@@ -1600,14 +1600,18 @@
       "explainerBody": "As pessoas tentam adivinhar senhas insistindo várias vezes. Um jail monitora um item — SSH, seu site, seu e-mail — e bane qualquer endereço que continue errando. Um jail desativado não está monitorando.",
       "whatIs": "O que é um jail?",
       "stateOff": "Sem monitoramento",
-      "stateQuiet": "Monitorando — tudo tranquilo",
+      "stateQuiet": "Ativado — nenhuma tentativa errada ou bloqueio ativo informado.",
       "stateFailing": "{count, plural, one {# endereço falhando agora} other {# endereços falhando agora}}",
       "stateBanned": "{count, plural, one {# endereço banido} other {# endereços banidos}}",
-      "stateUnknown": "Monitorando",
+      "stateUnknown": "Ativado — os dados de atividade não estão disponíveis.",
       "totalsTooltip": "Desde que o Fail2ban iniciou: {failed} tentativas erradas, {banned} banimentos.",
       "names": {
         "recidive": "Reincidentes"
-      }
+      },
+      "badgeOff": "Desligado",
+      "badgeEnabled": "Ativado",
+      "badgeFailing": "{count} falhando",
+      "badgeBanned": "Bloqueios: {count}"
     },
     "lockout": {
       "title": "Isso pode bloquear seu acesso",
@@ -1686,7 +1690,11 @@
       "permanent": "Para sempre",
       "currentSeconds": "{seconds} segundos (agora)",
       "ignore": "Nunca banir estes",
-      "ignoreHint": "Estes nunca são banidos, não importa quantas vezes errem. Adicione o endereço da sua casa ou escritório para que uma senha digitada errado nunca bloqueie seu acesso. Localhost sempre está nesta lista.",
+      "ignoreHint": "Os endereços desta lista ficam excluídos dos bloqueios do Fail2ban.",
+      "saveRules": "Salvar regras de bloqueio",
+      "saveAddresses": "Salvar endereços",
+      "ignoreDraftHint": "Adicionar prepara uma entrada nesta lista. Salvar endereços aplica as alterações.",
+      "inputLabel": "Endereço IP ou faixa (CIDR)",
       "ignoreEmpty": "Nada aqui ainda.",
       "ipPlaceholder": "203.0.113.5 ou 203.0.113.0/24",
       "addIp": "Adicionar",
@@ -1698,9 +1706,9 @@
       "failed": "Não foi possível salvar.",
       "ignoreSaved": "Lista salva.",
       "addMine": "Adicionar meu endereço",
-      "yourIpMissing": "Você está acessando de {ip}, e ele não está nesta lista. Adicione-o e este servidor nunca poderá banir você.",
-      "summary": "Agora: <strong>{retries} tentativas erradas</strong> em <strong>{window}</strong> resultam em um endereço banido por <strong>{duration}</strong>.",
-      "summaryPermanent": "Agora: <strong>{retries} tentativas erradas</strong> em <strong>{window}</strong> resultam em um endereço banido <strong>para sempre</strong>.",
+      "yourIpMissing": "Seu endereço atual {ip} não está excluído dos bloqueios.",
+      "summary": "Com estes valores, <strong>{retries} tentativas erradas</strong> em <strong>{window}</strong> baniriam um endereço por <strong>{duration}</strong>.",
+      "summaryPermanent": "Com estes valores, <strong>{retries} tentativas erradas</strong> em <strong>{window}</strong> baniriam um endereço <strong>para sempre</strong>.",
       "humanSeconds": "{count, plural, one {# segundo} other {# segundos}}",
       "humanMinutes": "{count, plural, one {# minuto} other {# minutos}}",
       "humanHours": "{count, plural, one {# hora} other {# horas}}",
@@ -1712,7 +1720,11 @@
       "cancel": "Cancelar",
       "ignoreLimit": "Esse é o máximo de endereços que esta lista suporta ({max}). Remova um para adicionar outro.",
       "maxretryRange": "Use um número inteiro de 2 a 100.",
-      "findtimeRange": "Use um número inteiro de segundos de 30 a 86400 (um dia)."
+      "findtimeRange": "Use um número inteiro de segundos de 30 a 86400 (um dia).",
+      "previewTitle": "Prévia da regra",
+      "previewInvalid": "Informe valores válidos de tentativas e período para visualizar a regra.",
+      "previewHint": "Prévia dos valores selecionados. Salvar regras de bloqueio aplica as alterações.",
+      "entriesCount": "{count, plural, one {# entrada} other {# entradas}}"
     },
     "tabs": {
       "live": "Proteção",

@@ -1600,14 +1600,18 @@
       "explainerBody": "Les gens devinent les mots de passe en essayant encore et encore. Un jail surveille un élément — SSH, votre site web, votre messagerie — et bannit toute adresse qui se trompe à répétition. Un jail désactivé ne surveille rien.",
       "whatIs": "Qu'est-ce qu'un jail ?",
       "stateOff": "Inactif",
-      "stateQuiet": "Actif — tout est calme",
+      "stateQuiet": "Activé — aucune tentative erronée ni aucun bannissement actif signalé.",
       "stateFailing": "{count, plural, one {# adresse en échec actuellement} other {# adresses en échec actuellement}}",
       "stateBanned": "{count, plural, one {# adresse bannie} other {# adresses bannies}}",
-      "stateUnknown": "Actif",
+      "stateUnknown": "Activé — les données d’activité ne sont pas disponibles.",
       "totalsTooltip": "Depuis le démarrage de Fail2ban : {failed} tentatives erronées, {banned} bannissements.",
       "names": {
         "recidive": "Récidivistes"
-      }
+      },
+      "badgeOff": "Désactivé",
+      "badgeEnabled": "Activé",
+      "badgeFailing": "{count} en échec",
+      "badgeBanned": "Bannissements : {count}"
     },
     "lockout": {
       "title": "Risque de vous verrouiller l'accès",
@@ -1686,7 +1690,11 @@
       "permanent": "Pour toujours",
       "currentSeconds": "{seconds} secondes (actuellement)",
       "ignore": "Ne jamais bannir",
-      "ignoreHint": "Ces adresses ne sont jamais bannies, quel que soit le nombre d'erreurs. Ajoutez votre adresse personnelle ou professionnelle pour qu'un mot de passe mal tapé ne puisse jamais vous verrouiller. Localhost figure toujours sur cette liste.",
+      "ignoreHint": "Les adresses de cette liste sont exclues des bannissements de Fail2ban.",
+      "saveRules": "Enregistrer les règles de bannissement",
+      "saveAddresses": "Enregistrer les adresses",
+      "ignoreDraftHint": "Ajouter prépare une entrée dans cette liste. Enregistrer les adresses applique les modifications.",
+      "inputLabel": "Adresse IP ou plage (CIDR)",
       "ignoreEmpty": "Rien ici pour l'instant.",
       "ipPlaceholder": "203.0.113.5 ou 203.0.113.0/24",
       "addIp": "Ajouter",
@@ -1698,9 +1706,9 @@
       "failed": "Impossible d'enregistrer cela.",
       "ignoreSaved": "Liste enregistrée.",
       "addMine": "Ajouter mon adresse",
-      "yourIpMissing": "Vous êtes connecté depuis {ip}, et elle ne figure pas sur cette liste. Ajoutez-la et ce serveur ne pourra jamais vous bannir.",
-      "summary": "Actuellement : <strong>{retries} tentatives erronées</strong> en <strong>{window}</strong> entraînent le bannissement d'une adresse pendant <strong>{duration}</strong>.",
-      "summaryPermanent": "Actuellement : <strong>{retries} tentatives erronées</strong> en <strong>{window}</strong> entraînent le bannissement <strong>définitif</strong> d'une adresse.",
+      "yourIpMissing": "Votre adresse actuelle {ip} n’est pas exclue des bannissements.",
+      "summary": "Avec ces valeurs, <strong>{retries} tentatives erronées</strong> en <strong>{window}</strong> entraîneraient le bannissement d’une adresse pendant <strong>{duration}</strong>.",
+      "summaryPermanent": "Avec ces valeurs, <strong>{retries} tentatives erronées</strong> en <strong>{window}</strong> entraîneraient le bannissement <strong>définitif</strong> d’une adresse.",
       "humanSeconds": "{count, plural, one {# seconde} other {# secondes}}",
       "humanMinutes": "{count, plural, one {# minute} other {# minutes}}",
       "humanHours": "{count, plural, one {# heure} other {# heures}}",
@@ -1712,7 +1720,11 @@
       "cancel": "Annuler",
       "ignoreLimit": "C'est le nombre maximal d'adresses que cette liste peut contenir ({max}). Retirez-en une pour en ajouter une autre.",
       "maxretryRange": "Saisissez un nombre entier de 2 à 100.",
-      "findtimeRange": "Saisissez un nombre entier de secondes de 30 à 86400 (un jour)."
+      "findtimeRange": "Saisissez un nombre entier de secondes de 30 à 86400 (un jour).",
+      "previewTitle": "Aperçu de la règle",
+      "previewInvalid": "Saisissez des valeurs valides pour les tentatives et la période afin de prévisualiser la règle.",
+      "previewHint": "Aperçu des valeurs sélectionnées. Enregistrer les règles de bannissement applique les modifications.",
+      "entriesCount": "{count, plural, one {# entrée} other {# entrées}}"
     },
     "tabs": {
       "live": "Protection",

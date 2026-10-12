@@ -9,6 +9,7 @@ import { ShieldOff, Ban, ScrollText, SearchX } from "lucide-react";
 import { unbanIp, unbanAll } from "@/lib/api/fail2ban";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import {
   Select,
@@ -44,20 +45,32 @@ const TOOLS_FROM = 8;
  * component type, so inline cells remount on every render. */
 
 function IpCell({ row }) {
-  return <span className="font-mono text-sm">{row.original.ip}</span>;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="block truncate rounded font-mono text-sm">{row.original.ip}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-80 break-all font-mono">{row.original.ip}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function JailCell({ row }) {
   return (
-    <Badge variant="outline" className="font-normal">
-      {row.original.jail}
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge tabIndex={0} variant="outline" className="max-w-full font-normal">
+          <span className="truncate">{row.original.jail}</span>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-80 break-all">{row.original.jail}</TooltipContent>
+    </Tooltip>
   );
 }
 
 function BannedAtCell({ row }) {
   return (
-    <span className="whitespace-nowrap text-xs text-muted-foreground">
+    <span className="block break-words whitespace-normal text-xs text-muted-foreground">
       {row.original.banned_at || "—"}
     </span>
   );
@@ -74,19 +87,19 @@ function expiryContent(ban, t) {
 
   if (typeof left === "number") {
     if (left <= 0) return <span className="text-muted-foreground">{t("banned.expiring")}</span>;
-    return <span className="whitespace-nowrap tabular-nums">{formatLeft(t, left)}</span>;
+    return <span className="block break-words whitespace-normal tabular-nums">{formatLeft(t, left)}</span>;
   }
 
   // No seconds but an expiry: show it verbatim (server clock).
   if (expires) {
-    return <span className="whitespace-nowrap text-xs tabular-nums">{expires}</span>;
+    return <span className="block break-words whitespace-normal text-xs tabular-nums">{expires}</span>;
   }
 
   // No expiry and no start date means unknown, not permanent.
   if (!since) return <span className="text-muted-foreground">{t("banned.unknownLeft")}</span>;
 
   return (
-    <Badge variant="muted" className="font-normal">
+    <Badge variant="muted" className="max-w-full break-words whitespace-normal font-normal">
       {t("banned.permanent")}
     </Badge>
   );
@@ -100,11 +113,12 @@ function ActionsCell({ row, table }) {
         <Button
           variant="destructive"
           size="sm"
+          className="h-auto max-w-full gap-1 px-2 py-1.5 whitespace-normal"
           disabled={!canManage || unbanning === row.original.ip}
           onClick={() => onRequestUnban(row.original)}
         >
           <ShieldOff className="size-4" />
-          {t("banned.unban")}
+          <span className="min-w-0 break-words">{t("banned.unban")}</span>
         </Button>
       </ReasonTooltip>
     </div>
@@ -187,44 +201,41 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
   }
 
   const columns = [
-    { accessorKey: "ip", header: t("banned.ip"), cell: IpCell },
-    { accessorKey: "jail", header: t("banned.jail"), cell: JailCell },
-    { accessorKey: "banned_at", header: t("banned.since"), cell: BannedAtCell },
-    { id: "expiry", header: t("banned.timeLeft"), cell: ExpiryCell },
+    { accessorKey: "ip", header: t("banned.ip"), cell: IpCell, meta: { className: "w-[28%]" } },
+    { accessorKey: "jail", header: t("banned.jail"), cell: JailCell, meta: { className: "w-[16%]" } },
+    { accessorKey: "banned_at", header: t("banned.since"), cell: BannedAtCell, meta: { className: "w-[24%] whitespace-normal" } },
+    { id: "expiry", header: t("banned.timeLeft"), cell: ExpiryCell, meta: { className: "w-[20%] whitespace-normal" } },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("banned.actions")}</span>,
-      meta: { className: "text-right" },
+      meta: { className: "w-[12%] px-2 text-right whitespace-normal" },
       cell: ActionsCell,
     },
   ];
 
   return (
     <Card>
-      {/* One row only from xl: below that four actions wrapped and left "Unban all" alone. */}
       <CardHeader className="flex flex-col gap-3 space-y-0 xl:flex-row xl:items-start xl:justify-between">
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <CardTitle className="text-base font-semibold">{t("banned.title")}</CardTitle>
           <CardDescription>{t("banned.description")}</CardDescription>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
           <RefreshButton />
           {/* The log shows what triggered a ban. */}
           {logHref ? (
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="neutral" asChild>
               <Link href={logHref}>
                 <ScrollText className="size-4" />
                 {t("banned.seeLog")}
               </Link>
             </Button>
           ) : null}
-          <BanIpDialog jails={jails} canManage={canManage} yourIp={yourIp} serverIp={serverIp} />
-          {/* Kept visible for a fast recovery from banning yourself. */}
+          {/* Kept visible for a fast recovery; confirmation remains destructive. */}
           {banned.length > 0 ? (
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               <Button
-                variant="destructive"
-                size="sm"
+                variant="neutral"
                 disabled={!canManage}
                 onClick={() => setConfirmAll(true)}
               >
@@ -232,6 +243,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
               </Button>
             </ReasonTooltip>
           ) : null}
+          <BanIpDialog jails={jails} canManage={canManage} yourIp={yourIp} serverIp={serverIp} />
         </div>
       </CardHeader>
 
@@ -296,6 +308,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
             >
               <DataTable
                 bare
+                fixedLayout
                 columns={columns}
                 data={visible}
                 emptyMessage={t("banned.noMatches")}

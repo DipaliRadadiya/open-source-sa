@@ -1600,14 +1600,18 @@
       "explainerBody": "攻撃者は何度もパスワードの入力を行います。Jail は SSH やウェブサイト、メールなどを1つ監視し、誤入力が続く接続元をブロックします。無効になっている Jail は何も監視していません。",
       "whatIs": "Jail とは何ですか？",
       "stateOff": "未監視",
-      "stateQuiet": "監視中 — 異常なし",
+      "stateQuiet": "有効 — 誤入力や現在のブロックは報告されていません。",
       "stateFailing": "{count, plural, one {現在 # 件のアドレスが誤入力中} other {現在 # 件のアドレスが誤入力中}}",
       "stateBanned": "{count, plural, one {# 件のアドレスがブロックされています} other {# 件のアドレスがブロックされています}}",
-      "stateUnknown": "監視中",
+      "stateUnknown": "有効 — 活動データを取得できません。",
       "totalsTooltip": "Fail2ban 起動以降: 誤入力 {failed} 回、ブロック {banned} 件。",
       "names": {
         "recidive": "常習者"
-      }
+      },
+      "badgeOff": "オフ",
+      "badgeEnabled": "有効",
+      "badgeFailing": "誤入力 {count} 件",
+      "badgeBanned": "ブロック {count} 件"
     },
     "lockout": {
       "title": "サーバーにアクセスできなくなる可能性があります",
@@ -1686,7 +1690,11 @@
       "permanent": "無期限",
       "currentSeconds": "{seconds} 秒 (現在)",
       "ignore": "常に許可するアドレス",
-      "ignoreHint": "何度誤入力してもブロックされません。自宅やオフィスのアドレスを追加しておけば、入力ミスでロックアウトされることを防げます。Localhost は常にこのリストに含まれます。",
+      "ignoreHint": "このリストのアドレスは Fail2ban によるブロックの対象外です。",
+      "saveRules": "ブロックルールを保存",
+      "saveAddresses": "アドレスを保存",
+      "ignoreDraftHint": "追加でリストに登録を準備します。「アドレスを保存」で変更が適用されます。",
+      "inputLabel": "IP アドレスまたは範囲（CIDR）",
       "ignoreEmpty": "登録されているアドレスはありません。",
       "ipPlaceholder": "203.0.113.5 または 203.0.113.0/24",
       "addIp": "追加",
@@ -1698,9 +1706,9 @@
       "failed": "保存できませんでした。",
       "ignoreSaved": "リストを保存しました。",
       "addMine": "現在のアドレスを追加",
-      "yourIpMissing": "現在のアドレスは {ip} ですが、リストに登録されていません。追加しておけば、サーバーにブロックされることはありません。",
-      "summary": "現在の設定: <strong>{window}</strong> の間に <strong>{retries} 回</strong> 誤入力したアドレスを <strong>{duration}</strong> ブロックします。",
-      "summaryPermanent": "現在の設定: <strong>{window}</strong> の間に <strong>{retries} 回</strong> 誤入力したアドレスを <strong>永続的に</strong> ブロックします。",
+      "yourIpMissing": "現在のアドレス {ip} はブロックの対象外ではありません。",
+      "summary": "この値では、<strong>{window}</strong> の間に <strong>{retries} 回</strong> 誤入力したアドレスを <strong>{duration}</strong> ブロックするルールになります。",
+      "summaryPermanent": "この値では、<strong>{window}</strong> の間に <strong>{retries} 回</strong> 誤入力したアドレスを <strong>永続的に</strong> ブロックするルールになります。",
       "humanSeconds": "{count, plural, one {# 秒} other {# 秒}}",
       "humanMinutes": "{count, plural, one {# 分} other {# 分}}",
       "humanHours": "{count, plural, one {# 時間} other {# 時間}}",
@@ -1712,7 +1720,11 @@
       "cancel": "キャンセル",
       "ignoreLimit": "リストの最大件数 ({max}) に達しています。新しいアドレスを追加するには、既存のものを削除してください。",
       "maxretryRange": "2 から 100 までの整数を入力してください。",
-      "findtimeRange": "30 から 86400(1 日)までの秒数を整数で入力してください。"
+      "findtimeRange": "30 から 86400(1 日)までの秒数を整数で入力してください。",
+      "previewTitle": "ルールのプレビュー",
+      "previewInvalid": "ルールを確認するには、試行回数と期間に有効な値を入力してください。",
+      "previewHint": "選択した値のプレビューです。「ブロックルールを保存」で変更が適用されます。",
+      "entriesCount": "{count, plural, one {# 件の登録} other {# 件の登録}}"
     },
     "tabs": {
       "live": "保護",

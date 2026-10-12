@@ -1600,14 +1600,18 @@
       "explainerBody": "Passwörter werden erraten, indem es immer wieder versucht wird. Ein Jail überwacht eine Sache — SSH, Ihre Website, Ihre Mail — und sperrt jede Adresse, die es wiederholt falsch macht. Ein Jail, das aus ist, überwacht nichts.",
       "whatIs": "Was ist ein Jail?",
       "stateOff": "Überwacht nicht",
-      "stateQuiet": "Überwacht — alles ruhig",
+      "stateQuiet": "Aktiviert — keine Fehlversuche oder aktiven Sperren gemeldet.",
       "stateFailing": "{count, plural, one {# Adresse scheitert gerade} other {# Adressen scheitern gerade}}",
       "stateBanned": "{count, plural, one {# Adresse gesperrt} other {# Adressen gesperrt}}",
-      "stateUnknown": "Überwacht",
+      "stateUnknown": "Aktiviert — Aktivitätsdaten sind nicht verfügbar.",
       "totalsTooltip": "Seit dem Start von Fail2ban: {failed} Fehlversuche, {banned} Sperren.",
       "names": {
         "recidive": "Wiederholungstäter"
-      }
+      },
+      "badgeOff": "Aus",
+      "badgeEnabled": "Aktiviert",
+      "badgeFailing": "{count} Fehler",
+      "badgeBanned": "{count} gesperrt"
     },
     "lockout": {
       "title": "Das könnte Sie aussperren",
@@ -1686,7 +1690,11 @@
       "permanent": "Für immer",
       "currentSeconds": "{seconds} Sekunden (aktuell)",
       "ignore": "Diese nie sperren",
-      "ignoreHint": "Diese werden nie gesperrt, egal wie oft sie falsch liegen. Fügen Sie Ihre Adresse von zu Hause oder aus dem Büro hinzu, damit ein vertipptes Passwort Sie nie aussperren kann. Localhost steht immer auf dieser Liste.",
+      "ignoreHint": "Adressen auf dieser Liste sind von Fail2ban-Sperren ausgenommen.",
+      "saveRules": "Sperrregeln speichern",
+      "saveAddresses": "Adressen speichern",
+      "ignoreDraftHint": "Hinzufügen merkt einen Eintrag in dieser Liste vor. Adressen speichern übernimmt die Änderungen.",
+      "inputLabel": "IP-Adresse oder Bereich (CIDR)",
       "ignoreEmpty": "Hier ist noch nichts.",
       "ipPlaceholder": "203.0.113.5 oder 203.0.113.0/24",
       "addIp": "Hinzufügen",
@@ -1698,9 +1706,9 @@
       "failed": "Das konnte nicht gespeichert werden.",
       "ignoreSaved": "Liste gespeichert.",
       "addMine": "Meine Adresse hinzufügen",
-      "yourIpMissing": "Sie sind von {ip} hier und diese Adresse steht nicht auf der Liste. Fügen Sie sie hinzu, dann kann dieser Server Sie nie sperren.",
-      "summary": "Aktuell: <strong>{retries} Fehlversuche</strong> in <strong>{window}</strong> sperren eine Adresse für <strong>{duration}</strong>.",
-      "summaryPermanent": "Aktuell: <strong>{retries} Fehlversuche</strong> in <strong>{window}</strong> sperren eine Adresse <strong>endgültig</strong>.",
+      "yourIpMissing": "Ihre aktuelle Adresse {ip} ist nicht von Sperren ausgenommen.",
+      "summary": "Mit diesen Werten würden <strong>{retries} Fehlversuche</strong> in <strong>{window}</strong> eine Adresse für <strong>{duration}</strong> sperren.",
+      "summaryPermanent": "Mit diesen Werten würden <strong>{retries} Fehlversuche</strong> in <strong>{window}</strong> eine Adresse <strong>dauerhaft</strong> sperren.",
       "humanSeconds": "{count, plural, one {# Sekunde} other {# Sekunden}}",
       "humanMinutes": "{count, plural, one {# Minute} other {# Minuten}}",
       "humanHours": "{count, plural, one {# Stunde} other {# Stunden}}",
@@ -1712,7 +1720,11 @@
       "cancel": "Abbrechen",
       "ignoreLimit": "Mehr Adressen kann diese Liste nicht aufnehmen ({max}). Entfernen Sie eine, um eine weitere hinzuzufügen.",
       "maxretryRange": "Geben Sie eine ganze Zahl von 2 bis 100 ein.",
-      "findtimeRange": "Geben Sie eine ganze Zahl an Sekunden von 30 bis 86400 (ein Tag) ein."
+      "findtimeRange": "Geben Sie eine ganze Zahl an Sekunden von 30 bis 86400 (ein Tag) ein.",
+      "previewTitle": "Regelvorschau",
+      "previewInvalid": "Geben Sie gültige Werte für Versuche und Zeitraum ein, um die Regel anzuzeigen.",
+      "previewHint": "Vorschau der ausgewählten Werte. Sperrregeln speichern übernimmt Änderungen.",
+      "entriesCount": "{count, plural, one {# Eintrag} other {# Einträge}}"
     },
     "tabs": {
       "live": "Schutz",

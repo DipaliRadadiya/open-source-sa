@@ -1600,14 +1600,18 @@
       "explainerBody": "People guess passwords by trying again and again. A jail watches one thing — SSH, your website, your mail — and bans any address that keeps getting it wrong. A jail that is off is not watching.",
       "whatIs": "What is a jail?",
       "stateOff": "Not watching",
-      "stateQuiet": "Watching — all quiet",
+      "stateQuiet": "Enabled — no failed attempts or active bans reported.",
       "stateFailing": "{count, plural, one {# address failing right now} other {# addresses failing right now}}",
       "stateBanned": "{count, plural, one {# address banned} other {# addresses banned}}",
-      "stateUnknown": "Watching",
+      "stateUnknown": "Enabled — activity data is unavailable.",
       "totalsTooltip": "Since Fail2ban started: {failed} wrong tries, {banned} bans.",
       "names": {
         "recidive": "Repeat offenders"
-      }
+      },
+      "badgeOff": "Off",
+      "badgeEnabled": "Enabled",
+      "badgeFailing": "{count} failing",
+      "badgeBanned": "{count} banned"
     },
     "lockout": {
       "title": "This could lock you out",
@@ -1686,7 +1690,11 @@
       "permanent": "Forever",
       "currentSeconds": "{seconds} seconds (now)",
       "ignore": "Never ban these",
-      "ignoreHint": "These are never banned, no matter how many times they get it wrong. Add your home or office address so a mistyped password can never lock you out. Localhost is always on this list.",
+      "ignoreHint": "Addresses on this list are excluded from Fail2ban bans.",
+      "saveRules": "Save ban rules",
+      "saveAddresses": "Save addresses",
+      "ignoreDraftHint": "Add stages an entry in this list. Save addresses applies your changes.",
+      "inputLabel": "IP address or range (CIDR)",
       "ignoreEmpty": "Nothing here yet.",
       "ipPlaceholder": "203.0.113.5 or 203.0.113.0/24",
       "addIp": "Add",
@@ -1698,9 +1706,9 @@
       "failed": "We could not save that.",
       "ignoreSaved": "List saved.",
       "addMine": "Add my address",
-      "yourIpMissing": "You are here from {ip}, and it is not on this list. Add it and this server can never ban you.",
-      "summary": "Right now: <strong>{retries} wrong tries</strong> in <strong>{window}</strong> gets an address banned for <strong>{duration}</strong>.",
-      "summaryPermanent": "Right now: <strong>{retries} wrong tries</strong> in <strong>{window}</strong> gets an address banned <strong>for good</strong>.",
+      "yourIpMissing": "Your current address {ip} is not excluded from bans.",
+      "summary": "With these values, <strong>{retries} wrong tries</strong> in <strong>{window}</strong> would ban an address for <strong>{duration}</strong>.",
+      "summaryPermanent": "With these values, <strong>{retries} wrong tries</strong> in <strong>{window}</strong> would ban an address <strong>for good</strong>.",
       "humanSeconds": "{count, plural, one {# second} other {# seconds}}",
       "humanMinutes": "{count, plural, one {# minute} other {# minutes}}",
       "humanHours": "{count, plural, one {# hour} other {# hours}}",
@@ -1712,7 +1720,11 @@
       "cancel": "Cancel",
       "ignoreLimit": "That is the most addresses this list can hold ({max}). Remove one to add another.",
       "maxretryRange": "Use a whole number from 2 to 100.",
-      "findtimeRange": "Use a whole number of seconds from 30 to 86400 (one day)."
+      "findtimeRange": "Use a whole number of seconds from 30 to 86400 (one day).",
+      "previewTitle": "Rule preview",
+      "previewInvalid": "Enter valid attempt and window values to preview this rule.",
+      "previewHint": "Preview of selected values. Save ban rules applies any changes.",
+      "entriesCount": "{count, plural, one {# entry} other {# entries}}"
     },
     "tabs": {
       "live": "Protection",

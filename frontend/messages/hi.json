@@ -1600,14 +1600,18 @@
       "explainerBody": "लोग बार-बार कोशिश करके पासवर्ड अंदाज़ते हैं। एक jail एक चीज़ पर नज़र रखती है — SSH, आपकी वेबसाइट, आपका मेल — और जो पता बार-बार गलत करता है उसे रोक देती है। बंद jail कुछ भी नहीं देखती।",
       "whatIs": "Jail क्या है?",
       "stateOff": "नज़र नहीं रखी जा रही",
-      "stateQuiet": "नज़र है — सब शांत",
+      "stateQuiet": "सक्षम — कोई असफल कोशिश या सक्रिय रोक दर्ज नहीं है।",
       "stateFailing": "{count, plural, one {# पता अभी असफल हो रहा है} other {# पते अभी असफल हो रहे हैं}}",
       "stateBanned": "{count, plural, one {# पता रोका गया} other {# पते रोके गए}}",
-      "stateUnknown": "नज़र रखी जा रही है",
+      "stateUnknown": "सक्षम — गतिविधि के आँकड़े उपलब्ध नहीं हैं।",
       "totalsTooltip": "Fail2ban शुरू होने के बाद से: {failed} गलत कोशिशें, {banned} रोक।",
       "names": {
         "recidive": "बार-बार हमला करने वाले"
-      }
+      },
+      "badgeOff": "बंद",
+      "badgeEnabled": "सक्षम",
+      "badgeFailing": "{count} असफल",
+      "badgeBanned": "रोके गए: {count}"
     },
     "lockout": {
       "title": "इससे आप बाहर हो सकते हैं",
@@ -1686,7 +1690,11 @@
       "permanent": "हमेशा के लिए",
       "currentSeconds": "{seconds} सेकंड (अभी)",
       "ignore": "इन्हें कभी न रोकें",
-      "ignoreHint": "ये कभी नहीं रोके जाते, चाहे कितनी बार भी गलत हों। अपने घर या दफ़्तर का पता जोड़ें ताकि गलत टाइप किया पासवर्ड आपको कभी बाहर न कर सके। Localhost हमेशा इस सूची में रहता है।",
+      "ignoreHint": "Fail2ban इस सूची के पतों को नहीं रोकता।",
+      "saveRules": "रोकने के नियम सहेजें",
+      "saveAddresses": "पते सहेजें",
+      "ignoreDraftHint": "जोड़ें से सूची में एक प्रविष्टि तैयार होती है। पते सहेजें से बदलाव लागू होते हैं।",
+      "inputLabel": "IP पता या रेंज (CIDR)",
       "ignoreEmpty": "यहाँ अभी कुछ नहीं है।",
       "ipPlaceholder": "203.0.113.5 या 203.0.113.0/24",
       "addIp": "जोड़ें",
@@ -1698,9 +1706,9 @@
       "failed": "हम इसे सहेज नहीं पाए।",
       "ignoreSaved": "सूची सहेजी गई।",
       "addMine": "मेरा पता जोड़ें",
-      "yourIpMissing": "आप {ip} से आए हैं, और यह इस सूची में नहीं है। इसे जोड़ दें तो यह सर्वर आपको कभी नहीं रोक पाएगा।",
-      "summary": "अभी: <strong>{window}</strong> में <strong>{retries} गलत कोशिशें</strong> किसी पते को <strong>{duration}</strong> के लिए रोक देती हैं।",
-      "summaryPermanent": "अभी: <strong>{window}</strong> में <strong>{retries} गलत कोशिशें</strong> किसी पते को <strong>हमेशा के लिए</strong> रोक देती हैं।",
+      "yourIpMissing": "आपके वर्तमान पते {ip} को रोक से छूट नहीं मिली है।",
+      "summary": "इन मानों के साथ, <strong>{window}</strong> में <strong>{retries} गलत कोशिशें</strong> किसी पते को <strong>{duration}</strong> के लिए रोकेंगी।",
+      "summaryPermanent": "इन मानों के साथ, <strong>{window}</strong> में <strong>{retries} गलत कोशिशें</strong> किसी पते को <strong>हमेशा के लिए</strong> रोकेंगी।",
       "humanSeconds": "{count, plural, one {# सेकंड} other {# सेकंड}}",
       "humanMinutes": "{count, plural, one {# मिनट} other {# मिनट}}",
       "humanHours": "{count, plural, one {# घंटा} other {# घंटे}}",
@@ -1712,7 +1720,11 @@
       "cancel": "रद्द करें",
       "ignoreLimit": "यह सूची अधिकतम {max} पते रख सकती है। एक हटाकर दूसरा जोड़ें।",
       "maxretryRange": "2 से 100 के बीच कोई पूर्ण संख्या डालें।",
-      "findtimeRange": "30 से 86400 (एक दिन) सेकंड के बीच कोई पूर्ण संख्या डालें।"
+      "findtimeRange": "30 से 86400 (एक दिन) सेकंड के बीच कोई पूर्ण संख्या डालें।",
+      "previewTitle": "नियम का पूर्वावलोकन",
+      "previewInvalid": "नियम का पूर्वावलोकन देखने के लिए कोशिशों और समय-सीमा के मान सही करें।",
+      "previewHint": "यह चुने गए मानों का पूर्वावलोकन है। रोकने के नियम सहेजें से बदलाव लागू होंगे।",
+      "entriesCount": "{count, plural, one {# प्रविष्टि} other {# प्रविष्टियाँ}}"
     },
     "tabs": {
       "live": "सुरक्षा",

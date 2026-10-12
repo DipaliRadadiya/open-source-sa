@@ -4,17 +4,19 @@ import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import { X, Plus, UserCheck, ShieldCheck, TriangleAlert } from "lucide-react";
+import { X, UserCheck, ShieldCheck, TriangleAlert } from "lucide-react";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { isIpOrCidr } from "@/lib/validation/ip";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { ActionIcon } from "@/components/ui/action-icon";
-import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
   Card,
   CardContent,
@@ -111,131 +113,153 @@ export function IgnoreListCard({ settings, canManage }) {
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">{t("settings.ignore")}</CardTitle>
+      {/* The left editor sets the desktop row height; only this list may shrink. */}
+      <Card className="@container/ignore-list min-w-0 gap-0 py-0 xl:@4xl/fail2ban-rules:h-0 xl:@4xl/fail2ban-rules:min-h-full">
+        <CardHeader className="flex-none border-b px-5 py-4">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
+            {t("settings.ignore")}
+            <Badge variant="outline" className="font-normal">{t("settings.entriesCount", { count: ips.length })}</Badge>
+          </CardTitle>
           <CardDescription>{t("settings.ignoreHint")}</CardDescription>
         </CardHeader>
-  
-        <CardContent className="space-y-3">
+
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-5 py-4">
           {/* Above the list: a missing own IP is the most important fact here. */}
           {yourIp && !ipIgnored ? (
-            <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
+            <div data-slot="caution" className="flex flex-none items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-2.5">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-warning" />
-              <div className="min-w-0 space-y-2">
-                <p className="text-xs leading-relaxed">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+                <p className="min-w-0 flex-1 basis-36 [overflow-wrap:anywhere] text-xs leading-relaxed">
                   {t("settings.yourIpMissing", { ip: yourIp })}
                 </p>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="outline"
+                  className="h-auto max-w-full py-1.5 text-xs whitespace-normal"
+                  aria-label={t("settings.addMine")}
                   disabled={!canManage || pending}
                   onClick={() => add(yourIp)}
                 >
                   <ActionIcon icon={UserCheck} pending={pending} />
-                  {t("settings.addMine")}
+                  {t("settings.addIp")}
                 </Button>
               </div>
             </div>
           ) : null}
-  
-          <ul className="divide-y rounded-lg border">
+
+          <div className="flex-none space-y-2">
+            <Label htmlFor="f2b-ignore-address">{t("settings.inputLabel")}</Label>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+              <Input
+                id="f2b-ignore-address"
+                value={draft}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  if (draftError) setDraftError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    add(draft);
+                  }
+                }}
+                placeholder={t("lockout.ipPlaceholder")}
+                disabled={!canManage || pending}
+                className="min-w-0 font-mono"
+                autoComplete="off"
+                spellCheck={false}
+                aria-invalid={Boolean(draftError)}
+                aria-describedby={draftError ? "f2b-ignore-examples f2b-ignore-hint f2b-ignore-error" : "f2b-ignore-examples f2b-ignore-hint"}
+              />
+              <ReasonTooltip
+                className="inline-flex shrink-0"
+                reason={
+                  !canManage
+                    ? t("disabled.noPermission")
+                    : !draft.trim()
+                      ? t("disabled.enterIp")
+                      : null
+                }
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  disabled={!canManage || !draft.trim() || pending}
+                  onClick={() => add(draft)}
+                >
+                  {t("settings.addIp")}
+                </Button>
+              </ReasonTooltip>
+            </div>
+            <div className="space-y-1 text-xs leading-relaxed text-muted-foreground">
+              <p id="f2b-ignore-examples">{t("settings.ipPlaceholder")}</p>
+              <p id="f2b-ignore-hint">{t("settings.ignoreDraftHint")}</p>
+            </div>
+            {draftError ? (
+              <p id="f2b-ignore-error" role="alert" className="text-xs text-destructive">
+                {draftError}
+              </p>
+            ) : null}
+          </div>
+
+          {/* Focusable native scrolling keeps warning, entry controls and Save outside. */}
+          <ul
+            tabIndex={0}
+            aria-label={t("settings.ignore")}
+            className="min-h-0 max-h-72 overflow-y-auto overscroll-contain rounded-lg border divide-y focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring xl:@4xl/fail2ban-rules:max-h-none xl:@4xl/fail2ban-rules:flex-1"
+          >
             {ips.length === 0 ? (
-              <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+              <li className="px-3 py-4 text-sm text-muted-foreground">
                 {t("settings.ignoreEmpty")}
               </li>
             ) : (
               ips.map((ip) => (
                 <li key={ip} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="min-w-0 truncate font-mono text-sm">{ip}</span>
+                  <span className="min-w-0 break-all font-mono text-sm">{ip}</span>
                   <div className="flex shrink-0 items-center gap-1">
                     {ip === yourIp ? (
-                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-xs font-medium text-success">
+                      <Badge variant="success" className="font-normal">
                         {t("settings.you")}
-                      </span>
+                      </Badge>
                     ) : null}
                     {canManage ? (
-                      <button
-                        type="button"
-                        onClick={() => remove(ip)}
-                        // A removal mid-save would be undone by the following refresh.
-                        disabled={pending}
-                        aria-label={t("settings.removeIp", { ip })}
-                        className="rounded p-1 text-muted-foreground hover:text-destructive disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      >
-                        <X className="size-3.5" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => remove(ip)}
+                            // A removal mid-save would be undone by the following refresh.
+                            disabled={pending}
+                            aria-label={t("settings.removeIp", { ip })}
+                            className="rounded p-1 text-muted-foreground hover:text-destructive disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t("settings.removeIp", { ip })}</TooltipContent>
+                      </Tooltip>
                     ) : null}
                   </div>
                 </li>
               ))
             )}
           </ul>
-  
-          <div className="flex items-center gap-2">
-            <Input
-              value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                if (draftError) setDraftError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  add(draft);
-                }
-              }}
-              placeholder={t("settings.ipPlaceholder")}
-              disabled={!canManage || pending}
-              className="font-mono"
-              autoComplete="off"
-              spellCheck={false}
-              aria-invalid={Boolean(draftError)}
-              aria-describedby={draftError ? "f2b-ignore-error" : undefined}
-            />
-            <IconTooltip
-              label={t("settings.addIp")}
-              reason={
-                !canManage
-                  ? t("disabled.noPermission")
-                  : !draft.trim()
-                    ? t("disabled.enterIp")
-                    : null
-              }
-            >
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9 shrink-0"
-                disabled={!canManage || !draft.trim() || pending}
-                onClick={() => add(draft)}
-                aria-label={t("settings.addIp")}
-              >
-                <ActionIcon icon={Plus} pending={pending} />
-              </Button>
-            </IconTooltip>
-          </div>
-  
-          {draftError ? (
-            <p id="f2b-ignore-error" role="alert" className="text-xs text-destructive">
-              {draftError}
-            </p>
-          ) : null}
+
         </CardContent>
-  
-        <div className="mt-auto">
+
+        <div className="flex-none">
           <CardSaveFooter
             saving={pending}
             dirty={dirty}
             saveReason={saveReason}
             onSave={save}
             onDiscard={() => setEdited(null)}
-            saveLabel={t("settings.save")}
+            saveLabel={t("settings.saveAddresses")}
             savingNote={t("settings.savingNote")}
           />
         </div>
-  
+
         <ConfirmDialog
           open={confirmRemoveSelf}
           onOpenChange={setConfirmRemoveSelf}

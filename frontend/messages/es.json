@@ -1600,14 +1600,18 @@
       "explainerBody": "La gente adivina contraseñas probando una y otra vez. Una jaula vigila una cosa — SSH, tu web, tu correo — y bloquea cualquier dirección que se equivoque demasiadas veces. Una jaula desactivada no vigila nada.",
       "whatIs": "¿Qué es una jaula?",
       "stateOff": "Sin vigilar",
-      "stateQuiet": "Vigilando — todo tranquilo",
+      "stateQuiet": "Activado — no se han informado intentos fallidos ni bloqueos activos.",
       "stateFailing": "{count, plural, one {# dirección fallando ahora mismo} other {# direcciones fallando ahora mismo}}",
       "stateBanned": "{count, plural, one {# dirección bloqueada} other {# direcciones bloqueadas}}",
-      "stateUnknown": "Vigilando",
+      "stateUnknown": "Activado — no hay datos de actividad disponibles.",
       "totalsTooltip": "Desde que Fail2ban arrancó: {failed} intentos fallidos, {banned} bloqueos.",
       "names": {
         "recidive": "Reincidentes"
-      }
+      },
+      "badgeOff": "Desactivado",
+      "badgeEnabled": "Activado",
+      "badgeFailing": "{count} fallando",
+      "badgeBanned": "Bloqueos: {count}"
     },
     "lockout": {
       "title": "Esto podría dejarte fuera",
@@ -1686,7 +1690,11 @@
       "permanent": "Para siempre",
       "currentSeconds": "{seconds} segundos (ahora)",
       "ignore": "Nunca bloquear estas",
-      "ignoreHint": "Estas nunca se bloquean, por muchas veces que se equivoquen. Añade la dirección de tu casa u oficina para que una contraseña mal escrita nunca te deje fuera. Localhost siempre está en esta lista.",
+      "ignoreHint": "Las direcciones de esta lista quedan excluidas de los bloqueos de Fail2ban.",
+      "saveRules": "Guardar reglas de bloqueo",
+      "saveAddresses": "Guardar direcciones",
+      "ignoreDraftHint": "Añadir prepara una entrada en esta lista. Guardar direcciones aplica los cambios.",
+      "inputLabel": "Dirección IP o rango (CIDR)",
       "ignoreEmpty": "Aquí no hay nada todavía.",
       "ipPlaceholder": "203.0.113.5 o 203.0.113.0/24",
       "addIp": "Añadir",
@@ -1698,9 +1706,9 @@
       "failed": "No hemos podido guardarlo.",
       "ignoreSaved": "Lista guardada.",
       "addMine": "Añadir mi dirección",
-      "yourIpMissing": "Estás aquí desde {ip}, y no está en esta lista. Añádela y este servidor nunca podrá bloquearte.",
-      "summary": "Ahora mismo: <strong>{retries} intentos fallidos</strong> en <strong>{window}</strong> bloquean una dirección durante <strong>{duration}</strong>.",
-      "summaryPermanent": "Ahora mismo: <strong>{retries} intentos fallidos</strong> en <strong>{window}</strong> bloquean una dirección <strong>para siempre</strong>.",
+      "yourIpMissing": "Tu dirección actual {ip} no está excluida de los bloqueos.",
+      "summary": "Con estos valores, <strong>{retries} intentos fallidos</strong> en <strong>{window}</strong> bloquearían una dirección durante <strong>{duration}</strong>.",
+      "summaryPermanent": "Con estos valores, <strong>{retries} intentos fallidos</strong> en <strong>{window}</strong> bloquearían una dirección <strong>para siempre</strong>.",
       "humanSeconds": "{count, plural, one {# segundo} other {# segundos}}",
       "humanMinutes": "{count, plural, one {# minuto} other {# minutos}}",
       "humanHours": "{count, plural, one {# hora} other {# horas}}",
@@ -1712,7 +1720,11 @@
       "cancel": "Cancelar",
       "ignoreLimit": "Es el máximo de direcciones que admite esta lista ({max}). Elimina una para añadir otra.",
       "maxretryRange": "Usa un número entero del 2 al 100.",
-      "findtimeRange": "Usa un número entero de segundos entre 30 y 86400 (un día)."
+      "findtimeRange": "Usa un número entero de segundos entre 30 y 86400 (un día).",
+      "previewTitle": "Vista previa de la regla",
+      "previewInvalid": "Introduce valores válidos de intentos y período para ver la regla.",
+      "previewHint": "Vista previa de los valores seleccionados. Guardar reglas de bloqueo aplica los cambios.",
+      "entriesCount": "{count, plural, one {# entrada} other {# entradas}}"
     },
     "tabs": {
       "live": "Protección",

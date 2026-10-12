@@ -83,17 +83,19 @@ export default async function Fail2banPage() {
             }
             settings={
               data.settings ? (
-                // No items-start: stretching both cards to the taller one squares the columns.
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <BanRulesCard
-                    settings={data.settings}
-                    presets={data.bantime_presets}
-                    canManage={canManage}
-                  />
-                  <IgnoreListCard
-                    settings={data.settings}
-                    canManage={canManage}
-                  />
+                // Split only when both the desktop and actual content width fit the editors.
+                <div className="@container/fail2ban-rules">
+                  <div className="grid items-start gap-4 xl:@4xl/fail2ban-rules:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                    <BanRulesCard
+                      settings={data.settings}
+                      presets={data.bantime_presets}
+                      canManage={canManage}
+                    />
+                    <IgnoreListCard
+                      settings={data.settings}
+                      canManage={canManage}
+                    />
+                  </div>
                 </div>
               ) : null
             }

@@ -10,23 +10,23 @@ export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, ren
     <CardList>
       {data.map((ban) => (
         <CardListItem key={`${ban.jail}-${ban.ip}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate font-mono text-sm font-medium">{ban.ip}</p>
-              <Badge variant="outline" className="mt-1.5 font-normal">
-                {ban.jail}
-              </Badge>
-              {/* Own line: sharing a line truncated the timestamp. */}
-              {ban.banned_at ? (
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  {t("banned.sinceShort", { at: ban.banned_at })}
-                </p>
-              ) : null}
-            </div>
-            <div className="shrink-0 text-right text-sm">{renderExpiry(ban)}</div>
+          <div className="min-w-0 space-y-1.5">
+            <p className="break-all font-mono text-sm font-medium">{ban.ip}</p>
+            <Badge variant="outline" className="max-w-full break-all whitespace-normal font-normal">
+              {ban.jail}
+            </Badge>
+            {ban.banned_at ? (
+              <p className="break-words text-xs text-muted-foreground">
+                {t("banned.sinceShort", { at: ban.banned_at })}
+              </p>
+            ) : null}
           </div>
 
-          <div className="mt-3 flex justify-end border-t pt-3">
+          <div className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t pt-3">
+            <div className="min-w-0 space-y-1 text-sm">
+              <p className="text-xs text-muted-foreground">{t("banned.timeLeft")}</p>
+              {renderExpiry(ban)}
+            </div>
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               <Button
                 variant="destructive"

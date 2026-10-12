@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { jailLabel } from "@/lib/fail2ban/jail-label";
@@ -9,6 +9,7 @@ import { updateFail2ban } from "@/lib/api/fail2ban";
 import { settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -47,6 +48,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   // Which guard button is in flight; both act on the same jail.
   const [guardAction, setGuardAction] = useState(null);
   const [explaining, setExplaining] = useState(false);
+  const explainerId = useId();
 
   // Pre-filled, never trusted. Derived until typed in, because the browser IP
   // arrives after the first render.
@@ -123,70 +125,75 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">{t("jails.title")}</CardTitle>
-          <CardDescription>{t("jails.description")}</CardDescription>
+        <CardHeader className="grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
+          <CardTitle className="col-start-1 row-start-1 min-w-0 break-words text-base font-semibold">
+            {t("jails.title")}
+          </CardTitle>
+          <button
+            type="button"
+            onClick={() => setExplaining((open) => !open)}
+            aria-expanded={explaining}
+            aria-controls={explainerId}
+            className="col-start-2 row-start-1 flex max-w-full items-center gap-1.5 rounded text-left text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <Info className="size-3.5 shrink-0" />
+            {t("jails.whatIs")}
+          </button>
+          {/* The description gets the whole row, not the narrow space beside the help link. */}
+          <CardDescription className="col-span-2 row-start-2">{t("jails.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* The explanation is behind a toggle so it does not crowd the switches. */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setExplaining((open) => !open)}
-              aria-expanded={explaining}
-              className="flex items-center gap-1.5 rounded text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Info className="size-3.5" />
-              {t("jails.whatIs")}
-            </button>
-            {explaining ? (
-              <p className="mt-2 rounded-lg bg-muted/60 p-3 text-sm leading-relaxed text-muted-foreground">
-                {t("jails.explainerBody")}
-              </p>
-            ) : null}
-          </div>
+          <p
+            id={explainerId}
+            hidden={!explaining}
+            className="rounded-lg bg-muted/60 p-3 text-sm leading-relaxed text-muted-foreground"
+          >
+            {t("jails.explainerBody")}
+          </p>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className={cn("grid gap-3", jails.length > 1 && "lg:grid-cols-2")}>
             {jails.map((jail) => (
-              <div
-                key={jail.name}
-                className={cn(
-                  "rounded-lg border p-3",
-                  // Highlight an attack in progress.
-                  jail.stats?.currently_failed > 0 && "border-warning/40 bg-warning/5",
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="font-medium">{jailLabel(t, jail)}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{jail.name}</span>
-                    {jail.lockout_risk ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span tabIndex={0} className="rounded">
-                            <ShieldAlert className="size-3.5 text-warning" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-60">
-                          {t("jails.lockoutHint")}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : null}
+              <div key={jail.name}>
+                <div
+                  className={cn(
+                    "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border p-4",
+                    // Highlight only actual failed attempts reported by the jail.
+                    jail.stats?.currently_failed > 0 && "border-warning/40 bg-warning/5",
+                  )}
+                >
+                  <div className="col-start-1 row-start-1 min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 break-words font-medium [overflow-wrap:anywhere]">{jailLabel(t, jail)}</span>
+                      {jail.lockout_risk ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span tabIndex={0} className="shrink-0 rounded">
+                              <ShieldAlert className="size-3.5 text-warning" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-60">
+                            {t("jails.lockoutHint")}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                      <JailState jail={jail} t={t} />
+                    </div>
+                    <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{jail.name}</span>
                   </div>
 
-                  <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-                    <PendingSwitch
-                      checked={shown(jail)}
-                      pending={pending === jail.name}
-                      disabled={!canManage}
-                      onCheckedChange={(next) => toggle(jail, next)}
-                      aria-label={t("jails.toggle", { name: jailLabel(t, jail) })}
-                    />
-                  </ReasonTooltip>
-                </div>
+                  <div className="col-start-2 row-start-1 flex justify-end">
+                    <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                      <PendingSwitch
+                        checked={shown(jail)}
+                        pending={pending === jail.name}
+                        disabled={!canManage}
+                        onCheckedChange={(next) => toggle(jail, next)}
+                        aria-label={t("jails.toggle", { name: jailLabel(t, jail) })}
+                      />
+                    </ReasonTooltip>
+                  </div>
 
-                {/* One-line state; lifetime totals are one hover away. */}
-                <JailState jail={jail} t={t} />
+                </div>
               </div>
             ))}
           </div>
@@ -275,23 +282,42 @@ function JailState({ jail, t }) {
     text = t("jails.stateUnknown");
   }
 
-  const line = <span className={cn("mt-2 block text-xs", tone)}>{text}</span>;
-
-  // Nothing to reveal when the jail never reported totals.
-  if (!jail.stats) return line;
+  // Configuration labels never claim a stopped service is watching.
+  const label = !jail.enabled
+    ? t("jails.badgeOff")
+    : failing > 0
+      ? t("jails.badgeFailing", { count: failing })
+      : blocked > 0
+        ? t("jails.badgeBanned", { count: blocked })
+        : t("jails.badgeEnabled");
+  const variant = !jail.enabled || !jail.stats
+    ? "muted"
+    : failing > 0
+      ? "warning"
+      : "success";
+  const line = (
+    <Badge variant={variant} className="font-normal" aria-label={text}>
+      {label}
+    </Badge>
+  );
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className="rounded">
+        <span tabIndex={0} className={cn("shrink-0 max-w-full rounded", tone)}>
           {line}
         </span>
       </TooltipTrigger>
-      <TooltipContent>
-        {t("jails.totalsTooltip", {
-          failed: jail.stats.total_failed ?? "—",
-          banned: jail.stats.total_banned ?? "—",
-        })}
+      <TooltipContent className="flex-col items-start gap-1">
+        <span>{text}</span>
+        {jail.stats ? (
+          <span>
+            {t("jails.totalsTooltip", {
+              failed: jail.stats.total_failed ?? "—",
+              banned: jail.stats.total_banned ?? "—",
+            })}
+          </span>
+        ) : null}
       </TooltipContent>
     </Tooltip>
   );

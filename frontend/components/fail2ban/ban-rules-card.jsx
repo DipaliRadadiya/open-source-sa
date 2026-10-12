@@ -88,99 +88,108 @@ export function BanRulesCard({ settings, presets, canManage }) {
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <Card className="h-full">
-        <CardHeader>
+      <Card className="@container/ban-rules min-w-0 gap-0 py-0">
+        <CardHeader className="border-b px-5 py-4">
           <CardTitle className="text-base font-semibold">{t("settings.title")}</CardTitle>
           <CardDescription>{t("settings.description")}</CardDescription>
         </CardHeader>
-  
-        {/* One field per row: three across is too narrow for their hints. */}
-        <CardContent className="space-y-4">
-          {/* The rules as one sentence, from the form values, so it previews edits. */}
-          <p className="rounded-lg bg-muted/60 px-3 py-2.5 text-sm leading-relaxed">
-            {t.rich(isPermanent ? "settings.summaryPermanent" : "settings.summary", {
-              retries: maxretry || "—",
-              window: humanDuration(t, findtime) ?? findtime,
-              duration: humanDuration(t, bantime) ?? bantime,
-              strong: (chunks) => <strong className="font-semibold">{chunks}</strong>,
-            })}
-          </p>
-  
-          <div className="space-y-2">
-            <Label htmlFor="f2b-maxretry" hint={t("settings.maxretryHint")}>{t("settings.maxretry")}</Label>
-            <Input
-              id="f2b-maxretry"
-              placeholder="5"
-              type="number"
-              // The API's bounds.
-              min={2}
-              max={100}
-              value={maxretry}
-              aria-invalid={maxretryError ? true : undefined}
-              aria-describedby={maxretryError ? "f2b-maxretry-error" : undefined}
-              onChange={(e) => setMaxretry(e.target.value)}
-              // Locked mid-save: the following refresh would overwrite an edit.
-              disabled={!canManage || pending}
-            />
-            {maxretryError ? (
-              <p id="f2b-maxretry-error" className="text-xs text-destructive">{maxretryError}</p>
-            ) : null}
-          </div>
-  
-          <div className="space-y-2">
-            <Label htmlFor="f2b-findtime">{t("settings.findtime")}</Label>
-            <Input
-              id="f2b-findtime"
-              placeholder="600"
-              type="number"
-              min={30}
-              max={86400}
-              value={findtime}
-              aria-invalid={findtimeError ? true : undefined}
-              aria-describedby={findtimeError ? "f2b-findtime-error" : undefined}
-              onChange={(e) => setFindtime(e.target.value)}
-              disabled={!canManage || pending}
-            />
-            {/* The field stays in seconds (what the file stores); words go beside it. */}
-            {findtimeError ? (
-              <p id="f2b-findtime-error" className="text-xs text-destructive">{findtimeError}</p>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              {humanDuration(t, findtime) ? `${humanDuration(t, findtime)} — ` : null}
-              {t("settings.findtimeHint")}
-            </p>
-          </div>
-  
-          <div className="space-y-2">
-            <Label htmlFor="f2b-bantime" hint={t("settings.bantimeHint")}>{t("settings.bantime")}</Label>
-            <Select value={bantime} onValueChange={setBantime} disabled={!canManage || pending}>
-              <SelectTrigger id="f2b-bantime" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {!hasCurrent ? (
-                  <SelectItem value={String(settings.bantime)}>
-                    {t("settings.currentSeconds", { seconds: settings.bantime })}
-                  </SelectItem>
-                ) : null}
-                {presets.map((p) => (
-                  <SelectItem key={p.key} value={String(p.seconds)}>
-                    {p.seconds === PERMANENT_BANTIME ? t("settings.permanent") : p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+        {/* Use the card width, not the viewport, to keep paired fields comfortable. */}
+        <CardContent className="px-5 py-5">
+          <div className="grid gap-x-6 gap-y-5 @md/ban-rules:grid-cols-2">
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="f2b-maxretry">{t("settings.maxretry")}</Label>
+              <Input
+                id="f2b-maxretry"
+                placeholder="5"
+                type="number"
+                // The API's bounds.
+                min={2}
+                max={100}
+                value={maxretry}
+                aria-invalid={maxretryError ? true : undefined}
+                aria-describedby={maxretryError ? "f2b-maxretry-hint f2b-maxretry-error" : "f2b-maxretry-hint"}
+                onChange={(e) => setMaxretry(e.target.value)}
+                // Locked mid-save: the following refresh would overwrite an edit.
+                disabled={!canManage || pending}
+              />
+              <p id="f2b-maxretry-hint" className="text-xs leading-relaxed text-muted-foreground">{t("settings.maxretryHint")}</p>
+              {maxretryError ? (
+                <p id="f2b-maxretry-error" className="text-xs text-destructive">{maxretryError}</p>
+              ) : null}
+            </div>
+
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="f2b-findtime">{t("settings.findtime")}</Label>
+              <Input
+                id="f2b-findtime"
+                placeholder="600"
+                type="number"
+                min={30}
+                max={86400}
+                value={findtime}
+                aria-invalid={findtimeError ? true : undefined}
+                aria-describedby={findtimeError ? "f2b-findtime-hint f2b-findtime-error" : "f2b-findtime-hint"}
+                onChange={(e) => setFindtime(e.target.value)}
+                disabled={!canManage || pending}
+              />
+              {/* The field stays in seconds; only valid values get a readable duration. */}
+              {findtimeError ? (
+                <p id="f2b-findtime-error" className="text-xs text-destructive">{findtimeError}</p>
+              ) : null}
+              <p id="f2b-findtime-hint" className="text-xs leading-relaxed text-muted-foreground">
+                {!findtimeError && humanDuration(t, findtime) ? `${humanDuration(t, findtime)} — ` : null}
+                {t("settings.findtimeHint")}
+              </p>
+            </div>
+
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="f2b-bantime">{t("settings.bantime")}</Label>
+              <Select value={bantime} onValueChange={setBantime} disabled={!canManage || pending}>
+                <SelectTrigger id="f2b-bantime" className="w-full" aria-describedby="f2b-bantime-hint">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {!hasCurrent ? (
+                    <SelectItem value={String(settings.bantime)}>
+                      {t("settings.currentSeconds", { seconds: settings.bantime })}
+                    </SelectItem>
+                  ) : null}
+                  {presets.map((p) => (
+                    <SelectItem key={p.key} value={String(p.seconds)}>
+                      {p.seconds === PERMANENT_BANTIME ? t("settings.permanent") : p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p id="f2b-bantime-hint" className="text-xs leading-relaxed text-muted-foreground">{t("settings.bantimeHint")}</p>
+            </div>
+
+            <div className="min-w-0 space-y-2">
+              <p className="text-sm font-medium">{t("settings.previewTitle")}</p>
+              <div className="space-y-2 rounded-lg bg-muted/60 p-3">
+                <p className="text-sm leading-relaxed">
+                  {maxretryError || findtimeError ? t("settings.previewInvalid") : t.rich(isPermanent ? "settings.summaryPermanent" : "settings.summary", {
+                    retries: maxretry || "—",
+                    window: humanDuration(t, findtime) ?? findtime,
+                    duration: humanDuration(t, bantime) ?? bantime,
+                    strong: (chunks) => <strong className="font-semibold">{chunks}</strong>,
+                  })}
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{t("settings.previewHint")}</p>
+              </div>
+            </div>
           </div>
         </CardContent>
-  
-        <div className="mt-auto">
+
+        <div>
           <CardSaveFooter
             saving={pending}
             dirty={dirty}
             saveReason={saveReason}
             onSave={save}
             onDiscard={discard}
-            saveLabel={t("settings.save")}
+            saveLabel={t("settings.saveRules")}
             savingNote={t("settings.savingNote")}
           />
         </div>
