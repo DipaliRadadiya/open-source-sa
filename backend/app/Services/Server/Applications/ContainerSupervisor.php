@@ -81,7 +81,13 @@ class ContainerSupervisor
      */
     private array $pastedServices = [];
 
-    public function apply(Application $application, string $documentRoot, bool $start = true): void
+    /**
+     * `$install` marks the first install, from the provisioning job: its `up`
+     * pulls every image for the first time and gets
+     * `server.docker.install_timeout` rather than `command_timeout` (RC-20).
+     * Every other caller runs inside a request or a shorter job and keeps 600 s.
+     */
+    public function apply(Application $application, string $documentRoot, bool $start = true, bool $install = false): void
     {
         $path = $this->composePath($application, $documentRoot);
 
@@ -114,6 +120,7 @@ class ContainerSupervisor
                 'compose_up',
                 $override,
                 $auth,
+                $install ? (int) config('server.docker.install_timeout', 1200) : null,
             ),
         );
 

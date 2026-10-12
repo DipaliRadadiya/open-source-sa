@@ -532,7 +532,8 @@ class ApplicationProvisioner
             // reads, before the container first reads it (DS-03).
             $this->writeContainerEnv($application);
 
-            $this->containers->apply($application, $documentRoot);
+            // The first pull of every image happens in this `up` (RC-20).
+            $this->containers->apply($application, $documentRoot, install: true);
             $this->progress->record('start_app');
 
             // The post-start hook, which this early return used to skip — so the

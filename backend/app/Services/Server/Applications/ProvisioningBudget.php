@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Models\Application;
+use App\Services\Recipes\RecipeRegistry;
 
 /**
  * How long a provision or a deploy is allowed to take.
@@ -82,6 +83,10 @@ class ProvisioningBudget
             $timeouts[] = $this->forSiteType((string) $siteType);
         }
 
+        // Docker apps are not in the installer list — recipes are data and
+        // `docker` installs nothing — so their budget is added by name.
+        $timeouts[] = $this->forSiteType('docker');
+
         return max($timeouts);
     }
 
@@ -89,16 +94,29 @@ class ProvisioningBudget
      * A site type with no installer still gets the default allowance: the
      * steps around it are the same, and `installer_timeout` is what its
      * `ServerOps` calls would use.
+     *
+     * Docker apps — every recipe and the Container tab's `docker` — get
+     * `server.docker.install_timeout` instead, because their first install
+     * pulls images inside this job and an image can be gigabytes (RC-20).
      */
     private function installerTimeout(?string $siteType): int
     {
         $default = (int) config('server.installer_timeout', 300);
+
+        if ($siteType !== null && $this->isDocker($siteType)) {
+            return (int) config('server.docker.install_timeout', 1200);
+        }
 
         if ($siteType === null || ! $this->installers->hasInstaller($siteType)) {
             return $default;
         }
 
         return (int) config("server.installers.{$siteType}.timeout", $default);
+    }
+
+    private function isDocker(string $siteType): bool
+    {
+        return $siteType === 'docker' || app(RecipeRegistry::class)->has($siteType);
     }
 
     private function overhead(): int

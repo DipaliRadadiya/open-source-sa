@@ -1711,6 +1711,18 @@ return [
         // deploy that was working and got killed.
         'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
 
+        // The first install of a Docker app — every recipe and the Container
+        // tab — pulls its images inside the provisioning job, and recipes and
+        // `docker` have no `installers.<type>.timeout`, so they got the 300 s
+        // default: 420 s with the overhead. Open WebUI + Ollama (3.8 GB) died
+        // at step `worker` twice that way on an ordinary link (RC-16), and
+        // Immich and Dify are the same size. This is both the job's installer
+        // allowance (`ProvisioningBudget`) and the timeout of that first
+        // `compose up`; later `up`/`pull` calls keep `command_timeout`.
+        // Stays under the queue worker's 1800 s TimeoutStopSec, so a restart
+        // still drains a running install (RC-F04).
+        'install_timeout' => (int) env('DOCKER_INSTALL_TIMEOUT', 1200),
+
         // Where a registry credential is materialised for the length of one
         // pull. Mirrors `git_credential_dir`, and for the identical reason: the
         // secret has to reach a CLI that only reads it from a file, so it is

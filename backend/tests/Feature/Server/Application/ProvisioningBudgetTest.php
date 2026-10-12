@@ -7,7 +7,9 @@ use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\ProvisionProgress;
 use Database\Seeders\PermissionSeeder;
@@ -83,6 +85,140 @@ describe('job timeouts', function () {
 
     it('survives an application deleted between dispatch and construction', function () {
         expect((new ProvisionApplication(99999))->timeout)->toBeGreaterThan(0);
+    });
+});
+
+describe('docker app first install (RC-20)', function () {
+    it('gives every recipe and the Container tab twenty minutes plus the overhead', function () {
+        // Recipes and `docker` have no `installers.<type>.timeout`, so they got
+        // the 300 s default: 420 s for a job that pulls the images. Open WebUI +
+        // Ollama (3.8 GB) died at step `worker` twice that way in RC-16.
+        $budget = app(ProvisioningBudget::class);
+        $recipes = array_keys(app(RecipeRegistry::class)->all());
+
+        expect($recipes)->toContain('vaultwarden');
+        expect($budget->forSiteType('docker'))->toBe(1320);
+
+        foreach ($recipes as $slug) {
+            expect($budget->forSiteType($slug))->toBe(1320, "{$slug}: a recipe's first install keeps the old 420 s");
+        }
+    });
+
+    it('reads the allowance from server.docker.install_timeout', function () {
+        config(['server.docker.install_timeout' => 1500]);
+
+        expect(app(ProvisioningBudget::class)->forSiteType('vaultwarden'))->toBe(1620)
+            ->and(app(ProvisioningBudget::class)->forSiteType('docker'))->toBe(1620);
+    });
+
+    it('leaves native site types where they were', function () {
+        $budget = app(ProvisioningBudget::class);
+
+        expect($budget->forSiteType('php'))->toBe(420)
+            ->and($budget->forSiteType(null))->toBe(420)
+            ->and($budget->forSiteType('nextcloud'))->toBe(120 + (int) config('server.installers.nextcloud.timeout'));
+    });
+
+    it('counts the docker budget in the longest job', function () {
+        // `longest()` walks the installer list, which no Docker app is in.
+        // Raised past every native installer, the Docker budget would be
+        // invisible to the `retry_after` check without this.
+        config(['server.docker.install_timeout' => 5000]);
+
+        expect(app(ProvisioningBudget::class)->longest())->toBe(5120);
+
+        config(['server.docker.install_timeout' => 1200]);
+
+        expect(app(ProvisioningBudget::class)->longest())
+            ->toBeGreaterThanOrEqual(app(ProvisioningBudget::class)->forSiteType('docker'));
+    });
+
+    it('sizes the provisioning job of a container site from it', function () {
+        $app = budgetApp(['site_type' => 'docker', 'serving_profile' => 'docker', 'image' => 'nginx:1.27-alpine', 'container_port' => 80]);
+
+        expect((new ProvisionApplication($app->id))->timeout)->toBe(1320);
+    });
+
+    it('lets the first compose up of a provision pull for the whole allowance', function (string $siteType) {
+        $timeouts = [];
+        Process::fake(function ($process) use (&$timeouts) {
+            $line = implode(' ', (array) $process->command);
+
+            if (str_contains($line, ' compose ') && str_contains($line, ' up -d')) {
+                $timeouts[] = $process->timeout;
+            }
+
+            return match (true) {
+                // The validator's parse of a recipe's rendered file: one service,
+                // published to loopback on the allocated port.
+                str_contains($line, 'config --format json') => Process::result(json_encode(['services' => ['app' => [
+                    'image' => 'example/app:1',
+                    'ports' => [['host_ip' => '127.0.0.1', 'published' => '20101', 'target' => 80]],
+                ]]])),
+                str_contains($line, '--status running') => Process::result("abc\n"),
+                default => Process::result(),
+            };
+        });
+
+        // `forceCreate`, because a recipe renders its compose from the slug and
+        // the port, which the create action assigns and `create()` drops.
+        $app = Application::forceCreate([
+            'system_user_id' => test()->su->id,
+            'name' => 'Site '.$siteType,
+            'slug' => $siteType,
+            'domain' => "{$siteType}.example.com",
+            'site_type' => $siteType,
+            'serving_profile' => 'docker',
+            'web_root' => 'public_html',
+            'status' => 'pending',
+            'app_port' => 20101,
+            'image' => $siteType === 'docker' ? 'nginx:1.27-alpine' : null,
+            'container_port' => $siteType === 'docker' ? 80 : null,
+        ]);
+
+        (new ProvisionApplication($app->id))->handle(
+            app(ApplicationProvisioner::class),
+            app(ActivityLogger::class),
+        );
+
+        expect($timeouts)->not->toBeEmpty()
+            ->and($timeouts[0])->toBe(1200);
+    })->with(['docker', 'memos']);
+
+    it('keeps the ordinary ceiling on every other compose up and pull', function () {
+        // Only the first install waits that long. A start, a settings change
+        // or a "pull and redeploy" runs inside a request or a shorter job.
+        $ups = [];
+        $pulls = [];
+        Process::fake(function ($process) use (&$ups, &$pulls) {
+            $line = implode(' ', (array) $process->command);
+
+            if (str_contains($line, ' compose ') && str_contains($line, ' up -d')) {
+                $ups[] = $process->timeout;
+            }
+
+            if (str_contains($line, ' compose ') && str_ends_with($line, ' pull')) {
+                $pulls[] = $process->timeout;
+            }
+
+            return Process::result(str_contains($line, '--status running') ? "abc\n" : '');
+        });
+
+        $supervisor = app(ContainerSupervisor::class);
+        $app = budgetApp(['site_type' => 'docker', 'serving_profile' => 'docker', 'image' => 'nginx:1.27-alpine', 'container_port' => 80]);
+        $root = '/home/deploy/site/public_html';
+
+        $supervisor->apply($app, $root);
+        $supervisor->start($app, $root);
+        $supervisor->pull($app, $root);
+
+        expect($ups)->toHaveCount(3)
+            ->and($ups)->each->toBe(600)
+            ->and($pulls)->toBe([600]);
+
+        $supervisor->apply($app, $root, install: true);
+
+        expect(end($ups))->toBe(1200);
     });
 });
 
