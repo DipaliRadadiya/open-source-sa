@@ -267,3 +267,13 @@ it('reads the SSH port once and not on every page view', function () {
 
     expect(collect($this->ran)->filter(fn (array $args): bool => $args[0] === 'sshd')->count())->toBe(1);
 });
+
+it('ships its YAML parser in a production install', function () {
+    // The panel is installed and updated with `composer install --no-dev`. The parser
+    // was a dev dependency, so every test here passed while a live box answered 500
+    // with `Class "Symfony\Component\Yaml\Yaml" not found` (found on the RC-23 check).
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
+
+    expect($composer['require'])->toHaveKey('symfony/yaml')
+        ->and($composer['require-dev'] ?? [])->not->toHaveKey('symfony/yaml');
+});
