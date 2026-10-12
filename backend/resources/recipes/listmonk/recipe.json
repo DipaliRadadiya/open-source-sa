@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "listmonk/listmonk:v6.2.0",
-            "tested": []
+            "tested": [
+                "listmonk/listmonk:v6.2.0"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         }
     },
     "services": [
@@ -80,6 +84,7 @@
         "Set the Root URL to https://<your domain> under Settings → General after the first login. Listmonk keeps it in the database (default http://localhost:9000) and environment variables cannot override it; links in emails and public pages use it.",
         "Sending campaigns needs an SMTP provider, configured under Settings → SMTP.",
         "Uploads go to /listmonk/uploads, the default media path, in its own named volume. PostgreSQL 17.11 (the official compose's major version, pinned) has its own volume and no published port.",
-        "Listmonk is a single Go binary; the 256m floor leaves ample headroom. The database uses the panel database-memory default."
+        "Listmonk is a single Go binary; the 256m floor leaves ample headroom. The database uses the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-25): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

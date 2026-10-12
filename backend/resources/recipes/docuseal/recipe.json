@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "docuseal/docuseal:3.3.2",
-            "tested": []
+            "tested": [
+                "docuseal/docuseal:3.3.2"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         }
     },
     "services": [
@@ -72,6 +76,7 @@
         "HOST is the site's domain and is used for links in emails. FORCE_SSL is not set: the panel terminates TLS and forwards the scheme, and leaving it off keeps sign-in working before a certificate is issued.",
         "Sending signing requests by email needs SMTP, configured in DocuSeal's settings; signing links can also be copied and shared directly.",
         "The healthcheck probes Rails' /up on 127.0.0.1, not localhost: BusyBox wget resolves localhost to ::1 first and Puma listens on IPv4 only, so a localhost probe was refused and the container stayed unhealthy (found live, RC-25).",
-        "The 1g floor covers the Rails app, its embedded Redis and background jobs; the database uses the panel database-memory default."
+        "The 1g floor covers the Rails app, its embedded Redis and background jobs; the database uses the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-25): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

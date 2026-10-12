@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "codercom/code-server:4.141.0",
-            "tested": []
+            "tested": [
+                "codercom/code-server:4.141.0"
+            ]
         }
     },
     "services": [
@@ -61,6 +63,7 @@
         "The whole /home/coder directory is one named volume, so projects, settings, installed extensions and the terminal's shell history survive restarts and image updates. Docker seeds the empty volume from the image on first start, keeping the coder user's ownership.",
         "The built-in terminal runs inside the container as the coder user. There is no docker.sock, no host bind mount and no extra capability, so it cannot reach the server's other sites or Docker. The upstream image does give coder passwordless sudo, which is root inside this container only.",
         "Extensions come from Open VSX (code-server's default marketplace), not Microsoft's marketplace.",
-        "The 1g floor covers the server and its extension host; heavy language servers or builds may need a larger memory limit."
+        "The 1g floor covers the server and its extension host; heavy language servers or builds may need a larger memory limit.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-25): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }
