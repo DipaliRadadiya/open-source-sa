@@ -91,6 +91,7 @@
         "The official example adds Redis for caching; it is left out because caching is off by default, which keeps the stack to the app and PostgreSQL. Plain PostgreSQL 17.11 replaces the example's PostGIS image; geometry fields need PostGIS.",
         "PUBLIC_URL is the URL key. IP_TRUST_PROXY keeps the Directus 12 default (false), so activity logs record the proxy address rather than a header the client could forge.",
         "Uploads and extensions live in their own named volumes; PostgreSQL has its own volume and no published port. Email (password resets, invitations) needs EMAIL_* settings that are not configured.",
+        "The healthcheck uses 127.0.0.1, not localhost: BusyBox wget in the image resolves localhost to ::1 first and Directus listens on IPv4 only, so a localhost probe was refused and the container stayed unhealthy (found live, RC-25).",
         "The 1g application floor fits Directus's Node process with headroom for imports; the database uses the panel database-memory default."
     ]
 }

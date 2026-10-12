@@ -71,6 +71,7 @@
         "Uploaded templates and signed documents live in the data volume (/data/docuseal, the image's working directory). PostgreSQL 17.11 has its own volume and no published port. DocuSeal runs its own Redis and background jobs inside the app container.",
         "HOST is the site's domain and is used for links in emails. FORCE_SSL is not set: the panel terminates TLS and forwards the scheme, and leaving it off keeps sign-in working before a certificate is issued.",
         "Sending signing requests by email needs SMTP, configured in DocuSeal's settings; signing links can also be copied and shared directly.",
+        "The healthcheck probes Rails' /up on 127.0.0.1, not localhost: BusyBox wget resolves localhost to ::1 first and Puma listens on IPv4 only, so a localhost probe was refused and the container stayed unhealthy (found live, RC-25).",
         "The 1g floor covers the Rails app, its embedded Redis and background jobs; the database uses the panel database-memory default."
     ]
 }
