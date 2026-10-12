@@ -13,7 +13,7 @@
         "ru": "Визуальный конструктор ИИ-процессов с приватной базой PostgreSQL",
         "hi": "निजी PostgreSQL डेटाबेस के साथ विज़ुअल AI वर्कफ़्लो बिल्डर"
     },
-    "category": "automation",
+    "category": "ai",
     "icon": "langflow",
     "popular": false,
     "catalog_order": 230,

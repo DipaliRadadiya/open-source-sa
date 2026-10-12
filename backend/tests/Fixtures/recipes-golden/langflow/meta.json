@@ -30,7 +30,7 @@
         "app_container",
         "app_compose"
     ],
-    "category": "automation",
+    "category": "ai",
     "icon": "langflow",
     "popular": false,
     "fields": [
@@ -112,7 +112,7 @@
     "catalog_en": {
         "name": "langflow",
         "icon": "langflow",
-        "category": "automation",
+        "category": "ai",
         "popular": false,
         "method": "one_click",
         "serving_profile": "docker",

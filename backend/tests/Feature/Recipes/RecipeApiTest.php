@@ -49,6 +49,13 @@ it('returns the same Ghost catalog entry with list-shaped images and volumes', f
     expect(collect($catalog)->firstWhere('name', 'docker')['recipe'])->toBeNull();
 });
 
+it('files Langflow under the ai category in both catalogs', function () {
+    $this->actingAs(rc08RecipeViewer());
+    expect($this->getJson('/api/recipes/langflow')->assertOk()->json('recipe.category'))->toBe('ai')
+        ->and(collect($this->getJson('/api/recipes')->assertOk()->json('recipes'))->firstWhere('name', 'langflow')['category'])->toBe('ai')
+        ->and(collect($this->getJson('/api/site-types')->assertOk()->json('site_types'))->firstWhere('name', 'langflow')['category'])->toBe('ai');
+});
+
 it('does not expose credential sources or internal recipe settings in the catalog', function () {
     $this->actingAs(rc08RecipeViewer());
     $entry = $this->getJson('/api/recipes/chatwoot')->assertOk()->json('recipe.recipe');

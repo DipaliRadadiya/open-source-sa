@@ -72,6 +72,18 @@ it('rejects schema ambiguity and unrecognized claim references', function () {
     }
 });
 
+it('accepts the ai category and still rejects an unknown category', function () {
+    $directory = base_path('tests/Fixtures/recipes/valid/demo_single');
+    $data = json_decode(file_get_contents($directory.'/recipe.json'), true);
+    RecipeSchema::check(['category' => 'ai'] + $data, $directory);
+    try {
+        RecipeSchema::check(['category' => 'artificial-intelligence'] + $data, $directory);
+        $this->fail('Unknown category accepted');
+    } catch (InvalidRecipeException $e) {
+        expect($e->code)->toBe('schema');
+    }
+});
+
 it('accepts tagged registry ports and pinned digests but rejects implicit tags', function () {
     expect(RecipeValueRules::imageRefValid('registry.example.test:5000/team/app:1.2'))->toBeTrue();
     expect(RecipeValueRules::imageRefValid('ghost@sha256:'.str_repeat('a', 64)))->toBeTrue();

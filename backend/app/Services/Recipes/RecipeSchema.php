@@ -22,7 +22,7 @@ final class RecipeSchema
             'description' => ['sometimes', 'array'],
             'description.en' => ['required_with:description', 'string'],
             'description.*' => ['string', 'max:600'],
-            'category' => ['required', Rule::in(explode(',', 'cms,security,development,productivity,monitoring,analytics,communication,database,ecommerce,automation,utility,business,education,marketing,community'))],
+            'category' => ['required', Rule::in(explode(',', 'cms,security,development,productivity,monitoring,analytics,communication,database,ecommerce,automation,ai,utility,business,education,marketing,community'))],
             'icon' => ['required', 'string', 'regex:/^[a-z0-9_-]{1,40}$/D'],
             'popular' => ['sometimes', 'boolean:strict'],
             'deprecated' => ['sometimes', 'boolean:strict'],
