@@ -1,0 +1,35 @@
+name: sv-app-4242
+
+services:
+  appsmith:
+    image: appsmith/appsmith-ce:v2.5.0
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      APPSMITH_ENCRYPTION_PASSWORD: "e5d5ea712e352c2eefc4ad9aa1bf01b1"
+      APPSMITH_ENCRYPTION_SALT: "c12a5911c904bd1b6fcaecb6f3d340ee"
+      APPSMITH_DISABLE_TELEMETRY: "true"
+
+    volumes:
+      - sv-app-4242_stacks:/appsmith-stacks
+
+    healthcheck:
+      test: ["CMD", "/opt/appsmith/healthcheck.sh"]
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 300s
+
+volumes:
+  sv-app-4242_stacks:
+    external: true

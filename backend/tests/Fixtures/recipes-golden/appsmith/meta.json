@@ -1,0 +1,117 @@
+{
+    "slug": "appsmith",
+    "container_port": 80,
+    "volume_roles": {
+        "stacks": "/appsmith-stacks"
+    },
+    "generated_secrets": [
+        "APPSMITH_ENCRYPTION_PASSWORD",
+        "APPSMITH_ENCRYPTION_SALT"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "4g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "development",
+    "icon": "appsmith",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "4g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 4g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_stacks",
+            "path": "/appsmith-stacks"
+        }
+    ],
+    "docker_secret_keys": [
+        "APPSMITH_ENCRYPTION_PASSWORD",
+        "APPSMITH_ENCRYPTION_SALT"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Appsmith",
+            "tagline": "Low-code builder for internal tools, admin panels and dashboards"
+        },
+        "es": {
+            "title": "Appsmith",
+            "tagline": "Constructor low-code de herramientas internas, paneles de administración y dashboards"
+        },
+        "de": {
+            "title": "Appsmith",
+            "tagline": "Low-Code-Builder für interne Tools, Admin-Panels und Dashboards"
+        },
+        "fr": {
+            "title": "Appsmith",
+            "tagline": "Outil low-code pour créer des outils internes, des panneaux d'administration et des tableaux de bord"
+        },
+        "pt": {
+            "title": "Appsmith",
+            "tagline": "Construtor low-code de ferramentas internas, painéis de administração e dashboards"
+        },
+        "ja": {
+            "title": "Appsmith",
+            "tagline": "社内ツール、管理パネル、ダッシュボードを作るローコードビルダー"
+        },
+        "ru": {
+            "title": "Appsmith",
+            "tagline": "Low-code-конструктор внутренних инструментов, админ-панелей и дашбордов"
+        },
+        "hi": {
+            "title": "Appsmith",
+            "tagline": "आंतरिक टूल, एडमिन पैनल और डैशबोर्ड बनाने के लिए लो-कोड बिल्डर"
+        }
+    },
+    "catalog_en": {
+        "name": "appsmith",
+        "icon": "appsmith",
+        "category": "development",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

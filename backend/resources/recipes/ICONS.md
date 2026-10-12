@@ -67,11 +67,19 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `infisical` | [official vector](https://raw.githubusercontent.com/Infisical/infisical/v0.166.4/frontend/public/images/gradientLogo.svg) | MIT | Official infinity mark; path unchanged, filled with Infisical yellow (#E0ED34) on the dark (#0E1117) rounded square of the official logo instead of the light gradient. |
 | `litellm` | [official vector](https://raw.githubusercontent.com/BerriAI/litellm/v1.105.0/ui/litellm-dashboard/public/assets/logos/litellm_monogram.svg) | MIT | Official LiteLLM monogram; paths unchanged, CSS class colour (#0117BE) inlined, over a rounded white backing. |
 
+## RC-27 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `librechat` | [official vector](https://raw.githubusercontent.com/LibreChat-AI/LibreChat/v0.8.8/client/public/assets/logo.svg) | MIT | Official LibreChat logo (already square); unchanged. |
+| `activepieces` | [official vector](https://raw.githubusercontent.com/activepieces/activepieces/0.92.3/packages/web/public/logo.svg) | MIT (Community Edition) | Official Activepieces mark; path and colour (#8142E3) unchanged, centred on a white rounded square. |
+| `appsmith` | [official favicon](https://raw.githubusercontent.com/appsmithorg/appsmith/v2.5.0/app/client/public/favicon-black.ico) and [vector of the same mark](https://raw.githubusercontent.com/appsmithorg/appsmith/v2.5.0/app/client/packages/storybook/public/favicon.svg) | Apache-2.0 | Appsmith's square mark (a bar on a square); the vector path is unchanged, coloured black and white like the official favicon-black.ico instead of the storybook purple, corners rounded. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server) and TOEVERYTHING PTE. LTD. (AFFiNE); see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors and Activepieces Inc.; see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 - [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).

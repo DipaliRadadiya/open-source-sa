@@ -1,0 +1,135 @@
+name: sv-app-4242
+
+services:
+  activepieces:
+    image: ghcr.io/activepieces/activepieces:0.92.3
+    restart: unless-stopped
+    mem_limit: 1536m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    command: ["sh", "-c", "export AP_ENCRYPTION_KEY=$$(printf %s $$AP_ENCRYPTION_KEY_SEED | sha256sum | cut -c1-32) && unset AP_ENCRYPTION_KEY_SEED && exec ./docker-entrypoint.sh"]
+    environment:
+      AP_CONTAINER_TYPE: APP
+      AP_ENVIRONMENT: prod
+      AP_FRONTEND_URL: "https://activepieces.golden.test"
+      AP_ENCRYPTION_KEY_SEED: "b838c852a69c7ee7953fdb81b331f8db"
+      AP_JWT_SECRET: "942a45141bc9450a39dece79ad6a3011"
+      AP_ENGINE_EXECUTABLE_PATH: dist/packages/engine/main.js
+      AP_DB_TYPE: POSTGRES
+      AP_POSTGRES_HOST: postgres
+      AP_POSTGRES_PORT: "5432"
+      AP_POSTGRES_DATABASE: activepieces
+      AP_POSTGRES_USERNAME: activepieces
+      AP_POSTGRES_PASSWORD: "37fa204727cd8bf6b37904731adf7177"
+      AP_REDIS_TYPE: STANDALONE
+      AP_REDIS_HOST: redis
+      AP_REDIS_PORT: "6379"
+      AP_EXECUTION_MODE: SANDBOX_CODE_ONLY
+      AP_WEBHOOK_TIMEOUT_SECONDS: "30"
+      AP_TRIGGER_DEFAULT_POLL_INTERVAL: "5"
+      AP_FLOW_TIMEOUT_SECONDS: "600"
+      AP_TELEMETRY_ENABLED: "false"
+      AP_TEMPLATES_SOURCE_URL: https://cloud.activepieces.com/api/v1/flow-templates
+
+    volumes:
+      - sv-app-4242_cache:/usr/src/app/cache
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  worker:
+    image: ghcr.io/activepieces/activepieces:0.92.3
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      AP_CONTAINER_TYPE: WORKER
+      AP_ENVIRONMENT: prod
+      AP_FRONTEND_URL: http://activepieces
+      AP_JWT_SECRET: "942a45141bc9450a39dece79ad6a3011"
+      AP_ENGINE_EXECUTABLE_PATH: dist/packages/engine/main.js
+      AP_EXECUTION_MODE: SANDBOX_CODE_ONLY
+      AP_WORKER_CONCURRENCY: "5"
+
+    volumes:
+      - sv-app-4242_worker-cache:/usr/src/app/cache
+
+    depends_on:
+      activepieces:
+        condition: service_healthy
+
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: activepieces
+      POSTGRES_USER: activepieces
+      POSTGRES_PASSWORD: "37fa204727cd8bf6b37904731adf7177"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U activepieces -d activepieces"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7.4.7-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - sv-app-4242_redis:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  sv-app-4242_cache:
+    external: true
+  sv-app-4242_worker-cache:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_redis:
+    external: true

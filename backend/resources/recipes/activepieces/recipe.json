@@ -1,0 +1,97 @@
+{
+    "schema": 1,
+    "slug": "activepieces",
+    "version": 1,
+    "title": "Activepieces",
+    "tagline": {
+        "en": "Open-source AI automation: build workflows and agents across hundreds of apps",
+        "es": "Automatización con IA de código abierto: crea flujos y agentes con cientos de aplicaciones",
+        "de": "Open-Source-KI-Automatisierung: Workflows und Agenten über Hunderte von Apps erstellen",
+        "fr": "Automatisation IA open source : créez des workflows et des agents avec des centaines d'applications",
+        "pt": "Automação com IA de código aberto: crie fluxos e agentes com centenas de aplicativos",
+        "ja": "オープンソースのAI自動化：数百のアプリをまたぐワークフローとエージェントを構築",
+        "ru": "ИИ-автоматизация с открытым исходным кодом: рабочие процессы и агенты для сотен приложений",
+        "hi": "ओपन-सोर्स AI ऑटोमेशन: सैकड़ों ऐप्स में वर्कफ़्लो और एजेंट बनाएँ"
+    },
+    "category": "automation",
+    "icon": "activepieces",
+    "popular": false,
+    "catalog_order": 400,
+    "docs_url": "https://www.activepieces.com/docs/install/options/docker-compose",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/activepieces/activepieces:0.92.3",
+            "tested": []
+        },
+        "db": {
+            "ref": "pgvector/pgvector:0.8.7-pg17",
+            "tested": []
+        },
+        "cache": {
+            "ref": "redis:7.4.7-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "activepieces",
+            "role": "app"
+        },
+        {
+            "name": "worker",
+            "role": "worker"
+        },
+        {
+            "name": "postgres",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "1536m",
+    "volumes": {
+        "cache": "/usr/src/app/cache",
+        "worker-cache": "/usr/src/app/cache",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "AP_ENCRYPTION_KEY_SEED",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "AP_JWT_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "AP_FRONTEND_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: open the site and sign up right after the install; the first account becomes the platform administrator. There is no default login.",
+        "The API and the flow worker run as two containers of the same image, as in the official compose: the app with AP_CONTAINER_TYPE=APP and one worker with AP_CONTAINER_TYPE=WORKER (the official file runs five; one worker with the default concurrency of 5 fits a single server). The worker reaches the API at http://activepieces inside the project network, which is what the official docs tell you to set; the public AP_FRONTEND_URL is only on the app. The worker signs its own worker token from AP_JWT_SECRET (the image's entrypoint does this).",
+        "AP_EXECUTION_MODE=SANDBOX_CODE_ONLY: every Code step runs in a fresh V8 isolate with no require, filesystem or npm, and the containers need no privileges. The docs call it the only mode that is both multi-tenant-safe and unprivileged. The .env.example default UNSANDBOXED runs user code with full access to the worker; SANDBOX_PROCESS needs a privileged container, which the panel does not allow.",
+        "AP_ENCRYPTION_KEY must be 32 hex characters. It is derived in the start command from the 32-character AP_ENCRYPTION_KEY_SEED secret with sha256sum and cut -c1-32, so a recreated container gets the same key; the seed variable is unset before Activepieces starts. Never change the seed: stored connections are encrypted under it and cannot be decrypted without it, even from a database backup.",
+        "PostgreSQL is the pgvector image (as in the official compose) so the knowledge-base and tool-search features find the vector extension; it is PostgreSQL 17 with pgvector 0.8.7 instead of the official file's PostgreSQL 14, which reaches end of life in November 2026. Redis 7.4.7 holds the job queue, so it runs with append-only persistence and the noeviction policy.",
+        "Telemetry is off (AP_TELEMETRY_ENABLED=false). Database migrations run inside the app on every start.",
+        "The app and worker each keep a pieces cache volume; the database and Redis each have a named volume. Nothing but the app publishes a port.",
+        "The healthcheck probes /api/v1/health on 127.0.0.1:80 with the image's curl; the first start installs pieces and runs migrations, so it is given two minutes."
+    ]
+}
