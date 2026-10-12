@@ -3,6 +3,10 @@
 return [
 
     'policies' => [
+        'legacy_v7' => [
+            'title' => 'Blocage IA hérité de v7',
+            'description' => 'Conserve la liste étendue des robots de v7 et son exception pour YandexBot.',
+        ],
         'allow_all' => [
             'title' => 'Autoriser tous les robots IA',
             'description' => 'Aucun robot d\'indexation IA n\'est bloqué.',

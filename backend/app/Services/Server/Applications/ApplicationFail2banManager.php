@@ -75,7 +75,21 @@ class ApplicationFail2banManager
      */
     public function jailName(Application $application): string
     {
-        return self::NAME_PREFIX.$this->slug($application);
+        $slug = $this->slug($application);
+        $stored = $application->fail2ban_jail_name;
+
+        if ($stored !== null && $stored !== '') {
+            if (! in_array($stored, [$slug, self::NAME_PREFIX.$slug], true)
+                || ! preg_match('/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*\z/D', $stored)) {
+                throw ValidationException::withMessages(['jail_config_content' => __('fail2ban.validation.foreign_jail', [
+                    'section' => $stored, 'name' => self::NAME_PREFIX.$slug,
+                ])]);
+            }
+
+            return $stored;
+        }
+
+        return self::NAME_PREFIX.$slug;
     }
 
     /**
@@ -153,7 +167,7 @@ class ApplicationFail2banManager
             // action banned at the firewall on 80/443, which took the address
             // off every site and off the panel (frontend QA FB-K). `action`
             // is not an allowed jail key, so this is the only one.
-            'jail' => $withBanAction
+            'jail' => $withBanAction && $this->legacyName($application) === null
                 ? rtrim(strtr($jailContent, $replace))."\n".'action   = '.self::BAN_ACTION.'[slug="'.basename($application->siteRulesPath()).'"]'."\n"
                 // What the form shows and saves: without the panel's own
                 // line, which the form may not set.
@@ -354,7 +368,9 @@ class ApplicationFail2banManager
     {
         $words = fn (string $text): string => (string) preg_replace('/\s+/', ' ', trim($text));
 
+        // A kept v7 jail is the user's; a deploy does not rewrite its filter.
         if ($application->fail2ban_jail_name === null
+            || $this->legacyName($application) !== null
             || $application->fail2ban_jail_content === null
             || ! in_array($words((string) $application->fail2ban_filter_content), array_map($words, self::LEGACY_DEFAULT_FILTERS), true)) {
             return false;
@@ -392,7 +408,11 @@ class ApplicationFail2banManager
     public function testConfigs(Application $application, string $jailContent, string $filterContent): array
     {
         // The jail names the ban action, so the test needs it in the tree.
-        $this->ensureBanTools();
+        $this->assertLegacyOwnership($application);
+
+        if ($this->legacyName($application) === null) {
+            $this->ensureBanTools();
+        }
 
         $configs = $this->renderConfigs($application, $jailContent, $filterContent, withBanAction: true);
         $root = $this->configRoot();
@@ -456,7 +476,11 @@ class ApplicationFail2banManager
             ])]);
         }
 
-        $this->ensureBanTools();
+        $this->assertLegacyOwnership($application);
+
+        if ($this->legacyName($application) === null) {
+            $this->ensureBanTools();
+        }
 
         $configs = $this->renderConfigs($application, $jailContent, $filterContent, withBanAction: true);
         $files = [
@@ -514,91 +538,54 @@ class ApplicationFail2banManager
     {
         $context = ['feature' => 'application', 'application' => $application->id];
 
-        $this->removeLegacyFiles($application);
+        $this->assertLegacyOwnership($application);
 
-        $remove = $this->serverOps->run(
-            ['rm', '-f', $this->getJailPath($application), $this->getFilterPath($application)],
-            $context + ['op' => 'fail2ban_remove_jail'],
-        );
-
-        if ($remove->failed()) {
-            throw new Fail2banOperationException($remove->reference);
+        $backups = [];
+        foreach ([$this->getJailPath($application), $this->getFilterPath($application)] as $path) {
+            $backups[$path] = $this->backup($path, $context);
         }
 
-        $reload = $this->client(['reload']);
+        try {
+            $this->must($this->serverOps->run(
+                ['rm', '-f', ...array_keys($backups)],
+                $context + ['op' => 'fail2ban_remove_jail'],
+            ));
+            $this->must($this->client(['reload']));
+        } catch (Fail2banOperationException $exception) {
+            $this->restore($backups, $context);
+            $this->client(['reload']);
+            throw $exception;
+        }
 
-        if ($reload->failed()) {
-            throw new Fail2banOperationException($reload->reference);
+        foreach (array_filter($backups) as $backup) {
+            $this->serverOps->run(['rm', '-f', $backup], $context + ['op' => 'fail2ban_discard_backup']);
         }
     }
 
     /**
-     * Move a jail enabled under the bare slug to the prefixed name.
-     *
-     * Rewrites the saved content so a literal old name in it follows (a
-     * section `[shop]`, `filter = shop` — what the old structured form
-     * generated), writes the new files through `enableForApp()` (tested
-     * reload, rolled back on failure), then removes the old jail file. The
-     * old filter is removed only when the fail2ban package does not own it:
-     * a package-owned file under that name means the site had already
-     * overwritten fail2ban's own filter (`sshd.conf`), and deleting it would
-     * leave the server jail referencing a filter that is gone — fail2ban
-     * would not start. That one is reported, not touched.
+     * Kept for callers of the previous namespace migration API. Existing v7
+     * jails now remain in place; this method deliberately performs no I/O.
      *
      * @return array{moved: bool, damaged_filter: string|null}
      */
     public function migrateLegacy(Application $application): array
     {
-        $legacy = $this->legacyName($application);
-
-        if ($legacy === null || $application->fail2ban_jail_content === null) {
-            return ['moved' => false, 'damaged_filter' => null];
-        }
-
-        $jail = $this->placeholderize((string) $application->fail2ban_jail_content, $legacy);
-        $filter = $this->placeholderize((string) $application->fail2ban_filter_content, $legacy, filter: true);
-
-        $this->enableForApp($application, $jail, $filter);
-        $damaged = $this->removeLegacyFiles($application);
-        $this->must($this->client(['reload']));
-
-        $application->forceFill([
-            'fail2ban_jail_name' => $this->jailName($application),
-            'fail2ban_jail_content' => $jail,
-            'fail2ban_filter_content' => $filter,
-        ])->save();
-
-        return ['moved' => true, 'damaged_filter' => $damaged];
+        // Compatibility keeps an owned v7 jail in place. A deploy must not
+        // rename it, change its ban scope or rewrite its custom filter.
+        return ['moved' => false, 'damaged_filter' => null];
     }
 
     /**
-     * Remove the files a site still has under its old, unprefixed name.
-     * No reload: every caller reloads once for all of its changes.
-     *
-     * The old filter only when the fail2ban package does not own it — see
-     * `migrateLegacy()`. Returns that filter's path when it was kept for that
-     * reason, so the caller can say so.
-     *
-     * @throws Fail2banOperationException
+     * Compatibility shim: no deploy-time namespace cleanup is permitted.
+     * Explicit disable removes only the owned actual jail and filter.
      */
     public function removeLegacyFiles(Application $application): ?string
     {
-        $legacy = $this->legacyName($application);
+        $this->assertLegacyOwnership($application);
 
-        if ($legacy === null) {
-            return null;
-        }
-
-        $context = ['feature' => 'application', 'application' => $application->id];
-        $oldFilter = $this->filterPathFor($legacy);
-        $damaged = $this->packageOwns($oldFilter, $context) ? $oldFilter : null;
-
-        $this->must($this->serverOps->run(
-            ['rm', '-f', $this->jailPathFor($legacy), ...($damaged === null ? [$oldFilter] : [])],
-            $context + ['op' => 'fail2ban_remove_legacy'],
-        ));
-
-        return $damaged;
+        // No namespace migration or second-file cleanup: disableForApp()
+        // removes the actual, ownership-checked jail transactionally.
+        return null;
     }
 
     public function hasLegacyFiles(Application $application): bool
@@ -618,11 +605,120 @@ class ApplicationFail2banManager
      * The unprefixed name this site's files were written under, when it has
      * any. Null for a site with no jail or one already on the prefix.
      */
+    /**
+     * A stored bare name is not authority to overwrite a system or foreign
+     * file. Require package-negative, root-owned regular files matching the
+     * recorded configuration; refuse unknown ownership before any write.
+     */
+    public function assertLegacyOwnership(Application $application): void
+    {
+        if ($this->legacyName($application) === null) {
+            return;
+        }
+
+        $name = $this->jailName($application);
+        $context = ['feature' => 'application', 'application' => $application->id];
+        $saved = $this->renderConfigs($application,
+            (string) $application->fail2ban_jail_content,
+            (string) $application->fail2ban_filter_content,
+        );
+        $paths = [$this->getJailPath($application) => $saved['jail'], $this->getFilterPath($application) => $saved['filter']];
+
+        foreach ($paths as $path => $expected) {
+            $stat = $this->serverOps->probe(['stat', '-c', '%u:%h:%F', '--', $path], $context + ['op' => 'fail2ban_ownership']);
+            $content = $this->serverOps->probe(['cat', '--', $path], $context + ['op' => 'fail2ban_ownership']);
+
+            if ($this->packageOwns($path, $context)
+                || ! $stat->ok || trim($stat->output()) !== '0:1:regular file'
+                || ! $content->ok || trim($content->output()) !== trim($expected)) {
+                throw ValidationException::withMessages(['jail_config_content' => __('fail2ban.validation.foreign_jail', [
+                    'section' => $name, 'name' => self::NAME_PREFIX.$this->slug($application),
+                ])]);
+            }
+        }
+
+        // stat does not follow symlinks. Verify the configured parent tree
+        // too; a safe file beneath a writable/symlinked directory is not safe.
+        foreach (array_unique(array_map(dirname(...), array_keys($paths))) as $directory) {
+            do {
+                $stat = $this->serverOps->probe(['stat', '-c', '%u:%a:%F', '--', $directory], $context + ['op' => 'fail2ban_ownership']);
+                [$owner, $mode, $type] = array_pad(explode(':', trim($stat->output()), 3), 3, '');
+                if (! $stat->ok || $owner !== '0' || $type !== 'directory'
+                    || ! ctype_digit($mode) || (octdec($mode) & 0022) !== 0) {
+                    $this->rejectOwnership($application, $name);
+                }
+                $directory = dirname($directory);
+            } while ($directory !== '/');
+        }
+
+        // No new privileged binary: find/cat are already allowlisted. Check
+        // all configuration fragments for a competing section with this name.
+        $inventory = $this->serverOps->probe(['find', $this->configRoot(), '(', '-type', 'f', '-o', '-type', 'l', ')', '(', '-name', '*.conf', '-o', '-name', '*.local', ')'],
+            $context + ['op' => 'fail2ban_ownership_sections']);
+        if (! $inventory->ok) {
+            $this->rejectOwnership($application, $name);
+        }
+        $found = [];
+        foreach (array_filter(explode("\n", trim($inventory->output()))) as $path) {
+            $content = $this->serverOps->probe(['cat', '--', $path], $context + ['op' => 'fail2ban_ownership_sections']);
+            if (! $content->ok) {
+                $this->rejectOwnership($application, $name);
+            }
+            if ($path !== $this->getJailPath($application)
+                && preg_match('/^\\s*filter\\s*[=:]\\s*'.preg_quote($name, '/').'(?:\\s|\\[|$)/mi', $content->output())) {
+                $this->rejectOwnership($application, $name);
+            }
+            // One entry per section, so a duplicate inside one file counts too.
+            array_push($found, ...array_fill(0, $this->definesSection($content->output(), $name), $path));
+        }
+        if ($found !== [$this->getJailPath($application)]) {
+            $this->rejectOwnership($application, $name);
+        }
+    }
+
+    private function rejectOwnership(Application $application, string $name): never
+    {
+        throw ValidationException::withMessages(['jail_config_content' => __('fail2ban.validation.foreign_jail', [
+            'section' => $name, 'name' => self::NAME_PREFIX.$this->slug($application),
+        ])]);
+    }
+
     private function legacyName(Application $application): ?string
     {
         $stored = $application->fail2ban_jail_name;
 
-        return $stored === null || $stored === '' || str_starts_with($stored, self::NAME_PREFIX) ? null : $stored;
+        // Exact, not a prefix test: a v7 site whose own slug starts with
+        // `panel-site-` stored that bare slug, which is not the generated
+        // `panel-site-{slug}` and must still prove its ownership.
+        return $stored === $this->slug($application) ? $stored : null;
+    }
+
+    /**
+     * Whether a fragment defines a section called $name. Errs toward yes:
+     * Python's ConfigParser takes everything up to the last `]` as the
+     * header and ignores what follows, and fail2ban strips `#`/`;` inline
+     * comments, so `[shop] # note` and `[ shop ]` both count.
+     */
+    private function definesSection(string $content, string $name): int
+    {
+        preg_match_all('/^[ \t]*\[([^\r\n]*)\]/m', $content, $matches);
+
+        $count = 0;
+        foreach ($matches[1] as $header) {
+            $candidates = [
+                $header,
+                strstr($header, ']', true) ?: $header,
+                preg_split('/\s[#;]/', $header)[0] ?? $header,
+            ];
+            foreach ($candidates as $candidate) {
+                if (strcasecmp(trim(rtrim(trim($candidate), ']')), $name) === 0) {
+                    $count++;
+                    break;
+                }
+            }
+        }
+
+        return $count;
     }
 
     /**
@@ -648,21 +744,6 @@ class ApplicationFail2banManager
         // package-owned. Anything else, sudo refusing included, stays unknown.
         return ! ($result->exitCode() === 1
             && str_contains($result->errorOutput(), 'no path found matching pattern'));
-    }
-
-    /**
-     * Put the placeholders back where saved content spelled the old name.
-     * A jail section `[old]` becomes `[{name}]`, `filter = old` becomes
-     * `filter = {filter}`; in a filter, a section `[old]` was never valid —
-     * fail2ban reads `[Definition]` — so it becomes that.
-     */
-    private function placeholderize(string $content, string $legacy, bool $filter = false): string
-    {
-        $name = preg_quote($legacy, '/');
-
-        $content = (string) preg_replace('/^(\s*)\['.$name.'\](\s*)$/m', $filter ? '$1[Definition]$2' : '$1[{name}]$2', $content);
-
-        return $filter ? $content : (string) preg_replace('/^(\s*filter\s*=\s*)'.$name.'(\s*)$/m', '$1{filter}$2', $content);
     }
 
     /** `/etc/fail2ban` — the tree `jail.d` sits in. */

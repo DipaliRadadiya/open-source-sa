@@ -48,7 +48,6 @@ class ResyncFail2banConfig extends Command
             return self::SUCCESS;
         }
 
-        $this->moveSiteJails($sites);
         $this->repairDefaultFilters($sites);
         $this->reportDisallowedJailSettings($sites);
 
@@ -122,7 +121,7 @@ class ResyncFail2banConfig extends Command
         $repaired = 0;
 
         Application::query()
-            ->whereNotNull('fail2ban_jail_name')
+            ->where('fail2ban_jail_name', 'like', ApplicationFail2banManager::NAME_PREFIX.'%')
             ->orderBy('id')
             ->each(function (Application $application) use ($sites, &$repaired) {
                 try {
@@ -136,50 +135,6 @@ class ResyncFail2banConfig extends Command
 
         if ($repaired > 0) {
             $this->components->info("Site filters updated so a logged-in administrator is not banned: {$repaired}.");
-        }
-    }
-
-    /**
-     * Move every site jail still under its bare slug to the prefixed name.
-     *
-     * Here because this command already runs on every panel update, and a
-     * fix that only changes what the next save writes repairs no server that
-     * already has a site called `sshd`. Per site and never fatal: one jail
-     * that cannot be moved keeps working under its old name, and must not
-     * stop the rest or fail the deploy.
-     */
-    private function moveSiteJails(ApplicationFail2banManager $sites): void
-    {
-        $moved = 0;
-
-        Application::query()
-            ->whereNotNull('fail2ban_jail_name')
-            ->where('fail2ban_jail_name', 'not like', ApplicationFail2banManager::NAME_PREFIX.'%')
-            ->orderBy('id')
-            ->each(function (Application $application) use ($sites, &$moved) {
-                try {
-                    $result = $sites->migrateLegacy($application);
-                } catch (Fail2banOperationException $exception) {
-                    $this->components->warn("Site jail for {$application->name} not moved (reference {$exception->reference}); it keeps its old name.");
-
-                    return;
-                }
-
-                if ($result['moved']) {
-                    $moved++;
-                }
-
-                if ($result['damaged_filter'] !== null) {
-                    $this->components->warn(
-                        "{$result['damaged_filter']} belongs to the fail2ban package and had been overwritten by the site "
-                        ."{$application->name}. It was left in place; restore it with: "
-                        .'apt-get install --reinstall -o Dpkg::Options::=--force-confmiss fail2ban (after moving the file aside).'
-                    );
-                }
-            });
-
-        if ($moved > 0) {
-            $this->components->info("Site jails moved to prefixed names: {$moved}.");
         }
     }
 }

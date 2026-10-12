@@ -3,6 +3,10 @@
 return [
 
     'policies' => [
+        'legacy_v7' => [
+            'title' => 'v7互換のAIブロック',
+            'description' => 'v7の広範なボット一覧とYandexBotの例外を維持します。',
+        ],
         'allow_all' => [
             'title' => 'すべてのAIボットを許可',
             'description' => 'AIクローラーはブロックされません。',

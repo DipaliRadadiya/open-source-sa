@@ -3,6 +3,10 @@
 return [
 
     'policies' => [
+        'legacy_v7' => [
+            'title' => 'KI-Blockierung wie in v7',
+            'description' => 'Behält die umfangreiche Bot-Liste aus v7 und die Ausnahme für YandexBot bei.',
+        ],
         'allow_all' => [
             'title' => 'Alle KI-Bots zulassen',
             'description' => 'Kein KI-Crawler wird blockiert.',

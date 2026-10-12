@@ -3,6 +3,10 @@
 return [
 
     'policies' => [
+        'legacy_v7' => [
+            'title' => 'v7 की AI ब्लॉकिंग',
+            'description' => 'v7 की विस्तृत बॉट सूची और YandexBot की छूट को बनाए रखता है।',
+        ],
         'allow_all' => [
             'title' => 'सभी AI बॉट्स की अनुमति दें',
             'description' => 'कोई भी AI क्रॉलर ब्लॉक नहीं किया गया है।',

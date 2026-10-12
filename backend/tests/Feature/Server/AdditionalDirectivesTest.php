@@ -61,3 +61,15 @@ it('still writes a panel-managed line saved before it was refused', function () 
     // yesterday is applied today.
     expect(app(AdditionalDirectives::class)->forIni('memory_limit = 1G'))->toBe('memory_limit = 1G');
 });
+
+it('retains supported v7 FPM directives in both stack renderings without accepting pool structure', function () {
+    $parser = app(AdditionalDirectives::class);
+    $text = "php_admin_flag[display_errors] = Off\nphp_value[session.name] = V7SESSION";
+    expect($parser->refusal($text))->toBeNull()
+        ->and($parser->forFpm($text))->toBe($text)
+        ->and($parser->forIni($text))->toBe("display_errors = Off\nsession.name = V7SESSION")
+        // A syntactically valid dotted name is rendered as a PHP setting,
+        // never as a raw FPM pool knob. It is NOT process-manager support.
+        ->and($parser->forFpm('pm.max_children = 20'))->toBe('php_admin_value[pm.max_children] = 20')
+        ->and($parser->refusal('[other-pool]'))->not->toBeNull();
+});

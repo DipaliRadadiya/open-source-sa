@@ -161,13 +161,6 @@ class ApplicationFail2banController extends Controller
             ], 422);
         }
 
-        // A jail saved before names were prefixed still has its old files;
-        // left there, the site would run two jails on one log.
-        if ($manager->hasLegacyFiles($application)) {
-            $manager->removeLegacyFiles($application);
-            $manager->reload();
-        }
-
         $application->fail2ban_jail_name = $manager->jailName($application);
         $application->fail2ban_jail_content = $jailContent;
         $application->fail2ban_filter_content = $filterContent;

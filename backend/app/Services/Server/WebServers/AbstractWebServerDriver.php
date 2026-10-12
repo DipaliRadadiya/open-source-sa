@@ -755,7 +755,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             return null;
         }
 
-        return implode('|', array_map(fn (string $bot) => preg_quote($bot, '/'), $bots));
+        $pattern = implode('|', array_map(fn (string $bot) => preg_quote($bot, '/'), $bots));
+
+        // Anchor the exemption to the whole user-agent: an unanchored negative
+        // lookahead could retry after YandexBot and wrongly block a later token.
+        return $application->ai_bot_policy === AiBotPolicy::LegacyV7
+            ? '^(?!.*YandexBot).*?(?:'.$pattern.')'
+            : $pattern;
     }
 
     public function test(): ServerOpsResult

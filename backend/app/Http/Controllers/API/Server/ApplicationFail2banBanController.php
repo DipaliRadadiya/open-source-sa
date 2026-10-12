@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BanApplicationIpRequest;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\ApplicationFail2banManager;
 use App\Services\Server\Fail2ban\Fail2banManager;
 use App\Support\IpAddress;
 use Illuminate\Http\JsonResponse;
@@ -73,6 +74,12 @@ class ApplicationFail2banBanController extends Controller
     private function activeJail(Application $application, Fail2banManager $fail2ban): ?string
     {
         $jail = $application->fail2ban_jail_name;
+
+        if ($jail !== null) {
+            $sites = app(ApplicationFail2banManager::class);
+            $sites->jailName($application);
+            $sites->assertLegacyOwnership($application);
+        }
 
         return $jail !== null && in_array($jail, $fail2ban->activeJails(), true) ? $jail : null;
     }

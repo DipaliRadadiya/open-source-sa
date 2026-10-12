@@ -2742,7 +2742,9 @@ Puts that copy back into the live database. The database **as it is now** is sav
 ### GET `/ai-bot-policies`
 **Permission:** `app_bot_blocker` (view)
 
-The three policy choices and exactly which bots each blocks (resolved server-side).
+The four current v8 policy choices (`allow_all`, `block_training`, `block_agents`, `block_all`) and the compatibility choice `legacy_v7`, with exactly which bots each blocks (resolved server-side).
+
+`legacy_v7` preserves the broad v7 literal user-agent list and the case-insensitive whole-agent YandexBot exemption. Migration may map v7 enabled to `legacy_v7` and disabled to `allow_all`; this backend does not implement that importer. New sites still default to `allow_all`, and existing v8 policies are unchanged.
 
 ```json
 {"ai_bot_policies": {
@@ -2938,9 +2940,9 @@ failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
 ignoreregex =
 ```
 
-`{slug}`, `{name}`, `{filter}`, `{logpath}` are replaced with the resolved values when the file is written. Any other content the user submits is left untouched, so a custom regex or action is preserved end-to-end.
+`{slug}`, `{name}`, `{filter}`, `{logpath}` are replaced with the resolved values when the file is written. Other permitted content is preserved. Jail settings are allowlisted: arbitrary actions, command hooks, foreign sections and foreign filters are rejected rather than executed.
 
-**Names are always prefixed `panel-site-`** (since 2026-09-26): `{name}` and `{filter}` resolve to `panel-site-{slug}`, and the files are `/etc/fail2ban/jail.d/panel-site-{slug}.conf` and `filter.d/panel-site-{slug}.conf`. Before, they were the bare slug, so a site called `sshd` or `recidive` overwrote fail2ban's own filter and replaced the server's jail. Existing jails are moved by `artisan fail2ban:resync` (run on every panel update).
+**New jail names remain prefixed `panel-site-`. Existing owned v7 jails retain their actual bare name.** `{name}` and `{filter}` resolve to the stored, validated identity for saves, tests and removal; resync does not rename or rewrite v7 jails. Bare-name operations require root-owned regular files matching the recorded configuration, safe parent directories, negative package ownership and no competing jail section. Unknown, foreign, package or system collisions fail closed with `422`; do not retry by adopting an SSH jail. No second prefixed jail is created.
 
 
 **`filter_scope` / `filter_note`** (added 2026-10-08, FB-wp): the default filter catches failed WordPress logins and XML-RPC only. On WordPress `filter_scope` is `wordpress` and `filter_note` is `null`; on every other site type `filter_scope` is `wordpress_only` and `filter_note` is a translated sentence saying the jail bans nobody until a rule for that application's own login page is added — show it above the form. There is no per-type default yet on purpose: a rule has to tell a failed login from a successful one by what the access log records, and that has not been measured for each type — a guessed rule bans the site's own users, as the old WordPress one did.
@@ -2954,7 +2956,7 @@ What this application's own jail has banned. `{"jail": "panel-site-shop", "banne
 ### POST `/applications/{application}/fail2ban/bans`
 **Permission:** `app_fail2ban` (manage) | **Throttle:** 20/min
 
-**Request:** `{"ip": "198.51.100.20"}` → `200 {"ban": {"ip": "…", "jail": "panel-site-shop"}}`. Blocks that address at this site only (FB-K), never at the firewall. `422` for the server's own address or the caller's own; `409` `reason: jail_not_enabled` when the jail is not running.
+**Request:** `{"ip": "198.51.100.20"}` → `200 {"ban": {"ip": "…", "jail": "panel-site-shop"}}`. Prefixed v8 jails use site-only bans (FB-K). Owned v7 jails retain the server-default firewall action, which can affect other sites or services: do not label these as site-only. List/ban/unban address the same ownership-checked actual jail. `422` for the server's own address or the caller's own; `409` `reason: jail_not_enabled` when the jail is not running.
 
 ### DELETE `/applications/{application}/fail2ban/bans/{ip}`
 **Permission:** `app_fail2ban` (manage) | **Throttle:** 20/min
@@ -2992,7 +2994,7 @@ Both fields are required, must be strings, and are capped at 65,535 characters.
 ### DELETE `/applications/{application}/fail2ban`
 **Permission:** `app_fail2ban` (manage) | **Throttle:** 10/min
 
-Remove the site's jail file from `/etc/fail2ban/jail.d/` **and its filter** from `filter.d/`, reload the daemon, and clear the saved content. The filter used to be kept in case another jail shared it; under the `panel-site-` prefix it belongs to this site alone, and a filter left behind under a colliding name is what made that collision permanent. Files a site still has under its old unprefixed name are removed too, except a filter the fail2ban package itself owns (checked with `dpkg-query -S`), which is never deleted.
+Remove only this application's actual, ownership-checked jail and filter, reload, then clear the record. On a failed reload the previous files are restored and the record remains unchanged. No parallel-name cleanup or package/system file removal.
 
 **Response `200`** — disabled:
 ```json

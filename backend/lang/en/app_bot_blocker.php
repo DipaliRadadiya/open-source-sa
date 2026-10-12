@@ -8,6 +8,10 @@
 return [
 
     'policies' => [
+        'legacy_v7' => [
+            'title' => 'Legacy v7 AI blocking',
+            'description' => 'Preserves the broad v7 bot list and its YandexBot exemption.',
+        ],
         'allow_all' => [
             'title' => 'Allow all AI bots',
             'description' => 'No AI crawler is blocked.',

@@ -37,7 +37,15 @@ function fakeSiteJails(): void
         $state = test()->f2b;
 
         if (($args[0] ?? '') !== 'fail2ban-client') {
-            return Process::result();
+            $files = $state->legacyFiles ?? [];
+
+            return match ($args[0] ?? '') {
+                'stat' => Process::result(output: $args[2] === '%u:%a:%F' ? '0:755:directory' : '0:1:regular file'),
+                'cat' => isset($files[end($args)]) ? Process::result(output: $files[end($args)]) : Process::result(exitCode: 1),
+                'find' => Process::result(output: implode("\n", array_keys($files))),
+                'dpkg-query' => Process::result(exitCode: 1, errorOutput: 'dpkg-query: no path found matching pattern'),
+                default => Process::result(),
+            };
         }
 
         return match (true) {
@@ -117,4 +125,33 @@ it('refuses the caller\'s own address and says when the jail is not running', fu
     $this->actingAs($this->admin)->postJson(siteBansUrl(), ['ip' => '198.51.100.20'])
         ->assertStatus(409)
         ->assertJsonPath('reason', 'jail_not_enabled');
+});
+
+it('lists bans and applies ban/unban to the same owned v7 jail without touching SSH', function () {
+    $this->application->forceFill([
+        'fail2ban_jail_name' => 'shop',
+        'fail2ban_jail_content' => "[shop]\nenabled = true\nfilter = shop\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST>\n",
+    ])->save();
+    $this->f2b->legacyFiles = [
+        config('server.fail2ban_apps.jail_d').'/shop.conf' => $this->application->fail2ban_jail_content,
+        config('server.fail2ban_apps.filter_d').'/shop.conf' => $this->application->fail2ban_filter_content,
+    ];
+    $this->f2b->jails[] = 'shop';
+    $this->f2b->banned['shop'] = ['203.0.113.9'];
+    fakeSiteJails();
+    $this->actingAs($this->admin)->getJson(siteBansUrl())->assertOk()->assertJsonPath('jail', 'shop');
+    $this->actingAs($this->admin)->postJson(siteBansUrl(), ['ip' => '198.51.100.20'])->assertOk()->assertJsonPath('ban.jail', 'shop');
+    $this->actingAs($this->admin)->deleteJson(siteBansUrl('/203.0.113.9'))->assertOk();
+    expect($this->f2b->banned['shop'])->toBe(['198.51.100.20'])
+        ->and($this->f2b->banned['sshd'])->toBe(['192.0.2.4'])
+        ->and($this->f2b->banned['panel-site-shop'])->toBe(['203.0.113.9']);
+});
+
+it('refuses a stored identity that would operate on the system SSH jail', function () {
+    $this->application->forceFill(['fail2ban_jail_name' => 'sshd'])->save();
+    fakeSiteJails();
+    $this->actingAs($this->admin)->getJson(siteBansUrl())->assertStatus(422);
+    $this->actingAs($this->admin)->postJson(siteBansUrl(), ['ip' => '198.51.100.20'])->assertStatus(422);
+    expect($this->f2b->banned['sshd'])->toBe(['192.0.2.4']);
 });

@@ -197,6 +197,7 @@ class BotTrafficReporter
             (array) config('ai_bots.training'),
             (array) config('ai_bots.search'),
             (array) config('ai_bots.agent'),
+            $application->ai_bot_policy === AiBotPolicy::LegacyV7 ? (array) config('ai_bots_v7') : [],
             $application->botRules->pluck('value')->all(),
         )));
     }
@@ -249,6 +250,10 @@ class BotTrafficReporter
     private function match(Application $application, string $agent): ?string
     {
         $lower = mb_strtolower($agent);
+
+        if ($application->ai_bot_policy === AiBotPolicy::LegacyV7 && str_contains($lower, 'yandexbot')) {
+            return null;
+        }
 
         foreach ($this->known($application) as $bot) {
             if (str_contains($lower, mb_strtolower($bot))) {

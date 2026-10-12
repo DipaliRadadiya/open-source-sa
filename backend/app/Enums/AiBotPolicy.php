@@ -31,6 +31,9 @@ enum AiBotPolicy: string
     /** Blocks every known AI bot: training, search and assistants alike. */
     case BlockAll = 'block_all';
 
+    /** Preserves the broad v7 list and its YandexBot exemption. */
+    case LegacyV7 = 'legacy_v7';
+
     public function title(): string
     {
         return __('app_bot_blocker.policies.'.$this->value.'.title');
@@ -53,6 +56,7 @@ enum AiBotPolicy: string
     {
         return match ($this) {
             self::AllowAll => [],
+            self::LegacyV7 => (array) config('ai_bots_v7'),
             self::BlockTraining => (array) config('ai_bots.training'),
             self::BlockAgents => array_merge(
                 (array) config('ai_bots.training'),

@@ -209,3 +209,11 @@ it('counts what the server really refused, not what the settings say now (AB-B)'
 
     expect($response->json('bot_traffic.totals.blocked_hits') ?? $response->json('totals.blocked_hits'))->toBe(1);
 });
+
+it('reports legacy-only bot hits consistently with the v7 Yandex exemption', function () {
+    $this->application->forceFill(['ai_bot_policy' => 'legacy_v7'])->save();
+    fakeAccessLog([accessLine('Jasper/1.0'), accessLine('YandexBot Jasper/1.0')]);
+    $response = $this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->assertOk();
+    $bots = collect($response->json('bot_traffic.bots'))->keyBy('bot');
+    expect($bots['Jasper']['hits'])->toBe(1)->and($bots['Jasper']['blocked'])->toBeTrue();
+});

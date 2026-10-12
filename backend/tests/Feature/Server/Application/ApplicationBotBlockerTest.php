@@ -6,6 +6,9 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\WebServers\ApacheDriver;
+use App\Services\Server\WebServers\NginxDriver;
+use App\Services\Server\WebServers\OlsDriver;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -204,9 +207,13 @@ it('refuses without manage permission', function () {
 
 describe('the opt-outs a user-agent block cannot do', function () {
     it('keeps robots.txt-only tokens out of every blocked list', function () {
-        foreach (AiBotPolicy::cases() as $policy) {
+        foreach ([AiBotPolicy::AllowAll, AiBotPolicy::BlockTraining, AiBotPolicy::BlockAgents, AiBotPolicy::BlockAll] as $policy) {
             expect($policy->blockedBots())->not->toContain('Google-Extended')->not->toContain('Applebot-Extended');
         }
+
+        // v7 included this token in its literal list, even though blocking a
+        // user-agent cannot implement the robots.txt training opt-out.
+        expect(AiBotPolicy::LegacyV7->blockedBots())->toContain('Google-Extended');
     });
 
     it('hands the owner the robots.txt lines instead, for every policy that blocks training', function () {
@@ -221,3 +228,38 @@ describe('the opt-outs a user-agent block cannot do', function () {
             ->and($response->json('ai_bot_policies.block_all.robots_txt_recommended'))->toBeTrue();
     });
 });
+
+it('stores the explicit legacy policy without changing the normal v8 catalog', function () {
+    fakeBotBlockerWebServer();
+    $normal = AiBotPolicy::BlockAll->blockedBots();
+
+    $this->withHeaders(botBlockerHeaders())->putJson(botBlockerUrl(), ['policy' => 'legacy_v7'])
+        ->assertOk()->assertJsonPath('application.ai_bot_policy', 'legacy_v7');
+
+    expect($this->application->fresh()->ai_bot_policy)->toBe(AiBotPolicy::LegacyV7)
+        ->and(AiBotPolicy::LegacyV7->blockedBots())->toContain('Jasper', 'GPT', 'YouBot')
+        ->and(AiBotPolicy::BlockAll->blockedBots())->toBe($normal)->not->toContain('Jasper');
+
+    $this->withHeaders(botBlockerHeaders())->getJson('/api/ai-bot-policies')->assertOk()
+        ->assertJsonPath('ai_bot_policies.legacy_v7.blocked_bots', AiBotPolicy::LegacyV7->blockedBots());
+});
+
+it('renders broad legacy matching with a whole-agent Yandex exemption on every stack', function (string $driver) {
+    Process::fake();
+    $this->application->forceFill(['ai_bot_policy' => AiBotPolicy::LegacyV7])->save();
+    $rendered = app($driver)->renderConfig($this->application, '/home/siteowner/blog/public_html');
+
+    preg_match('/\(\^\(\?![^\r\n]*?\)\)/', $rendered, $match);
+    expect($match)->not->toBeEmpty();
+    $regex = '~'.$match[0].'~i';
+
+    expect(preg_match($regex, 'Mozilla compatible Jasper/1.0'))->toBe(1)
+        ->and(preg_match($regex, 'Mozilla compatible gPtBot/1.0'))->toBe(1)
+        ->and(preg_match($regex, 'YandexBot Jasper'))->toBe(0)
+        ->and(preg_match($regex, 'Jasper YANDEXBOT'))->toBe(0)
+        ->and(preg_match($regex, 'Mozilla Chrome/128.0'))->toBe(0);
+})->with([
+    NginxDriver::class,
+    ApacheDriver::class,
+    OlsDriver::class,
+]);

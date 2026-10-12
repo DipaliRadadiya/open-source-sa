@@ -100,13 +100,44 @@ function fakeAppFail2ban(
     ?ArrayObject $runs = null,
     array $packageOwned = [],
     string $reloadError = '',
+    ?string $ownershipStat = null,
+    bool $packageUnavailable = false,
 ): void {
-    Process::fake(function ($process) use ($testOk, &$writes, $reloadOk, $existing, $runs, $packageOwned, $reloadError) {
+    Process::fake(function ($process) use ($testOk, &$writes, $reloadOk, $existing, $runs, $packageOwned, $reloadError, $ownershipStat, $packageUnavailable) {
         $args = $process->command[0] === 'sudo'
             ? array_slice($process->command, 2)
             : $process->command;
 
         $runs?->append($args);
+
+        if (($args[0] ?? '') === 'stat') {
+            if ($ownershipStat !== null) {
+                return Process::result(output: $ownershipStat);
+            }
+            if ($args[2] === '%u:%a:%F') {
+                return Process::result(output: "0:755:directory\n");
+            }
+
+            return is_file(end($args)) && ! is_link(end($args)) ? Process::result(output: "0:1:regular file\n") : Process::result(exitCode: 1);
+        }
+        if (($args[0] ?? '') === 'cat' && ($args[1] ?? '') === '--') {
+            return is_file(end($args)) ? Process::result(output: (string) file_get_contents(end($args))) : Process::result(exitCode: 1);
+        }
+        if (($args[0] ?? '') === 'find') {
+            // Same set the real `find` is asked for: *.conf and *.local.
+            return Process::result(output: implode("\n", array_merge(glob(test()->jailD.'/*.{conf,local}', GLOB_BRACE) ?: [], glob(test()->filterD.'/*.{conf,local}', GLOB_BRACE) ?: [])));
+        }
+
+        if (($args[0] ?? '') === 'cp' && ($args[1] ?? '') === '-p' && is_file($args[2])) {
+            copy($args[2], $args[3]);
+
+            return Process::result();
+        }
+        if (($args[0] ?? '') === 'mv' && is_file($args[count($args) - 2])) {
+            rename($args[count($args) - 2], end($args));
+
+            return Process::result();
+        }
 
         if (($args[0] ?? '') === 'tee') {
             $writes[$args[1] ?? ''] = (string) $process->input;
@@ -137,6 +168,10 @@ function fakeAppFail2ban(
         // An earlier fake answered "not owned" silently, and passed code that
         // read every real "not owned" as "could not find out".
         if (($args[0] ?? '') === 'dpkg-query') {
+            if ($packageUnavailable) {
+                return Process::result(exitCode: 1, errorOutput: 'sudo: a password is required');
+            }
+
             return in_array($args[2] ?? '', $packageOwned, true)
                 ? Process::result(output: 'fail2ban: '.($args[2] ?? '')."\n")
                 : Process::result(errorOutput: 'dpkg-query: no path found matching pattern '.($args[2] ?? '')."\n", exitCode: 1);
@@ -465,7 +500,7 @@ it('disables fail2ban and clears the stored content', function () {
     $this->application = createFail2banApp('Shop', 'shop.test', 'php', [
         'fail2ban_jail_name' => 'shop',
         'fail2ban_jail_content' => "[shop]\nenabled  = true\n",
-        'fail2ban_filter_content' => "[shop]\nfailregex = ^<HOST>\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST>\n",
     ]);
 
     // Enabled before names were prefixed: its files are still `shop.conf`.
@@ -710,12 +745,12 @@ it('refuses custom config that names a jail or filter other than the site\'s own
     'filter with options' => "[{name}]\nenabled = true\nfilter = sshd[mode=aggressive]\n",
 ]);
 
-it('moves a jail enabled under the bare slug on fail2ban:resync', function () {
+it('preserves a jail enabled under the bare slug on fail2ban:resync', function () {
     $this->application = createFail2banApp('Shop', 'shop.test', 'php', [
         'fail2ban_jail_name' => 'shop',
         // What the old structured form generated: the name spelled out.
         'fail2ban_jail_content' => "[shop]\nenabled  = true\nfilter   = shop\nlogpath  = {logpath}\n",
-        'fail2ban_filter_content' => "[shop]\nfailregex = ^<HOST>\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST>\n",
     ]);
     file_put_contents($this->jailD.'/shop.conf', "[shop]\n");
     file_put_contents($this->filterD.'/shop.conf', "[shop]\n");
@@ -727,17 +762,14 @@ it('moves a jail enabled under the bare slug on fail2ban:resync', function () {
 
     $application = $this->application->fresh();
 
-    expect($application->fail2ban_jail_name)->toBe('panel-site-shop')
-        ->and($application->fail2ban_jail_content)->toContain('[{name}]')
-        ->and($application->fail2ban_jail_content)->toContain('filter   = {filter}')
-        ->and($application->fail2ban_filter_content)->toContain('[Definition]')
-        ->and($writes[$this->jailD.'/panel-site-shop.conf'])->toContain('[panel-site-shop]')
-        ->and($writes[$this->jailD.'/panel-site-shop.conf'])->toContain('filter   = panel-site-shop')
-        ->and(file_exists($this->jailD.'/shop.conf'))->toBeFalse()
-        ->and(file_exists($this->filterD.'/shop.conf'))->toBeFalse();
+    expect($application->fail2ban_jail_name)->toBe('shop')
+        ->and($application->fail2ban_jail_content)->toContain('[shop]')
+        ->and($writes)->not->toHaveKey($this->jailD.'/panel-site-shop.conf')
+        ->and(file_get_contents($this->jailD.'/shop.conf'))->toBe("[shop]\n")
+        ->and(file_get_contents($this->filterD.'/shop.conf'))->toBe("[shop]\n");
 });
 
-it('keeps a filter the fail2ban package owns when moving a colliding jail, and says so', function () {
+it('leaves a system collision untouched during resync and refuses to manage it', function () {
     $this->application = createFail2banApp('sshd', 'sshd.test', 'php', [
         'fail2ban_jail_name' => 'sshd',
         'fail2ban_jail_content' => "[{name}]\nenabled = true\nfilter = {filter}\nlogpath = {logpath}\n",
@@ -750,13 +782,13 @@ it('keeps a filter the fail2ban package owns when moving a colliding jail, and s
 
     // Deleting it would leave the server's [sshd] jail pointing at a filter
     // that is gone — and fail2ban would not start. Overwritten beats missing.
-    $this->artisan('fail2ban:resync')
-        ->expectsOutputToContain('belongs to the fail2ban package')
-        ->assertSuccessful();
+    $this->artisan('fail2ban:resync')->assertSuccessful();
+
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertStatus(422);
 
     expect(file_exists($this->filterD.'/sshd.conf'))->toBeTrue()
-        ->and(file_exists($this->jailD.'/sshd.conf'))->toBeFalse()
-        ->and($this->application->fresh()->fail2ban_jail_name)->toBe('panel-site-sshd');
+        ->and(file_exists($this->jailD.'/sshd.conf'))->toBeTrue()
+        ->and($this->application->fresh()->fail2ban_jail_name)->toBe('sshd');
 });
 
 it('treats a filter as package-owned when dpkg cannot be asked', function () {
@@ -775,6 +807,10 @@ it('treats a filter as package-owned when dpkg cannot be asked', function () {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') === 'dpkg-query') {
+            if ($packageUnavailable) {
+                return Process::result(exitCode: 1, errorOutput: 'sudo: a password is required');
+            }
+
             return Process::result(errorOutput: "sudo: a password is required\n", exitCode: 1);
         }
 
@@ -838,6 +874,31 @@ it('takes the wp-admin rule out of a filter still on the old default, on fail2ba
     expect($this->application->fresh()->fail2ban_filter_content)->not->toContain('wp-admin')
         ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->toContain('wp-login\.php')
         ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->not->toContain('wp-admin');
+});
+
+it('leaves the old default filter of a v7 site named panel-site-… alone on fail2ban:resync', function () {
+    $filter = "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n"
+        ."  ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n"
+        ."  ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n";
+    // Its bare v7 name only looks like the panel's prefix.
+    $this->application = createFail2banApp('panel-site-shop', 'shop.test', 'wordpress', [
+        'fail2ban_jail_name' => 'panel-site-shop',
+        'fail2ban_jail_content' => "[{name}]\nenabled  = true\nfilter   = {filter}\nlogpath  = {logpath}\n",
+        'fail2ban_filter_content' => $filter,
+    ]);
+    // Owned files on disk, so the ownership check passes and only the
+    // "a kept v7 jail is the user's" rule stands between it and a rewrite.
+    $configs = app(ApplicationFail2banManager::class)->renderConfigs($this->application, $this->application->fail2ban_jail_content, $filter);
+    file_put_contents($this->jailD.'/panel-site-shop.conf', $configs['jail']);
+    file_put_contents($this->filterD.'/panel-site-shop.conf', $configs['filter']);
+
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+
+    $this->artisan('fail2ban:resync')->assertSuccessful();
+
+    expect($this->application->fresh()->fail2ban_filter_content)->toBe($filter)
+        ->and($writes)->not->toHaveKey($this->filterD.'/panel-site-shop.conf');
 });
 
 it('leaves a filter the user edited alone on fail2ban:resync', function () {
@@ -958,3 +1019,119 @@ function banTool(string $path): bool
     return $path === config('server.fail2ban_apps.ban_script')
         || $path === rtrim((string) config('server.fail2ban_apps.action_d'), '/').'/panel-site-ban.conf';
 }
+
+function prepareOwnedV7Jail(string $slug = 'shop'): void
+{
+    test()->application = createFail2banApp($slug, $slug.'.test', 'php', [
+        'fail2ban_jail_name' => $slug,
+        'fail2ban_jail_content' => "[{$slug}]\nenabled = true\nfilter = {$slug}\nlogpath = {logpath}\nmaxretry = 3\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST>\n",
+    ]);
+    expect(test()->application->slug)->toBe($slug);
+    $manager = app(ApplicationFail2banManager::class);
+    $configs = $manager->renderConfigs(test()->application,
+        test()->application->fail2ban_jail_content, test()->application->fail2ban_filter_content);
+    file_put_contents(test()->jailD."/{$slug}.conf", $configs['jail']);
+    file_put_contents(test()->filterD."/{$slug}.conf", $configs['filter']);
+}
+
+it('saves an owned v7 jail under its actual name without a second jail or site-only action', function () {
+    prepareOwnedV7Jail();
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+    $this->withHeaders(appFail2banHeaders())->postJson(appFail2banUrl(), [
+        'jail_config_content' => str_replace('maxretry = 3', 'maxretry = 5', $this->application->fail2ban_jail_content),
+        'filter_config_content' => $this->application->fail2ban_filter_content,
+    ])->assertOk();
+
+    expect($writes[$this->jailD.'/shop.conf'])->toContain('[shop]', 'maxretry = 5')->not->toContain('panel-site-ban')
+        ->and($writes)->not->toHaveKey($this->jailD.'/panel-site-shop.conf')
+        ->and($this->application->fresh()->fail2ban_jail_name)->toBe('shop');
+});
+
+it('refuses foreign or duplicate v7 files before writes or removal', function (string $kind) {
+    prepareOwnedV7Jail();
+    match ($kind) {
+        'foreign' => file_put_contents($this->filterD.'/shop.conf', "[Definition]\nfailregex = foreign\n"),
+        'shared' => file_put_contents($this->jailD.'/foreign.conf', "[another]\nfilter = shop\n"),
+        // fail2ban reads INI the way Python's ConfigParser does: `:` is a
+        // separator and anything after the closing `]` is ignored.
+        'shared, colon' => file_put_contents($this->jailD.'/foreign.conf', "[another]\nfilter : shop\n"),
+        'shared, comment' => file_put_contents($this->jailD.'/foreign.conf', "[another]\nfilter = shop ; theirs\n"),
+        'duplicate, header comment' => file_put_contents($this->jailD.'/foreign.conf', "[shop] # theirs\nenabled = true\n"),
+        'duplicate, spaced' => file_put_contents($this->jailD.'/foreign.local', "[ shop ]\nenabled = true\n"),
+        'duplicate, same file' => file_put_contents($this->jailD.'/shop.conf', file_get_contents($this->jailD.'/shop.conf')."\n[shop]\nmaxretry = 9\n"),
+        default => file_put_contents($this->jailD.'/foreign.conf', "[shop]\nenabled = true\n"),
+    };
+    $writes = [];
+    $runs = new ArrayObject;
+    fakeAppFail2ban(writes: $writes, runs: $runs);
+    $before = file_get_contents($this->jailD.'/shop.conf');
+    $this->withHeaders(appFail2banHeaders())->postJson(appFail2banUrl(), [
+        'jail_config_content' => $this->application->fail2ban_jail_content,
+        'filter_config_content' => $this->application->fail2ban_filter_content,
+    ])->assertStatus(422);
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertStatus(422);
+    expect($writes)->toBe([])
+        ->and(file_get_contents($this->jailD.'/shop.conf'))->toBe($before)
+        ->and(collect($runs)->contains(fn ($args) => in_array($args[0], ['rm', 'tee'], true)))->toBeFalse();
+})->with(['foreign', 'duplicate', 'shared', 'shared, colon', 'shared, comment', 'duplicate, header comment', 'duplicate, spaced', 'duplicate, same file']);
+
+it('treats a v7 site whose own name starts with panel-site- as v7, not as the panel\'s', function () {
+    prepareOwnedV7Jail('panel-site-shop');
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+
+    $this->withHeaders(appFail2banHeaders())->postJson(appFail2banUrl(), [
+        'jail_config_content' => str_replace('maxretry = 3', 'maxretry = 5', $this->application->fail2ban_jail_content),
+        'filter_config_content' => $this->application->fail2ban_filter_content,
+    ])->assertOk();
+
+    expect($writes[$this->jailD.'/panel-site-shop.conf'])->toContain('maxretry = 5')->not->toContain('panel-site-ban')
+        ->and($writes)->not->toHaveKey($this->jailD.'/panel-site-panel-site-shop.conf')
+        ->and($this->application->fresh()->fail2ban_jail_name)->toBe('panel-site-shop');
+});
+
+it('checks ownership of a v7 site whose own name starts with panel-site-', function () {
+    prepareOwnedV7Jail('panel-site-shop');
+    file_put_contents($this->jailD.'/foreign.conf', "[panel-site-shop]\nenabled = true\n");
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertStatus(422);
+
+    expect($writes)->toBe([])
+        ->and(file_exists($this->jailD.'/panel-site-shop.conf'))->toBeTrue();
+});
+
+it('refuses package-owned v7 files even when their content matches the record', function () {
+    prepareOwnedV7Jail();
+    $writes = [];
+    fakeAppFail2ban(writes: $writes, packageOwned: [$this->filterD.'/shop.conf']);
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertStatus(422);
+    expect($writes)->toBe([])->and(file_exists($this->filterD.'/shop.conf'))->toBeTrue();
+});
+
+it('refuses unsafe or unknown ownership without deleting the recorded v7 jail', function (string $stat, bool $unknownPackage) {
+    prepareOwnedV7Jail();
+    fakeAppFail2ban(ownershipStat: $stat === '' ? null : $stat, packageUnavailable: $unknownPackage);
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertStatus(422);
+    expect(file_exists($this->jailD.'/shop.conf'))->toBeTrue()
+        ->and($this->application->fresh()->fail2ban_jail_name)->toBe('shop');
+})->with([
+    'site-owned file' => ['1000:1:regular file', false],
+    'hard-linked file' => ['0:2:regular file', false],
+    'symlink' => ['0:1:symbolic link', false],
+    'package probe unavailable' => ['', true],
+]);
+
+it('keeps the database and restores owned v7 files when disable reload fails', function () {
+    prepareOwnedV7Jail();
+    $jail = file_get_contents($this->jailD.'/shop.conf');
+    $filter = file_get_contents($this->filterD.'/shop.conf');
+    fakeAppFail2ban(reloadOk: false);
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertStatus(500);
+    expect(file_get_contents($this->jailD.'/shop.conf'))->toBe($jail)
+        ->and(file_get_contents($this->filterD.'/shop.conf'))->toBe($filter)
+        ->and($this->application->fresh()->fail2ban_jail_name)->toBe('shop');
+});
