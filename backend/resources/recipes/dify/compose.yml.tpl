@@ -186,7 +186,7 @@ services:
   worker_beat:
     image: {{ image.api }}
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 1g
     logging:
       driver: json-file
       options:
@@ -342,6 +342,7 @@ services:
       PLUGIN_WORKING_PATH: /app/storage/cwd
       FORCE_VERIFYING_SIGNATURE: "true"
       PYTHON_ENV_INIT_TIMEOUT: "120"
+      PIP_MIRROR_AUTO_DETECT: "false"
       PLUGIN_MAX_EXECUTION_TIMEOUT: "600"
       PLUGIN_STORAGE_TYPE: local
       PLUGIN_STORAGE_LOCAL_ROOT: /app/storage
