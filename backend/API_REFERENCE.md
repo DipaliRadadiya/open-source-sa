@@ -6325,6 +6325,39 @@ The existing `application.container_secrets_viewed` activity is still recorded b
 
 ---
 
+## Application — Command-line access
+
+### GET `/applications/{application}/container/access`
+**Permission:** `app_compose` (view), the same as reading the compose file. **Throttle:** 60/min. A site type without container screens (WordPress, PHP, Node, …) returns `404` through the feature gate; a container type on another serving profile returns `422` with `errors/application.not_a_container`, as `…/container/compose` does (RC-23).
+
+What the dashboard's Command-line access card needs to write `ssh -t [-p <ssh_port>] <user>@<host> 'sudo docker exec -it <name> sh'`.
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/applications/12/container/access"
+```
+
+```json
+{
+  "host": "203.0.113.10",
+  "ssh_port": 22,
+  "project": "sv-app-12",
+  "containers": [
+    { "service": "openclaw", "name": "sv-app-12-openclaw-1", "main": true }
+  ],
+  "ssh_users": [
+    { "username": "adarsh", "ssh_access": true, "sudo": true, "has_password": true }
+  ]
+}
+```
+
+- `host`: the server's public IP (`ServerPublicIp`, cached an hour). When it cannot be determined, the host this request came in on.
+- `ssh_port`: the port `sshd -T` reports (default `server.ssh_port`). Cached for **5 minutes**, and dropped as soon as Settings → Security writes a new port.
+- `project`: the Compose project, `sv-app-<id>`.
+- `containers`: read from the site's **stored compose file** (a Simple-mode site: the file the panel renders for it), never from `docker ps`. `name` is the service's `container_name` when set, otherwise `<project>-<service>-1`. `main: true` on the service that publishes the site's `app_port` (short or long port syntax, any host address); it comes first, then the rest in file order. Services under a Compose `profiles` key are left out (a plain `compose up` does not start them), and so is any name Docker would refuse (`[a-zA-Z0-9][a-zA-Z0-9_.-]*`): these are pasted into a terminal under `sudo`. A file that does not parse gives `[]`. A Simple-mode site with no container port gives the compose endpoint's `422` with `reason: container_port_missing`.
+- `ssh_users`: every system user with `ssh_access`, `sudo` and `has_password` (the panel knows a password, which is what `sudo` asks for), ordered by username — **only** for a caller who also holds `system_user` view; otherwise `[]`. Never a password, hash, key or home path.
+
+---
+
 ## Utility
 
 ### GET `/basic-info`

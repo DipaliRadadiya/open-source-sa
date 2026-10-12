@@ -112,6 +112,12 @@ Route::put('/applications/{application}/container', [ApplicationContainerControl
 Route::get('/applications/{application}/container/compose', [ApplicationContainerController::class, 'compose'])
     ->middleware(['permission:app_compose', 'throttle:60,1']);
 
+// What the Command-line access card needs to write its `ssh … docker exec` line
+// (RC-23). Gated like reading the compose file, which is where the container names
+// come from; the system users in it are filtered on `system_user` inside.
+Route::get('/applications/{application}/container/access', [ApplicationContainerController::class, 'access'])
+    ->middleware(['permission:app_compose', 'throttle:60,1']);
+
 // Throttled like the other apply paths: each save recreates the container, and a
 // form that can be spammed is a site that can be restarted in a loop.
 Route::put('/applications/{application}/container/compose', [ApplicationContainerController::class, 'updateCompose'])

@@ -12,6 +12,7 @@ use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\SshUsersGroup;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -41,6 +42,9 @@ class SecuritySettings implements SettingGroup
     // so an upgraded box does not keep both — two files setting the same
     // keyword is exactly the failure mode above, just against ourselves.
     private const LEGACY_DROP_IN = '99-panel.conf';
+
+    // See port().
+    private const PORT_CACHE = 'server.ssh_port.effective';
 
     public function __construct(
         private ServerOps $serverOps,
@@ -77,6 +81,23 @@ class SecuritySettings implements SettingGroup
             // control and the 422 can never disagree about why.
             'has_ssh_key' => $this->hasSshKey($effective['permitrootlogin'] ?? 'prohibit-password'),
         ];
+    }
+
+    /**
+     * The port SSH listens on, and nothing else.
+     *
+     * For the Command-line access card (RC-23), which is on every Docker app's
+     * dashboard. `read()` shells out to `sshd -T` and then looks for keys, so
+     * this reads the port alone and keeps it for five minutes; `apply()` drops
+     * it the moment it writes a new one.
+     */
+    public function port(): int
+    {
+        return (int) Cache::remember(
+            self::PORT_CACHE,
+            now()->addMinutes(5),
+            fn (): int => (int) ($this->effectiveConfig()['port'] ?? config('server.ssh_port', 22)),
+        );
     }
 
     /**
@@ -134,6 +155,10 @@ class SecuritySettings implements SettingGroup
         if ($write->failed()) {
             throw new SettingOperationException($write->reference);
         }
+
+        // `sshd -T` reads the files, not the running daemon, so from here on it
+        // answers with the new port whether or not the rest of this succeeds.
+        Cache::forget(self::PORT_CACHE);
 
         // Refuse to reload on a bad config — the running SSH daemon stays up.
         $test = $this->serverOps->run(['sshd', '-t'], ['feature' => 'setting', 'group' => 'security', 'op' => 'test']);

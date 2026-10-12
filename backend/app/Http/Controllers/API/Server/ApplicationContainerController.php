@@ -11,11 +11,17 @@ use App\Http\Requests\Server\Application\UpdateComposeRequest;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Models\Application;
+use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Recipes\RecipeCredentials;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ContainerAccess;
 use App\Services\Server\Applications\ContainerSupervisor;
+use App\Services\Server\Applications\DnsVerifier;
+use App\Services\Server\ServerPublicIp;
+use App\Services\Server\Settings\SecuritySettings;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ApplicationContainerController extends Controller
 {
@@ -134,6 +140,61 @@ class ApplicationContainerController extends Controller
             // Which of the two the user is looking at, so the editor can warn that
             // saving takes the file over instead of quietly converting the site.
             'generated' => $generated,
+        ]);
+    }
+
+    /**
+     * What the Command-line access card needs to write one line:
+     * `ssh -t <user>@<host> 'sudo docker exec -it <container> sh'` (RC-23).
+     *
+     * On the same permission as reading the compose file, because it says no more
+     * than the file does: the container names come out of it. The server's system
+     * users are a separate grant, so they are listed only for a viewer who holds
+     * `system_user` — and even then as flags, never a password or a key.
+     */
+    public function access(
+        Request $request,
+        Application $application,
+        ContainerAccess $access,
+        ContainerSupervisor $containers,
+        ServerPublicIp $publicIp,
+        SecuritySettings $security,
+    ): JsonResponse {
+        abort_unless(
+            $application->serving_profile === 'docker',
+            422,
+            __('errors/application.not_a_container'),
+        );
+
+        try {
+            $list = $access->containers($application);
+        } catch (ProvisioningFailedException $e) {
+            // Said the way the compose endpoint says it: a Simple-mode site with no
+            // container port has no file, so there is nothing to name yet.
+            return response()->json([
+                'message' => __('application.failure_reason.'.$e->reason),
+                'reason' => $e->reason,
+            ], 422);
+        }
+
+        $users = $request->user()?->canView('system_user')
+            ? SystemUser::query()->orderBy('username')->get()->map(fn (SystemUser $user): array => [
+                'username' => $user->username,
+                'ssh_access' => (bool) $user->ssh_access,
+                'sudo' => (bool) $user->sudo,
+                // Whether the panel knows one, which is what `sudo` will ask for.
+                'has_password' => $user->password !== null,
+            ])->all()
+            : [];
+
+        return response()->json([
+            // A machine that cannot work out its public address is still reachable
+            // at the one this request came in on: that is the panel, on this box.
+            'host' => $publicIp->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? $request->getHost(),
+            'ssh_port' => $security->port(),
+            'project' => $containers->project($application),
+            'containers' => $list,
+            'ssh_users' => $users,
         ]);
     }
 
