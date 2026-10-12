@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "ghcr.io/librechat-ai/librechat:v0.8.8",
-            "tested": []
+            "tested": [
+                "ghcr.io/librechat-ai/librechat:v0.8.8"
+            ]
         },
         "db": {
             "ref": "mongo:8.0.20",
-            "tested": []
+            "tested": [
+                "mongo:8.0.20"
+            ]
         },
         "search": {
             "ref": "getmeili/meilisearch:v1.35.1",
-            "tested": []
+            "tested": [
+                "getmeili/meilisearch:v1.35.1"
+            ]
         }
     },
     "services": [
@@ -106,6 +112,7 @@
         "MongoDB 8.0.20 and Meilisearch 1.35.1 are the versions the official compose pins. MongoDB runs with authentication (the official file uses --noauth); Meilisearch runs in production mode with its own master key and powers conversation search (SEARCH=true). Neither publishes a port.",
         "MongoDB 5 and later need a CPU with AVX. Every current cloud CPU has it; very old or emulated CPUs do not, and MongoDB then exits at start.",
         "TRUST_PROXY=1 trusts the panel's reverse proxy for the client address. Password reset is off because no email service is configured.",
-        "The healthcheck probes /health on 127.0.0.1:3080 with the image's wget."
+        "The healthcheck probes /health on 127.0.0.1:3080 with the image's wget.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-27): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

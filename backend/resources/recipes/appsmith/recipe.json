@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "appsmith/appsmith-ce:v2.5.0",
-            "tested": []
+            "tested": [
+                "appsmith/appsmith-ce:v2.5.0"
+            ]
         }
     },
     "services": [
@@ -62,6 +64,7 @@
         "APPSMITH_ENCRYPTION_PASSWORD and APPSMITH_ENCRYPTION_SALT encrypt saved datasource credentials. They are set from secrets so they do not depend on the docker.env the container writes on its first start (variables set from outside take precedence). Never change them: saved credentials cannot be decrypted afterwards.",
         "APPSMITH_CUSTOM_DOMAIN is left unset on purpose: it makes the container's own Caddy request a Let's Encrypt certificate, while the panel already terminates HTTPS in front of it. Appsmith's Caddy trusts forwarded headers from private addresses by default, which covers the panel's proxy.",
         "Telemetry is off (APPSMITH_DISABLE_TELEMETRY=true).",
-        "Memory floor 4g, kept from the card's estimate. The Java backend, MongoDB, the realtime and MCP servers share the container: in the RC-27 live smoke it idled at 1.44-1.61 GiB (36-40%) and peaked at 1.82-1.89 GiB (44-47%) through first start, setup, editing and deploying, and the Java heap grows with real workloads. The first start is slow while the embedded database initialises, so the healthcheck (the image's own /opt/appsmith/healthcheck.sh) is given five minutes."
+        "Memory floor 4g, kept from the card's estimate. The Java backend, MongoDB, the realtime and MCP servers share the container: in the RC-27 live smoke it idled at 1.44-1.61 GiB (36-40%) and peaked at 1.82-1.89 GiB (44-47%) through first start, setup, editing and deploying, and the Java heap grows with real workloads. The first start is slow while the embedded database initialises, so the healthcheck (the image's own /opt/appsmith/healthcheck.sh) is given five minutes.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-27): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }
