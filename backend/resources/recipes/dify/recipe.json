@@ -21,35 +21,51 @@
     "images": {
         "nginx": {
             "ref": "nginx:1.30.5-alpine",
-            "tested": []
+            "tested": [
+                "nginx:1.30.5-alpine"
+            ]
         },
         "api": {
             "ref": "langgenius/dify-api:1.17.1",
-            "tested": []
+            "tested": [
+                "langgenius/dify-api:1.17.1"
+            ]
         },
         "web": {
             "ref": "langgenius/dify-web:1.17.1",
-            "tested": []
+            "tested": [
+                "langgenius/dify-web:1.17.1"
+            ]
         },
         "sandbox": {
             "ref": "langgenius/dify-sandbox:0.2.15",
-            "tested": []
+            "tested": [
+                "langgenius/dify-sandbox:0.2.15"
+            ]
         },
         "plugin_daemon": {
             "ref": "langgenius/dify-plugin-daemon:0.6.10-local",
-            "tested": []
+            "tested": [
+                "langgenius/dify-plugin-daemon:0.6.10-local"
+            ]
         },
         "squid": {
             "ref": "ubuntu/squid:6.6-24.04_edge",
-            "tested": []
+            "tested": [
+                "ubuntu/squid:6.6-24.04_edge"
+            ]
         },
         "db": {
             "ref": "pgvector/pgvector:0.8.7-pg16-bookworm",
-            "tested": []
+            "tested": [
+                "pgvector/pgvector:0.8.7-pg16-bookworm"
+            ]
         },
         "redis": {
             "ref": "redis:6.2.24-alpine",
-            "tested": []
+            "tested": [
+                "redis:6.2.24-alpine"
+            ]
         }
     },
     "services": [
@@ -170,6 +186,7 @@
         "The api container starts as root only to give the storage volume to the image's dify user (uid 1001), which is what upstream's one-shot init_permissions service did, then runs the upstream entrypoint as dify via setpriv. api, worker and worker_beat all run the upstream migration step; it holds a Redis lock, so only one migrates.",
         "Network isolation follows upstream: the sandbox is only on an internal network shared with ssrf_proxy, api, worker, worker_beat and plugin_daemon, so code run by Code nodes reaches the internet only through the Squid proxy, which refuses private addresses. The plugin daemon installs plugins from the Dify Marketplace and PyPI and needs outbound internet. PIP_MIRROR_AUTO_DETECT is off: by default the daemon probes two mirrors in China at start and installs plugin dependencies from whichever answers faster than PyPI (seen live on Ubuntu 26.04), so plugins now come from pypi.org. Its remote-debugging port (5003) is not published.",
         "Secrets: SECRET_KEY, DB_PASSWORD, REDIS_PASSWORD, SANDBOX_API_KEY, PLUGIN_DAEMON_KEY and PLUGIN_DIFY_INNER_API_KEY, named as in the official .env, each 32 alphanumeric characters. SECRET_KEY signs sessions and encrypts stored provider keys; it must never change after install.",
-        "Memory: nginx takes the app limit (floor 256m); api 2g, worker 2g, plugin_daemon 2g (installed plugins run inside it), web 1g, worker_beat 1g, sandbox and ssrf_proxy 512m; PostgreSQL and Redis use the panel database default. worker_beat was 512m in the first draft: Celery beat loads the whole Flask app, and live on Ubuntu 24.04 it sat at 73% of 512m (anonymous memory) with its peak at the limit. Model providers and API keys are added in Settings after the admin is created; the recipe ships none."
+        "Memory: nginx takes the app limit (floor 256m); api 2g, worker 2g, plugin_daemon 2g (installed plugins run inside it), web 1g, worker_beat 1g, sandbox and ssrf_proxy 512m; PostgreSQL and Redis use the panel database default. worker_beat was 512m in the first draft: Celery beat loads the whole Flask app, and live on Ubuntu 24.04 it sat at 73% of 512m (anonymous memory) with its peak at the limit. Model providers and API keys are added in Settings after the admin is created; the recipe ships none.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-19): every image ref above is in its tested list. Create to Running in 276 s and 231 s; /install created the admin; a Chatflow was published and a Workflow Code node returned 42 through the sandbox; a marketplace plugin installed on 26.04. After the 56d76fd0 fix (worker_beat 1g, PIP_MIRROR_AUTO_DETECT off) the panel upgrade re-rendered and recreated the changed services on both boxes. Measured idle as a share of each limit: api about 23%, worker 22%, worker_beat 40%, web 16 to 21%, sandbox 3 to 21%, plugin_daemon 2 to 7%, ssrf_proxy 5 to 11%, PostgreSQL 16 to 26%; no restarts or OOM kills."
     ]
 }
