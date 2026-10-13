@@ -21,27 +21,39 @@
     "images": {
         "web": {
             "ref": "langfuse/langfuse:4.57.0",
-            "tested": []
+            "tested": [
+                "langfuse/langfuse:4.57.0"
+            ]
         },
         "worker": {
             "ref": "langfuse/langfuse-worker:4.57.0",
-            "tested": []
+            "tested": [
+                "langfuse/langfuse-worker:4.57.0"
+            ]
         },
         "clickhouse": {
             "ref": "clickhouse/clickhouse-server:25.12.11.4",
-            "tested": []
+            "tested": [
+                "clickhouse/clickhouse-server:25.12.11.4"
+            ]
         },
         "minio": {
             "ref": "pgsty/silo:RELEASE.2026-09-16T00-00-00Z",
-            "tested": []
+            "tested": [
+                "pgsty/silo:RELEASE.2026-09-16T00-00-00Z"
+            ]
         },
         "redis": {
             "ref": "redis:7.4.11",
-            "tested": []
+            "tested": [
+                "redis:7.4.11"
+            ]
         },
         "db": {
             "ref": "postgres:17.11",
-            "tested": []
+            "tested": [
+                "postgres:17.11"
+            ]
         }
     },
     "services": [
@@ -151,6 +163,7 @@
         "ENCRYPTION_KEY must be 64 hex characters. The panel's secrets are alphanumeric, so web and worker derive it at start from the 32-character ENCRYPTION_KEY_SEED with sha256sum (the same seed always gives the same key), then drop the seed from the environment. It encrypts stored LLM API keys; the seed must never change after install.",
         "HOSTNAME=0.0.0.0 makes the Next.js server listen on every interface (it otherwise binds to the container's hostname), so the healthcheck can reach it on 127.0.0.1. NEXTAUTH_URL is the url key and sets the address used for sign-in callbacks and links.",
         "Secrets: NEXTAUTH_SECRET, SALT, ENCRYPTION_KEY_SEED, ADMIN_PASSWORD, DB_PASSWORD, CLICKHOUSE_PASSWORD, REDIS_PASSWORD and MINIO_PASSWORD, each 32 alphanumeric characters. SALT hashes API keys; changing it invalidates every key.",
-        "Memory: langfuse-web takes the app limit (floor 2g) and runs with NODE_OPTIONS=--max-old-space-size=1536. With a 1g limit (the first draft) Node's default heap ceiling was about 560 MiB and the web server died with \"JavaScript heap out of memory\" seconds after every start, live on Ubuntu 24.04; it idles at about 1.1 GiB. If you raise the limit above 2g, raise the heap flag with it. langfuse-worker 2g with the same heap flag: at 1g its heap ceiling is also about 560 MiB, and live it idled at about 540 MiB of memory there (Ubuntu 26.04). ClickHouse 2g (it does not fit the 512m database default), storage 512m; PostgreSQL and Redis use the panel database default. Redis runs with maxmemory-policy noeviction, as upstream requires for its queues."
+        "Memory: langfuse-web takes the app limit (floor 2g) and runs with NODE_OPTIONS=--max-old-space-size=1536. With a 1g limit (the first draft) Node's default heap ceiling was about 560 MiB and the web server died with \"JavaScript heap out of memory\" seconds after every start, live on Ubuntu 24.04; it idles at about 1.1 GiB. If you raise the limit above 2g, raise the heap flag with it. langfuse-worker 2g with the same heap flag: at 1g its heap ceiling is also about 560 MiB, and live it idled at about 540 MiB of memory there (Ubuntu 26.04). ClickHouse 2g (it does not fit the 512m database default), storage 512m; PostgreSQL and Redis use the panel database default. Redis runs with maxmemory-policy noeviction, as upstream requires for its queues.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-33): every image ref above is in its tested list. Create to Running in 48 s with images cached. Signed in with the admin email and generated password, created an API key pair in the UI, sent a trace over OTLP (POST /api/public/otel/v1/traces; Langfuse 4 runs in events_only mode, where the legacy /api/public/ingestion accepts only scores) and saw it in the Traces view; the event landed in S3 and ClickHouse; sign-up was refused (422); traces survived restarts of web and worker. Measured: langfuse-web about 1 GiB of 2 GiB (peak 56%), langfuse-worker 26 to 29% of 2 GiB (peak 37%), ClickHouse 32 to 43% of 2 GiB; heap_size_limit 1632 MiB on both Node services; no restarts or OOM kills."
     ]
 }

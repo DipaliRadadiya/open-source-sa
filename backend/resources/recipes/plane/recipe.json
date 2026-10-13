@@ -21,43 +21,63 @@
     "images": {
         "proxy": {
             "ref": "makeplane/plane-proxy:v1.4.2",
-            "tested": []
+            "tested": [
+                "makeplane/plane-proxy:v1.4.2"
+            ]
         },
         "web": {
             "ref": "makeplane/plane-frontend:v1.4.2",
-            "tested": []
+            "tested": [
+                "makeplane/plane-frontend:v1.4.2"
+            ]
         },
         "space": {
             "ref": "makeplane/plane-space:v1.4.2",
-            "tested": []
+            "tested": [
+                "makeplane/plane-space:v1.4.2"
+            ]
         },
         "admin": {
             "ref": "makeplane/plane-admin:v1.4.2",
-            "tested": []
+            "tested": [
+                "makeplane/plane-admin:v1.4.2"
+            ]
         },
         "live": {
             "ref": "makeplane/plane-live:v1.4.2",
-            "tested": []
+            "tested": [
+                "makeplane/plane-live:v1.4.2"
+            ]
         },
         "backend": {
             "ref": "makeplane/plane-backend:v1.4.2",
-            "tested": []
+            "tested": [
+                "makeplane/plane-backend:v1.4.2"
+            ]
         },
         "db": {
             "ref": "postgres:15.19-alpine",
-            "tested": []
+            "tested": [
+                "postgres:15.19-alpine"
+            ]
         },
         "redis": {
             "ref": "valkey/valkey:7.2.14-alpine",
-            "tested": []
+            "tested": [
+                "valkey/valkey:7.2.14-alpine"
+            ]
         },
         "mq": {
             "ref": "rabbitmq:3.13.7-management-alpine",
-            "tested": []
+            "tested": [
+                "rabbitmq:3.13.7-management-alpine"
+            ]
         },
         "minio": {
             "ref": "pgsty/silo:RELEASE.2026-09-16T00-00-00Z",
-            "tested": []
+            "tested": [
+                "pgsty/silo:RELEASE.2026-09-16T00-00-00Z"
+            ]
         }
     },
     "services": [
@@ -164,6 +184,7 @@
         "HTTPS: the panel's nginx terminates TLS; the Caddy proxy listens on plain HTTP (SITE_ADDRESS :80), trusts the forwarded headers (its default trusted_proxies) and passes X-Forwarded-Proto on, and Plane's production settings honour it (SECURE_PROXY_SSL_HEADER). WEB_URL is the url key; CORS_ALLOWED_ORIGINS is https://<domain>, which also makes the session and CSRF cookies Secure.",
         "Images: every Plane image is pinned to v1.4.2 (upstream defaults to the moving stable tag). PostgreSQL 15.19, Valkey 7.2.14 and RabbitMQ 3.13.7 are newer patch releases of the series upstream pins (15.7, 7.2.11, 3.13.6). RabbitMQ has a fixed hostname so its data directory survives a container recreate.",
         "Secrets: SECRET_KEY (Django), LIVE_SERVER_SECRET_KEY (shared by api and live), DB_PASSWORD, RABBITMQ_PASSWORD and MINIO_PASSWORD, each 32 alphanumeric characters. SECRET_KEY must never change after install.",
-        "Memory: the proxy takes the app limit (floor 256m); api and worker 1g each, beat-worker 512m, space and live 512m (Node), web and admin 256m (static nginx), RabbitMQ and storage 512m; PostgreSQL and Valkey use the panel database default."
+        "Memory: the proxy takes the app limit (floor 256m); api and worker 1g each, beat-worker 512m, space and live 512m (Node), web and admin 256m (static nginx), RabbitMQ and storage 512m; PostgreSQL and Valkey use the panel database default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-33): every image ref above is in its tested list. Create to Running in 280 to 371 s (the api runs about 150 migrations first; the panel waits for its healthcheck). God mode admin set up, then sign-in, workspace, project and work item; an attachment uploaded from the browser to https://<domain>/uploads (204) and downloaded again (200); project Pages kept text over the /live/ websocket; everything survived a fresh sign-in and a restart of api, worker and proxy. Measured idle as a share of each limit: proxy 6 to 23%, api 15 to 21%, worker 35 to 46%, live and space 20 to 43%, RabbitMQ about 38% (peak 53%), PostgreSQL 19 to 35%; no restarts or OOM kills."
     ]
 }
