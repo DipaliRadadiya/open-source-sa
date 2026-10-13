@@ -56,7 +56,7 @@ services:
     command:
       - sh
       - -c
-      - 'while :; do sleep 3600; printf "GET /api/v1/cron/%s HTTP/1.0\r\nHost: app\r\n\r\n" "$$STATIC_CRON_TOKEN" | nc -w 120 app 8080 > /dev/null 2>&1; sleep 82800; done'
+      - 'while :; do sleep 3600; { printf "GET /api/v1/cron/%s HTTP/1.0\r\nHost: app\r\n\r\n" "$$STATIC_CRON_TOKEN"; sleep 300; } | nc -w 300 app 8080 > /dev/null 2>&1; sleep 82500; done'
 
     environment:
       STATIC_CRON_TOKEN: "{{ secret.STATIC_CRON_TOKEN }}"
