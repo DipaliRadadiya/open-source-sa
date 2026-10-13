@@ -19,12 +19,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  * back to lying only when someone with two versions installed clicks between
  * them. Neither test box has two versions, so this is the only check that runs.
  */
+// One per row on both pages (12 Oct).
 const PAGES = [
-  { label: "node", file: "app/(app)/node/page.jsx" },
-  { label: "php", file: "app/(app)/php/page.jsx" },
+  { label: "node", file: "app/(app)/node/page.jsx", key: /key=\{version\.version\}/ },
+  { label: "php", file: "app/(app)/php/page.jsx", key: /key=\{version\.version\}/ },
 ];
 
-for (const { label, file } of PAGES) {
+for (const { label, file, key } of PAGES) {
   test(`${label} page keys VersionSummary on the version`, () => {
     const source = fs.readFileSync(path.join(root, file), "utf8");
 
@@ -36,8 +37,8 @@ for (const { label, file } of PAGES) {
 
     assert.match(
       tag,
-      /key=\{current\.version\}/,
-      `${file} renders VersionSummary without key={current.version}, so its ` +
+      key,
+      `${file} renders VersionSummary without its version key, so its ` +
         `local state will survive a version switch and show the previous ` +
         `version's data`,
     );

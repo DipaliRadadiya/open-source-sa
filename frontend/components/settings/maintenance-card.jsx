@@ -120,7 +120,7 @@ export function MaintenanceCard({
 }
 
 // An "on" toggle is no evidence anything ran. `unattended_last_result` tells never-run from failed.
-function UpdateStatus({ updates }) {
+function UpdateStatus({ updates, action = null, meta = null, details = null }) {
   const t = useTranslations("settings.maintenance");
 
   // Only the security count: every control here acts on security updates alone.
@@ -132,8 +132,19 @@ function UpdateStatus({ updates }) {
   const neverRun =
     updates?.security_updates_enabled && !updates?.unattended_last_run_at;
 
-  // A failed run is reported even when the apt-check count is null.
-  if (security == null && !failed && !unreadable && !neverRun) return null;
+  // A failed run is reported even when the apt-check count is null. With no note,
+  // the install control still stands on its own.
+  if (security == null && !failed && !unreadable && !neverRun) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {action}
+          {meta}
+        </div>
+        {details}
+      </div>
+    );
+  }
 
   const tone = failed
     ? "border-destructive/30 bg-destructive/5 text-destructive"
@@ -189,6 +200,10 @@ function UpdateStatus({ updates }) {
         </span>
       ) : null}
 
+      {meta}
+      {/* On the right of the note it answers; wraps under it on a phone. */}
+      {action ? <span className="ms-auto">{action}</span> : null}
+
       {/* Verbatim and untranslated (searchable); `wrap-anywhere` for long package names. */}
       {failed && updates?.unattended_last_error ? (
         <p className="w-full font-mono text-xs wrap-anywhere opacity-90">
@@ -218,12 +233,14 @@ function UpdateStatus({ updates }) {
           </CollapsibleContent>
         </Collapsible>
       ) : null}
+
+      {details ? <div className="w-full space-y-3 pt-1.5">{details}</div> : null}
     </div>
   );
 }
 
 // Runs unattended-upgrades' own binary, so it installs exactly what the toggle allows.
-function RunSecurityUpdates({ run, canManage }) {
+function RunSecurityUpdates({ run, canManage, frame }) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -303,14 +320,16 @@ function RunSecurityUpdates({ run, canManage }) {
       ? t("updates.runInProgress")
       : null;
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
+  // The main action, filled (it is the one thing to do here), and placed by `frame`
+  // inside the note that says why (Krishna, 12 Oct).
+  const action = (
         <ReasonTooltip reason={reason}>
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             size="sm"
+            // Wraps: in Russian the label alone is wider than a phone's card.
+            className="h-auto min-h-8 py-1.5 text-left whitespace-normal"
             disabled={!canManage || running || starting}
             onClick={() => setConfirming(true)}
           >
@@ -322,7 +341,9 @@ function RunSecurityUpdates({ run, canManage }) {
             {running ? t("updates.running") : t("updates.runNow")}
           </Button>
         </ReasonTooltip>
-
+  );
+  const meta = (
+    <>
         {running && reconnecting ? (
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <WifiOff className="size-3.5 shrink-0" />
@@ -345,8 +366,11 @@ function RunSecurityUpdates({ run, canManage }) {
                 })}
           </span>
         ) : null}
-      </div>
-
+    </>
+  );
+  const hasDetails = Boolean((current?.reboot_required_after && !running) || current?.status === "failed" || current?.output);
+  const details = hasDetails ? (
+    <>
       {/* Never performed here: rebooting is its own confirmed action. */}
       {current?.reboot_required_after && !running ? (
         <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
@@ -379,6 +403,22 @@ function RunSecurityUpdates({ run, canManage }) {
         </Collapsible>
       ) : null}
 
+    </>
+  ) : null;
+
+  return (
+    <>
+      {frame ? (
+        frame({ action, meta, details })
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {action}
+            {meta}
+          </div>
+          {details}
+        </div>
+      )}
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
@@ -390,7 +430,7 @@ function RunSecurityUpdates({ run, canManage }) {
         pending={starting}
         onConfirm={start}
       />
-    </div>
+    </>
   );
 }
 
@@ -446,11 +486,10 @@ function UpdatesSection({ updates, canManage }) {
           }
         >
           {/* What is actually waiting; the switches below only describe intent. */}
-          <UpdateStatus updates={updates} />
-
           <RunSecurityUpdates
             run={updates?.security_update ?? null}
             canManage={canManage}
+            frame={(parts) => <UpdateStatus updates={updates} {...parts} />}
           />
 
           <FormField
@@ -608,6 +647,8 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
             render={({ field }) => (
               <Row
                 toggle
+                // Alone when off: the next-run cell beside it only had "Not scheduled" to say.
+                wide={!enabled}
                 label={t("schedule.enable")}
                 hint={
                   presetsFailed
@@ -754,13 +795,13 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
           ) : null}
 
           {/* Reported, not set: the API computes it from the expression on disk. */}
-          <InfoRow label={t("schedule.nextLabel")}>
-            <span className="text-sm tabular-nums">
-              {enabled && schedule?.next_run_human
-                ? schedule.next_run_human
-                : t("schedule.notScheduled")}
-            </span>
-          </InfoRow>
+          {enabled ? (
+            <InfoRow label={t("schedule.nextLabel")}>
+              <span className="text-sm tabular-nums">
+                {schedule?.next_run_human ?? t("schedule.notScheduled")}
+              </span>
+            </InfoRow>
+          ) : null}
         </Section>
       </form>
     </Form>

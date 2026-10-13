@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { PasswordInput } from "@/components/ui/password-input";
+import { CopyablePasswordInput } from "@/components/system-users/copyable-password-input";
 import { FormModal } from "@/components/ui/form-modal";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -186,7 +186,8 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
             <FormItem className="relative">
               <FormLabel hint={t("create.passwordHint")}>{t("create.password")}</FormLabel>
               <FormControl>
-                <PasswordInput
+                <CopyablePasswordInput
+                  copyLabel={t("detail.copy")}
                   autoComplete="new-password"
                   placeholder={t("create.passwordPlaceholder")}
                   {...field}

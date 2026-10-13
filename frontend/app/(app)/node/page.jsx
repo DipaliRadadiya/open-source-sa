@@ -3,14 +3,15 @@ import { Hexagon } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getNode } from "@/lib/node/get-node";
-import { VersionBar } from "@/components/runtime/version-bar";
+import { VersionsCard } from "@/components/runtime/versions-table";
+import { rowGrid } from "@/lib/runtime/version-rows";
+import { compareVersions } from "@/lib/runtime/version-range";
 import { InstallVersionButton } from "@/components/runtime/install-version-button";
 import { VersionSummary } from "@/components/node/version-summary";
 import { SystemNodeNote } from "@/components/node/system-node-note";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
-import { RuntimeStatusNotice } from "@/components/runtime/version-status";
 import {
   anyInFlight,
   RUNTIME_POLL_MS,
@@ -26,8 +27,7 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-export default async function NodePage({ searchParams }) {
-  const sp = await searchParams;
+export default async function NodePage() {
   const [permissions, t, { data, failed, status, failure, message }] =
     await Promise.all([getPermissions(), getTranslations("node"), getNode()]);
 
@@ -65,15 +65,20 @@ export default async function NodePage({ searchParams }) {
   const versions = node?.versions ?? [];
   const lifecycleAvailable = Boolean(node?.lifecycle_available);
 
-  // The version in the URL wins so a reload keeps the selection; otherwise the default.
-  const selected =
-    versions.find((version) => version.version === sp?.version)?.version ??
-    node?.default ??
-    versions[0]?.version ??
-    null;
+  // Newest first: the API lists in-flight installs ahead of installed versions.
+  const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
 
-  const current =
-    versions.find((version) => version.version === selected) ?? null;
+  // Install sits in the table's header, or in the empty state when there is no table.
+  const install = (
+    <InstallVersionButton
+      runtime="node"
+      installable={node?.installable ?? []}
+      catalogError={node?.installable_error ?? null}
+      installed={versions}
+      canManage={canManage}
+      lifecycleAvailable={lifecycleAvailable}
+    />
+  );
 
   // fnm installs take minutes and finish silently, so in-flight versions are polled.
   const inFlight = anyInFlight(versions);
@@ -103,65 +108,36 @@ export default async function NodePage({ searchParams }) {
                   : t("empty.noneInstallable")
                 : t("empty.description")
             }
-            action={
-              <InstallVersionButton
-                runtime="node"
-                installable={node?.installable ?? []}
-                catalogError={node?.installable_error ?? null}
-                installed={versions}
-                canManage={canManage}
-                lifecycleAvailable={lifecycleAvailable}
-              />
-            }
+            action={install}
           />
           <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Install sits at the end of the version chips. With a single version
-              there are no chips, so it joins that version's card actions. */}
-          {versions.length > 1 ? (
-            <VersionBar
-              versions={versions}
-              selected={selected}
-              namespace="node"
-              lifecycleAvailable={lifecycleAvailable}
-              action={
-                <InstallVersionButton
-                  runtime="node"
-                  installable={node?.installable ?? []}
-                  catalogError={node?.installable_error ?? null}
-                  installed={versions}
-                  canManage={canManage}
-                  lifecycleAvailable={lifecycleAvailable}
-                />
-              }
-            />
-          ) : null}
-
-          {current ? (
-            // Keyed on the version: the card seeds state from it on mount only.
-            <VersionSummary
-              key={current.version}
-              version={current}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-            >
-              {versions.length === 1 ? (
-                <InstallVersionButton
-                  runtime="node"
-                  installable={node?.installable ?? []}
-                  catalogError={node?.installable_error ?? null}
-                  installed={versions}
-                  canManage={canManage}
-                  lifecycleAvailable={lifecycleAvailable}
-                />
-              ) : null}
-            </VersionSummary>
-          ) : null}
-
-          {/* Status of this version when it is not simply ready. Shared with PHP. */}
-          <RuntimeStatusNotice version={current} versionLabel={selected} namespace="node" />
+          <VersionsCard
+            namespace="node"
+            gridClass={rowGrid("node", lifecycleAvailable)}
+            columns={[
+              t("table.colVersion"),
+              ...(lifecycleAvailable ? [t("table.colSupport")] : []),
+              t("table.colNpm"),
+              t("table.colUsedBy"),
+              t("table.colActions"),
+            ]}
+            action={install}
+            footnote={t("versions.defaultHint")}
+          >
+            {/* Newest first: the API lists in-flight installs ahead of installed versions. */}
+            {ordered.map((version) => (
+              /* Keyed on version: each row holds its own confirm and running state. */
+              <VersionSummary
+                key={version.version}
+                version={version}
+                canManage={canManage}
+                lifecycleAvailable={lifecycleAvailable}
+              />
+            ))}
+          </VersionsCard>
 
           <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>

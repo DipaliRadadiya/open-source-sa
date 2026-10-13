@@ -121,6 +121,9 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
               render={({ field }) => (
                 <Row
                   toggle
+                  // Full width under name and timezone: in one column it left an empty
+                  // quarter beside it (Krishna, 12 Oct).
+                  wide
                   label={t("ntp")}
                   hint={
                     general?.clock_synchronized === false && general?.ntp

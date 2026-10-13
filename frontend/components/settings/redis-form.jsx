@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { CircleAlert, Database, KeyRound, Loader2 } from "lucide-react";
 import { redisFormSchema, REDIS_POLICIES } from "@/lib/schemas/settings";
@@ -18,6 +18,9 @@ import { validationMessage } from "@/lib/settings/validation-message";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { formatBytes } from "@/lib/format/bytes";
+import { memoryBytes, memoryInput } from "@/lib/settings/redis-memory";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
 import {
@@ -63,10 +66,17 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const showStored = Boolean(redis?.password) && !changing;
 
   const defaults = {
-    maxmemory: redis?.maxmemory ?? "0",
+    maxmemory: memoryInput(redis?.maxmemory ?? "0"),
     maxmemory_policy: redis?.maxmemory_policy ?? "noeviction",
     password: "",
   };
+
+  const format = useFormatter();
+  const limitBytes = memoryBytes(redis?.maxmemory) || null;
+  const usedLabel =
+    typeof redis?.memory_used === "number"
+      ? formatBytes(redis.memory_used, format)
+      : (redis?.memory_used_human ?? null);
 
   const form = useForm({
     resolver: zodResolver(redisFormSchema),
@@ -190,13 +200,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
                 <Row
                   label={t("redis.maxmemory")}
                   required
-                  hint={
-                    redis?.memory_used_human
-                      ? (redis.maxmemory && redis.maxmemory !== "0"
-                          ? t("redis.usageOfLimit", { used: redis.memory_used_human, limit: redis.maxmemory })
-                          : t("redis.usage", { used: redis.memory_used_human }))
-                      : t("redis.maxmemoryHint")
-                  }
+                  hint={t("redis.maxmemoryHint")}
                   error={validationMessage(
                     tv,
                     form.formState.errors.maxmemory?.message,
@@ -212,6 +216,22 @@ export function RedisForm({ redis, canManage, changedBy }) {
                       {...field}
                     />
                   </FormControl>
+                  {/* What it is using now, against the saved limit. */}
+                  {usedLabel ? (
+                    <div className="space-y-1 pt-1">
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {limitBytes
+                          ? t("redis.usageOfLimit", { used: usedLabel, limit: formatBytes(limitBytes, format) })
+                          : t("redis.usage", { used: usedLabel })}
+                      </p>
+                      {limitBytes && typeof redis?.memory_used === "number" ? (
+                        <Progress
+                          value={Math.min(100, (redis.memory_used / limitBytes) * 100)}
+                          aria-label={t("redis.usageOfLimit", { used: usedLabel, limit: formatBytes(limitBytes, format) })}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                 </Row>
               )}
             />
@@ -227,18 +247,21 @@ export function RedisForm({ redis, canManage, changedBy }) {
                     disabled={!canManage}
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full font-mono">
+                      {/* Wraps rather than clips: the plain-words label is long in Russian and on a phone. */}
+                      <SelectTrigger className="redis-policy-trigger h-auto min-h-9 w-full data-[size=default]:h-auto py-1.5 text-left whitespace-normal *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:flex-wrap">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
+                    {/* Plain words first; Redis's own name after, for anyone matching docs. */}
                     <SelectContent>
                       {REDIS_POLICIES.map((policy) => (
-                        <SelectItem
-                          key={policy}
-                          value={policy}
-                          className="font-mono"
-                        >
-                          {policy}
+                        <SelectItem key={policy} value={policy}>
+                          {t(`redis.policies.${policy}`)}
+                          {/* Only in the open list: in the closed box it pushed the label onto two lines.
+                              A class, not data-slot: FormControl overwrites the trigger's data-slot. */}
+                          <span className="ms-1.5 font-mono text-xs whitespace-nowrap text-muted-foreground in-[.redis-policy-trigger]:hidden">
+                            {policy}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -253,6 +276,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
               name="password"
               render={({ field }) => (
                 <Row
+                  wide
                   label={t("redis.password")}
                   hint={
                     // The full sentence lives here; the input is too narrow for it.
@@ -276,7 +300,10 @@ export function RedisForm({ redis, canManage, changedBy }) {
                     form.formState.errors.password?.message,
                   )}
                 >
-                  <div className="space-y-1.5">
+                  {/* The field keeps the same column width as Memory limit above it; its
+                      buttons sit beside it in the second column (Krishna, 12 Oct). */}
+                  <div className="grid gap-x-6 gap-y-2 @3xl/section:grid-cols-2 @3xl/section:items-center">
+                    <div className="min-w-0">
                     {showStored ? (
                       // Shaped like the inputs beside it, at their full width, with its
                       // two buttons inside: a short grey strip read as a different field.
@@ -313,32 +340,32 @@ export function RedisForm({ redis, canManage, changedBy }) {
                           />
                         </FormControl>
 
-                        {/* Only when there is something to go back to. */}
-                        {changing ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setChanging(false);
-                              form.resetField("password");
-                            }}
-                          >
-                            {t("redis.changeCancel")}
-                          </Button>
-                        ) : null}
                       </>
                     )}
+                    </div>
+
+                    {/* Only when there is something to go back to. */}
+                    {changing && canManage ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setChanging(false);
+                          form.resetField("password");
+                        }}
+                      >
+                        {t("redis.changeCancel")}
+                      </Button>
+                    ) : null}
 
                     {/* Removing is its own action (`remove_password`), not an
                         empty value: Laravel rewrites "" to null before validation. */}
                     {!passwordLocked && !changing ? (
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
                         {showStored ? (
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
                             onClick={() => setChanging(true)}
                           >
                             {t("redis.changePassword")}
@@ -351,7 +378,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                           <Button
                             type="button"
                             variant="destructive"
-                            size="sm"
                             onClick={() => setRemoving(true)}
                           >
                             {t("redis.removePassword")}

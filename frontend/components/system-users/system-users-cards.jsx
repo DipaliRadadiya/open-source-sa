@@ -4,6 +4,7 @@ import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-t
 import { AccessSwitch } from "@/components/system-users/access-switch";
 import { ShellSelect } from "@/components/system-users/shell-select";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
+import { CopyButton } from "@/components/ui/copy-button";
 import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 
@@ -37,7 +38,10 @@ export function SystemUsersCards({
                   </Badge>
                 ) : null}
               </div>
-              <p className="truncate font-mono text-xs text-muted-foreground">{user.home_path}</p>
+              <p className="flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+                <span className="min-w-0 truncate">{user.home_path}</span>
+                <CopyButton value={user.home_path} label={t("detail.copyPath")} className="size-6" />
+              </p>
             </div>
             {/* For viewers too: the menu is how SSH keys are reached. */}
             <div className="-me-2 -mt-1 shrink-0">

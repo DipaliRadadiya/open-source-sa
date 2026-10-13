@@ -234,7 +234,7 @@ export function DomainsSection({
           <div className="-mx-(--card-spacing) -mb-(--card-spacing) border-t">
             <div
               aria-hidden
-              className={cn(ROW_GRID, "hidden gap-x-4 border-b bg-muted/40 px-5 py-3 text-[13px] font-medium text-muted-foreground md:grid")}
+              className={cn(ROW_GRID, "hidden gap-x-4 border-b bg-muted/40 px-5 py-3 text-sm font-medium text-muted-foreground md:grid")}
             >
               <span>{t("columns.domain")}</span>
               <span>{t("columns.dns")}</span>

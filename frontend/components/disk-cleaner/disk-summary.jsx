@@ -1,26 +1,39 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { HardDrive } from "lucide-react";
-import { StatCard } from "@/components/ui/stat-card";
+import { HardDrive, Sparkles } from "lucide-react";
+import { usageStatus } from "@/lib/metrics/usage-level";
+import { Tile } from "@/components/applications/app-status-tiles";
 
 // Client-side because the icon component cannot cross the server boundary as a prop.
-export function DiskSummary({ disk, reclaimableHuman }) {
+// Compact tiles, as on Services: the stacked cards left most of their width empty (Krishna, 13 Oct).
+const TONE = { normal: "info", watch: "warning", high: "destructive" };
+
+export function DiskSummary({ disk, reclaimableHuman, reclaimableCount }) {
   const t = useTranslations("diskCleaner");
 
   return (
-    <StatCard
-      icon={HardDrive}
-      label={t("summary.label")}
-      value={t("summary.percentUsed", { percent: Math.round(disk?.percent ?? 0) })}
-      hint={t("summary.freeShort", { free: disk?.free_human ?? "—" })}
-      percent={disk?.percent ?? 0}
-      hasSub
-      sub={t("summary.subLine", {
-        used: disk?.used_human ?? "—",
-        total: disk?.total_human ?? "—",
-        reclaimable: reclaimableHuman ?? "0 B",
-      })}
-    />
+    <>
+      <Tile
+        compact
+        icon={HardDrive}
+        label={t("summary.label")}
+        value={t("summary.percentUsed", { percent: Math.round(disk?.percent ?? 0) })}
+        detail={t("summary.usedLine", {
+          used: disk?.used_human ?? "—",
+          total: disk?.total_human ?? "—",
+          free: disk?.free_human ?? "—",
+        })}
+        tone={TONE[usageStatus(disk?.percent)] ?? "neutral"}
+      />
+      <Tile
+        compact
+        icon={Sparkles}
+        label={t("summary.reclaimLabel")}
+        value={reclaimableHuman ?? "0 B"}
+        detail={t("summary.reclaimCount", { count: reclaimableCount })}
+        tone={reclaimableCount > 0 ? "success" : "neutral"}
+      />
+    </>
   );
 }

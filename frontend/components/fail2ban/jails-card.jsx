@@ -178,6 +178,11 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                       ) : null}
                       <JailState jail={jail} t={t} />
                     </div>
+                    {/* What this jail does, in one line: "SSH" and "Repeat offenders" alone
+                        did not say (Krishna, 13 Oct). Jails without a sentence show none. */}
+                    {t.has(`jails.about.${jail.name}`) ? (
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t(`jails.about.${jail.name}`)}</p>
+                    ) : null}
                     <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{jail.name}</span>
                   </div>
 

@@ -61,14 +61,26 @@ export function hasBot(list, value) {
   return list.some((entry) => String(entry).toLowerCase() === lower);
 }
 
+/**
+ * Whether an allow exempts this bot. Exact name on the v8 policies; on `legacy_v7`
+ * an allowed name exempts every agent that contains it (the v7 list has short
+ * tokens like "GPT" inside longer names), so a contained name is exempt too.
+ */
+export function isAllowedBot(allowed, bot, { contains = false } = {}) {
+  const lower = String(bot ?? "").trim().toLowerCase();
+  return allowed.some((entry) => {
+    const allow = String(entry).trim().toLowerCase();
+    return contains ? allow !== "" && lower.includes(allow) : allow === lower;
+  });
+}
+
 // Policy list plus additions, minus exemptions; mirrors `botBlockPattern()`, where allow beats block.
-export function effectiveBlockedBots(policyBots = [], blocked = [], allowed = []) {
-  const allow = new Set(allowed.map((bot) => String(bot).toLowerCase()));
+export function effectiveBlockedBots(policyBots = [], blocked = [], allowed = [], { contains = false } = {}) {
   const seen = new Set();
 
   return [...policyBots, ...blocked].filter((bot) => {
     const lower = String(bot).toLowerCase();
-    if (allow.has(lower) || seen.has(lower)) return false;
+    if (isAllowedBot(allowed, bot, { contains }) || seen.has(lower)) return false;
     seen.add(lower);
     return true;
   });

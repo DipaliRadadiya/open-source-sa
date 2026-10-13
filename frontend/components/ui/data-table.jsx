@@ -136,10 +136,12 @@ export function DataTable({
                     <TableHead
                       key={header.id}
                       // Sticky headers need an opaque background.
-                      // `meta.className` lets a caller constrain a column's width.
+                      // `meta.className` lets a caller constrain a column's width;
+                      // `meta.headClassName` styles the header cell alone (e.g. let it wrap).
                       className={cn(
                         stickyHeader && "bg-muted",
                         header.column.columnDef.meta?.className,
+                        header.column.columnDef.meta?.headClassName,
                       )}
                       /* Server-driven columns sort via the URL; `meta.sortKey` supplies aria-sort. */
                       aria-sort={

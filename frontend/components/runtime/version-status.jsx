@@ -1,6 +1,7 @@
 import { Loader2, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/data-table/empty-state";
 
 // `ready`, or a missing `status` (older responses), renders nothing.
@@ -17,12 +18,12 @@ export function removeFailed(version) {
 }
 
 // `useTranslations`, not `getTranslations`: renders in both a server and a client component.
-export function RuntimeStatusBadge({ version, namespace }) {
+export function RuntimeStatusBadge({ version, namespace, className }) {
   const t = useTranslations(namespace);
   const state = versionState(version);
   if (removeFailed(version)) {
     return (
-      <Badge variant="destructive" className="font-normal" title={version.message ?? undefined}>
+      <Badge variant="destructive" className={cn("font-normal", className)} title={version.message ?? undefined}>
         {t("versions.statusRemoveFailed")}
       </Badge>
     );
@@ -31,14 +32,14 @@ export function RuntimeStatusBadge({ version, namespace }) {
 
   if (state === "failed") {
     return (
-      <Badge variant="destructive" className="font-normal">
+      <Badge variant="destructive" className={cn("font-normal", className)}>
         {t("versions.statusFailed")}
       </Badge>
     );
   }
 
   return (
-    <Badge variant="warning" className="font-normal">
+    <Badge variant="warning" className={cn("font-normal", className)}>
       <Loader2 className="size-3 animate-spin" />
       {state === "removing"
         ? t("versions.statusRemoving")

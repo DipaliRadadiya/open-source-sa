@@ -38,7 +38,8 @@ test("the card reports the security count, not the total", () => {
 });
 
 test("the state and the icon key off the security count", () => {
-  assert.match(SOURCE, /if \(security == null && !failed && !unreadable && !neverRun\) return null/);
+  // 12 Oct: with no note to show, the install control still renders on its own.
+  assert.match(SOURCE, /if \(security == null && !failed && !unreadable && !neverRun\) \{/);
   assert.match(SOURCE, /: unreadable \|\| security == null/, "unknown-count branch uses security");
   assert.match(SOURCE, /unreadable \|\| security == null \|\| security > 0 \?/, "icon branch uses security");
 });
@@ -52,7 +53,7 @@ test("the reconciling note is gone, along with its string", () => {
 });
 
 test("the run button no longer needs either count", () => {
-  assert.match(SOURCE, /function RunSecurityUpdates\(\{ run, canManage \}\)/);
+  assert.match(SOURCE, /function RunSecurityUpdates\(\{ run, canManage, frame \}\)/);
   assert.doesNotMatch(SOURCE, /total=\{updates\?\.updates_available\}/);
 });
 

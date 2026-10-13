@@ -38,10 +38,10 @@ export const getCleanerSchedule = cache(async function getCleanerSchedule() {
   }
 });
 
-/** Recent runs, manual and scheduled. Empty is the normal first-run state. */
-export const getCleanerRuns = cache(async function getCleanerRuns() {
+/** Recent runs, manual and scheduled, a page at a time. Empty is the normal first-run state. */
+export const getCleanerRuns = cache(async function getCleanerRuns(page = 1, perPage = 10) {
   try {
-    const res = await serverFetch("/disk-cleaner/runs", { searchParams: { per_page: 10 } });
+    const res = await serverFetch("/disk-cleaner/runs", { searchParams: { page, per_page: perPage } });
     if (!res.ok) return { runs: [] };
 
     const parsed = cleanerRunsSchema.safeParse(await res.json());

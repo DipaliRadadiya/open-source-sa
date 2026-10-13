@@ -1,13 +1,9 @@
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { RotateCw } from "lucide-react";
 
-// A re-measure button instead of polling, because the scan walks the filesystem.
+// How old the sizes are; the card's refresh button re-measures (the scan walks the filesystem, so no polling).
 export function MeasuredAt({ at }) {
   const t = useTranslations("diskCleaner");
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
   const [minutes, setMinutes] = useState(0);
 
   useEffect(() => {
@@ -20,17 +16,8 @@ export function MeasuredAt({ at }) {
   }, [at]);
 
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-      <span>{minutes < 1 ? t("list.measuredJustNow") : t("list.measuredAgo", { minutes })}</span>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 underline underline-offset-4 disabled:opacity-50"
-        disabled={pending}
-        onClick={() => startTransition(() => router.refresh())}
-      >
-        <RotateCw className={pending ? "size-3 animate-spin" : "size-3"} />
-        {t("list.rescan")}
-      </button>
-    </p>
+    <span className="mt-1 block text-xs">
+      {minutes < 1 ? t("list.measuredJustNow") : t("list.measuredAgo", { minutes })}
+    </span>
   );
 }

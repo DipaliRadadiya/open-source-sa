@@ -4,20 +4,18 @@ import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CalendarClock, Loader2 } from "lucide-react";
+import { CalendarClock, Loader2, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteCleanerSchedule, saveCleanerSchedule } from "@/lib/api/disk-cleaner";
-import { clampPercent, thresholdProblem } from "@/lib/disk-cleaner/clamp-percent";
 import { clockTimeOf } from "@/lib/disk-cleaner/next-run";
 import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
 import { apiMessage } from "@/lib/api/error-message";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FormModal } from "@/components/ui/form-modal";
 import {
   Select,
@@ -26,12 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Tile } from "@/components/applications/app-status-tiles";
 
 const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
+
+// Radix Select cannot hold "", which is how the form spells "every time".
+const ANY = "any";
+const THRESHOLDS = ["50", "60", "70", "80", "90"];
+
+// A schedule saved with another number (the API takes 1–99) keeps it on offer.
+function thresholdOptions(current) {
+  return current && !THRESHOLDS.includes(current)
+    ? [...THRESHOLDS, current].sort((a, b) => Number(a) - Number(b))
+    : THRESHOLDS;
+}
 
 // Only `safe` categories are offered; the backend enforces the same.
 export function ScheduleCard({ schedule, categories, canManage }) {
@@ -43,7 +49,10 @@ export function ScheduleCard({ schedule, categories, canManage }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
-  const safeCategories = categories.filter((c) => c.available && c.safe);
+  // Biggest first, the same order as the list on the page.
+  const safeCategories = categories
+    .filter((c) => c.available && c.safe)
+    .sort((a, b) => (b.reclaimable ?? 0) - (a.reclaimable ?? 0));
   const [enabled, setEnabled] = useState(Boolean(schedule?.enabled));
   const [frequency, setFrequency] = useState(schedule?.frequency ?? "weekly");
   const [picked, setPicked] = useState(() => new Set(schedule?.categories ?? []));
@@ -59,10 +68,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
     setThreshold(schedule?.threshold_percent != null ? String(schedule.threshold_percent) : "");
   }
 
-  const thresholdInvalid = enabled && thresholdProblem(threshold) !== null;
-
   async function save() {
-    if (thresholdInvalid) return;
     setPending(true);
     try {
       // Off with nothing ticked DELETES the schedule: the API requires a category on
@@ -102,15 +108,11 @@ export function ScheduleCard({ schedule, categories, canManage }) {
       })
     : t("schedule.summaryOff");
 
-  // Names, not a count; the threshold is the other half of when this fires.
-  const scheduledLabels = (schedule?.categories ?? [])
-    .map((key) => categories.find((c) => c.key === key)?.label)
-    .filter(Boolean);
-
+  // The threshold is the other half of when this fires; "every time" goes without saying.
   const whenLine =
-    schedule?.threshold_percent != null
+    schedule?.enabled && schedule?.threshold_percent != null
       ? t("schedule.overThreshold", { percent: schedule.threshold_percent })
-      : t("schedule.everyTime");
+      : null;
 
   // Only the API knows the hour; the zone is named because it is the project's, not the reader's.
   const nextClockTime = clockTimeOf(schedule?.next_run_at);
@@ -125,78 +127,57 @@ export function ScheduleCard({ schedule, categories, canManage }) {
         : t("schedule.nextRun", { when: schedule.next_run_at_human })
       : null;
 
+  // An icon, not a text button: the words squeezed the tile's own text onto three
+  // lines in German and cut off the next run.
+  const configureButton = (
+    <Button
+      variant="outline"
+      size="icon"
+      className="size-8 shrink-0"
+      disabled={!canManage}
+      aria-label={t("schedule.setUp")}
+      onClick={() => {
+        reset();
+        setOpen(true);
+      }}
+    >
+      <Settings2 className="size-4" />
+    </Button>
+  );
+
   return (
     <>
-      <Card className="gap-0 overflow-hidden py-0">
-        <CardContent className="px-4 py-3.5">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <CalendarClock className="size-3.5" />
-            </span>
-            <span className="text-sm font-medium text-muted-foreground">
-              {t("schedule.title")}
-            </span>
-            {schedule?.enabled ? (
-              <Badge variant="success" className="ml-auto font-normal">
-                {t("schedule.on")}
-              </Badge>
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex items-baseline justify-between gap-2">
-            <p className="text-lg font-semibold leading-none tracking-tight">{summary}</p>
-          </div>
-
-          {/* One badge per item; names in a sentence blur together at 12px. */}
-          {schedule?.enabled ? (
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-              {scheduledLabels.length ? (
-                scheduledLabels.map((label) => (
-                  <Badge key={label} variant="outline" className="font-normal text-muted-foreground">
-                    {label}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-xs text-muted-foreground">
-                  {t("schedule.cleansNothing")}
-                </span>
-              )}
-              <span className="text-xs text-muted-foreground">{whenLine}</span>
-            </div>
-          ) : null}
-
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              {/* Shows whether a schedule that looks on has ever fired. */}
-              <p className="truncate text-xs text-muted-foreground">
-                {schedule?.last_run_at_human
-                  ? t("schedule.lastRun", { when: schedule.last_run_at_human })
-                  : t("schedule.neverRun")}
-              </p>
-              {/* Null while the cleaner is off: the API names no run that will
-                  not happen, and the card must not invent one. */}
-              {nextRunLine ? (
-                <p className="truncate text-xs text-muted-foreground">{nextRunLine}</p>
-              ) : null}
-            </div>
-
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 shrink-0"
-                disabled={!canManage}
-                onClick={() => {
-                  reset();
-                  setOpen(true);
-                }}
-              >
-                {t("schedule.configure")}
-              </Button>
-            </ReasonTooltip>
-          </div>
-        </CardContent>
-      </Card>
+      {/* A compact tile like the two beside it. Which items it cleans is in Configure. */}
+      <Tile
+        compact
+        icon={CalendarClock}
+        label={t("schedule.title")}
+        value={summary}
+        // Shows whether a schedule that looks on has ever fired, and when it fires next.
+        // The next run is null while the cleaner is off: the API names no run that will
+        // not happen, and the tile must not invent one.
+        detail={[
+          nextRunLine ??
+            (schedule?.last_run_at_human
+              ? t("schedule.lastRun", { when: schedule.last_run_at_human })
+              : t("schedule.neverRun")),
+          whenLine,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        tone={schedule?.enabled ? "success" : "neutral"}
+        action={
+          canManage ? (
+            // Named on hover, like the refresh buttons: an icon alone does not say what it opens.
+            <Tooltip>
+              <TooltipTrigger asChild>{configureButton}</TooltipTrigger>
+              <TooltipContent>{t("schedule.setUp")}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <ReasonTooltip reason={t("noPermission")}>{configureButton}</ReasonTooltip>
+          )
+        }
+      />
 
       <FormModal
         open={open}
@@ -204,7 +185,6 @@ export function ScheduleCard({ schedule, categories, canManage }) {
         icon={CalendarClock}
         title={t("schedule.title")}
         description={t("schedule.dialogDescription")}
-        // A form, so Enter in the threshold field saves like every other dialog.
         asForm
         onSubmit={(event) => {
           event.preventDefault();
@@ -220,7 +200,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             >
               {/* Spinner and label while saving: the dialog stays open, so a
                   greyed-out button alone reads as a missed click. */}
-              <Button type="submit" disabled={pending || (enabled && picked.size === 0) || thresholdInvalid}>
+              <Button type="submit" disabled={pending || (enabled && picked.size === 0)}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {pending ? t("schedule.saving") : t("schedule.save")}
               </Button>
@@ -236,102 +216,102 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             <Switch id="cleaner-enabled" checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
-          {/* Stated inline, not only in a tooltip: the controls below are
-              disabled while off, and Radix tooltips never open on touch. */}
+          {/* Off, the settings below are hidden rather than greyed out, so the dialog
+              stays short; picked items are kept and come back when it is turned on. */}
           {!enabled ? (
             <p className="-mt-3 text-xs text-muted-foreground">
               {t("schedule.turnOnFirst")}
             </p>
-          ) : null}
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="cleaner-frequency">{t("schedule.howOften")}</Label>
+                  <Select value={frequency} onValueChange={setFrequency}>
+                    <SelectTrigger id="cleaner-frequency" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCIES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(`schedule.frequencyOption.${value}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className={cn("grid gap-4 sm:grid-cols-2", !enabled && "opacity-50")}>
-            <div className="space-y-2">
-              <Label htmlFor="cleaner-frequency">{t("schedule.howOften")}</Label>
-              <ReasonTooltip
-                reason={enabled ? null : t("schedule.turnOnFirst")}
-                className="block w-full"
-              >
-              <Select value={frequency} onValueChange={setFrequency} disabled={!enabled}>
-                <SelectTrigger id="cleaner-frequency" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FREQUENCIES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {t(`schedule.frequency.${value}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              </ReasonTooltip>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cleaner-threshold" hint={t("schedule.onlyWhenHint")}>{t("schedule.onlyWhen")}</Label>
-              <div className="relative">
-                <Input
-                  id="cleaner-threshold"
-                  inputMode="numeric"
-                  className="pr-8"
-                  value={threshold}
-                  disabled={!enabled}
-                  disabledReason={t("schedule.turnOnFirst")}
-                  // An example number, not a word: it reads under the label.
-                  placeholder={t("schedule.thresholdPlaceholder")}
-                  onChange={(e) => setThreshold(clampPercent(e.target.value))}
-                  aria-invalid={thresholdInvalid || undefined}
-                  aria-describedby={thresholdInvalid ? "cleaner-threshold-error" : undefined}
-                />
-                {/* Always rendered: the unit is what an empty box must show. */}
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
-                  %
-                </span>
+                {/* A list, not a number box: an example "80" in an empty box read as a
+                    value already set, while empty really meant "every time". */}
+                <div className="space-y-2">
+                  <Label htmlFor="cleaner-threshold" hint={t("schedule.onlyWhenHint")}>
+                    {t("schedule.onlyWhen")}
+                  </Label>
+                  <Select
+                    value={threshold === "" ? ANY : threshold}
+                    onValueChange={(value) => setThreshold(value === ANY ? "" : value)}
+                  >
+                    <SelectTrigger id="cleaner-threshold" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ANY}>{t("schedule.thresholdAny")}</SelectItem>
+                      {thresholdOptions(threshold).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t("schedule.thresholdOver", { percent: Number(value) })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {thresholdInvalid ? (
-                <p id="cleaner-threshold-error" role="alert" className="text-sm text-destructive">
-                  {t("schedule.thresholdRange")}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">{t("schedule.thresholdHint")}</p>
-              )}
-            </div>
-          </div>
 
-          <div className={cn("space-y-2", !enabled && "opacity-50")}>
-            <Label className="flex flex-wrap items-center justify-between gap-2">
-              <span>{t("schedule.whatToClean")}</span>
-              {/* Inline, not in a tooltip: Save stays disabled until something is ticked. */}
-              {enabled && picked.size === 0 ? (
-                <span className="font-normal text-warning">{t("schedule.pickSomething")}</span>
-              ) : null}
-            </Label>
-            <ul className="divide-y rounded-lg border">
-              {safeCategories.map((category) => (
-                <li key={category.key} className="flex items-center gap-3 px-3 py-2.5">
-                  <Checkbox
-                    checked={picked.has(category.key)}
-                    disabled={!enabled}
-                    disabledReason={t("schedule.turnOnFirst")}
-                    onCheckedChange={() =>
-                      setPicked((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(category.key)) next.delete(category.key);
-                        else next.add(category.key);
-                        return next;
-                      })
-                    }
-                    aria-label={category.label}
-                  />
-                  <span className="flex-1 text-sm">{category.label}</span>
-                  <span className="text-sm tabular-nums text-muted-foreground">
-                    {category.reclaimable_human ?? "0 B"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs text-muted-foreground">{t("schedule.safeOnly")}</p>
-          </div>
-
+              <div className="space-y-2">
+                <Label className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{t("schedule.whatToClean")}</span>
+                  {/* Inline, not in a tooltip: Save stays disabled until something is ticked. */}
+                  {picked.size === 0 ? (
+                    <span className="font-normal leading-snug text-muted-foreground">{t("schedule.pickSomething")}</span>
+                  ) : null}
+                </Label>
+                <ul className="divide-y overflow-hidden rounded-lg border">
+                  {safeCategories.map((category) => {
+                    const checked = picked.has(category.key);
+                    return (
+                      <li key={category.key}>
+                        {/* The whole row is the label, as on the page. */}
+                        <label
+                          htmlFor={`schedule-${category.key}`}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40",
+                            checked && "bg-primary/5 hover:bg-primary/5",
+                          )}
+                        >
+                          <Checkbox
+                            id={`schedule-${category.key}`}
+                            checked={checked}
+                            onCheckedChange={() =>
+                              setPicked((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(category.key)) next.delete(category.key);
+                                else next.add(category.key);
+                                return next;
+                              })
+                            }
+                          />
+                          <span className="min-w-0 flex-1 text-sm">{category.label}</span>
+                          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                            {category.reclaimable_human ?? "0 B"}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-xs text-muted-foreground">{t("schedule.safeOnly")}</p>
+              </div>
+            </>
+          )}
         </div>
       </FormModal>
     </>

@@ -21,6 +21,7 @@ import { AccessSwitch } from "@/components/system-users/access-switch";
 import { ShellSelect } from "@/components/system-users/shell-select";
 import { AppsCell } from "@/components/system-users/apps-cell";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
+import { CopyButton } from "@/components/ui/copy-button";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 import { SystemUsersCards } from "@/components/system-users/system-users-cards";
@@ -51,8 +52,9 @@ function UsernameCell({ row, table }) {
           </Badge>
         ) : null}
       </div>
-      <p className="font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">
-        {row.original.home_path}
+      <p className="flex items-start gap-1 font-mono text-xs text-muted-foreground">
+        <span className="min-w-0 pt-1 [overflow-wrap:anywhere]">{row.original.home_path}</span>
+        <CopyButton value={row.original.home_path} label={t("detail.copyPath")} className="size-6" />
       </p>
     </div>
   );

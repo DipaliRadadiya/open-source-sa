@@ -871,15 +871,13 @@
       "password": "Contraseña del SO",
       "passwordHint": "Se usa para iniciar sesión en el servidor como este usuario.",
       "passwordNotSet": "Sin establecer",
-      "reveal": "Mostrar contraseña",
-      "hide": "Ocultar contraseña",
       "copy": "Copiar contraseña",
-      "copied": "Contraseña copiada al portapapeles.",
       "applications": "Aplicaciones",
       "noApplications": "Este usuario no posee ninguna aplicación.",
       "sshKeys": "Claves SSH",
       "noSshKeys": "Aún no se han añadido claves SSH.",
-      "fingerprint": "Huella digital"
+      "fingerprint": "Huella digital",
+      "copyPath": "Copiar ruta"
     },
     "noPermission": "Tu rol no incluye Usuario del sistema con acceso de gestión. Pide a un administrador que te lo conceda.",
     "shellNeedsLogin": "Este shell rechaza el inicio de sesión, así que no puede usarse con el acceso SSH activado. Desactiva SSH primero.",
@@ -1506,10 +1504,8 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "description": "El archivo completo, tal como lo lee PHP. Al guardar se hace una copia, se escribe, se comprueba con php-fpm -t y se recarga. Si PHP lo rechaza, se restaura el archivo anterior y no se recarga nada.",
       "acknowledge": "Entiendo que un php.ini incorrecto puede impedir que arranque FPM de PHP {version}, lo que dejaría sin servicio todas las aplicaciones de esa versión.",
       "save": "Guardar y recargar",
-      "cancel": "Cancelar",
       "copy": "Copiar el archivo",
       "saved": "php.ini guardado y PHP {version} recargado",
       "loadFailed": "No se pudo leer el php.ini.",
@@ -1517,10 +1513,7 @@
       "blockedNoChanges": "No hay nada que guardar: el archivo no ha cambiado.",
       "blockedAcknowledge": "Primero confirma que entiendes el riesgo.",
       "pathUnknown": "Cargando…",
-      "shortAction": "Editar php.ini",
-      "viewAction": "Ver php.ini",
-      "readOnlyDescription": "El archivo completo, tal como lo lee PHP.",
-      "close": "Cerrar"
+      "readOnlyDescription": "El archivo completo, tal como lo lee PHP."
     },
     "notMeasured": "Sin medir",
     "phpSettings": "Ajustes de PHP",
@@ -1617,7 +1610,11 @@
       "badgeOff": "Desactivado",
       "badgeEnabled": "Activado",
       "badgeFailing": "{count} fallando",
-      "badgeBanned": "Bloqueos: {count}"
+      "badgeBanned": "Bloqueos: {count}",
+      "about": {
+        "sshd": "Vigila los inicios de sesión SSH en este servidor. Una dirección que falla la contraseña o la clave demasiadas veces se bloquea, según los límites de Reglas de bloqueo.",
+        "recidive": "Vigila las demás jaulas. Una dirección bloqueada 3 veces en un día queda bloqueada en todos los servicios de este servidor durante una semana."
+      }
     },
     "lockout": {
       "title": "Esto podría dejarte fuera",
@@ -2080,7 +2077,7 @@
         "maxmemory": "Límite de memoria",
         "maxmemoryHint": "Como 256mb o 1gb. 0 significa sin límite.",
         "policy": "Al alcanzar el límite",
-        "policyHint": "allkeys-* descartan claves antiguas; volatile-*, solo las que caducan.",
+        "policyHint": "Qué hace Redis cuando se llena.",
         "password": "Contraseña",
         "passwordHint": "Déjalo vacío para conservar la actual.",
         "passwordSet": "Hay una contraseña configurada",
@@ -2101,7 +2098,17 @@
         "usageOfLimit": "{used} de {limit}",
         "saveFailed": "No se pudieron guardar los ajustes de Redis.",
         "outOfSync": "La contraseña de Redis guardada en el panel ya no funciona: se cambió en el servidor. Los trabajos en cola, la caché y las sesiones no pueden usar Redis hasta que vuelvan a coincidir.",
-        "outOfSyncFix": "Establece una contraseña nueva abajo; el panel actualiza Redis y su propia copia a la vez."
+        "outOfSyncFix": "Establece una contraseña nueva abajo; el panel actualiza Redis y su propia copia a la vez.",
+        "policies": {
+          "noeviction": "Rechazar datos nuevos (conservar todo)",
+          "allkeys-lru": "Eliminar las claves usadas hace más tiempo",
+          "allkeys-lfu": "Eliminar las claves menos usadas",
+          "allkeys-random": "Eliminar claves al azar",
+          "volatile-lru": "Eliminar claves con caducidad usadas hace más tiempo",
+          "volatile-lfu": "Eliminar claves con caducidad menos usadas",
+          "volatile-random": "Eliminar al azar claves con caducidad",
+          "volatile-ttl": "Eliminar las claves más próximas a caducar"
+        }
       },
       "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda.",
       "passwordNotManageable": "Esta instalación no puede reescribir su propio archivo de configuración, así que la contraseña de Redis no se puede cambiar desde aquí. Cámbiala en el servidor y actualiza REDIS_PASSWORD."
@@ -2224,6 +2231,28 @@
   "php": {
     "title": "PHP",
     "subtitle": "El PHP de este servidor y las extensiones que pueden usar tus aplicaciones.",
+    "table": {
+      "title": "Versiones instaladas",
+      "description": "Haz clic en una versión para ver y cambiar sus extensiones, ionCube y php.ini.",
+      "colVersion": "Versión",
+      "colSupport": "Soporte",
+      "colUsedBy": "Usada por",
+      "colActions": "Acciones",
+      "usedByCount": "{count, plural, one {# aplicación} other {# aplicaciones}}",
+      "usedByNone": "Ninguna",
+      "usedByTitle": "Aplicaciones con PHP {version}"
+    },
+    "settings": {
+      "title": "Ajustes de PHP {version}",
+      "description": "Los cambios aquí afectan a todas las aplicaciones que usan PHP {version}."
+    },
+    "ini": {
+      "description": "El archivo completo, tal como lo lee PHP. Al guardar se hace una copia del anterior y PHP comprueba el nuevo. Si PHP lo rechaza, se restaura el anterior y no cambia nada.",
+      "perApp": "Para cambiar el tamaño de subida, la memoria o los límites de tiempo de una sola aplicación, usa los ajustes de PHP de esa aplicación.",
+      "perAppLink": "Ir a Aplicaciones",
+      "retry": "Reintentar",
+      "discard": "Descartar cambios"
+    },
     "loadFailed": "No pudimos leer la configuración de PHP de este servidor.",
     "noPermission": "Tu rol no incluye PHP con acceso de gestión. Pide a un administrador que te lo conceda.",
     "empty": {
@@ -2241,7 +2270,7 @@
       "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
-      "defaultHint": "Tus aplicaciones conservan su propia versión: esto solo cambia el comando php.",
+      "defaultHint": "La versión predeterminada se preselecciona para las nuevas aplicaciones y ejecuta el comando php (terminal y tareas cron). Las aplicaciones existentes conservan la versión que ya usan.",
       "defaultSet": "PHP {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "PHP {version} eliminada.",
@@ -2250,7 +2279,6 @@
       "confirmRemoveTitle": "¿Quitar PHP {version}?",
       "confirmRemoveBody": "Sus extensiones y ajustes se van con ella. Puedes instalarla de nuevo más tarde.",
       "confirmCancel": "Cancelar",
-      "switchLabel": "Ajustes de:",
       "statusFailed": "Instalación fallida",
       "statusInstalling": "Instalando",
       "steps": {
@@ -2304,8 +2332,6 @@
       "filterOn": "Activadas",
       "filterOff": "Desactivadas",
       "panelNeedsShort": "Necesaria para el panel",
-      "colName": "Extensión",
-      "colStatus": "Estado",
       "driftWebOnly": "Activa para los sitios, desactivada para la línea de comandos",
       "driftCliOnly": "Activa para la línea de comandos, desactivada para los sitios",
       "driftPartial": "Activa solo para algunos usos",
@@ -2461,7 +2487,7 @@
       "loadFailed": "No se pudo leer el estado de ionCube Loader.",
       "removeConfirmTitle": "¿Eliminar ionCube Loader?",
       "removeConfirmBody": "Cualquier aplicación en PHP {version} que ejecute software cifrado dejará de funcionar hasta que se vuelva a instalar.",
-      "hint": "Un archivo de código cerrado de ionCube, no un paquete apt: por eso tiene su propia pestaña en lugar de una fila en Extensiones.",
+      "hint": "Instálalo solo si una aplicación pide ionCube Loader. Se añade únicamente a PHP {version}.",
       "onShort": "Activado",
       "offShort": "Desactivado",
       "unavailableShort": "No disponible",
@@ -2471,7 +2497,8 @@
     },
     "tabs": {
       "extensions": "Extensiones",
-      "ioncube": "ionCube"
+      "ioncube": "ionCube",
+      "ini": "php.ini"
     },
     "unavailable": {
       "title": "PHP no se gestiona en este servidor",
@@ -2481,6 +2508,20 @@
   "node": {
     "title": "Node.js",
     "subtitle": "Las versiones de Node.js en este servidor.",
+    "table": {
+      "title": "Versiones instaladas",
+      "description": "Versiones de Node.js que el panel instaló en este servidor.",
+      "colVersion": "Versión",
+      "colSupport": "Soporte",
+      "colNpm": "npm",
+      "colUsedBy": "Usada por",
+      "colActions": "Acciones",
+      "usedByCount": "{count, plural, one {# aplicación} other {# aplicaciones}}",
+      "usedByNone": "Ninguna",
+      "usedByTitle": "Aplicaciones con Node.js {version}",
+      "npmCurrent": "Al día",
+      "npmUpdate": "Actualizar"
+    },
     "loadFailed": "No pudimos leer la configuración de Node.js de este servidor.",
     "noPermission": "Tu rol no incluye Node.js con acceso de gestión. Pide a un administrador que te lo conceda.",
     "empty": {
@@ -2497,12 +2538,10 @@
       "failed": "No se pudo actualizar npm.",
       "alreadyLatest": "npm ya estaba actualizado ({version}).",
       "installed": "npm {version}",
-      "upgrade": "npm {current} → {latest}",
-      "currentReason": "npm ya está en la versión más reciente."
+      "upgrade": "npm {current} → {latest}"
     },
     "versions": {
       "pickerLabel": "Versiones de Node.js",
-      "switchLabel": "Ajustes de:",
       "name": "Node.js {version}",
       "default": "Predeterminada",
       "isDefault": "Esta es la versión predeterminada.",
@@ -2511,7 +2550,7 @@
       "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
-      "defaultHint": "Tus aplicaciones conservan su propia versión: esto solo cambia el comando node.",
+      "defaultHint": "La versión predeterminada se preselecciona para las nuevas aplicaciones y ejecuta los comandos node, npm y npx. Las aplicaciones existentes conservan la versión que ya usan.",
       "defaultSet": "Node.js {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "Node.js {version} eliminada.",
@@ -2590,32 +2629,24 @@
       "label": "Espacio en disco",
       "percentUsed": "{percent}% ocupado",
       "lastRun": "Última limpieza {when}",
-      "freeShort": "{free} libres",
-      "subLine": "{used} de {total} usados · {reclaimable} liberables"
-    },
-    "groups": {
-      "package": "Paquetes",
-      "logs": "Registros",
-      "temp": "Archivos temporales",
-      "other": "Otros"
+      "usedLine": "{used} de {total} usados · {free} libres",
+      "reclaimLabel": "Se puede liberar",
+      "reclaimCount": "{count, plural, one {# elemento} other {# elementos}}"
     },
     "list": {
       "title": "Qué se puede limpiar",
       "subtitle": "Elige qué eliminar. No se borra nada hasta que confirmes.",
       "allClean": "No hay nada que limpiar ahora mismo: todo está en orden.",
-      "alreadyClean": "Ya está limpio",
-      "nothingToFree": "Aquí no hay nada que liberar.",
+      "alreadyCleanList": "Ya está limpio: {items}",
       "showPaths": "Ver carpetas exactas",
       "hidePaths": "Ocultar carpetas exactas",
       "selectAll": "Seleccionar todo lo limpiable",
-      "unselectAll": "Deseleccionar todo",
       "morePaths": "Mostrar {count} más",
       "fewerPaths": "Mostrar menos",
       "whatIsKept": "Qué se conserva",
       "checkFirst": "Revisar antes",
       "measuredJustNow": "Medido ahora mismo",
-      "measuredAgo": "Medido hace {minutes, plural, one {# minuto} other {# minutos}}",
-      "rescan": "Volver a medir"
+      "measuredAgo": "Medido hace {minutes, plural, one {# minuto} other {# minutos}}"
     },
     "action": {
       "clean": "Limpiar",
@@ -2639,14 +2670,13 @@
     "schedule": {
       "saving": "Guardando…",
       "title": "Limpieza automática",
-      "on": "Activa",
       "summaryOn": "Se ejecuta {frequency} · {count, plural, one {# elemento} other {# elementos}}",
-      "summaryOff": "Desactivada: limpia a mano cuando lo necesites.",
+      "summaryOff": "Desactivada",
       "enable": "Limpiar automáticamente",
       "howOften": "Con qué frecuencia",
-      "onlyWhen": "Ejecutar cuando el uso del disco supere",
-      "thresholdPlaceholder": "80",
-      "thresholdHint": "Déjalo vacío para limpiar cada vez que se ejecute.",
+      "onlyWhen": "Uso del disco",
+      "thresholdAny": "Cualquiera (limpiar siempre)",
+      "thresholdOver": "Más del {percent}%",
       "whatToClean": "Qué limpiar",
       "safeOnly": "Solo se pueden programar los elementos seguros de eliminar sin supervisión.",
       "save": "Guardar programación",
@@ -2661,22 +2691,29 @@
         "weekly": "cada semana",
         "monthly": "cada mes"
       },
-      "configure": "Configurar",
+      "frequencyOption": {
+        "hourly": "Cada hora",
+        "daily": "Cada día",
+        "weekly": "Cada semana",
+        "monthly": "Cada mes"
+      },
+      "setUp": "Configurar la limpieza automática",
       "dialogDescription": "Deja que el panel limpie solo, para que un disco lleno no te sorprenda.",
-      "cleansNothing": "Nada seleccionado",
       "overThreshold": "cuando supere el {percent}%",
-      "everyTime": "siempre",
       "turnOnFirst": "Activa la programación para elegir cuándo se ejecuta.",
       "enableHint": "Ejecuta la limpieza de forma programada en lugar de solo cuando presiona el botón.",
       "onlyWhenHint": "Solo limpia cuando el disco esté al menos así de lleno, para que una limpieza rutinaria no se ejecute en un disco casi vacío.",
       "nextRun": "Próxima limpieza {when}",
-      "nextRunAtZone": "Próxima limpieza {when} · {time} {timezone}",
-      "thresholdRange": "Escribe un número del 1 al 99. El uso del disco nunca supera el 100 %, así que un número mayor hace que la limpieza no se ejecute nunca."
+      "nextRunAtZone": "Próxima limpieza {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Limpiezas recientes",
       "subtitle": "Qué se liberó y cuándo.",
-      "categories": "{count, plural, one {# elemento} other {# elementos}}",
+      "colWhen": "Cuándo",
+      "colWhat": "Qué se limpió",
+      "colHow": "Cómo",
+      "colDiskAfter": "Disco después",
+      "colFreed": "Liberado",
       "trigger": {
         "manual": "Manual",
         "scheduled": "Automática",
@@ -4973,7 +5010,8 @@
           "limit": "Esta lista no admite más bots.",
           "browserWord": "Esa palabra forma parte del nombre de los navegadores normales, así que bloquearía a visitantes reales. Usa el nombre completo del bot, como GPTBot."
         },
-        "noPermission": "Tu rol no incluye Bloqueador de bots de IA de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda."
+        "noPermission": "Tu rol no incluye Bloqueador de bots de IA de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
+        "legacyContains": "Con el bloqueo de v7, un nombre permitido deja pasar a todos los bots cuyo nombre lo contiene: permitir “GPT” también permite GPTBot."
       },
       "howItWorks": "Tu robots.txt no se modifica, y Google y los visitantes reales no se ven afectados.",
       "save": "Guardar",
@@ -5423,6 +5461,7 @@
       "bans": {
         "title": "Direcciones bloqueadas",
         "subtitle": "Direcciones que ha bloqueado la jaula de esta aplicación. Un bloqueo aquí solo afecta a esta aplicación, no al servidor.",
+        "subtitleServerWide": "Direcciones que ha bloqueado la jaula de esta aplicación. Esta jaula se conservó de v7, así que un bloqueo aquí bloquea la dirección en todo el servidor, no solo en esta aplicación.",
         "none": "Ahora mismo no hay nadie bloqueado.",
         "notRunning": "La jaula de esta aplicación no está en marcha, así que aún no se puede bloquear nada aquí.",
         "noPermission": "Tu rol no incluye Fail2ban para esta aplicación con acceso de gestión.",
@@ -5432,6 +5471,7 @@
         "typeIp": "Escribe primero una dirección IP.",
         "invalidIp": "Escribe una sola dirección IPv4 o IPv6, como 203.0.113.10.",
         "banned": "{ip} está bloqueada en esta aplicación.",
+        "bannedServerWide": "{ip} está bloqueada en este servidor.",
         "banFailed": "No se pudo bloquear la dirección.",
         "unban": "Desbloquear",
         "unbanned": "{ip} puede volver a acceder a esta aplicación.",

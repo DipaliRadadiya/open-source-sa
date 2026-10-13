@@ -22,7 +22,8 @@ test("Enter in the automatic-cleanup dialog saves, like the other dialogs", () =
   const card = read("components/disk-cleaner/schedule-card.jsx");
   assert.match(card, /asForm\s+onSubmit=\{\(event\) => \{\s*event\.preventDefault\(\);\s*save\(\);/);
   assert.match(card, /<Button type="button" variant="outline" onClick=\{\(\) => setOpen\(false\)\}/);
-  assert.match(card, /<Button type="submit" disabled=\{pending \|\| \(enabled && picked\.size === 0\) \|\| thresholdInvalid\}>/);
+  // The threshold is a list since 13 Oct, so there is no invalid number left to block on.
+  assert.match(card, /<Button type="submit" disabled=\{pending \|\| \(enabled && picked\.size === 0\)\}>/);
 });
 
 test("a version whose install just started is not offered again before the list catches up", () => {

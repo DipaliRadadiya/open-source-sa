@@ -9,7 +9,7 @@ import { setSystemUserPassword } from "@/lib/api/system-users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
-import { PasswordInput } from "@/components/ui/password-input";
+import { CopyablePasswordInput } from "@/components/system-users/copyable-password-input";
 import { FormModal } from "@/components/ui/form-modal";
 import {
   Form,
@@ -125,7 +125,8 @@ export function SystemUserPasswordDialog({
               <FormItem className="relative">
                 <FormLabel required>{t("password.new")}</FormLabel>
                 <FormControl>
-                  <PasswordInput
+                  <CopyablePasswordInput
+                    copyLabel={t("detail.copy")}
                     placeholder={t("password.newPlaceholder")}
                     autoComplete="new-password"
                     {...field}
@@ -157,7 +158,8 @@ export function SystemUserPasswordDialog({
               <FormItem>
                 <FormLabel required>{t("password.confirm")}</FormLabel>
                 <FormControl>
-                  <PasswordInput
+                  <CopyablePasswordInput
+                    copyLabel={t("detail.copy")}
                     placeholder={t("password.confirmPlaceholder")}
                     autoComplete="new-password"
                     {...field}

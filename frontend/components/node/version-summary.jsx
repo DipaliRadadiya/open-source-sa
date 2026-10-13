@@ -5,8 +5,13 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
-import { RuntimeStatusBadge, versionState } from "@/components/runtime/version-status";
-import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
+import { RuntimeStatusBadge, removeFailed, versionState } from "@/components/runtime/version-status";
+import { SupportCell, UsedByCell, VersionCell } from "@/components/runtime/versions-table";
+import { SUBGRID } from "@/lib/runtime/version-rows";
+
+// Long states ("Installation fehlgeschlagen") wrap inside the column instead of spilling.
+const WRAP = "h-auto text-left whitespace-normal";
+import { cn } from "@/lib/utils";
 import {
   setDefaultNodeVersion,
   removeNodeVersion,
@@ -20,15 +25,9 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallOutput } from "@/components/runtime/install-output";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
-// Same card as PHP's, minus the panel-version rule and plus npm.
-export function VersionSummary({ version, canManage, lifecycleAvailable = false, children }) {
+// One row of the Installed versions table: PHP's row minus the panel-version rule, plus npm.
+export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
   const t = useTranslations("node");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
@@ -52,7 +51,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false,
   const npmCurrent = npmKnown && !npmBehind;
 
   const usedBy = version.in_use_by ?? 0;
-  const sites = version.sites ?? [];
 
   // Shares the install-state helper with PHP, so a version mid-install does not
   // render like a healthy one.
@@ -160,156 +158,143 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false,
   }
 
   return (
-    <Card>
-      <CardHeader>
-        {/* Every action for this version on one line, with the version it acts on. */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
-            {t("versions.name", { version: version.version })}
-            {version.is_default ? (
-              <Badge variant="muted" className="font-normal">
-                {t("versions.default")}
-              </Badge>
-            ) : null}
-            <RuntimeStatusBadge version={version} namespace="node" />
-            <LifecycleBadge
-              lifecycle={version.lifecycle}
-              namespace="node"
-              available={lifecycleAvailable}
-            />
-            {/* The installed npm version is a fact about this version, shown here rather than
-                in the button label (which read as the version it would install). */}
-            {npm ? (
-              <Badge variant="outline" className="font-normal">
+    <li className={cn("relative px-4 py-3", SUBGRID)}>
+      <div className={cn("grid gap-y-2 @3xl/versions:items-center", SUBGRID)}>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="font-medium">{t("versions.name", { version: version.version })}</span>
+          {version.is_default ? (
+            <Badge variant="muted" className="font-normal">
+              {t("versions.default")}
+            </Badge>
+          ) : null}
+          <RuntimeStatusBadge version={version} namespace="node" className={WRAP} />
+        </div>
+
+        {lifecycleAvailable ? (
+          <SupportCell
+            version={version}
+            namespace="node"
+            lifecycleAvailable={lifecycleAvailable}
+            label={t("table.colSupport")}
+            quiet={["current", "lts"]}
+          />
+        ) : null}
+
+        {/* npm ships inside Node and updates separately. Null means unreadable: say so
+            rather than show a wrong number. */}
+        <VersionCell label={t("table.colNpm")}>
+          {npm ? (
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="font-mono text-xs">
                 {npmBehind
                   ? t("npm.upgrade", { current: npm, latest: npmLatest })
                   : t("npm.installed", { version: npm })}
-              </Badge>
-            ) : null}
-          </CardTitle>
+              </span>
+              {/* Up to date: said, not offered as a button that cannot do anything. */}
+              {npmCurrent ? (
+                <span className="text-xs text-muted-foreground">{t("table.npmCurrent")}</span>
+              ) : (
+                <ReasonTooltip
+                  reason={canManage ? (notReadyReason ?? null) : t("noPermission")}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!canManage || pending || Boolean(notReadyReason) || npmCurrent}
+                    onClick={upgradeNpm}
+                  >
+                    {running === "npm" ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {/* Short: the column already says npm. The full name is still read out. */}
+                    <span aria-hidden>{t("table.npmUpdate")}</span>
+                    <span className="sr-only">{t("npm.action")}</span>
+                  </Button>
+                </ReasonTooltip>
+              )}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </VersionCell>
 
-          {/* Not shrink-0: a shrink-0 flex item keeps its max-content width, so its
-              flex-wrap never fires and buttons overflow the card. */}
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {children}
-            {/* npm ships inside Node and updates separately. Null means unreadable: hide the
-                control rather than show a wrong number. */}
-            {npm ? (
-              <ReasonTooltip
-                reason={
-                  canManage
-                    ? (notReadyReason ?? (npmCurrent ? t("npm.currentReason") : null))
-                    : t("noPermission")
-                }
+        <UsedByCell version={version} namespace="node" label={t("table.colUsedBy")} />
+
+        <div className="flex flex-wrap items-center gap-2 @3xl/versions:justify-end">
+          {version.is_default ? null : (
+            <ReasonTooltip reason={canManage ? notReadyReason : t("noPermission")}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canManage || pending || Boolean(notReadyReason)}
+                onClick={makeDefault}
               >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!canManage || pending || Boolean(notReadyReason) || npmCurrent}
-                  onClick={upgradeNpm}
-                >
-                  {running === "npm" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("npm.action")}
-                </Button>
-              </ReasonTooltip>
-            ) : null}
+                {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("versions.makeDefault")}
+              </Button>
+            </ReasonTooltip>
+          )}
 
-            {version.is_default ? null : (
-              <ReasonTooltip reason={canManage ? notReadyReason : t("noPermission")}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!canManage || pending || Boolean(notReadyReason)}
-                  onClick={makeDefault}
-                >
-                  {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("versions.makeDefault")}
-                </Button>
-              </ReasonTooltip>
-            )}
-
-            {nothingToRemove ? (
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!canManage || pending}
-                  onClick={retry}
-                >
-                  {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("versions.retry")}
-                </Button>
-              </ReasonTooltip>
-            ) : null}
-            {nothingToRemove ? (
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-                <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
-                  {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("versions.dismiss")}
-                </Button>
-              </ReasonTooltip>
-            ) : (
-              <ReasonTooltip reason={removeReason}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-                  disabled={Boolean(removeReason) || pending}
-                  onClick={() => setConfirming(true)}
-                >
-                  {t("versions.remove")}
-                </Button>
-              </ReasonTooltip>
-            )}
-          </div>
+          {nothingToRemove ? (
+            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canManage || pending}
+                onClick={retry}
+              >
+                {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("versions.retry")}
+              </Button>
+            </ReasonTooltip>
+          ) : null}
+          {nothingToRemove ? (
+            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
+                {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("versions.dismiss")}
+              </Button>
+            </ReasonTooltip>
+          ) : (
+            <ReasonTooltip reason={removeReason}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                disabled={Boolean(removeReason) || pending}
+                onClick={() => setConfirming(true)}
+              >
+                {t("versions.remove")}
+              </Button>
+            </ReasonTooltip>
+          )}
         </div>
+      </div>
 
-        {/* The count answers "can I remove this?"; the names answer "what breaks?". Kept
-            separate, as on the PHP card. */}
-        <CardDescription>
-          {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
-          {/* Only when the date is news; on a supported line the green badge says enough. */}
-          {lifecycleAvailable &&
-          version.lifecycle?.eol_date &&
-          version.lifecycle.status !== "current" &&
-          version.lifecycle.status !== "lts"
-            ? ` ${
-                version.lifecycle.status === "eol"
-                  ? t("lifecycle.endedOn", { date: version.lifecycle.eol_date })
-                  : t("lifecycle.endsOn", { date: version.lifecycle.eol_date })
-              }`
-            : null}
-        </CardDescription>
-
-        {/* The installer's own output, as on the PHP card. */}
-        {installState && version.output ? (
-          <InstallOutput text={version.output.trimEnd()} />
-        ) : null}
-
-        {/* Tags: each name is one scannable unit. The API sends at most five and reports
-            how many it held back. */}
-        {sites.length > 0 ? (
-          <ul className="flex flex-wrap gap-1.5 pt-1">
-            {sites.map((site) => (
-              <li
-                key={site}
-                className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-              >
-                {site}
-              </li>
-            ))}
-            {version.sites_truncated && usedBy > sites.length ? (
-              <li className="px-1 py-0.5 text-xs text-muted-foreground">
-                {t("versions.moreCount", { count: usedBy - sites.length })}
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-
-        {version.is_default ? (
-          <p className="text-xs text-muted-foreground">{t("versions.defaultHint")}</p>
-        ) : null}
-      </CardHeader>
+      {/* Why it stopped, and how long it has been going, as visible text. */}
+      {removeFailed(version) || (installState && (version.started_at_human || version.output)) ? (
+        <div className="mt-2 space-y-1 text-xs @3xl/versions:col-span-full">
+          {removeFailed(version) ? (
+            <p className="text-destructive">
+              {version.message ?? t("versions.removeFailed")}
+              {version.reference ? (
+                <span className="ml-1.5 font-mono whitespace-nowrap text-muted-foreground">
+                  {version.reference}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+          {installState && installState !== "failed" && version.started_at_human ? (
+            <p className="text-muted-foreground">
+              {t(installState === "removing" ? "versions.removingSince" : "versions.installingSince", {
+                when: version.started_at_human,
+              })}
+            </p>
+          ) : null}
+          {/* The installer's own output, as on the PHP row. */}
+          {installState && version.output ? (
+            <InstallOutput text={version.output.trimEnd()} />
+          ) : null}
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={confirming}
@@ -323,6 +308,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false,
         pending={running === "remove"}
         onConfirm={remove}
       />
-    </Card>
+    </li>
   );
 }

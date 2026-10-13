@@ -67,6 +67,21 @@ export function SkTiles({ count = 4, className }) {
   );
 }
 
+// One compact status tile (Services, Disk Cleaner): icon, label, value and a line beside it.
+export function SkCompactTile({ action = false }) {
+  return (
+    <div className={cn(CARD, "flex items-center gap-3 px-4 py-3")} aria-hidden>
+      <Skeleton className="size-10 shrink-0 rounded-xl" />
+      <div className="min-w-0 flex-1 space-y-2 py-0.5">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-3 w-40 max-w-full" />
+      </div>
+      {action ? <Skeleton className="size-8 shrink-0 rounded-lg" /> : null}
+    </div>
+  );
+}
+
 // Divided rows, edge to edge inside a card body: an icon, two lines, something on the right.
 export function SkRows({ count = 4, icon = true, trailing = "pill" }) {
   return (

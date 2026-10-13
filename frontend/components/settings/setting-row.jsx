@@ -66,6 +66,7 @@ export function InfoRow({ label, hint, children, className }) {
 
 // Each group saves on its own, so the card boundary shows what a Save covers.
 export function Section({
+  icon: Icon,
   title,
   description,
   tone,
@@ -82,22 +83,29 @@ export function Section({
 
   return (
     <Card className="@container/section gap-0 overflow-hidden py-0">
-      {/* The same head as the cards on an application's page: title and line on a
-          band of their own. No icon: the tab above already carries one. */}
+      {/* The same head as the cards on an application's page. Colour sits in the icon
+          chip, never the title: a red title read as an error (Krishna, 12 Oct). */}
       {title ? (
-        <div className="min-w-0 border-b px-5 py-4">
-          <h3
-            className={cn(
-              "flex flex-wrap items-center gap-2 text-base font-semibold tracking-tight",
-              destructive && "text-destructive",
-            )}
-          >
-            {title}
-            {badge}
-          </h3>
-          {description ? (
-            <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+        <div className="flex min-w-0 items-start gap-3 border-b px-5 py-4">
+          {Icon ? (
+            <span
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-xl",
+                destructive ? "bg-destructive-soft text-destructive" : "bg-primary/10 text-primary",
+              )}
+            >
+              <Icon className="size-[18px]" aria-hidden />
+            </span>
           ) : null}
+          <div className="min-w-0">
+            <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold tracking-tight">
+              {title}
+              {badge}
+            </h3>
+            {description ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

@@ -111,9 +111,9 @@ export function SshForm({
             icon={KeyRound}
             title={t("title")}
             description={t("description")}
-            // Three questions, three columns: in two, the port sat alone under an
-            // empty half (Krishna, 8 Oct).
-            gridClassName="@4xl/section:grid-cols-3"
+            // One question per row, answers as cards (three narrow columns wrapped every
+            // answer). The port gets its own ruled row: beside the cards it read as a
+            // third sign-in choice (Krishna, 12 Oct).
             readOnly={!canManage}
             changedBy={changedBy}
             actions={
@@ -136,12 +136,12 @@ export function SshForm({
               </div>
             ) : null}
   
-            {/* Side by side: each choice has its consequence under it, and half the card is room enough. */}
             <FormField
               control={form.control}
               name="password_authentication"
               render={({ field }) => (
                 <Row
+                  wide
                   label={t("signIn.label")}
                   hint={t("signIn.hint")}
                   error={validationMessage(
@@ -150,6 +150,8 @@ export function SshForm({
                   )}
                 >
                   <ChoiceField
+                    variant="card"
+                    className="grid gap-2 @md/section:grid-cols-2"
                     value={field.value ? "password" : "key"}
                     onChange={(next) => field.onChange(next === "password")}
                     disabled={!canManage}
@@ -181,10 +183,13 @@ export function SshForm({
               name="permit_root_login"
               render={({ field }) => (
                 <Row
+                  wide
                   label={t("rootLogin.label")}
                   hint={t("rootLogin.hint")}
                 >
                   <ChoiceField
+                    variant="card"
+                    className="grid gap-2 @xl/section:grid-cols-3"
                     value={field.value}
                     onChange={field.onChange}
                     disabled={!canManage}
@@ -198,7 +203,11 @@ export function SshForm({
                 </Row>
               )}
             />
-  
+
+            {/* A rule above the port, so it does not read as a third sign-in choice
+                (Krishna, 12 Oct). Label on top and one column wide, like every other field. */}
+            <hr className="border-border" />
+
             <FormField
               control={form.control}
               name="port"

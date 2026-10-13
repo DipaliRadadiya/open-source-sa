@@ -21,7 +21,7 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-export default async function DiskCleanerPage() {
+export default async function DiskCleanerPage({ searchParams }) {
   const [permissions, t] = await Promise.all([
     getPermissions(),
     getTranslations("diskCleaner"),
@@ -32,31 +32,40 @@ export default async function DiskCleanerPage() {
 
   // Schedule and history are secondary: on failure they degrade to null/empty
   // rather than taking the page down.
-  const [{ data, failed, status, failure, message }, schedule, { runs }] = await Promise.all([
+  // History pages through the URL like every other list; the backend allows 10/20/50/100.
+  const query = await searchParams;
+  const runsPage = Math.max(1, Number.parseInt(query?.page, 10) || 1);
+  const perPage = [10, 20, 50, 100].includes(Number(query?.per_page)) ? Number(query.per_page) : 10;
+
+  const [{ data, failed, status, failure, message }, schedule, { runs, meta }] = await Promise.all([
     getDiskCleaner(),
     getCleanerSchedule(),
-    getCleanerRuns(),
+    getCleanerRuns(runsPage, perPage),
   ]);
 
   if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const categories = data.categories ?? [];
-  const reclaimable = categories
-    .filter((category) => category.available)
-    .reduce((total, category) => total + (category.reclaimable ?? 0), 0);
+  const cleanable = categories.filter((category) => category.available && category.reclaimable > 0);
+  const reclaimable = cleanable.reduce((total, category) => total + category.reclaimable, 0);
 
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* Status cards side by side across the top; the list gets full width below. */}
+      {/* Three compact tiles across the top (one per row until the page is wide enough);
+          the schedule tile gets the most room, "Can be freed" the least (a short number).
+          The list gets full width below. */}
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <DiskSummary
-            disk={data.disk}
-            reclaimableHuman={humanBytes(reclaimable)}
-          />
-          <ScheduleCard schedule={schedule} categories={categories} canManage={canManage} />
+        <div className="@container/tiles">
+          <div className="grid gap-3 sm:gap-4 @min-[52rem]/tiles:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)]">
+            <DiskSummary
+              disk={data.disk}
+              reclaimableHuman={humanBytes(reclaimable)}
+              reclaimableCount={cleanable.length}
+            />
+            <ScheduleCard schedule={schedule} categories={categories} canManage={canManage} />
+          </div>
         </div>
 
         <CleanupPanel
@@ -65,7 +74,7 @@ export default async function DiskCleanerPage() {
           measuredAt={new Date().toISOString()}
         />
 
-        <RunsCard runs={runs} />
+        <RunsCard runs={runs} meta={meta} categories={categories} />
       </div>
     </div>
   );

@@ -15,8 +15,10 @@ import { apiMessage } from "@/lib/api/error-message";
 import { isIpAddress } from "@/lib/validation/ip";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// This application's own jail (FS-C45): a ban here blocks one site, not the server.
-export function BannedAddressesCard({ appId, bans, canManage }) {
+// This application's own jail (FS-C45). New `panel-site-` jails ban at this site only;
+// a jail kept from v7 keeps its bare name and the server-default firewall action, so
+// its bans block the address on the whole server and must not be called site-only.
+export function BannedAddressesCard({ appId, bans, jailName = null, canManage }) {
   const t = useTranslations("applications.fail2ban.bans");
   const { refreshAndWait } = useRefresh();
   const [ip, setIp] = useState("");
@@ -26,6 +28,8 @@ export function BannedAddressesCard({ appId, bans, canManage }) {
   const [confirm, setConfirm] = useState(null);
 
   const running = Boolean(bans.jail);
+  const name = bans.jail ?? jailName;
+  const serverWide = Boolean(name) && !name.startsWith("panel-site-");
   const blocked = !canManage ? t("noPermission") : !running ? t("notRunning") : null;
 
   async function ban(event) {
@@ -40,7 +44,7 @@ export function BannedAddressesCard({ appId, bans, canManage }) {
     try {
       await banApplicationIp(appId, value);
       await refreshAndWait();
-      toast.success(t("banned", { ip: value }));
+      toast.success(t(serverWide ? "bannedServerWide" : "banned", { ip: value }));
       setIp("");
     } catch (error) {
       // The server's own address and the caller's come back as a bare 422 sentence; it
@@ -75,7 +79,7 @@ export function BannedAddressesCard({ appId, bans, canManage }) {
       <CardContent className="space-y-4 px-5 py-4">
         <div className="space-y-1">
           <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <p className="text-sm text-muted-foreground">{t(serverWide ? "subtitleServerWide" : "subtitle")}</p>
         </div>
 
         {bans.failed ? (

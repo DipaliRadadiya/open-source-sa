@@ -16,6 +16,8 @@ import { useCreateUser } from "@/components/admin/users/users-view";
 import { initials } from "@/lib/format/initials";
 import { UsersCards } from "@/components/admin/users/users-cards";
 
+const HEAD_WRAPS = "h-auto py-2.5 whitespace-normal";
+
 const MAX_ROLE_BADGES = 2;
 
 // Cells at module level: inline cells would remount (losing dialog state) every render.
@@ -151,8 +153,10 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
 
   const columns = [
     { accessorKey: "name", header: t("columns.name"), cell: NameCell },
-    { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
-    { accessorKey: "is_admin", header: t("columns.accountType"), cell: AccountTypeCell },
+    // These two headers are wider than anything under them (fr/ru): letting them wrap
+    // kept the table from scrolling sideways at 1280px once headers went to 14px.
+    { accessorKey: "username", header: t("columns.username"), cell: UsernameCell, meta: { headClassName: HEAD_WRAPS } },
+    { accessorKey: "is_admin", header: t("columns.accountType"), cell: AccountTypeCell, meta: { headClassName: HEAD_WRAPS } },
     { id: "roles", header: t("columns.roles"), cell: RolesCell },
     { accessorKey: "last_login_at_human", header: t("columns.lastSignIn"), cell: LastSignInCell },
     { accessorKey: "created_at_human", header: t("columns.joined"), cell: JoinedCell },

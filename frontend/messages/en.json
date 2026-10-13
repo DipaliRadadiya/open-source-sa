@@ -225,15 +225,13 @@
       "password": "OS password",
       "passwordHint": "Used to sign in to the server as this user.",
       "passwordNotSet": "Not set",
-      "reveal": "Reveal password",
-      "hide": "Hide password",
       "copy": "Copy password",
-      "copied": "Password copied to clipboard.",
       "applications": "Applications",
       "noApplications": "This user doesn't own any applications.",
       "sshKeys": "SSH keys",
       "noSshKeys": "No SSH keys added yet.",
-      "fingerprint": "Fingerprint"
+      "fingerprint": "Fingerprint",
+      "copyPath": "Copy path"
     },
     "noPermission": "Your role does not include System User with Manage access. Ask an administrator to grant it.",
     "shellNeedsLogin": "This shell refuses login, so it cannot be set while SSH access is on. Turn SSH off first.",
@@ -1506,10 +1504,8 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "description": "The whole file, as PHP reads it. On save it is backed up, written, tested with php-fpm -t, and reloaded. If PHP rejects it the previous file is put back and nothing is reloaded.",
       "acknowledge": "I understand a bad php.ini can stop PHP {version} FPM from starting, which would take every application on that version offline.",
       "save": "Save and reload",
-      "cancel": "Cancel",
       "copy": "Copy file",
       "saved": "php.ini saved and PHP {version} reloaded",
       "loadFailed": "The php.ini could not be read.",
@@ -1517,10 +1513,7 @@
       "blockedNoChanges": "Nothing to save — the file has not been changed.",
       "blockedAcknowledge": "Confirm you understand the risk first.",
       "pathUnknown": "Loading…",
-      "shortAction": "Edit php.ini",
-      "viewAction": "View php.ini",
-      "readOnlyDescription": "The whole file, as PHP reads it.",
-      "close": "Close"
+      "readOnlyDescription": "The whole file, as PHP reads it."
     },
     "notMeasured": "Not measured",
     "phpSettings": "PHP settings",
@@ -1617,7 +1610,11 @@
       "badgeOff": "Off",
       "badgeEnabled": "Enabled",
       "badgeFailing": "{count} failing",
-      "badgeBanned": "{count} banned"
+      "badgeBanned": "{count} banned",
+      "about": {
+        "sshd": "Watches SSH logins to this server. An address that gets the password or key wrong too many times is banned, using the limits under Ban rules.",
+        "recidive": "Watches the other jails. An address banned 3 times in one day is banned from every service on this server for a week."
+      }
     },
     "lockout": {
       "title": "This could lock you out",
@@ -2080,7 +2077,7 @@
         "maxmemory": "Memory limit",
         "maxmemoryHint": "Like 256mb or 1gb. 0 means no limit.",
         "policy": "When the limit is reached",
-        "policyHint": "allkeys-* drop old keys; volatile-* only ones with an expiry.",
+        "policyHint": "What Redis does when it is full.",
         "password": "Password",
         "passwordHint": "Leave empty to keep the current one.",
         "passwordSet": "A password is set",
@@ -2101,7 +2098,17 @@
         "usageOfLimit": "{used} of {limit}",
         "saveFailed": "Redis settings could not be saved.",
         "outOfSync": "The panel's saved Redis password no longer works — it was changed on the server. Queued jobs, the cache and sessions can't reach Redis until they match again.",
-        "outOfSyncFix": "Set a new password below; the panel updates Redis and its own copy together."
+        "outOfSyncFix": "Set a new password below; the panel updates Redis and its own copy together.",
+        "policies": {
+          "noeviction": "Refuse new data (keep everything)",
+          "allkeys-lru": "Remove the least recently used keys",
+          "allkeys-lfu": "Remove the least often used keys",
+          "allkeys-random": "Remove random keys",
+          "volatile-lru": "Remove least recently used keys that expire",
+          "volatile-lfu": "Remove least often used keys that expire",
+          "volatile-random": "Remove random keys that expire",
+          "volatile-ttl": "Remove the keys closest to expiring"
+        }
       },
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
       "passwordNotManageable": "This install cannot rewrite its own configuration file, so the Redis password cannot be changed from here. Change it on the server and update REDIS_PASSWORD."
@@ -2224,6 +2231,28 @@
   "php": {
     "title": "PHP",
     "subtitle": "PHP on this server, and the extensions your applications can use.",
+    "table": {
+      "title": "Installed versions",
+      "description": "Click a version to see and change its extensions, ionCube and php.ini.",
+      "colVersion": "Version",
+      "colSupport": "Support",
+      "colUsedBy": "Used by",
+      "colActions": "Actions",
+      "usedByCount": "{count, plural, one {# application} other {# applications}}",
+      "usedByNone": "None",
+      "usedByTitle": "Applications on PHP {version}"
+    },
+    "settings": {
+      "title": "Settings for PHP {version}",
+      "description": "Changes here apply to every application that uses PHP {version}."
+    },
+    "ini": {
+      "description": "The whole file, as PHP reads it. When you save, the old file is backed up and PHP checks the new one. If PHP rejects it, the old file is put back and nothing changes.",
+      "perApp": "To change upload size, memory or time limits for one application only, use that application’s PHP settings instead.",
+      "perAppLink": "Go to Applications",
+      "retry": "Try again",
+      "discard": "Discard changes"
+    },
     "loadFailed": "We couldn't read this server's PHP setup.",
     "noPermission": "Your role does not include PHP with Manage access. Ask an administrator to grant it.",
     "empty": {
@@ -2241,7 +2270,7 @@
       "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "Your applications keep their own version — this only changes the php command.",
+      "defaultHint": "The default version is preselected for new applications and runs the php command (terminal and cron jobs). Existing applications keep the version they already use.",
       "defaultSet": "PHP {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "PHP {version} removed.",
@@ -2250,7 +2279,6 @@
       "confirmRemoveTitle": "Remove PHP {version}?",
       "confirmRemoveBody": "Its extensions and settings go with it. You can install it again later.",
       "confirmCancel": "Cancel",
-      "switchLabel": "Settings for:",
       "statusFailed": "Install failed",
       "statusInstalling": "Installing",
       "steps": {
@@ -2304,8 +2332,6 @@
       "filterOn": "On",
       "filterOff": "Off",
       "panelNeedsShort": "Needed by the panel",
-      "colName": "Extension",
-      "colStatus": "Status",
       "driftWebOnly": "On for websites, off for the command line",
       "driftCliOnly": "On for the command line, off for websites",
       "driftPartial": "On for some uses only",
@@ -2461,7 +2487,7 @@
       "loadFailed": "The ionCube Loader status could not be read.",
       "removeConfirmTitle": "Remove the ionCube Loader?",
       "removeConfirmBody": "Any application on PHP {version} running encrypted software will stop working until it is installed again.",
-      "hint": "A closed-source file from ionCube, not an apt package — that is why it has its own tab rather than a row in Extensions.",
+      "hint": "Install it only if an application asks for the ionCube Loader. It is added to PHP {version} only.",
       "onShort": "On",
       "offShort": "Off",
       "unavailableShort": "Unavailable",
@@ -2471,7 +2497,8 @@
     },
     "tabs": {
       "extensions": "Extensions",
-      "ioncube": "ionCube"
+      "ioncube": "ionCube",
+      "ini": "php.ini"
     },
     "unavailable": {
       "title": "PHP is not managed on this server",
@@ -2481,6 +2508,20 @@
   "node": {
     "title": "Node.js",
     "subtitle": "The Node.js versions on this server.",
+    "table": {
+      "title": "Installed versions",
+      "description": "Node.js versions installed by the panel on this server.",
+      "colVersion": "Version",
+      "colSupport": "Support",
+      "colNpm": "npm",
+      "colUsedBy": "Used by",
+      "colActions": "Actions",
+      "usedByCount": "{count, plural, one {# application} other {# applications}}",
+      "usedByNone": "None",
+      "usedByTitle": "Applications on Node.js {version}",
+      "npmCurrent": "Up to date",
+      "npmUpdate": "Update"
+    },
     "loadFailed": "We couldn't read this server's Node.js setup.",
     "noPermission": "Your role does not include Node.js with Manage access. Ask an administrator to grant it.",
     "empty": {
@@ -2497,12 +2538,10 @@
       "failed": "npm could not be updated.",
       "alreadyLatest": "npm was already up to date ({version}).",
       "installed": "npm {version}",
-      "upgrade": "npm {current} → {latest}",
-      "currentReason": "npm is already the newest version."
+      "upgrade": "npm {current} → {latest}"
     },
     "versions": {
       "pickerLabel": "Node.js versions",
-      "switchLabel": "Settings for:",
       "name": "Node.js {version}",
       "default": "Default",
       "isDefault": "This is the default version.",
@@ -2511,7 +2550,7 @@
       "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "Your applications keep their own version — this only changes the node command.",
+      "defaultHint": "The default version is preselected for new applications and runs the node, npm and npx commands. Existing applications keep the version they already use.",
       "defaultSet": "Node.js {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "Node.js {version} removed.",
@@ -2590,32 +2629,24 @@
       "label": "Disk space",
       "percentUsed": "{percent}% full",
       "lastRun": "Last cleaned {when}",
-      "freeShort": "{free} free",
-      "subLine": "{used} of {total} used · {reclaimable} can be freed"
-    },
-    "groups": {
-      "package": "Packages",
-      "logs": "Logs",
-      "temp": "Temporary files",
-      "other": "Other"
+      "usedLine": "{used} of {total} used · {free} free",
+      "reclaimLabel": "Can be freed",
+      "reclaimCount": "{count, plural, one {# item} other {# items}}"
     },
     "list": {
       "title": "What can be cleaned",
       "subtitle": "Pick what to remove. Nothing is deleted until you confirm.",
       "allClean": "Nothing to clean right now — everything is already tidy.",
-      "alreadyClean": "Already clean",
-      "nothingToFree": "There's nothing here to free.",
+      "alreadyCleanList": "Already clean: {items}",
       "showPaths": "Show exact folders",
       "hidePaths": "Hide exact folders",
       "selectAll": "Select all cleanable",
-      "unselectAll": "Unselect all",
       "morePaths": "Show {count} more",
       "fewerPaths": "Show fewer",
       "whatIsKept": "What this keeps",
       "checkFirst": "Check first",
       "measuredJustNow": "Measured just now",
-      "measuredAgo": "Measured {minutes, plural, one {# minute} other {# minutes}} ago",
-      "rescan": "Re-measure"
+      "measuredAgo": "Measured {minutes, plural, one {# minute} other {# minutes}} ago"
     },
     "action": {
       "clean": "Clean up",
@@ -2639,14 +2670,13 @@
     "schedule": {
       "saving": "Saving…",
       "title": "Automatic cleanup",
-      "on": "On",
       "summaryOn": "Runs {frequency} · {count, plural, one {# item} other {# items}}",
-      "summaryOff": "Off — clean up by hand whenever you need to.",
+      "summaryOff": "Off",
       "enable": "Clean up automatically",
       "howOften": "How often",
-      "onlyWhen": "Run when disk usage is above",
-      "thresholdPlaceholder": "80",
-      "thresholdHint": "Leave empty to clean every time it runs.",
+      "onlyWhen": "Disk usage",
+      "thresholdAny": "Any (clean every time)",
+      "thresholdOver": "Over {percent}%",
       "whatToClean": "What to clean",
       "safeOnly": "Only items that are safe to remove unattended can be scheduled.",
       "save": "Save schedule",
@@ -2661,22 +2691,29 @@
         "weekly": "every week",
         "monthly": "every month"
       },
-      "configure": "Configure",
+      "frequencyOption": {
+        "hourly": "Every hour",
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month"
+      },
+      "setUp": "Set up automatic cleanup",
       "dialogDescription": "Let the panel clean up on its own, so a full disk never surprises you.",
-      "cleansNothing": "Nothing selected",
       "overThreshold": "when over {percent}%",
-      "everyTime": "every time",
       "turnOnFirst": "Turn the schedule on to choose when it runs.",
       "enableHint": "Runs the cleanup on a schedule instead of only when you press the button.",
       "onlyWhenHint": "Only clean up once the disk is at least this full, so a routine cleanup does not run on a mostly empty disk.",
       "nextRun": "Next clean {when}",
-      "nextRunAtZone": "Next clean {when} · {time} {timezone}",
-      "thresholdRange": "Enter a number from 1 to 99. Disk usage never goes above 100%, so a higher number means the cleanup never runs."
+      "nextRunAtZone": "Next clean {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Recent cleanups",
       "subtitle": "What was freed, and when.",
-      "categories": "{count, plural, one {# item} other {# items}}",
+      "colWhen": "When",
+      "colWhat": "What was cleaned",
+      "colHow": "How",
+      "colDiskAfter": "Disk after",
+      "colFreed": "Freed",
       "trigger": {
         "manual": "By hand",
         "scheduled": "Automatic",
@@ -4973,7 +5010,8 @@
           "limit": "That's the most bots this list can hold.",
           "browserWord": "That word is part of ordinary browsers' names, so it would block real visitors. Use the bot's full name, like GPTBot."
         },
-        "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it."
+        "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it.",
+        "legacyContains": "With v7 blocking, an allowed name lets through every bot whose name contains it — allowing “GPT” also allows GPTBot."
       },
       "howItWorks": "Your robots.txt isn't changed, and Google and real visitors aren't affected.",
       "save": "Save",
@@ -5423,6 +5461,7 @@
       "bans": {
         "title": "Banned addresses",
         "subtitle": "Addresses this application's jail has blocked. A ban here blocks this application only, not the server.",
+        "subtitleServerWide": "Addresses this application's jail has blocked. This jail was kept from v7, so a ban here blocks the address on the whole server, not just this application.",
         "none": "Nobody is banned right now.",
         "notRunning": "This application's jail isn't running, so nothing can be banned here yet.",
         "noPermission": "Your role does not include Fail2ban for this application with Manage access.",
@@ -5432,6 +5471,7 @@
         "typeIp": "Type an IP address first.",
         "invalidIp": "Enter a single IPv4 or IPv6 address, like 203.0.113.10.",
         "banned": "{ip} is banned from this application.",
+        "bannedServerWide": "{ip} is banned on this server.",
         "banFailed": "The address couldn't be banned.",
         "unban": "Unban",
         "unbanned": "{ip} can reach this application again.",

@@ -23,9 +23,9 @@ test("red buttons in dark mode clear 4.5:1", () => {
   assert.match(read("components/ui/button.jsx"), /dark:bg-destructive\/20 dark:text-\[color-mix\(in_oklch,var\(--destructive\)_80%,var\(--foreground\)\)\]/);
 });
 
-test("installer output wraps, and the selected version chip is scrolled into view", () => {
+test("installer output wraps, and every version is a row (no chips to scroll off a phone)", () => {
   assert.match(read("components/runtime/install-output.jsx"), /break-words whitespace-pre-wrap/);
-  const bar = read("components/runtime/version-bar.jsx");
-  assert.match(bar, /querySelector\('\[aria-current="page"\]'\)/);
-  assert.match(bar, /scrollIntoView\(\{ block: "nearest", inline: "nearest" \}\)/);
+  // 12 Oct: the chip strip cut "PHP 8.1 No longer supported" off at 390px; rows stack instead.
+  assert.match(read("components/runtime/versions-table.jsx"), /@3xl\/versions:sr-only/);
+  assert.match(read("app/(app)/node/page.jsx"), /\{ordered\.map\(\(version\) => \(/);
 });

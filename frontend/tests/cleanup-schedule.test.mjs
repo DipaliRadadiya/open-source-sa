@@ -27,7 +27,9 @@ test("a Save that refuses says what is missing, on the page", () => {
   // and its reason was hover-only, which reads as a form silently refusing.
   assert.match(
     CARD,
-    /enabled && picked\.size === 0 \? \(\s*<span className="font-normal text-warning">\{t\("schedule\.pickSomething"\)\}/,
+    // Grey since 13 Oct (Krishna): orange before anything was done read as an error.
+    // The list only renders while the schedule is on, so the `enabled` guard moved up.
+    /picked\.size === 0 \? \(\s*<span className="font-normal leading-snug text-muted-foreground">\{t\("schedule\.pickSomething"\)\}/,
     "the empty-selection reason is hidden again",
   );
 });

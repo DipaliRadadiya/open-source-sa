@@ -18,8 +18,10 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InfoHint } from "@/components/ui/info-hint";
 import { MeasuredAt } from "@/components/disk-cleaner/measured-at";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -44,13 +46,12 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
   );
 
   // By measured size, not the API's category grouping.
-  const ordered = useMemo(
-    () =>
-      categories
-        // `filter` returns a new array, so the sort below cannot mutate the prop.
-        .filter((category) => category.available)
-        // Descending by size, so already-clean rows end up last.
-        .sort((a, b) => b.reclaimable - a.reclaimable),
+  const cleanableRows = useMemo(
+    () => [...cleanable].sort((a, b) => b.reclaimable - a.reclaimable),
+    [cleanable],
+  );
+  const cleanRows = useMemo(
+    () => categories.filter((c) => c.available && !(c.reclaimable > 0)),
     [categories],
   );
 
@@ -70,7 +71,6 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
 
   const allSelected = cleanable.length > 0 && chosen.length === cleanable.length;
 
-  // One control, both directions.
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(cleanable.map((c) => c.key)));
     setResult(null);
@@ -103,37 +103,35 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <>
         {/* pb-0 so the footer band reaches the card edge. */}
-        <Card className="overflow-hidden pb-0">
-          <CardHeader>
+        <Card className="gap-0 overflow-hidden pb-0">
+          <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold">{t("list.title")}</CardTitle>
-            <CardDescription>
-              {chosen.length > 0
-                ? t("action.selectedSummary", {
-                    count: chosen.length,
-                    size: humanBytes(chosenBytes),
-                  })
-                : t("list.subtitle")}
+            <CardDescription className="@max-sm/card-header:col-span-full">
+              {t("list.subtitle")}
+              {measuredAt ? <MeasuredAt at={measuredAt} /> : null}
             </CardDescription>
-            {/* Both about the view, neither an action. */}
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              {measuredAt ? <MeasuredAt at={measuredAt} /> : <span />}
-  
+            {/* View controls, not actions; below a phone's width they drop under the text. */}
+            <CardAction className="flex items-center gap-2 @max-sm/card-header:col-start-1 @max-sm/card-header:row-span-1 @max-sm/card-header:row-start-3 @max-sm/card-header:mt-3 @max-sm/card-header:justify-self-start">
               {!nothingToClean ? (
-                <button
+                <Button
                   type="button"
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline underline-offset-4"
+                  variant="outline"
+                  className="h-9"
+                  aria-pressed={showPaths}
                   onClick={() => setShowPaths((v) => !v)}
                 >
-                  <FolderTree className="size-3.5" />
+                  <FolderTree className="size-4" />
                   {showPaths ? t("list.hidePaths") : t("list.showPaths")}
-                </button>
+                </Button>
               ) : null}
-            </div>
+              <RefreshButton />
+            </CardAction>
           </CardHeader>
-  
-          <CardContent className="space-y-4 px-0 pb-0">
+
+          {/* No gap between list and footer: space-y left an empty strip above the footer band. */}
+          <CardContent className="px-0 pb-0">
             {result ? (
-              <div className="mx-6 flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
+              <div className="mx-4 mb-4 flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                 <Check className="mt-0.5 size-4 shrink-0 text-success" />
                 <div className="space-y-1">
                   <p className="font-medium">
@@ -151,88 +149,86 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                 </div>
               </div>
             ) : null}
-  
+
             {nothingToClean ? (
               <EmptyState compact icon={Sparkles} badge={null} title={t("list.allClean")} />
             ) : (
-              <ul className="divide-y border-t">
-                {ordered.map((category) => {
-                        const empty = category.reclaimable <= 0;
-                        const checked = selected.has(category.key);
-  
-                        return (
-                          <li
-                            key={category.key}
+              <div className="border-t">
+                {/* One control, both directions; half-ticked while only some are chosen. */}
+                {/* px-7 lines this checkbox up with the ones inside the tiles (16px + 12px). */}
+                <div className="flex items-center gap-3 border-b bg-muted/40 px-7 py-2.5">
+                  <Checkbox
+                    id="clean-all"
+                    checked={allSelected ? true : chosen.length > 0 ? "indeterminate" : false}
+                    disabled={!canManage}
+                    onCheckedChange={toggleAll}
+                  />
+                  <label
+                    htmlFor="clean-all"
+                    className={cn(
+                      "text-xs font-medium text-muted-foreground",
+                      canManage ? "cursor-pointer" : "cursor-default",
+                    )}
+                  >
+                    {t("list.selectAll")}
+                  </label>
+                </div>
+
+                {/* Selectable tiles, two across when there is room: in full-width rows the
+                    size sat a whole card away from its name (Krishna, 13 Oct). */}
+                <div className="@container/items px-4 py-4">
+                  <ul className="grid grid-cols-1 gap-3 @2xl/items:grid-cols-2">
+                    {cleanableRows.map((category) => {
+                      const checked = selected.has(category.key);
+
+                      return (
+                        <li key={category.key} className="min-w-0">
+                          {/* The whole tile is the label, so a click anywhere on it toggles. */}
+                          <label
+                            htmlFor={`clean-${category.key}`}
                             className={cn(
-                              "relative flex items-start gap-3 px-6 py-3 transition-colors",
-                              checked && "bg-primary/5",
-                              empty && "opacity-55",
+                              "flex h-full items-start gap-3 rounded-xl border p-3 transition-colors",
+                              checked ? "border-primary/40 bg-primary/5" : "bg-card",
+                              canManage ? "cursor-pointer hover:border-primary/30" : "cursor-default",
                             )}
                           >
-                            <ReasonTooltip
-                              reason={
-                                !canManage
-                                  ? t("noPermission")
-                                  : empty
-                                    ? t("list.nothingToFree")
-                                    : null
-                              }
-                            >
-                              <Checkbox
-                                id={`clean-${category.key}`}
-                                className="relative mt-0.5"
-                                checked={checked}
-                                disabled={empty || !canManage}
-                                onCheckedChange={() => toggle(category.key)}
-                                aria-label={category.label}
-                              />
-                            </ReasonTooltip>
-  
-                            {/* The whole block is the label, so the entire row toggles. */}
-                            <label
-                              htmlFor={`clean-${category.key}`}
-                              className={cn(
-                                "relative min-w-0 flex-1 space-y-0.5",
-                                empty || !canManage ? "cursor-default" : "cursor-pointer",
-                              )}
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                {/* Keeps the ⓘ from wrapping onto its own line. */}
-                                <span className="inline-flex items-center gap-1.5">
-                                  <span className="text-sm font-medium">{category.label}</span>
-                                  {category.note ? (
-                                    <InfoHint label={t("list.whatIsKept")}>{category.note}</InfoHint>
+                            <Checkbox
+                              id={`clean-${category.key}`}
+                              className="mt-0.5"
+                              checked={checked}
+                              disabled={!canManage}
+                              onCheckedChange={() => toggle(category.key)}
+                              aria-label={category.label}
+                            />
+
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                  {/* Keeps the ⓘ from wrapping onto its own line. */}
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className="text-sm font-medium">{category.label}</span>
+                                    {category.note ? (
+                                      <InfoHint label={t("list.whatIsKept")}>{category.note}</InfoHint>
+                                    ) : null}
+                                  </span>
+
+                                  {/* The API decides what is safe to remove unattended. */}
+                                  {!category.safe ? (
+                                    <Badge variant="warning" className="font-normal">
+                                      {t("list.checkFirst")}
+                                    </Badge>
                                   ) : null}
+                                </div>
+
+                                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                                  {category.reclaimable_human ?? "0 B"}
                                 </span>
-  
-                                {category.group ? (
-                                  <Badge variant="outline" className="font-normal text-muted-foreground">
-                                    {t.has(`groups.${category.group}`)
-                                      ? t(`groups.${category.group}`)
-                                      : category.group}
-                                  </Badge>
-                                ) : null}
-  
-                                {/* The API decides what is safe to remove unattended. */}
-                                {!category.safe && !empty ? (
-                                  <Badge variant="warning" className="font-normal">
-                                    {t("list.checkFirst")}
-                                  </Badge>
-                                ) : null}
-  
-                                {empty ? (
-                                  <Badge variant="muted" className="font-normal">
-                                    {t("list.alreadyClean")}
-                                  </Badge>
-                                ) : null}
                               </div>
-  
+
                               {category.description ? (
-                                <p className="text-sm text-muted-foreground">
-                                  {category.description}
-                                </p>
+                                <p className="text-sm text-muted-foreground">{category.description}</p>
                               ) : null}
-  
+
                               {/* One path per line, monospace. */}
                               {showPaths && category.paths?.length ? (
                                 <PathList
@@ -242,59 +238,67 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                   }
                                 />
                               ) : null}
-                            </label>
-  
-                            <span className="relative shrink-0 text-sm font-medium tabular-nums">
-                              {category.reclaimable_human ?? "0 B"}
-                            </span>
-                          </li>
-                  );
-                })}
-              </ul>
-            )}
-  
-            {!nothingToClean ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-6 py-4">
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50"
-                  onClick={toggleAll}
-                  disabled={!canManage}
-                >
-                  {allSelected ? t("list.unselectAll") : t("list.selectAll")}
-                </button>
-  
-                <div className="flex items-center gap-2">
-                  {/* No separate Clear: the footer link already unselects everything. */}
-                  <ReasonTooltip
-                    reason={
-                      !canManage
-                        ? t("noPermission")
-                        : chosen.length === 0
-                          ? t("action.pickSomething")
-                          : null
-                    }
-                  >
-                    <Button
-                      disabled={!canManage || chosen.length === 0}
-                      onClick={() => {
-                        // Opening from here skips onOpenChange, so clear a stale error explicitly.
-                        setError(null);
-                        setConfirming(true);
-                      }}
-                    >
-                      {/* The button states the amount it will free. */}
-                      {chosen.length > 0
-                        ? t("action.cleanSized", { size: humanBytes(chosenBytes) })
-                        : t("action.clean")}
-                    </Button>
-                  </ReasonTooltip>
+                            </div>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {/* Nothing to free: named once, in one line, with nothing to tick. */}
+                  {cleanRows.length ? (
+                    <p className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                      <span>
+                        {t("list.alreadyCleanList", {
+                          items: cleanRows.map((category) => category.label).join(", "),
+                        })}
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
+              </div>
+            )}
+
+            {!nothingToClean ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-4 py-4">
+                <p className="min-w-0 text-sm text-muted-foreground tabular-nums">
+                  {chosen.length > 0
+                    ? t("action.selectedSummary", {
+                        count: chosen.length,
+                        size: humanBytes(chosenBytes),
+                      })
+                    : t("action.pickSomething")}
+                </p>
+
+                <ReasonTooltip
+                  reason={
+                    !canManage
+                      ? t("noPermission")
+                      : chosen.length === 0
+                        ? t("action.pickSomething")
+                        : null
+                  }
+                >
+                  <Button
+                    disabled={!canManage || chosen.length === 0}
+                    onClick={() => {
+                      // Opening from here skips onOpenChange, so clear a stale error explicitly.
+                      setError(null);
+                      setConfirming(true);
+                    }}
+                  >
+                    {/* The button states the amount it will free. */}
+                    {chosen.length > 0
+                      ? t("action.cleanSized", { size: humanBytes(chosenBytes) })
+                      : t("action.clean")}
+                  </Button>
+                </ReasonTooltip>
               </div>
             ) : null}
           </CardContent>
         </Card>
-  
+
         <ConfirmDialog
           open={confirming}
           onOpenChange={(open) => {

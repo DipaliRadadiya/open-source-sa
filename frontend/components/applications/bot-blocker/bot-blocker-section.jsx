@@ -7,7 +7,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import { Bot, ChevronDown, FileText, Globe, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
+import { Bot, ChevronDown, FileText, Globe, History, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
 import { Note } from "@/components/ui/note";
@@ -18,6 +18,7 @@ import {
   botRuleError,
   effectiveBlockedBots,
   hasBot,
+  isAllowedBot,
 } from "@/lib/schemas/bot-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,12 +31,17 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 // keys appear after these.
 const ORDER = ["allow_all", "block_training", "block_agents", "block_all"];
 
+// v7 compatibility: its own broad list, not a step on the ladder above. Offered only to
+// an application already on it (a migrated v7 site); new sites have no use for it.
+const LEGACY = "legacy_v7";
+
 // Unknown policies fall back to the generic bot icon.
 const ICONS = {
   allow_all: Globe,
   block_training: ShieldCheck,
   block_agents: ShieldHalf,
   block_all: ShieldBan,
+  legacy_v7: History,
 };
 
 // Blocking every AI bot also blocks ones that send visitors, so it is tinted.
@@ -66,10 +72,10 @@ function dedupedPolicies(policies) {
   );
 }
 
-function orderedKeys(policies) {
+function orderedKeys(policies, showLegacy) {
   const known = ORDER.filter((key) => key in policies);
-  const rest = Object.keys(policies).filter((key) => !ORDER.includes(key));
-  return [...known, ...rest];
+  const rest = Object.keys(policies).filter((key) => !ORDER.includes(key) && key !== LEGACY);
+  return [...known, ...rest, ...(showLegacy && LEGACY in policies ? [LEGACY] : [])];
 }
 
 // What each option blocks on top of the previous one, derived from the API's
@@ -78,6 +84,7 @@ function additionsByPolicy(keys, policies) {
   const additions = {};
   let previous = null;
   for (const key of keys) {
+    if (key === LEGACY) continue;
     const bots = policies[key]?.blocked_bots ?? [];
     if (previous && (policies[previous]?.blocked_count ?? 0) > 0) {
       const already = new Set(policies[previous]?.blocked_bots ?? []);
@@ -91,9 +98,15 @@ function additionsByPolicy(keys, policies) {
 // Bots grouped by the policy that first blocks them; same derivation as the
 // card counts, so they always agree.
 function botGroups(keys, policies, selected) {
+  // The v7 list stands alone: it is everything that policy blocks.
+  if (selected === LEGACY) {
+    const bots = policies[LEGACY]?.blocked_bots ?? [];
+    return bots.length ? [{ key: LEGACY, bots }] : [];
+  }
   const seen = new Set();
   const groups = [];
   for (const key of keys) {
+    if (key === LEGACY) continue;
     const bots = (policies[key]?.blocked_bots ?? []).filter((bot) => !seen.has(bot));
     for (const bot of bots) seen.add(bot);
     if (bots.length > 0) groups.push({ key, bots });
@@ -325,7 +338,10 @@ export function BotBlockerSection({
   const [saving, setSaving] = useState(false);
   const [showBots, setShowBots] = useState(false);
 
-  const keys = orderedKeys(policies);
+  const keys = orderedKeys(policies, base.policy === LEGACY || policy === LEGACY);
+  // On v7 blocking an allowed name exempts every bot containing it (see isAllowedBot).
+  const contains = policy === LEGACY;
+  const allows = (bot) => isAllowedBot(allowed, bot, { contains });
   const selected = policies[policy] ?? null;
   const savedPolicy = policies[base.policy] ?? null;
   const isDirty =
@@ -336,27 +352,30 @@ export function BotBlockerSection({
   const groups = botGroups(keys, policies, policy);
 
   // What the vhost will enforce once saved, including this site's own rules.
-  const effective = effectiveBlockedBots(selected?.blocked_bots ?? [], blocked, allowed);
+  const effective = effectiveBlockedBots(selected?.blocked_bots ?? [], blocked, allowed, { contains });
   const savedEffective = effectiveBlockedBots(
     savedPolicy?.blocked_bots ?? [],
     base.blocked,
     base.allowed,
+    { contains: base.policy === LEGACY },
   );
 
   // Must agree with the count on the button: exemptions are removed from the
   // policy groups and site additions get their own group.
   const shownGroups = [
     ...groups
-      .map((group) => ({ ...group, bots: group.bots.filter((bot) => !hasBot(allowed, bot)) }))
+      .map((group) => ({ ...group, bots: group.bots.filter((bot) => !allows(bot)) }))
       .filter((group) => group.bots.length > 0),
-    ...(blocked.some((bot) => !hasBot(allowed, bot))
-      ? [{ key: "custom", bots: blocked.filter((bot) => !hasBot(allowed, bot)) }]
+    ...(blocked.some((bot) => !allows(bot))
+      ? [{ key: "custom", bots: blocked.filter((bot) => !allows(bot)) }]
       : []),
   ];
 
   // Allows that nothing would block anyway.
-  const idleAllows = allowed.filter(
-    (bot) => !hasBot(selected?.blocked_bots ?? [], bot) && !hasBot(blocked, bot),
+  const idleAllows = allowed.filter((allow) =>
+    contains
+      ? ![...(selected?.blocked_bots ?? []), ...blocked].some((bot) => isAllowedBot([allow], bot, { contains }))
+      : !hasBot(selected?.blocked_bots ?? [], allow) && !hasBot(blocked, allow),
   );
 
   // Nothing blocked is the default, not a protected state.
@@ -541,6 +560,10 @@ export function BotBlockerSection({
                 />
               </div>
   
+              {contains ? (
+                <p className="text-xs text-muted-foreground">{t("exceptions.legacyContains")}</p>
+              ) : null}
+
               {/* Flags allows that have no effect. */}
               {idleAllows.length > 0 ? (
                 <p className="text-xs text-muted-foreground">

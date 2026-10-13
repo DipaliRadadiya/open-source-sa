@@ -1,12 +1,18 @@
 "use client";
 
-import { removeFailed, versionState } from "@/components/runtime/version-status";
+import { RuntimeStatusBadge, removeFailed, versionState } from "@/components/runtime/version-status";
 import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
-import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
+import { SupportCell, UsedByCell } from "@/components/runtime/versions-table";
+import { SUBGRID } from "@/lib/runtime/version-rows";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
+import Link from "@/components/ui/app-link";
+import { cn } from "@/lib/utils";
+import { requestReveal } from "@/components/php/reveal-settings";
 import { InstallOutput } from "@/components/runtime/install-output";
 import { setDefaultPhpVersion, removePhpVersion, installPhpVersion } from "@/lib/api/php";
 import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
@@ -14,22 +20,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-// `children` carries the php.ini button, owned by the page (a Server Component).
+// Long states ("Installation fehlgeschlagen") wrap instead of spilling.
+const WRAP = "h-auto text-left whitespace-normal";
+
+// One row of the Installed versions table. Clicking it shows its settings below; the
+// selection lives in the URL, keeping whichever settings tab is open.
 export function VersionSummary({
   version,
   canManage,
   lifecycleAvailable = false,
-  children,
+  selected = false,
+  selectable = false,
 }) {
   const t = useTranslations("php");
+  const { guardNavigation } = useUnsaved();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const params = new URLSearchParams(searchParams);
+  params.set("version", version.version);
+  const href = selectable ? `${pathname}?${params.toString()}` : null;
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
   // WHICH action is running, so only that button spins. They still disable
@@ -38,7 +49,6 @@ export function VersionSummary({
   const pending = running !== null;
 
   const usedBy = version.in_use_by ?? 0;
-  const sites = version.sites ?? [];
 
   // The API omits `status` on older responses; absent means ready.
   const installState = versionState(version);
@@ -153,146 +163,149 @@ export function VersionSummary({
   const nothingToRemove = failedWithNothingInstalled(version);
   const showRemove = !version.in_use_by_panel && !nothingToRemove;
 
+  const name = t("versions.name", { version: version.version });
+
   return (
-    <Card>
-      <CardHeader>
-        {/* php.ini sits with the version it edits, on the title line. */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
-          {t("versions.name", { version: version.version })}
+    <li
+      className={cn(
+        "relative px-4 py-3 transition-colors",
+        SUBGRID,
+        href && "hover:bg-muted/40",
+        // A tint and an edge, so the selected row reads as the one the settings below belong to.
+        selected && "bg-primary/[0.04] shadow-[inset_3px_0_0_var(--primary)]",
+      )}
+    >
+      <div className={cn("grid gap-y-2 @3xl/versions:items-center", SUBGRID)}>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {/* The whole row selects the version: the link's ::after covers it, and the
+              controls sit above it (z-10). */}
+          {href ? (
+            <Link
+              href={href}
+              scroll={false}
+              prefetch={false}
+              aria-current={selected ? "true" : undefined}
+              onClick={(event) => {
+                // An unsaved php.ini below would be lost by the switch.
+                if (guardNavigation(href)) event.preventDefault();
+                else requestReveal(version.version);
+              }}
+              className="rounded-sm font-medium after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {name}
+            </Link>
+          ) : (
+            <span className="font-medium">{name}</span>
+          )}
           {/* Filled, not outlined: "Default" is a state, not a plain label. */}
           {version.is_default ? (
             <Badge variant="muted" className="font-normal">
               {t("versions.default")}
             </Badge>
           ) : null}
-          {/* Not folded into the status chain below: a version can be both
-              incomplete AND end-of-life. */}
+          {/* Not folded into the status badge: a version can be both incomplete AND end-of-life. */}
           {incomplete ? (
             <Badge variant="warning" className="font-normal">
               {t("versions.incomplete")}
             </Badge>
           ) : null}
-          {/* A failed install must not look like a healthy one. */}
-          {removeFailed(version) ? (
-            <Badge variant="destructive" className="font-normal">
-              {t("versions.statusRemoveFailed")}
-            </Badge>
-          ) : installState === "failed" ? (
-            <Badge variant="destructive" className="font-normal">
-              {t("versions.statusFailed")}
-            </Badge>
-          ) : installState === "removing" ? (
-            // A badge rather than hiding the card: the purge takes minutes and
-            // may fail.
-            <Badge variant="warning" className="font-normal">
-              <Loader2 className="size-3 animate-spin" />
-              {t("versions.statusRemoving")}
-            </Badge>
-          ) : installState === "installing" ? (
-            <Badge variant="warning" className="font-normal">
-              <Loader2 className="size-3 animate-spin" />
-              {/* The apt phase, not a percentage: the total is unknown until
-                  apt finishes. */}
-              {version.current_step
-                ? t(`versions.steps.${version.current_step}`)
-                : t("versions.statusInstalling")}
-            </Badge>
-          ) : (
-            <LifecycleBadge
-              lifecycle={version.lifecycle}
-              namespace="php"
-              available={lifecycleAvailable}
-            />
-          )}
-        </CardTitle>
+          <RuntimeStatusBadge version={version} namespace="php" className={WRAP} />
+        </div>
 
-          {/* Not shrink-0: it keeps max-content width, so flex-wrap never wraps. */}
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {children}
+        {lifecycleAvailable ? (
+          <SupportCell
+            version={version}
+            namespace="php"
+            lifecycleAvailable={lifecycleAvailable}
+            label={t("table.colSupport")}
+            quiet={["active"]}
+          />
+        ) : null}
 
-            {/* The API allows an incomplete version as default; the UI does not. */}
-            {!showMakeDefault ? null : (
-              <ReasonTooltip
-                reason={
-                  notReadyReason ??
-                  (incomplete ? t("versions.incompleteDefault") : null) ??
-                  (canManage ? null : t("noPermission"))
-                }
+        <UsedByCell version={version} namespace="php" label={t("table.colUsedBy")} />
+
+        {/* Clicks between the buttons fall through to the row link. */}
+        <div className="pointer-events-none relative z-10 flex flex-wrap items-center gap-2 @3xl/versions:justify-end [&>*]:pointer-events-auto">
+          {/* The API allows an incomplete version as default; the UI does not. */}
+          {!showMakeDefault ? null : (
+            <ReasonTooltip
+              reason={
+                notReadyReason ??
+                (incomplete ? t("versions.incompleteDefault") : null) ??
+                (canManage ? null : t("noPermission"))
+              }
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canManage || pending || Boolean(notReadyReason) || incomplete}
+                onClick={makeDefault}
               >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!canManage || pending || Boolean(notReadyReason) || incomplete}
-                  onClick={makeDefault}
-                >
-                  {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("versions.makeDefault")}
-                </Button>
-              </ReasonTooltip>
-            )}
+                {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("versions.makeDefault")}
+              </Button>
+            </ReasonTooltip>
+          )}
 
-            {/* `PhpController::store` falls through to an idempotent apt install when incomplete. */}
-            {!incomplete ? null : (
+          {/* `PhpController::store` falls through to an idempotent apt install when incomplete. */}
+          {!incomplete ? null : (
+            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canManage || pending}
+                onClick={complete}
+              >
+                {running === "complete" ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("versions.completeInstall")}
+              </Button>
+            </ReasonTooltip>
+          )}
+
+          {!nothingToRemove ? null : (
+            <>
               <ReasonTooltip reason={canManage ? null : t("noPermission")}>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={!canManage || pending}
-                  onClick={complete}
+                  onClick={retry}
                 >
-                  {running === "complete" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("versions.completeInstall")}
+                  {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("versions.retry")}
                 </Button>
               </ReasonTooltip>
-            )}
-
-            {!nothingToRemove ? null : (
-              <>
-                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!canManage || pending}
-                    onClick={retry}
-                  >
-                    {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
-                    {t("versions.retry")}
-                  </Button>
-                </ReasonTooltip>
-                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-                  <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
-                    {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
-                    {t("versions.dismiss")}
-                  </Button>
-                </ReasonTooltip>
-              </>
-            )}
-
-            {/* Hidden on the panel's own version, which the API refuses. */}
-            {!showRemove ? null : (
-              <ReasonTooltip reason={removeReason}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-                  disabled={Boolean(removeReason) || pending}
-                  onClick={() => setConfirming(true)}
-                >
-                  {t("versions.remove")}
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
+                  {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("versions.dismiss")}
                 </Button>
               </ReasonTooltip>
-            )}
-          </div>
+            </>
+          )}
+
+          {/* Hidden on the panel's own version, which the API refuses. */}
+          {!showRemove ? null : (
+            <ReasonTooltip reason={removeReason}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                disabled={Boolean(removeReason) || pending}
+                onClick={() => setConfirming(true)}
+              >
+                {t("versions.remove")}
+              </Button>
+            </ReasonTooltip>
+          )}
         </div>
+      </div>
 
-        {/* The count answers "can I remove this?"; the site tags below answer
-            "what breaks?". */}
-        <CardDescription>
-          {/* Why the removal stopped, as visible text (a `title` is not shown
-              on touch or keyboard). */}
+      {/* Why something stopped, as visible text (a `title` is not shown on touch or keyboard). */}
+      {removeFailed(version) || incomplete || (installState && (version.started_at_human || version.output)) ? (
+        <div className="relative z-10 mt-2 space-y-1 text-xs @3xl/versions:col-span-full">
           {removeFailed(version) ? (
-            <span className="block text-destructive">
+            <p className="text-destructive">
               {/* The job records no message for this, so ours stands in. */}
               {version.message ?? t("versions.removeFailed")}
               {version.reference ? (
@@ -300,57 +313,27 @@ export function VersionSummary({
                   {version.reference}
                 </span>
               ) : null}
-            </span>
+            </p>
           ) : null}
           {incomplete ? (
-            <span className="block text-warning">
+            <p className="text-warning">
               {t("versions.incompleteDetail", { packages: missingPackages.join(", ") })}
-            </span>
+            </p>
           ) : null}
-          {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
-          {/* Only when the date is news; supported versions show just the badge. */}
-          {lifecycleAvailable &&
-          version.lifecycle?.eol_date &&
-          version.lifecycle.status !== "active"
-            ? ` ${
-                version.lifecycle.status === "eol"
-                  ? t("lifecycle.endedOn", { date: version.lifecycle.eol_date })
-                  : t("lifecycle.endsOn", { date: version.lifecycle.eol_date })
-              }`
-            : null}
-        </CardDescription>
-
-        {/* apt's output while installing and after a failure: the badge gives
-            the phase, only this says why it stopped. */}
-        {installState && version.output ? (
-          <InstallOutput text={version.output.trimEnd()} />
-        ) : null}
-
-        {/* Tags, so near-duplicate names stay distinct. The API sends at most
-            five and reports how many it held back. */}
-        {sites.length > 0 ? (
-          <ul className="flex flex-wrap gap-1.5 pt-1">
-            {sites.map((site) => (
-              <li
-                key={site}
-                className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-              >
-                {site}
-              </li>
-            ))}
-            {version.sites_truncated && usedBy > sites.length ? (
-              <li className="px-1 py-0.5 text-xs text-muted-foreground">
-                {t("versions.moreCount", { count: usedBy - sites.length })}
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-
-        {/* "Default" does not mean every site uses this version; said here. */}
-        {version.is_default ? (
-          <p className="text-xs text-muted-foreground">{t("versions.defaultHint")}</p>
-        ) : null}
-      </CardHeader>
+          {installState && installState !== "failed" && version.started_at_human ? (
+            <p className="text-muted-foreground">
+              {t(installState === "removing" ? "versions.removingSince" : "versions.installingSince", {
+                when: version.started_at_human,
+              })}
+            </p>
+          ) : null}
+          {/* apt's output while installing and after a failure: the badge gives
+              the phase, only this says why it stopped. */}
+          {installState && version.output ? (
+            <InstallOutput text={version.output.trimEnd()} />
+          ) : null}
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={confirming}
@@ -364,6 +347,6 @@ export function VersionSummary({
         pending={running === "remove"}
         onConfirm={remove}
       />
-    </Card>
+    </li>
   );
 }

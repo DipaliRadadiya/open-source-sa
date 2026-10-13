@@ -32,10 +32,9 @@ test("it survives as the heading fallback, not as body text", () => {
   assert.doesNotMatch(code, /<p className="mt-2 text-xs text-muted-foreground">\{t\("schedule\.summaryOff"\)\}<\/p>/);
 });
 
-test("the badge row still renders when a schedule exists", () => {
-  // Guard against collapsing the wrong branch: the enabled side is what shows
-  // which categories are scheduled, and it is the half worth keeping.
-  assert.match(code, /schedule\?\.enabled \? \(/);
-  assert.match(code, /scheduledLabels\.map\(\(label\) => \(/);
-  assert.match(code, /\{whenLine\}<\/span>/);
+test("with a schedule on, the tile still says when it fires", () => {
+  // 13 Oct: the badge row became a compact tile (Krishna: too much empty space). The
+  // tile keeps the half that answers "will it run": next run, and the disk threshold.
+  assert.match(code, /nextRunLine \?\?/);
+  assert.match(code, /whenLine,\s*\]\s*\.filter\(Boolean\)/);
 });

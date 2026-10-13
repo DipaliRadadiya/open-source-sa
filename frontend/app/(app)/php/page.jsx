@@ -5,13 +5,17 @@ import { can } from "@/lib/permissions/can";
 import { getPhp } from "@/lib/php/get-php";
 import { getPhpExtensions } from "@/lib/php/get-php-extensions";
 import { getIonCube } from "@/lib/php/get-ioncube";
-import { VersionBar } from "@/components/runtime/version-bar";
+import { VersionsCard } from "@/components/runtime/versions-table";
+import { rowGrid } from "@/lib/runtime/version-rows";
+import { SettingsVersionPicker } from "@/components/php/settings-version-picker";
+import { compareVersions } from "@/lib/runtime/version-range";
 import { VersionSummary } from "@/components/php/version-summary";
 import { InstallVersionButton } from "@/components/runtime/install-version-button";
 import { ExtensionsCard } from "@/components/php/extensions-card";
 import { IonCubeCard } from "@/components/php/ioncube-card";
 import { PhpVersionTabs } from "@/components/php/version-tabs";
 import { IniEditor } from "@/components/php/ini-editor";
+import { RevealSettings } from "@/components/php/reveal-settings";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -84,6 +88,18 @@ export default async function PhpPage({ searchParams }) {
     versions.find((version) => version.version === selected) ?? null;
 
   const installState = versionState(current);
+  const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
+
+  // Install sits in the table's header, or in the empty state when there is no table.
+  const install = (
+    <InstallVersionButton
+      runtime="php"
+      installable={php?.installable ?? []}
+      installed={versions}
+      canManage={canManage}
+      lifecycleAvailable={lifecycleAvailable}
+    />
+  );
   // Both endpoints 404 for a version that is not installed (installing, failed,
   // removing), so skip them then. Fetched in parallel.
   const [{ data: extensions }, { data: ioncube, failed: ionCubeFailed }] = installState
@@ -114,108 +130,92 @@ export default async function PhpPage({ searchParams }) {
           icon={FileCode2}
           title={t("empty.title")}
           description={t("empty.description")}
-          // With no versions there is no version bar, so the empty state carries Install.
-          action={
-            <InstallVersionButton
-              runtime="php"
-              installable={php?.installable ?? []}
-              installed={versions}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-            />
-          }
+          // With no versions there is no table, so the empty state carries Install.
+          action={install}
         />
       ) : (
-        <div className="space-y-4">
-          {/* Install sits after the version chips; with one version there are no
-              chips, so it joins that version's card actions instead of floating. */}
-          {versions.length > 1 ? (
-            <VersionBar
-              versions={versions}
-              selected={selected}
-              namespace="php"
-              lifecycleAvailable={lifecycleAvailable}
-              action={
-                <InstallVersionButton
-                  runtime="php"
-                  installable={php?.installable ?? []}
-                  installed={versions}
-                  canManage={canManage}
-                  lifecycleAvailable={lifecycleAvailable}
-                />
-              }
-            />
-          ) : null}
+        <>
+          <VersionsCard
+            namespace="php"
+            gridClass={rowGrid("php", lifecycleAvailable)}
+            columns={[
+              t("table.colVersion"),
+              ...(lifecycleAvailable ? [t("table.colSupport")] : []),
+              t("table.colUsedBy"),
+              t("table.colActions"),
+            ]}
+            action={install}
+            footnote={t("versions.defaultHint")}
+          >
+            {/* Newest first: the API lists in-flight installs ahead of installed versions. */}
+            {ordered.map((version) => (
+              /* Keyed on version: each row holds its own confirm and running state. */
+              <VersionSummary
+                key={version.version}
+                version={version}
+                canManage={canManage}
+                lifecycleAvailable={lifecycleAvailable}
+                selected={version.version === selected}
+                selectable
+              />
+            ))}
+          </VersionsCard>
 
           {current ? (
-            /* Keyed on version: without it a save could write one version's php.ini into another's. */
-            <VersionSummary
-              key={current.version}
-              version={current}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-            >
-              {versions.length === 1 ? (
-                <InstallVersionButton
-                  runtime="php"
-                  installable={php?.installable ?? []}
-                  installed={versions}
-                  canManage={canManage}
-                  lifecycleAvailable={lifecycleAvailable}
-                />
-              ) : null}
-              <IniEditor
-                version={selected}
-                canManage={canManage}
-                unavailableReason={
-                  installState === "installing"
-                    ? t("versions.stillInstalling")
-                    : installState === "removing"
-                      ? t("versions.stillRemoving")
-                      : installState
-                        ? t("versions.installFailedShort")
-                        : null
-                }
-              />
-            </VersionSummary>
-          ) : null}
+            <section aria-labelledby="php-settings-title" className="space-y-3">
+              <RevealSettings version={selected} targetId="php-settings-title" />
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+                <div className="min-w-0 space-y-1">
+                  {/* Clears the sticky top bar when scrolled to. */}
+                  <h2 id="php-settings-title" className="scroll-mt-[calc(var(--app-chrome,4rem)+1rem)] text-[15px] font-semibold tracking-tight">
+                    {t("settings.title", { version: selected })}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {t("settings.description", { version: selected })}
+                  </p>
+                </div>
+                {versions.length > 1 ? <SettingsVersionPicker versions={ordered} selected={selected} /> : null}
+              </div>
 
-          {/* In place of the extensions card, explain why it is unavailable. */}
-          {installState ? (
-            // Shared with the Node page so the two cannot drift.
-            <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
-          ) : (
-            // Tabs rather than stacked: the extensions list is long enough to bury what follows.
-            <PhpVersionTabs
-              initial={sp?.tab}
-              // Excludes built-ins, matching the card's own count.
-              extensionCount={extensions?.extensions?.filter((e) => !e.builtin).length}
-              ionCubeState={ioncube}
-              ionCubeFailed={ionCubeFailed}
-              extensions={
-                /* A failed fetch renders nothing, never an empty list. */
-                extensions ? (
-                  <ExtensionsCard
-                    version={selected}
-                    extensions={extensions.extensions}
-                    panelRequired={extensions.panel_required}
-                    toggleSupported={extensions.toggle_supported}
-                    canManage={canManage}
-                  />
-                ) : null
-              }
-              ioncube={
-                /* Rendered even when its fetch failed; the card reports it. */
-                <IonCubeCard
-                  version={selected}
-                  ioncube={ioncube}
-                  failed={ionCubeFailed}
-                  canManage={canManage}
+              {/* In place of the settings, explain why they are unavailable. */}
+              {installState ? (
+                // Shared with the Node page so the two cannot drift.
+                <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
+              ) : (
+                <PhpVersionTabs
+                  initial={sp?.tab}
+                  // Excludes built-ins, matching the card's own count.
+                  extensionCount={extensions?.extensions?.filter((e) => !e.builtin).length}
+                  ionCubeState={ioncube}
+                  ionCubeFailed={ionCubeFailed}
+                  extensions={
+                    /* A failed fetch renders nothing, never an empty list. */
+                    extensions ? (
+                      <ExtensionsCard
+                        version={selected}
+                        extensions={extensions.extensions}
+                        panelRequired={extensions.panel_required}
+                        toggleSupported={extensions.toggle_supported}
+                        canManage={canManage}
+                      />
+                    ) : null
+                  }
+                  ioncube={
+                    /* Rendered even when its fetch failed; the card reports it. */
+                    <IonCubeCard
+                      version={selected}
+                      ioncube={ioncube}
+                      failed={ionCubeFailed}
+                      canManage={canManage}
+                    />
+                  }
+                  // Keyed on version: its buffer belongs to one version's file.
+                  ini={<IniEditor key={selected} version={selected} canManage={canManage} />}
                 />
-              }
-            />
-          )}
-        </div>
+              )}
+            </section>
+          ) : null}
+        </>
       )}
     </div>
   );

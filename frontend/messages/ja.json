@@ -225,15 +225,13 @@
       "password": "OS パスワード",
       "passwordHint": "このユーザーとしてサーバーにサインインするために使用します。",
       "passwordNotSet": "未設定",
-      "reveal": "パスワードを表示",
-      "hide": "パスワードを隠す",
       "copy": "パスワードをコピー",
-      "copied": "パスワードをクリップボードにコピーしました。",
       "applications": "アプリケーション",
       "noApplications": "このユーザーはアプリケーションを所有していません。",
       "sshKeys": "SSH 鍵",
       "noSshKeys": "SSH 鍵はまだ追加されていません。",
-      "fingerprint": "フィンガープリント"
+      "fingerprint": "フィンガープリント",
+      "copyPath": "パスをコピー"
     },
     "noPermission": "あなたのロールには管理権限付きの System User が含まれていません。管理者に依頼して権限を付与してもらってください。",
     "shellNeedsLogin": "このシェルはログインを拒否するため、SSH アクセスが有効な間は設定できません。先に SSH をオフにしてください。",
@@ -1506,10 +1504,8 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "description": "PHP が読み込むファイル全体です。保存時にはバックアップが作成され、書き込み、php-fpm -t でのテスト、リロードが行われます。PHP が拒否した場合、以前のファイルが復元され、リロードは行われません。",
       "acknowledge": "不適切な php.ini は PHP {version} FPM の起動を妨げ、そのバージョンのすべてのアプリケーションを停止させることを理解しました。",
       "save": "保存してリロード",
-      "cancel": "キャンセル",
       "copy": "ファイルをコピー",
       "saved": "php.ini を保存し、PHP {version} をリロードしました",
       "loadFailed": "php.ini を読み込めませんでした。",
@@ -1517,10 +1513,7 @@
       "blockedNoChanges": "保存する内容がありません — ファイルは変更されていません。",
       "blockedAcknowledge": "まずリスクを理解した旨を確認してください。",
       "pathUnknown": "読み込み中…",
-      "shortAction": "php.ini を編集",
-      "viewAction": "php.ini を表示",
-      "readOnlyDescription": "PHP が読み込むファイル全体です。",
-      "close": "閉じる"
+      "readOnlyDescription": "PHP が読み込むファイル全体です。"
     },
     "notMeasured": "未計測",
     "phpSettings": "PHP 設定",
@@ -1617,7 +1610,11 @@
       "badgeOff": "オフ",
       "badgeEnabled": "有効",
       "badgeFailing": "誤入力 {count} 件",
-      "badgeBanned": "ブロック {count} 件"
+      "badgeBanned": "ブロック {count} 件",
+      "about": {
+        "sshd": "このサーバーへの SSH ログインを監視します。パスワードや鍵を何度も間違えた接続元は、ブロックルールの上限に従ってブロックされます。",
+        "recidive": "ほかの Jail を監視します。1日に3回ブロックされた接続元は、このサーバーのすべてのサービスから1週間ブロックされます。"
+      }
     },
     "lockout": {
       "title": "サーバーにアクセスできなくなる可能性があります",
@@ -2080,7 +2077,7 @@
         "maxmemory": "メモリ上限",
         "maxmemoryHint": "256mb や 1gb のように指定します。0 は無制限を意味します。",
         "policy": "上限に達したとき",
-        "policyHint": "allkeys-* は古いキーを削除、volatile-* は有効期限のあるキーのみ削除します。",
+        "policyHint": "Redis がいっぱいになったときの動作です。",
         "password": "パスワード",
         "passwordHint": "現在のパスワードを維持するには空のままにしてください。",
         "passwordSet": "パスワードが設定されています",
@@ -2101,7 +2098,17 @@
         "usageOfLimit": "{limit} のうち {used}",
         "saveFailed": "Redis 設定を保存できませんでした。",
         "outOfSync": "パネルに保存されている Redis のパスワードが使えなくなっています。サーバー上で変更されました。一致するまで、キューのジョブ、キャッシュ、セッションは Redis に接続できません。",
-        "outOfSyncFix": "下で新しいパスワードを設定してください。パネルが Redis と自身のコピーを同時に更新します。"
+        "outOfSyncFix": "下で新しいパスワードを設定してください。パネルが Redis と自身のコピーを同時に更新します。",
+        "policies": {
+          "noeviction": "新しいデータを拒否（すべて保持）",
+          "allkeys-lru": "最も長く使われていないキーを削除",
+          "allkeys-lfu": "使用頻度が最も低いキーを削除",
+          "allkeys-random": "ランダムにキーを削除",
+          "volatile-lru": "有効期限付きで最も長く使われていないキーを削除",
+          "volatile-lfu": "有効期限付きで使用頻度が最も低いキーを削除",
+          "volatile-random": "有効期限付きのキーをランダムに削除",
+          "volatile-ttl": "有効期限が最も近いキーを削除"
+        }
       },
       "noPermission": "現在のロールには、設定の管理権限が含まれていません。管理者に付与を依頼してください。",
       "passwordNotManageable": "このインストールでは自身の設定ファイルを書き換えられないため、Redis パスワードをここから変更できません。サーバーで変更し、REDIS_PASSWORD を更新してください。"
@@ -2224,6 +2231,28 @@
   "php": {
     "title": "PHP",
     "subtitle": "このサーバーのPHPと、各アプリケーションで使用できる拡張機能です。",
+    "table": {
+      "title": "インストール済みのバージョン",
+      "description": "バージョンをクリックすると、その拡張機能、ionCube、php.ini を確認・変更できます。",
+      "colVersion": "バージョン",
+      "colSupport": "サポート",
+      "colUsedBy": "使用箇所",
+      "colActions": "操作",
+      "usedByCount": "{count, plural, other {# アプリケーション}}",
+      "usedByNone": "なし",
+      "usedByTitle": "PHP {version} を使うアプリケーション"
+    },
+    "settings": {
+      "title": "PHP {version} の設定",
+      "description": "ここでの変更は、PHP {version} を使うすべてのアプリケーションに適用されます。"
+    },
+    "ini": {
+      "description": "PHP が読み込むファイル全体です。保存すると古いファイルがバックアップされ、PHP が新しいファイルを確認します。PHP が拒否した場合は古いファイルが戻され、何も変わりません。",
+      "perApp": "1 つのアプリケーションだけのアップロードサイズ、メモリ、時間制限を変えるには、そのアプリケーションの PHP 設定を使ってください。",
+      "perAppLink": "アプリケーションへ",
+      "retry": "再試行",
+      "discard": "変更を破棄"
+    },
     "loadFailed": "このサーバーのPHP設定を読み込めませんでした。",
     "noPermission": "お持ちのロールには管理権限付きのPHPが含まれていません。管理者に付与を依頼してください。",
     "empty": {
@@ -2241,7 +2270,7 @@
       "usedByNone": "このバージョンを使用しているアプリケーションはまだありません。",
       "makeDefault": "デフォルトにする",
       "remove": "解除",
-      "defaultHint": "各アプリケーションは独自のバージョンを維持します。変更されるのはphpコマンドのみです。",
+      "defaultHint": "デフォルトのバージョンは新しいアプリケーションで最初から選択され、php コマンド（ターミナルと Cronジョブ）を実行します。既存のアプリケーションは今のバージョンのままです。",
       "defaultSet": "PHP {version} をデフォルトに設定しました。",
       "defaultFailed": "そのバージョンをデフォルトに設定できませんでした。",
       "removed": "PHP {version} を削除しました。",
@@ -2250,7 +2279,6 @@
       "confirmRemoveTitle": "PHP {version} を削除しますか？",
       "confirmRemoveBody": "拡張機能や設定も一緒に削除されます。後から再インストールできます。",
       "confirmCancel": "キャンセル",
-      "switchLabel": "設定対象:",
       "statusFailed": "インストールに失敗しました",
       "statusInstalling": "インストール中",
       "steps": {
@@ -2304,8 +2332,6 @@
       "filterOn": "オン",
       "filterOff": "オフ",
       "panelNeedsShort": "パネルが必要",
-      "colName": "拡張機能",
-      "colStatus": "状態",
       "driftWebOnly": "ウェブサイトではオン、コマンドラインではオフ",
       "driftCliOnly": "コマンドラインではオン、ウェブサイトではオフ",
       "driftPartial": "一部の用途でのみオン",
@@ -2461,7 +2487,7 @@
       "loadFailed": "ionCube Loader の状態を読み取れませんでした。",
       "removeConfirmTitle": "ionCube Loader を削除しますか？",
       "removeConfirmBody": "PHP {version} で動作している暗号化ソフトウェアをご利用のアプリケーションは、再インストールするまで動作しなくなります。",
-      "hint": "apt パッケージではなく、ionCube のクローズドソースファイルです。そのため拡張機能の一覧の行ではなく、独立したタブになっています。",
+      "hint": "アプリケーションが ionCube Loader を必要とする場合だけインストールしてください。追加されるのは PHP {version} のみです。",
       "onShort": "オン",
       "offShort": "オフ",
       "unavailableShort": "利用不可",
@@ -2471,7 +2497,8 @@
     },
     "tabs": {
       "extensions": "拡張機能",
-      "ioncube": "ionCube"
+      "ioncube": "ionCube",
+      "ini": "php.ini"
     },
     "unavailable": {
       "title": "このサーバーでは PHP を管理しません",
@@ -2481,6 +2508,20 @@
   "node": {
     "title": "Node.js",
     "subtitle": "このサーバー上の Node.js バージョンです。",
+    "table": {
+      "title": "インストール済みのバージョン",
+      "description": "パネルがこのサーバーにインストールした Node.js バージョンです。",
+      "colVersion": "バージョン",
+      "colSupport": "サポート",
+      "colNpm": "npm",
+      "colUsedBy": "使用箇所",
+      "colActions": "操作",
+      "usedByCount": "{count, plural, other {# アプリケーション}}",
+      "usedByNone": "なし",
+      "usedByTitle": "Node.js {version} を使うアプリケーション",
+      "npmCurrent": "最新です",
+      "npmUpdate": "更新"
+    },
     "loadFailed": "このサーバーの Node.js 設定を読み取れませんでした。",
     "noPermission": "あなたのロールには Node.js の管理権限が含まれていません。管理者に付与を依頼してください。",
     "empty": {
@@ -2497,12 +2538,10 @@
       "failed": "npm を更新できませんでした。",
       "alreadyLatest": "npm はすでに最新でした({version})。",
       "installed": "npm {version}",
-      "upgrade": "npm {current} → {latest}",
-      "currentReason": "npm はすでに最新バージョンです。"
+      "upgrade": "npm {current} → {latest}"
     },
     "versions": {
       "pickerLabel": "Node.js バージョン",
-      "switchLabel": "設定対象:",
       "name": "Node.js {version}",
       "default": "デフォルト",
       "isDefault": "これはデフォルトのバージョンです。",
@@ -2511,7 +2550,7 @@
       "usedByNone": "このバージョンを使用しているアプリケーションはまだありません。",
       "makeDefault": "デフォルトにする",
       "remove": "解除",
-      "defaultHint": "各アプリケーションは独自のバージョンを維持します。変更されるのはnodeコマンドのみです。",
+      "defaultHint": "デフォルトのバージョンは新しいアプリケーションで最初から選択され、node、npm、npx コマンドを実行します。既存のアプリケーションは今のバージョンのままです。",
       "defaultSet": "Node.js {version} をデフォルトに設定しました。",
       "defaultFailed": "そのバージョンをデフォルトに設定できませんでした。",
       "removed": "Node.js {version} を削除しました。",
@@ -2590,32 +2629,24 @@
       "label": "ディスク容量",
       "percentUsed": "{percent}% 使用中",
       "lastRun": "最終クリーンアップ: {when}",
-      "freeShort": "空き {free}",
-      "subLine": "{total} 中 {used} 使用 · {reclaimable} 解放可能"
-    },
-    "groups": {
-      "package": "パッケージ",
-      "logs": "ログ",
-      "temp": "一時ファイル",
-      "other": "その他"
+      "usedLine": "{total} 中 {used} 使用 · 空き {free}",
+      "reclaimLabel": "解放可能",
+      "reclaimCount": "{count, plural, other {# 件}}"
     },
     "list": {
       "title": "クリーンアップ可能な項目",
       "subtitle": "削除する項目を選んでください。確定するまで何も削除されません。",
       "allClean": "現在クリーンアップできるものはありません — すべて整っています。",
-      "alreadyClean": "すでにクリーン済み",
-      "nothingToFree": "解放できるものはありません。",
+      "alreadyCleanList": "すでにクリーン済み: {items}",
       "showPaths": "フォルダーを表示",
       "hidePaths": "フォルダーを隠す",
       "selectAll": "クリーンアップ可能なものをすべて選択",
-      "unselectAll": "すべて選択解除",
       "morePaths": "残り {count} 件を表示",
       "fewerPaths": "折りたたむ",
       "whatIsKept": "保持されるもの",
       "checkFirst": "事前確認",
       "measuredJustNow": "計測したばかり",
-      "measuredAgo": "{minutes, plural, other {# 分前}}に計測",
-      "rescan": "再計測"
+      "measuredAgo": "{minutes, plural, other {# 分前}}に計測"
     },
     "action": {
       "clean": "クリーンアップ",
@@ -2639,14 +2670,13 @@
     "schedule": {
       "saving": "保存中…",
       "title": "自動クリーンアップ",
-      "on": "オン",
       "summaryOn": "{frequency} · {count, plural, other {# 件}}",
-      "summaryOff": "オフ — 必要なときに手動でクリーンアップしてください。",
+      "summaryOff": "オフ",
       "enable": "自動でクリーンアップする",
       "howOften": "実行間隔",
-      "onlyWhen": "ディスク使用量が次を超えたときに実行",
-      "thresholdPlaceholder": "80",
-      "thresholdHint": "空欄にすると、実行ごとに毎回クリーンアップします。",
+      "onlyWhen": "ディスク使用率",
+      "thresholdAny": "指定なし（毎回クリーンアップ）",
+      "thresholdOver": "{percent}% 超",
       "whatToClean": "クリーンアップ対象",
       "safeOnly": "自動削除しても安全な項目のみスケジュールできます。",
       "save": "スケジュールを保存",
@@ -2661,22 +2691,29 @@
         "weekly": "毎週",
         "monthly": "毎月"
       },
-      "configure": "設定",
+      "frequencyOption": {
+        "hourly": "毎時",
+        "daily": "毎日",
+        "weekly": "毎週",
+        "monthly": "毎月"
+      },
+      "setUp": "自動クリーンアップを設定",
       "dialogDescription": "パネルに自動でクリーンアップさせれば、ディスク満杯のトラブルに遭わずに済みます。",
-      "cleansNothing": "未選択",
       "overThreshold": "{percent}% を超えたとき",
-      "everyTime": "毎回",
       "turnOnFirst": "スケジュールをオンにしてから実行タイミングを選んでください。",
       "enableHint": "ボタンを押したときだけでなく、スケジュールでクリーンアップを実行します。",
       "onlyWhenHint": "ディスクが少なくともこの使用率になってからクリーンアップを実行するため、空きが多い状態では通常のクリーンアップは行われません。",
       "nextRun": "次回のクリーンアップ: {when}",
-      "nextRunAtZone": "次回のクリーンアップ: {when} · {time} {timezone}",
-      "thresholdRange": "1〜99 の数値を入力してください。ディスク使用率は 100% を超えないため、それより大きい値ではクリーンアップが実行されません。"
+      "nextRunAtZone": "次回のクリーンアップ: {when} · {time} {timezone}"
     },
     "runs": {
       "title": "最近のクリーンアップ",
       "subtitle": "何をいつ解放したか。",
-      "categories": "{count, plural, other {# 件}}",
+      "colWhen": "タイミング",
+      "colWhat": "クリーンアップした項目",
+      "colHow": "方法",
+      "colDiskAfter": "実行後のディスク",
+      "colFreed": "解放量",
       "trigger": {
         "manual": "手動",
         "scheduled": "自動",
@@ -4973,7 +5010,8 @@
           "limit": "このリストが保持できるボットの数の上限です。",
           "browserWord": "この語は一般的なブラウザ名に含まれるため、実際の訪問者をブロックしてしまいます。GPTBot のようにボットの正式名を入力してください。"
         },
-        "noPermission": "現在のロールには、このアプリケーションの AI Bot Blocker の管理権限が含まれていません。管理者に付与を依頼してください。"
+        "noPermission": "現在のロールには、このアプリケーションの AI Bot Blocker の管理権限が含まれていません。管理者に付与を依頼してください。",
+        "legacyContains": "v7 のブロックでは、許可した名前を含むすべてのボットが通過します。「GPT」を許可すると GPTBot も許可されます。"
       },
       "howItWorks": "robots.txt は変更されず、Google や実際の訪問者にも影響しません。",
       "save": "保存",
@@ -5423,6 +5461,7 @@
       "bans": {
         "title": "ブロック中のアドレス",
         "subtitle": "このアプリケーションの jail がブロックしたアドレスです。ここでのブロックはこのアプリケーションだけに適用され、サーバー全体には適用されません。",
+        "subtitleServerWide": "このアプリケーションの Jail がブロックした接続元です。この Jail は v7 から引き継がれたもので、ここでのブロックはこのアプリケーションだけでなくサーバー全体でその接続元をブロックします。",
         "none": "現在ブロックされているアドレスはありません。",
         "notRunning": "このアプリケーションの jail が動作していないため、まだここではブロックできません。",
         "noPermission": "あなたのロールには、このアプリケーションの Fail2ban の管理権限が含まれていません。",
@@ -5432,6 +5471,7 @@
         "typeIp": "先に IP アドレスを入力してください。",
         "invalidIp": "203.0.113.10 のような IPv4 または IPv6 アドレスを 1 つ入力してください。",
         "banned": "{ip} をこのアプリケーションからブロックしました。",
+        "bannedServerWide": "{ip} はこのサーバーでブロックされています。",
         "banFailed": "アドレスをブロックできませんでした。",
         "unban": "ブロック解除",
         "unbanned": "{ip} は再びこのアプリケーションにアクセスできます。",

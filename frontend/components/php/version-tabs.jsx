@@ -9,7 +9,7 @@ import { isInFlight } from "@/lib/runtime/in-flight";
 
 // ionCube is separate from extensions: a vendor `.so`, not an apt package.
 
-const VALUES = ["extensions", "ioncube"];
+const VALUES = ["extensions", "ioncube", "ini"];
 
 // Uses `isInFlight`, never a hand-written test: the API sends `idle` when untouched.
 function ionCubeBadge(ioncube, failed, t) {
@@ -30,6 +30,7 @@ function ionCubeBadge(ioncube, failed, t) {
 export function PhpVersionTabs({
   extensions,
   ioncube,
+  ini,
   extensionCount,
   ionCubeState,
   ionCubeFailed = false,
@@ -37,6 +38,9 @@ export function PhpVersionTabs({
 }) {
   const t = useTranslations("php");
   const [tab, setTab] = useState(() => (VALUES.includes(initial) ? initial : "extensions"));
+  // php.ini mounts on first open (it costs a read) and then stays, so its edits survive a
+  // look at another tab.
+  const [opened, setOpened] = useState(() => new Set([tab]));
 
   const badge = ionCubeBadge(ionCubeState, ionCubeFailed, t);
 
@@ -51,10 +55,12 @@ export function PhpVersionTabs({
       node: extensions,
     },
     { value: "ioncube", label: t("tabs.ioncube"), badge, node: ioncube },
+    { value: "ini", label: t("tabs.ini"), badge: null, node: ini, keep: true },
   ];
 
   function select(next) {
     setTab(next);
+    setOpened((current) => (current.has(next) ? current : new Set([...current, next])));
     // Same as DatabaseTabs: a URL rewrite rather than a route change, so Back
     // does not step through tabs.
     const url = new URL(window.location.href);
@@ -90,14 +96,23 @@ export function PhpVersionTabs({
 
         {/* Inside real tab panels so each tab's aria-controls resolves. Only
             the active panel mounts. */}
-        {sections.map((section) => (
-          <TabsContent key={section.value} value={section.value}>
-            {section.node}
-          </TabsContent>
-        ))}
+        {sections.map((section) =>
+          section.keep && opened.has(section.value) ? (
+            <TabsContent
+              key={section.value}
+              value={section.value}
+              forceMount
+              className="data-[state=inactive]:hidden"
+            >
+              {section.node}
+            </TabsContent>
+          ) : (
+            <TabsContent key={section.value} value={section.value}>
+              {section.node}
+            </TabsContent>
+          ),
+        )}
       </Tabs>
-
-
     </div>
   );
 }

@@ -15,14 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -111,7 +103,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
   }
 
   return (
-    <Card>
+    <Card className="@container/ext">
       <CardHeader>
         <CardTitle className="text-base font-semibold">{t("extensions.title")}</CardTitle>
         <CardDescription>
@@ -173,18 +165,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
           // Edge to edge, as every table inside a card.
           <div className="relative -mx-(--card-spacing)">
             <div className="max-h-[32rem] overflow-y-auto border-y">
-            <Table>
-              <TableHeader>
-                {/* Header labels the column of switches and badges. */}
-                <TableRow className="sticky top-0 z-10 bg-muted hover:bg-muted">
-                  <TableHead>{t("extensions.colName")}</TableHead>
-                  {/* Narrow on a phone so the switches stay on screen. */}
-                  <TableHead className="w-24 text-right sm:w-56">
-                    {t("extensions.colStatus")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            {/* Columns, not one stretched row: on a wide card a single row left the switch far
+                from the name it belongs to (Krishna, 12 Oct). Each switch carries its own label. */}
+            <ul aria-label={t("extensions.title")} className="-mr-px -mb-px grid grid-cols-1 @xl/ext:grid-cols-2 @6xl/ext:grid-cols-3">
                 {shown.map((extension) => {
                   const required = panelRequired.includes(extension.name);
                   // One at a time: each switch runs apt, and a second run would fail on the lock.
@@ -197,9 +180,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                         : null;
 
                   return (
-                    <TableRow key={extension.name}>
+                    <li key={extension.name} className="flex items-center justify-between gap-4 border-r border-b px-4 py-2.5">
                       {/* min-h keeps every row the same height. */}
-                      <TableCell className="max-w-0">
+                      <div className="min-w-0 flex-1">
                         <span className="flex min-h-9 flex-col justify-center">
                         <span className="font-mono text-sm font-medium">{extension.name}</span>
 
@@ -239,9 +222,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                           </span>
                         ) : null}
                         </span>
-                      </TableCell>
+                      </div>
 
-                      <TableCell className="text-right">
+                      <div className="shrink-0 text-right">
                         {/* Locked rows are disabled with the reason on hover. */}
                         {!toggleSupported && extension.installed ? (
                           // OpenLiteSpeed: installed means on, and it cannot be switched off.
@@ -295,12 +278,11 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                             {t(`extensions.${driftOf(extension)}`)}
                           </span>
                         ) : null}
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </li>
                   );
                 })}
-              </TableBody>
-            </Table>
+            </ul>
             </div>
             {/* Fade so the cut-off last row reads as scrollable. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-px h-8 bg-gradient-to-t from-card to-transparent" />

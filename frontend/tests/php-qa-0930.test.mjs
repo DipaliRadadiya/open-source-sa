@@ -10,10 +10,11 @@ test("view-only opens php.ini read-only: GET …/ini only needs view", () => {
   const src = read("components/php/ini-editor.jsx");
   assert.match(src, /const readOnly = !canManage;/);
   assert.match(src, /readOnly=\{readOnly\}/);
-  assert.match(src, /disabled=\{Boolean\(unavailableReason\)\}\n\s*onClick=\{load\}/);
-  assert.match(src, /\{readOnly \? null : \(\s*\n\s*<ReasonTooltip reason=\{blockedReason\}>/);
+  // 12 Oct: an inline tab now, so read-only means no Save row at all, not a hidden button.
+  assert.match(src, /\{readOnly \|\| loadError \? null : \(\s*\n\s*<CardFooter/);
+  assert.match(src, /readOnly \? t\("phpIni\.readOnlyDescription"\)/);
   const en = JSON.parse(read("messages/en.json")).services.phpIni;
-  assert.equal(en.viewAction, "View php.ini");
+  assert.ok(en.readOnlyDescription);
 });
 
 test("extension descriptions wrap instead of being cut on a phone", () => {
@@ -22,10 +23,12 @@ test("extension descriptions wrap instead of being cut on a phone", () => {
   assert.doesNotMatch(src, /block truncate text-xs text-muted-foreground/);
 });
 
-test("version chips are newest first whatever order the API sends", () => {
-  const src = read("components/runtime/version-bar.jsx");
-  assert.match(src, /\[\.\.\.versions\]\.sort\(\(a, b\) => compareVersions\(b\.version, a\.version\)\)/);
-  assert.match(src, /\{ordered\.map\(/);
+test("version rows are newest first whatever order the API sends", () => {
+  for (const page of ["app/(app)/php/page.jsx", "app/(app)/node/page.jsx"]) {
+    const src = read(page);
+    assert.match(src, /\[\.\.\.versions\]\.sort\(\(a, b\) => compareVersions\(b\.version, a\.version\)\)/, page);
+    assert.match(src, /\{ordered\.map\(|versions=\{ordered\}/, page);
+  }
 });
 
 test("the Extensions tab counts what the card counts (built-ins listed apart)", () => {

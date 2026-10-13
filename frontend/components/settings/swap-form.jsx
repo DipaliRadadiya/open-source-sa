@@ -17,6 +17,7 @@ import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Form, FormField, FormControl } from "@/components/ui/form";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -161,14 +162,26 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
               }
             >
               {/* The API's *_human strings are English-formatted; format the bytes for the locale. */}
-              <p className="text-sm">
-                {swap?.enabled
-                  ? t("swap.currentValue", {
+              <div className="space-y-1.5">
+                <p className="text-sm tabular-nums">
+                  {swap?.enabled
+                    ? t("swap.currentValue", {
+                        size: formatBytes(swap.size, format) ?? swap.size_human,
+                        used: formatBytes(swap.used, format) ?? swap.used_human,
+                      })
+                    : t("swap.none")}
+                </p>
+                {/* How full it is, at a glance. */}
+                {swap?.enabled && swap.size > 0 && typeof swap.used === "number" ? (
+                  <Progress
+                    value={Math.min(100, (swap.used / swap.size) * 100)}
+                    aria-label={t("swap.currentValue", {
                       size: formatBytes(swap.size, format) ?? swap.size_human,
                       used: formatBytes(swap.used, format) ?? swap.used_human,
-                    })
-                  : t("swap.none")}
-              </p>
+                    })}
+                  />
+                ) : null}
+              </div>
             </InfoRow>
   
             <FormField
