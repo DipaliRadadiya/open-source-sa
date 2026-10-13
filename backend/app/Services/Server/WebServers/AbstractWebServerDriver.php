@@ -755,7 +755,10 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             return null;
         }
 
-        $pattern = implode('|', array_map(fn (string $bot) => preg_quote($bot, '/'), $bots));
+        // A space is written as \x20: OpenLiteSpeed's RewriteCond takes the
+        // pattern unquoted, so a literal space ends it and the config test
+        // fails. v8's own names have none; 23 of v7's do ("Hugging Face").
+        $pattern = implode('|', array_map(fn (string $bot) => str_replace(' ', '\x20', preg_quote($bot, '/')), $bots));
 
         // Anchor the exemption to the whole user-agent: an unanchored negative
         // lookahead could retry after YandexBot and wrongly block a later token.

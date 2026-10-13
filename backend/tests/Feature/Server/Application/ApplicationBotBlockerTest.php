@@ -257,7 +257,11 @@ it('renders broad legacy matching with a whole-agent Yandex exemption on every s
         ->and(preg_match($regex, 'Mozilla compatible gPtBot/1.0'))->toBe(1)
         ->and(preg_match($regex, 'YandexBot Jasper'))->toBe(0)
         ->and(preg_match($regex, 'Jasper YANDEXBOT'))->toBe(0)
-        ->and(preg_match($regex, 'Mozilla Chrome/128.0'))->toBe(0);
+        ->and(preg_match($regex, 'Mozilla Chrome/128.0'))->toBe(0)
+        // v7 names with a space still match, and none reaches the config as
+        // a bare space: OLS's RewriteCond is unquoted (refused live, 2026-10-13).
+        ->and(preg_match($regex, 'Mozilla (compatible; Hugging Face crawler)'))->toBe(1)
+        ->and($match[0])->not->toContain(' ');
 })->with([
     NginxDriver::class,
     ApacheDriver::class,
