@@ -880,7 +880,10 @@
     "excludeInsideSite": "Einen Pfad im Ordner der Anwendung verwenden, etwa storage/logs — ohne / oder ..",
     "cronTrailingComment": "Entfernen Sie die #-Notiz. Cron behandelt alles nach # als Kommentar, auch den Teil, der das Protokoll des Jobs schreibt.",
     "cronReboot": "@reboot wird hier nicht unterstützt. Verwenden Sie einen Zeitplan, zum Beispiel @daily oder */5 * * * *.",
-    "hostForbidden": "Geben Sie die Adresse des Backup-Servers selbst ein. Lokale Adressen wie localhost oder 127.0.0.1 sind nicht erlaubt."
+    "hostForbidden": "Geben Sie die Adresse des Backup-Servers selbst ein. Lokale Adressen wie localhost oder 127.0.0.1 sind nicht erlaubt.",
+    "sshKeyRequired": "Fügen Sie einen SSH-Schlüssel hinzu: Die Anmeldung per Passwort ist auf diesem Server ausgeschaltet.",
+    "sshKeyOrPassword": "Fügen Sie einen SSH-Schlüssel hinzu oder legen Sie ein Passwort fest.",
+    "confirmContainerOnly": "Setzen Sie das Häkchen zur Bestätigung."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -5948,17 +5951,34 @@
       "description": "Öffnen Sie von Ihrem Computer aus eine Shell im Container dieser Anwendung.",
       "loading": "Kommandozeilenzugriff wird geladen",
       "copied": "Befehl kopiert",
-      "step1": {
-        "title": "Systembenutzer anlegen",
-        "body": "Sie brauchen einen Systembenutzer mit SSH-Zugriff, Passwort und sudo. Überspringen Sie diesen Schritt, wenn Sie sich als root anmelden.",
-        "open": "Systembenutzer öffnen",
-        "pick": "Anmelden als",
-        "pickPlaceholder": "Benutzer auswählen"
+      "copyLabel": "Kopieren: {label}",
+      "owner": "Systembenutzer dieser Anwendung: <user>{username}</user>",
+      "readOnly": "Bitten Sie einen Administrator, die Container-Anmeldung für {username} einzuschalten.",
+      "turnOn": {
+        "title": "Container-Anmeldung für {username} einschalten",
+        "body": "Wer sich als {username} anmeldet, landet direkt im Container dieser Anwendung.",
+        "key": "Ihren SSH-Schlüssel hinzufügen",
+        "keyRecommended": "Empfohlen: Sie melden sich ohne Passwortabfrage an.",
+        "password": "Passwort festlegen",
+        "passwordHint": "Wird bei der Anmeldung ohne Schlüssel verwendet.",
+        "passwordReplaces": "Leer lassen, um das aktuelle Passwort von {username} zu behalten.",
+        "keyRequired": "Die Anmeldung per Passwort ist auf diesem Server ausgeschaltet, daher ist ein SSH-Schlüssel nötig. Sie können das unter <link>Zugang & Sicherheit</link> ändern.",
+        "otherApps": "{username} gehören noch {count, plural, one {# weitere Anwendung} other {# weitere Anwendungen}}. Danach öffnet die SSH-Anmeldung dieses Benutzers nur noch diesen Container, und normales SSH und SFTP funktionieren für ihn nicht mehr. Für normales SSH auf dem Server legen Sie einen eigenen Systembenutzer an.",
+        "confirm": "Mir ist klar, dass sich {username} nur noch in diesem Container anmeldet",
+        "submit": "Container-Anmeldung einschalten",
+        "done": "Container-Anmeldung für {username} ist eingeschaltet",
+        "failed": "Die Container-Anmeldung konnte nicht eingeschaltet werden."
       },
-      "step2": {
-        "title": "Diesen Befehl ausführen",
+      "commands": {
+        "shell": "Shell im Container öffnen",
         "container": "Container",
-        "note": "sudo fragt nach dem Passwort dieses Benutzers. Mit <code>exit</code> verlassen Sie den Container."
+        "exec": "Einen Befehl ausführen",
+        "logs": "Protokolle ansehen",
+        "appCommands": "Befehle der Anwendung",
+        "note": "Kein sudo nötig. Mit einem SSH-Schlüssel gibt es keine Passwortabfrage, sonst wird einmal nach dem Passwort von {username} gefragt. <link>Für normales SSH auf dem Server legen Sie einen eigenen Systembenutzer an.</link>",
+        "turnOff": "Ausschalten",
+        "turnedOff": "Container-Anmeldung für {username} ist ausgeschaltet",
+        "turnOffFailed": "Die Container-Anmeldung konnte nicht ausgeschaltet werden."
       }
     }
   },

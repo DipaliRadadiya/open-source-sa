@@ -308,7 +308,10 @@
     "excludeInsideSite": "Usa una ruta dentro de la carpeta de la aplicación, como storage/logs, sin / ni .. al principio",
     "cronTrailingComment": "Quita la nota con #. Cron trata todo lo que va después de # como un comentario, incluida la parte que escribe el registro de la tarea.",
     "cronReboot": "@reboot no es compatible aquí. Usa una programación, por ejemplo @daily o */5 * * * *.",
-    "hostForbidden": "Escribe la dirección del propio servidor de copias. No se permiten direcciones locales como localhost o 127.0.0.1."
+    "hostForbidden": "Escribe la dirección del propio servidor de copias. No se permiten direcciones locales como localhost o 127.0.0.1.",
+    "sshKeyRequired": "Añada una clave SSH: el inicio de sesión con contraseña está desactivado en este servidor.",
+    "sshKeyOrPassword": "Añada una clave SSH o establezca una contraseña.",
+    "confirmContainerOnly": "Marque la casilla para confirmar."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -5948,17 +5951,34 @@
       "description": "Abra una shell dentro del contenedor de esta aplicación desde su ordenador.",
       "loading": "Cargando el acceso por línea de comandos",
       "copied": "Comando copiado",
-      "step1": {
-        "title": "Cree un usuario del sistema",
-        "body": "Necesita un usuario del sistema con acceso SSH, contraseña y sudo. Omita este paso si inicia sesión como root.",
-        "open": "Abrir Usuarios del sistema",
-        "pick": "Iniciar sesión como",
-        "pickPlaceholder": "Elija un usuario"
+      "copyLabel": "Copiar: {label}",
+      "owner": "Usuario del sistema de esta aplicación: <user>{username}</user>",
+      "readOnly": "Pida a un administrador que active el inicio de sesión en el contenedor para {username}.",
+      "turnOn": {
+        "title": "Activar el inicio de sesión en el contenedor para {username}",
+        "body": "Al iniciar sesión como {username} se abrirá directamente el contenedor de esta aplicación.",
+        "key": "Añada su clave SSH",
+        "keyRecommended": "Recomendado: inicia sesión sin que se le pida contraseña.",
+        "password": "Establecer una contraseña",
+        "passwordHint": "Se usa cuando inicia sesión sin clave.",
+        "passwordReplaces": "Déjelo vacío para conservar la contraseña actual de {username}.",
+        "keyRequired": "El inicio de sesión con contraseña está desactivado en este servidor, así que se necesita una clave SSH. Puede cambiarlo en <link>Acceso y seguridad</link>.",
+        "otherApps": "{username} también es propietario de {count, plural, one {# aplicación más} other {# aplicaciones más}}. Después de esto, su inicio de sesión SSH solo abrirá este contenedor, y el SSH y el SFTP normales dejarán de funcionar para él. Para el SSH normal del servidor, cree un usuario del sistema aparte.",
+        "confirm": "Entiendo que {username} solo iniciará sesión en este contenedor",
+        "submit": "Activar el inicio de sesión en el contenedor",
+        "done": "El inicio de sesión en el contenedor está activado para {username}",
+        "failed": "No se pudo activar el inicio de sesión en el contenedor."
       },
-      "step2": {
-        "title": "Ejecute este comando",
+      "commands": {
+        "shell": "Abrir una shell en el contenedor",
         "container": "Contenedor",
-        "note": "sudo le pedirá la contraseña de ese usuario. Escriba <code>exit</code> para salir del contenedor."
+        "exec": "Ejecutar un comando",
+        "logs": "Ver registros",
+        "appCommands": "Comandos de la aplicación",
+        "note": "No necesita sudo. Con una clave SSH no se pide contraseña; si no, se pide la contraseña de {username} una vez. <link>Para el SSH normal del servidor, cree un usuario del sistema aparte.</link>",
+        "turnOff": "Desactivar",
+        "turnedOff": "El inicio de sesión en el contenedor está desactivado para {username}",
+        "turnOffFailed": "No se pudo desactivar el inicio de sesión en el contenedor."
       }
     }
   },

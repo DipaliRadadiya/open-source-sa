@@ -880,7 +880,10 @@
     "excludeInsideSite": "storage/logs のように、アプリケーションのフォルダー内のパスを指定してください（/ や .. は使えません）",
     "cronTrailingComment": "# のメモを削除してください。cron は # 以降をすべてコメントとして扱うため、ジョブのログを書き込む部分も無効になります。",
     "cronReboot": "@reboot はここでは使えません。@daily や */5 * * * * などのスケジュールを使ってください。",
-    "hostForbidden": "バックアップサーバー自体のアドレスを入力してください。localhost や 127.0.0.1 などのローカルアドレスは使えません。"
+    "hostForbidden": "バックアップサーバー自体のアドレスを入力してください。localhost や 127.0.0.1 などのローカルアドレスは使えません。",
+    "sshKeyRequired": "SSH 鍵を追加してください。このサーバーではパスワードログインがオフです。",
+    "sshKeyOrPassword": "SSH 鍵を追加するか、パスワードを設定してください。",
+    "confirmContainerOnly": "確認のためチェックを入れてください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -5948,17 +5951,34 @@
       "description": "お使いのコンピューターから、このアプリのコンテナ内でシェルを開きます。",
       "loading": "コマンドラインアクセスを読み込んでいます",
       "copied": "コマンドをコピーしました",
-      "step1": {
-        "title": "システムユーザーを作成する",
-        "body": "SSH アクセス、パスワード、sudo を持つシステムユーザーが必要です。root でログインする場合は省略できます。",
-        "open": "システムユーザーを開く",
-        "pick": "ログインするユーザー",
-        "pickPlaceholder": "ユーザーを選択"
+      "copyLabel": "コピー: {label}",
+      "owner": "このアプリのシステムユーザー: <user>{username}</user>",
+      "readOnly": "{username} のコンテナログインをオンにするよう管理者に依頼してください。",
+      "turnOn": {
+        "title": "{username} のコンテナログインをオンにする",
+        "body": "{username} としてログインすると、このアプリのコンテナが直接開きます。",
+        "key": "SSH 鍵を追加",
+        "keyRecommended": "推奨: パスワードを尋ねられずにログインできます。",
+        "password": "パスワードを設定",
+        "passwordHint": "鍵を使わずにログインするときに使います。",
+        "passwordReplaces": "{username} の現在のパスワードを使い続ける場合は空欄のままにします。",
+        "keyRequired": "このサーバーではパスワードログインがオフのため、SSH 鍵が必要です。<link>アクセスとセキュリティ</link>で変更できます。",
+        "otherApps": "{username} はほかに {count, plural, other {# 個のアプリ}}も所有しています。この操作の後、このユーザーの SSH ログインはこのコンテナだけを開き、通常の SSH と SFTP は使えなくなります。サーバーへの通常の SSH には、別のシステムユーザーを作成してください。",
+        "confirm": "{username} はこのコンテナにのみログインすることを理解しました",
+        "submit": "コンテナログインをオンにする",
+        "done": "{username} のコンテナログインをオンにしました",
+        "failed": "コンテナログインをオンにできませんでした。"
       },
-      "step2": {
-        "title": "このコマンドを実行する",
+      "commands": {
+        "shell": "コンテナでシェルを開く",
         "container": "コンテナ",
-        "note": "sudo がそのユーザーのパスワードを尋ねます。コンテナから出るには <code>exit</code> と入力します。"
+        "exec": "コマンドを 1 つ実行する",
+        "logs": "ログを表示",
+        "appCommands": "アプリのコマンド",
+        "note": "sudo は不要です。SSH 鍵があればパスワードは尋ねられません。鍵がない場合は {username} のパスワードを 1 回だけ尋ねられます。<link>サーバーへの通常の SSH には、別のシステムユーザーを作成してください。</link>",
+        "turnOff": "オフにする",
+        "turnedOff": "{username} のコンテナログインをオフにしました",
+        "turnOffFailed": "コンテナログインをオフにできませんでした。"
       }
     }
   },

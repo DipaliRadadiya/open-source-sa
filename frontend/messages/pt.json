@@ -880,7 +880,10 @@
     "excludeInsideSite": "Use um caminho dentro da pasta da aplicação, como storage/logs, sem / nem ..",
     "cronTrailingComment": "Remova a nota com #. O cron trata tudo depois de # como comentário, incluindo a parte que grava o log da tarefa.",
     "cronReboot": "@reboot não é compatível aqui. Use um agendamento, por exemplo @daily ou */5 * * * *.",
-    "hostForbidden": "Informe o endereço do próprio servidor de backup. Endereços locais como localhost ou 127.0.0.1 não são permitidos."
+    "hostForbidden": "Informe o endereço do próprio servidor de backup. Endereços locais como localhost ou 127.0.0.1 não são permitidos.",
+    "sshKeyRequired": "Adicione uma chave SSH: o login com senha está desligado neste servidor.",
+    "sshKeyOrPassword": "Adicione uma chave SSH ou defina uma senha.",
+    "confirmContainerOnly": "Marque a caixa para confirmar."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -5948,17 +5951,34 @@
       "description": "Abra um shell dentro do contentor desta aplicação a partir do seu computador.",
       "loading": "Carregando o acesso por linha de comando",
       "copied": "Comando copiado",
-      "step1": {
-        "title": "Crie um usuário do sistema",
-        "body": "Você precisa de um usuário do sistema com acesso SSH, senha e sudo. Pule esta etapa se você entra como root.",
-        "open": "Abrir Usuários do sistema",
-        "pick": "Entrar como",
-        "pickPlaceholder": "Escolha um usuário"
+      "copyLabel": "Copiar: {label}",
+      "owner": "Usuário do sistema desta aplicação: <user>{username}</user>",
+      "readOnly": "Peça a um administrador para ligar o login no contentor para {username}.",
+      "turnOn": {
+        "title": "Ligar o login no contentor para {username}",
+        "body": "Entrar como {username} vai abrir diretamente o contentor desta aplicação.",
+        "key": "Adicione sua chave SSH",
+        "keyRecommended": "Recomendado: você entra sem pedido de senha.",
+        "password": "Definir uma senha",
+        "passwordHint": "Usada quando você entra sem chave.",
+        "passwordReplaces": "Deixe vazio para manter a senha atual de {username}.",
+        "keyRequired": "O login com senha está desligado neste servidor, então é preciso uma chave SSH. Você pode mudar isso em <link>Acesso e segurança</link>.",
+        "otherApps": "{username} também é dono de {count, plural, one {# outra aplicação} other {# outras aplicações}}. Depois disso, o login SSH dele abre só este contentor, e o SSH e o SFTP normais deixam de funcionar para ele. Para SSH normal no servidor, crie um usuário do sistema separado.",
+        "confirm": "Entendo que {username} vai entrar só neste contentor",
+        "submit": "Ligar o login no contentor",
+        "done": "O login no contentor está ligado para {username}",
+        "failed": "Não foi possível ligar o login no contentor."
       },
-      "step2": {
-        "title": "Execute este comando",
+      "commands": {
+        "shell": "Abrir um shell no contentor",
         "container": "Contentor",
-        "note": "O sudo pedirá a senha desse usuário. Digite <code>exit</code> para sair do contentor."
+        "exec": "Executar um comando",
+        "logs": "Ver logs",
+        "appCommands": "Comandos da aplicação",
+        "note": "Não precisa de sudo. Com uma chave SSH não há pedido de senha; caso contrário, a senha de {username} é pedida uma vez. <link>Para SSH normal no servidor, crie um usuário do sistema separado.</link>",
+        "turnOff": "Desligar",
+        "turnedOff": "O login no contentor está desligado para {username}",
+        "turnOffFailed": "Não foi possível desligar o login no contentor."
       }
     }
   },

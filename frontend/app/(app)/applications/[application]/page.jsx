@@ -399,6 +399,8 @@ export default async function ApplicationDetailPage({ params }) {
             <ContainerAccessCard
               application={application}
               canSeeSystemUsers={can(permissions, "system_user", "view")}
+              canManageSystemUsers={can(permissions, "system_user", "manage")}
+              canOpenSecurity={can(permissions, "setting", "manage")}
               className="lg:col-span-2 xl:col-span-3"
             />
           ) : null}

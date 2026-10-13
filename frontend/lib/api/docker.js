@@ -115,11 +115,25 @@ export function acknowledgeContainerSecrets(id) {
 }
 
 /**
- * The host, SSH port, containers and ready system users for the Command-line
- * access card (RC-23). A read, gated like the compose file.
+ * The app's own system user and the lines to copy for the Command-line access
+ * card (RC-23, RC-28). A read, gated like the compose file.
  */
 export function getContainerAccess(id) {
   return api.get(`/applications/${id}/container/access`);
+}
+
+/**
+ * Turns container login on for the app's owner: its SSH login then opens the
+ * container (RC-28). `ssh_key`, `password` and `confirm_container_only` are
+ * optional; the first two go through the System Users rules.
+ */
+export function enableContainerAccess(id, payload = {}) {
+  return api.post(`/applications/${id}/container/access`, payload);
+}
+
+// The owner's SSH goes back to a normal host login if it is still on.
+export function disableContainerAccess(id) {
+  return api.delete(`/applications/${id}/container/access`);
 }
 
 /**

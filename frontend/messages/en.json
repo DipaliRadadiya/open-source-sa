@@ -880,7 +880,10 @@
     "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or ..",
     "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log.",
     "cronReboot": "@reboot isn't supported here. Use a schedule, for example @daily or */5 * * * *.",
-    "hostForbidden": "Enter the backup server’s own address. Local addresses like localhost or 127.0.0.1 are not allowed."
+    "hostForbidden": "Enter the backup server’s own address. Local addresses like localhost or 127.0.0.1 are not allowed.",
+    "sshKeyRequired": "Add an SSH key: password login is off on this server.",
+    "sshKeyOrPassword": "Add an SSH key or set a password.",
+    "confirmContainerOnly": "Tick the box to confirm."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -5948,17 +5951,34 @@
       "description": "Open a shell inside this app's container from your computer.",
       "loading": "Loading command-line access",
       "copied": "Command copied",
-      "step1": {
-        "title": "Create a system user",
-        "body": "You need a system user with SSH access, a password and sudo. Skip this if you log in as root.",
-        "open": "Open System Users",
-        "pick": "Log in as",
-        "pickPlaceholder": "Choose a user"
+      "copyLabel": "Copy: {label}",
+      "owner": "This app's system user: <user>{username}</user>",
+      "readOnly": "Ask an admin to turn on container login for {username}.",
+      "turnOn": {
+        "title": "Turn on container login for {username}",
+        "body": "Logging in as {username} will open this app's container directly.",
+        "key": "Add your SSH key",
+        "keyRecommended": "Recommended: you log in with no password prompt.",
+        "password": "Set a password",
+        "passwordHint": "Used when you log in without a key.",
+        "passwordReplaces": "Leave empty to keep {username}'s current password.",
+        "keyRequired": "Password login is off on this server, so an SSH key is required. You can change this in <link>Access & security</link>.",
+        "otherApps": "{username} also owns {count, plural, one {# other app} other {# other apps}}. After this, its SSH login opens this container only, and normal SSH and SFTP for it stop. For normal server SSH, create a separate system user.",
+        "confirm": "I understand that {username} will log in to this container only",
+        "submit": "Turn on container login",
+        "done": "Container login is on for {username}",
+        "failed": "Container login could not be turned on."
       },
-      "step2": {
-        "title": "Run this command",
+      "commands": {
+        "shell": "Open a shell in the container",
         "container": "Container",
-        "note": "sudo will ask for that user's password. Type <code>exit</code> to leave the container."
+        "exec": "Run one command",
+        "logs": "View logs",
+        "appCommands": "App commands",
+        "note": "No sudo needed. With an SSH key there is no password prompt; otherwise it asks for {username}'s password once. <link>For normal server SSH, create a separate system user.</link>",
+        "turnOff": "Turn off",
+        "turnedOff": "Container login is off for {username}",
+        "turnOffFailed": "Container login could not be turned off."
       }
     }
   },

@@ -880,7 +880,10 @@
     "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni ..",
     "cronTrailingComment": "Supprimez la note avec #. Cron traite tout ce qui suit # comme un commentaire, y compris la partie qui écrit le journal de la tâche.",
     "cronReboot": "@reboot n'est pas pris en charge ici. Utilisez une planification, par exemple @daily ou */5 * * * *.",
-    "hostForbidden": "Saisissez l’adresse du serveur de sauvegarde lui-même. Les adresses locales comme localhost ou 127.0.0.1 ne sont pas autorisées."
+    "hostForbidden": "Saisissez l’adresse du serveur de sauvegarde lui-même. Les adresses locales comme localhost ou 127.0.0.1 ne sont pas autorisées.",
+    "sshKeyRequired": "Ajoutez une clé SSH : la connexion par mot de passe est désactivée sur ce serveur.",
+    "sshKeyOrPassword": "Ajoutez une clé SSH ou définissez un mot de passe.",
+    "confirmContainerOnly": "Cochez la case pour confirmer."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -5948,17 +5951,34 @@
       "description": "Ouvrez un shell dans le conteneur de cette application depuis votre ordinateur.",
       "loading": "Chargement de l'accès en ligne de commande",
       "copied": "Commande copiée",
-      "step1": {
-        "title": "Créez un utilisateur système",
-        "body": "Il vous faut un utilisateur système avec accès SSH, un mot de passe et sudo. Ignorez cette étape si vous vous connectez en root.",
-        "open": "Ouvrir Utilisateurs système",
-        "pick": "Se connecter en tant que",
-        "pickPlaceholder": "Choisissez un utilisateur"
+      "copyLabel": "Copier : {label}",
+      "owner": "Utilisateur système de cette application : <user>{username}</user>",
+      "readOnly": "Demandez à un administrateur d'activer la connexion au conteneur pour {username}.",
+      "turnOn": {
+        "title": "Activer la connexion au conteneur pour {username}",
+        "body": "Se connecter en tant que {username} ouvrira directement le conteneur de cette application.",
+        "key": "Ajoutez votre clé SSH",
+        "keyRecommended": "Recommandé : vous vous connectez sans saisir de mot de passe.",
+        "password": "Définir un mot de passe",
+        "passwordHint": "Utilisé quand vous vous connectez sans clé.",
+        "passwordReplaces": "Laissez vide pour garder le mot de passe actuel de {username}.",
+        "keyRequired": "La connexion par mot de passe est désactivée sur ce serveur, une clé SSH est donc obligatoire. Vous pouvez modifier cela dans <link>Accès et sécurité</link>.",
+        "otherApps": "{username} possède aussi {count, plural, one {# autre application} other {# autres applications}}. Ensuite, sa connexion SSH n'ouvrira plus que ce conteneur, et le SSH et le SFTP normaux cesseront de fonctionner pour lui. Pour un accès SSH normal au serveur, créez un utilisateur système distinct.",
+        "confirm": "Je comprends que {username} ne se connectera plus qu'à ce conteneur",
+        "submit": "Activer la connexion au conteneur",
+        "done": "La connexion au conteneur est activée pour {username}",
+        "failed": "Impossible d'activer la connexion au conteneur."
       },
-      "step2": {
-        "title": "Exécutez cette commande",
+      "commands": {
+        "shell": "Ouvrir un shell dans le conteneur",
         "container": "Conteneur",
-        "note": "sudo demandera le mot de passe de cet utilisateur. Tapez <code>exit</code> pour quitter le conteneur."
+        "exec": "Exécuter une commande",
+        "logs": "Voir les journaux",
+        "appCommands": "Commandes de l'application",
+        "note": "Pas besoin de sudo. Avec une clé SSH, aucun mot de passe n'est demandé ; sinon, le mot de passe de {username} est demandé une fois. <link>Pour un accès SSH normal au serveur, créez un utilisateur système distinct.</link>",
+        "turnOff": "Désactiver",
+        "turnedOff": "La connexion au conteneur est désactivée pour {username}",
+        "turnOffFailed": "Impossible de désactiver la connexion au conteneur."
       }
     }
   },
