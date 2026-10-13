@@ -23,6 +23,7 @@ services:
     environment:
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: "{{ secret.ADMIN_PASSWORD }}"
+      SECRET_KEY: "{{ secret.SECRET_KEY }}"
       ALLOWED_HOSTS: "{{ domain }}"
       PUBLIC_INDEX: "False"
       PUBLIC_SNAPSHOTS: "False"

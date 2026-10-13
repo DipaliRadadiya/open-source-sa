@@ -19,6 +19,7 @@ services:
     environment:
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: "655dfb69734d20c02a034c0f326b3feb"
+      SECRET_KEY: "692877b8eb8e62d3594e47e6ea0e72d8"
       ALLOWED_HOSTS: "archivebox.golden.test"
       PUBLIC_INDEX: "False"
       PUBLIC_SNAPSHOTS: "False"

@@ -5,7 +5,8 @@
         "data": "/data"
     },
     "generated_secrets": [
-        "ADMIN_PASSWORD"
+        "ADMIN_PASSWORD",
+        "SECRET_KEY"
     ],
     "complex_secrets": [],
     "panel_only_secrets": [],
@@ -63,7 +64,8 @@
         }
     ],
     "docker_secret_keys": [
-        "ADMIN_PASSWORD"
+        "ADMIN_PASSWORD",
+        "SECRET_KEY"
     ],
     "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
     "catalog": {
