@@ -39,6 +39,7 @@ return [
     'storage_destination.deleted' => 'Removed the :name backup destination',
     'setting.reboot_cancelled' => 'Cancelled the scheduled server reboot',
     'php.ioncube_install_started' => 'Started installing the ionCube Loader for PHP :version',
+    'php.ioncube_install_followed' => 'Started installing the ionCube Loader for PHP :version, because other PHP versions on this server have it',
     'php.ioncube_installed' => 'Installed the ionCube Loader for PHP :version',
     'php.ioncube_install_failed' => 'The ionCube Loader could not be installed for PHP :version',
     'php.ioncube_removed' => 'Removed the ionCube Loader from PHP :version',

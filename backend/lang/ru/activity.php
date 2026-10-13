@@ -39,6 +39,7 @@ return [
     'storage_destination.deleted' => 'Удалил место назначения резервных копий :name',
     'setting.reboot_cancelled' => 'Отменил запланированную перезагрузку сервера',
     'php.ioncube_install_started' => 'Начал установку загрузчика ionCube для PHP :version',
+    'php.ioncube_install_followed' => 'Начал установку загрузчика ionCube для PHP :version, так как он есть у других версий PHP на этом сервере',
     'php.ioncube_installed' => 'Установил загрузчик ionCube для PHP :version',
     'php.ioncube_install_failed' => 'Не удалось установить загрузчик ionCube для PHP :version',
     'php.ioncube_removed' => 'Удалил загрузчик ionCube из PHP :version',

@@ -311,9 +311,10 @@ class PhpController extends Controller
         // Refused here too, not only in the job: a queued install that can
         // only fail would show a spinner and then an error for something the
         // card already knew.
-        if ($loader->source($version) === IonCubeLoader::SOURCE_EXTERNAL) {
+        $source = $loader->source($version);
+        if ($source === IonCubeLoader::SOURCE_EXTERNAL || $source === IonCubeLoader::SOURCE_V7) {
             return response()->json([
-                'message' => __('errors/php.ioncube_external', ['version' => $version]),
+                'message' => __($source === IonCubeLoader::SOURCE_V7 ? 'errors/php.ioncube_v7' : 'errors/php.ioncube_external', ['version' => $version]),
             ], 422);
         }
 

@@ -39,6 +39,7 @@ return [
     'storage_destination.deleted' => 'バックアップ先 :name を削除しました',
     'setting.reboot_cancelled' => '予約されたサーバー再起動をキャンセルしました',
     'php.ioncube_install_started' => 'PHP :version の ionCube Loader のインストールを開始しました',
+    'php.ioncube_install_followed' => 'このサーバーの他の PHP バージョンにあるため、PHP :version の ionCube Loader のインストールを開始しました',
     'php.ioncube_installed' => 'PHP :version に ionCube Loader をインストールしました',
     'php.ioncube_install_failed' => 'PHP :version の ionCube Loader をインストールできませんでした',
     'php.ioncube_removed' => 'PHP :version から ionCube Loader を削除しました',

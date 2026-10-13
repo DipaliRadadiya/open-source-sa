@@ -39,6 +39,7 @@ return [
     'storage_destination.deleted' => 'बैकअप गंतव्य :name हटाया',
     'setting.reboot_cancelled' => 'निर्धारित सर्वर रीबूट रद्द किया',
     'php.ioncube_install_started' => 'PHP :version के लिए ionCube Loader इंस्टॉल करना शुरू किया',
+    'php.ioncube_install_followed' => 'PHP :version के लिए ionCube Loader इंस्टॉल करना शुरू किया, क्योंकि इस सर्वर के अन्य PHP वर्ज़न में यह है',
     'php.ioncube_installed' => 'PHP :version के लिए ionCube Loader इंस्टॉल किया',
     'php.ioncube_install_failed' => 'PHP :version के लिए ionCube Loader इंस्टॉल नहीं हो सका',
     'php.ioncube_removed' => 'PHP :version से ionCube Loader हटाया',

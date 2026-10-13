@@ -39,6 +39,7 @@ return [
     'storage_destination.deleted' => 'Eliminó el destino de copias :name',
     'setting.reboot_cancelled' => 'Canceló el reinicio programado del servidor',
     'php.ioncube_install_started' => 'Empezó a instalar el cargador ionCube para PHP :version',
+    'php.ioncube_install_followed' => 'Empezó a instalar el cargador ionCube para PHP :version porque otras versiones de PHP de este servidor lo tienen',
     'php.ioncube_installed' => 'Instaló el cargador ionCube para PHP :version',
     'php.ioncube_install_failed' => 'No se pudo instalar el cargador ionCube para PHP :version',
     'php.ioncube_removed' => 'Eliminó el cargador ionCube de PHP :version',

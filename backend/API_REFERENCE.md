@@ -5844,19 +5844,24 @@ The ionCube Loader, which commercial PHP applications (WHMCS and most licensed s
 
 `loader_version` is read out of PHP itself, so it is the version actually loaded rather than the one that was requested; `null` while `installed` is `true` means the ini is in place and the loader did not load. `status` / `reason` / `reference` follow the same pattern as PHP extension installs.
 
-**`source`** — who installed it: `"panel"`, `"external"`, or `null` when not installed. **`external`** = installed outside this panel (an earlier ServerAvatar version added a `zend_extension` line to php.ini, or LiteSpeed's `lsphpNN-ioncube` package on OpenLiteSpeed). Show it as installed with its `loader_version`, and **disable Install and Remove** with a note ("installed outside the panel"): both answer `422` for it, because installing over it loads ionCube twice and removing the package's file is undone by the next upgrade. `sha256` and `path` are `null` for an external loader. It goes away when that PHP version is removed.
+**`source`** — who installed it: `"panel"`, `"v7"`, `"external"`, or `null` when not installed.
+- **`v7`** = installed by ServerAvatar v7, recognised exactly: on nginx/Apache its own `zend_extension = {extension_dir}/ioncube_loader_lin_{version}.so` line in that version's php.ini files, on OpenLiteSpeed LiteSpeed's `lsphpNN-ioncube` package. **Remove works for it** (same card, same confirm): on nginx/Apache only v7's line comes out of each php.ini and then its loader file, after a config test and a check that PHP really stopped loading ionCube; on OpenLiteSpeed the package is removed through apt. Any failure puts everything back and reloads nothing. **Install answers `422`** (`errors/php.ioncube_v7`, "remove it here first") while it is there — installing over it would load ionCube twice. After Remove, Install works as usual.
+- **`external`** = installed some other way the panel does not recognise. Show it as installed with its `loader_version`, and **disable Install and Remove** with a note ("installed outside the panel"): both answer `422`. It goes away when that PHP version is removed.
+- `sha256` and `path` are `null` for both.
 
 **Show `message`, never `reason`.** On a failed install, `message` is the sentence in the viewer's locale; `reason` is a code to branch on — the actual cause (`ioncube_download_failed`, `ioncube_invalid_loader`, `ioncube_config_test_failed`, `ioncube_reload_failed`, `ioncube_rollback_failed`, …, or `worker` if the job died), no longer always `install_failed`. `message` is `null` whenever the last run did not fail.
 
 ### POST `/php/versions/{version}/ioncube`
 **Permission:** `php` (manage)
 
-`202` — the archive is ~29 MB, so the install is queued. Poll `GET` until `status` leaves `installing`. A second call while one is running is a no-op `202`, not a second download. A version ionCube does not publish for is refused `422` before anything is queued.
+`202` — the archive is ~29 MB, so the install is queued. Poll `GET` until `status` leaves `installing`. A second call while one is running is a no-op `202`, not a second download. A version ionCube does not publish for is refused `422` before anything is queued, and so is a version whose ionCube is `v7` or `external`.
+
+**Installing a new PHP version installs ionCube for it too** when another installed PHP version already has ionCube (any `source`), as v7 did. It is a separate queued install on that version's card, so poll its `GET` the same way; the activity log says "Started installing the ionCube Loader for PHP X, because other PHP versions on this server have it". Skipped for versions ionCube publishes no loader for. If it fails, PHP itself is still installed and the card shows the failure.
 
 ### DELETE `/php/versions/{version}/ioncube`
 **Permission:** `php` (manage)
 
-`200`, synchronous — two files removed and a reload, nothing to download. `422` when `source` is `external`.
+`200`, synchronous — two files removed and a reload, nothing to download (for `source: "v7"` see above). `422` when `source` is `external`.
 
 **Removing a PHP version removes its ionCube too** — the panel's own loader and ini are deleted after the version's packages are purged (an external one goes with the purge / the version's config directory).
 

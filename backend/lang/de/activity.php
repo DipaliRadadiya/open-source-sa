@@ -39,6 +39,7 @@ return [
     'storage_destination.deleted' => 'Sicherungsziel :name entfernt',
     'setting.reboot_cancelled' => 'Geplanten Server-Neustart abgebrochen',
     'php.ioncube_install_started' => 'Installation des ionCube Loaders für PHP :version gestartet',
+    'php.ioncube_install_followed' => 'Installation des ionCube Loaders für PHP :version gestartet, weil andere PHP-Versionen auf diesem Server ihn haben',
     'php.ioncube_installed' => 'ionCube Loader für PHP :version installiert',
     'php.ioncube_install_failed' => 'ionCube Loader konnte für PHP :version nicht installiert werden',
     'php.ioncube_removed' => 'ionCube Loader aus PHP :version entfernt',

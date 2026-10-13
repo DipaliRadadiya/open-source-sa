@@ -9,10 +9,12 @@ use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -80,6 +82,36 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
         // {@see InstallDatabaseEngine}, which has always done this.
         $capabilities->refresh();
         $log->log('php.installed', null, ['version' => $this->version], actor: $this->actor());
+
+        $this->followIonCube($php, $log, $installs);
+    }
+
+    /**
+     * v7 parity (2026-10-13, Dipali): when other PHP versions here have
+     * ionCube, the new one gets it too — otherwise moving a site with encoded
+     * files to the new version breaks it. Its own queued install, tracked on
+     * the version's ionCube card like a click would be. Never fatal: PHP is
+     * installed whatever happens here.
+     */
+    private function followIonCube(PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): void
+    {
+        try {
+            $loader = app(IonCubeLoader::class);
+            $others = array_column($php->versions(), 'version');
+
+            if (! $loader->shouldFollow($this->version, $others)) {
+                return;
+            }
+
+            $installs->start(InstallIonCubeLoader::RUNTIME, $this->version);
+            InstallIonCubeLoader::dispatch($this->version, $this->actorId);
+            $log->log('php.ioncube_install_followed', null, ['version' => $this->version], actor: $this->actor());
+        } catch (Throwable $e) {
+            Log::warning('ionCube could not be queued for a new PHP version', [
+                'version' => $this->version,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

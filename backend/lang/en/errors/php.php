@@ -31,6 +31,7 @@ return [
     'ioncube_unsupported_version' => 'ionCube does not publish a Loader for PHP :version.',
     'ioncube_unsupported_architecture' => 'ionCube does not publish a Loader for this server\'s architecture (:architecture).',
     'ioncube_external' => 'ionCube for PHP :version was installed outside the panel (by an earlier panel version or a system package), so the panel will not change it. It is removed together with PHP :version.',
+    'ioncube_v7' => 'ionCube for PHP :version was installed by ServerAvatar v7. Remove it here first, then install it again.',
     'ioncube_download_failed' => 'The ionCube Loader could not be downloaded. Check the server\'s internet access and try again.',
     'ioncube_invalid_loader' => 'The downloaded file is not a valid ionCube Loader for this server. Nothing was installed.',
     'ioncube_install_failed' => 'The ionCube Loader could not be installed.',

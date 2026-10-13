@@ -114,6 +114,12 @@ class PhpConfigException extends Exception
         return new self('errors/php.ioncube_external', 422, replace: ['version' => $version]);
     }
 
+    /** Installed by v7: Remove takes it out, and Install works after that. */
+    public static function ionCubeV7(string $version): self
+    {
+        return new self('errors/php.ioncube_v7', 422, replace: ['version' => $version]);
+    }
+
     public static function ionCubeDownloadFailed(string $reference): self
     {
         return new self('errors/php.ioncube_download_failed', 500, $reference);

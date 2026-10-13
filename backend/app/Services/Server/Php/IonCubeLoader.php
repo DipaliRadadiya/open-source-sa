@@ -74,6 +74,16 @@ class IonCubeLoader
      */
     public const SOURCE_EXTERNAL = 'external';
 
+    /**
+     * Installed by v7, recognised exactly (2026-10-13, Dipali): on PHP-FPM
+     * its own `zend_extension = {extension_dir}/ioncube_loader_lin_{v}.so`
+     * line in the version's php.ini files, on OpenLiteSpeed LiteSpeed's
+     * `lsphpXX-ioncube` package. Unlike {@see SOURCE_EXTERNAL} the panel
+     * knows how to take it back out, so Remove works for it; Install is still
+     * refused while it is there, since that would load ionCube twice.
+     */
+    public const SOURCE_V7 = 'v7';
+
     private const PANEL_MARKER = '; Managed by the panel.';
 
     public function __construct(
@@ -125,14 +135,48 @@ class IonCubeLoader
     public function source(string $version): ?string
     {
         if ($this->iniInstalled($version)) {
-            return $this->panelWroteIni($version) ? self::SOURCE_PANEL : self::SOURCE_EXTERNAL;
+            if ($this->panelWroteIni($version)) {
+                return self::SOURCE_PANEL;
+            }
+
+            return $this->v7Package($version) !== null ? self::SOURCE_V7 : self::SOURCE_EXTERNAL;
         }
 
-        if ($this->anyIniPresent($version) || $this->loadedVersion($version) !== null) {
+        if ($this->anyIniPresent($version)) {
             return self::SOURCE_EXTERNAL;
         }
 
-        return null;
+        if ($this->loadedVersion($version) === null) {
+            return null;
+        }
+
+        // A version that cannot say where its extensions live is not v7's to
+        // touch: the card says external, as it did before, rather than a 500.
+        return rescue(fn () => $this->v7IniLines($version), [], false) !== [] ? self::SOURCE_V7 : self::SOURCE_EXTERNAL;
+    }
+
+    /**
+     * Should a PHP version just installed get ionCube too?
+     *
+     * v7 parity: a server where ionCube is on got it for every PHP version
+     * installed later. Here "on" means any other installed version has it,
+     * whoever put it there — a v7 server's loader counts.
+     *
+     * @param  array<int, string>  $otherVersions
+     */
+    public function shouldFollow(string $version, array $otherVersions): bool
+    {
+        if (! $this->supports($version) || $this->source($version) !== null) {
+            return false;
+        }
+
+        foreach ($otherVersions as $other) {
+            if ($other !== $version && $this->source($other) !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -262,7 +306,17 @@ class IonCubeLoader
      */
     public function remove(string $version): void
     {
-        $this->refuseExternal($version);
+        $source = $this->source($version);
+
+        if ($source === self::SOURCE_V7) {
+            $this->removeV7($version);
+
+            return;
+        }
+
+        if ($source === self::SOURCE_EXTERNAL) {
+            throw PhpConfigException::ionCubeExternal($version);
+        }
 
         $loader = $this->loaderPath($version);
         $backups = $this->snapshot($version, $loader);
@@ -289,6 +343,168 @@ class IonCubeLoader
 
         $this->reload($version);
         $this->discardBackups($version, $backups);
+    }
+
+    /**
+     * Take out a loader v7 installed — only the exact things v7 wrote.
+     *
+     * OpenLiteSpeed: LiteSpeed's package, removed through apt (it has no
+     * conffiles or scripts, so that takes its ini and `.so` both) and put
+     * back the same way if the config test then fails.
+     *
+     * PHP-FPM: v7's own line out of each php.ini that has it, then the config
+     * test, then a check that PHP really stopped loading ionCube — a second
+     * line somewhere v7 never wrote would otherwise be reported as removed —
+     * and only then the `.so`. Any failure puts every file back unreloaded.
+     *
+     * @throws PhpConfigException
+     */
+    private function removeV7(string $version): void
+    {
+        $package = $this->v7Package($version);
+
+        if ($package !== null) {
+            $this->removeV7Package($version, $package);
+
+            return;
+        }
+
+        $lines = $this->v7IniLines($version);
+        $loaders = array_values(array_unique(array_merge(...array_values($lines))));
+        $extensionDir = $this->extensionDir($version);
+
+        $backups = $this->snapshotPaths($version, [...$loaders, ...array_keys($lines)]);
+        try {
+            foreach ($lines as $ini => $ignored) {
+                $read = $this->files->get($ini, $this->context($version, 'ioncube_v7_read_ini'));
+                if ($read->failed()) {
+                    throw PhpConfigException::ionCubeRemovalFailed($read->reference);
+                }
+
+                $written = $this->files->put($ini, $this->withoutV7Lines($read->output(), $version, $extensionDir), $this->context($version, 'ioncube_v7_remove_line'));
+                if ($written->failed()) {
+                    throw PhpConfigException::ionCubeRemovalFailed($written->reference);
+                }
+            }
+
+            $test = $this->stack->configTest($version);
+            if ($test->failed()) {
+                throw PhpConfigException::ionCubeConfigTestFailed($test->reference);
+            }
+
+            if ($this->loadedVersion($version) !== null) {
+                throw PhpConfigException::ionCubeRemovalFailed($this->reference('v7_still_loaded', "PHP {$version} still loads ionCube after v7's lines were removed"));
+            }
+
+            foreach ($loaders as $loader) {
+                $result = $this->files->delete($loader, $this->context($version, 'ioncube_v7_remove_loader'));
+                if ($result->failed()) {
+                    throw PhpConfigException::ionCubeRemovalFailed($result->reference);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->restore($version, $backups);
+            throw $e;
+        }
+
+        $this->reload($version);
+        $this->discardBackups($version, $backups);
+    }
+
+    /** @throws PhpConfigException */
+    private function removeV7Package(string $version, string $package): void
+    {
+        $removed = $this->serverOps->apt(['apt-get', 'remove', '-y', $package], $this->context($version, 'ioncube_v7_remove_package'));
+        if ($removed->failed()) {
+            throw PhpConfigException::ionCubeRemovalFailed($removed->reference);
+        }
+
+        $test = $this->stack->configTest($version);
+        if ($test->failed()) {
+            $back = $this->serverOps->apt(['apt-get', 'install', '-y', $package], $this->context($version, 'ioncube_v7_restore_package'));
+            if ($back->failed()) {
+                throw PhpConfigException::ionCubeRollbackFailed($back->reference);
+            }
+
+            throw PhpConfigException::ionCubeConfigTestFailed($test->reference);
+        }
+
+        $this->reload($version);
+    }
+
+    /**
+     * The LiteSpeed package that owns this version's ionCube ini, or null.
+     * Only on OpenLiteSpeed: that is the only stack v7 used a package on.
+     */
+    private function v7Package(string $version): ?string
+    {
+        if ($this->stack->key() !== 'lsphp') {
+            return null;
+        }
+
+        $package = $this->stack->packagePrefix($version).'ioncube';
+        $owner = $this->serverOps->probe(
+            ['dpkg-query', '-S', $this->iniPath($version, $this->stack->sapis($version)[0] ?? 'litespeed')],
+            $this->context($version, 'ioncube_v7_package'),
+        );
+
+        return $owner->ok && str_starts_with(trim($owner->output()), $package.':') ? $package : null;
+    }
+
+    /**
+     * v7's `zend_extension` lines in this version's php.ini files, and the
+     * loader each points at: `[ini path => [loader path, ...]]`. PHP-FPM only.
+     *
+     * v7 wrote `zend_extension = {extension_dir}/ioncube_loader_lin_{v}.so`
+     * into the cli, fpm and cgi php.ini. A line only counts when it points
+     * into this version's own extension directory at this version's loader —
+     * anything else in a php.ini is not v7's, and is left alone.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private function v7IniLines(string $version): array
+    {
+        if ($this->stack->key() !== 'fpm') {
+            return [];
+        }
+
+        $extensionDir = $this->extensionDir($version);
+        $found = [];
+
+        foreach (array_unique([...$this->stack->sapis($version), 'cgi']) as $sapi) {
+            $ini = $this->stack->sapiDir($version, $sapi).'/php.ini';
+            $read = $this->serverOps->probe(['cat', '--', $ini], $this->context($version, 'ioncube_v7_read_ini'));
+            if (! $read->ok) {
+                continue;
+            }
+
+            preg_match_all($this->v7LinePattern($version), $read->output(), $matches);
+            $loaders = array_values(array_unique(array_filter(
+                $matches[1],
+                fn (string $loader): bool => dirname($loader) === $extensionDir,
+            )));
+
+            if ($loaders !== []) {
+                $found[$ini] = $loaders;
+            }
+        }
+
+        return $found;
+    }
+
+    private function v7LinePattern(string $version, string $end = '$'): string
+    {
+        return '~^[ \t]*zend_extension[ \t]*=[ \t]*"?(/[^\s"]+/ioncube_loader_lin_'.preg_quote($version, '~').'(?:_ts)?\.so)"?[ \t]*'.$end.'~m';
+    }
+
+    /** The same lines {@see v7IniLines()} found, each with its line ending — nothing else. */
+    private function withoutV7Lines(string $contents, string $version, string $extensionDir): string
+    {
+        return (string) preg_replace_callback(
+            $this->v7LinePattern($version, '(?:\r?\n|\z)'),
+            fn (array $m): string => dirname($m[1]) === $extensionDir ? '' : $m[0],
+            $contents,
+        );
     }
 
     /**
@@ -466,13 +682,25 @@ class IonCubeLoader
     /** @return array<string, ?string> Original path => recovery copy, or null if absent. */
     private function snapshot(string $version, string $loader): array
     {
-        // Unique adjacent copies survive download cleanup and a failed recovery.
-        $suffix = '.panel-ioncube-'.Str::uuid().'.bak';
-        $backups = [];
         $paths = [$loader];
         foreach ($this->stack->sapis($version) as $sapi) {
             $paths[] = $this->iniPath($version, $sapi);
         }
+
+        return $this->snapshotPaths($version, $paths);
+    }
+
+    /**
+     * Binaries first, then INIs: {@see restore()} relies on that order.
+     *
+     * @param  array<int, string>  $paths
+     * @return array<string, ?string> Original path => recovery copy, or null if absent.
+     */
+    private function snapshotPaths(string $version, array $paths): array
+    {
+        // Unique adjacent copies survive download cleanup and a failed recovery.
+        $suffix = '.panel-ioncube-'.Str::uuid().'.bak';
+        $backups = [];
         foreach ($paths as $path) {
             $exists = $this->serverOps->run(['test', '-e', $path], $this->context($version, 'ioncube_snapshot'), expectedExitCodes: [1]);
             if (! $exists->answered) {
@@ -611,8 +839,15 @@ class IonCubeLoader
     /** @throws PhpConfigException */
     private function refuseExternal(string $version): void
     {
-        if ($this->source($version) === self::SOURCE_EXTERNAL) {
+        $source = $this->source($version);
+
+        if ($source === self::SOURCE_EXTERNAL) {
             throw PhpConfigException::ionCubeExternal($version);
+        }
+
+        // Installing over v7's loads ionCube twice: removed first, then installed.
+        if ($source === self::SOURCE_V7) {
+            throw PhpConfigException::ionCubeV7($version);
         }
     }
 
