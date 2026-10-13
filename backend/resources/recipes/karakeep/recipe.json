@@ -1,0 +1,85 @@
+{
+    "schema": 1,
+    "slug": "karakeep",
+    "version": 1,
+    "title": "Karakeep",
+    "tagline": {
+        "en": "Bookmark everything: links, notes and images, with full-text search and optional AI tagging",
+        "es": "Guarda todo: enlaces, notas e imágenes, con búsqueda de texto completo y etiquetado con IA opcional",
+        "de": "Alles merken: Links, Notizen und Bilder, mit Volltextsuche und optionaler KI-Verschlagwortung",
+        "fr": "Enregistrez tout : liens, notes et images, avec recherche plein texte et étiquetage par IA facultatif",
+        "pt": "Salve tudo: links, notas e imagens, com busca de texto completo e marcação opcional por IA",
+        "ja": "リンク、メモ、画像をすべて保存。全文検索とオプションの AI タグ付けに対応",
+        "ru": "Сохраняйте всё: ссылки, заметки и изображения, с полнотекстовым поиском и необязательной ИИ-разметкой",
+        "hi": "सब कुछ बुकमार्क करें: लिंक, नोट्स और छवियाँ, पूर्ण-पाठ खोज और वैकल्पिक AI टैगिंग के साथ"
+    },
+    "category": "productivity",
+    "icon": "karakeep",
+    "popular": false,
+    "catalog_order": 450,
+    "docs_url": "https://docs.karakeep.app/installation/docker",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/karakeep-app/karakeep:0.33.2",
+            "tested": []
+        },
+        "chrome": {
+            "ref": "ghcr.io/karakeep-app/karakeep-chrome:154.0.8037.57-r1",
+            "tested": []
+        },
+        "search": {
+            "ref": "getmeili/meilisearch:v1.41.0",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "web",
+            "role": "app"
+        },
+        {
+            "name": "chrome",
+            "role": "worker"
+        },
+        {
+            "name": "meilisearch",
+            "role": "cache"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/data",
+        "meili": "/meili_data"
+    },
+    "secrets": [
+        {
+            "key": "NEXTAUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MEILI_MASTER_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "NEXTAUTH_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first account that signs up becomes the administrator. Open the site and sign up immediately after install.",
+        "Sign-ups stay open (DISABLE_SIGNUPS=false), so anyone who can reach the site can create an account. Once your own accounts exist, set DISABLE_SIGNUPS to true in the panel's environment, or invite users from the admin settings instead.",
+        "AI tagging and summaries are optional and off until you add a provider: set OPENAI_API_KEY (or an Ollama/other provider as described in Karakeep's configuration docs). Bookmarking, crawling and search work without it.",
+        "The crawler uses Karakeep's own Chrome image (the official compose's chrome service, pinned to the build the release tag pointed to). Its entrypoint supplies --no-sandbox itself, so the service needs no extra capability or security option. It has a fixed 1g limit.",
+        "Search uses Meilisearch v1.41.0, the version the official compose file pins for this release; it has its own volume and no published port. The SQLite database, crawled assets and screenshots live in the data volume (/data), with WAL mode on.",
+        "NEXTAUTH_URL is the site's HTTPS address. NEXTAUTH_SECRET signs sessions and MEILI_MASTER_KEY protects the search engine; both are generated.",
+        "The 1g floor covers the Next.js web app and its background workers, which run in the same container."
+    ]
+}

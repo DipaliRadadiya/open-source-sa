@@ -75,12 +75,22 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `activepieces` | [official vector](https://raw.githubusercontent.com/activepieces/activepieces/0.92.3/packages/web/public/logo.svg) | MIT (Community Edition) | Official Activepieces mark; path and colour (#8142E3) unchanged, centred on a white rounded square. |
 | `appsmith` | [official favicon](https://raw.githubusercontent.com/appsmithorg/appsmith/v2.5.0/app/client/public/favicon-black.ico) and [vector of the same mark](https://raw.githubusercontent.com/appsmithorg/appsmith/v2.5.0/app/client/packages/storybook/public/favicon.svg) | Apache-2.0 | Appsmith's square mark (a bar on a square); the vector path is unchanged, coloured black and white like the official favicon-black.ico instead of the storybook purple, corners rounded. |
 
+## RC-30 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `docmost` | [selfh.st vector](https://raw.githubusercontent.com/selfhst/icons/2053b70b283ffed5f2cc1424d1e17d9c554a846d/svg/docmost.svg) | CC-BY-4.0 (selfh.st icons) | The official Docmost application ships raster icons only (apps/client/public/icons, v0.96.0); this is selfh.st's vector of the same mark, unchanged. |
+| `siyuan` | [official vector](https://raw.githubusercontent.com/siyuan-note/siyuan/v3.8.6/app/stage/icon.svg) | AGPL-3.0 | Official application mark; generator comment and empty elements removed, rounded white backing added so the dark parts stay legible in both panel themes; paths unchanged. |
+| `joplin` | original panel artwork | MIT (this repository) | Neutral note-and-sync glyph drawn for the panel. The Joplin logos and icons are "copyright (c) Laurent Cozic, all rights reserved, and may not be used without a permission" ([LICENSE](https://github.com/laurent22/joplin/blob/server-v3.7.2/LICENSE)), so the official mark is not shipped. |
+| `karakeep` | [official vector](https://raw.githubusercontent.com/karakeep-app/karakeep/v0.33.2/apps/landing/public/icons/logo-icon.svg) | AGPL-3.0 | Official square mark; document declarations removed, fixed dark fill and an inset white backing so the cut-out letter stays legible in both panel themes; path unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
 - [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors and Activepieces Inc.; see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
+- [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 - [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).
 - [MSCL-1.0-GPL](https://github.com/directus/directus/blob/v12.5.0/license) — Monospace, Inc. (Directus); the rabbit path is unmodified.

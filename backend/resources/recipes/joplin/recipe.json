@@ -1,0 +1,81 @@
+{
+    "schema": 1,
+    "slug": "joplin",
+    "version": 1,
+    "title": "Joplin Server",
+    "tagline": {
+        "en": "Sync server for the Joplin note-taking apps, with sharing and user accounts",
+        "es": "Servidor de sincronización para las apps de notas Joplin, con uso compartido y cuentas de usuario",
+        "de": "Synchronisationsserver für die Joplin-Notizen-Apps, mit Freigaben und Benutzerkonten",
+        "fr": "Serveur de synchronisation pour les applications de notes Joplin, avec partage et comptes utilisateurs",
+        "pt": "Servidor de sincronização para os apps de notas Joplin, com compartilhamento e contas de usuário",
+        "ja": "共有とユーザーアカウントに対応した、Joplin ノートアプリ用の同期サーバー",
+        "ru": "Сервер синхронизации для приложений заметок Joplin с общим доступом и учётными записями",
+        "hi": "Joplin नोट लेने वाले ऐप्स के लिए सिंक सर्वर, साझाकरण और उपयोगकर्ता खातों के साथ"
+    },
+    "category": "productivity",
+    "icon": "joplin",
+    "popular": false,
+    "catalog_order": 440,
+    "docs_url": "https://github.com/laurent22/joplin/blob/dev/packages/server/README.md",
+    "images": {
+        "app": {
+            "ref": "joplin/server:3.7.2",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "joplin",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 22300,
+    "memory_floor": "512m",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "APP_BASE_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "default_login",
+        "credentials": [
+            {
+                "label": "email",
+                "value": "admin@localhost"
+            },
+            {
+                "label": "password",
+                "value": "admin"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Licence: Joplin Server is not open source. It is published under the Joplin Server Personal Use License, which allows personal, non-commercial use only; a business, or anyone giving others access for commercial purposes or for a fee, needs written permission from JOPLIN SAS. Check the licence before you deploy it.",
+        "Joplin Server ships a fixed administrator, admin@localhost with the password admin. Sign in and change that password (and the email) immediately from the profile page: until you do, anyone can sign in as the administrator.",
+        "Create a user for each person on the admin pages, then point the Joplin desktop or mobile app at this site: Synchronisation target \"Joplin Server\", the site's HTTPS address, and that user's email and password.",
+        "APP_BASE_URL is the site's HTTPS address; Joplin Server builds every link and API URL from it. The server listens on APP_PORT 22300.",
+        "Notes, resources and accounts are stored in PostgreSQL (Joplin Server's default database storage driver), so the database volume is the only data to back up. PostgreSQL 16.15 matches the major version of the official compose file and has no published port.",
+        "Email (password resets, invitations) needs the MAILER_* settings; without them, the administrator sets passwords directly. The optional transcription service from the official compose file is not included.",
+        "The healthcheck calls /api/ping with Node's fetch, because the slim image ships neither curl nor wget.",
+        "The 512m floor covers the Node server for a small team; the database uses the panel database-memory default."
+    ]
+}

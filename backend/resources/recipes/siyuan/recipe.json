@@ -1,0 +1,67 @@
+{
+    "schema": 1,
+    "slug": "siyuan",
+    "version": 1,
+    "title": "SiYuan",
+    "tagline": {
+        "en": "Privacy-first personal knowledge base with block references and Markdown",
+        "es": "Base de conocimiento personal centrada en la privacidad, con referencias de bloque y Markdown",
+        "de": "Datenschutzfreundliche persönliche Wissensdatenbank mit Blockreferenzen und Markdown",
+        "fr": "Base de connaissances personnelle respectueuse de la vie privée, avec références de blocs et Markdown",
+        "pt": "Base de conhecimento pessoal com foco em privacidade, com referências de bloco e Markdown",
+        "ja": "ブロック参照と Markdown に対応した、プライバシー重視の個人ナレッジベース",
+        "ru": "Личная база знаний с упором на приватность, ссылками на блоки и Markdown",
+        "hi": "ब्लॉक संदर्भ और Markdown के साथ गोपनीयता-प्रथम व्यक्तिगत ज्ञानकोश"
+    },
+    "category": "productivity",
+    "icon": "siyuan",
+    "popular": false,
+    "catalog_order": 430,
+    "docs_url": "https://github.com/siyuan-note/siyuan#docker-hosting",
+    "images": {
+        "app": {
+            "ref": "b3log/siyuan:v3.8.6",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "siyuan",
+            "role": "app"
+        }
+    ],
+    "container_port": 6806,
+    "memory_floor": "512m",
+    "volumes": {
+        "workspace": "/siyuan/workspace"
+    },
+    "secrets": [
+        {
+            "key": "ACCESS_AUTH_CODE",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "password",
+                "secret": "ACCESS_AUTH_CODE"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Unlock SiYuan with the generated access code (ACCESS_AUTH_CODE, shown as the password; SiYuan calls it the lock screen password); there is no username. SiYuan requires an access code whenever it is reachable from the network, and the official image reads it from SIYUAN_ACCESS_AUTH_CODE.",
+        "The access code is applied again on every container start, so a code changed inside SiYuan's settings is replaced by the generated one after a restart.",
+        "The whole workspace (notebooks, assets, settings and the search index) is one named volume at /siyuan/workspace. The image's entrypoint starts as root, hands the workspace to UID/GID 1000 (PUID/PGID) and then runs SiYuan as that user.",
+        "SiYuan is a single-user application. The Docker edition is used from the browser only: the desktop and mobile apps cannot connect to it, and PDF/HTML/Word export and Markdown file import are not available (upstream limitations).",
+        "The real-time editor uses a WebSocket on /ws, which the panel's proxy forwards. TZ is set to UTC instead of the image's Asia/Shanghai default.",
+        "The 512m floor covers the Go kernel and its SQLite index for a typical personal workspace; large workspaces may need a larger memory limit."
+    ]
+}
