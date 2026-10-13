@@ -19,7 +19,7 @@ services:
     ports:
       - "127.0.0.1:{{ app_port }}:{{ container_port }}"
 
-    command: ["sh", "-c", "exec marimo edit --headless --host 0.0.0.0 --port 8080 --token-password $$MARIMO_PASSWORD --skip-update-check --no-sandbox /app/data"]
+    command: ["sh", "-c", "exec marimo -q edit --headless --host 0.0.0.0 --port 8080 --token-password-file - --skip-update-check --no-sandbox /app/data <<EOF\n$$MARIMO_PASSWORD\nEOF"]
     environment:
       MARIMO_PASSWORD: "{{ secret.MARIMO_PASSWORD }}"
 

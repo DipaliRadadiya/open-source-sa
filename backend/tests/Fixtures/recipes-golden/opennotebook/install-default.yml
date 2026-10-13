@@ -23,6 +23,7 @@ services:
       SURREAL_PASSWORD: "c37b348efd8047fee30b61a151c54756"
       SURREAL_NAMESPACE: open_notebook
       SURREAL_DATABASE: open_notebook
+      CORS_ORIGINS: "https://opennotebook.golden.test"
 
     volumes:
       - sv-app-4242_data:/app/data
@@ -49,8 +50,10 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    command: ["start", "--log", "info", "--user", "035048372d7813a986c5fd69a4dd66f1", "--pass", "c37b348efd8047fee30b61a151c54756", "rocksdb:/mydata/mydatabase.db"]
+    command: ["start", "--log", "info", "rocksdb:/mydata/mydatabase.db"]
     environment:
+      SURREAL_USER: "035048372d7813a986c5fd69a4dd66f1"
+      SURREAL_PASS: "c37b348efd8047fee30b61a151c54756"
       SURREAL_EXPERIMENTAL_GRAPHQL: "true"
 
     volumes:

@@ -28,6 +28,7 @@ services:
       SURREAL_PASSWORD: "{{ secret.SURREAL_PASSWORD }}"
       SURREAL_NAMESPACE: open_notebook
       SURREAL_DATABASE: open_notebook
+      CORS_ORIGINS: "https://{{ domain }}"
 
     volumes:
       - {{ volume.data }}:/app/data
@@ -54,8 +55,10 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    command: ["start", "--log", "info", "--user", "{{ secret.SURREAL_USER }}", "--pass", "{{ secret.SURREAL_PASSWORD }}", "rocksdb:/mydata/mydatabase.db"]
+    command: ["start", "--log", "info", "rocksdb:/mydata/mydatabase.db"]
     environment:
+      SURREAL_USER: "{{ secret.SURREAL_USER }}"
+      SURREAL_PASS: "{{ secret.SURREAL_PASSWORD }}"
       SURREAL_EXPERIMENTAL_GRAPHQL: "true"
 
     volumes:
