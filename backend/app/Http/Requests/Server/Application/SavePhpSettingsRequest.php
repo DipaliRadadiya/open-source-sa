@@ -11,6 +11,7 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\MemoryBudget;
 use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Php\PoolIsolator;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Number;
@@ -24,6 +25,18 @@ class SavePhpSettingsRequest extends FormRequest
      * budget warns; this refuses.
      */
     public const MAX_CHILDREN = 100;
+
+    /**
+     * The site being saved. Set directly when the PHP screen's rules are run
+     * on a body that is not this request's own — the v7 extra-conf preview
+     * checks its translated body with them before anyone saves it.
+     */
+    public ?Application $forApplication = null;
+
+    public function target(): mixed
+    {
+        return $this->forApplication ?? $this->route('application');
+    }
 
     public function authorize(): bool
     {
@@ -81,6 +94,13 @@ class SavePhpSettingsRequest extends FormRequest
             'pm_type' => ['sometimes', 'nullable', Rule::in(ApplicationPhpSettings::PM_TYPES)],
             'pm_max_children' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
             'pm_max_requests' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
+            // Kept from v7 when a site has them; empty = derived from
+            // max_children. They must agree with it — checked in after().
+            'pm_start_servers' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
+            'pm_min_spare_servers' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
+            'pm_max_spare_servers' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
+            'pm_process_idle_timeout' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:86400'],
+            'pm_max_spawn_rate' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:1024'],
 
             'open_basedir_enabled' => ['sometimes', 'boolean'],
             'open_basedir_paths' => [
@@ -141,7 +161,13 @@ class SavePhpSettingsRequest extends FormRequest
                 // PHP settings the panel does not set itself, one per line —
                 // see AdditionalDirectives.
                 function (string $attribute, mixed $value, Closure $fail): void {
-                    $refusal = app(AdditionalDirectives::class)->refusal((string) $value);
+                    $application = $this->target();
+                    $refusal = app(AdditionalDirectives::class)->refusal(
+                        (string) $value,
+                        // No pool on OpenLiteSpeed: pool settings have nowhere to go.
+                        fpm: app(PoolIsolator::class)->supported(),
+                        logsPath: $application instanceof Application ? rescue(fn () => $application->logsPath(), null, false) : null,
+                    );
 
                     if ($refusal !== null) {
                         $fail(__('php_settings.errors.'.$refusal['reason'], [
@@ -216,7 +242,7 @@ class SavePhpSettingsRequest extends FormRequest
      */
     public function after(): array
     {
-        return [function (Validator $validator): void {
+        return [$this->spareServersAgree(...), function (Validator $validator): void {
             if (! $this->hasAny(['post_max_size', 'upload_max_filesize'])
                 || $validator->errors()->hasAny(['post_max_size', 'upload_max_filesize'])) {
                 return;
@@ -239,6 +265,37 @@ class SavePhpSettingsRequest extends FormRequest
     }
 
     /**
+     * PHP-FPM refuses to start a dynamic pool whose numbers disagree:
+     * min_spare <= start <= max_spare <= max_children (php-fpm's fpm_conf.c). All
+     * three or none — one set and two derived is a combination nobody chose.
+     * Compared as they will be after the save, like the size check below.
+     */
+    private function spareServersAgree(Validator $validator): void
+    {
+        $keys = ['pm_start_servers', 'pm_min_spare_servers', 'pm_max_spare_servers'];
+
+        if (! $this->hasAny([...$keys, 'pm_max_children']) || $validator->errors()->hasAny([...$keys, 'pm_max_children'])) {
+            return;
+        }
+
+        $value = fn (string $key): ?int => ($v = $this->has($key) ? $this->input($key) : $this->stored($key)) === null || $v === '' ? null : (int) $v;
+        [$start, $min, $max] = array_map($value, $keys);
+        $children = (int) ($this->has('pm_max_children') && $this->input('pm_max_children') !== null
+            ? $this->input('pm_max_children')
+            : $this->stored('pm_max_children', effective: true));
+
+        if ($start === null && $min === null && $max === null) {
+            return;
+        }
+
+        if ($start === null || $min === null || $max === null || $min > $start || $start > $max || $max > $children) {
+            $validator->errors()->add('pm_start_servers', __('php_settings.errors.pm_spare_inconsistent', [
+                'min' => $min ?? '-', 'start' => $start ?? '-', 'max' => $max ?? '-', 'children' => $children,
+            ]));
+        }
+    }
+
+    /**
      * Bug #61: only `..` was refused, so any absolute path passed, another
      * site's files included, run at the top of every request of this one.
      * Now it must be an absolute path inside this site's own folder.
@@ -252,7 +309,7 @@ class SavePhpSettingsRequest extends FormRequest
                 return;
             }
 
-            $application = $this->route('application');
+            $application = $this->target();
             $root = $application instanceof Application ? rescue(fn () => $application->rootPath(), null, false) : null;
 
             if ($root === null || str_contains($value, "\0") || ! str_starts_with($value, rtrim($root, '/').'/')) {
@@ -267,7 +324,7 @@ class SavePhpSettingsRequest extends FormRequest
      */
     private function stored(string $key, bool $effective = false): ?string
     {
-        $application = $this->route('application');
+        $application = $this->target();
         $settings = $application instanceof Application ? $application->phpSettings : null;
 
         $value = $effective
@@ -296,7 +353,7 @@ class SavePhpSettingsRequest extends FormRequest
      */
     private function supportedRangeRules(): array
     {
-        $application = $this->route('application');
+        $application = $this->target();
 
         if (! $application instanceof Application) {
             return [];

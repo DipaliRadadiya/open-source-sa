@@ -88,6 +88,12 @@ class ApplicationPhpSettingsResource extends JsonResource
                 'pm_type' => $effective['pm_type'],
                 'pm_max_children' => (int) $effective['pm_max_children'],
                 'pm_max_requests' => (int) $effective['pm_max_requests'],
+                // Null = derived from pm_max_children (the usual case).
+                'pm_start_servers' => $effective['pm_start_servers'],
+                'pm_min_spare_servers' => $effective['pm_min_spare_servers'],
+                'pm_max_spare_servers' => $effective['pm_max_spare_servers'],
+                'pm_process_idle_timeout' => $effective['pm_process_idle_timeout'],
+                'pm_max_spawn_rate' => $effective['pm_max_spawn_rate'],
                 'open_basedir_enabled' => (bool) $effective['open_basedir_enabled'],
                 'open_basedir_paths' => $effective['open_basedir_paths'],
                 'disable_functions' => $effective['disable_functions'],

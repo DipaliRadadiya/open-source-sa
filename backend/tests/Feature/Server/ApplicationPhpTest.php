@@ -18,6 +18,7 @@ use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -498,9 +499,9 @@ describe('settings', function () {
             ->toContain('php_admin_value[memory_limit] = 300M')
             ->toContain('php_admin_flag[display_errors] = Off')
             ->toContain('php_value[max_input_nesting_level] = 128')
-            // A pool setting's name is only ever a PHP setting name here.
-            ->toContain('php_admin_value[listen] = /tmp/other.sock')
-            ->not->toMatch('/^listen\s*=/m')
+            // A pool setting that could move the site off its socket is
+            // refused by name and never written, in either form (2026-10-13).
+            ->not->toContain('listen')
             ->not->toContain('; a comment');
     });
 
@@ -1564,4 +1565,182 @@ it('does not call a value changed when it is the default (PHP-ob)', function () 
     $this->actingAs($this->admin)->getJson(phpUrl())
         ->assertJsonPath('php.overridden.open_basedir_enabled', true)
         ->assertJsonPath('php.overridden.memory_limit', true);
+});
+
+/*
+ * v7 parity (Dipali, 2026-10-13). v7's "extra pool lines" were pasted into the
+ * pool as typed, with no checks. v8 takes the pool settings that only change
+ * how this site's own workers run, refuses the rest by name with a reason, and
+ * keeps v7's own PHP-FPM numbers in fields of their own.
+ */
+describe('v7 extra pool lines', function () {
+    it('writes the allowed pool settings into the pool as typed', function () {
+        $logs = $this->application->load('systemUser')->logsPath();
+        $text = "env[APP_ENV] = production\nrequest_terminate_timeout = 300\nrequest_slowlog_timeout = 5s\nslowlog = {$logs}/php-slow.log\ncatch_workers_output = yes\ndecorate_workers_output = no\nrlimit_files = 4096\nrlimit_core = unlimited";
+        $parser = app(AdditionalDirectives::class);
+
+        expect($parser->refusal($text, logsPath: $logs))->toBeNull();
+
+        $pool = app(PoolManager::class)->render($this->application, new ApplicationPhpSettings(['additional_directives' => $text]));
+
+        foreach (explode("\n", $text) as $line) {
+            expect($pool)->toContain("\n{$line}\n");
+        }
+        // A pool setting is never written into OpenLiteSpeed's php.ini.
+        expect($parser->forIni($text))->toBe('');
+    });
+
+    it('refuses pool settings that change who the workers are, where they listen or what runs as PHP', function (string $line, string $reason) {
+        $parser = app(AdditionalDirectives::class);
+
+        expect($parser->refusal($line, logsPath: '/home/siteowner/shop/logs')['reason'] ?? null)->toBe($reason)
+            ->and($parser->forFpm($line))->toBe('');
+    })->with([
+        ['user = root', 'directive_pool_forbidden'],
+        ['group = root', 'directive_pool_forbidden'],
+        ['listen = /run/php/other.sock', 'directive_pool_forbidden'],
+        ['listen.owner = nobody', 'directive_pool_forbidden'],
+        ['chroot = /', 'directive_pool_forbidden'],
+        ['chdir = /root', 'directive_pool_forbidden'],
+        ['include = /etc/passwd', 'directive_pool_forbidden'],
+        ['clear_env = no', 'directive_pool_forbidden'],
+        ['access.log = /tmp/x.log', 'directive_pool_forbidden'],
+        ['security.limit_extensions = .php .txt', 'directive_pool_forbidden'],
+        ['prefix = /', 'directive_pool_forbidden'],
+        ['pm = static', 'directive_pm'],
+        ['pm.max_children = 50', 'directive_pm'],
+        ['pm.status_path = /status', 'directive_pm'],
+        ['slowlog = /tmp/slow.log', 'directive_slowlog_path'],
+        ['slowlog = /home/siteowner/shop/logs/../../.ssh/x', 'directive_invalid'],
+        ['request_terminate_timeout = forever', 'directive_invalid'],
+        ['request_terminate_timeout = 2d', 'directive_invalid'],
+        ['env[BAD-NAME] = x', 'directive_invalid'],
+        ['catch_workers_output = maybe', 'directive_invalid'],
+    ]);
+
+    it('saves an env line on PHP-FPM and refuses it on OpenLiteSpeed, which has no pools', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['additional_directives' => "env[APP_ENV] = production\nrequest_terminate_timeout = 120"])
+            ->assertOk();
+        expect(poolFile())->toContain("env[APP_ENV] = production\nrequest_terminate_timeout = 120");
+
+        $isolator = Mockery::mock(PoolIsolator::class);
+        $isolator->shouldReceive('supported')->andReturnFalse();
+        app()->instance(PoolIsolator::class, $isolator);
+
+        $response = $this->actingAs($this->admin)->putJson(phpUrl(), ['additional_directives' => 'env[APP_ENV] = production'])
+            ->assertStatus(422);
+        expect($response->json('errors.additional_directives.0'))->toContain('OpenLiteSpeed');
+    });
+
+    it('keeps the site\'s own spare-server numbers, and derives them when empty', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), [
+            'pm_type' => 'dynamic', 'pm_max_children' => 20,
+            'pm_start_servers' => 3, 'pm_min_spare_servers' => 2, 'pm_max_spare_servers' => 7, 'pm_max_spawn_rate' => 16,
+        ])->assertOk()->assertJsonPath('php.settings.pm_start_servers', 3);
+
+        expect(poolFile())->toContain("pm.start_servers = 3\npm.min_spare_servers = 2\npm.max_spare_servers = 7\npm.max_spawn_rate = 16");
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), [
+            'pm_start_servers' => null, 'pm_min_spare_servers' => null, 'pm_max_spare_servers' => null, 'pm_max_spawn_rate' => null,
+        ])->assertOk();
+
+        expect(poolFile())->toContain('pm.start_servers = 10')->not->toContain('pm.max_spawn_rate');
+    });
+
+    it('keeps the site\'s own idle timeout on ondemand', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['pm_type' => 'ondemand', 'pm_process_idle_timeout' => 10])->assertOk();
+
+        expect(poolFile())->toContain('pm.process_idle_timeout = 10s');
+    });
+
+    it('refuses spare-server numbers php-fpm would refuse to start with', function (array $numbers) {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['pm_type' => 'dynamic', 'pm_max_children' => 10] + $numbers)
+            ->assertStatus(422)->assertJsonValidationErrors('pm_start_servers');
+    })->with([
+        'min above start' => [['pm_start_servers' => 2, 'pm_min_spare_servers' => 3, 'pm_max_spare_servers' => 5]],
+        'start above max' => [['pm_start_servers' => 6, 'pm_min_spare_servers' => 1, 'pm_max_spare_servers' => 5]],
+        'max above children' => [['pm_start_servers' => 2, 'pm_min_spare_servers' => 1, 'pm_max_spare_servers' => 11]],
+        'only one of three' => [['pm_start_servers' => 2]],
+    ]);
+
+    it('falls back to deriving when max_children later drops below the kept numbers', function () {
+        $pool = app(PoolManager::class)->render($this->application->load('systemUser'), new ApplicationPhpSettings([
+            'pm_type' => 'dynamic', 'pm_max_children' => 4,
+            'pm_start_servers' => 3, 'pm_min_spare_servers' => 2, 'pm_max_spare_servers' => 7,
+        ]));
+
+        expect($pool)->toContain("pm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3");
+    });
+
+    it('translates v7 extra_conf into the body of a PHP save, v7 lines winning over fields', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+        $logs = $this->application->load('systemUser')->logsPath();
+
+        $v7 = "php_admin_value[memory_limit] = 512M\nphp_value[date.timezone] = Asia/Kolkata\nphp_flag[display_errors] = off\n"
+            ."env[APP_ENV] = production\npm = dynamic\npm.max_children = 12\npm.start_servers = 3\npm.min_spare_servers = 2\n"
+            ."pm.max_spare_servers = 6\npm.process_idle_timeout = 15s\nrequest_terminate_timeout = 300\nslowlog = {$logs}/slow.log\n"
+            ."listen = /tmp/x.sock\nsecurity.limit_extensions = .php .txt\nextension = imagick.so\npm.status_path = /st\n; comment";
+
+        $response = $this->actingAs($this->admin)->postJson(phpUrl('/v7-extra-conf'), ['extra_conf' => $v7])->assertOk();
+
+        expect($response->json('settings'))->toMatchArray([
+            'memory_limit' => '512M', 'php_timezone' => 'Asia/Kolkata', 'pm_type' => 'dynamic', 'pm_max_children' => 12,
+            'pm_start_servers' => 3, 'pm_min_spare_servers' => 2, 'pm_max_spare_servers' => 6, 'pm_process_idle_timeout' => 15,
+        ])
+            ->and($response->json('settings.additional_directives'))->toBe("php_flag[display_errors] = off\nenv[APP_ENV] = production\nrequest_terminate_timeout = 300\nslowlog = {$logs}/slow.log")
+            ->and(collect($response->json('refused'))->pluck('reason', 'line')->all())->toBe([
+                'listen = /tmp/x.sock' => 'directive_pool_forbidden',
+                'security.limit_extensions = .php .txt' => 'directive_pool_forbidden',
+                'extension = imagick.so' => 'directive_extension',
+                'pm.status_path = /st' => 'directive_pm',
+            ])
+            ->and($response->json('refused.0.message'))->not->toStartWith('php_settings.')
+            ->and($response->json('errors'))->toBe([])->and($response->json('valid'))->toBeTrue();
+
+        // The body really saves, through the one path that tests the pool.
+        $this->actingAs($this->admin)->putJson(phpUrl(), $response->json('settings'))->assertOk();
+        expect(poolFile())->toContain('memory_limit] = 512M')->toContain('pm.start_servers = 3')->toContain('env[APP_ENV] = production');
+    });
+
+    it('says when the translated body would be refused, instead of promising a save', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+        $this->actingAs($this->admin)->postJson(phpUrl('/v7-extra-conf'), ['extra_conf' => "memory_limit = -1\npm.start_servers = 9"])
+            ->assertOk()
+            ->assertJsonPath('valid', false)
+            ->assertJsonStructure(['errors' => ['memory_limit', 'pm_start_servers']]);
+    });
+
+    it('needs PHP manage permission to translate', function () {
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_php', view: true, manage: false);
+
+        $this->actingAs($viewer)->postJson(phpUrl('/v7-extra-conf'), ['extra_conf' => 'memory_limit = 512M'])->assertForbidden();
+    });
+
+    it('adds and removes its five columns', function () {
+        $migration = require database_path('migrations/2026_10_13_120000_add_pm_tuning_to_application_php_settings.php');
+
+        $migration->down();
+        expect(Schema::hasColumn('application_php_settings', 'pm_start_servers'))->toBeFalse();
+
+        $migration->up();
+        expect(Schema::hasColumns('application_php_settings', [
+            'pm_start_servers', 'pm_min_spare_servers', 'pm_max_spare_servers', 'pm_process_idle_timeout', 'pm_max_spawn_rate',
+        ]))->toBeTrue();
+    });
 });

@@ -4,12 +4,14 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\SavePhpSettingsRequest;
+use App\Http\Requests\Server\Application\TranslateV7ExtraConfRequest;
 use App\Http\Resources\ApplicationPhpSettingsResource;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\ActivityLogger;
 use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\Php\V7PhpExtraConf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -189,6 +191,40 @@ class ApplicationPhpController extends Controller
     {
         return $application->phpSettings ?? new ApplicationPhpSettings([
             'application_id' => $application->id,
+        ]);
+    }
+
+    /**
+     * A v7 site's "extra pool lines" as the body of a PHP settings save
+     * (v7 importer helper). Saves nothing: the caller sends `settings` to
+     * PUT /php, the one path that tests the pool before it reloads.
+     *
+     * `valid`/`errors` are the PHP screen's own rules run on that body now,
+     * so a preview never promises a save that will be refused.
+     */
+    public function translateV7(TranslateV7ExtraConfRequest $request, Application $application, V7PhpExtraConf $translator, PoolIsolator $isolator): JsonResponse
+    {
+        $result = $translator->translate((string) $request->validated('extra_conf'), $application->loadMissing('systemUser'), fpm: $isolator->supported());
+
+        $check = SavePhpSettingsRequest::create($request->url(), 'PUT', $result['settings']);
+        $check->setContainer(app())->setRedirector(app('redirect'))->setUserResolver(fn () => $request->user());
+        $check->forApplication = $application;
+
+        $errors = [];
+
+        try {
+            $check->validateResolved();
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+        }
+
+        return response()->json([
+            'settings' => $result['settings'],
+            'refused' => array_map(fn (array $r): array => $r + [
+                'message' => __('php_settings.errors.'.$r['reason'], ['line' => mb_strimwidth($r['line'], 0, 80, '…'), 'name' => $r['name']]),
+            ], $result['refused']),
+            'valid' => $errors === [],
+            'errors' => $errors,
         ]);
     }
 }

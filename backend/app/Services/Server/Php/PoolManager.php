@@ -315,6 +315,26 @@ class PoolManager
         return trim($contents) === trim($this->render($application, $settings));
     }
 
+    /**
+     * @param  array<string, mixed>  $effective
+     * @return array{pmStartServers: int, pmMinSpare: int, pmMaxSpare: int}
+     */
+    private function spareServers(array $effective, int $children): array
+    {
+        [$start, $min, $max] = [$effective['pm_start_servers'], $effective['pm_min_spare_servers'], $effective['pm_max_spare_servers']];
+
+        if ($start !== null && $min !== null && $max !== null
+            && (int) $min >= 1 && (int) $min <= (int) $start && (int) $start <= (int) $max && (int) $max <= $children) {
+            return ['pmStartServers' => (int) $start, 'pmMinSpare' => (int) $min, 'pmMaxSpare' => (int) $max];
+        }
+
+        return [
+            'pmStartServers' => max(1, (int) ceil($children / 2)),
+            'pmMinSpare' => max(1, (int) ceil($children / 4)),
+            'pmMaxSpare' => max(2, (int) ceil($children * 3 / 4)),
+        ];
+    }
+
     public function render(Application $application, ApplicationPhpSettings $settings): string
     {
         $effective = $settings->effective();
@@ -330,12 +350,17 @@ class PoolManager
             'pmType' => $effective['pm_type'],
             'pmMaxChildren' => $children,
             'pmMaxRequests' => (int) $effective['pm_max_requests'],
-            // Derived from max_children rather than asked for. These three have
-            // to stay consistent with it and with each other; exposing them is
-            // mostly a way to produce a pool that will not start.
-            'pmStartServers' => max(1, (int) ceil($children / 2)),
-            'pmMinSpare' => max(1, (int) ceil($children / 4)),
-            'pmMaxSpare' => max(2, (int) ceil($children * 3 / 4)),
+            // Derived from max_children unless the site brought its own (v7
+            // stored them per site). Only all three together, and only while
+            // they still agree with max_children — a save validates that, but
+            // a later max_children change must not leave a pool that will not
+            // start, so disagreement falls back to deriving.
+            ...$this->spareServers($effective, $children),
+            'pmIdleTimeout' => (int) ($effective['pm_process_idle_timeout'] ?? 0) ?: 30,
+            // v7 wrote it on PHP 8.1+ only; older php-fpm refuses the key.
+            'pmMaxSpawnRate' => $effective['pm_max_spawn_rate'] !== null
+                && version_compare((string) ($application->php_version ?: '8.4'), '8.1', '>=')
+                ? (int) $effective['pm_max_spawn_rate'] : null,
 
             'sessionPath' => $this->sessionPath($application),
             'errorLog' => $this->errorLogPath($application),
@@ -355,9 +380,10 @@ class PoolManager
                 ? $this->openBasedir($application, (string) ($effective['open_basedir_paths'] ?? ''))
                 : null,
             'disableFunctions' => $effective['disable_functions'],
-            // PHP settings only, each as php_admin_value/flag — see
-            // AdditionalDirectives. Never the owner's text as pool config.
-            'additionalDirectives' => app(AdditionalDirectives::class)->forFpm((string) $effective['additional_directives']),
+            // PHP settings as php_admin_value/flag, plus the few pool
+            // settings AdditionalDirectives allows — parsed, never the
+            // owner's text as typed.
+            'additionalDirectives' => app(AdditionalDirectives::class)->forFpm((string) $effective['additional_directives'], rescue(fn () => $application->logsPath(), null, false)),
         ])->render();
     }
 

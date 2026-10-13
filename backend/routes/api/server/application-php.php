@@ -26,3 +26,8 @@ Route::put('/applications/{application}/php', [ApplicationPhpController::class, 
 // isolation exists to close.
 Route::post('/applications/{application}/php/isolate', [ApplicationPhpController::class, 'isolate'])
     ->middleware(['permission:app_php,manage', 'throttle:5,1']);
+
+// v7 importer helper: a v7 site's "extra pool lines" turned into the body of
+// the PUT above, plus the lines v8 refuses and why. Saves nothing.
+Route::post('/applications/{application}/php/v7-extra-conf', [ApplicationPhpController::class, 'translateV7'])
+    ->middleware(['permission:app_php,manage', 'throttle:30,1']);

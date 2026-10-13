@@ -25,13 +25,16 @@ listen.mode = 0660
 pm = {{ $pmType }}
 pm.max_children = {{ $pmMaxChildren }}
 @if ($pmType === 'dynamic')
-{{-- Derived rather than asked for: four more numbers that have to agree with
-     max_children, and disagreeing is how a pool refuses to start. --}}
+{{-- Derived from max_children, or the site's own numbers (kept from v7)
+     when all three are set and agree with it. --}}
 pm.start_servers = {{ $pmStartServers }}
 pm.min_spare_servers = {{ $pmMinSpare }}
 pm.max_spare_servers = {{ $pmMaxSpare }}
+@if ($pmMaxSpawnRate)
+pm.max_spawn_rate = {{ $pmMaxSpawnRate }}
+@endif
 @elseif ($pmType === 'ondemand')
-pm.process_idle_timeout = 30s
+pm.process_idle_timeout = {{ $pmIdleTimeout }}s
 @endif
 ; Recycles a worker after this many requests, so a slow leak is bounded to one
 ; worker's lifetime instead of growing until the kernel kills something.

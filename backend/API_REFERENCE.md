@@ -2502,7 +2502,9 @@ The shared `www-data` pool is **no longer a choice**: asking for it answers `405
 
 **`managed: null` means the panel could not check** (the pool file could not be probed or read). Say "could not verify the pool file" — do not treat it as `true` (a save may overwrite hand edits) or as `false` (there may be none).
 
-**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` accepts **PHP settings only**, one per line — `name = value` or the FPM form `php_[admin_]value|flag[name] = value`; `;`/`#` comments and blank lines are allowed. Any other line is a 422 naming it (`php_settings.errors.directive_invalid`). Also a 422 (since 2026-10-01): a setting the panel writes itself (`directive_managed` — `memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, `max_input_time`, `max_input_vars`, `allow_url_fopen`, `session.save_path`, `session.gc_maxlifetime`, `error_log`, `log_errors`, `date.timezone`, `auto_prepend_file`, `open_basedir`, `disable_functions`; any case; use its own field), and `extension`/`zend_extension` (`directive_extension`; use the PHP Extensions screen). In a PHP-FPM pool each line is written as `php_admin_value[...]`/`php_admin_flag[...]` (an FPM-form line keeps its own directive); on OpenLiteSpeed it goes into the site's php.ini as `name = value`. It can never set a setting of the pool itself. ⚠️ Lines saved **before** 2026-10-01 are still written as they were, and for those **which value wins differs by stack** (measured 2026-09-30): PHP-FPM applies the **first** of a repeated key, so on nginx/Apache a panel-managed key there has **no effect**; on OpenLiteSpeed the php.ini is read top to bottom and it **does** override. Re-saving the screen with such a line in it is a 422 — remove it or move the value to its field.
+**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` accepts **PHP settings only**, one per line — `name = value` or the FPM form `php_[admin_]value|flag[name] = value`; `;`/`#` comments and blank lines are allowed. Any other line is a 422 naming it (`php_settings.errors.directive_invalid`). Also a 422 (since 2026-10-01): a setting the panel writes itself (`directive_managed` — `memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, `max_input_time`, `max_input_vars`, `allow_url_fopen`, `session.save_path`, `session.gc_maxlifetime`, `error_log`, `log_errors`, `date.timezone`, `auto_prepend_file`, `open_basedir`, `disable_functions`; any case; use its own field), and `extension`/`zend_extension` (`directive_extension`; use the PHP Extensions screen). In a PHP-FPM pool each line is written as `php_admin_value[...]`/`php_admin_flag[...]` (an FPM-form line keeps its own directive); on OpenLiteSpeed it goes into the site's php.ini as `name = value`.
+
+**Pool settings (since 2026-10-13, v7 parity).** On PHP-FPM (nginx/Apache) these pool lines are also accepted and written as typed: `env[NAME] = value` (NAME `[A-Za-z_][A-Za-z0-9_]*`), `request_terminate_timeout` / `request_slowlog_timeout` (seconds or `s|m|h|d`, at most a day), `slowlog = <path>` (**must be inside the site's own `logs/`** — `directive_slowlog_path`; never written otherwise), `catch_workers_output` / `decorate_workers_output` (`yes|no`), `rlimit_files` (number), `rlimit_core` (number or `unlimited`). On OpenLiteSpeed they are a 422 `directive_fpm_only` (no pools). Refused by name and never written, in any form: `user`, `group`, `listen*`, `chroot`, `chdir`, `prefix`, `include`, `clear_env`, `access.*`, `security.*` (e.g. `security.limit_extensions`, which would run other file types as PHP), `process.*`, `ping.*`, `apparmor` → `directive_pool_forbidden`; `pm` / `pm.*` → `directive_pm` (use the PM fields). ⚠️ Lines saved **before** 2026-10-01 are still written as they were, and for those **which value wins differs by stack** (measured 2026-09-30): PHP-FPM applies the **first** of a repeated key, so on nginx/Apache a panel-managed key there has **no effect**; on OpenLiteSpeed the php.ini is read top to bottom and it **does** override. Re-saving the screen with such a line in it is a 422 — remove it or move the value to its field.
 
 | field | question it answers |
 |---|---|
@@ -2612,6 +2614,27 @@ Server-side, `php artisan php:isolate-all` converts every remaining shared site 
 Returns **`405`**. There is no supported way back onto the shared pool: it means running as the web server's own account again, which lets one compromised site read every other site's `.env`. Remove any "un-isolate" / "back to shared pool" control.
 
 ---
+
+
+**PHP-FPM tuning fields (since 2026-10-13).** `pm_start_servers`, `pm_min_spare_servers`, `pm_max_spare_servers` (dynamic), `pm_process_idle_timeout` (seconds, ondemand), `pm_max_spawn_rate` (dynamic, PHP ≥ 8.1) — all nullable. **Null = derived as before** (start = children/2, min = children/4, max = 3·children/4, idle 30s, no spawn rate), so existing sites do not change. The three spare-server numbers are all-or-none and must satisfy `min ≤ start ≤ max ≤ pm_max_children` (php-fpm's own rule), else 422 on `pm_start_servers` (`pm_spare_inconsistent`). If `pm_max_children` is later lowered below them, the pool falls back to deriving rather than write a pool that will not start. Returned in `settings` by GET.
+
+### POST `/applications/{application}/php/v7-extra-conf`
+v7 importer helper. Permission `app_php` **manage**, `throttle:30,1`. Body `{"extra_conf": "<v7 text>"}`. **Saves nothing.**
+v7 appended `extra_conf` to the pool as typed, after its own fields, so a line there won. This returns the same effect as v8 settings:
+```json
+{
+  "settings": {"memory_limit": "512M", "php_timezone": "Asia/Kolkata", "pm_type": "dynamic", "pm_max_children": 12,
+               "pm_start_servers": 3, "pm_process_idle_timeout": 15,
+               "additional_directives": "php_flag[display_errors] = off\nenv[APP_ENV] = production\nrequest_terminate_timeout = 300"},
+  "refused": [{"line": "listen = /tmp/x.sock", "reason": "directive_pool_forbidden", "name": "listen", "message": "…"}],
+  "valid": true,
+  "errors": {}
+}
+```
+- A setting v8 has a field for (`memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, `max_input_time`, `max_input_vars`, `session.gc_maxlifetime`, `date.timezone`, `auto_prepend_file`, `allow_url_fopen`, `disable_functions`, `pm`, `pm.max_children`, `pm.max_requests`, `pm.start_servers`, `pm.min_spare_servers`, `pm.max_spare_servers`, `pm.process_idle_timeout`, `pm.max_spawn_rate`) goes to that field, **v7's value winning**; later lines win.
+- PHP settings and the allowed pool lines go to `additional_directives`. Everything else is in `refused` with the PHP screen's reason and message.
+- `valid`/`errors`: the PHP screen's own validation run on `settings` now (e.g. `memory_limit = -1` → invalid).
+To apply: `PUT /applications/{id}/php` with `settings` — the one save path (pool tested before reload, rolled back on failure).
 
 ## Application — Basic Auth (Password Protection)
 

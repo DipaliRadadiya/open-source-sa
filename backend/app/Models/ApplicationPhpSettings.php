@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'memory_limit', 'upload_max_filesize', 'post_max_size',
     'max_execution_time', 'max_input_time', 'max_input_vars', 'session_gc_maxlifetime',
     'pm_type', 'pm_max_children', 'pm_max_requests',
+    'pm_start_servers', 'pm_min_spare_servers', 'pm_max_spare_servers', 'pm_process_idle_timeout', 'pm_max_spawn_rate',
     'open_basedir_enabled', 'open_basedir_paths', 'disable_functions', 'allow_url_fopen',
     'php_timezone', 'auto_prepend_file', 'additional_directives',
 ])]
@@ -93,6 +94,11 @@ class ApplicationPhpSettings extends Model
             'session_gc_maxlifetime' => 'integer',
             'pm_max_children' => 'integer',
             'pm_max_requests' => 'integer',
+            'pm_start_servers' => 'integer',
+            'pm_min_spare_servers' => 'integer',
+            'pm_max_spare_servers' => 'integer',
+            'pm_process_idle_timeout' => 'integer',
+            'pm_max_spawn_rate' => 'integer',
             'open_basedir_enabled' => 'boolean',
             'allow_url_fopen' => 'boolean',
         ];
@@ -130,6 +136,13 @@ class ApplicationPhpSettings extends Model
             // Without this a slow leak grows a worker until the kernel kills
             // something. With it, the leak is bounded to 500 requests.
             'pm_max_requests' => 500,
+            // Null: derived from pm_max_children when the pool is written
+            // (PoolManager). Set only for a site that brought its own (v7).
+            'pm_start_servers' => null,
+            'pm_min_spare_servers' => null,
+            'pm_max_spare_servers' => null,
+            'pm_process_idle_timeout' => null,
+            'pm_max_spawn_rate' => null,
             // On by default, as v7 has it: the site's own folder, its sessions
             // and /tmp ({@see PoolManager::openBasedir()}).
             'open_basedir_enabled' => true,
