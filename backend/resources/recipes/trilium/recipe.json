@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "triliumnext/trilium:v0.106.0",
-            "tested": []
+            "tested": [
+                "triliumnext/trilium:v0.106.0"
+            ]
         }
     },
     "services": [
@@ -50,6 +52,7 @@
         "Trilium is single-user: one password protects the whole instance, there are no accounts.",
         "Notes, attachments, the SQLite database and backups live in the data volume (/home/node/trilium-data). Trilium's own daily, weekly and monthly backups are written there too.",
         "The image starts as root only to hand the data folder to the node user and then runs Trilium as that user (upstream's start-docker.sh, via gosu); the image's own healthcheck stays on. The time zone is UTC.",
-        "Desktop clients can sync with this server: in the desktop app, choose sync with a server and enter https://<domain>."
+        "Desktop clients can sync with this server: in the desktop app, choose sync with a server and enter https://<domain>.",
+        "Live smoke (RC-35) on Ubuntu 24.04 and 26.04: Running 32 to 48 s after Create; setup wizard, password, parent and child notes with formatting, reload, re-login and restart all passed; idle 54 to 63 MiB of the 512m limit (10 to 12 percent), peak 81 MiB; no restarts or OOM."
     ]
 }

@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "ghcr.io/marimo-team/marimo:0.25.1",
-            "tested": []
+            "tested": [
+                "ghcr.io/marimo-team/marimo:0.25.1"
+            ]
         }
     },
     "services": [
@@ -62,6 +64,7 @@
         "Notebooks are .py files in the notebooks volume (/app/data), which is the editor's home folder; create and open them from marimo's file list. They survive restarts and redeploys.",
         "The image is marimo's official base variant (ghcr.io/marimo-team/marimo:0.25.1, Python 3.13 slim, running as the image's non-root appuser). The -data and -sql variants that preinstall pandas, numpy and altair were not published for 0.25.x. Packages a notebook installs from marimo's package panel go into the container, not the volume, so they are gone after the container is recreated; a notebook that needs them installs them again on first run.",
         "Code in a notebook runs inside this container with the app user's rights: there is no docker.sock, no extra capability and no host mount.",
-        "marimo's update check and its sandbox prompt are off (--skip-update-check, --no-sandbox), since the container itself is the sandbox."
+        "marimo's update check and its sandbox prompt are off (--skip-update-check, --no-sandbox), since the container itself is the sandbox.",
+        "Live smoke (RC-35) on Ubuntu 24.04 and 26.04: Running 17 to 63 s after Create; login, a two-cell reactive notebook (changing the first cell re-ran the second), restart with the notebook kept; the password is in no process argument and not in the container log; idle about 132 MiB of the 1g limit (13 percent), 463 MiB with two notebook kernels open; no restarts or OOM."
     ]
 }

@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "archivebox/archivebox:0.7.4",
-            "tested": []
+            "tested": [
+                "archivebox/archivebox:0.7.4"
+            ]
         }
     },
     "services": [
@@ -73,6 +75,7 @@
         "ALLOWED_HOSTS is the site's domain, so the app answers only for it. A domain change in the panel does not re-render this value; change ALLOWED_HOSTS in the environment to the new domain as well.",
         "CSRF_TRUSTED_ORIGINS from the card is not set: it is not a setting in 0.7.4 (Django 3.1), and sign-in works over HTTPS without it.",
         "Snapshots are taken by the Chromium, wget, yt-dlp and SingleFile extractors inside the container and stored in the data volume (/data) with the SQLite index. Upstream's default SAVE_ARCHIVE_DOT_ORG=True is kept, so every added URL is also submitted to the Internet Archive; set it to False in the environment for a fully private archive.",
-        "Chromium runs without its own sandbox (the 0.7 image's default in Docker), so the container needs no extra capability or security option."
+        "Chromium runs without its own sandbox (the 0.7 image's default in Docker), so the container needs no extra capability or security option.",
+        "Live smoke (RC-35) on Ubuntu 24.04 and 26.04: Running 17 to 79 s after Create (the image is 2.9 GB); admin login, example.com archived in about 30 s by 12 extractors (SingleFile, wget, screenshot and others open), nothing visible logged out, and the session survives restarts; idle 58 to 85 MiB of the 2g limit (3 to 4 percent), peak 397 to 505 MiB while archiving (up to 25 percent). The 2g floor is kept for Chromium on heavy pages and for media downloads, which a single example.com snapshot does not exercise; no restarts or OOM."
     ]
 }

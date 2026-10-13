@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "lfnovo/open_notebook:1.15.0",
-            "tested": []
+            "tested": [
+                "lfnovo/open_notebook:1.15.0"
+            ]
         },
         "db": {
             "ref": "surrealdb/surrealdb:v2.7.0",
-            "tested": []
+            "tested": [
+                "surrealdb/surrealdb:v2.7.0"
+            ]
         }
     },
     "services": [
@@ -86,6 +90,7 @@
         "No AI provider ships with the recipe. Add one in Settings, Models (API key and model); keys are stored encrypted in the database with OPEN_NOTEBOOK_ENCRYPTION_KEY. Upstream accepts any string as the key and derives the Fernet key from it with PBKDF2-HMAC-SHA256, so the generated 32-character secret is used as is. Changing or losing it makes the saved provider keys unreadable.",
         "The database is SurrealDB v2.7.0 (the v2 line upstream's compose and Dockerfile use), with a generated root user and password, on its own volume and with no published port. Upstream passes the root user and password as --user/--pass on the command line; this recipe passes them as SURREAL_USER and SURREAL_PASS in the container environment instead, because process arguments are readable by every account on the host and the database's container address is reachable from the host. It runs as root inside its container, as in upstream's compose, so it can write to the volume.",
         "The data volume (/app/data) holds uploads, generated podcasts and caches. The optional heavy extraction runtimes (OPEN_NOTEBOOK_ENABLE_DOCLING, OPEN_NOTEBOOK_ENABLE_CRAWL4AI) are off; enabling them downloads large packages into that volume on the next start and needs a bigger memory limit.",
-        "The container's healthcheck checks both the API (/health on 5055) and the UI (8502), so the panel shows the app as running only once both answer."
+        "The container's healthcheck checks both the API (/health on 5055) and the UI (8502), so the panel shows the app as running only once both answer.",
+        "Live smoke (RC-35) on Ubuntu 24.04 and 26.04: Running 32 to 79 s after Create; password login, a provider with a fake OpenAI key saved and stored encrypted, a notebook with a text source, reload and restart kept everything; every browser request went to https://<domain>, none to port 5055; SurrealDB credentials in no process argument; idle about 400 MiB of the 2g limit (20 percent) plus SurrealDB 65 MiB of 512m, peaks 420 MiB and 144 MiB; no restarts or OOM. The 2g floor leaves room for real source processing and podcasts, which a fake key cannot exercise."
     ]
 }
