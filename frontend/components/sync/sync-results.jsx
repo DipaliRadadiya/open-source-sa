@@ -23,12 +23,16 @@ import { ListCard } from "@/components/data-table/list-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+// A colour per outcome: every status was grey, so "Found" and "Skipped" looked alike (Krishna, 13 Oct).
 const ACTION_VARIANTS = {
   adopted: "success",
   skipped: "muted",
   failed: "destructive",
-  found: "outline",
+  found: "default",
 };
+
+// `default` is a label style; as a status it gets the same pill shape as the others.
+const ACTION_CLASSES = { found: "h-6 rounded-4xl px-2.5" };
 
 // Percentages, so the bars shrink with a phone-width column instead of widening the table.
 const PENDING_NAME_WIDTHS = ["w-[45%]", "w-[60%]", "w-[38%]", "w-[52%]"];
@@ -42,7 +46,7 @@ function ResultsHeader() {
         {/* Below sm the type moves under the name so the row fits a phone. */}
         <TableHead className="hidden w-[16%] sm:table-cell">{t("results.columns.type")}</TableHead>
         <TableHead>{t("results.columns.name")}</TableHead>
-        <TableHead className="w-[12%]">{t("results.columns.outcome")}</TableHead>
+        <TableHead className="w-[19%]">{t("results.columns.outcome")}</TableHead>
         <TableHead className="w-10 px-1 sm:px-2" />
       </TableRow>
     </TableHeader>
@@ -139,35 +143,39 @@ export function SyncResults({
     // One card, as every list: search and type filters on top, rows below.
     <ListCard
       toolbar={
-        <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <LocalSearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder={t("results.searchPlaceholder")}
-              />
-              <p className="text-sm text-muted-foreground">
-                {t("results.showing", { shown: visible.length, total: items.length })}
-              </p>
-            </div>
+        // One row: search, type chips, then the count at the far end, so the right
+        // side is not left empty (Krishna, 13 Oct).
+        <div className="flex flex-wrap items-center gap-3">
+          <LocalSearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={t("results.searchPlaceholder")}
+          />
 
-            {presentTypes.length > 1 ? (
-              <ToggleGroup
-                type="multiple"
-                value={types}
-                onValueChange={setTypes}
-                variant="outline"
-                size="sm"
-                className="flex flex-wrap justify-start gap-2"
-              >
-                {presentTypes.map((type) => (
-                  <ToggleGroupItem key={type} value={type} className={cn(FILTER_TOGGLE_ITEM, "gap-1.5")}>
-                    {t(`types.${type}`)}
-                    <span className="text-xs text-muted-foreground">{countsByType.get(type)}</span>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            ) : null}
+          {presentTypes.length > 1 ? (
+            <ToggleGroup
+              type="multiple"
+              value={types}
+              onValueChange={setTypes}
+              variant="outline"
+              size="sm"
+              className="flex flex-wrap justify-start gap-2"
+            >
+              {presentTypes.map((type) => (
+                <ToggleGroupItem key={type} value={type} className={cn(FILTER_TOGGLE_ITEM, "gap-1.5")}>
+                  {t(`types.${type}`)}
+                  <span className="text-xs text-muted-foreground">{countsByType.get(type)}</span>
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          ) : null}
+
+          {/* Only while filtering: "Showing 5 of 5" said nothing and pushed onto its own line. */}
+          {visible.length !== items.length ? (
+            <p className="text-sm text-muted-foreground sm:ms-auto">
+              {t("results.showing", { shown: visible.length, total: items.length })}
+            </p>
+          ) : null}
         </div>
       }
     >
@@ -265,9 +273,19 @@ export function SyncResults({
                       ) : null}
                     </TableCell>
                     <TableCell className="align-top">
-                      <Badge variant={ACTION_VARIANTS[item.action] ?? "outline"}>
+                      <Badge
+                        variant={ACTION_VARIANTS[item.action] ?? "outline"}
+                        className={ACTION_CLASSES[item.action]}
+                      >
                         {t(`outcomes.${item.action}`)}
                       </Badge>
+                      {/* What the status means, in a few words. */}
+                      {t.has(`outcomeHints.${item.action}`) ? (
+                        // Phone: the badge alone; three-line hints filled the narrow column.
+                        <p className="mt-1 hidden text-xs whitespace-normal text-muted-foreground sm:block">
+                          {t(`outcomeHints.${item.action}`)}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="px-1 align-top sm:px-2">
                       {canManage && !wholeType ? (

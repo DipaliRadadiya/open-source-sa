@@ -14,6 +14,7 @@ import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 import { applicationPhpResponseSchema } from "@/lib/schemas/php-settings";
 import { applicationBansResponseSchema, applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
 import { applicationStagingResponseSchema, stagingSafetyCopiesSchema } from "@/lib/schemas/application-staging";
+import { applicationUpdateResponseSchema } from "@/lib/schemas/application-update";
 
 
 // Search, filters and sort run in the API. A stale filter value is a 422, not an empty list.
@@ -111,6 +112,13 @@ export async function getApplicationBans(id) {
 export async function getApplicationPhp(id) {
   const result = await read(`/applications/${id}/php`, applicationPhpResponseSchema);
   return { php: result.data?.php ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
+}
+
+// One-click update state. Every site type answers; `supported: false` means no card.
+// The first open may look up releases (GitHub, Packagist), so callers stream it.
+export async function getApplicationUpdate(id) {
+  const result = await read(`/applications/${id}/update`, applicationUpdateResponseSchema);
+  return { data: result.data ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
 // Gated by `app_log` on the backend, not `app_bot_blocker` — it reads the

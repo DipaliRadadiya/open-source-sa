@@ -4,7 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ExternalLink, KeyRound, Loader2, TriangleAlert } from "lucide-react";
+import { ExternalLink, KeyRound, Loader2 } from "lucide-react";
+import { Caution } from "@/components/ui/caution";
 import { replaceTokenSchema } from "@/lib/schemas/git";
 import { updateAccount } from "@/lib/api/git";
 import { createTokenUrl } from "@/lib/git/provider-links";
@@ -93,10 +94,9 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
         }
       >
         {failure ? (
-          <div className="flex gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <p className="text-xs leading-relaxed">{failure}</p>
-          </div>
+          <Caution tone="destructive" size="md">
+            <p className="leading-relaxed">{failure}</p>
+          </Caution>
         ) : null}
 
         <FormField

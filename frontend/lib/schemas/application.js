@@ -309,7 +309,7 @@ export const aiBotPoliciesResponseSchema = z.object({
 export const botTrafficBotSchema = z.object({
   bot: z.string(),
   hits: z.number().default(0),
-  // training | search | agent | custom
+  // training | search | agent | custom | legacy (v7 list)
   category: z.string().nullish(),
   // What the CURRENT settings do to it — policy plus any per-bot rules.
   blocked: z.boolean().default(false),

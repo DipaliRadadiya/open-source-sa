@@ -884,14 +884,17 @@
     "passwordSameAsCurrent": "現在とは別のパスワードを設定してください。",
     "cronNameReserved": "この名前はサーバーまたはパネルのファイルで既に使われています。別の名前を選んでください。",
     "cronRootRefused": "ジョブを root として実行することはできません。システムユーザーを選んでください。",
-    "directivesPhpOnly": "PHP の設定のみを 1 行に 1 つずつ入力してください（例: display_errors = Off）。",
+    "directivesPhpOnly": "PHP の設定と許可されたプール設定行のみを 1 行に 1 つずつ入力してください（例: display_errors = Off）。",
     "noManagedWorkerKeys": "user、command、directory とログファイルはパネルが設定します。ここではなく上の項目で変更してください。",
     "insideApplication": "このアプリケーションのフォルダー内のパスを指定してください。",
     "securityUsernameAscii": "半角英字、数字、. _ - @ のみ使用してください。それ以外の文字はブラウザによって送信方法が異なります。",
     "excludeInsideSite": "storage/logs のように、アプリケーションのフォルダー内のパスを指定してください（/ や .. は使えません）",
     "cronTrailingComment": "# のメモを削除してください。cron は # 以降をすべてコメントとして扱うため、ジョブのログを書き込む部分も無効になります。",
     "cronReboot": "@reboot はここでは使えません。@daily や */5 * * * * などのスケジュールを使ってください。",
-    "hostForbidden": "バックアップサーバー自体のアドレスを入力してください。localhost や 127.0.0.1 などのローカルアドレスは使えません。"
+    "hostForbidden": "バックアップサーバー自体のアドレスを入力してください。localhost や 127.0.0.1 などのローカルアドレスは使えません。",
+    "rangeIdleTimeout": "1〜86400 秒を入力するか、空欄のままにしてください。",
+    "rangeSpawnRate": "1〜1024 を入力するか、空欄のままにしてください。",
+    "pmSpareOrder": "ワーカー数は 3 つすべて入力するか、すべて空欄にしてください。待機の最小数 ≤ 起動時 ≤ 待機の最大数 ≤ PHP ワーカープロセス数 となるようにします。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -4976,7 +4979,8 @@
           "training": "学習",
           "search": "AI 検索",
           "agent": "AI アシスタント",
-          "custom": "カスタムルール"
+          "custom": "カスタムルール",
+          "legacy": "v7 のリスト"
         },
         "blockedHits": "{count, plural, other{# 件をブロック}}"
       },
@@ -5283,7 +5287,12 @@
         "timezonePlaceholder": "サーバーに合わせる",
         "autoPrepend": "各ページの前に実行するファイル",
         "directives": "追加ディレクティブ",
-        "directivesPlaceholder": "display_errors = Off"
+        "directivesPlaceholder": "display_errors = Off",
+        "startServers": "プール起動時のワーカー数",
+        "minSpare": "待機ワーカーの最小数",
+        "maxSpare": "待機ワーカーの最大数",
+        "spawnRate": "1 秒あたりの新規ワーカー数の上限",
+        "idleTimeout": "待機中のワーカーを停止するまで（秒）"
       },
       "hints": {
         "postTooSmall": "アップロード上限より小さいため、そのサイズのアップロードは失敗します。",
@@ -5295,6 +5304,7 @@
         "timezone": "PHP が出力する日付にのみ影響し、サーバー時刻には影響しません。",
         "autoPrepend": "アプリケーション内のパスを指定してください。特に指示がない場合は空欄にしてください。",
         "directives": "PHP の設定を 1 行に 1 つずつ記述します（例: display_errors = Off）。この画面に専用のフィールドがある設定と拡張機能は、ここでは設定できません。",
+        "directivesPool": "設定を 1 行に 1 つずつ記述します（例: display_errors = Off）。env[APP_ENV] = production や request_terminate_timeout = 300 などのプール設定行も使えます。この画面に専用のフィールドがある設定と拡張機能は、ここでは設定できません。",
         "openBasedir": "PHP がアプリケーションフォルダ外のファイルを読み書きするのを防ぎます。",
         "allowUrlFopen": "PHP がリモート URL を取得できるようにします。マルウェアがよく利用する経路のため、無効化を推奨します。",
         "upload": "Web サーバー自体のアップロード上限も上がります。PHP が処理する前に大きなアップロードを拒否するのは Web サーバー側の役割です。以前に作成されたアプリケーションでは、最初に保存したときからこの値が適用されます。",
@@ -5303,7 +5313,12 @@
         "executionTime": "PHPがページを停止するまで動かす秒数です。インポートやバックアップでは増やし、通常のページでは低く保ってください。",
         "inputVars": "1つのフォームが送信できるボックスの数です。大きな設定ページやページビルダーはデフォルトを超えることがあります。",
         "disableFunctions": "このアプリケーションでの実行が許可されないPHPコマンドです。デフォルトでは攻撃で悪用されやすいものをブロックしています。アプリケーションが本当に必要とする場合のみ解除してください。",
-        "children": "このアプリケーションが同時に処理できるリクエスト数です。少なすぎると訪問者が待ち行列に並び、多すぎるとサーバーのメモリが足りなくなります。"
+        "children": "このアプリケーションが同時に処理できるリクエスト数です。少なすぎると訪問者が待ち行列に並び、多すぎるとサーバーのメモリが足りなくなります。",
+        "startServers": "PHP の再起動時に起動するワーカー数です。空欄にすると自動になります。",
+        "minSpare": "待機中のワーカーがこれより少ないと、追加で起動します。",
+        "maxSpare": "待機中のワーカーがこれより多いと、一部を停止します。",
+        "spawnRate": "アクセス急増時に新しいワーカーを起動できる速さです。空欄にすると PHP の既定値になります。",
+        "idleTimeout": "この時間リクエストのないワーカーは停止します。空欄にすると 30 秒です。"
       },
       "pmTypes": {
         "ondemand": "On demand",
@@ -5410,7 +5425,8 @@
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} は PHP {range} に対応しています。このアプリケーションを別のバージョンに移動すると動作しなくなる可能性があります。",
       "presetsLabelHint": "小・中・大のアプリケーションに合わせた設定です。出発点として利用し、その後も各値は変更できます。",
-      "fixErrors": "修正が必要な設定があります。問題のあるタブに印が付いています。"
+      "fixErrors": "修正が必要な設定があります。問題のあるタブに印が付いています。",
+      "autoValue": "自動 · {value}"
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5996,6 +6012,67 @@
       "staticFiles": "静的ファイル",
       "runtimeDetail": "バージョンと上限を変更",
       "staticDetail": "そのまま配信され、実行するものはありません"
+    },
+    "update": {
+      "title": "{app} のバージョン",
+      "state": {
+        "running": "更新中…",
+        "failed": "前回の更新に失敗",
+        "available": "更新が利用可能",
+        "up_to_date": "最新です",
+        "lookup_failed": "確認できませんでした",
+        "version_unknown": "バージョン不明",
+        "not_active": "停止中"
+      },
+      "checkAgain": "再確認",
+      "updateTo": "{version} に更新",
+      "update": "更新",
+      "history": {
+        "open": "履歴",
+        "title": "{app} の更新履歴",
+        "description": "このアプリケーションの直近 10 件の更新です。",
+        "by": "{user} が実行"
+      },
+      "blocked": {
+        "noPermission": "このアプリケーションを更新する権限がありません。",
+        "not_active": "更新できるのは、一時停止していない稼働中のアプリケーションだけです。",
+        "version_unknown": "アプリケーションのファイルからインストール済みのバージョンを読み取れませんでした。",
+        "lookup_failed": "利用可能なバージョンを確認できませんでした。もう一度お試しください。",
+        "up_to_date": "このバージョン系列ではすでに最新です。",
+        "running": "更新はすでに実行中です。",
+        "unsupported": "この種類のアプリケーションはパネルから更新できません。"
+      },
+      "installed": "インストール済み",
+      "available": "利用可能",
+      "lastUpdate": "前回の更新",
+      "unknown": "不明",
+      "notChecked": "確認できませんでした",
+      "last": {
+        "completed": "{when}に {version} へ更新",
+        "failed": "{when}に {version} への更新が失敗",
+        "never": "パネルから更新したことはありません"
+      },
+      "runningNote": "{version} への更新を{when}に開始しました。アプリケーションが一時的に利用できなくなる場合があります。このページを離れても問題ありません。",
+      "copyReference": "リファレンスをコピー",
+      "reference": "参照: {reference}",
+      "newerMajor": "{version} は新しいメジャーバージョンです。メジャーバージョンの移行にはアプリケーション側の変更が必要な場合があるため、ここからはインストールしません。",
+      "confirm": {
+        "title": "{app} を {from} から {to} に更新しますか？",
+        "description": "アプリケーションのコードが新しいリリースに置き換わります。設定とデータはそのまま残ります。数分かかる場合があります。",
+        "cancel": "キャンセル",
+        "confirm": "今すぐ更新",
+        "backupFresh": "最終バックアップ: {when}。",
+        "backupOld": "最終バックアップは{when}のものです。更新に失敗した場合は、これを復元することになります。",
+        "backupNone": "このアプリケーションにはバックアップがありません。更新に失敗しても、復元できるものがありません。",
+        "backUpFirst": "先にバックアップ"
+      },
+      "toast": {
+        "started": "{app} を {version} に更新しています…",
+        "completed": "{app} を {version} に更新しました。",
+        "failed": "{app} の更新に失敗しました。",
+        "startFailed": "更新を開始できませんでした。",
+        "checkFailed": "バージョンを確認できませんでした。"
+      }
     }
   },
   "panelUpdate": {
@@ -6306,7 +6383,17 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.example.com",
-        "root": "backups/"
+        "root": "backups/",
+        "access_key": "アクセスキー ID を貼り付け",
+        "secret_key": "シークレットアクセスキーを貼り付け",
+        "username": "backup",
+        "password": "パスワードを貼り付け",
+        "client_id": "クライアント ID を貼り付け",
+        "client_secret": "クライアントシークレットを貼り付け",
+        "service_account_json": "'{' \"type\": \"service_account\", … '}'",
+        "folder_id": "例: 1AbCdEfGhIjKlMnOp",
+        "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
+        "passphrase": "鍵に設定されている場合のみ"
       }
     },
     "connect": {
@@ -6348,11 +6435,12 @@
       "replacedButFailed": "キーは差し替えましたが、接続テストは失敗しました。",
       "onlyWhatYouChange": "変更する項目だけを入力してください。空欄のままにした項目は現在の値を保持します。",
       "failed": "新しいキーを保存できませんでした。",
-      "replacedNotTested": "キーは差し替えましたが、接続テストは実行されませんでした。「テスト」を押してもう一度お試しください。"
+      "replacedNotTested": "キーは差し替えましたが、接続テストは実行されませんでした。「テスト」を押してもう一度お試しください。",
+      "keepCurrent": "空欄のままにすると現在の値を保持します"
     },
     "delete": {
-      "title": "この送信先を削除しますか？",
-      "description": "{name} をパネルから削除します。",
+      "titleNamed": "{name} を削除しますか？",
+      "description": "パネルから削除されます。ストレージ側のデータは削除されません。",
       "warning": "保存先を削除できるのは、どのアプリケーションもそこにバックアップしておらず、バックアップも残っていない場合だけです。",
       "cancel": "キャンセル",
       "confirm": "送信先を削除",
@@ -7089,6 +7177,12 @@
       "rotationFailed": "{username} のログローテーション。",
       "failed": "移行を完了できませんでした。",
       "noPermission": "あなたのロールにはサーバー同期の管理権限が含まれていません。"
+    },
+    "outcomeHints": {
+      "found": "パネルに追加できます",
+      "adopted": "パネルに追加済み",
+      "skipped": "意図的に対象外",
+      "failed": "追加できませんでした。詳細を確認してください"
     }
   },
   "central": {

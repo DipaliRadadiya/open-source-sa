@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ExternalLink } from "lucide-react";
@@ -32,6 +33,8 @@ import { getRootLock } from "@/lib/applications/get-root-lock";
 import { issueItems, localKeysSupersededBy } from "@/lib/applications/issue-items";
 import { BackupCard } from "@/components/applications/backup-card";
 import { DatabaseCard } from "@/components/applications/database-card";
+import { UpdateCardLoader, UpdateCardSkeleton } from "@/components/applications/update-card-loader";
+import { UPDATABLE_SITE_TYPES } from "@/lib/applications/app-update";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -393,6 +396,19 @@ export default async function ApplicationDetailPage({ params }) {
             deploy={deployTile}
             alerts={alerts}
           />
+
+          {/* Wide, like Source: three facts in one row. Streamed on its own because the
+              first open can wait on a release lookup; renders nothing for other types. */}
+          {settled && UPDATABLE_SITE_TYPES.includes(application.site_type) ? (
+            <Suspense fallback={<UpdateCardSkeleton />}>
+              <UpdateCardLoader
+                appId={id}
+                appTitle={application.site_type_title ?? application.site_type}
+                canManage={canManage}
+                backupsHref={canSeeBackups ? `/applications/${id}/backups` : null}
+              />
+            </Suspense>
+          ) : null}
 
           {/* Deploy and Process are wide; the rest is an aligned two-by-two grid, every
               card the same shape: title with its state, one button, rows (Krishna, 7 Oct). */}

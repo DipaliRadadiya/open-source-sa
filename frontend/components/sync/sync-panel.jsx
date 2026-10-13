@@ -214,7 +214,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       />
 
       {run?.finished ? (
-        <Button variant="ghost" onClick={refresh} disabled={refreshing}>
+        <Button variant="outline" onClick={refresh} disabled={refreshing}>
           <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
           {t("actions.refresh")}
         </Button>

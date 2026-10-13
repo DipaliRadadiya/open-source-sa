@@ -11,6 +11,7 @@ import { probeDestination } from "@/lib/storage/probe";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Note } from "@/components/ui/note";
 import { useConfirmAction } from "@/hooks/use-confirm-action";
 import { InfoHint } from "@/components/ui/info-hint";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -182,7 +183,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         onOpenChange={removal.setOpen}
         icon={Trash2}
         tone="destructive"
-        title={t("delete.title")}
+        title={t("delete.titleNamed", { name: removal.target?.name ?? "" })}
         description={t("delete.description", { name: removal.target?.name ?? "" })}
         cancelLabel={t("delete.cancel")}
         confirmLabel={t("delete.confirm")}
@@ -192,8 +193,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         onConfirm={remove}
       >
         {/* The API refuses while anything backs up or is stored here, and names it in
-            the error. */}
-        <p className="text-sm text-muted-foreground">{t("delete.warning")}</p>
+            the error; said up front as a note, not grey small print. */}
+        <Note>{t("delete.warning")}</Note>
       </ConfirmDialog>
     </Card>
   );

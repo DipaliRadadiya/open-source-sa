@@ -884,14 +884,17 @@
     "passwordSameAsCurrent": "Wählen Sie ein anderes Passwort als das aktuelle.",
     "cronNameReserved": "Dieser Name gehört zu einer Datei, die der Server oder das Panel bereits nutzt. Wählen Sie einen anderen.",
     "cronRootRefused": "Aufgaben können nicht als root laufen. Wählen Sie einen Systembenutzer.",
-    "directivesPhpOnly": "Nur PHP-Einstellungen, eine pro Zeile, etwa display_errors = Off.",
+    "directivesPhpOnly": "Nur PHP-Einstellungen und erlaubte Pool-Zeilen, eine pro Zeile, etwa display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory und die Logdateien setzt das Panel. Ändern Sie sie in den Feldern oben, nicht hier.",
     "insideApplication": "Einen Pfad im Ordner dieser Anwendung verwenden.",
     "securityUsernameAscii": "Nur englische Buchstaben, Ziffern und . _ - @ verwenden — Browser senden andere Buchstaben unterschiedlich.",
     "excludeInsideSite": "Einen Pfad im Ordner der Anwendung verwenden, etwa storage/logs — ohne / oder ..",
     "cronTrailingComment": "Entfernen Sie die #-Notiz. Cron behandelt alles nach # als Kommentar, auch den Teil, der das Protokoll des Jobs schreibt.",
     "cronReboot": "@reboot wird hier nicht unterstützt. Verwenden Sie einen Zeitplan, zum Beispiel @daily oder */5 * * * *.",
-    "hostForbidden": "Geben Sie die Adresse des Backup-Servers selbst ein. Lokale Adressen wie localhost oder 127.0.0.1 sind nicht erlaubt."
+    "hostForbidden": "Geben Sie die Adresse des Backup-Servers selbst ein. Lokale Adressen wie localhost oder 127.0.0.1 sind nicht erlaubt.",
+    "rangeIdleTimeout": "Geben Sie 1 bis 86400 Sekunden ein oder lassen Sie das Feld leer.",
+    "rangeSpawnRate": "Geben Sie 1 bis 1024 ein oder lassen Sie das Feld leer.",
+    "pmSpareOrder": "Füllen Sie alle drei Worker-Zahlen aus oder keine, sodass mindestens frei ≤ beim Start ≤ höchstens frei ≤ PHP-Worker-Prozesse."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4976,7 +4979,8 @@
           "training": "Training",
           "search": "KI-Suche",
           "agent": "KI-Assistent",
-          "custom": "Eigene Regel"
+          "custom": "Eigene Regel",
+          "legacy": "v7-Liste"
         },
         "blockedHits": "{count, plural, other {# blockiert}}"
       },
@@ -5283,7 +5287,12 @@
         "timezonePlaceholder": "Die des Servers verwenden",
         "autoPrepend": "Datei, die vor jeder Seite läuft",
         "directives": "Zusätzliche Direktiven",
-        "directivesPlaceholder": "display_errors = Off"
+        "directivesPlaceholder": "display_errors = Off",
+        "startServers": "Worker beim Start des Pools",
+        "minSpare": "Mindestens freie Worker",
+        "maxSpare": "Höchstens freie Worker",
+        "spawnRate": "Neue Worker pro Sekunde, höchstens",
+        "idleTimeout": "Freien Worker beenden nach (Sekunden)"
       },
       "hints": {
         "postTooSmall": "Das ist kleiner als das Upload-Limit, Uploads dieser Größe scheitern also trotzdem.",
@@ -5295,6 +5304,7 @@
         "timezone": "Betrifft nur Datumsangaben, die PHP erzeugt, nicht die Serveruhr.",
         "autoPrepend": "Ein Pfad innerhalb dieser Anwendung. Leer lassen, sofern Ihnen nichts anderes gesagt wurde.",
         "directives": "Eine PHP-Einstellung pro Zeile, etwa display_errors = Off. Einstellungen mit eigenem Feld auf dieser Seite und Erweiterungen lassen sich hier nicht setzen.",
+        "directivesPool": "Eine Einstellung pro Zeile, etwa display_errors = Off. Pool-Zeilen wie env[APP_ENV] = production und request_terminate_timeout = 300 sind ebenfalls erlaubt. Einstellungen mit eigenem Feld auf dieser Seite und Erweiterungen lassen sich hier nicht setzen.",
         "openBasedir": "Verhindert, dass PHP Dateien außerhalb des Ordners dieser Anwendung liest oder schreibt.",
         "allowUrlFopen": "Erlaubt PHP, entfernte URLs abzurufen. Ausschalten blockiert einen verbreiteten Weg, auf dem Malware nach Hause telefoniert.",
         "upload": "Hebt auch das eigene Limit des Webservers an, der große Uploads ablehnt, bevor PHP sie sieht. Eine früher eingerichtete Anwendung übernimmt das beim ersten Speichern.",
@@ -5303,7 +5313,12 @@
         "executionTime": "Wie viele Sekunden PHP eine Seite laufen lässt, bevor es sie abbricht. Erhöhen Sie den Wert für Importe und Sicherungen; belassen Sie ihn für gewöhnliche Seiten niedrig.",
         "inputVars": "Wie viele einzelne Felder ein Formular absenden darf. Große Einstellungsseiten und Page Builder können über die Vorgabe hinausgehen.",
         "disableFunctions": "PHP-Befehle, die diese Seite nicht ausführen darf. Die Vorgaben blockieren diejenigen, die am häufigsten bei Angriffen genutzt werden — entfernen Sie einen nur, wenn die Seite ihn wirklich benötigt.",
-        "children": "Wie viele Anfragen diese Seite gleichzeitig beantworten kann. Zu wenige und Besucher warten in einer Schlange; zu viele und dem Server geht der Speicher aus."
+        "children": "Wie viele Anfragen diese Seite gleichzeitig beantworten kann. Zu wenige und Besucher warten in einer Schlange; zu viele und dem Server geht der Speicher aus.",
+        "startServers": "So viele Worker starten, wenn PHP neu startet. Leer lassen für automatisch.",
+        "minSpare": "Sind weniger Worker frei, werden weitere gestartet.",
+        "maxSpare": "Sind mehr Worker frei, werden einige beendet.",
+        "spawnRate": "Wie schnell neue Worker bei steigendem Traffic starten dürfen. Leer lassen für den PHP-Standard.",
+        "idleTimeout": "Ein Worker ohne Anfrage wird nach dieser Zeit beendet. Leer lassen für 30 Sekunden."
       },
       "pmTypes": {
         "ondemand": "Auf Anforderung",
@@ -5410,7 +5425,8 @@
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} unterstützt PHP {range}. Diese Anwendung auf eine andere Version zu bringen macht sie wahrscheinlich kaputt.",
       "presetsLabelHint": "Fertige Einstellungen, zugeschnitten auf kleine, mittlere und große Seiten. Ein Ausgangspunkt — Sie können danach jeden Wert weiterhin ändern.",
-      "fixErrors": "Einige Einstellungen müssen korrigiert werden. Der betroffene Tab ist markiert."
+      "fixErrors": "Einige Einstellungen müssen korrigiert werden. Der betroffene Tab ist markiert.",
+      "autoValue": "Auto · {value}"
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5996,6 +6012,67 @@
       "staticFiles": "Statische Dateien",
       "runtimeDetail": "Version und Limits ändern",
       "staticDetail": "Werden unverändert ausgeliefert, nichts läuft"
+    },
+    "update": {
+      "title": "{app}-Version",
+      "state": {
+        "running": "Wird aktualisiert…",
+        "failed": "Letztes Update fehlgeschlagen",
+        "available": "Update verfügbar",
+        "up_to_date": "Aktuell",
+        "lookup_failed": "Prüfung nicht möglich",
+        "version_unknown": "Version unbekannt",
+        "not_active": "Läuft nicht"
+      },
+      "checkAgain": "Erneut prüfen",
+      "updateTo": "Auf {version} aktualisieren",
+      "update": "Aktualisieren",
+      "history": {
+        "open": "Verlauf",
+        "title": "{app}-Updates",
+        "description": "Die letzten 10 Updates dieser Anwendung.",
+        "by": "von {user}"
+      },
+      "blocked": {
+        "noPermission": "Sie dürfen diese Anwendung nicht aktualisieren.",
+        "not_active": "Nur eine aktive, nicht pausierte Anwendung kann aktualisiert werden.",
+        "version_unknown": "Die installierte Version ließ sich nicht aus den Dateien der Anwendung lesen.",
+        "lookup_failed": "Die verfügbaren Versionen konnten nicht geprüft werden. Versuchen Sie es erneut.",
+        "up_to_date": "Das ist bereits die neueste Version dieser Versionslinie.",
+        "running": "Ein Update läuft bereits.",
+        "unsupported": "Dieser Anwendungstyp lässt sich nicht über das Panel aktualisieren."
+      },
+      "installed": "Installiert",
+      "available": "Verfügbar",
+      "lastUpdate": "Letztes Update",
+      "unknown": "Unbekannt",
+      "notChecked": "Prüfung nicht möglich",
+      "last": {
+        "completed": "Auf {version} aktualisiert {when}",
+        "failed": "Update auf {version} fehlgeschlagen {when}",
+        "never": "Nie über das Panel aktualisiert"
+      },
+      "runningNote": "Aktualisierung auf {version}, gestartet {when}. Die Anwendung ist eventuell kurz nicht erreichbar. Sie können diese Seite verlassen.",
+      "copyReference": "Referenz kopieren",
+      "reference": "Referenz: {reference}",
+      "newerMajor": "{version} ist eine neue Hauptversion. Sie wird nicht von hier installiert, weil der Wechsel auf eine neue Hauptversion Änderungen an der Anwendung erfordern kann.",
+      "confirm": {
+        "title": "{app} von {from} auf {to} aktualisieren?",
+        "description": "Der Code der Anwendung wird durch die neue Version ersetzt; Einstellungen und Daten bleiben erhalten. Das kann einige Minuten dauern.",
+        "cancel": "Abbrechen",
+        "confirm": "Jetzt aktualisieren",
+        "backupFresh": "Letztes Backup: {when}.",
+        "backupOld": "Das letzte Backup ist von {when}. Schlägt das Update fehl, können Sie dieses wiederherstellen.",
+        "backupNone": "Diese Anwendung hat kein Backup. Schlägt das Update fehl, gibt es nichts wiederherzustellen.",
+        "backUpFirst": "Zuerst sichern"
+      },
+      "toast": {
+        "started": "{app} wird auf {version} aktualisiert…",
+        "completed": "{app} auf {version} aktualisiert.",
+        "failed": "Das {app}-Update ist fehlgeschlagen.",
+        "startFailed": "Das Update konnte nicht gestartet werden.",
+        "checkFailed": "Die Versionen konnten nicht geprüft werden."
+      }
     }
   },
   "panelUpdate": {
@@ -6306,7 +6383,17 @@
         "bucket": "meine-backups",
         "region": "eu-west-1",
         "host": "backup.beispiel.de",
-        "root": "backups/"
+        "root": "backups/",
+        "access_key": "Access-Key-ID einfügen",
+        "secret_key": "Secret Access Key einfügen",
+        "username": "backup",
+        "password": "Passwort einfügen",
+        "client_id": "Client-ID einfügen",
+        "client_secret": "Client-Secret einfügen",
+        "service_account_json": "'{' \"type\": \"service_account\", … '}'",
+        "folder_id": "Zum Beispiel 1AbCdEfGhIjKlMnOp",
+        "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
+        "passphrase": "Nur falls der Schlüssel eine hat"
       }
     },
     "connect": {
@@ -6348,11 +6435,12 @@
       "replacedButFailed": "Schlüssel ersetzt, aber der Verbindungstest ist fehlgeschlagen.",
       "onlyWhatYouChange": "Nur ausfüllen, was Sie ändern. Leer gelassene Felder behalten ihren aktuellen Wert.",
       "failed": "Die neuen Schlüssel konnten nicht gespeichert werden.",
-      "replacedNotTested": "Schlüssel ersetzt, aber der Verbindungstest wurde nicht ausgeführt. Klicken Sie auf Testen, um es erneut zu versuchen."
+      "replacedNotTested": "Schlüssel ersetzt, aber der Verbindungstest wurde nicht ausgeführt. Klicken Sie auf Testen, um es erneut zu versuchen.",
+      "keepCurrent": "Leer lassen, um den aktuellen Wert zu behalten"
     },
     "delete": {
-      "title": "Dieses Ziel löschen?",
-      "description": "{name} wird aus dem Panel entfernt.",
+      "titleNamed": "{name} löschen?",
+      "description": "Es wird aus dem Panel entfernt. Im Speicher selbst wird nichts gelöscht.",
       "warning": "Ein Ziel lässt sich nur löschen, wenn keine Anwendung mehr dorthin sichert und keine Backups mehr darin liegen.",
       "cancel": "Abbrechen",
       "confirm": "Ziel löschen",
@@ -7089,6 +7177,12 @@
       "rotationFailed": "Log-Rotation für {username}.",
       "failed": "Der Umzug konnte nicht abgeschlossen werden.",
       "noPermission": "Ihre Rolle umfasst Server-Sync nicht mit Verwaltungszugriff."
+    },
+    "outcomeHints": {
+      "found": "Kann zum Panel hinzugefügt werden",
+      "adopted": "Jetzt im Panel",
+      "skipped": "Absichtlich nicht übernommen",
+      "failed": "Konnte nicht hinzugefügt werden – siehe Details"
     }
   },
   "central": {

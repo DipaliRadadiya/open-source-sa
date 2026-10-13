@@ -86,6 +86,12 @@ export const applicationPhpSchema = z
         pm_type: z.string().default("ondemand"),
         pm_max_children: z.number().default(5),
         pm_max_requests: z.number().default(500),
+        // Null = derived from pm_max_children (start c/2, min c/4, max 3c/4), idle 30 s, no spawn rate.
+        pm_start_servers: z.number().nullish(),
+        pm_min_spare_servers: z.number().nullish(),
+        pm_max_spare_servers: z.number().nullish(),
+        pm_process_idle_timeout: z.number().nullish(),
+        pm_max_spawn_rate: z.number().nullish(),
         open_basedir_enabled: z.boolean().default(false),
         // Only the user-added paths; the backend always prepends app root,
         // this site's sessions and /tmp.
@@ -145,6 +151,14 @@ export const applicationPhpSchema = z
 
 export const applicationPhpResponseSchema = z.object({ php: applicationPhpSchema });
 
+// "" and null mean "automatic"; anything else must be a whole number in range.
+function optionalCount(max, message) {
+  return z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? null : value),
+    z.coerce.number().int("integer").min(1, message).max(max, message).nullable(),
+  );
+}
+
 /** Mirrors `SavePhpSettingsRequest`'s bounds so values are refused before a 422. */
 export const phpSettingsFormSchema = z.object({
   php_version: z.string().min(1, "requiredField"),
@@ -158,6 +172,12 @@ export const phpSettingsFormSchema = z.object({
   pm_type: z.enum(PM_TYPES),
   pm_max_children: z.coerce.number().int("integer").min(1, "rangeWorkers").max(MAX_CHILDREN, "rangeWorkers"),
   pm_max_requests: z.coerce.number().int("integer").min(0, "rangeMaxRequests").max(100000, "rangeMaxRequests"),
+  // Empty = automatic (sent as null).
+  pm_start_servers: optionalCount(MAX_CHILDREN, "rangeWorkers"),
+  pm_min_spare_servers: optionalCount(MAX_CHILDREN, "rangeWorkers"),
+  pm_max_spare_servers: optionalCount(MAX_CHILDREN, "rangeWorkers"),
+  pm_process_idle_timeout: optionalCount(86400, "rangeIdleTimeout"),
+  pm_max_spawn_rate: optionalCount(1024, "rangeSpawnRate"),
   open_basedir_enabled: z.boolean().default(false),
   // Backend rules: absolute only, never bare `/` (would allow everything), and no `..`.
   open_basedir_paths: z
@@ -207,7 +227,8 @@ export const phpSettingsFormSchema = z.object({
     .max(4000, "max4000")
     .refine((value) => !/^\s*\[/m.test(value), "noSections")
     // Same line grammar as App\Services\Server\Php\AdditionalDirectives: `name = value` or
-    // `php_[admin_]value|flag[name] = value`. The server refuses settings with their own field.
+    // `php_[admin_]value|flag[name] = value`, or a pool line such as `env[NAME] = value`.
+    // The server refuses settings with their own field and pool lines it does not allow.
     .refine(
       (value) =>
         value
@@ -217,7 +238,7 @@ export const phpSettingsFormSchema = z.object({
             (line) =>
               line === "" ||
               /^[;#]/.test(line) ||
-              /^(php_(admin_)?(value|flag)\[[A-Za-z_][A-Za-z0-9_.]*\]|[A-Za-z_][A-Za-z0-9_.]*)\s*=/.test(line),
+              /^(php_(admin_)?(value|flag)\[[A-Za-z_][A-Za-z0-9_.]*\]|env\[[A-Za-z_][A-Za-z0-9_]*\]|[A-Za-z_][A-Za-z0-9_.]*)\s*=/.test(line),
           ),
       "directivesPhpOnly",
     )
@@ -240,5 +261,30 @@ export function phpSettingsFormSchemaFor(totalMemoryBytes = 0, applicationPath =
     if (phpSizeToBytes(values.post_max_size) < phpSizeToBytes(values.upload_max_filesize)) {
       ctx.addIssue({ code: "custom", path: ["post_max_size"], message: "postBelowUpload" });
     }
+    if (!spareServersAgree(values)) {
+      ctx.addIssue({ code: "custom", path: ["pm_start_servers"], message: "pmSpareOrder" });
+    }
   });
+}
+
+/**
+ * php-fpm refuses to start a dynamic pool unless min spare ≤ start ≤ max spare ≤ max children,
+ * and the backend takes all three or none (`SavePhpSettingsRequest::spareServersAgree`).
+ */
+export function spareServersAgree({ pm_start_servers: start, pm_min_spare_servers: min, pm_max_spare_servers: max, pm_max_children: children }) {
+  const set = [start, min, max].filter((value) => value !== null && value !== undefined && value !== "");
+  if (set.length === 0) return true;
+  if (set.length < 3) return false;
+  const [a, b, c, d] = [min, start, max, children].map(Number);
+  return a <= b && b <= c && c <= d;
+}
+
+/** What the pool uses when the three numbers are left empty (`PoolManager::spareServers`). */
+export function derivedSpareServers(children) {
+  const c = Math.max(1, Number(children) || 1);
+  return {
+    pm_start_servers: Math.max(1, Math.ceil(c / 2)),
+    pm_min_spare_servers: Math.max(1, Math.ceil(c / 4)),
+    pm_max_spare_servers: Math.max(2, Math.ceil((c * 3) / 4)),
+  };
 }

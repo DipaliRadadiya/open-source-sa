@@ -4,7 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ExternalLink, Info, KeyRound, Loader2, TriangleAlert } from "lucide-react";
+import { ExternalLink, KeyRound, Loader2 } from "lucide-react";
+import { Caution } from "@/components/ui/caution";
 import { connectFormSchema } from "@/lib/schemas/git";
 import { connectAccount } from "@/lib/api/git";
 import { createTokenUrl } from "@/lib/git/provider-links";
@@ -71,18 +72,18 @@ function ScopeHint({ provider, fallback }) {
         option: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
       })}
     </FormDescription>
+    {/* The panel's standard warning box, a little apart from the hint above it. */}
     {t.has(noteKey) ? (
-      <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-2.5 text-xs leading-5 text-muted-foreground">
-        <Info className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden />
-        <p>
+      <Caution size="md" className="mt-3">
+        <p className="leading-relaxed">
           {t.rich(noteKey, {
             scope: (chunks) => (
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-foreground">{chunks}</code>
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{chunks}</code>
             ),
-            strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+            strong: (chunks) => <span className="font-medium">{chunks}</span>,
           })}
         </p>
-      </div>
+      </Caution>
     ) : null}
     </>
   );
@@ -209,10 +210,9 @@ export function ConnectForm({
         </div>
 
         {failure ? (
-          <div className="flex gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <p className="text-xs leading-relaxed">{failure}</p>
-          </div>
+          <Caution tone="destructive" size="md">
+            <p className="leading-relaxed">{failure}</p>
+          </Caution>
         ) : null}
 
         {/* Local field: the label identifies the account across the panel. */}
@@ -313,7 +313,7 @@ function TokenHelp({ fallback, value, provider }) {
   const pastedUrl = LOOKS_LIKE_URL.test(value ?? "");
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {pastedUrl ? <p className="text-xs text-warning">{t("looksLikeUrl")}</p> : null}
       <ScopeHint provider={provider} fallback={fallback} />
     </div>

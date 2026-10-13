@@ -25,14 +25,14 @@ import {
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { budgetWith, phpSettingsFormSchemaFor, phpSizeToBytes } from "@/lib/schemas/php-settings";
+import { budgetWith, derivedSpareServers, MAX_CHILDREN, phpSettingsFormSchemaFor, phpSizeToBytes } from "@/lib/schemas/php-settings";
 import {
   isolateApplicationPhp,
   resetApplicationPhpFields,
   updateApplicationPhp,
 } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
-import { rangeLabel, versionWithin } from "@/lib/runtime/version-range";
+import { compareVersions, rangeLabel, versionWithin } from "@/lib/runtime/version-range";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Badge } from "@/components/ui/badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
@@ -100,6 +100,11 @@ const TAB_FIELDS = {
   advanced: [
     "pm_type",
     "pm_max_requests",
+    "pm_start_servers",
+    "pm_min_spare_servers",
+    "pm_max_spare_servers",
+    "pm_max_spawn_rate",
+    "pm_process_idle_timeout",
     "max_input_time",
     "session_gc_maxlifetime",
     "php_timezone",
@@ -358,6 +363,12 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     pm_type: settings.pm_type,
     pm_max_children: settings.pm_max_children,
     pm_max_requests: settings.pm_max_requests,
+    // Empty = automatic; the placeholder shows what that works out to.
+    pm_start_servers: settings.pm_start_servers ?? "",
+    pm_min_spare_servers: settings.pm_min_spare_servers ?? "",
+    pm_max_spare_servers: settings.pm_max_spare_servers ?? "",
+    pm_process_idle_timeout: settings.pm_process_idle_timeout ?? "",
+    pm_max_spawn_rate: settings.pm_max_spawn_rate ?? "",
     open_basedir_enabled: settings.open_basedir_enabled,
     open_basedir_paths: settings.open_basedir_paths ?? "",
     disable_functions: settings.disable_functions ?? "",
@@ -393,6 +404,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     name: "max_execution_time",
   });
   const pmType = useWatch({ control: form.control, name: "pm_type" });
+  const derived = derivedSpareServers(maxChildren);
 
   const budget = budgetWith(php.memory, memoryLimit, maxChildren);
 
@@ -730,6 +742,73 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   min={0}
                   max={100000}
                 />
+
+                {/* Only the numbers the chosen mode reads. Shown on an error too, so a
+                    lowered worker count that breaks saved numbers is visible. */}
+                {pmType === "dynamic" || errors.pm_start_servers ? (
+                  <>
+                    <NumberField
+                      form={form}
+                      name="pm_start_servers"
+                      placeholder={t("autoValue", { value: derived.pm_start_servers })}
+                      label={t("fields.startServers")}
+                      directive="pm.start_servers"
+                      explain={t("hints.startServers")}
+                      disabled={locked}
+                      min={1}
+                      max={MAX_CHILDREN}
+                    />
+                    <NumberField
+                      form={form}
+                      name="pm_min_spare_servers"
+                      placeholder={t("autoValue", { value: derived.pm_min_spare_servers })}
+                      label={t("fields.minSpare")}
+                      directive="pm.min_spare_servers"
+                      explain={t("hints.minSpare")}
+                      disabled={locked}
+                      min={1}
+                      max={MAX_CHILDREN}
+                    />
+                    <NumberField
+                      form={form}
+                      name="pm_max_spare_servers"
+                      placeholder={t("autoValue", { value: derived.pm_max_spare_servers })}
+                      label={t("fields.maxSpare")}
+                      directive="pm.max_spare_servers"
+                      explain={t("hints.maxSpare")}
+                      disabled={locked}
+                      min={1}
+                      max={MAX_CHILDREN}
+                    />
+                    {/* php-fpm before 8.1 refuses the key, so the backend leaves it out there. */}
+                    {version && compareVersions(version, "8.1") >= 0 ? (
+                      <NumberField
+                        form={form}
+                        name="pm_max_spawn_rate"
+                        placeholder={t("autoValue", { value: 32 })}
+                        label={t("fields.spawnRate")}
+                        directive="pm.max_spawn_rate"
+                        explain={t("hints.spawnRate")}
+                        disabled={locked}
+                        min={1}
+                        max={1024}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+                {pmType === "ondemand" ? (
+                  <NumberField
+                    form={form}
+                    name="pm_process_idle_timeout"
+                    placeholder={t("autoValue", { value: 30 })}
+                    label={t("fields.idleTimeout")}
+                    directive="pm.process_idle_timeout"
+                    explain={t("hints.idleTimeout")}
+                    disabled={locked}
+                    min={1}
+                    max={86400}
+                  />
+                ) : null}
                 <NumberField
                   form={form}
                   name="max_input_time"
@@ -812,7 +891,8 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                     <Label
                       label={t("fields.directives")}
                       name="additional_directives"
-                      explain={t("hints.directives")}
+                      // Per-site FPM pools also take pool lines (env[], timeouts); OpenLiteSpeed has none.
+                      explain={t(php.isolation_supported ? "hints.directivesPool" : "hints.directives")}
                     />
                     <FormControl>
                       <Textarea

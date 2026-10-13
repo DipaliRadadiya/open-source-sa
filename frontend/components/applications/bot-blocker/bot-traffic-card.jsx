@@ -15,7 +15,8 @@ export const TRAFFIC_RANGES = [7, 30, 90];
 export const DEFAULT_RANGE = 7;
 
 // The list is small and pre-sorted, so a plain Table rather than DataTable.
-const CATEGORY_LABELS = new Set(["training", "search", "agent", "custom"]);
+// `legacy`: a name from v7's list on a legacy_v7 site that the owner did not add.
+const CATEGORY_LABELS = new Set(["training", "search", "agent", "custom", "legacy"]);
 
 // Which AI bots visited and what the current settings do to each.
 export async function BotTrafficCard({ appId, traffic, failed, days }) {

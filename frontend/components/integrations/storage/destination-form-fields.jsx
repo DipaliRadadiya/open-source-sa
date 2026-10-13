@@ -13,6 +13,7 @@ import {
   warningFor,
 } from "@/lib/storage/providers";
 import { Input } from "@/components/ui/input";
+import { Caution } from "@/components/ui/caution";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,10 +126,9 @@ export function DestinationFormFields({
             </p>
             {/* Stored keys are relative to the folder, so changing it strands every archive. */}
             {existing ? (
-              <p className="flex items-start gap-1.5 text-xs text-warning">
-                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                {t("prefixChangeWarning")}
-              </p>
+              <Caution size="md" className="mt-1">
+                <p className="leading-relaxed">{t("prefixChangeWarning")}</p>
+              </Caution>
             ) : null}
             <FormMessage />
           </FormItem>
@@ -198,6 +198,7 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
                 <PasswordInput
                   autoComplete="off"
                   spellCheck={false}
+                  placeholder={hint}
                   disabled={disabled}
                   className={mono ? "font-mono" : undefined}
                   {...field}

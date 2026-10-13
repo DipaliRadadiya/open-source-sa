@@ -64,8 +64,9 @@ export function AccountRow({
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <div className="flex items-start justify-between gap-3 py-3.5">
-        <div className="flex min-w-0 gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 py-3.5">
+        {/* min-w-64 + flex-1: the account keeps its width and the buttons wrap below it on a phone. */}
+        <div className="flex min-w-64 flex-1 gap-3">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
             <ProviderLogo provider={account.provider} />
           </span>
@@ -92,31 +93,8 @@ export function AccountRow({
   
             <AccountHealth status={status} loading={loading} />
   
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!canManage || testing}
-                aria-busy={testing}
-                onClick={onTest}
-              >
-                <RefreshCw className={`size-3.5 ${testing ? "animate-spin" : ""}`} />
-                {testing ? t("actions.checking") : t("actions.check")}
-              </Button>
-  
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!canManage || testingRepos}
-                aria-busy={testingRepos}
-                onClick={testRepositories}
-              >
-                {testingRepos ? <RefreshCw className="size-3.5 animate-spin" /> : <FolderGit2 className="size-3.5" />}
-                {testingRepos
-                  ? t("repositoryAccess.checking")
-                  : t("repositoryAccess.action")}
-              </Button>
-  
+            {/* The check results stay under the account; the buttons sit on the right. */}
+            <div className="flex flex-wrap items-center gap-2 empty:hidden">
               {repositoryAccess === "available" ? (
                 <p
                   role="status"
@@ -155,51 +133,79 @@ export function AccountRow({
                 </p>
               ) : null}
   
-              {/* A broken token gets its fix inline, not hidden in the menu. */}
-              {broken && canManage ? (
-                <Button variant="outline" size="sm" onClick={onReplace}>
-                  <KeyRound className="size-3.5" />
-                  {t("actions.replace")}
-                </Button>
-              ) : null}
             </div>
           </div>
         </div>
   
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0"
-              disabled={!canManage}
-            >
-              <MoreHorizontal className="size-4" />
-              <span className="sr-only">{t("actions.menu")}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuItem onClick={onEdit}>
-              <Pencil className="size-4" />
-              {t("actions.edit")}
-            </DropdownMenuItem>
-            {/* Separate from Edit: replacing a token is a verified round-trip. */}
-            <DropdownMenuItem onClick={onReplace}>
-              <KeyRound className="size-4" />
+        {/* Checks on the right, next to the menu (Krishna, 13 Oct); below the account on a phone. */}
+        <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:ps-11 sm:ms-auto sm:justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canManage || testing}
+            aria-busy={testing}
+            onClick={onTest}
+          >
+            <RefreshCw className={`size-3.5 ${testing ? "animate-spin" : ""}`} />
+            {testing ? t("actions.checking") : t("actions.check")}
+          </Button>
+  
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canManage || testingRepos}
+            aria-busy={testingRepos}
+            onClick={testRepositories}
+          >
+            {testingRepos ? <RefreshCw className="size-3.5 animate-spin" /> : <FolderGit2 className="size-3.5" />}
+            {testingRepos
+              ? t("repositoryAccess.checking")
+              : t("repositoryAccess.action")}
+          </Button>
+  
+          {/* A broken token gets its fix inline, not hidden in the menu. */}
+          {broken && canManage ? (
+            <Button variant="outline" size="sm" onClick={onReplace}>
+              <KeyRound className="size-3.5" />
               {t("actions.replace")}
-            </DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onClick={onDisconnect}>
-              <Trash2 className="size-4" />
-              {t("actions.disconnect")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </Button>
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                disabled={!canManage}
+              >
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">{t("actions.menu")}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="size-4" />
+                {t("actions.edit")}
+              </DropdownMenuItem>
+              {/* Separate from Edit: replacing a token is a verified round-trip. */}
+              <DropdownMenuItem onClick={onReplace}>
+                <KeyRound className="size-4" />
+                {t("actions.replace")}
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={onDisconnect}>
+                <Trash2 className="size-4" />
+                {t("actions.disconnect")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </DisabledReasonProvider>
   );
 }
 
-/** Scopes and when the account was last checked, kept off the row. */
+/** Scopes and when the account was last checked, kept off the row. Colours are
+ * for the dark tooltip skin; card tokens like `bg-muted` vanish on it. */
 function AccountDetails({ account }) {
   const t = useTranslations("git.details");
   const scopes = account.scopes ?? [];
@@ -209,19 +215,19 @@ function AccountDetails({ account }) {
       <div className="space-y-2 text-xs">
         <Fact label={t("scopes")}>
           {account.provider === "github" && scopes.length === 0 ? (
-            <span className="text-muted-foreground">
+            <span className="text-background/70">
               {t("noScopesFineGrained")}
             </span>
           ) : scopes.length ? (
             <span className="flex flex-wrap gap-1">
               {scopes.map((scope) => (
-                <code key={scope} className="rounded bg-muted px-1 py-0.5 font-mono">
+                <code key={scope} className="rounded bg-background/15 px-1.5 py-0.5 font-mono text-background">
                   {scope}
                 </code>
               ))}
             </span>
           ) : (
-            <span className="text-muted-foreground">{t("noScopes")}</span>
+            <span className="text-background/70">{t("noScopes")}</span>
           )}
         </Fact>
         {account.workspace ? (
@@ -241,7 +247,7 @@ function AccountDetails({ account }) {
 function Fact({ label, children }) {
   return (
     <div className="space-y-0.5">
-      <p className="text-muted-foreground">{label}</p>
+      <p className="text-background/60">{label}</p>
       <div>{children}</div>
     </div>
   );

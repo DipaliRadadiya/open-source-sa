@@ -20,7 +20,7 @@ export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost">
+        <Button variant="outline">
           <EyeOff className="size-4" aria-hidden />
           {t("ignored.trigger", { count: ignores.length })}
         </Button>

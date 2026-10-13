@@ -13,6 +13,7 @@ import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
+import { Note } from "@/components/ui/note";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
@@ -112,11 +113,14 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
             <GoogleDriveConnect destination={destination} />
           </>
         ) : null}
-        <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
-        {/* Explains why there is no provider control. */}
-        <p className="text-xs text-muted-foreground">
-          {t("providerLocked", { provider: destination?.provider_title ?? provider })}
-        </p>
+        {/* What this form leaves alone, in one note instead of two lines of grey print.
+            The provider line explains why there is no provider control. */}
+        <Note>
+          <ul className="list-disc space-y-1 ps-4">
+            <li>{t("credentialsUntouched")}</li>
+            <li>{t("providerLocked", { provider: destination?.provider_title ?? provider })}</li>
+          </ul>
+        </Note>
       </FormModal>
     </Form>
   );

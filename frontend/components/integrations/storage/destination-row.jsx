@@ -162,21 +162,12 @@ export function DestinationRow({
                         ? t("row.testPassedIn", { ms: result.latency })
                         : t("row.testPassed")
                       : result.message}
+                    {/* Wrong keys are the common cause, so the fix is a link at the end of the line. */}
+                    {!result.ok && !result.notRun && canManage ? (
+                      <ReplaceLink onClick={onReplace} />
+                    ) : null}
                   </span>
                 </p>
-                {/* Wrong keys are the common cause, so the fix is offered inline. */}
-                {!result.ok && !result.notRun && canManage ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7"
-                    onClick={onReplace}
-                  >
-                    <KeyRound className="size-3" />
-                    {t("row.replace")}
-                  </Button>
-                ) : null}
               </div>
             ) : (
               <StoredVerdict destination={destination} canManage={canManage} onReplace={onReplace} />
@@ -263,18 +254,32 @@ function StoredVerdict({ destination, canManage, onReplace }) {
   }
 
   return (
-    <div className="space-y-1.5 pt-0.5">
-      <p className="flex items-start gap-1.5 text-xs text-destructive">
-        <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-        {/* Branches on the stable category, never on a message (provider text is not translatable). */}
-        <span>{t(`row.${FAILURE_KEYS[destination.last_test_error] ?? "failed"}`, { when: when ?? "" })}</span>
-      </p>
-      {destination.last_test_error === "invalid_credentials" && canManage ? (
-        <Button type="button" variant="outline" size="sm" className="h-7" onClick={onReplace}>
-          <KeyRound className="size-3" />
-          {t("row.replace")}
-        </Button>
-      ) : null}
-    </div>
+    <p className="flex items-start gap-1.5 pt-0.5 text-xs text-destructive">
+      <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+      {/* Branches on the stable category, never on a message (provider text is not translatable). */}
+      <span>
+        {t(`row.${FAILURE_KEYS[destination.last_test_error] ?? "failed"}`, { when: when ?? "" })}
+        {destination.last_test_error === "invalid_credentials" && canManage ? (
+          <ReplaceLink onClick={onReplace} />
+        ) : null}
+      </span>
+    </p>
+  );
+}
+
+// Inline after the failure text, so the fix reads as part of the sentence.
+function ReplaceLink({ onClick }) {
+  const t = useTranslations("storage");
+  return (
+    <>
+      {" "}
+      <button
+        type="button"
+        onClick={onClick}
+        className="ms-1 rounded-sm font-medium whitespace-nowrap text-primary underline underline-offset-2 hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        {t("row.replace")}
+      </button>
+    </>
   );
 }

@@ -884,14 +884,17 @@
     "passwordSameAsCurrent": "Choose a password different from your current one.",
     "cronNameReserved": "That name is taken by a file the server or the panel already uses. Choose another.",
     "cronRootRefused": "Jobs can't run as root. Choose a system user.",
-    "directivesPhpOnly": "Only PHP settings, one per line, like display_errors = Off.",
+    "directivesPhpOnly": "Only PHP settings and allowed pool lines, one per line, like display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory and the log files are set by the panel. Change them in the fields above, not here.",
     "insideApplication": "Use a path inside this application's folder.",
     "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
     "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or ..",
     "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log.",
     "cronReboot": "@reboot isn't supported here. Use a schedule, for example @daily or */5 * * * *.",
-    "hostForbidden": "Enter the backup server’s own address. Local addresses like localhost or 127.0.0.1 are not allowed."
+    "hostForbidden": "Enter the backup server’s own address. Local addresses like localhost or 127.0.0.1 are not allowed.",
+    "rangeIdleTimeout": "Enter 1 to 86400 seconds, or leave it empty.",
+    "rangeSpawnRate": "Enter 1 to 1024, or leave it empty.",
+    "pmSpareOrder": "Fill in all three worker numbers or none, so that fewest idle ≤ started ≤ most idle ≤ PHP workers."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4976,7 +4979,8 @@
           "training": "Training",
           "search": "AI search",
           "agent": "AI assistant",
-          "custom": "Your own rule"
+          "custom": "Your own rule",
+          "legacy": "v7 list"
         },
         "blockedHits": "{count, plural, other {# blocked}}"
       },
@@ -5283,7 +5287,12 @@
         "timezonePlaceholder": "Use the server's",
         "autoPrepend": "File to run before every page",
         "directives": "Extra directives",
-        "directivesPlaceholder": "display_errors = Off"
+        "directivesPlaceholder": "display_errors = Off",
+        "startServers": "Workers started with the pool",
+        "minSpare": "Fewest idle workers",
+        "maxSpare": "Most idle workers",
+        "spawnRate": "New workers per second, at most",
+        "idleTimeout": "Stop an idle worker after (seconds)"
       },
       "hints": {
         "postTooSmall": "This is smaller than the upload limit, so uploads that size will still fail.",
@@ -5295,6 +5304,7 @@
         "timezone": "Only affects dates PHP produces, not the server clock.",
         "autoPrepend": "A path inside this application. Leave empty unless you were told otherwise.",
         "directives": "One PHP setting per line, like display_errors = Off. Settings with a field on this screen, and extensions, can't be set here.",
+        "directivesPool": "One setting per line, like display_errors = Off. Pool lines such as env[APP_ENV] = production and request_terminate_timeout = 300 are allowed too. Settings with a field on this screen, and extensions, can't be set here.",
         "openBasedir": "Stops PHP reading or writing files outside this application's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
         "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. An application set up earlier picks this up the first time you save.",
@@ -5303,7 +5313,12 @@
         "executionTime": "How many seconds PHP will let a page run before stopping it. Raise it for imports and backups; leave it low for ordinary pages.",
         "inputVars": "How many separate boxes one form may submit. Large settings pages and page builders can go past the default.",
         "disableFunctions": "PHP commands this application is not allowed to run. The defaults block the ones most often used in attacks — remove one only if the application genuinely needs it.",
-        "children": "How many requests this application can answer at the same time. Too few and visitors wait in a queue; too many and the server runs out of memory."
+        "children": "How many requests this application can answer at the same time. Too few and visitors wait in a queue; too many and the server runs out of memory.",
+        "startServers": "How many workers start when PHP restarts. Leave empty for automatic.",
+        "minSpare": "When fewer workers than this are idle, more are started.",
+        "maxSpare": "When more workers than this are idle, some are stopped.",
+        "spawnRate": "How fast new workers may start when traffic jumps. Leave empty for PHP's default.",
+        "idleTimeout": "A worker with no request for this long is stopped. Leave empty for 30 seconds."
       },
       "pmTypes": {
         "ondemand": "On demand",
@@ -5410,7 +5425,8 @@
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} supports PHP {range}. Moving this application to another version is likely to break it.",
       "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards.",
-      "fixErrors": "Some settings need fixing. The tab with the problem is marked."
+      "fixErrors": "Some settings need fixing. The tab with the problem is marked.",
+      "autoValue": "Auto · {value}"
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5996,6 +6012,67 @@
       "staticFiles": "Static files",
       "runtimeDetail": "Change the version and limits",
       "staticDetail": "Served as they are, nothing to run"
+    },
+    "update": {
+      "title": "{app} version",
+      "state": {
+        "running": "Updating…",
+        "failed": "Last update failed",
+        "available": "Update available",
+        "up_to_date": "Up to date",
+        "lookup_failed": "Couldn't check",
+        "version_unknown": "Version unknown",
+        "not_active": "Not running"
+      },
+      "checkAgain": "Check again",
+      "updateTo": "Update to {version}",
+      "update": "Update",
+      "history": {
+        "open": "History",
+        "title": "{app} updates",
+        "description": "The last 10 updates of this application.",
+        "by": "by {user}"
+      },
+      "blocked": {
+        "noPermission": "You don't have permission to update this application.",
+        "not_active": "Only an active application that isn't paused can be updated.",
+        "version_unknown": "The installed version couldn't be read from the application's files.",
+        "lookup_failed": "The available versions couldn't be checked. Try again.",
+        "up_to_date": "This is already the newest release in this version line.",
+        "running": "An update is already running.",
+        "unsupported": "This application type can't be updated from the panel."
+      },
+      "installed": "Installed",
+      "available": "Available",
+      "lastUpdate": "Last update",
+      "unknown": "Unknown",
+      "notChecked": "Couldn't check",
+      "last": {
+        "completed": "Updated to {version} {when}",
+        "failed": "Update to {version} failed {when}",
+        "never": "Never updated from the panel"
+      },
+      "runningNote": "Updating to {version}, started {when}. The application may be unavailable for a moment. You can leave this page.",
+      "copyReference": "Copy reference",
+      "reference": "Reference: {reference}",
+      "newerMajor": "{version} is a new major version. It isn't installed from here, because moving to a new major version can need changes to the application.",
+      "confirm": {
+        "title": "Update {app} {from} → {to}?",
+        "description": "The application's code is replaced with the new release; its settings and data are kept. This can take a few minutes.",
+        "cancel": "Cancel",
+        "confirm": "Update now",
+        "backupFresh": "Last backup: {when}.",
+        "backupOld": "The last backup is from {when}. If the update fails, that is what you can restore.",
+        "backupNone": "This application has no backup. If the update fails, there is nothing to restore.",
+        "backUpFirst": "Back up first"
+      },
+      "toast": {
+        "started": "Updating {app} to {version}…",
+        "completed": "{app} updated to {version}.",
+        "failed": "The {app} update failed.",
+        "startFailed": "The update couldn't be started.",
+        "checkFailed": "The versions couldn't be checked."
+      }
     }
   },
   "panelUpdate": {
@@ -6306,7 +6383,17 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.example.com",
-        "root": "backups/"
+        "root": "backups/",
+        "access_key": "Paste the access key ID",
+        "secret_key": "Paste the secret access key",
+        "username": "backup",
+        "password": "Paste the password",
+        "client_id": "Paste the client ID",
+        "client_secret": "Paste the client secret",
+        "service_account_json": "'{' \"type\": \"service_account\", … '}'",
+        "folder_id": "For example 1AbCdEfGhIjKlMnOp",
+        "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
+        "passphrase": "Only if the key has one"
       }
     },
     "connect": {
@@ -6348,11 +6435,12 @@
       "replacedButFailed": "Keys replaced, but the connection test failed.",
       "onlyWhatYouChange": "Fill in only what you are changing. Anything left empty keeps its current value.",
       "failed": "The new keys could not be saved.",
-      "replacedNotTested": "Keys replaced, but the connection test did not run. Press Test to try again."
+      "replacedNotTested": "Keys replaced, but the connection test did not run. Press Test to try again.",
+      "keepCurrent": "Leave empty to keep the current value"
     },
     "delete": {
-      "title": "Delete this destination?",
-      "description": "{name} will be removed from the panel.",
+      "titleNamed": "Delete {name}?",
+      "description": "It is removed from the panel. Nothing is deleted from the storage itself.",
       "warning": "A destination can only be deleted when no application backs up to it and no backups are stored in it any more.",
       "cancel": "Cancel",
       "confirm": "Delete destination",
@@ -7089,6 +7177,12 @@
       "rotationFailed": "Log rotation for {username}.",
       "failed": "The move couldn't be finished.",
       "noPermission": "Your role does not include Server Sync with Manage access."
+    },
+    "outcomeHints": {
+      "found": "Can be added to the panel",
+      "adopted": "Now in the panel",
+      "skipped": "Left alone on purpose",
+      "failed": "Couldn't be added — see details"
     }
   },
   "central": {

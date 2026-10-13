@@ -129,6 +129,8 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
                       className="font-mono text-xs"
                       autoComplete="off"
                       spellCheck={false}
+                      // Says what an empty box means here: the current value stays.
+                      placeholder={t("keepCurrent")}
                       disabled={submitting}
                       {...field}
                     />
@@ -136,6 +138,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
                     <PasswordInput
                       autoComplete="new-password"
                       spellCheck={false}
+                      placeholder={t("keepCurrent")}
                       disabled={submitting}
                       className={definition.mono ? "font-mono" : undefined}
                       {...field}
