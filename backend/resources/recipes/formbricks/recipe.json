@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "ghcr.io/formbricks/formbricks:5.4.5",
-            "tested": []
+            "tested": [
+                "ghcr.io/formbricks/formbricks:5.4.5"
+            ]
         },
         "db": {
             "ref": "pgvector/pgvector:0.8.7-pg18",
-            "tested": []
+            "tested": [
+                "pgvector/pgvector:0.8.7-pg18"
+            ]
         },
         "cache": {
             "ref": "valkey/valkey:8.1.10-alpine",
-            "tested": []
+            "tested": [
+                "valkey/valkey:8.1.10-alpine"
+            ]
         }
     },
     "services": [
@@ -97,6 +103,7 @@
         "EMAIL_VERIFICATION_DISABLED=1 and PASSWORD_RESET_DISABLED=1 because no SMTP server is configured: without them the owner could not confirm the address, and a reset link could never arrive. After you add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and MAIL_FROM in the panel's environment editor, you can remove both. Invitations and survey follow-up emails also need SMTP.",
         "File uploads (images in surveys, file-upload questions) need S3-compatible storage: Formbricks 5 has no local file storage, and its editor says File storage not set up until S3_BUCKET_NAME is set. Add S3_ACCESS_KEY, S3_SECRET_KEY, S3_REGION, S3_BUCKET_NAME and, for MinIO and other S3-compatible services, S3_ENDPOINT_URL and S3_FORCE_PATH_STYLE=1 in the panel's environment editor. Text, choice and rating questions work without it. The uploads volume stays because the image declares that folder as a volume (without it Docker would create an anonymous one on every recreate). TELEMETRY_DISABLED=1 switches off the anonymous usage report.",
         "The memory floor is 2g: Node in the image sizes its JavaScript heap from the container limit, and with 1g the heap stopped at about 560 MB while the idle server already held about 500 MB, so the first sign-in crashed it (heap out of memory, measured on Ubuntu 26.04). With 2g the heap limit is about 1.1 GB.",
-        "WEBAPP_URL, NEXTAUTH_URL and BETTER_AUTH_URL are the site's address and follow a domain change. Link surveys already shared keep the old address in their links."
+        "WEBAPP_URL, NEXTAUTH_URL and BETTER_AUTH_URL are the site's address and follow a domain change. Link surveys already shared keep the old address in their links.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-37): created from the 1-Click Recipes tab, Running in 32 to 33 s, the owner and organization created in the setup, a link survey answered by a logged-out visitor and shown in the summary, public sign-up answering 404, the 167 migrations applied once and a restart. Idle 565 to 724 MiB of 2g, peak 948 MiB; every image ref below is in its tested list."
     ]
 }

@@ -24,12 +24,14 @@ if [ -f "$root/app/config/parameters.php" ]; then
     fi
     if [ -f /ps-init/sync-domain.php ]; then
         # The database may still be starting (a restart restarts it too):
-        # wait for it, up to two minutes, with the password in the
-        # environment rather than on a command line. The script itself runs
+        # wait for it, up to about two minutes, with the password in the
+        # environment rather than on a command line. --connect-timeout keeps
+        # each try short: Docker's DNS fails for a stopped container and the
+        # client would otherwise retry for its 12-hour default. The script itself runs
         # with exception arguments and error display off, so a failure can
         # never print a connection string with the password into the log.
         n=0
-        until MYSQL_PWD="$DB_PASSWD" mysqladmin ping -h "$DB_SERVER" -P "$DB_PORT" -u "$DB_USER" --silent >/dev/null 2>&1 || [ "$n" -ge 60 ]; do
+        until MYSQL_PWD="$DB_PASSWD" mysqladmin --connect-timeout=2 ping -h "$DB_SERVER" -P "$DB_PORT" -u "$DB_USER" --silent >/dev/null 2>&1 || [ "$n" -ge 60 ]; do
             n=$((n + 1))
             sleep 2
         done

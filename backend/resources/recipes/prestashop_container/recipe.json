@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "prestashop/prestashop:9.2.0-apache",
-            "tested": []
+            "tested": [
+                "prestashop/prestashop:9.2.0-apache"
+            ]
         },
         "db": {
             "ref": "mariadb:11.8.9",
-            "tested": []
+            "tested": [
+                "mariadb:11.8.9"
+            ]
         }
     },
     "services": [
@@ -106,6 +110,8 @@
         "Two workarounds for PrestaShop 9.2.0's automatic installation, found in the RC-37 smoke (without them the installation crashed in its last step and left the web installer public at /install/): the installer puts the back-office assets into admin/ or, when that folder is gone, admin-dev/, but the image has already renamed admin/ to shopadmin/, so start.sh points a temporary admin-dev link at shopadmin for the installation and removes it as soon as the setup completes; and PS_FOLDER_INSTALL is install-ps, because PrestaShop deletes an install/ folder itself and the image's own removal of that folder then failed and stopped the container. Both are gone from the shop once it is installed (/install-ps/ and /admin-dev/ answer 404). If an installation still stops half-way (for example the language pack download fails because the server has no outgoing internet), the image would serve its web installer on the next start; start.sh then removes the installer folder instead and logs that the installation did not finish: delete and recreate the app to install again.",
         "Domain changes: PrestaShop keeps its domain in the database. PS_SHOP_URL is the site's address, so a domain change in the panel re-renders this file, and on the next start ps-init/sync-domain.php (run as www-data by start.sh before Apache starts, once the database answers; any error is reported by its class name only, so a failed connection cannot print the database password into the log) moves the main shop URL to PS_DOMAIN and regenerates .htaccess, robots.txt and the caches, as the image's own docker_updt_ps_domains.php does. It does nothing when the domain already matches or when multistore is on. Delete the script to manage the domain yourself in Shop Parameters > Traffic & SEO.",
         "The whole PrestaShop folder (/var/www/html: code, configuration, product images, modules and themes) lives in one named volume, as the image expects; the database is a private MariaDB 11.8 (the official image docs use MySQL; MariaDB needs less memory). Because the code is in the volume, a newer image does not upgrade an existing shop: use PrestaShop's own update assistant (the autoupgrade module) for that.",
-        "Outgoing email (order confirmations, password reset) needs an SMTP server: set it in Advanced Parameters > E-mail. Until then PrestaShop tries the local mail function, which does not deliver from the container."
+        "Before the first order, set up shipping and payment for your own country (PrestaShop's demo data, checked in the RC-37 smoke): the United Kingdom is in the zone Europe (non-EU), which the demo carriers do not cover, so a UK address gets no carrier until you tick that zone in Shipping > Carriers > (carrier) > Shipping locations and costs; the offline payment modules (bank wire, check) are enabled for the United Kingdom and the United States only (Payment > Preferences); and only EUR and USD are installed, so add GBP in International > Localization > Currencies to sell in pounds. A test order with a United States address works out of the box.",
+        "Outgoing email (order confirmations, password reset) needs an SMTP server: set it in Advanced Parameters > E-mail. Until then PrestaShop tries the local mail function, which does not deliver from the container.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-37, three rounds): created from the 1-Click Recipes tab, Running in 48 to 111 s and the shop front up about 50 s later (installation 66 to 70 s), /install/, /install-ps/, /admin/ and /admin-dev/ answering 404, back-office sign-in over HTTPS, a product created and bought by a logged-out guest with Pay by bank wire (United States address) and the order shown in the back office, the domain sync moved and restored, two restarts with no password text in any log, and an installation deliberately failed without internet left no public installer. Idle 236 to 342 MiB of 1g, peak 538 MiB during the installation; every image ref below is in its tested list."
     ]
 }

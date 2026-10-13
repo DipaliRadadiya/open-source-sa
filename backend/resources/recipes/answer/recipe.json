@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "apache/answer:2.0.3",
-            "tested": []
+            "tested": [
+                "apache/answer:2.0.3"
+            ]
         }
     },
     "services": [
@@ -71,6 +73,7 @@
         "SITE_URL is the site's address and is stored in the database at installation. After a domain change, update it in Admin > Settings > General (Site URL), or links in emails and the sitemap keep the old address.",
         "Outgoing email (registration confirmation, password reset, notifications) needs an SMTP server: set it in Admin > Settings > SMTP. Until then new members who register cannot confirm their address; the administrator created here is already active.",
         "The memory floor is 384m: with 256m Answer sat at 150 to 166 MiB idle and reached 187 MiB while questions were asked and answered (59 to 73 % of the limit, Ubuntu 24.04 and 26.04).",
-        "The image's clock is fixed to Asia/Shanghai at build time (upstream TIMEZONE default); times in the web interface follow each user's own timezone setting, so this only affects timestamps in the container log."
+        "The image's clock is fixed to Asia/Shanghai at build time (upstream TIMEZONE default); times in the web interface follow each user's own timezone setting, so this only affects timestamps in the container log.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-37): created from the 1-Click Recipes tab, Running in 17 to 32 s, installed by AUTO_INSTALL with no installer reachable, sign-in with the email, a question asked, answered and accepted and visible to a logged-out visitor, and a restart. Idle 144 to 183 MiB of 384m, peak 192 MiB; every image ref below is in its tested list."
     ]
 }
