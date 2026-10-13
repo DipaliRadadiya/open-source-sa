@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "joplin/server:3.7.2",
-            "tested": []
+            "tested": [
+                "joplin/server:3.7.2"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         }
     },
     "services": [
@@ -76,6 +80,7 @@
         "Notes, resources and accounts are stored in PostgreSQL (Joplin Server's default database storage driver), so the database volume is the only data to back up. PostgreSQL 16.15 matches the major version of the official compose file and has no published port.",
         "Email (password resets, invitations) needs the MAILER_* settings; without them, the administrator sets passwords directly. The optional transcription service from the official compose file is not included.",
         "The healthcheck calls /api/ping with Node's http module, because the slim image ships neither curl nor wget. It sends the site's domain as the Host header: Joplin Server answers 404 \"Invalid origin\" to any host other than APP_BASE_URL's, so a plain 127.0.0.1 probe left the container unhealthy (found live, RC-30).",
-        "The 512m floor covers the Node server for a small team; the database uses the panel database-memory default."
+        "The 512m floor covers the Node server for a small team; the database uses the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-30): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

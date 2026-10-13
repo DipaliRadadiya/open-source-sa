@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "docmost/docmost:0.96.0",
-            "tested": []
+            "tested": [
+                "docmost/docmost:0.96.0"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         },
         "cache": {
             "ref": "redis:8.8.3-alpine",
-            "tested": []
+            "tested": [
+                "redis:8.8.3-alpine"
+            ]
         }
     },
     "services": [
@@ -81,6 +87,7 @@
         "Attachments and images live in the storage volume (/app/data/storage, local storage driver). Telemetry is turned off.",
         "Inviting members by email needs SMTP (MAIL_DRIVER/SMTP_* settings); invitation links can also be copied and shared from the members page.",
         "The healthcheck probes /api/health/live on 127.0.0.1 with curl, which the image ships.",
-        "The 1g floor covers the Node server and its collaboration engine; the database and Redis use the panel database-memory default."
+        "The 1g floor covers the Node server and its collaboration engine; the database and Redis use the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-30): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "b3log/siyuan:v3.8.6",
-            "tested": []
+            "tested": [
+                "b3log/siyuan:v3.8.6"
+            ]
         }
     },
     "services": [
@@ -63,6 +65,7 @@
         "The whole workspace (notebooks, assets, settings and the search index) is one named volume at /siyuan/workspace. The image's entrypoint starts as root, hands the workspace to UID/GID 1000 (PUID/PGID) and then runs SiYuan as that user.",
         "SiYuan is a single-user application. The Docker edition is used from the browser only: the desktop and mobile apps cannot connect to it, and PDF/HTML/Word export and Markdown file import are not available (upstream limitations).",
         "The real-time editor uses a WebSocket on /ws, which the panel's proxy forwards. TZ is set to UTC instead of the image's Asia/Shanghai default.",
-        "The 512m floor covers the Go kernel and its SQLite index for a typical personal workspace; large workspaces may need a larger memory limit."
+        "The 512m floor covers the Go kernel and its SQLite index for a typical personal workspace; large workspaces may need a larger memory limit.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-30): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }
