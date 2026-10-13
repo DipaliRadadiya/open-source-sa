@@ -38,7 +38,7 @@
     "secrets": [
         {
             "key": "ROOT_PASSWORD",
-            "complexity": "alnum",
+            "complexity": "complex",
             "panel_only": false
         }
     ],
@@ -66,6 +66,7 @@
     "hook": null,
     "notes": [
         "OpenObserve creates its root user on the first start from ZO_ROOT_USER_EMAIL (the admin email you enter) and ZO_ROOT_USER_PASSWORD (a generated password shown on the first-run card). Sign in with that email and password. The same email and password also work as HTTP basic auth for the ingestion API (POST https://<your domain>/api/default/<stream>/_json). Once the root user exists these variables no longer change it: change the password in the web interface instead.",
+        "ROOT_PASSWORD is a complex secret (letters, digits and one symbol from !@#%^*-_=+): OpenObserve refuses to start with a root password that lacks an uppercase letter, a lowercase letter, a digit or a special character ('ZO_ROOT_USER_PASSWORD is too weak'), which a letters-and-digits password does not satisfy. In curl, quote the user:password pair (-u 'email:password').",
         "Single-node mode as in the official quick start: one container, all data (the metadata database, the write-ahead log and the stored Parquet files) on local disk in one named volume on /data. There is no object storage and no cluster; OpenObserve's high-availability mode needs S3-compatible storage and is a different deployment.",
         "The image is the official one from AWS ECR Public (public.ecr.aws/zinclabs/openobserve, the registry the installation docs name), pinned to v1.0.4 (the image openobserve/openobserve on Docker Hub is the same build).",
         "ZO_WEB_URL is the site's address (used for links and the allowed browser origin) and follows the domain. ZO_COOKIE_SECURE_ONLY keeps the session cookie on HTTPS; ZO_TELEMETRY is off so the server does not report usage to the vendor.",

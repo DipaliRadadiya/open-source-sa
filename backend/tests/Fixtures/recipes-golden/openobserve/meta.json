@@ -7,7 +7,9 @@
     "generated_secrets": [
         "ROOT_PASSWORD"
     ],
-    "complex_secrets": [],
+    "complex_secrets": [
+        "ROOT_PASSWORD"
+    ],
     "panel_only_secrets": [],
     "url_env_key": "ZO_WEB_URL",
     "default_memory_limit": "1g",
