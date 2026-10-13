@@ -171,15 +171,29 @@ class CraftCmsInstaller extends AbstractPhpInstaller implements ApplicationUpdat
     }
 
     /**
-     * Craft's own updater, pinned to the target so it cannot cross a major.
-     * It runs the migrations itself; `--backup=0` because the backup is taken
-     * by the panel before the update, not by Craft into the site's storage.
+     * Composer, pinned to the target so it cannot cross a major, then
+     * `craft up` for the migrations and project config.
+     *
+     * Not `craft update`: it asks api.craftcms.com for a licence first, and
+     * on a site without one that request was refused (400, "not a valid email
+     * address") before anything was updated — measured live, 2026-10-13. The
+     * Composer route is Craft's documented alternative and needs no licence.
      */
     public function update(Application $application, string $from, string $to): void
     {
-        $this->runAsSiteUser('update_app', $application, [
-            ...$this->phpCommand($application), 'craft', 'update', 'craft:'.$to,
-            '--interactive=0', '--backup=0', '--migrate=1',
-        ], null, $application->codePath());
+        $projectRoot = $application->codePath();
+
+        $this->runAsSiteUser('update_app', $application, array_merge(
+            $this->shim->envPrefixFor($application),
+            [
+                (string) config('server.composer_binary', 'composer'),
+                'update', 'craftcms/cms', '--with', 'craftcms/cms:'.$to,
+                '--with-all-dependencies', '--no-interaction', '--no-progress',
+            ],
+        ), null, $projectRoot);
+
+        $this->runAsSiteUser('migrate', $application, [
+            ...$this->phpCommand($application), 'craft', 'up', '--interactive=0',
+        ], null, $projectRoot);
     }
 }

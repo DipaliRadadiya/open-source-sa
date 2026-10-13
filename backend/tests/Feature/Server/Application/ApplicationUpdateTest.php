@@ -138,8 +138,7 @@ function moodleFixture(Application $application): void
         "<?php\n\$version  = 2025041411.00;\n\$release  = '5.0.11 (Build: 20261005)';\n",
     ];
     Http::fake([
-        'raw.githubusercontent.com/moodle/moodle/MOODLE_500_STABLE/version.php' => Http::response("<?php\n\$release  = '5.0.11 (Build: 20261005)';\n"),
-        'api.github.com/repos/moodle/moodle/tags*' => Http::response([['name' => 'v5.3.0'], ['name' => 'v5.3.0-rc1'], ['name' => 'v5.0.11'], ['name' => 'v4.5.7']]),
+        'api.github.com/repos/moodle/moodle/tags*' => Http::response([['name' => 'v5.3.0'], ['name' => 'v5.3.0-rc1'], ['name' => 'v5.0.11'], ['name' => 'v5.0.10'], ['name' => 'v4.5.7']]),
     ]);
 }
 
@@ -275,7 +274,7 @@ it('updates Moodle: maintenance on, new code of its branch, upgrade, maintenance
 
     expect($update->status)->toBe(ApplicationUpdateStatus::Completed)
         ->and($update->to_version)->toBe('5.0.11')
-        ->and(UpdateHost::ran('https://packaging.moodle.org/stable500/moodle-latest-500.tgz'))->toBeTrue()
+        ->and(UpdateHost::ran('https://packaging.moodle.org/stable500/moodle-5.0.11.tgz'))->toBeTrue()
         ->and(UpdateHost::ran('admin/cli/maintenance.php --enable'))->toBeTrue()
         ->and(UpdateHost::ran('admin/cli/maintenance.php --disable'))->toBeTrue();
 
@@ -364,23 +363,28 @@ it('updates Statamic with composer update inside its constraint, on the site PHP
         ->and(UpdateHost::ran('statamic:updates:run'))->toBeFalse();
 });
 
-it('updates Craft with its own updater pinned to the target, so it cannot cross a major', function () {
+it('updates Craft with Composer pinned to the target (no licence call), then craft up', function () {
     $application = updateApp('craftcms', '/web');
     UpdateHost::$files[$application->codePath().'/vendor/composer/installed.json'] = [
         '{"packages":[{"name":"craftcms/cms","version":"5.11.3"}]}',
         '{"packages":[{"name":"craftcms/cms","version":"5.12.0"}]}',
     ];
-    UpdateHost::$finalStep = 'craft update';
+    UpdateHost::$finalStep = 'update craftcms/cms';
     Http::fake(['repo.packagist.org/p2/craftcms/cms.json' => Http::response(['packages' => ['craftcms/cms' => [
-        ['version' => '6.0.0'], ['version' => '5.12.0'], ['version' => '5.11.3'],
+        ['version' => '6.0.0'], ['version' => '6.0.0-alpha.20'], ['version' => '5.12.0'], ['version' => '5.11.3'],
     ]]])]);
 
+    expect(app(ApplicationUpdates::class)->status($application)['latest_version'])->toBe('5.12.0');
+
     $update = runUpdateJob(pendingUpdate($application, '5.11.3', '5.12.0'));
-    $craft = UpdateHost::run('craft update');
+    $composer = UpdateHost::run('update craftcms/cms');
 
     expect($update->status)->toBe(ApplicationUpdateStatus::Completed)
-        ->and($craft['command'])->toContain('craft:5.12.0', '--interactive=0', '--backup=0')
-        ->and($craft['path'])->toBe($application->codePath());
+        ->and($composer['command'])->toContain('--with', 'craftcms/cms:5.12.0', '--with-all-dependencies')
+        ->and($composer['path'])->toBe($application->codePath())
+        ->and(implode(' ', $composer['command']))->toContain('php-shims/8.3')
+        ->and(UpdateHost::ran('craft up --interactive=0'))->toBeTrue()
+        ->and(UpdateHost::ran('craft update'))->toBeFalse();
 });
 
 it('updates Uptime Kuma to the release tag, rebuilds and restarts its service', function () {
