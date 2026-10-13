@@ -166,6 +166,9 @@ function fakeWorkerSupervisor(): void
             $program = WorkerFake::program($args[2] ?? '');
 
             if ($verb === 'status') {
+                if (! isset($args[2])) {
+                    return Process::result(output: implode("\n", array_map(fn ($name) => WorkerFake::statusOutput($name), array_keys(WorkerFake::$running))));
+                }
                 // Exit 3 is supervisorctl's "some processes are not running",
                 // which is what it really answers for a stopped program — the
                 // panel treats it as an answer rather than a failure, and a
@@ -181,7 +184,7 @@ function fakeWorkerSupervisor(): void
             // is a real transition rather than one the fake pretends about.
             if (in_array($verb, ['start', 'restart'], true)) {
                 $slug = str_starts_with($program, 'sv-worker-') ? substr($program, strlen('sv-worker-')) : $program;
-                $processes = (int) (Worker::query()->where('slug', $slug)->value('processes') ?? 0);
+                $processes = (int) (Worker::query()->where('program', $program)->orWhere(fn ($query) => $query->whereNull('program')->where('slug', $slug))->value('processes') ?? 0);
 
                 WorkerFake::$running[$program] = $processes;
             }
@@ -268,7 +271,7 @@ it('finds Craft above its served web directory and runs the worker there', funct
 
     expect(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, 'artisan queue:restart')))
         ->toBeFalse()
-        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart sv-worker-{$worker->slug}:*")))
+        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart {$worker->program}:*")))
         ->toBeTrue();
 });
 
@@ -345,7 +348,7 @@ it('creates a worker and starts as many copies as asked for', function () {
     // supervisor owns the copies via `numprocs`, so the evidence is how many
     // it reports running — not a unit name per copy, which no longer exists.
     $worker = Worker::first();
-    expect(WorkerFake::$running["sv-worker-{$worker->slug}"] ?? 0)->toBe(3);
+    expect(WorkerFake::$running[$worker->program] ?? 0)->toBe(3);
 });
 
 it('gives a queue worker time to finish its job, and a custom one the usual 30 seconds (bug #74)', function () {
@@ -379,7 +382,7 @@ it('reports a partly-running pool as its own state', function () {
 
     // One copy died. A green dot would hide this, and a half-dead worker pool
     // is exactly the state nobody notices until the queue backs up.
-    WorkerFake::$running["sv-worker-{$worker->slug}"] = 2;
+    WorkerFake::$running[$worker->program] = 2;
 
     $status = app(WorkerSupervisor::class)->status($worker->load('application.systemUser'));
 
@@ -399,7 +402,7 @@ it('stops the surplus when the process count is lowered', function () {
     // rather than the panel sweeping instance numbers, but the requirement is
     // unchanged: nothing else in the system would notice four processes still
     // consuming the queue.
-    expect(WorkerFake::$running["sv-worker-{$worker->slug}"] ?? 0)->toBe(2);
+    expect(WorkerFake::$running[$worker->program] ?? 0)->toBe(2);
 
     // And the pair that does it, in that order — `update` alone acts on a
     // config supervisord has not re-read, so the change would appear to save
@@ -416,7 +419,11 @@ it('refuses a worker whose unit will not stay up', function () {
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
-        return Process::result(exitCode: ($args[1] ?? '') === 'is-active' ? 1 : 0);
+        if ($args[0] === 'supervisorctl' && ($args[1] ?? '') === 'status' && isset($args[2])) {
+            return Process::result(output: ($args[2] ?? '').': ERROR (no such process)', exitCode: 4);
+        }
+
+        return Process::result(exitCode: 0);
     });
 
     // A command that will not run is the user's to fix, not a server fault
@@ -434,7 +441,7 @@ it('quotes what a worker printed before it died', function () {
 
         return match (true) {
             ($args[0] ?? '') === 'tail' => Process::result(output: "PHP 8.4.1 (cli)\nCould not open input file: artisan\n"),
-            ($args[1] ?? '') === 'is-active' => Process::result(exitCode: 1),
+            ($args[0] ?? '') === 'supervisorctl' && ($args[1] ?? '') === 'status' && isset($args[2]) => Process::result(output: ($args[2] ?? '').': ERROR (no such process)', exitCode: 4),
             default => Process::result(exitCode: 0),
         };
     });
@@ -509,7 +516,7 @@ describe('restarting', function () {
         WorkerFake::$ran = [];
         $this->actingAs($this->admin)->postJson(workerUrl("/{$worker->id}/restart"));
 
-        expect(collect(WorkerFake::$ran)->contains(fn (string $c) => str_contains($c, "restart sv-worker-{$worker->slug}:*")))
+        expect(collect(WorkerFake::$ran)->contains(fn (string $c) => str_contains($c, "restart {$worker->program}:*")))
             ->toBeTrue();
     });
 });
@@ -710,7 +717,7 @@ describe('the unit name', function () {
         // with twenty sites.
         expect($worker->slug)->toBe('queued-site-email-queue')
             ->and(app(WorkerSupervisor::class)->program($worker))
-            ->toBe('sv-worker-queued-site-email-queue');
+            ->toBe('email-queue');
     });
 
     it('does not move when the worker is renamed', function () {
@@ -909,6 +916,7 @@ describe('a server whose sudo grant is out of date', function () {
             'processes' => 1,
         ]);
 
+        $worker->forceFill(['program' => 'queue-worker'])->save();
         WorkerFake::$denied = ['supervisorctl'];
         fakeWorkerSupervisor();
 
@@ -959,7 +967,7 @@ describe('a server whose sudo grant is out of date', function () {
         $supervisorctl = collect(WorkerFake::$ran)
             ->filter(fn (string $c): bool => str_starts_with($c, 'supervisorctl'));
 
-        expect($supervisorctl->first())->toBe('supervisorctl reread')
+        expect($supervisorctl->first())->toBe('supervisorctl status')
             ->and($supervisorctl)->toHaveCount(1);
     });
 });
@@ -1324,7 +1332,7 @@ describe('an edit that will not start (W-edit)', function () {
 
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
         $worker = Worker::query()->sole();
-        $program = 'sv-worker-'.$worker->slug;
+        $program = $worker->program;
 
         // From here on, any program whose command is the new one dies at
         // start, as a mistyped binary does.
@@ -1395,7 +1403,10 @@ it('rewrites a switched-off worker written before the fix on the next sites:resy
 
     $off = Worker::findOrFail($this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['name' => 'Off']))->json('worker.id'));
     $on = Worker::findOrFail($this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['name' => 'On']))->json('worker.id'));
-    $off->forceFill(['enabled' => false])->save();
+    // These are historical workers from before the program column/v7 layout,
+    // not freshly managed v7 or adopted programs that must stay untouched.
+    $off->forceFill(['program' => null, 'enabled' => false])->save();
+    $on->forceFill(['program' => null])->save();
 
     // What a server updated from before the fix has on disk for both.
     $stale = fn (Worker $w) => str_replace('autostart=false', 'autostart=true', app(WorkerSupervisor::class)->render($w->fresh()->load('application.systemUser')));
@@ -1422,3 +1433,103 @@ it('rewrites a switched-off worker written before the fix on the next sites:resy
     expect($written)->toContain(app(WorkerSupervisor::class)->configPath($off))
         ->and($written)->not->toContain(app(WorkerSupervisor::class)->configPath($on));
 });
+
+it('keeps a worker named syslog in its own namespaced log source', function () {
+    fakeWorkerSupervisor();
+    $response = $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['name' => 'syslog']))->assertCreated();
+    $worker = Worker::query()->sole();
+    $key = $response->json('worker.log_identifier');
+    $source = app(LogManager::class)->find($key);
+    expect($worker->program)->toBe('syslog')
+        ->and($key)->toBe('sv-worker-'.$worker->slug)
+        ->and($source['group'])->toBe('worker')
+        ->and($source['path'])->toEndWith('/logs/supervisor-syslog.log');
+});
+
+it('retains failed-create ownership when cleanup cannot be verified', function (string $failure) {
+    $rereads = 0;
+    $updates = 0;
+    $running = false;
+    $restarts = 0;
+    Process::fake(function ($process) use ($failure, &$rereads, &$updates, &$running, &$restarts) {
+        $args = (array) $process->command;
+        if ($args[0] === 'test') {
+            return Process::result(exitCode: 1);
+        }
+        if ($args[0] === 'rm' && $failure === 'remove') {
+            return Process::result(exitCode: 1);
+        }
+        if ($args[0] === 'supervisorctl') {
+            $program = explode(':', $args[2] ?? '')[0];
+            if ($args[1] === 'reread' && ++$rereads === 2) {
+                return Process::result(exitCode: 1);
+            }
+            if ($args[1] === 'update' && ++$updates === 2 && $failure === 'reload') {
+                return Process::result(exitCode: 1);
+            }
+            if ($args[1] === 'restart') {
+                $restarts++;
+                $running = true;
+            }
+            if ($args[1] === 'stop') {
+                if ($failure === 'stop') {
+                    return Process::result(exitCode: 1);
+                }
+                $running = false;
+            }
+            if ($args[1] === 'status') {
+                if (! isset($args[2])) {
+                    return Process::result();
+                }
+
+                return Process::result(output: $program.':'.$program.'_00 '.($running ? 'RUNNING pid 123' : 'STOPPED'), exitCode: $running ? 0 : 3);
+            }
+        }
+
+        return Process::result();
+    });
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertStatus(500);
+    expect(Worker::query()->count())->toBe(1);
+    $worker = Worker::query()->sole();
+    expect($worker->program)->toBe('queue-worker')
+        ->and($restarts)->toBe(1);
+    // A retry cannot silently allocate queue-worker-2 while the first still
+    // exists: the retained row reserves both its label and program.
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())
+        ->assertUnprocessable()->assertJsonValidationErrors('name');
+    expect(Worker::query()->count())->toBe(1)->and($restarts)->toBe(1);
+})->with(['stop', 'remove', 'reload']);
+
+it('does not discard program ownership when deletion fails', function (string $failure) {
+    $worker = Worker::create(workerPayload() + ['application_id' => $this->application->id])->refresh();
+    $worker->forceFill(['program' => 'queue-worker'])->save();
+    $running = true;
+    Process::fake(function ($process) use ($failure, &$running) {
+        $args = (array) $process->command;
+        if ($args[0] === 'rm' && $failure === 'remove') {
+            return Process::result(exitCode: 1);
+        }
+        if ($args[0] === 'supervisorctl') {
+            $program = explode(':', $args[2] ?? '')[0];
+            if ($args[1] === 'stop') {
+                if ($failure === 'stop') {
+                    return Process::result(exitCode: 1);
+                }
+                $running = false;
+            }
+            if ($args[1] === 'update' && $failure === 'reload') {
+                return Process::result(exitCode: 1);
+            }
+            if ($args[1] === 'status') {
+                return Process::result(output: $program.':'.$program.'_00 '.($running ? 'RUNNING pid 123' : 'STOPPED'), exitCode: $running ? 0 : 3);
+            }
+        }
+
+        return Process::result();
+    });
+    $this->actingAs($this->admin)->deleteJson(workerUrl('/'.$worker->id))->assertStatus(500);
+    expect(Worker::query()->whereKey($worker->id)->value('program'))->toBe('queue-worker');
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())
+        ->assertUnprocessable()->assertJsonValidationErrors('name');
+})->with(['stop', 'remove', 'reload']);

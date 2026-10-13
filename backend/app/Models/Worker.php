@@ -45,6 +45,7 @@ class Worker extends Model
     protected function casts(): array
     {
         return [
+            'program' => 'string',
             'processes' => 'integer',
             'stop_wait_seconds' => 'integer',
             'auto_restart' => 'boolean',
@@ -117,6 +118,12 @@ class Worker extends Model
         return $slug;
     }
 
+    public function hasProgram(): bool
+    {
+        return $this->program !== null && $this->program !== '';
+    }
+
+    /** @return BelongsTo<Application, $this> */
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);

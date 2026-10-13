@@ -55,7 +55,7 @@ class WorkerDiscoverer implements Discoverable
             return [];
         }
 
-        $tracked = Worker::query()->pluck('name', 'application_id');
+        $tracked = Worker::query()->get()->groupBy('application_id');
 
         return array_merge(
             $this->fromSupervisor($applications, $tracked),
@@ -63,11 +63,12 @@ class WorkerDiscoverer implements Discoverable
         );
     }
 
+    /** @param array{key?: string, attributes?: array<string, mixed>, evidence?: array<string, mixed>} $item */
     public function adopt(array $item): ?object
     {
         $attributes = $item['attributes'] ?? [];
 
-        return Worker::firstOrCreate(
+        $worker = Worker::firstOrCreate(
             [
                 'application_id' => $attributes['application_id'],
                 'name' => $attributes['name'],
@@ -83,13 +84,27 @@ class WorkerDiscoverer implements Discoverable
                 'enabled' => false,
             ],
         );
+
+        // Only a single canonical v7 file can be controlled in place. A
+        // shared config must never be deleted when one of its groups is saved.
+        $evidence = $item['evidence'] ?? [];
+        $program = $evidence['program'] ?? '';
+        $directory = rtrim((string) config('server.applications.supervisor_dir', '/etc/supervisor/conf.d'), '/');
+        if ($worker->wasRecentlyCreated && ($evidence['source'] ?? null) === 'supervisor'
+            && ($evidence['program_count'] ?? 0) === 1
+            && preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/D', $program)
+            && ($evidence['path'] ?? null) === $directory.'/'.$program.'.conf') {
+            $worker->forceFill(['program' => $program])->save();
+        }
+
+        return $worker;
     }
 
     /**
      * `[program:name]` blocks under supervisor's conf.d.
      *
      * @param  Collection<int, Application>  $applications
-     * @param  Collection<int, string>  $tracked
+     * @param  Collection<int|string, \Illuminate\Database\Eloquent\Collection<int, Worker>>  $tracked
      * @return array<int, array<string, mixed>>
      */
     private function fromSupervisor($applications, $tracked): array
@@ -105,7 +120,7 @@ class WorkerDiscoverer implements Discoverable
             }
 
             // Split on the program headers, keeping each block with its name.
-            $blocks = preg_split('/^\[program:([^\]]+)\]/mi', $contents, -1, PREG_SPLIT_DELIM_CAPTURE);
+            $blocks = preg_split('/^[ \t]*\[program:([^\]]+)\]/mi', $contents, -1, PREG_SPLIT_DELIM_CAPTURE);
 
             for ($i = 1; $i < count($blocks); $i += 2) {
                 $name = trim($blocks[$i]);
@@ -125,7 +140,7 @@ class WorkerDiscoverer implements Discoverable
                     $command,
                     $workingDir,
                     (int) ($this->ini($body, 'numprocs') ?? 1),
-                    ['source' => 'supervisor', 'path' => $path, 'program' => $name],
+                    ['source' => 'supervisor', 'path' => $path, 'program' => $name, 'program_count' => intdiv(count($blocks) - 1, 2)],
                 );
 
                 if ($item !== null) {
@@ -141,7 +156,7 @@ class WorkerDiscoverer implements Discoverable
      * systemd units whose ExecStart runs inside a site the panel knows.
      *
      * @param  Collection<int, Application>  $applications
-     * @param  Collection<int, string>  $tracked
+     * @param  Collection<int|string, \Illuminate\Database\Eloquent\Collection<int, Worker>>  $tracked
      * @return array<int, array<string, mixed>>
      */
     private function fromSystemd($applications, $tracked): array
@@ -206,7 +221,7 @@ class WorkerDiscoverer implements Discoverable
      * bury the handful that matter.
      *
      * @param  Collection<int, Application>  $applications
-     * @param  Collection<int, string>  $tracked
+     * @param  Collection<int|string, \Illuminate\Database\Eloquent\Collection<int, Worker>>  $tracked
      * @param  array<string, mixed>  $evidence
      * @return array<string, mixed>|null
      */
@@ -242,7 +257,8 @@ class WorkerDiscoverer implements Discoverable
             return null;
         }
 
-        if (($tracked[$application->id] ?? null) === $name) {
+        if (($tracked[$application->id] ?? collect())->contains(fn (Worker $worker) => $worker->name === $name || $worker->program === $name
+            || ($worker->program === null && 'sv-worker-'.$worker->slug === $name))) {
             return null;
         }
 

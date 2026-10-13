@@ -159,35 +159,23 @@ class WorkerController extends Controller
         // the same step and reference they would have. The catch is here to
         // undo, not to hide.
         try {
-            $supervisor->apply($worker->load('application.systemUser'));
+            $supervisor->applySaved($worker->load('application.systemUser'));
         } catch (Throwable $e) {
-            // Best effort, and deliberately not allowed to mask the real
-            // failure. `apply()` already calls remove() on the start-failure
-            // path; a second removal is harmless (stop ignores its exit code,
-            // the delete is an `rm -f`) and the write-failure path has left a
-            // config file behind that nothing else will clear.
-            //
-            // Except when the grant itself was refused. Nothing ran, so there
-            // is nothing on the server to undo, and issuing more commands that
-            // will be refused too is the behaviour `supervisorctl()` throws
-            // early to prevent — "a refused grant is not a state to carry on
-            // from". The row is still removed; only the server-side cleanup is
-            // skipped.
-            try {
-                if (! ($e instanceof ServerOperationException && $e->denied)) {
-                    $supervisor->remove($worker);
-                }
-            } catch (Throwable $cleanupException) {
-                Log::warning('supervisor cleanup after a failed worker create also failed', [
+            // applySaved clears program only after verified cleanup. If it
+            // retains an identity, cleanup was refused or uncertain: keeping
+            // the row prevents a retry from creating an untracked duplicate.
+            // Do not repeat a best-effort removal or discard its owner here.
+            if ($worker->program === null) {
+                $worker->delete();
+            } else {
+                Log::warning('failed worker create retains its tracked program pending recovery', [
                     'feature' => 'application',
                     'op' => 'worker_create_cleanup',
                     'worker' => $worker->id,
                     'application' => $application->id,
-                    'exception' => $cleanupException::class,
+                    'exception' => $e::class,
                 ]);
             }
-
-            $worker->delete();
 
             throw $this->explainStart($e, $worker, $supervisor);
         }
@@ -211,6 +199,7 @@ class WorkerController extends Controller
     ): JsonResponse {
         $this->assertBelongsTo($worker, $application);
 
+        $original = clone $worker->load('application.systemUser');
         $before = $worker->only(array_keys($request->validated()));
 
         $worker->update($request->validated());
@@ -221,11 +210,11 @@ class WorkerController extends Controller
         // longer existed. Put the row back and bring the old program up
         // again; the error still reaches the user unchanged.
         try {
-            $supervisor->apply($worker->load('application.systemUser'));
+            $supervisor->applySaved($worker->load('application.systemUser'), $original);
         } catch (Throwable $e) {
             $worker->forceFill($before)->save();
 
-            if (! ($e instanceof ServerOperationException && $e->denied)) {
+            if ($worker->hasProgram() && ! ($e instanceof ServerOperationException && $e->denied)) {
                 try {
                     $supervisor->apply($worker->refresh()->load('application.systemUser'));
                 } catch (Throwable $restoreException) {

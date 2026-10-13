@@ -5,12 +5,16 @@ namespace App\Services\Server\Applications;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Exceptions\Server\Application\SupervisorMissingException;
 use App\Exceptions\Server\Application\WorkerControlException;
+use App\Exceptions\Server\ServerOperationException;
+use App\Models\SystemUser;
 use App\Models\Worker;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Runs an application's background workers, as supervisord programs.
@@ -56,7 +60,7 @@ class WorkerSupervisor
         // on the box — and the slug rather than the *name*, so renaming a
         // worker relabels it without stopping and recreating a running
         // process.
-        return 'sv-worker-'.$worker->slug;
+        return $worker->hasProgram() ? (string) $worker->program : 'sv-worker-'.$worker->slug;
     }
 
     /**
@@ -186,6 +190,199 @@ class WorkerSupervisor
     }
 
     /**
+     * Opt into v7 naming only on an explicit create/save, never during a
+     * deploy, control action or migration. Null remains the legacy identity.
+     *
+     * The old file must match the pre-edit rendering byte for byte before we
+     * retire it. A foreign or manually replaced config is not ours to delete.
+     */
+    public function applySaved(Worker $worker, ?Worker $before = null): void
+    {
+        if ($worker->hasProgram()) {
+            $this->apply($worker);
+
+            return;
+        }
+
+        $this->withProgramLock(function () use ($worker, $before): void {
+            $this->assertAvailable();
+            $directory = rtrim((string) config('server.applications.supervisor_dir', '/etc/supervisor/conf.d'), '/');
+            // Every entry, symlinks and directories too: neither is a free
+            // target. A refused/unreadable listing is never an empty folder.
+            // `find`, not `ls`: it is already on the privilege allowlist.
+            $listing = $this->serverOps->run(['find', $directory, '-mindepth', '1', '-maxdepth', '1', '-printf', '%f\n'], $this->context($worker, 'worker_program_names'));
+            if ($listing->failed()) {
+                throw new WorkerControlException($listing->reference, denied: $listing->denied);
+            }
+            $files = preg_split('/\R/', trim($listing->output())) ?: [];
+            $reserved = Worker::query()->get()->map(fn (Worker $item) => $this->program($item))->all();
+            // Loaded groups can outlive their files. Do not take over one
+            // simply because its original config is no longer on disk.
+            $loaded = $this->supervisorctl(['status'], $worker, 'worker_loaded_programs');
+            if (! in_array($loaded->exitCode(), [0, 3], true)) {
+                throw new WorkerControlException($loaded->reference);
+            }
+            foreach (preg_split('/\R/', trim($loaded->output())) ?: [] as $line) {
+                if (preg_match('/^(\S+)\s+(RUNNING|STOPPED|STARTING|BACKOFF|EXITED|FATAL|UNKNOWN|STOPPING)\b/', $line, $match)) {
+                    $reserved[] = explode(':', $match[1])[0];
+                } elseif ($line !== '') {
+                    throw new WorkerControlException($loaded->reference);
+                }
+            }
+            foreach ($files as $file) {
+                if (! str_ends_with($file, '.conf')) {
+                    continue;
+                }
+                $definition = $this->files->get($directory.'/'.$file, $this->context($worker, 'worker_program_read'));
+                if ($definition->failed()) {
+                    throw new WorkerControlException($definition->reference, denied: $definition->denied);
+                }
+                preg_match_all('/^[ \t]*\[program:([^\]]+)\]/m', $definition->output(), $headers);
+                $reserved = array_merge($reserved, $headers[1]);
+            }
+            $oldPath = $this->configPath($worker);
+            $old = null;
+            if ($before !== null && ! in_array(basename($oldPath), $files, true)) {
+                // A loaded process may outlive a missing file. Do not start a
+                // second group when ownership/state cannot be verified.
+                throw new WorkerControlException($listing->reference);
+            }
+            if ($before !== null && in_array(basename($oldPath), $files, true)) {
+                $old = $this->files->get($oldPath, $this->context($worker, 'worker_legacy_read'));
+                if ($old->failed() || $old->output() !== $this->render($before)) {
+                    throw new WorkerControlException($old->reference, denied: $old->denied);
+                }
+            }
+
+            $slug = Str::slug($worker->name);
+            $base = substr($slug === '' ? 'worker' : $slug, 0, 64);
+            $program = $base;
+            $suffix = 2;
+            while (in_array($program.'.conf', $files, true)
+                || in_array($program, $reserved, true)) {
+                if ($suffix > 10000) {
+                    throw new WorkerControlException($listing->reference);
+                }
+                $tail = '-'.$suffix++;
+                $program = substr($base, 0, 64 - strlen($tail)).$tail;
+            }
+
+            // Retire and reload BEFORE writing/starting the new name. There
+            // can never be two configured groups consuming the same queue.
+            $allocated = false;
+            $retired = false;
+            $oldWasRunning = false;
+            try {
+                if ($old !== null) {
+                    $state = $this->supervisorctl(['status', $this->group($before)], $before, 'worker_legacy_status');
+                    // Exit 3 means stopped, not an unreadable/unknown group.
+                    if (! in_array($state->exitCode(), [0, 3], true)
+                        || ! str_contains($state->output(), $this->program($before).':')) {
+                        throw new WorkerControlException($state->reference);
+                    }
+                    $oldWasRunning = str_contains($state->output(), 'RUNNING');
+                    if ($oldWasRunning) {
+                        $stopped = $this->supervisorctl(['stop', $this->group($before)], $before, 'worker_legacy_stop');
+                        if ($stopped->failed()) {
+                            throw new WorkerControlException($stopped->reference);
+                        }
+                    }
+                    $retired = true;
+                    $removed = $this->files->delete($oldPath, $this->context($worker, 'worker_legacy_remove'));
+                    if ($removed->failed()) {
+                        throw new WorkerControlException($removed->reference);
+                    }
+                    $this->checkedReload($worker);
+                }
+
+                $worker->forceFill(['program' => $program])->save();
+                $allocated = true;
+                $this->apply($worker);
+                $this->checkedReload($worker);
+            } catch (Throwable $e) {
+                if ($e instanceof ServerOperationException && $e->denied) {
+                    throw $e;
+                }
+                // Do not revive the old group until the new one is known
+                // stopped and removed. If cleanup fails, keep its identity
+                // tracked and surface that failure instead of doubling it.
+                if ($allocated) {
+                    $neverLoaded = $e instanceof ProvisioningFailedException && $e->step === 'write_unit';
+                    $state = $neverLoaded ? null : $this->supervisorctl(['status', $this->group($worker)], $worker, 'worker_new_cleanup_status');
+                    if ($state !== null && str_contains($state->output(), 'RUNNING')) {
+                        $stopped = $this->supervisorctl(['stop', $this->group($worker)], $worker, 'worker_new_cleanup_stop');
+                        if ($stopped->failed()) {
+                            throw new WorkerControlException($stopped->reference);
+                        }
+                    } elseif ($state !== null && ! ($state->exitCode() === 3 && str_contains($state->output(), 'STOPPED'))
+                        && ! ($state->exitCode() === 4 && str_contains($state->output(), 'no such process'))) {
+                        throw new WorkerControlException($state->reference);
+                    }
+                    $removed = $this->files->delete($this->configPath($worker), $this->context($worker, 'worker_new_cleanup_remove'));
+                    if ($removed->failed()) {
+                        throw new WorkerControlException($removed->reference);
+                    }
+                    $this->checkedReload($worker, $state !== null && $state->exitCode() !== 4);
+                }
+                $worker->forceFill(['program' => null])->save();
+                if ($retired && $old !== null) {
+                    $restored = $this->files->put($oldPath, $old->output(), $this->context($worker, 'worker_legacy_restore'));
+                    if ($restored->failed()) {
+                        throw new WorkerControlException($restored->reference);
+                    }
+                    $this->checkedReload($worker);
+                    // update may autostart a restored group. Preserve the
+                    // observed pre-save state rather than blindly issuing
+                    // start (which fails when it is already running).
+                    $state = $this->supervisorctl(['status', $this->group($before)], $before, 'worker_legacy_restored_status');
+                    if (! in_array($state->exitCode(), [0, 3], true)
+                        || ! str_contains($state->output(), $this->program($before).':')) {
+                        throw new WorkerControlException($state->reference);
+                    }
+                    $isRunning = str_contains($state->output(), 'RUNNING');
+                    if ($oldWasRunning !== $isRunning) {
+                        $action = $oldWasRunning ? 'start' : 'stop';
+                        $controlled = $this->supervisorctl([$action, $this->group($before)], $before, 'worker_legacy_restore_'.$action);
+                        if ($controlled->failed()) {
+                            throw new WorkerControlException($controlled->reference);
+                        }
+                    }
+                }
+                throw $e;
+            }
+        });
+    }
+
+    /** A host-local mutex without an expiring lease while commands run. */
+    private function withProgramLock(callable $operation): void
+    {
+        $handle = fopen(storage_path('framework/cache/worker-program.lock'), 'c');
+        if ($handle === false) {
+            throw new WorkerControlException((string) Str::uuid());
+        }
+        try {
+            if (! flock($handle, LOCK_EX | LOCK_NB)) {
+                throw new WorkerControlException((string) Str::uuid());
+            }
+            $operation();
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    private function checkedReload(Worker $worker, bool $update = true): void
+    {
+        foreach ($update ? ['reread', 'update'] : ['reread'] as $verb) {
+            $arguments = $verb === 'update' ? [$verb, $this->program($worker)] : [$verb];
+            $result = $this->supervisorctl($arguments, $worker, 'worker_program_'.$verb);
+            if ($result->failed()) {
+                throw new WorkerControlException($result->reference);
+            }
+        }
+    }
+
+    /**
      * Rewrite a switched-off worker's program when it is out of date, so it
      * stays off after the next reboot (bug #73: they were written with
      * autostart=true). Only switched-off workers: one that is running is never
@@ -193,7 +390,7 @@ class WorkerSupervisor
      */
     public function refreshDisabled(Worker $worker): bool
     {
-        if ($worker->enabled || ! $this->installed()) {
+        if ($worker->hasProgram() || $worker->enabled || ! $this->installed()) {
             return false;
         }
 
@@ -218,13 +415,33 @@ class WorkerSupervisor
     /** Stop every copy, then delete the program and let supervisord forget it. */
     public function remove(Worker $worker): void
     {
-        $this->stop($worker);
+        $loaded = true;
+        $stopped = $this->supervisorctl(['stop', $this->group($worker)], $worker, 'worker_stop');
+        if ($stopped->failed()) {
+            $state = $this->supervisorctl(['status', $this->group($worker)], $worker, 'worker_remove_status');
+            if ($state->exitCode() === 4 && str_contains($state->output(), 'no such process')) {
+                $loaded = false;
+            } elseif ($state->exitCode() === 3 && trim($state->output()) !== '') {
+                // Already stopped/fatal is safe, but BACKOFF/STARTING/EXITED
+                // may still restart. Every reported member must be inactive.
+                foreach (preg_split('/\R/', trim($state->output())) ?: [] as $line) {
+                    if (! preg_match('/^'.preg_quote($this->program($worker), '/').':\S+\s+(STOPPED|FATAL)\b/', $line)) {
+                        throw new WorkerControlException($stopped->reference);
+                    }
+                }
+            } else {
+                throw new WorkerControlException($stopped->reference);
+            }
+        }
 
-        $this->files->delete($this->configPath($worker), $this->context($worker, 'worker_remove'));
-
-        // After the file is gone, so `update` removes the program rather than
-        // reinstating it from a config that is still on disk.
-        $this->reload($worker);
+        $removed = $this->files->delete($this->configPath($worker), $this->context($worker, 'worker_remove'));
+        if ($removed->failed()) {
+            throw new WorkerControlException($removed->reference, denied: $removed->denied);
+        }
+        // A failed stop/delete/reload must not let callers discard the row
+        // which owns a possibly still-configured program. Already absent is
+        // idempotent: reread the deletion but do not update a nonexistent group.
+        $this->checkedReload($worker, $loaded);
     }
 
     public function start(Worker $worker): void
@@ -346,7 +563,9 @@ class WorkerSupervisor
         // back to `supervisorctl restart`, killing whatever job was running
         // (found live 2026-09-29, Statamic on nginx). As root instead it would
         // have left root-owned cache files the site then cannot write.
-        $user = $worker->user ?: $application->systemUser->username;
+        /** @var SystemUser $owner */
+        $owner = $application->systemUser;
+        $user = $worker->user ?: $owner->username;
 
         return match ($worker->kind) {
             Worker::KIND_QUEUE => ['runuser', '-u', $user, '--', $php, $root.'/artisan', 'queue:restart'],
@@ -359,6 +578,8 @@ class WorkerSupervisor
         $application = $worker->application;
         $projectRoot = $this->frameworks->root($application);
         $directory = $worker->directory ?: $projectRoot;
+        /** @var SystemUser $owner */
+        $owner = $application->systemUser;
 
         return View::make('server.programs.worker', [
             'worker' => $worker,
@@ -369,7 +590,7 @@ class WorkerSupervisor
             // The site's own account unless an adopted block named another.
             // Rewriting someone else's choice silently would change who owns
             // the files a running job writes.
-            'user' => $worker->user ?: $application->systemUser->username,
+            'user' => $worker->user ?: $owner->username,
             // Off as well while the worker is disabled: apply() stops it, but a
             // config still saying autostart=true brought it back the next time
             // supervisord started — every reboot (bug #73).
@@ -416,7 +637,7 @@ class WorkerSupervisor
     public function logFile(Worker $worker): string
     {
         return $worker->log_file
-            ?: $worker->application->logsPath().'/'.$this->program($worker).'.log';
+            ?: $worker->application->logsPath().'/'.($worker->hasProgram() ? 'supervisor-'.$worker->program : $this->program($worker)).'.log';
     }
 
     private function directory(Worker $worker): string
@@ -498,7 +719,7 @@ class WorkerSupervisor
     private function reload(Worker $worker): void
     {
         $this->supervisorctl(['reread'], $worker, 'worker_reread');
-        $this->supervisorctl(['update'], $worker, 'worker_update');
+        $this->supervisorctl(['update', $this->program($worker)], $worker, 'worker_update');
     }
 
     /**

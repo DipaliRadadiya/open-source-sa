@@ -3080,7 +3080,7 @@ Every clear is written to the activity feed as `application.log_cleared` with th
 ### GET `/applications/{application}/workers`
 **Permission:** `app_worker` (view)
 
-Workers are **supervisord programs** — one `[program:sv-worker-{slug}]` block per worker in `/etc/supervisor/conf.d`, with supervisor owning the copies via `numprocs`. (They were systemd units until 2026-09-07; this section described that and was wrong for a day.) The panel's field names are its own, not supervisor's — `processes` is `numprocs`, `auto_start` is `autostart`, `auto_restart` is `autorestart`, `stop_wait_seconds` is `stopwaitsecs`. Send the panel's names:
+Workers are **supervisord programs** — one `[program:{program}]` block per worker in `/etc/supervisor/conf.d` (legacy workers retain `[program:sv-worker-{slug}]`), with supervisor owning the copies via `numprocs`. (They were systemd units until 2026-09-07; this section described that and was wrong for a day.) The panel's field names are its own, not supervisor's — `processes` is `numprocs`, `auto_start` is `autostart`, `auto_restart` is `autorestart`, `stop_wait_seconds` is `stopwaitsecs`. Send the panel's names:
 
 ```json
 {"workers": [{
@@ -3122,7 +3122,7 @@ Workers are **supervisord programs** — one `[program:sv-worker-{slug}]` block 
 
 `user` is the account the processes run as. Null means the panel chose, and `effective_user` says what that resolves to (the site's own system user) — show `effective_user` as the hint, not as the field's value, or saving the form writes a choice nobody made. A non-null `user` is normally an adopted block naming another account, which the panel preserves rather than rewriting.
 
-`log_file` is `stdout_logfile`, with `redirect_stderr` on so one file holds both streams. Null means the panel's default, `{application root}/logs/sv-worker-{slug}.log`. `log_level` is supervisord's own: `critical | error | warn | info | debug | trace | blather`.
+`log_file` is `stdout_logfile`, with `redirect_stderr` on so one file holds both streams. Null means `{application root}/logs/supervisor-{program}.log` for v7-layout workers, or the unchanged `{application root}/logs/sv-worker-{slug}.log` for legacy workers. `log_level` is supervisord's own: `critical | error | warn | info | debug | trace | blather`.
 
 `extra_config` is appended to the program block verbatim, so a directive there wins over everything the panel wrote — the same shape as `additional_directives` on PHP settings. It **may not contain `[`**: a section header would define a second program the panel does not know about and would never stop. Max 2000 characters; both are 422s.
 
@@ -3130,15 +3130,32 @@ Workers are **supervisord programs** — one `[program:sv-worker-{slug}]` block 
 
 `restart_on_deploy` makes the worker pick up new code after a deploy; without it a deploy leaves the site on new code and the queue on old code, with nothing anywhere connecting the two.
 
-`log_identifier` is the key of this worker's source on the Logs screen (`/logs?source=sv-worker-shop-queue`), so a link can be built without the frontend assembling a name. It was the journald identifier when workers were systemd units; the output now goes to `log_file` and the Logs screen reads that file, but the key is unchanged.
+`log_identifier` is the opaque key of this worker's source on the Logs screen.
+Use it directly for `/logs?source={log_identifier}`; do not construct it.
 
-It is `sv-worker-{slug}`, where the slug is derived once from the application's
-slug and the worker's name — **not from the id, and not from the name.** Not the
-id, because `sv-worker-3` says nothing to whoever reads it in `journalctl`; not
-the name, because renaming a worker would then have to stop, disable, delete,
-rewrite and restart a running process, and a half-failure leaves an orphan unit
-still consuming the queue. **Renaming a worker does not change it.** Treat it as
-opaque and use what the API sends.
+Newly saved workers use v7's `/etc/supervisor/conf.d/{program}.conf` and
+`[program:{program}]`. The program is a globally unique, file-safe slug of the
+worker's name (max 64 characters including collision suffixes). Existing disk
+filenames and program headers, including foreign/shared configs, are reserved.
+A label rename does not move a worker that already has a stored program.
+
+The nullable internal `workers.program` column is **not client input**. Null
+continues to identify the legacy `sv-worker-{slug}` group and its existing log.
+Adding the column does not stop or rewrite workers. The first explicit save
+moves an owned legacy definition to v7 naming: stop/remove/reload the old group
+before starting the new one, restoring the legacy definition on a recoverable
+failure. Missing, unreadable or replaced legacy definitions are refused rather
+than deleted or duplicated. No bulk backfill runs on deploy. Controls and Sync use the stored program (legacy fallback when null). Log
+paths follow it too, while log-source keys retain the globally unique
+`sv-worker-{slug}` namespace. A worker named `mysql` must never select the
+server database log, and existing links remain valid across the move.
+
+If a create fails and stopping/removing its new program cannot be verified,
+the worker row is retained for recovery rather than losing ownership of a
+possibly running process. An identical create retry is refused by name
+uniqueness; inspect/edit/control that retained worker instead. Verified cleanup
+still removes a failed-create row. Supervisor updates are scoped to the owned
+program, not unrelated pending config changes.
 
 `presets` are starting points for the detected framework — key/kind/command, already localised. Craft returns `queue` + `custom`; Statamic returns `queue` + `horizon` + `custom`; Node applications without a recognised queue framework (including n8n and Node-RED) return only `custom`. Detection follows the application's actual project root rather than assuming its served directory contains the CLI, so Craft's `craft`, Statamic's `please`/`artisan`, and brownfield Laravel layouts with `artisan` beside `public/` are found correctly. When `directory` is null, the worker uses that same detected project root as its working and writable directory.
 
@@ -5187,19 +5204,12 @@ size or last-write time, and a zero would read as an empty log last touched in
 
 **A source is omitted only when the server answered "not there".** If the panel could not run the check at all — an out-of-date sudo grant is the usual reason — the source is **kept**, with `readable: false`. Those are opposite statements: dropping the second would say this server has no such log, and someone would reasonably conclude their cron jobs never wrote anything.
 
-**Worker logs are `journal`, one source per worker, keyed `sv-worker-{slug}`.** A
-worker writes no file — its unit sends stdout and stderr to journald under that
-identifier, which is why nothing has to rotate or clean up after it. The source
-is **scoped to its own identifier**, so it shows that worker rather than every
-unit on the box; the `journal` source remains the whole system, which is what it
-is for. `WorkerResource.log_identifier` is the same string, so a worker row can
-link straight to `/logs?source={log_identifier}` without building the key.
-
-Like any journal source these are `follow: false`, `downloadable: false`, and
-`size`/`modified` null. Retention is journald's, not the panel's — the disk
-cleaner's `journal` category vacuums to `SERVER_DISK_JOURNAL_DAYS` (default 7)
-when it is enabled and includes that category; otherwise systemd's own size cap
-applies.
+**Worker logs are `privileged` file sources**, one per worker, keyed by
+`WorkerResource.log_identifier`. The default file is
+`logs/supervisor-{program}.log` for v7-layout workers and
+`logs/sv-worker-{slug}.log` for unchanged legacy workers. An explicit `log_file`
+is preserved. Supervisor rotates the stream at 10 MB with 3 backups. These
+sources support clearing; follow/download are unavailable.
 
 **Cron job logs are `privileged`.** They are `0640` owned by the account the job runs as, whose group is that account's own — so the `adm` membership that makes `nginx`, `mysql` and `syslog` readable does not apply, and the panel reads them through the system like Let's Encrypt. `follow` and `downloadable` are therefore `false` for them.
 
