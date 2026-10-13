@@ -10,7 +10,7 @@
     "complex_secrets": [],
     "panel_only_secrets": [],
     "url_env_key": "SITE_URL",
-    "default_memory_limit": "256m",
+    "default_memory_limit": "384m",
     "method": "one_click",
     "serving_profile": "docker",
     "needs_database": false,
@@ -37,8 +37,8 @@
             "type": "text",
             "required": false,
             "advanced": false,
-            "placeholder": "256m",
-            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+            "placeholder": "384m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 384m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
         },
         {
             "name": "cpu_limit",

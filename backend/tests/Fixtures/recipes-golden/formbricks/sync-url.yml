@@ -4,7 +4,7 @@ services:
   formbricks:
     image: ghcr.io/formbricks/formbricks:5.4.5
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 2g
     logging:
       driver: json-file
       options:

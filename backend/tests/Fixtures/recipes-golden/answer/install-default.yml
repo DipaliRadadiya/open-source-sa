@@ -4,7 +4,7 @@ services:
   answer:
     image: apache/answer:2.0.3
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 384m
     logging:
       driver: json-file
       options:

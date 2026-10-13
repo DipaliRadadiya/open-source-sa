@@ -31,7 +31,7 @@
         }
     ],
     "container_port": 80,
-    "memory_floor": "256m",
+    "memory_floor": "384m",
     "volumes": {
         "data": "/data"
     },
@@ -70,6 +70,7 @@
         "One container with one named volume on /data, as in the official compose file: the SQLite database, config.yaml, uploaded files and the language packs all live there. SQLite (DB_TYPE=sqlite3) keeps the app to a single service; Answer also supports MySQL and PostgreSQL if a community outgrows it.",
         "SITE_URL is the site's address and is stored in the database at installation. After a domain change, update it in Admin > Settings > General (Site URL), or links in emails and the sitemap keep the old address.",
         "Outgoing email (registration confirmation, password reset, notifications) needs an SMTP server: set it in Admin > Settings > SMTP. Until then new members who register cannot confirm their address; the administrator created here is already active.",
+        "The memory floor is 384m: with 256m Answer sat at 150 to 166 MiB idle and reached 187 MiB while questions were asked and answered (59 to 73 % of the limit, Ubuntu 24.04 and 26.04).",
         "The image's clock is fixed to Asia/Shanghai at build time (upstream TIMEZONE default); times in the web interface follow each user's own timezone setting, so this only affects timestamps in the container log."
     ]
 }

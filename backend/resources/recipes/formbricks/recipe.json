@@ -47,7 +47,7 @@
         }
     ],
     "container_port": 3000,
-    "memory_floor": "1g",
+    "memory_floor": "2g",
     "volumes": {
         "uploads": "/home/nextjs/apps/web/uploads",
         "db": "/var/lib/postgresql",
@@ -95,7 +95,8 @@
         "The optional Hub (unified feedback records and AI taxonomy) and Cube (analysis charts) services are not included. Formbricks still requires their four variables, so HUB_API_URL and CUBEJS_API_URL point to a closed local port and HUB_API_KEY and CUBEJS_API_SECRET say not-configured. Surveys, responses, the summary and exports do not use them; only those enterprise features do.",
         "ENCRYPTION_KEY must be 64 hex characters, so the start command derives it from the generated ENCRYPTION_SEED with sha256sum: the same seed always gives the same key, so a recreated container can still read encrypted data. NEXTAUTH_SECRET, BETTER_AUTH_SECRET and CRON_SECRET are generated secrets.",
         "EMAIL_VERIFICATION_DISABLED=1 and PASSWORD_RESET_DISABLED=1 because no SMTP server is configured: without them the owner could not confirm the address, and a reset link could never arrive. After you add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and MAIL_FROM in the panel's environment editor, you can remove both. Invitations and survey follow-up emails also need SMTP.",
-        "Uploaded files (survey images, file-upload answers) are stored in the uploads volume. TELEMETRY_DISABLED=1 switches off the anonymous usage report.",
+        "File uploads (images in surveys, file-upload questions) need S3-compatible storage: Formbricks 5 has no local file storage, and its editor says File storage not set up until S3_BUCKET_NAME is set. Add S3_ACCESS_KEY, S3_SECRET_KEY, S3_REGION, S3_BUCKET_NAME and, for MinIO and other S3-compatible services, S3_ENDPOINT_URL and S3_FORCE_PATH_STYLE=1 in the panel's environment editor. Text, choice and rating questions work without it. The uploads volume stays because the image declares that folder as a volume (without it Docker would create an anonymous one on every recreate). TELEMETRY_DISABLED=1 switches off the anonymous usage report.",
+        "The memory floor is 2g: Node in the image sizes its JavaScript heap from the container limit, and with 1g the heap stopped at about 560 MB while the idle server already held about 500 MB, so the first sign-in crashed it (heap out of memory, measured on Ubuntu 26.04). With 2g the heap limit is about 1.1 GB.",
         "WEBAPP_URL, NEXTAUTH_URL and BETTER_AUTH_URL are the site's address and follow a domain change. Link surveys already shared keep the old address in their links."
     ]
 }

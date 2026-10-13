@@ -17,7 +17,7 @@ services:
     command:
       - sh
       - -c
-      - 'echo SetEnvIf X-Forwarded-Proto https HTTPS=on > /etc/apache2/conf-enabled/zz-forwarded-https.conf; if [ -f /var/www/html/app/config/parameters.php ] && [ -f /ps-init/sync-domain.php ]; then runuser -u www-data -- php /ps-init/sync-domain.php || true; fi; exec /tmp/docker_run.sh'
+      - 'if [ -f /ps-init/start.sh ]; then exec sh /ps-init/start.sh; fi; exec /tmp/docker_run.sh'
 
     environment:
       PS_INSTALL_AUTO: "1"
@@ -25,7 +25,7 @@ services:
       PS_SHOP_URL: "http://prestashop-container.golden.test"
       PS_ENABLE_SSL: "1"
       PS_FOLDER_ADMIN: shopadmin
-      PS_FOLDER_INSTALL: install
+      PS_FOLDER_INSTALL: install-ps
       PS_LANGUAGE: en
       PS_COUNTRY: GB
       ADMIN_MAIL: "owner@golden.test"

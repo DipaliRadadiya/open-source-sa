@@ -10,7 +10,7 @@ echo 'SetEnvIf X-Forwarded-Proto https HTTPS=on' > /etc/apache2/conf-enabled/zz-
 
 config=/var/www/html/config/local.php
 installed() {
-    php -r 'include getenv("MAUTIC_LOCAL_PHP"); exit(!empty($parameters["db_driver"]) && !empty($parameters["site_url"]) ? 0 : 1);' 2>/dev/null
+    [ -f "$config" ] && php -d display_errors=0 -r 'include getenv("MAUTIC_LOCAL_PHP"); exit(!empty($parameters["db_driver"]) && !empty($parameters["site_url"]) ? 0 : 1);'
 }
 export MAUTIC_LOCAL_PHP="$config"
 
@@ -29,6 +29,20 @@ if ! installed; then
 else
     # Keep site_url in step with the panel's address after a domain change.
     su -s /bin/bash www-data -c 'php /mautic-init/sync-url.php' || true
+fi
+
+# Mautic compiles cookie_secure (true when site_url is https) into its Symfony
+# cache, and the image ships a cache built without a site_url, so the session
+# cookie was not Secure (RC-37 smoke). Rebuild the cache once per container
+# and address: the marker lives in the container's own filesystem, so a
+# recreated container (new image, new domain) rebuilds it and a plain restart
+# does not. It takes about a minute.
+marker=/var/www/html/var/cache/.panel-site-url
+if [ "$(cat "$marker" 2>/dev/null)" != "$MAUTIC_URL" ]; then
+    echo "[mautic-init] rebuilding the cache for ${MAUTIC_URL}"
+    if su -s /bin/bash www-data -c 'php /var/www/html/bin/console cache:clear --no-interaction'; then
+        printf '%s' "$MAUTIC_URL" > "$marker"
+    fi
 fi
 
 exec /entrypoint.sh
