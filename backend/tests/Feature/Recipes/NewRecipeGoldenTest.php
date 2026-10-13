@@ -72,7 +72,7 @@ function rc09GoldenInstall(Application $application): Application
     return $application->fresh();
 }
 
-dataset('new golden apps', array_combine(['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep'])));
+dataset('new golden apps', array_combine(['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve'])));
 
 it('renders the same compose on install', function (string $slug) {
     Golden::assertMatches(Golden::dir($slug).'/install-default.yml', rc09GoldenInstall(rc09GoldenSite($slug))->compose);

@@ -1,0 +1,80 @@
+{
+    "schema": 1,
+    "slug": "hasura",
+    "version": 1,
+    "title": "Hasura",
+    "tagline": {
+        "en": "Instant GraphQL API on PostgreSQL, with a web console, permissions and events",
+        "es": "API GraphQL instantánea sobre PostgreSQL, con consola web, permisos y eventos",
+        "de": "Sofortige GraphQL-API auf PostgreSQL, mit Web-Konsole, Berechtigungen und Events",
+        "fr": "API GraphQL instantanée sur PostgreSQL, avec console web, permissions et événements",
+        "pt": "API GraphQL instantânea sobre PostgreSQL, com console web, permissões e eventos",
+        "ja": "PostgreSQL 上に即座に GraphQL API を構築。Web コンソール、権限、イベントに対応",
+        "ru": "Мгновенный GraphQL API поверх PostgreSQL с веб-консолью, правами доступа и событиями",
+        "hi": "PostgreSQL पर तुरंत GraphQL API, वेब कंसोल, अनुमतियों और इवेंट्स के साथ"
+    },
+    "category": "development",
+    "icon": "hasura",
+    "popular": false,
+    "catalog_order": 470,
+    "docs_url": "https://hasura.io/docs/2.0/deployment/deployment-guides/docker/",
+    "images": {
+        "app": {
+            "ref": "hasura/graphql-engine:v2.50.3",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:15.19-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "hasura",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "512m",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "token",
+                "secret": "ADMIN_SECRET"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Open the site to reach the Hasura console: it asks for the admin secret, which is the token on the first-run card (HASURA_GRAPHQL_ADMIN_SECRET, 32 characters). The GraphQL endpoint is /v1/graphql; requests need the x-hasura-admin-secret header, or a JWT/webhook once you configure one. Without either, Hasura refuses the request.",
+        "The admin secret bypasses every permission. Keep it on servers only; give browsers and apps JWTs or a webhook with role-based permissions.",
+        "Hasura Community Edition v2 with its own PostgreSQL 15.19 database (the major version of the official compose file). The same database holds Hasura's metadata (HASURA_GRAPHQL_METADATA_DATABASE_URL) and is connected as the \"default\" data source (HASURA_GRAPHQL_DATABASE_URL), so tables you create in the console live there. The database has its own volume and no published port; back it up.",
+        "The console is on (HASURA_GRAPHQL_ENABLE_CONSOLE) and its assets are served by the server itself (/srv/console-assets) instead of Hasura's CDN. Dev mode is off, so errors do not include internal details, and telemetry is off.",
+        "The official compose file's data-connector-agent (for Athena, MySQL, Oracle and Snowflake sources) is not included; PostgreSQL sources need nothing extra.",
+        "The healthcheck calls /healthz with the curl that ships in the image. The 512m floor covers the GraphQL engine for a typical schema; the database uses the panel database-memory default."
+    ]
+}

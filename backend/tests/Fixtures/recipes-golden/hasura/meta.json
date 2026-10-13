@@ -1,0 +1,117 @@
+{
+    "slug": "hasura",
+    "container_port": 8080,
+    "volume_roles": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "ADMIN_SECRET",
+        "DB_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "development",
+    "icon": "hasura",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "ADMIN_SECRET",
+        "DB_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Hasura",
+            "tagline": "Instant GraphQL API on PostgreSQL, with a web console, permissions and events"
+        },
+        "es": {
+            "title": "Hasura",
+            "tagline": "API GraphQL instantánea sobre PostgreSQL, con consola web, permisos y eventos"
+        },
+        "de": {
+            "title": "Hasura",
+            "tagline": "Sofortige GraphQL-API auf PostgreSQL, mit Web-Konsole, Berechtigungen und Events"
+        },
+        "fr": {
+            "title": "Hasura",
+            "tagline": "API GraphQL instantanée sur PostgreSQL, avec console web, permissions et événements"
+        },
+        "pt": {
+            "title": "Hasura",
+            "tagline": "API GraphQL instantânea sobre PostgreSQL, com console web, permissões e eventos"
+        },
+        "ja": {
+            "title": "Hasura",
+            "tagline": "PostgreSQL 上に即座に GraphQL API を構築。Web コンソール、権限、イベントに対応"
+        },
+        "ru": {
+            "title": "Hasura",
+            "tagline": "Мгновенный GraphQL API поверх PostgreSQL с веб-консолью, правами доступа и событиями"
+        },
+        "hi": {
+            "title": "Hasura",
+            "tagline": "PostgreSQL पर तुरंत GraphQL API, वेब कंसोल, अनुमतियों और इवेंट्स के साथ"
+        }
+    },
+    "catalog_en": {
+        "name": "hasura",
+        "icon": "hasura",
+        "category": "development",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

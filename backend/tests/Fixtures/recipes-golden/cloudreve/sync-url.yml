@@ -1,0 +1,93 @@
+name: sv-app-4242
+
+services:
+  cloudreve:
+    image: cloudreve/cloudreve:4.19.1
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:5212"
+
+    environment:
+      CR_SETTING_DEFAULT_siteURL: "http://cloudreve.golden.test"
+      CR_CONF_Database__Type: postgres
+      CR_CONF_Database__Host: db
+      CR_CONF_Database__Port: "5432"
+      CR_CONF_Database__User: cloudreve
+      CR_CONF_Database__Password: "b04b488fda638d93b082fa2f531576cc"
+      CR_CONF_Database__Name: cloudreve
+      CR_CONF_Redis__Server: redis:6379
+      TZ: UTC
+
+    volumes:
+      - sv-app-4242_data:/cloudreve/data
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5212/api/v4/site/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: cloudreve
+      POSTGRES_USER: cloudreve
+      POSTGRES_PASSWORD: "b04b488fda638d93b082fa2f531576cc"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "cloudreve", "-d", "cloudreve"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:8.8.3-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    volumes:
+      - sv-app-4242_redis:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_redis:
+    external: true

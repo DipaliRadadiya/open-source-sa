@@ -1,0 +1,63 @@
+name: sv-app-4242
+
+services:
+  hasura:
+    image: hasura/graphql-engine:v2.50.3
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"
+
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: "postgres://hasura:c5bb10863817d123114bc8e7d0ce9007@db:5432/hasura"
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: "postgres://hasura:c5bb10863817d123114bc8e7d0ce9007@db:5432/hasura"
+      HASURA_GRAPHQL_ADMIN_SECRET: "d20a0a007248b58e4a05ca8def06335d"
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_CONSOLE_ASSETS_DIR: /srv/console-assets
+      HASURA_GRAPHQL_DEV_MODE: "false"
+      HASURA_GRAPHQL_ENABLE_TELEMETRY: "false"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  db:
+    image: postgres:15.19-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: hasura
+      POSTGRES_USER: hasura
+      POSTGRES_PASSWORD: "c5bb10863817d123114bc8e7d0ce9007"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "hasura", "-d", "hasura"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_db:
+    external: true
