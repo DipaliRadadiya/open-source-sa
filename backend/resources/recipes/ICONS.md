@@ -119,6 +119,15 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `fireflyiii` | [official vector](https://raw.githubusercontent.com/firefly-iii/firefly-iii/v6.7.9/public/maskable-icon.svg) | AGPL-3.0 | Official maskable application icon; the licence comment block removed (the licence is recorded here); paths and colours unchanged. |
 | `yourls` | [official vector](https://raw.githubusercontent.com/YOURLS/YOURLS/1.10.6/images/favicon.svg) | MIT | Official favicon (the chain-link mark); Inkscape metadata, editor attributes, ids and one unused definition removed; paths and colours unchanged. |
 
+## RC-37 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `prestashop_container` | [source](../../../frontend/public/site-types/prestashop.svg) | PrestaShop trademark (puffin mark; existing panel asset) | Byte-for-byte copy of the panel's existing PrestaShop icon, as `wordpress_container` reuses the WordPress one. |
+| `mautic_container` | [official vector](https://raw.githubusercontent.com/mautic/mautic/7.2.1/app/bundles/CoreBundle/Assets/images/logo--minimized.svg) | GPL-3.0 | Official minimized logo (the "M" in a circle); HTML comments, class names and editor attributes removed, whitespace in the path data collapsed, filled with Mautic's brand colour #4E5E9E (Mautic's logos page, also Simple Icons' value); paths unchanged. |
+| `formbricks` | [official vector](https://raw.githubusercontent.com/formbricks/formbricks/5.4.5/docs/images/favicon.svg) | AGPL-3.0 (outside the ee/ directories) | Official favicon (the square mark on its gradient); unchanged. |
+| `answer` | [official vector](https://raw.githubusercontent.com/apache/answer/v2.0.3/docs/img/logo.svg) | Apache-2.0 | The speech-bubble mark of the official logo: the wordmark paths and the white background removed, viewBox cropped to the mark (6 6 32 32); path and colour (#0033FF) unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.

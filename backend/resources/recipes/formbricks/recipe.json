@@ -1,0 +1,101 @@
+{
+    "schema": 1,
+    "slug": "formbricks",
+    "version": 1,
+    "title": "Formbricks",
+    "tagline": {
+        "en": "Open source surveys and forms: link surveys, in-app and website surveys, with response analysis",
+        "es": "Encuestas y formularios de código abierto: encuestas por enlace, en la app y en la web, con análisis de respuestas",
+        "de": "Open-Source-Umfragen und -Formulare: Link-Umfragen, In-App- und Website-Umfragen mit Auswertung der Antworten",
+        "fr": "Sondages et formulaires open source : sondages par lien, dans l'app et sur le site, avec analyse des réponses",
+        "pt": "Pesquisas e formulários de código aberto: pesquisas por link, no app e no site, com análise das respostas",
+        "ja": "オープンソースのアンケートとフォーム：リンク、アプリ内、Webサイトのアンケートと回答分析",
+        "ru": "Опросы и формы с открытым кодом: опросы по ссылке, в приложении и на сайте, с анализом ответов",
+        "hi": "ओपन सोर्स सर्वे और फ़ॉर्म: लिंक सर्वे, ऐप और वेबसाइट सर्वे, जवाबों के विश्लेषण के साथ"
+    },
+    "category": "marketing",
+    "icon": "formbricks",
+    "popular": false,
+    "catalog_order": 680,
+    "docs_url": "https://formbricks.com/docs/self-hosting/setup/docker",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/formbricks/formbricks:5.4.5",
+            "tested": []
+        },
+        "db": {
+            "ref": "pgvector/pgvector:0.8.7-pg18",
+            "tested": []
+        },
+        "cache": {
+            "ref": "valkey/valkey:8.1.10-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "formbricks",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "1g",
+    "volumes": {
+        "uploads": "/home/nextjs/apps/web/uploads",
+        "db": "/var/lib/postgresql",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "NEXTAUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "BETTER_AUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "CRON_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ENCRYPTION_SEED",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "WEBAPP_URL",
+    "inputs": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor creates the owner account and the organization (Formbricks' fresh-instance setup), so open the site and finish the setup right after the app is created. Public sign-up is closed on a self-hosted Formbricks from then on (it is only open on Formbricks Cloud): add people from Organization settings > Members.",
+        "Formbricks 5.4.5, not 6.x: version 6 refuses to start without an AuthZed/SpiceDB permission server (AUTHZED_ENABLED must be true), which adds a SpiceDB service, its own database and three one-shot setup jobs. The 5.4 line is still maintained upstream (5.4.5 was released on the same day as 6.0.2).",
+        "Three services, from the official docker/docker-compose.yml of v5.4.5: the app, PostgreSQL with pgvector (the official file uses pgvector/pgvector:pg18; pinned here to 0.8.7-pg18) and Valkey with append-only persistence. The official file's one-shot formbricks-migrate job is folded into the app: the image's start script applies the database migrations on every start (SKIP_STARTUP_MIGRATION is not set).",
+        "The optional Hub (unified feedback records and AI taxonomy) and Cube (analysis charts) services are not included. Formbricks still requires their four variables, so HUB_API_URL and CUBEJS_API_URL point to a closed local port and HUB_API_KEY and CUBEJS_API_SECRET say not-configured. Surveys, responses, the summary and exports do not use them; only those enterprise features do.",
+        "ENCRYPTION_KEY must be 64 hex characters, so the start command derives it from the generated ENCRYPTION_SEED with sha256sum: the same seed always gives the same key, so a recreated container can still read encrypted data. NEXTAUTH_SECRET, BETTER_AUTH_SECRET and CRON_SECRET are generated secrets.",
+        "EMAIL_VERIFICATION_DISABLED=1 and PASSWORD_RESET_DISABLED=1 because no SMTP server is configured: without them the owner could not confirm the address, and a reset link could never arrive. After you add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and MAIL_FROM in the panel's environment editor, you can remove both. Invitations and survey follow-up emails also need SMTP.",
+        "Uploaded files (survey images, file-upload answers) are stored in the uploads volume. TELEMETRY_DISABLED=1 switches off the anonymous usage report.",
+        "WEBAPP_URL, NEXTAUTH_URL and BETTER_AUTH_URL are the site's address and follow a domain change. Link surveys already shared keep the old address in their links."
+    ]
+}

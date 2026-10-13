@@ -1,0 +1,75 @@
+{
+    "schema": 1,
+    "slug": "answer",
+    "version": 1,
+    "title": "Apache Answer",
+    "tagline": {
+        "en": "Q&A community for your team or product: questions, answers, votes, tags and reputation",
+        "es": "Comunidad de preguntas y respuestas para tu equipo o producto: preguntas, respuestas, votos, etiquetas y reputación",
+        "de": "Frage-und-Antwort-Community für Ihr Team oder Produkt: Fragen, Antworten, Votes, Tags und Reputation",
+        "fr": "Communauté de questions-réponses pour votre équipe ou votre produit : questions, réponses, votes, tags et réputation",
+        "pt": "Comunidade de perguntas e respostas para sua equipe ou produto: perguntas, respostas, votos, tags e reputação",
+        "ja": "チームや製品のためのQ&Aコミュニティ：質問、回答、投票、タグ、評判",
+        "ru": "Сообщество вопросов и ответов для команды или продукта: вопросы, ответы, голоса, теги и репутация",
+        "hi": "आपकी टीम या उत्पाद के लिए प्रश्नोत्तर समुदाय: प्रश्न, उत्तर, वोट, टैग और प्रतिष्ठा"
+    },
+    "category": "community",
+    "icon": "answer",
+    "popular": false,
+    "catalog_order": 690,
+    "docs_url": "https://answer.apache.org/docs/installation",
+    "images": {
+        "app": {
+            "ref": "apache/answer:2.0.3",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "answer",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "256m",
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "SITE_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The image installs itself on the first start (AUTO_INSTALL, the variables in the official installation docs and internal/install/install_from_env.go of v2.0.3): it creates the SQLite database /data/answer.db and the administrator from ADMIN_EMAIL (the admin email you enter), ADMIN_PASSWORD (a generated password shown on the first-run card) and the username admin. Sign in with the email and that password. These variables are read only while the database is empty, so changing them later does nothing: change the password in your profile instead.",
+        "If the automatic installation ever fails (for example a value Answer refuses), the image falls back to its web installer at /install, which anyone who reaches the site could complete. The container log shows '[auto-install] try to init by env fail' in that case; fix the value and recreate the app before sharing the address.",
+        "One container with one named volume on /data, as in the official compose file: the SQLite database, config.yaml, uploaded files and the language packs all live there. SQLite (DB_TYPE=sqlite3) keeps the app to a single service; Answer also supports MySQL and PostgreSQL if a community outgrows it.",
+        "SITE_URL is the site's address and is stored in the database at installation. After a domain change, update it in Admin > Settings > General (Site URL), or links in emails and the sitemap keep the old address.",
+        "Outgoing email (registration confirmation, password reset, notifications) needs an SMTP server: set it in Admin > Settings > SMTP. Until then new members who register cannot confirm their address; the administrator created here is already active.",
+        "The image's clock is fixed to Asia/Shanghai at build time (upstream TIMEZONE default); times in the web interface follow each user's own timezone setting, so this only affects timestamps in the container log."
+    ]
+}

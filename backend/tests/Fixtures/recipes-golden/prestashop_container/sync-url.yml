@@ -1,0 +1,77 @@
+name: sv-app-4242
+
+services:
+  prestashop:
+    image: prestashop/prestashop:9.2.0-apache
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    command:
+      - sh
+      - -c
+      - 'echo SetEnvIf X-Forwarded-Proto https HTTPS=on > /etc/apache2/conf-enabled/zz-forwarded-https.conf; if [ -f /var/www/html/app/config/parameters.php ] && [ -f /ps-init/sync-domain.php ]; then runuser -u www-data -- php /ps-init/sync-domain.php || true; fi; exec /tmp/docker_run.sh'
+
+    environment:
+      PS_INSTALL_AUTO: "1"
+      PS_DOMAIN: "prestashop-container.golden.test"
+      PS_SHOP_URL: "http://prestashop-container.golden.test"
+      PS_ENABLE_SSL: "1"
+      PS_FOLDER_ADMIN: shopadmin
+      PS_FOLDER_INSTALL: install
+      PS_LANGUAGE: en
+      PS_COUNTRY: GB
+      ADMIN_MAIL: "owner@golden.test"
+      ADMIN_PASSWD: "fcb5e72e129d86546500a4b0d26a589d"
+      DB_SERVER: db
+      DB_PORT: "3306"
+      DB_NAME: prestashop
+      DB_USER: prestashop
+      DB_PASSWD: "fca57885367080f42bf7fbb8d0eec328"
+      DB_PREFIX: ps_
+
+    volumes:
+      - sv-app-4242_html:/var/www/html
+      - /home/owner/golden-prestashop-container/public_html/public_html/ps-init:/ps-init:ro
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11.8.9
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MYSQL_DATABASE: prestashop
+      MYSQL_USER: prestashop
+      MYSQL_PASSWORD: "fca57885367080f42bf7fbb8d0eec328"
+      MYSQL_ROOT_PASSWORD: "534a44bd7bc567921f1fcec0ac912bc6"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+volumes:
+  sv-app-4242_html:
+    external: true
+  sv-app-4242_db:
+    external: true

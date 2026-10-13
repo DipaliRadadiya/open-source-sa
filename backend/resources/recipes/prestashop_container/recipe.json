@@ -1,0 +1,106 @@
+{
+    "schema": 1,
+    "slug": "prestashop_container",
+    "version": 1,
+    "title": "PrestaShop",
+    "tagline": {
+        "en": "Open source online store: catalog, cart and checkout, orders, payments and shipping",
+        "es": "Tienda online de código abierto: catálogo, carrito y pago, pedidos, pagos y envíos",
+        "de": "Open-Source-Onlineshop: Katalog, Warenkorb und Kasse, Bestellungen, Zahlungen und Versand",
+        "fr": "Boutique en ligne open source : catalogue, panier et paiement, commandes, moyens de paiement et livraison",
+        "pt": "Loja online de código aberto: catálogo, carrinho e checkout, pedidos, pagamentos e envios",
+        "ja": "オープンソースのオンラインストア：カタログ、カートと決済、注文、支払い、配送",
+        "ru": "Интернет-магазин с открытым кодом: каталог, корзина и оформление заказа, заказы, оплата и доставка",
+        "hi": "ओपन सोर्स ऑनलाइन स्टोर: कैटलॉग, कार्ट और चेकआउट, ऑर्डर, भुगतान और शिपिंग"
+    },
+    "category": "ecommerce",
+    "icon": "prestashop",
+    "popular": false,
+    "catalog_order": 660,
+    "docs_url": "https://hub.docker.com/r/prestashop/prestashop",
+    "images": {
+        "app": {
+            "ref": "prestashop/prestashop:9.2.0-apache",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:11.8.9",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "prestashop",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "1g",
+    "volumes": {
+        "html": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "PS_SHOP_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [
+        {
+            "path": "/ps-init/sync-domain.php",
+            "source": "starter/sync-domain.php"
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "url",
+                "path": "/shopadmin/"
+            },
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The slug is prestashop_container because prestashop is already the panel's own PHP installer for PrestaShop (a web-server site, not Docker); two site types cannot share a name. Same pattern as wordpress_container.",
+        "The image installs the shop on the first start (PS_INSTALL_AUTO=1, the official image's variables): the shop answers on PS_DOMAIN over HTTPS (PS_ENABLE_SSL=1), and the back-office employee is ADMIN_MAIL (the admin email you enter) with ADMIN_PASSWD (a generated password shown on the first-run card). The installation takes one to three minutes after the container starts; until it finishes the site does not answer. Language en, country GB (PS_LANGUAGE, PS_COUNTRY); add languages and change the country in International > Localization.",
+        "The back office is at /shopadmin/ (PS_FOLDER_ADMIN, a fixed folder name; the image renames the admin folder to it before installing and deletes the install folder afterwards). The admin email and password are read only at installation, so changing them later does nothing: change the password in the back office (Your profile).",
+        "Upstream behaviour: the image's start script passes the database and admin passwords to the mysql client and to the PrestaShop installer as command-line arguments while it installs, so for those one to three minutes they are visible in the server's process list. The variables are not read again after installation.",
+        "HTTPS behind the panel's proxy: the start command writes one Apache line (SetEnvIf X-Forwarded-Proto https HTTPS=on) so PHP sees HTTPS=on for requests the proxy received over HTTPS. The shop's own secure-mode check and the Symfony back office both read it, so links, redirects and the back-office login stay on HTTPS without trusting any proxy address.",
+        "Domain changes: PrestaShop keeps its domain in the database. PS_SHOP_URL is the site's address, so a domain change in the panel re-renders this file, and on the next start a small starter script (ps-init/sync-domain.php in the site folder, run as www-data before Apache starts) moves the main shop URL to PS_DOMAIN and regenerates .htaccess, robots.txt and the caches, as the image's own docker_updt_ps_domains.php does. It does nothing when the domain already matches or when multistore is on. Delete the script to manage the domain yourself in Shop Parameters > Traffic & SEO.",
+        "The whole PrestaShop folder (/var/www/html: code, configuration, product images, modules and themes) lives in one named volume, as the image expects; the database is a private MariaDB 11.8 (the official image docs use MySQL; MariaDB needs less memory). Because the code is in the volume, a newer image does not upgrade an existing shop: use PrestaShop's own update assistant (the autoupgrade module) for that.",
+        "Outgoing email (order confirmations, password reset) needs an SMTP server: set it in Advanced Parameters > E-mail. Until then PrestaShop tries the local mail function, which does not deliver from the container."
+    ]
+}

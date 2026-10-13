@@ -1,0 +1,135 @@
+{
+    "slug": "prestashop_container",
+    "container_port": 80,
+    "volume_roles": {
+        "html": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "ADMIN_PASSWORD",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "PS_SHOP_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ecommerce",
+    "icon": "prestashop",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": {
+        "/ps-init/sync-domain.php": "<?php\n// Managed by the panel's PrestaShop recipe (RC-37). Run by the container's start\n// command, as www-data, before Apache starts on an installed shop.\n//\n// PrestaShop keeps its domain in the database. The panel passes the site's\n// current domain as PS_DOMAIN, so after a domain change this moves the main shop\n// URL to it and regenerates what depends on it, the same steps as the image's\n// own docker_updt_ps_domains.php. Nothing happens when they already match.\n// Delete this file to manage the domain yourself (Shop Parameters > Traffic & SEO).\n\n$domain = strtolower((string) getenv('PS_DOMAIN'));\nif (!preg_match('/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/', $domain)) {\n    exit(0);\n}\n\n$_SERVER['HTTP_HOST'] = $domain;\n$_SERVER['SERVER_NAME'] = $domain;\n$_SERVER['REQUEST_METHOD'] = 'GET';\n$_SERVER['REQUEST_URI'] = '/';\nchdir('/var/www/html');\nrequire '/var/www/html/config/config.inc.php';\n\nif (Shop::isFeatureActive()) {\n    echo \"sync-domain: multistore is on, domains are left alone\\n\";\n    exit(0);\n}\n\nif (Configuration::get('PS_SHOP_DOMAIN') === $domain && Configuration::get('PS_SHOP_DOMAIN_SSL') === $domain) {\n    exit(0);\n}\n\n$url = ShopUrl::getShopUrls((int) Configuration::get('PS_SHOP_DEFAULT'))->where('main', '=', 1)->getFirst();\nif ($url) {\n    $url->domain = $domain;\n    $url->domain_ssl = $domain;\n    $url->save();\n}\n\nConfiguration::updateValue('PS_SHOP_DOMAIN', $domain);\nConfiguration::updateValue('PS_SHOP_DOMAIN_SSL', $domain);\nTools::generateHtaccess();\nTools::generateRobotsFile();\nTools::clearSmartyCache();\nMedia::clearCache();\nTools::clearSf2Cache();\n\necho \"sync-domain: shop domain set to {$domain}\\n\";\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_html",
+            "path": "/var/www/html"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "ADMIN_PASSWORD",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "PrestaShop",
+            "tagline": "Open source online store: catalog, cart and checkout, orders, payments and shipping"
+        },
+        "es": {
+            "title": "PrestaShop",
+            "tagline": "Tienda online de código abierto: catálogo, carrito y pago, pedidos, pagos y envíos"
+        },
+        "de": {
+            "title": "PrestaShop",
+            "tagline": "Open-Source-Onlineshop: Katalog, Warenkorb und Kasse, Bestellungen, Zahlungen und Versand"
+        },
+        "fr": {
+            "title": "PrestaShop",
+            "tagline": "Boutique en ligne open source : catalogue, panier et paiement, commandes, moyens de paiement et livraison"
+        },
+        "pt": {
+            "title": "PrestaShop",
+            "tagline": "Loja online de código aberto: catálogo, carrinho e checkout, pedidos, pagamentos e envios"
+        },
+        "ja": {
+            "title": "PrestaShop",
+            "tagline": "オープンソースのオンラインストア：カタログ、カートと決済、注文、支払い、配送"
+        },
+        "ru": {
+            "title": "PrestaShop",
+            "tagline": "Интернет-магазин с открытым кодом: каталог, корзина и оформление заказа, заказы, оплата и доставка"
+        },
+        "hi": {
+            "title": "PrestaShop",
+            "tagline": "ओपन सोर्स ऑनलाइन स्टोर: कैटलॉग, कार्ट और चेकआउट, ऑर्डर, भुगतान और शिपिंग"
+        }
+    },
+    "catalog_en": {
+        "name": "prestashop_container",
+        "icon": "prestashop",
+        "category": "ecommerce",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}
