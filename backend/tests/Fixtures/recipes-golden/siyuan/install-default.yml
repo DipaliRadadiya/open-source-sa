@@ -14,6 +14,7 @@ services:
     ports:
       - "127.0.0.1:20101:6806"
 
+    command: ["serve"]
     environment:
       SIYUAN_WORKSPACE_PATH: /siyuan/workspace
       SIYUAN_ACCESS_AUTH_CODE: "dc7ec70f866edfe4e4cd4c372bd84905"

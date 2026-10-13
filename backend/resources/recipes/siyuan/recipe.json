@@ -59,6 +59,7 @@
     "notes": [
         "Unlock SiYuan with the generated access code (ACCESS_AUTH_CODE, shown as the password; SiYuan calls it the lock screen password); there is no username. SiYuan requires an access code whenever it is reachable from the network, and the official image reads it from SIYUAN_ACCESS_AUTH_CODE.",
         "The access code is applied again on every container start, so a code changed inside SiYuan's settings is replaced by the generated one after a restart.",
+        "The compose file passes command [\"serve\"], as the official compose does. The image's default command repeats the kernel path, which v3.8.6's entrypoint forwards as an unknown subcommand, so the container exits at once (found live, RC-30).",
         "The whole workspace (notebooks, assets, settings and the search index) is one named volume at /siyuan/workspace. The image's entrypoint starts as root, hands the workspace to UID/GID 1000 (PUID/PGID) and then runs SiYuan as that user.",
         "SiYuan is a single-user application. The Docker edition is used from the browser only: the desktop and mobile apps cannot connect to it, and PDF/HTML/Word export and Markdown file import are not available (upstream limitations).",
         "The real-time editor uses a WebSocket on /ws, which the panel's proxy forwards. TZ is set to UTC instead of the image's Asia/Shanghai default.",

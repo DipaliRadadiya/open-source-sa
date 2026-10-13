@@ -19,6 +19,7 @@ services:
     ports:
       - "127.0.0.1:{{ app_port }}:{{ container_port }}"
 
+    command: ["serve"]
     environment:
       SIYUAN_WORKSPACE_PATH: /siyuan/workspace
       SIYUAN_ACCESS_AUTH_CODE: "{{ secret.ACCESS_AUTH_CODE }}"
