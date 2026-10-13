@@ -226,6 +226,7 @@ return [
     'application.staging_pushed_full' => ':name पर स्टेजिंग की फ़ाइलें और डेटाबेस पुश किए',
     'application.staging_safety_copy_restored' => ':name का लाइव डेटाबेस पुश से पहले सहेजी गई कॉपी (:copy) से वापस लाया गया',
     'application.cloned' => ':name को :domain पर क्लोन किया',
+    'application.v7_leftovers_removed' => ':name की :files पुरानी v7 कॉन्फ़िग फ़ाइल(ें) हटाईं',
     'application.update_started' => ':name को :from से :to पर अपडेट करना शुरू किया',
     'application.updated' => ':name को :from से :to पर अपडेट किया',
     'application.update_failed' => ':name का :to पर अपडेट विफल रहा',

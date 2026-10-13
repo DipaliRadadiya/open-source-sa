@@ -226,6 +226,7 @@ return [
     'application.staging_pushed_full' => 'Envió los archivos y la base de datos de staging a :name',
     'application.staging_safety_copy_restored' => 'Se restauró la base de datos en vivo de :name desde la copia guardada antes de un envío (:copy)',
     'application.cloned' => 'Clonó :name a :domain',
+    'application.v7_leftovers_removed' => 'Eliminó :files archivo(s) de configuración antiguos de v7 de :name',
     'application.update_started' => 'Inició la actualización de :name de :from a :to',
     'application.updated' => 'Actualizó :name de :from a :to',
     'application.update_failed' => 'Falló la actualización de :name a :to',

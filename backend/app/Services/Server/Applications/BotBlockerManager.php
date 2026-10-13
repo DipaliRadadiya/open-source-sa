@@ -6,6 +6,7 @@ use App\Enums\AiBotPolicy;
 use App\Exceptions\Server\Application\BotBlockerOperationException;
 use App\Models\Application;
 use App\Models\ApplicationBotRule;
+use App\Services\ActivityLogger;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Collection;
@@ -27,6 +28,7 @@ class BotBlockerManager
     public function __construct(
         private WebServerManager $webServers,
         private ApplicationProvisioner $provisioner,
+        private V7Leftovers $leftovers,
     ) {}
 
     /**
@@ -65,9 +67,25 @@ class BotBlockerManager
             throw new BotBlockerOperationException($restored->reference);
         }
 
+        // v7's own files for this setting, now that v8's are live: moved
+        // aside and tested again — put back if the web server objects.
+        $moved = $this->leftovers->remove($application, 'ai_bot_blocker');
+
+        if ($moved !== [] && $this->webServers->driver()->test()->failed()) {
+            $this->leftovers->restore($application, $moved);
+            $moved = [];
+        }
+
         $this->webServers->driver()->reload();
 
         $application->save();
+
+        if ($moved !== []) {
+            app(ActivityLogger::class)->log('application.v7_leftovers_removed', $application, [
+                'name' => $application->name,
+                'files' => count($moved),
+            ]);
+        }
 
         if (! $rulesChange) {
             return;

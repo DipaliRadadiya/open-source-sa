@@ -226,6 +226,7 @@ return [
     'application.staging_pushed_full' => 'Отправил файлы и базу данных staging на :name',
     'application.staging_safety_copy_restored' => 'Рабочая база данных :name восстановлена из копии, сохранённой перед отправкой (:copy)',
     'application.cloned' => 'Клонировал :name на :domain',
+    'application.v7_leftovers_removed' => 'Удалил старые файлы конфигурации v7 для :name: :files',
     'application.update_started' => 'Начал обновление :name с :from до :to',
     'application.updated' => 'Обновил :name с :from до :to',
     'application.update_failed' => 'Обновление :name до :to не удалось',

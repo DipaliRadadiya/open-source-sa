@@ -226,6 +226,7 @@ return [
     'application.staging_pushed_full' => 'Staging-Dateien und -Datenbank auf :name übertragen',
     'application.staging_safety_copy_restored' => 'Live-Datenbank von :name aus der vor einer Übertragung gespeicherten Kopie wiederhergestellt (:copy)',
     'application.cloned' => ':name nach :domain geklont',
+    'application.v7_leftovers_removed' => ':files alte v7-Konfigurationsdatei(en) für :name entfernt',
     'application.update_started' => 'Update von :name von :from auf :to gestartet',
     'application.updated' => ':name von :from auf :to aktualisiert',
     'application.update_failed' => 'Update von :name auf :to fehlgeschlagen',

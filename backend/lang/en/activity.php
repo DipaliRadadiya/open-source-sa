@@ -232,6 +232,7 @@ return [
     'application.staging_pushed_full' => 'Pushed the staging files and database to :name',
     'application.staging_safety_copy_restored' => 'Put back the live database of :name from the copy saved before a push (:copy)',
     'application.cloned' => 'Cloned :name to :domain',
+    'application.v7_leftovers_removed' => 'Removed :files old v7 config file(s) for :name',
     'application.update_started' => 'Started updating :name from :from to :to',
     'application.updated' => 'Updated :name from :from to :to',
     'application.update_failed' => 'Update of :name to :to failed',

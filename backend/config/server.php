@@ -1445,6 +1445,11 @@ return [
     ],
 
     'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),
+
+    // Where v7's own AI-blocker and 7G/8G files for a site are moved when the
+    // owner first changes that setting in v8 (V7Leftovers). Moved, not
+    // deleted: a failed config test puts them back from here.
+    'v7_leftovers_backup_dir' => env('SERVER_V7_LEFTOVERS_BACKUP_DIR', '/var/lib/panel/v7-leftovers'),
     'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
 
     /*

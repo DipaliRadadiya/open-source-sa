@@ -6,6 +6,7 @@ use App\Enums\WafMode;
 use App\Exceptions\Server\Application\WafOperationException;
 use App\Models\Application;
 use App\Models\ApplicationWafRule;
+use App\Services\ActivityLogger;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -31,6 +32,7 @@ class Waf8GManager
     public function __construct(
         private WebServerManager $webServers,
         private ApplicationProvisioner $provisioner,
+        private V7Leftovers $leftovers,
         private ManagedFile $files,
         private ServerOps $serverOps,
     ) {}
@@ -105,9 +107,25 @@ class Waf8GManager
             throw new WafOperationException($restored->reference);
         }
 
+        // v7's own files for this setting, now that v8's are live: moved
+        // aside and tested again — put back if the web server objects.
+        $moved = $this->leftovers->remove($application, 'firewall');
+
+        if ($moved !== [] && $this->webServers->driver()->test()->failed()) {
+            $this->leftovers->restore($application, $moved);
+            $moved = [];
+        }
+
         $this->webServers->driver()->reload();
 
         $application->save();
+
+        if ($moved !== []) {
+            app(ActivityLogger::class)->log('application.v7_leftovers_removed', $application, [
+                'name' => $application->name,
+                'files' => count($moved),
+            ]);
+        }
 
         // Switched off: its log is emptied (bug #84). Kept, it came back the
         // next time the firewall went on, full of hits against rules that
