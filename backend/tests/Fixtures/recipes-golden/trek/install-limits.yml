@@ -1,0 +1,38 @@
+name: sv-app-4242
+
+services:
+  trek:
+    image: mauriceboe/trek:4.3.3
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3000"
+
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      TZ: UTC
+      LOG_LEVEL: info
+      APP_URL: "https://trek.golden.test"
+      ALLOWED_ORIGINS: "https://trek.golden.test"
+      TRUST_PROXY: "1"
+      ENCRYPTION_KEY: "7b7c02387292ec8772e0431f3c668199"
+      ADMIN_EMAIL: "owner@golden.test"
+      ADMIN_PASSWORD: "c41d7528beeacf5ad44365d8d876d172"
+
+    volumes:
+      - sv-app-4242_data:/app/data
+      - sv-app-4242_uploads:/app/uploads
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_uploads:
+    external: true

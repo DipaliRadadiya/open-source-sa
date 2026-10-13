@@ -1,0 +1,105 @@
+name: sv-app-4242
+
+services:
+  monica:
+    image: monica:4.1.2-apache
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      APP_URL: "https://monica.golden.test"
+      APP_KEY: "base64:Yjk3YTExMjlhNjA5MDcyZTQ5MjJlODMxOTljODFiZTE="
+      HASH_SALT: "df5ab349bb0d3927b3b0f1f7ed6feb03"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TRUSTED_PROXIES: "*"
+      APP_DISABLE_SIGNUP: "true"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: monica
+      DB_USERNAME: monica
+      DB_PASSWORD: "c637b378f9b059895229d43c1fbc76a8"
+      MAIL_MAILER: log
+      LOG_CHANNEL: stderr
+
+    volumes:
+      - sv-app-4242_storage:/var/www/html/storage
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cron:
+    image: monica:4.1.2-apache
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["cron.sh"]
+
+    environment:
+      APP_URL: "https://monica.golden.test"
+      APP_KEY: "base64:Yjk3YTExMjlhNjA5MDcyZTQ5MjJlODMxOTljODFiZTE="
+      HASH_SALT: "df5ab349bb0d3927b3b0f1f7ed6feb03"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_DISABLE_SIGNUP: "true"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: monica
+      DB_USERNAME: monica
+      DB_PASSWORD: "c637b378f9b059895229d43c1fbc76a8"
+      MAIL_MAILER: log
+      LOG_CHANNEL: stderr
+
+    volumes:
+      - sv-app-4242_storage:/var/www/html/storage
+
+    depends_on:
+      monica:
+        condition: service_started
+
+  db:
+    image: mariadb:11.8.9
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MYSQL_DATABASE: monica
+      MYSQL_USER: monica
+      MYSQL_PASSWORD: "c637b378f9b059895229d43c1fbc76a8"
+      MYSQL_ROOT_PASSWORD: "24606353dff24de1cb2cf279d7afc9c0"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+volumes:
+  sv-app-4242_storage:
+    external: true
+  sv-app-4242_db:
+    external: true

@@ -1,0 +1,95 @@
+{
+    "schema": 1,
+    "slug": "fireflyiii",
+    "version": 1,
+    "title": "Firefly III",
+    "tagline": {
+        "en": "Personal finance manager: accounts, budgets, bills and reports on where your money goes",
+        "es": "Gestor de finanzas personales: cuentas, presupuestos, facturas e informes sobre a dónde va tu dinero",
+        "de": "Persönliche Finanzverwaltung: Konten, Budgets, Rechnungen und Berichte darüber, wohin dein Geld fließt",
+        "fr": "Gestionnaire de finances personnelles : comptes, budgets, factures et rapports sur où va votre argent",
+        "pt": "Gestor de finanças pessoais: contas, orçamentos, contas a pagar e relatórios sobre para onde vai o seu dinheiro",
+        "ja": "個人向け家計管理：口座、予算、請求書、お金の行き先がわかるレポート",
+        "ru": "Управление личными финансами: счета, бюджеты, регулярные платежи и отчёты о том, куда уходят деньги",
+        "hi": "निजी वित्त प्रबंधक: खाते, बजट, बिल और आपका पैसा कहां जाता है इसकी रिपोर्ट"
+    },
+    "category": "productivity",
+    "icon": "fireflyiii",
+    "popular": false,
+    "catalog_order": 640,
+    "docs_url": "https://docs.firefly-iii.org/how-to/firefly-iii/installation/docker/",
+    "images": {
+        "app": {
+            "ref": "fireflyiii/core:version-6.7.9",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:11.8.9",
+            "tested": []
+        },
+        "cron": {
+            "ref": "alpine:3.24.2",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        },
+        {
+            "name": "cron",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "512m",
+    "volumes": {
+        "upload": "/var/www/html/storage/upload",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "APP_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "STATIC_CRON_TOKEN",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "APP_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Setup wizard: the first person to open the site and register becomes the owner, so register right after the install. Firefly III runs in single-user mode by default, so registration closes once that first account exists; the owner can invite more users from the administration pages.",
+        "APP_KEY must be exactly 32 characters (Firefly III's own rule), so it is a plain generated secret rather than base64. The image runs the database migrations and upgrades itself on every start.",
+        "Three services: the Firefly III app (the only published port), MariaDB 11.8 (the official file uses mariadb:lts) and a tiny cron service. The official file runs crond in an Alpine container that installs tzdata from the internet on every start; here a plain Alpine loop calls /api/v1/cron/<STATIC_CRON_TOKEN> on the app one hour after it starts and then every 24 hours (recurring transactions, auto-budgets, bill reminders and webhooks), which is the daily schedule upstream asks for. Firefly III also skips a job that ran less than 12 hours earlier. The token travels in the HTTP request on stdin of nc, never in a command line that ps could show.",
+        "STATIC_CRON_TOKEN is a generated 32-character secret, the exact length Firefly III requires. It only lets someone trigger those daily jobs early.",
+        "Behind the panel's HTTPS proxy, TRUSTED_PROXIES='**' (the value Firefly III's .env.example recommends for Docker) makes it trust the forwarded https scheme and host. APP_URL is the site's HTTPS address.",
+        "Mail goes to the application log (MAIL_MAILER=log) until you set the MAIL_* variables for an SMTP server in the panel's environment editor, so password-reset and bill-reminder emails are not sent before that. LOG_CHANNEL=stdout sends the log to the container log.",
+        "The upload volume holds attachments; everything else is in MariaDB. Back up both."
+    ]
+}

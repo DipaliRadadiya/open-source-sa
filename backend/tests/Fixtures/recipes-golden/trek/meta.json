@@ -1,0 +1,131 @@
+{
+    "slug": "trek",
+    "container_port": 3000,
+    "volume_roles": {
+        "data": "/app/data",
+        "uploads": "/app/uploads"
+    },
+    "generated_secrets": [
+        "ADMIN_PASSWORD",
+        "ENCRYPTION_KEY"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "APP_URL",
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "trek",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/app/data"
+        },
+        {
+            "volume": "sv-app-4242_uploads",
+            "path": "/app/uploads"
+        }
+    ],
+    "docker_secret_keys": [
+        "ADMIN_PASSWORD",
+        "ENCRYPTION_KEY"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "TREK",
+            "tagline": "Plan trips together: day-by-day itineraries, places on a map, budgets and packing lists"
+        },
+        "es": {
+            "title": "TREK",
+            "tagline": "Planifica viajes en grupo: itinerarios día a día, lugares en el mapa, presupuestos y listas de equipaje"
+        },
+        "de": {
+            "title": "TREK",
+            "tagline": "Reisen gemeinsam planen: Tagespläne, Orte auf der Karte, Budgets und Packlisten"
+        },
+        "fr": {
+            "title": "TREK",
+            "tagline": "Planifiez vos voyages ensemble : itinéraires jour par jour, lieux sur la carte, budgets et listes de bagages"
+        },
+        "pt": {
+            "title": "TREK",
+            "tagline": "Planeje viagens em conjunto: roteiros dia a dia, lugares no mapa, orçamentos e listas de bagagem"
+        },
+        "ja": {
+            "title": "TREK",
+            "tagline": "旅行をみんなで計画：日ごとの旅程、地図上の場所、予算、持ち物リスト"
+        },
+        "ru": {
+            "title": "TREK",
+            "tagline": "Планируйте поездки вместе: маршруты по дням, места на карте, бюджеты и списки вещей"
+        },
+        "hi": {
+            "title": "TREK",
+            "tagline": "साथ मिलकर यात्रा की योजना बनाएं: दिन-ब-दिन यात्रा कार्यक्रम, नक्शे पर जगहें, बजट और पैकिंग सूचियां"
+        }
+    },
+    "catalog_en": {
+        "name": "trek",
+        "icon": "trek",
+        "category": "productivity",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

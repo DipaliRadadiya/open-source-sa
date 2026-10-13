@@ -1,0 +1,104 @@
+{
+    "schema": 1,
+    "slug": "yourls",
+    "version": 1,
+    "title": "YOURLS",
+    "tagline": {
+        "en": "Your own URL shortener with click statistics, custom keywords and a bookmarklet",
+        "es": "Tu propio acortador de URL con estadísticas de clics, palabras clave personalizadas y un marcador",
+        "de": "Dein eigener URL-Kürzer mit Klickstatistiken, eigenen Kürzeln und einem Bookmarklet",
+        "fr": "Votre propre raccourcisseur d'URL avec statistiques de clics, mots-clés personnalisés et un bookmarklet",
+        "pt": "O seu próprio encurtador de URL com estatísticas de cliques, palavras-chave personalizadas e um bookmarklet",
+        "ja": "クリック統計、カスタムキーワード、ブックマークレットを備えた自分専用の URL 短縮サービス",
+        "ru": "Собственный сокращатель ссылок со статистикой переходов, своими ключевыми словами и букмарклетом",
+        "hi": "क्लिक आंकड़ों, कस्टम कीवर्ड और बुकमार्कलेट के साथ आपका अपना URL शॉर्टनर"
+    },
+    "category": "marketing",
+    "icon": "yourls",
+    "popular": false,
+    "catalog_order": 650,
+    "docs_url": "https://yourls.org/docs",
+    "images": {
+        "app": {
+            "ref": "yourls:1.10.6-apache",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:11.8.9",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "yourls",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "256m",
+    "volumes": {
+        "user": "/var/www/html/user",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "YOURLS_PASS",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "YOURLS_COOKIEKEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "YOURLS_SITE",
+    "inputs": [],
+    "starter_files": [
+        {
+            "path": "/docker-entrypoint-init.d/front-page.php",
+            "source": "starter/front-page.php"
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "url",
+                "path": "/admin/"
+            },
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "YOURLS_PASS"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The administrator is admin with a generated password (YOURLS_USER and YOURLS_PASS, shown on the first-run card); YOURLS reads them from the environment on every request, so a new YOURLS_PASS in the panel's environment editor takes effect after a redeploy.",
+        "The first visit to /admin/ shows YOURLS's one-click \"Install YOURLS\" page, which creates the database tables; then sign in. The official image does not install by itself, and the button only creates empty tables: it cannot create an account or change the password.",
+        "YOURLS ships no front page, so the bare domain answered 403. A small starter script (docker-entrypoint-init.d/front-page.php in the site folder, run by the official image before Apache starts) writes an index.php that redirects / to /admin/. Edit or delete that script to serve your own front page; short links are not affected.",
+        "YOURLS_SITE is the site's HTTPS address (lowercase, no trailing slash, as YOURLS requires); short links are built from it. YOURLS_COOKIEKEY is a generated secret that signs the login cookie, instead of the random value the image would write into the config file.",
+        "MariaDB 11.8 (the LTS line) instead of the mysql image the image documentation uses: YOURLS supports both, and MariaDB needs less memory. The user volume holds plugins, pages, translations and the generated config.php; links and statistics are in MariaDB. Back up both.",
+        "The admin area is private (YOURLS_PRIVATE defaults to true): only the administrator can shorten links. Short links redirect with 301 for everyone."
+    ]
+}
