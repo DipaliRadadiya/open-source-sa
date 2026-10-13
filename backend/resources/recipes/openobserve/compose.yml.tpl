@@ -31,7 +31,7 @@ services:
       - {{ volume.data }}:/data
 
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:5080/healthz || exit 1"]
+      test: ["CMD", "/openobserve", "node", "status"]
       interval: 10s
       timeout: 5s
       retries: 12
