@@ -1,0 +1,55 @@
+{
+    "schema": 1,
+    "slug": "trilium",
+    "version": 1,
+    "title": "Trilium Notes",
+    "tagline": {
+        "en": "Hierarchical note-taking for large personal knowledge bases",
+        "es": "Notas jerárquicas para grandes bases de conocimiento personales",
+        "de": "Hierarchische Notizen für große persönliche Wissensdatenbanken",
+        "fr": "Prise de notes hiérarchique pour de grandes bases de connaissances personnelles",
+        "pt": "Anotações hierárquicas para grandes bases de conhecimento pessoais",
+        "ja": "大規模な個人ナレッジベースのための階層型ノートアプリ",
+        "ru": "Иерархические заметки для больших личных баз знаний",
+        "hi": "बड़े निजी ज्ञान-आधारों के लिए पदानुक्रमित नोट्स"
+    },
+    "category": "productivity",
+    "icon": "trilium",
+    "popular": false,
+    "catalog_order": 600,
+    "docs_url": "https://docs.triliumnotes.org/user-guide/setup/server/installation/docker",
+    "images": {
+        "app": {
+            "ref": "triliumnext/trilium:v0.106.0",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "trilium",
+            "role": "app"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "512m",
+    "volumes": {
+        "data": "/home/node/trilium-data"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor sets the password: open the site right after install and choose a new document, then set the password. Until then anyone who reaches the site can claim it.",
+        "Trilium is single-user: one password protects the whole instance, there are no accounts.",
+        "Notes, attachments, the SQLite database and backups live in the data volume (/home/node/trilium-data). Trilium's own daily, weekly and monthly backups are written there too.",
+        "The image starts as root only to hand the data folder to the node user and then runs Trilium as that user (upstream's start-docker.sh, via gosu); the image's own healthcheck stays on. The time zone is UTC.",
+        "Desktop clients can sync with this server: in the desktop app, choose sync with a server and enter https://<domain>."
+    ]
+}

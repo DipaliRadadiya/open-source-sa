@@ -12,7 +12,7 @@ it('loads a safe vector icon for every shipped recipe', function () {
     expect(array_keys($recipes))->toEqualCanonicalizing([
         'bookstack', 'chatwoot', 'excalidraw', 'forgejo', 'freshrss', 'ghost', 'gitea', 'glance', 'grafana', 'homepage',
         'ittools', 'matomo', 'mattermost', 'memos', 'metabase', 'nocodb', 'paperless', 'stirlingpdf', 'vaultwarden', 'wikijs', 'wordpress_container',
-        'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve', 'actual', 'plausible', 'snipeit', 'invoiceninja', 'plane', 'langfuse', 'erpnext', 'nanobot',
+        'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve', 'actual', 'plausible', 'snipeit', 'invoiceninja', 'plane', 'langfuse', 'erpnext', 'nanobot', 'opennotebook', 'marimo', 'trilium', 'archivebox',
     ]);
 
     foreach ($recipes as $recipe) {

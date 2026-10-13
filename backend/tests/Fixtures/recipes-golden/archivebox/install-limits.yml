@@ -1,0 +1,39 @@
+name: sv-app-4242
+
+services:
+  archivebox:
+    image: archivebox/archivebox:0.7.4
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8000"
+
+    command: ["server", "--quick-init", "0.0.0.0:8000"]
+    environment:
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: "655dfb69734d20c02a034c0f326b3feb"
+      ALLOWED_HOSTS: "archivebox.golden.test"
+      PUBLIC_INDEX: "False"
+      PUBLIC_SNAPSHOTS: "False"
+      PUBLIC_ADD_VIEW: "False"
+
+    volumes:
+      - sv-app-4242_data:/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -H 'Host: archivebox.golden.test' http://127.0.0.1:8000/admin/login/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
+volumes:
+  sv-app-4242_data:
+    external: true

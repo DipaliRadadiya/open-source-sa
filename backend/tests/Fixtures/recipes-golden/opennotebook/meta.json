@@ -1,0 +1,126 @@
+{
+    "slug": "opennotebook",
+    "container_port": 8502,
+    "volume_roles": {
+        "data": "/app/data",
+        "db": "/mydata"
+    },
+    "generated_secrets": [
+        "OPEN_NOTEBOOK_PASSWORD",
+        "OPEN_NOTEBOOK_ENCRYPTION_KEY",
+        "SURREAL_USER",
+        "SURREAL_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "API_URL",
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "opennotebook",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/app/data"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/mydata"
+        }
+    ],
+    "docker_secret_keys": [
+        "OPEN_NOTEBOOK_PASSWORD",
+        "OPEN_NOTEBOOK_ENCRYPTION_KEY",
+        "SURREAL_USER",
+        "SURREAL_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Open Notebook",
+            "tagline": "Private NotebookLM alternative: research notebooks, sources, AI chat and podcasts"
+        },
+        "es": {
+            "title": "Open Notebook",
+            "tagline": "Alternativa privada a NotebookLM: cuadernos de investigación, fuentes, chat con IA y pódcasts"
+        },
+        "de": {
+            "title": "Open Notebook",
+            "tagline": "Private NotebookLM-Alternative: Recherche-Notizbücher, Quellen, KI-Chat und Podcasts"
+        },
+        "fr": {
+            "title": "Open Notebook",
+            "tagline": "Alternative privée à NotebookLM : carnets de recherche, sources, chat IA et podcasts"
+        },
+        "pt": {
+            "title": "Open Notebook",
+            "tagline": "Alternativa privada ao NotebookLM: cadernos de pesquisa, fontes, chat com IA e podcasts"
+        },
+        "ja": {
+            "title": "Open Notebook",
+            "tagline": "プライベートな NotebookLM の代替。リサーチノートブック、ソース、AI チャット、ポッドキャスト"
+        },
+        "ru": {
+            "title": "Open Notebook",
+            "tagline": "Частная альтернатива NotebookLM: исследовательские блокноты, источники, ИИ-чат и подкасты"
+        },
+        "hi": {
+            "title": "Open Notebook",
+            "tagline": "निजी NotebookLM विकल्प: शोध नोटबुक, स्रोत, AI चैट और पॉडकास्ट"
+        }
+    },
+    "catalog_en": {
+        "name": "opennotebook",
+        "icon": "opennotebook",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

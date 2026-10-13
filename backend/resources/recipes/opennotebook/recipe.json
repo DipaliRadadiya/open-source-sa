@@ -1,0 +1,91 @@
+{
+    "schema": 1,
+    "slug": "opennotebook",
+    "version": 1,
+    "title": "Open Notebook",
+    "tagline": {
+        "en": "Private NotebookLM alternative: research notebooks, sources, AI chat and podcasts",
+        "es": "Alternativa privada a NotebookLM: cuadernos de investigación, fuentes, chat con IA y pódcasts",
+        "de": "Private NotebookLM-Alternative: Recherche-Notizbücher, Quellen, KI-Chat und Podcasts",
+        "fr": "Alternative privée à NotebookLM : carnets de recherche, sources, chat IA et podcasts",
+        "pt": "Alternativa privada ao NotebookLM: cadernos de pesquisa, fontes, chat com IA e podcasts",
+        "ja": "プライベートな NotebookLM の代替。リサーチノートブック、ソース、AI チャット、ポッドキャスト",
+        "ru": "Частная альтернатива NotebookLM: исследовательские блокноты, источники, ИИ-чат и подкасты",
+        "hi": "निजी NotebookLM विकल्प: शोध नोटबुक, स्रोत, AI चैट और पॉडकास्ट"
+    },
+    "category": "ai",
+    "icon": "opennotebook",
+    "popular": false,
+    "catalog_order": 580,
+    "docs_url": "https://github.com/lfnovo/open-notebook/blob/v1.15.0/docs/1-INSTALLATION/docker-compose.md",
+    "images": {
+        "app": {
+            "ref": "lfnovo/open_notebook:1.15.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "surrealdb/surrealdb:v2.7.0",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "open_notebook",
+            "role": "app"
+        },
+        {
+            "name": "surrealdb",
+            "role": "database"
+        }
+    ],
+    "container_port": 8502,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/app/data",
+        "db": "/mydata"
+    },
+    "secrets": [
+        {
+            "key": "OPEN_NOTEBOOK_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "OPEN_NOTEBOOK_ENCRYPTION_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SURREAL_USER",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SURREAL_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "API_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "password",
+                "secret": "OPEN_NOTEBOOK_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Sign in with the generated password (OPEN_NOTEBOOK_PASSWORD); Open Notebook has a single shared password, no user accounts. Every page and every API call needs it.",
+        "Only the web UI port (8502) is published. The browser reaches the REST API through the UI at https://<domain>/api: Next.js forwards /api/* to the API on port 5055 inside the same container (upstream's single-port reverse-proxy setup, docs/5-CONFIGURATION/reverse-proxy.md). API_URL is the site's HTTPS address, so the frontend never points the browser at port 5055.",
+        "No AI provider ships with the recipe. Add one in Settings, Models (API key and model); keys are stored encrypted in the database with OPEN_NOTEBOOK_ENCRYPTION_KEY. Upstream accepts any string as the key and derives the Fernet key from it with SHA-256, so the generated 32-character secret is used as is. Changing or losing it makes the saved provider keys unreadable.",
+        "The database is SurrealDB v2.7.0 (the v2 line upstream's compose and Dockerfile use), with a generated root user and password, on its own volume and with no published port. It runs as root inside its container, as in upstream's compose, so it can write to the volume.",
+        "The data volume (/app/data) holds uploads, generated podcasts and caches. The optional heavy extraction runtimes (OPEN_NOTEBOOK_ENABLE_DOCLING, OPEN_NOTEBOOK_ENABLE_CRAWL4AI) are off; enabling them downloads large packages into that volume on the next start and needs a bigger memory limit.",
+        "The container's healthcheck checks both the API (/health on 5055) and the UI (8502), so the panel shows the app as running only once both answer."
+    ]
+}

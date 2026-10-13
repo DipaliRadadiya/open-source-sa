@@ -110,14 +110,19 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | Recipe | Source URL | Licence | Adaptation / attribution |
 | --- | --- | --- | --- |
 | `nanobot` | [official vector](https://raw.githubusercontent.com/HKUDS/nanobot/v0.3.5/webui/public/brand/nanobot_mark.svg) | MIT | Official WebUI brand mark (also images/nanobot_mark.svg); width/height attributes dropped and the viewBox padded to a square (0 -20.5 759 759); paths and colours unchanged. |
+| `opennotebook` | [official vector](https://raw.githubusercontent.com/lfnovo/open-notebook/v1.15.0/frontend/public/logo.svg) | MIT | Official logo from the web UI's public assets; XML declaration, comments, width/height and the CSS pulse animation removed, gradient stop styles moved to attributes, viewBox cropped to the mark (54 53 132 132); paths and colours unchanged. |
+| `marimo` | [official vector](https://raw.githubusercontent.com/marimo-team/marimo/0.25.1/docs/_static/marimo-logotype-thick.svg) | Apache-2.0 | Square mark composed exactly as marimo's own MarimoIcon component does (frontend/src/components/icons/marimo-icons.tsx): the circle and "m" paths of the official logotype with the component's transforms, in the logotype's #1c7361; no paths changed. |
+| `trilium` | [official vector](https://raw.githubusercontent.com/TriliumNext/Trilium/v0.106.0/apps/client/src/assets/icon-color.svg) | AGPL-3.0 | Official application icon; title and the CSS class block removed with each class's fill inlined on its path; paths and colours unchanged. |
+| `archivebox` | [official icon](https://raw.githubusercontent.com/ArchiveBox/ArchiveBox/v0.9.73/publicsite/icon.png) | MIT | Official icon is raster-only (192 × 192). Redrawn as six vector rectangles measured from it pixel by pixel, in its colours (#9c2e55, black, white); no raster embedded. |
 
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse) and Xubin Ren and the nanobot contributors; see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse), Xubin Ren and the nanobot contributors, Luis Novo (Open Notebook) and Nick Sweeting (ArchiveBox); see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
+- [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) — Marimo, Inc. (marimo); see the source repository for notices.
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 - [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).
 - [MSCL-1.0-GPL](https://github.com/directus/directus/blob/v12.5.0/license) — Monospace, Inc. (Directus); the rabbit path is unmodified.
