@@ -105,11 +105,17 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `langfuse` | [official vector](https://raw.githubusercontent.com/langfuse/langfuse/v4.57.0/web/public/icon.svg) | MIT (outside the ee/ directories) | Official application icon; width/height attributes dropped; paths unchanged. |
 | `erpnext` | [official vector](https://raw.githubusercontent.com/frappe/erpnext/v16.50.0/erpnext/public/images/erpnext-logo.svg) | GPL-3.0 | Official square mark; width/height attributes dropped; paths and colours unchanged. |
 
+## RC-34 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `nanobot` | [official vector](https://raw.githubusercontent.com/HKUDS/nanobot/v0.3.5/webui/public/brand/nanobot_mark.svg) | MIT | Official WebUI brand mark (also images/nanobot_mark.svg); width/height attributes dropped and the viewBox padded to a square (0 -20.5 759 759); paths and colours unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc. and ClickHouse, Inc. (Langfuse); see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse) and Xubin Ren and the nanobot contributors; see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.

@@ -68,6 +68,13 @@ services:
         PY
         exec setpriv --reuid=nanobot --regid=nanobot --init-groups nanobot gateway
 
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 1200s
+
     volumes:
       - {{ volume.data }}:/home/nanobot/.nanobot
       - {{ volume.venv }}:/home/nanobot/.venv
