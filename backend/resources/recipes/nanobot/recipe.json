@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "python:3.12.15-slim-bookworm",
-            "tested": []
+            "tested": [
+                "python:3.12.15-slim-bookworm"
+            ]
         }
     },
     "services": [
@@ -64,6 +66,7 @@
         "No model provider ships with the recipe. Add one in the WebUI under Settings, Models (API key and model); until then the gateway runs and replies that no provider is configured.",
         "config.json follows upstream's Render blueprint (render-config.json at v0.3.5) and is written on the first start only, so settings saved in the WebUI survive restarts. On every start the panel re-asserts just the keys it owns: gateway host 127.0.0.1 and port 18790 (the unauthenticated health endpoint stays inside the container, as in the blueprint), and the WebSocket channel on 0.0.0.0:8765 with websocketRequiresToken, tokenIssueSecret ${NANOBOT_WEB_TOKEN} (resolved by nanobot from the environment, so the token never sits in the file) and publicWsUrl wss://<domain>/ derived from NANOBOT_PUBLIC_URL. NANOBOT_PUBLIC_URL is the url key, so a domain change re-renders it and the next start updates publicWsUrl.",
         "The blueprint's tools defaults are written on the first start: restrictToWorkspace on, webuiAllowRemotePackageInstall off and my.allowSet off. They can be changed in the WebUI afterwards; the panel does not reset them.",
-        "The agent can run shell commands, but only inside its own container, which is the boundary: no docker.sock, no extra capabilities and no host mounts. The container starts as root only to create the nanobot user (uid 1000) and hand both volumes to it; pip, the config write and the gateway all run as nanobot via setpriv, as upstream's entrypoint does. A root docker exec (the Command-line access card) is fine, and every start re-owns anything root left in the volumes."
+        "The agent can run shell commands, but only inside its own container, which is the boundary: no docker.sock, no extra capabilities and no host mounts. The container starts as root only to create the nanobot user (uid 1000) and hand both volumes to it; pip, the config write and the gateway all run as nanobot via setpriv, as upstream's entrypoint does. A root docker exec (the Command-line access card) is fine, and every start re-owns anything root left in the volumes.",
+        "Live smoke (RC-34) on Ubuntu 24.04 and 26.04 with nanobot-ai 0.3.5: the first-start pip install took 102 to 141 s and the panel showed the app starting, then running, once the WebUI answered (125 to 162 s after Create); restart and container recreate skip pip and are ready in 3 to 5 s with config and chat history kept; idle about 75 to 180 MiB of the 1g limit (7 to 18 percent), peak 623 MiB during the install (mostly page cache), no restarts or OOM. The 1g floor is kept for the agent's own shell and package work, which a smoke without a real model key cannot exercise."
     ]
 }
