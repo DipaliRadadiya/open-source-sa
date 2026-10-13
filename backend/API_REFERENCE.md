@@ -2744,7 +2744,7 @@ Puts that copy back into the live database. The database **as it is now** is sav
 
 The four current v8 policy choices (`allow_all`, `block_training`, `block_agents`, `block_all`) and the compatibility choice `legacy_v7`, with exactly which bots each blocks (resolved server-side).
 
-`legacy_v7` preserves the broad v7 literal user-agent list and the case-insensitive whole-agent YandexBot exemption. Migration may map v7 enabled to `legacy_v7` and disabled to `allow_all`; this backend does not implement that importer. New sites still default to `allow_all`, and existing v8 policies are unchanged.
+`legacy_v7` preserves the broad v7 literal user-agent list and the case-insensitive whole-agent YandexBot exemption. On `legacy_v7` an `allowed` name exempts every user-agent that contains it, the same way, because the v7 list has short tokens that sit inside longer names (`GPT` in `GPTBot`); on the other policies an allowed name is only removed from the list. Migration may map v7 enabled to `legacy_v7` and disabled to `allow_all`; this backend does not implement that importer. New sites still default to `allow_all`, and existing v8 policies are unchanged.
 
 ```json
 {"ai_bot_policies": {

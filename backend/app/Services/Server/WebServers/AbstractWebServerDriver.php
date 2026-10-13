@@ -760,11 +760,19 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         // fails. v8's own names have none; 23 of v7's do ("Hugging Face").
         $pattern = implode('|', array_map(fn (string $bot) => str_replace(' ', '\x20', preg_quote($bot, '/')), $bots));
 
+        if ($application->ai_bot_policy !== AiBotPolicy::LegacyV7) {
+            return $pattern;
+        }
+
+        // v7's list has short tokens that sit inside other names ("GPT" is in
+        // "GPTBot"), so leaving an allowed name out of the list does not let it
+        // through. On legacy_v7 an allowed name exempts the whole user-agent,
+        // the way YandexBot always has. Allowed names cannot hold a space.
+        $exempt = implode('|', ['YandexBot', ...array_map(fn (string $bot) => preg_quote($bot, '/'), $allowed)]);
+
         // Anchor the exemption to the whole user-agent: an unanchored negative
         // lookahead could retry after YandexBot and wrongly block a later token.
-        return $application->ai_bot_policy === AiBotPolicy::LegacyV7
-            ? '^(?!.*YandexBot).*?(?:'.$pattern.')'
-            : $pattern;
+        return '^(?!.*(?:'.$exempt.')).*?(?:'.$pattern.')';
     }
 
     public function test(): ServerOpsResult

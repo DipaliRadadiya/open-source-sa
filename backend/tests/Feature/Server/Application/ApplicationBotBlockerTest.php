@@ -249,7 +249,7 @@ it('renders broad legacy matching with a whole-agent Yandex exemption on every s
     $this->application->forceFill(['ai_bot_policy' => AiBotPolicy::LegacyV7])->save();
     $rendered = app($driver)->renderConfig($this->application, '/home/siteowner/blog/public_html');
 
-    preg_match('/\(\^\(\?![^\r\n]*?\)\)/', $rendered, $match);
+    preg_match('/\(\^\(\?![^\r\n]*\)\)/', $rendered, $match);
     expect($match)->not->toBeEmpty();
     $regex = '~'.$match[0].'~i';
 
@@ -262,6 +262,27 @@ it('renders broad legacy matching with a whole-agent Yandex exemption on every s
         // a bare space: OLS's RewriteCond is unquoted (refused live, 2026-10-13).
         ->and(preg_match($regex, 'Mozilla (compatible; Hugging Face crawler)'))->toBe(1)
         ->and($match[0])->not->toContain(' ');
+})->with([
+    NginxDriver::class,
+    ApacheDriver::class,
+    OlsDriver::class,
+]);
+
+it('lets an allowed bot through on legacy_v7 even when a short v7 token sits inside its name', function (string $driver) {
+    Process::fake();
+    $this->application->forceFill(['ai_bot_policy' => AiBotPolicy::LegacyV7])->save();
+    $this->application->botRules()->create(['type' => 'allow', 'value' => 'GPTBot']);
+    $rendered = app($driver)->renderConfig($this->application->fresh(), '/home/siteowner/blog/public_html');
+
+    preg_match('/\(\^\(\?![^\r\n]*\)\)/', $rendered, $match);
+    $regex = '~'.$match[0].'~i';
+
+    // "GPT" is in v7's list; without the exemption it matches inside "GPTBot".
+    expect(preg_match($regex, 'Mozilla/5.0 (compatible; GPTBot/1.3)'))->toBe(0)
+        ->and(preg_match($regex, 'Mozilla/5.0 (compatible; gptbot/1.3)'))->toBe(0)
+        ->and(preg_match($regex, 'Mozilla/5.0 GPT-4 crawler'))->toBe(1)
+        ->and(preg_match($regex, 'Mozilla/5.0 (compatible; AIMatrix/1.0)'))->toBe(1)
+        ->and(preg_match($regex, 'YandexBot/3.0 AIMatrix'))->toBe(0);
 })->with([
     NginxDriver::class,
     ApacheDriver::class,
