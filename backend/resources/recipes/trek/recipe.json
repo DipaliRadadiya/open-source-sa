@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "mauriceboe/trek:4.3.3",
-            "tested": []
+            "tested": [
+                "mauriceboe/trek:4.3.3"
+            ]
         }
     },
     "services": [
@@ -84,6 +86,7 @@
         "Behind the panel's HTTPS proxy, TRUST_PROXY=1 trusts exactly one hop, so TREK sees the forwarded https scheme and sets secure cookies (it does that by itself with NODE_ENV=production). FORCE_HTTPS=true makes TREK itself send plain-HTTP visitors to HTTPS (301; /api/health is exempt, and the panel's own health check accepts any answer): the panel's Force HTTPS switch is off by default, and over plain HTTP TREK's pages fail on CORS and its secure cookies. APP_URL is the site's address (used for email links, OIDC and that redirect); ALLOWED_ORIGINS is the same origin, for CORS.",
         "The official compose file also sets read_only, cap_drop and no-new-privileges. Recipes cannot carry security_opt or capability changes, so those hardening options are not used; the container runs with Docker's default capabilities.",
         "Place search asks TREK's own Places service (places.liketrek.com) by default, as upstream ships it. Set TREK_PLACES_ENABLED=false in the panel's environment editor to search OpenStreetMap instead and send nothing to that host.",
-        "The memory floor is 768m: with 512m TREK sat at 302 to 342 MiB idle and 359 MiB after a few place searches (59 to 70 % of the limit, measured on Ubuntu 24.04 and 26.04), too close to the ceiling for a Node server."
+        "The memory floor is 768m: with 512m TREK sat at 302 to 342 MiB idle and 359 MiB after a few place searches (59 to 70 % of the limit, measured on Ubuntu 24.04 and 26.04), too close to the ceiling for a Node server.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-36): created from the 1-Click Recipes tab, Running in 17 to 79 s, HTTPS with the http to https redirect, first sign-in with the forced password change, a two-day trip with a searched place on the map, public sign-up closed (403) and an admin's re-opening kept across a restart. Idle 251 to 304 MiB, peak 345 MiB of 768m; every image ref below is in its tested list."
     ]
 }

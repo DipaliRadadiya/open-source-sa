@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "fireflyiii/core:version-6.7.9",
-            "tested": []
+            "tested": [
+                "fireflyiii/core:version-6.7.9"
+            ]
         },
         "db": {
             "ref": "mariadb:11.8.9",
-            "tested": []
+            "tested": [
+                "mariadb:11.8.9"
+            ]
         },
         "cron": {
             "ref": "alpine:3.24.2",
-            "tested": []
+            "tested": [
+                "alpine:3.24.2"
+            ]
         }
     },
     "services": [
@@ -87,9 +93,10 @@
         "Setup wizard: the first person to open the site and register becomes the owner, so register right after the install. Firefly III runs in single-user mode by default, so registration closes once that first account exists; the owner can invite more users from the administration pages.",
         "APP_KEY must be exactly 32 characters (Firefly III's own rule), so it is a plain generated secret rather than base64. The image runs the database migrations and upgrades itself on every start.",
         "Three services: the Firefly III app (the only published port), MariaDB 11.8 (the official file uses mariadb:lts) and a tiny cron service. The official file runs crond in an Alpine container that installs tzdata from the internet on every start; here a plain Alpine loop calls /api/v1/cron/<STATIC_CRON_TOKEN> on the app one hour after it starts and then every 24 hours (recurring transactions, auto-budgets, bill reminders and webhooks), which is the daily schedule upstream asks for. Firefly III also skips a job that ran less than 12 hours earlier. The token travels in the HTTP request on stdin of nc, never in a command line that ps could show. The request side stays open for up to 300 seconds (sleep 300 inside the pipe) because BusyBox nc closes the connection as soon as its input ends, and the app then drops the request unanswered (measured: HTTP 499, no job ran); the loop sleeps 3600 + 300 + 82500 seconds, one day in total.",
-        "STATIC_CRON_TOKEN is a generated 32-character secret, the exact length Firefly III requires. It only lets someone trigger those daily jobs early.",
+        "STATIC_CRON_TOKEN is a generated 32-character secret, the exact length Firefly III requires. It only lets someone trigger those daily jobs early. The token is part of the cron URL, so the app container's own access log shows it once a day (and Firefly III logs its first 8 characters); the panel shows that log only to people who can reveal the secret anyway.",
         "Behind the panel's HTTPS proxy, TRUSTED_PROXIES='**' (the value Firefly III's .env.example recommends for Docker) makes it trust the forwarded https scheme and host. APP_URL is the site's HTTPS address.",
         "Mail goes to the application log (MAIL_MAILER=log) until you set the MAIL_* variables for an SMTP server in the panel's environment editor, so password-reset and bill-reminder emails are not sent before that. LOG_CHANNEL=stdout sends the log to the container log.",
-        "The upload volume holds attachments; everything else is in MariaDB. Back up both."
+        "The upload volume holds attachments; everything else is in MariaDB. Back up both.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-36): created from the 1-Click Recipes tab, Running in 32 to 64 s, HTTPS, owner registration and the new-user wizard, an asset account and a withdrawal (1000 - 42.50 = 957.50 on the dashboard), registration closed afterwards, a restart, and the cron service's own request answered HTTP 200 with every daily job fired. Idle about 65 to 76 MiB for the app (of 512m) and 106 to 143 MiB for MariaDB; every image ref below is in its tested list."
     ]
 }

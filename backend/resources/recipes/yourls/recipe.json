@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "yourls:1.10.6-apache",
-            "tested": []
+            "tested": [
+                "yourls:1.10.6-apache"
+            ]
         },
         "db": {
             "ref": "mariadb:11.8.9",
-            "tested": []
+            "tested": [
+                "mariadb:11.8.9"
+            ]
         }
     },
     "services": [
@@ -99,6 +103,7 @@
         "YOURLS ships no front page, so the bare domain answered 403. A small starter script (docker-entrypoint-init.d/front-page.php in the site folder, run by the official image before Apache starts) writes an index.php that redirects / to /admin/. Edit or delete that script to serve your own front page; short links are not affected.",
         "YOURLS_SITE is the site's HTTPS address (lowercase, no trailing slash, as YOURLS requires); short links are built from it. YOURLS_COOKIEKEY is a generated secret that signs the login cookie, instead of the random value the image would write into the config file.",
         "MariaDB 11.8 (the LTS line) instead of the mysql image the image documentation uses: YOURLS supports both, and MariaDB needs less memory. The user volume holds plugins, pages, translations and the generated config.php; links and statistics are in MariaDB. Back up both.",
-        "The admin area is private (YOURLS_PRIVATE defaults to true): only the administrator can shorten links. Short links redirect with 301 for everyone."
+        "The admin area is private (YOURLS_PRIVATE defaults to true): only the administrator can shorten links. Short links redirect with 301 for everyone.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-36): created from the 1-Click Recipes tab, Running in 63 s, / redirecting to /admin/, the Install YOURLS step, sign-in, a short link that redirects with 301 for a logged-out visitor, and a restart all passed. Idle 28 to 43 MiB (of 256m) and 94 to 105 MiB for MariaDB; every image ref below is in its tested list."
     ]
 }

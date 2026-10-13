@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "monica:4.1.2-apache",
-            "tested": []
+            "tested": [
+                "monica:4.1.2-apache"
+            ]
         },
         "db": {
             "ref": "mariadb:11.8.9",
-            "tested": []
+            "tested": [
+                "mariadb:11.8.9"
+            ]
         }
     },
     "services": [
@@ -85,6 +89,7 @@
         "Three services, as in the official full example: the Apache app (the only published port), a cron service on the same image that runs Laravel's scheduler every minute (reminders and birthday notifications come from it), and MariaDB 11.8 (the LTS line). The image copies its .env.example to .env, so every setting that differs from it is set here: APP_ENV=production, LOG_CHANNEL=stderr (logs go to the container log) and MAIL_MAILER=log.",
         "Behind the panel's HTTPS proxy, APP_TRUSTED_PROXIES='*' (the value in the official example) makes Laravel trust the forwarded https scheme; the app is only reachable through the panel's proxy because its port is published on 127.0.0.1. APP_URL is the site's HTTPS address, and SESSION_SECURE_COOKIE=true marks the session, XSRF and API cookies Secure (Monica's default leaves them without the flag).",
         "Reminder emails, invitations and password resets go to the application log (MAIL_MAILER=log) until you set the MAIL_* variables for an SMTP server in the panel's environment editor. Reminders still show up inside Monica without mail.",
-        "The storage volume holds uploaded photos and documents, the Passport keys (oauth-*.key) and sessions; MariaDB keeps everything else. Back up both."
+        "The storage volume holds uploaded photos and documents, the Passport keys (oauth-*.key) and sessions; MariaDB keeps everything else. Back up both.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-36): created from the 1-Click Recipes tab, Running in 32 to 64 s, HTTPS, first registration, a contact with a reminder and a note, sign-up closed afterwards (403), Secure cookies and a restart all passed. Idle about 65 to 86 MiB for the app (of 512m), 2 MiB for cron and 105 to 150 MiB for MariaDB; every image ref below is in its tested list."
     ]
 }
