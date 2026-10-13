@@ -108,6 +108,8 @@ return [
     'system_user.shell_changed' => 'Изменена оболочка системного пользователя :username на :shell',
     'system_user.ssh_enabled' => 'Включён доступ SSH для системного пользователя :username',
     'system_user.ssh_disabled' => 'Отключён доступ SSH для системного пользователя :username',
+    'system_user.container_login_enabled' => 'Включён вход в контейнер для системного пользователя :username',
+    'system_user.container_login_disabled' => 'Отключён вход в контейнер для системного пользователя :username',
     'cronjob.created' => 'Создано задание cron :name',
     'cronjob.updated' => 'Обновлено задание cron :name',
     'cronjob.deleted' => 'Удалено задание cron :name',

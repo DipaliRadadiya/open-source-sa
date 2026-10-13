@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['username', 'home_path', 'shell', 'sudo', 'password', 'ssh_access'])]
+#[Fillable(['username', 'home_path', 'shell', 'sudo', 'password', 'ssh_access', 'container_login'])]
 class SystemUser extends Model
 {
     use HasFactory;
@@ -20,6 +20,7 @@ class SystemUser extends Model
         return [
             'sudo' => 'boolean',
             'ssh_access' => 'boolean',
+            'container_login' => 'boolean',
         ];
     }
 

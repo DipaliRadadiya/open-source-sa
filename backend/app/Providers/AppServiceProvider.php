@@ -4,7 +4,10 @@ namespace App\Providers;
 
 use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
+use App\Models\Application;
+use App\Models\SystemUser;
 use App\Models\User;
+use App\Observers\AppShellMapObserver;
 use App\Services\Admin\ApiErrorLogWriter;
 use App\Services\Recipes\RecipeRegistry;
 use App\Services\Runtime\InstallTracker;
@@ -163,6 +166,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('access-admin', fn (User $user): bool => $user->isAdmin());
+
+        // Container login (RC-28): the access map follows every change to a
+        // Docker app or its owner, whichever code path made it.
+        Application::observe(AppShellMapObserver::class);
+        SystemUser::observe(AppShellMapObserver::class);
 
         // Laravel ships no Google Drive driver, so `Storage::build()` cannot
         // resolve one without this. Registered here rather than inside

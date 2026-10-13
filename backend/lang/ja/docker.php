@@ -29,4 +29,9 @@ return [
         'warning_no_port' => 'このイメージは待ち受けポートを宣言していません。イメージのドキュメントにあるポートを入力してください。',
         'warning_several_ports' => 'このイメージは複数のポート (:ports) で待ち受けます。サイト用にポート :port を選びました。ドキュメントの指定が異なる場合は変更してください。',
     ],
+
+    // Container login (RC-28): the name given to a key added from the card.
+    'container_login' => [
+        'key_name' => 'コンテナーログイン',
+    ],
 ];

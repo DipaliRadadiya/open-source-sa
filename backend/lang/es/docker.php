@@ -29,4 +29,9 @@ return [
         'warning_no_port' => 'Esta imagen no indica en qué puerto escucha. Introduce el puerto que indica su documentación.',
         'warning_several_ports' => 'Esta imagen escucha en varios puertos (:ports). Se eligió el puerto :port para el sitio web; cámbialo si la documentación dice otra cosa.',
     ],
+
+    // Container login (RC-28): the name given to a key added from the card.
+    'container_login' => [
+        'key_name' => 'Inicio de sesión en el contenedor',
+    ],
 ];

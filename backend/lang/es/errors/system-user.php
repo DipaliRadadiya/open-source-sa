@@ -21,4 +21,11 @@ return [
     'shell_not_installed' => 'El shell :shell no está instalado en este servidor. Instálalo primero o elige otro shell.',
     'username_taken_on_server' => 'Ya existe en el servidor un usuario o grupo con este nombre. Elige otro nombre de usuario.',
     'has_processes' => 'Este usuario todavía tiene procesos en ejecución (por ejemplo, una sesión SSH abierta o una tarea en curso). Finalízalos y vuelve a intentarlo.',
+
+    // Container login (RC-28).
+    'container_login_failed' => 'No se pudo activar el inicio de sesión en el contenedor para el usuario del sistema.',
+    'container_login_unsupported' => 'La configuración SSH de este servidor no aplica el inicio de sesión en el contenedor (su sshd_config no incluye sshd_config.d), así que no se activó.',
+    'container_login_no_owner' => 'Esta aplicación no tiene usuario del sistema.',
+    'container_login_confirm' => '{1} :username también es dueño de :count aplicación más. Su SSH y SFTP abrirán solo este contenedor. Confirme para continuar.|[2,*] :username también es dueño de :count aplicaciones más. Su SSH y SFTP abrirán solo este contenedor. Confirme para continuar.',
+    'container_login_needs_key' => 'El inicio de sesión con contraseña está desactivado en este servidor, así que :username necesita una clave SSH. Añada una para activar el inicio de sesión en el contenedor.',
 ];

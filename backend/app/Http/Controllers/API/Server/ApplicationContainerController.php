@@ -5,8 +5,11 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\PullContainerImage;
 use App\Actions\Server\Application\UpdateContainerCompose;
 use App\Actions\Server\Application\UpdateContainerSettings;
+use App\Actions\Server\SystemUser\DisableContainerLogin;
+use App\Actions\Server\SystemUser\EnableContainerLogin;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Application\EnableContainerLoginRequest;
 use App\Http\Requests\Server\Application\UpdateComposeRequest;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
 use App\Http\Resources\ApplicationResource;
@@ -18,6 +21,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerAccess;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\DnsVerifier;
+use App\Services\Server\AppShell\ContainerLoginInfo;
 use App\Services\Server\ServerPublicIp;
 use App\Services\Server\Settings\SecuritySettings;
 use Illuminate\Http\JsonResponse;
@@ -144,22 +148,69 @@ class ApplicationContainerController extends Controller
     }
 
     /**
-     * What the Command-line access card needs to write one line:
-     * `ssh -t <user>@<host> 'sudo docker exec -it <container> sh'` (RC-23).
+     * What the Command-line access card needs (RC-23, extended by RC-28).
      *
      * On the same permission as reading the compose file, because it says no more
-     * than the file does: the container names come out of it. The server's system
-     * users are a separate grant, so they are listed only for a viewer who holds
-     * `system_user` — and even then as flags, never a password or a key.
+     * than the file does: the container names come out of it. The app's own
+     * system user — the way in since RC-28 — is part of that, as flags and
+     * counts only. The server's full list of system users is a separate grant,
+     * so `ssh_users` is filled only for a viewer who holds `system_user`, and
+     * never with a password or a key.
      */
-    public function access(
+    public function access(Request $request, Application $application): JsonResponse
+    {
+        return $this->accessResponse($request, $application);
+    }
+
+    /**
+     * Turn container login on for this app's own system user (RC-28): its SSH
+     * login then opens this app's container, with no sudo and no docker group.
+     * Answers with the card's new state, so it can switch without a reload.
+     */
+    public function enableAccess(
+        EnableContainerLoginRequest $request,
+        Application $application,
+        EnableContainerLogin $action,
+    ): JsonResponse {
+        // Not a container, or no owner: refused by the request before this runs.
+        $action->execute($application->systemUser, $request->safe()->only(['ssh_key', 'password']));
+
+        return $this->accessResponse($request, $application->refresh());
+    }
+
+    /**
+     * Turn it off: the user leaves the group, and its SSH (if still on) is an
+     * ordinary login on the server again.
+     */
+    public function disableAccess(
         Request $request,
         Application $application,
-        ContainerAccess $access,
-        ContainerSupervisor $containers,
-        ServerPublicIp $publicIp,
-        SecuritySettings $security,
+        DisableContainerLogin $action,
     ): JsonResponse {
+        $this->assertContainerApp($application);
+        abort_if($application->systemUser === null, 422, __('errors/system-user.container_login_no_owner'));
+
+        $action->execute($application->systemUser);
+
+        return $this->accessResponse($request, $application->refresh());
+    }
+
+    /**
+     * The 404/422 the other container endpoints give a site that is not one: a
+     * site type without the compose screen does not have this card either.
+     */
+    private function assertContainerApp(Application $application): void
+    {
+        abort_unless($application->supports('app_compose'), 404);
+        abort_unless(
+            $application->serving_profile === 'docker',
+            422,
+            __('errors/application.not_a_container'),
+        );
+    }
+
+    private function accessResponse(Request $request, Application $application): JsonResponse
+    {
         abort_unless(
             $application->serving_profile === 'docker',
             422,
@@ -167,7 +218,7 @@ class ApplicationContainerController extends Controller
         );
 
         try {
-            $list = $access->containers($application);
+            $list = app(ContainerAccess::class)->containers($application);
         } catch (ProvisioningFailedException $e) {
             // Said the way the compose endpoint says it: a Simple-mode site with no
             // container port has no file, so there is nothing to name yet.
@@ -187,14 +238,21 @@ class ApplicationContainerController extends Controller
             ])->all()
             : [];
 
+        $security = app(SecuritySettings::class);
+
+        // A machine that cannot work out its public address is still reachable
+        // at the one this request came in on: that is the panel, on this box.
+        $host = app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? $request->getHost();
+        $port = $security->port();
+
         return response()->json([
-            // A machine that cannot work out its public address is still reachable
-            // at the one this request came in on: that is the panel, on this box.
-            'host' => $publicIp->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? $request->getHost(),
-            'ssh_port' => $security->port(),
-            'project' => $containers->project($application),
+            'host' => $host,
+            'ssh_port' => $port,
+            'project' => app(ContainerSupervisor::class)->project($application),
             'containers' => $list,
             'ssh_users' => $users,
+            'password_login' => $security->passwordLogin(),
+            ...app(ContainerLoginInfo::class)->for($application, $host, $port),
         ]);
     }
 

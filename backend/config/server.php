@@ -215,6 +215,10 @@ return [
             // /usr/bin/mysql, which is a symlink to mariadb on this very box.
             'psql', 'pg_dump', 'pg_restore', 'pg_isready', 'pg_lsclusters',
             'ufw', 'fail2ban-client', 'sshd',
+            // Container login (RC-28) installs its own sudoers drop-in, and a
+            // sudoers file is only ever moved into place after `visudo -cqf`
+            // has accepted it -- the same rule PanelSudoers follows as root.
+            'visudo',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
@@ -263,6 +267,7 @@ return [
             'phpdismod' => ['/usr/sbin/phpdismod'],
             'ufw' => ['/usr/sbin/ufw'],
             'sshd' => ['/usr/sbin/sshd'],
+            'visudo' => ['/usr/sbin/visudo'],
             'mkswap' => ['/usr/sbin/mkswap'],
             'swapon' => ['/usr/sbin/swapon'],
             'swapoff' => ['/usr/sbin/swapoff'],
@@ -2612,6 +2617,37 @@ return [
     'hosts_file' => env('SERVER_HOSTS_FILE', '/etc/hosts'),
 
     'sshd_config_dir' => env('SERVER_SSHD_CONFIG_DIR', '/etc/ssh/sshd_config.d'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Container login (RC-28)
+    |--------------------------------------------------------------------------
+    |
+    | A Docker app's own system user logs in straight into the app's container:
+    | sshd forces every login of a member of `group` through `login`, which runs
+    | `helper` as root through one NOPASSWD rule, and the helper reaches only
+    | the containers `map` says that user owns. See AppShellInstaller.
+    |
+    | `sshd_drop_in` sorts right after SecuritySettings' 00-panel.conf: sshd
+    | keeps the FIRST value it reads for a keyword, so the block has to come
+    | before anything that might set forwarding or a forced command globally.
+    |
+    | `sync` is off under phpunit (see phpunit.xml) for the same reason
+    | privilege.sudo is: the suite asserts on the commands a feature runs, and
+    | a map rewrite after every Application save would be in all of them.
+    | AppShellMapTest turns it on.
+    |
+    */
+
+    'app_shell' => [
+        'group' => env('SERVER_APP_SHELL_GROUP', 'sv-app-shell'),
+        'map' => env('SERVER_APP_SHELL_MAP', '/etc/panel-app-shell/map.json'),
+        'helper' => env('SERVER_APP_SHELL_HELPER', '/usr/local/libexec/panel/app-shell'),
+        'login' => env('SERVER_APP_SHELL_LOGIN', '/usr/local/libexec/panel/app-login'),
+        'sudoers' => env('SERVER_APP_SHELL_SUDOERS', '/etc/sudoers.d/panel-app-shell'),
+        'sshd_drop_in' => '01-panel-app-shell.conf',
+        'sync' => (bool) env('SERVER_APP_SHELL_SYNC', true),
+    ],
 
     'unattended_upgrades_file' => env('SERVER_UNATTENDED_UPGRADES', '/etc/apt/apt.conf.d/99-panel-upgrades'),
 

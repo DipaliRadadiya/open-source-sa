@@ -37,6 +37,7 @@ class UpdateScript
         'seed_permissions',
         'configure_services',
         'sync_privileges',
+        'configure_app_shell',
         'resync_site_configs',
         'record_firewall_defaults',
         'resync_fail2ban',
@@ -355,6 +356,17 @@ class UpdateScript
         # failure, and panel:doctor names the drift afterwards.
         note sync_privileges
         {$run}{$php} {$backend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
+
+        # Container login (RC-28): a Docker app's own system user logs straight
+        # into its container. Installs the group, the root helper, its sudo rule
+        # (visudo-checked) and the sshd Match block (sshd -t before any reload),
+        # then rebuilds the access map from the database -- which is how apps
+        # installed before this release get it. After sync_privileges, because
+        # the visudo check runs through the grant that step just wrote. As the
+        # panel user like every other artisan call; never fatal, because a
+        # failure leaves sshd and sudo exactly as they were.
+        note configure_app_shell
+        {$asUser}{$php} {$backend}/artisan containers:sync-shell-access || echo "WARNING: container login not set up; run 'artisan containers:sync-shell-access'"
 
         # A vhost is a rendered file, so the AI bot list, the 8G ruleset and
         # the templates shipped in this release do not reach an existing site

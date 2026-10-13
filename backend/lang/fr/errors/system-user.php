@@ -21,4 +21,11 @@ return [
     'shell_not_installed' => 'Le shell :shell n\'est pas installé sur ce serveur. Installez-le d\'abord ou choisissez un autre shell.',
     'username_taken_on_server' => 'Un utilisateur ou un groupe portant ce nom existe déjà sur le serveur. Choisissez un autre nom d\'utilisateur.',
     'has_processes' => 'Cet utilisateur a encore des processus en cours (par exemple une session SSH ouverte ou une tâche en cours). Arrêtez-les, puis réessayez.',
+
+    // Container login (RC-28).
+    'container_login_failed' => 'La connexion au conteneur n\'a pas pu être activée pour l\'utilisateur système.',
+    'container_login_unsupported' => 'La configuration SSH de ce serveur n\'applique pas la connexion au conteneur (son sshd_config n\'inclut pas sshd_config.d), elle n\'a donc pas été activée.',
+    'container_login_no_owner' => 'Cette application n\'a pas d\'utilisateur système.',
+    'container_login_confirm' => '{1} :username possède aussi :count autre application. Son SSH et son SFTP n\'ouvriront plus que ce conteneur. Confirmez pour continuer.|[2,*] :username possède aussi :count autres applications. Son SSH et son SFTP n\'ouvriront plus que ce conteneur. Confirmez pour continuer.',
+    'container_login_needs_key' => 'La connexion par mot de passe est désactivée sur ce serveur, :username a donc besoin d\'une clé SSH. Ajoutez-en une pour activer la connexion au conteneur.',
 ];

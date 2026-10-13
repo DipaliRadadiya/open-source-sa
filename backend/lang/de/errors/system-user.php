@@ -21,4 +21,11 @@ return [
     'shell_not_installed' => 'Die Shell :shell ist auf diesem Server nicht installiert. Installieren Sie sie zuerst oder wählen Sie eine andere Shell.',
     'username_taken_on_server' => 'Auf dem Server gibt es bereits einen Benutzer oder eine Gruppe mit diesem Namen. Wählen Sie einen anderen Benutzernamen.',
     'has_processes' => 'Dieser Benutzer hat noch laufende Prozesse (zum Beispiel eine offene SSH-Sitzung oder einen laufenden Job). Beenden Sie sie und versuchen Sie es erneut.',
+
+    // Container login (RC-28).
+    'container_login_failed' => 'Die Container-Anmeldung konnte für den Systembenutzer nicht aktiviert werden.',
+    'container_login_unsupported' => 'Die SSH-Konfiguration dieses Servers wendet die Container-Anmeldung nicht an (seine sshd_config bindet sshd_config.d nicht ein), daher wurde sie nicht aktiviert.',
+    'container_login_no_owner' => 'Diese App hat keinen Systembenutzer.',
+    'container_login_confirm' => '{1} :username besitzt noch :count weitere App. SSH und SFTP öffnen dann nur noch diesen Container. Bestätigen Sie, um fortzufahren.|[2,*] :username besitzt noch :count weitere Apps. SSH und SFTP öffnen dann nur noch diesen Container. Bestätigen Sie, um fortzufahren.',
+    'container_login_needs_key' => 'Die Passwort-Anmeldung ist auf diesem Server deaktiviert, daher braucht :username einen SSH-Schlüssel. Fügen Sie einen hinzu, um die Container-Anmeldung zu aktivieren.',
 ];

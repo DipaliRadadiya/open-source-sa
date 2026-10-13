@@ -6330,7 +6330,7 @@ The existing `application.container_secrets_viewed` activity is still recorded b
 ### GET `/applications/{application}/container/access`
 **Permission:** `app_compose` (view), the same as reading the compose file. **Throttle:** 60/min. A site type without container screens (WordPress, PHP, Node, …) returns `404` through the feature gate; a container type on another serving profile returns `422` with `errors/application.not_a_container`, as `…/container/compose` does (RC-23).
 
-What the dashboard's Command-line access card needs to write `ssh -t [-p <ssh_port>] <user>@<host> 'sudo docker exec -it <name> sh'`.
+What the dashboard's Command-line access card needs. Since RC-28 the way in is the app's **own system user**: with container login on, `ssh -t <owner>@<host>` lands inside the app's main container, with no sudo grant and no docker group (see **Container login** below).
 
 ```bash
 curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/applications/12/container/access"
@@ -6346,6 +6346,21 @@ curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/
   ],
   "ssh_users": [
     { "username": "adarsh", "ssh_access": true, "sudo": true, "has_password": true }
+  ],
+  "password_login": true,
+  "owner": {
+    "username": "adarsh-oc", "ssh_access": true, "container_login": true,
+    "has_password": false, "ssh_keys": 1, "other_apps": 0
+  },
+  "app": "openclaw",
+  "commands": {
+    "shell": "ssh -t adarsh-oc@203.0.113.10",
+    "exec_example": "ssh adarsh-oc@203.0.113.10 'ls -la'",
+    "logs": "ssh adarsh-oc@203.0.113.10 @logs --tail 100"
+  },
+  "cli_examples": [
+    { "label": "List pending browsers", "command": "ssh adarsh-oc@203.0.113.10 'openclaw devices list'" },
+    { "label": "Approve a browser", "command": "ssh adarsh-oc@203.0.113.10 'openclaw devices approve <requestId>'" }
   ]
 }
 ```
@@ -6355,6 +6370,42 @@ curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/
 - `project`: the Compose project, `sv-app-<id>`.
 - `containers`: read from the site's **stored compose file** (a Simple-mode site: the file the panel renders for it), never from `docker ps`. `name` is the service's `container_name` when set, otherwise `<project>-<service>-1`. `main: true` on the service that publishes the site's `app_port` (short or long port syntax, any host address); it comes first, then the rest in file order. Services under a Compose `profiles` key are left out (a plain `compose up` does not start them), and so is any name Docker would refuse (`[a-zA-Z0-9][a-zA-Z0-9_.-]*`): these are pasted into a terminal under `sudo`. A file that does not parse gives `[]`. A Simple-mode site with no container port gives the compose endpoint's `422` with `reason: container_port_missing`.
 - `ssh_users`: every system user with `ssh_access`, `sudo` and `has_password` (the panel knows a password, which is what `sudo` asks for), ordered by username — **only** for a caller who also holds `system_user` view; otherwise `[]`. Never a password, hash, key or home path.
+- `password_login`: whether sshd accepts passwords server-wide (`PasswordAuthentication`, from the same cached `sshd -T` read as `ssh_port`).
+- `owner`: the app's own system user, on this endpoint's permission (flags and counts only): `ssh_access`, `container_login` (in the `sv-app-shell` group), `has_password`, `ssh_keys` (a count) and `other_apps` (how many **non-Docker** apps it owns — those lose ordinary SSH/SFTP when container login is on). `null` for an app with no system user, with `commands: null`.
+- `app`: the name used in `@<app>`: the app's slug when it is 1–40 characters of `a-z 0-9 -`, otherwise (or on a clash) `app-<id>`.
+- `commands`: exact copyable lines. `-p <port>` only when SSH is not on 22; `@<app>` only when the owner has more than one Docker app (with one, the helper opens it by default).
+- `cli_examples`: the recipe's `cli_examples`, each as a full `ssh` one-liner run in the main container (`[]` for apps that are not recipes or have none).
+
+### POST `/applications/{application}/container/access`
+**Permission:** `system_user` (manage). **Throttle:** 10/min. Same `404`/`422` as the GET for sites that are not containers, answered before the body is validated.
+
+Turns **container login** on for the app's owner (RC-28): sets its key and/or password if sent, gives a `nologin` user `/bin/bash` (the forced command runs through the login shell), makes sure the server pieces are installed (`containers:sync-shell-access`), rewrites the access map, adds the user to `sv-app-shell`, asks `sshd -T -C user=<owner>` whether the Match block now applies, and only then turns `ssh_access` on through the System Users path. Answers `200` with the GET body.
+
+```json
+{ "ssh_key": "ssh-ed25519 AAAA… me@laptop", "password": null, "confirm_container_only": false }
+```
+
+- `ssh_key` (optional): validated like `POST /system-users/{id}/ssh-keys`; stored under the name "Container login".
+- `password` (optional): validated like `PUT /system-users/{id}/password`.
+- `422 confirm_container_only` when `owner.other_apps > 0` and this is not `true`: its SSH and SFTP will open this container only.
+- `422 ssh_key` when `password_login` is off, the user has no key, and none is sent.
+- `422 container_login` when sshd on this server does not apply the block (its `sshd_config` does not include `sshd_config.d`): the user is taken out of the group again and SSH access is left as it was.
+- `500` (`errors/system-user.container_login_failed`, with a reference) when the helper, sudo rule or sshd block could not be installed; nothing about the user is changed.
+
+### DELETE `/applications/{application}/container/access`
+**Permission:** `system_user` (manage). **Throttle:** 10/min. Takes the owner out of `sv-app-shell`. If `ssh_access` is still on, its next login is an ordinary one on the server. Answers `200` with the GET body.
+
+#### What the user can type (container login on)
+| Command | Does |
+|---|---|
+| `ssh -t u@host` | a shell (bash if present, else sh) in the main container |
+| `ssh u@host '<command…>'` | `docker exec -i <c> sh -c '<command…>'`; the text is interpreted by the container's shell only |
+| `ssh -t u@host @<service>` / `ssh u@host @<service> <command…>` | the same in another container of the app (only when the user has one Docker app) |
+| `ssh -t u@host @<app>` / `@<app>/<service>` | picks one app when the user owns several; with no pick the list is printed and the exit code is 2 |
+| `ssh u@host @logs [<target>] [--tail N] [--follow]` | `docker logs --tail N [-f]` (default 200 lines) |
+| `ssh u@host @list` | the user's apps and containers |
+
+Anything else after `@` is refused with `not your app` (exit 1), with no hint about other apps. sftp, scp and every kind of forwarding are off for these users. A container that is privileged or mounts the Docker socket is never opened. Each session writes one auth-log line: `app-shell[pid]: user=… app=… container=… action=shell|exec|logs|refused`.
 
 ---
 

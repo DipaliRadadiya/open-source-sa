@@ -33,6 +33,8 @@ final readonly class Recipe
         public ?string $iconDataUri,
         public RecipeTemplate $template,
         public string $directory,
+        /** @var list<array{label: string, command: string}> */
+        public array $cliExamples = [],
     ) {}
 
     public function tagline(string $locale): string

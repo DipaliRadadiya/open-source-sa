@@ -29,4 +29,9 @@ return [
         'warning_no_port' => 'Образ не сообщает, какой порт он слушает. Укажите порт из документации образа.',
         'warning_several_ports' => 'Образ слушает несколько портов (:ports). Для сайта выбран порт :port; измените его, если в документации указано иное.',
     ],
+
+    // Container login (RC-28): the name given to a key added from the card.
+    'container_login' => [
+        'key_name' => 'Вход в контейнер',
+    ],
 ];

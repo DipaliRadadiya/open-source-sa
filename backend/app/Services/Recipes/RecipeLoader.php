@@ -82,6 +82,7 @@ final class RecipeLoader
             iconDataUri: $icon,
             template: $template,
             directory: $directory,
+            cliExamples: array_values($data['cli_examples'] ?? []),
         );
     }
 }

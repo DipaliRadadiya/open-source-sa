@@ -58,8 +58,18 @@
     },
     "after_install": null,
     "hook": null,
+    "cli_examples": [
+        {
+            "label": "List pending browsers",
+            "command": "openclaw devices list"
+        },
+        {
+            "label": "Approve a browser",
+            "command": "openclaw devices approve <requestId>"
+        }
+    ],
     "notes": [
-        "Sign in to the Control UI with the generated gateway token. OpenClaw then asks you to approve each new browser once, from the server: the approval runs inside the container. Over SSH run `sudo docker exec -it -u node sv-app-<id>-openclaw-1 openclaw devices list`, then `sudo docker exec -it -u node sv-app-<id>-openclaw-1 openclaw devices approve <requestId>` with the request id the browser shows; or open a shell with the Command-line access card on the app page and run `openclaw devices approve <requestId>` there. The waiting browser connects on its own a few seconds later. Run `devices list` right before approving, because a retrying browser gets a new request id. Once one browser is approved, further browsers can also be approved from its Settings, Devices screen.",
+        "Sign in to the Control UI with the generated gateway token. OpenClaw then asks you to approve each new browser once, from the server: the approval runs inside the container. Log in as the app's system user (Command-line access card on the app page, which turns container login on and shows the exact commands): `ssh <app-user>@<server> 'openclaw devices list'` shows the waiting request, and `ssh <app-user>@<server> 'openclaw devices approve <requestId>'` approves it with the request id the browser shows. No sudo is needed. The waiting browser connects on its own a few seconds later. Run `devices list` right before approving, because a retrying browser gets a new request id. Once one browser is approved, further browsers can also be approved from its Settings, Devices screen.",
         "Model providers and API keys are set from the Control UI after the browser is approved; the recipe ships no provider key.",
         "There is no docker.sock in the container, so OpenClaw's agent sandboxing stays off and the container itself is the boundary. Agent tools run with the container's access to the /data volume and the internet.",
         "The container starts as root only to create /data/.openclaw and /data/workspace and give them to the image's node user (Northflank layout); the gateway and its config writes run as node via setpriv. `-u node` with docker exec is preferred; a root exec (as the Command-line access card opens) also approves and was verified to leave nothing root-owned in /data, and every start re-owns anything root left there.",

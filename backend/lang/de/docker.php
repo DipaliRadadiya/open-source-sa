@@ -29,4 +29,9 @@ return [
         'warning_no_port' => 'Dieses Image gibt nicht an, auf welchem Port es lauscht. Gib den Port aus der Dokumentation des Images ein.',
         'warning_several_ports' => 'Dieses Image lauscht auf mehreren Ports (:ports). Für die Website wurde Port :port gewählt; ändere ihn, falls die Dokumentation etwas anderes sagt.',
     ],
+
+    // Container login (RC-28): the name given to a key added from the card.
+    'container_login' => [
+        'key_name' => 'Container-Anmeldung',
+    ],
 ];

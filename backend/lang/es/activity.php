@@ -108,6 +108,8 @@ return [
     'system_user.shell_changed' => 'Cambió el shell del usuario del sistema :username a :shell',
     'system_user.ssh_enabled' => 'Habilitó el acceso SSH para el usuario del sistema :username',
     'system_user.ssh_disabled' => 'Deshabilitó el acceso SSH para el usuario del sistema :username',
+    'system_user.container_login_enabled' => 'Activó el inicio de sesión en el contenedor para el usuario del sistema :username',
+    'system_user.container_login_disabled' => 'Desactivó el inicio de sesión en el contenedor para el usuario del sistema :username',
     'cronjob.created' => 'Creó la tarea cron :name',
     'cronjob.updated' => 'Actualizó la tarea cron :name',
     'cronjob.deleted' => 'Eliminó la tarea cron :name',

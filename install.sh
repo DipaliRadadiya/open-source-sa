@@ -3750,6 +3750,17 @@ finish() {
         warn "could not set the default site for unknown domains — see $LOG_FILE"
     fi
 
+    # Container login (RC-28): a Docker app's own system user logs straight into
+    # its container. The group, the root helper, its sudo rule (visudo-checked)
+    # and the sshd Match block (sshd -t before reload). After configure_sudoers,
+    # because the visudo check runs through that grant. Not fatal: a failure
+    # leaves sshd and sudo exactly as they were, and every update retries it.
+    if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan containers:sync-shell-access' -- "$backend" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
+        ok "Docker apps' own users can log in to their containers"
+    else
+        warn "container login for Docker apps is not set up — see $LOG_FILE"
+    fi
+
     # Prove the panel actually works before claiming the install succeeded.
     # Everything above this line only shows that commands ran as *root*; the
     # panel runs as an unprivileged account, and the gap between those two is

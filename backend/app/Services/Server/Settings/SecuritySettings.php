@@ -43,8 +43,8 @@ class SecuritySettings implements SettingGroup
     // keyword is exactly the failure mode above, just against ourselves.
     private const LEGACY_DROP_IN = '99-panel.conf';
 
-    // See port().
-    private const PORT_CACHE = 'server.ssh_port.effective';
+    // See port(). Holds the port and whether passwords are accepted.
+    private const PORT_CACHE = 'server.ssh_login.effective';
 
     public function __construct(
         private ServerOps $serverOps,
@@ -93,11 +93,37 @@ class SecuritySettings implements SettingGroup
      */
     public function port(): int
     {
-        return (int) Cache::remember(
-            self::PORT_CACHE,
-            now()->addMinutes(5),
-            fn (): int => (int) ($this->effectiveConfig()['port'] ?? config('server.ssh_port', 22)),
-        );
+        return $this->loginSummary()['port'];
+    }
+
+    /**
+     * Whether sshd accepts passwords, from the same cached read as port().
+     *
+     * The card turns container login on with a key or a password (RC-28), and
+     * offers the password only where it would work. The same answer read()
+     * gives as `password_authentication`, without its key lookup.
+     */
+    public function passwordLogin(): bool
+    {
+        return $this->loginSummary()['password_authentication'];
+    }
+
+    /**
+     * @return array{port: int, password_authentication: bool}
+     */
+    private function loginSummary(): array
+    {
+        // A new key, not the old `server.ssh_port.effective`: that one held the
+        // bare port, and a value cached by the previous release must not be
+        // read back as this shape.
+        return Cache::remember(self::PORT_CACHE, now()->addMinutes(5), function (): array {
+            $effective = $this->effectiveConfig();
+
+            return [
+                'port' => (int) ($effective['port'] ?? config('server.ssh_port', 22)),
+                'password_authentication' => ($effective['passwordauthentication'] ?? 'yes') === 'yes',
+            ];
+        });
     }
 
     /**

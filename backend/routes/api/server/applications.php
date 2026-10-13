@@ -118,6 +118,15 @@ Route::get('/applications/{application}/container/compose', [ApplicationContaine
 Route::get('/applications/{application}/container/access', [ApplicationContainerController::class, 'access'])
     ->middleware(['permission:app_compose', 'throttle:60,1']);
 
+// Container login for the app's own system user (RC-28): on, its SSH login opens
+// this app's container. A change to that user's account, so gated on
+// `system_user` manage like the System Users switches it reuses. The controller
+// gives a site that is not a container the same 404/422 as the read above.
+Route::post('/applications/{application}/container/access', [ApplicationContainerController::class, 'enableAccess'])
+    ->middleware(['permission:system_user,manage', 'throttle:10,1']);
+Route::delete('/applications/{application}/container/access', [ApplicationContainerController::class, 'disableAccess'])
+    ->middleware(['permission:system_user,manage', 'throttle:10,1']);
+
 // Throttled like the other apply paths: each save recreates the container, and a
 // form that can be spammed is a site that can be restarted in a loop.
 Route::put('/applications/{application}/container/compose', [ApplicationContainerController::class, 'updateCompose'])

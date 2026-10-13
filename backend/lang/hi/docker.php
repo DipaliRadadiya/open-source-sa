@@ -29,4 +29,9 @@ return [
         'warning_no_port' => 'यह इमेज नहीं बताती कि वह किस पोर्ट पर सुनती है। इमेज के दस्तावेज़ में दिया पोर्ट दर्ज करें।',
         'warning_several_ports' => 'यह इमेज कई पोर्ट पर सुनती है (:ports)। वेबसाइट के लिए पोर्ट :port चुना गया है; दस्तावेज़ कुछ और कहे तो इसे बदलें।',
     ],
+
+    // Container login (RC-28): the name given to a key added from the card.
+    'container_login' => [
+        'key_name' => 'कंटेनर लॉगिन',
+    ],
 ];

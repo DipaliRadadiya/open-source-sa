@@ -114,6 +114,8 @@ return [
     'system_user.shell_changed' => 'Changed the shell of system user :username to :shell',
     'system_user.ssh_enabled' => 'Enabled SSH access for system user :username',
     'system_user.ssh_disabled' => 'Disabled SSH access for system user :username',
+    'system_user.container_login_enabled' => 'Turned on container login for system user :username',
+    'system_user.container_login_disabled' => 'Turned off container login for system user :username',
     'cronjob.created' => 'Created cron job :name',
     'cronjob.updated' => 'Updated cron job :name',
     'cronjob.deleted' => 'Deleted cron job :name',

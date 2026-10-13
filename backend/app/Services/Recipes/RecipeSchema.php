@@ -68,6 +68,13 @@ final class RecipeSchema
             'hook' => ['nullable', 'string'],
             'notes' => ['sometimes', 'array'],
             'notes.*' => ['string'],
+            // Commands for the Command-line access card (RC-28), each run in the
+            // app's main container. Shown as a full `ssh` one-liner someone will
+            // paste into a terminal, so one line each and short.
+            'cli_examples' => ['sometimes', 'array', 'max:10'],
+            'cli_examples.*' => ['array:label,command'],
+            'cli_examples.*.label' => ['required', 'string', 'min:1', 'max:80', 'not_regex:/[\x00-\x1F\x7F]/'],
+            'cli_examples.*.command' => ['required', 'string', 'min:1', 'max:300', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];
     }
 
