@@ -97,11 +97,19 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `snipeit` | [official raster](https://raw.githubusercontent.com/grokability/snipe-it/v8.8.0/public/img/snipe-logo-bug.png) | AGPL-3.0 | The official mark is raster-only (no SVG in the repository or on snipeitapp.com). Four-colour vector trace (potrace, colours sampled from the PNG, centred in a square viewBox); no raster embedded. |
 | `invoiceninja` | [Simple Icons vector](https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/invoiceninja.svg) | CC0-1.0 (Simple Icons) | Simple Icons' vector of the official round logo (its source: invoiceninja/invoiceninja public/images/round_logo.png); path unchanged, black on a rounded white square so it stays legible in both panel themes. |
 
+## RC-33 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `plane` | [Simple Icons vector](https://raw.githubusercontent.com/simple-icons/simple-icons/978656df6ce854ac04e45351059f8e3db7e34ef4/icons/plane.svg) | CC0-1.0 (Simple Icons) | Plane v1.4.2 ships its mark only as raster (favicons, and apps/space/app/assets/plane-logo.svg wraps an embedded PNG); this is Simple Icons' vector of the current mark (its source: plane.so/brand-logos), path unchanged, in Plane's #121212 on a rounded white square so it stays legible in both panel themes. |
+| `langfuse` | [official vector](https://raw.githubusercontent.com/langfuse/langfuse/v4.57.0/web/public/icon.svg) | MIT (outside the ee/ directories) | Official application icon; width/height attributes dropped; paths unchanged. |
+| `erpnext` | [official vector](https://raw.githubusercontent.com/frappe/erpnext/v16.50.0/erpnext/public/images/erpnext-logo.svg) | GPL-3.0 | Official square mark; width/height attributes dropped; paths and colours unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors and Activepieces Inc.; see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc. and ClickHouse, Inc. (Langfuse); see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.

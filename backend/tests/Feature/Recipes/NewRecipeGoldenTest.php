@@ -61,7 +61,7 @@ function rc09GoldenSite(string $slug, array $overrides = []): Application
         'status' => 'pending',
         'app_port' => Golden::APP_PORT,
         'docker_secrets' => $secrets,
-        'settings' => in_array($slug, ['directus', 'invoiceninja'], true) ? ['admin_email' => 'owner@golden.test'] : null,
+        'settings' => in_array($slug, ['directus', 'invoiceninja', 'langfuse'], true) ? ['admin_email' => 'owner@golden.test'] : null,
     ]);
 }
 
@@ -72,7 +72,7 @@ function rc09GoldenInstall(Application $application): Application
     return $application->fresh();
 }
 
-dataset('new golden apps', array_combine(['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve', 'actual', 'plausible', 'snipeit', 'invoiceninja'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve', 'actual', 'plausible', 'snipeit', 'invoiceninja'])));
+dataset('new golden apps', array_combine(['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve', 'actual', 'plausible', 'snipeit', 'invoiceninja', 'plane', 'langfuse', 'erpnext'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk', 'keycloak', 'infisical', 'litellm', 'librechat', 'activepieces', 'appsmith', 'docmost', 'siyuan', 'joplin', 'karakeep', 'meilisearch', 'hasura', 'cyberchef', 'cloudreve', 'actual', 'plausible', 'snipeit', 'invoiceninja', 'plane', 'langfuse', 'erpnext'])));
 
 it('renders the same compose on install', function (string $slug) {
     Golden::assertMatches(Golden::dir($slug).'/install-default.yml', rc09GoldenInstall(rc09GoldenSite($slug))->compose);

@@ -1,0 +1,204 @@
+name: sv-app-4242
+
+services:
+  frontend:
+    image: frappe/erpnext:v16.50.0
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"
+
+    command: ["nginx-entrypoint.sh"]
+
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: erpnext
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: "120"
+      CLIENT_MAX_BODY_SIZE: 50m
+
+    volumes:
+      - sv-app-4242_sites:/home/frappe/frappe-bench/sites
+      - sv-app-4242_logs:/home/frappe/frappe-bench/logs
+
+    depends_on:
+      - websocket
+      - backend
+
+  backend:
+    image: frappe/erpnext:v16.50.0
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["bash", "-c", "set -e; wait-for-it -t 120 db:3306; wait-for-it -t 120 redis-cache:6379; wait-for-it -t 120 redis-queue:6379; ls -1 apps > sites/apps.txt; bench set-config -g db_host db; bench set-config -gp db_port 3306; bench set-config -g redis_cache redis://redis-cache:6379; bench set-config -g redis_queue redis://redis-queue:6379; bench set-config -g redis_socketio redis://redis-queue:6379; bench set-config -gp socketio_port 9000; if [ ! -f sites/erpnext/.panel-site-ready ]; then bench new-site erpnext --force --mariadb-user-host-login-scope=% --db-root-username root --db-root-password $$DB_ROOT_PASSWORD --admin-password $$ADMIN_PASSWORD --install-app erpnext --set-default; touch sites/erpnext/.panel-site-ready; fi; exec start.sh"]
+
+    environment:
+      DB_ROOT_PASSWORD: "dfb749bf88da2859e969a7663046504a"
+      ADMIN_PASSWORD: "7b73f17f953cab156eec604a0837231c"
+
+    volumes:
+      - sv-app-4242_sites:/home/frappe/frappe-bench/sites
+      - sv-app-4242_logs:/home/frappe/frappe-bench/logs
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_started
+      redis-queue:
+        condition: service_started
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "-H", "X-Frappe-Site-Name: erpnext", "http://127.0.0.1:8000/api/method/ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 1200s
+
+  websocket:
+    image: frappe/erpnext:v16.50.0
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["bash", "-c", "until [ -f sites/erpnext/.panel-site-ready ]; do sleep 5; done; exec node /home/frappe/frappe-bench/apps/frappe/socketio.js"]
+
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+
+    volumes:
+      - sv-app-4242_sites:/home/frappe/frappe-bench/sites
+      - sv-app-4242_logs:/home/frappe/frappe-bench/logs
+
+  queue-long:
+    image: frappe/erpnext:v16.50.0
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["bash", "-c", "until [ -f sites/erpnext/.panel-site-ready ]; do sleep 5; done; exec bench worker --queue long,default,short"]
+
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+
+    volumes:
+      - sv-app-4242_sites:/home/frappe/frappe-bench/sites
+      - sv-app-4242_logs:/home/frappe/frappe-bench/logs
+
+  queue-short:
+    image: frappe/erpnext:v16.50.0
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["bash", "-c", "until [ -f sites/erpnext/.panel-site-ready ]; do sleep 5; done; exec bench worker --queue short,default"]
+
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+
+    volumes:
+      - sv-app-4242_sites:/home/frappe/frappe-bench/sites
+      - sv-app-4242_logs:/home/frappe/frappe-bench/logs
+
+  scheduler:
+    image: frappe/erpnext:v16.50.0
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["bash", "-c", "until [ -f sites/erpnext/.panel-site-ready ]; do sleep 5; done; exec bench schedule"]
+
+    volumes:
+      - sv-app-4242_sites:/home/frappe/frappe-bench/sites
+      - sv-app-4242_logs:/home/frappe/frappe-bench/logs
+
+  db:
+    image: mariadb:11.8.9
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--skip-character-set-client-handshake"]
+
+    environment:
+      MARIADB_ROOT_PASSWORD: "dfb749bf88da2859e969a7663046504a"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
+
+  redis-cache:
+    image: redis:6.2.24-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis-queue:
+    image: redis:6.2.24-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    volumes:
+      - sv-app-4242_redis-queue:/data
+
+volumes:
+  sv-app-4242_sites:
+    external: true
+  sv-app-4242_logs:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_redis-queue:
+    external: true

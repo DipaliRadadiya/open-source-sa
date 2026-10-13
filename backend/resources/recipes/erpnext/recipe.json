@@ -1,0 +1,120 @@
+{
+    "schema": 1,
+    "slug": "erpnext",
+    "version": 1,
+    "title": "ERPNext",
+    "tagline": {
+        "en": "Full ERP for accounting, inventory, sales, purchasing, manufacturing and HR",
+        "es": "ERP completo para contabilidad, inventario, ventas, compras, fabricación y RR. HH.",
+        "de": "Vollständiges ERP für Buchhaltung, Lager, Vertrieb, Einkauf, Fertigung und Personal",
+        "fr": "ERP complet pour la comptabilité, les stocks, les ventes, les achats, la production et les RH",
+        "pt": "ERP completo para contabilidade, estoque, vendas, compras, produção e RH",
+        "ja": "会計、在庫、販売、購買、製造、人事をカバーするフル機能の ERP",
+        "ru": "Полноценная ERP для бухгалтерии, склада, продаж, закупок, производства и кадров",
+        "hi": "लेखा, इन्वेंटरी, बिक्री, खरीद, विनिर्माण और HR के लिए पूर्ण ERP"
+    },
+    "category": "business",
+    "icon": "erpnext",
+    "popular": false,
+    "catalog_order": 560,
+    "docs_url": "https://github.com/frappe/frappe_docker/blob/v4.0.1/docs/getting-started.md",
+    "images": {
+        "erpnext": {
+            "ref": "frappe/erpnext:v16.50.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:11.8.9",
+            "tested": []
+        },
+        "redis": {
+            "ref": "redis:6.2.24-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "frontend",
+            "role": "app"
+        },
+        {
+            "name": "backend",
+            "role": "worker"
+        },
+        {
+            "name": "websocket",
+            "role": "worker"
+        },
+        {
+            "name": "queue-long",
+            "role": "worker"
+        },
+        {
+            "name": "queue-short",
+            "role": "worker"
+        },
+        {
+            "name": "scheduler",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis-cache",
+            "role": "cache"
+        },
+        {
+            "name": "redis-queue",
+            "role": "cache"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "256m",
+    "volumes": {
+        "sites": "/home/frappe/frappe-bench/sites",
+        "logs": "/home/frappe/frappe-bench/logs",
+        "db": "/var/lib/mysql",
+        "redis-queue": "/data"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "Administrator"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: sign in at the site's address as Administrator with the generated password on the first-run card. ERPNext then opens its own setup wizard (language, country, currency, company, fiscal year); finish it before anything else. Change the Administrator password afterwards, or create your own user and keep Administrator for maintenance.",
+        "The first install takes several minutes: the backend creates the site (bench new-site with ERPNext installed) before it starts serving, and the panel waits for its healthcheck. Services from the official frappe_docker pwd.yml (v4.0.1, which pins frappe/erpnext:v16.50.0): frontend (nginx, the published app, port 8080), backend (gunicorn), websocket, queue-long, queue-short, scheduler, MariaDB 11.8, redis-cache and redis-queue.",
+        "The one-shot configurator and create-site jobs are folded into the backend's start command. Every start it writes the database and Redis settings into common_site_config.json, as the configurator does. If the marker file sites/erpnext/.panel-site-ready is absent it runs bench new-site erpnext --force with ERPNext and writes the marker only after that succeeds, so an interrupted first install starts over cleanly on the next start. Never delete that file: without it the next start recreates the site and its database from scratch. websocket, the queue workers and the scheduler wait for the marker before they start.",
+        "Site name: the site is always called erpnext and the frontend sends FRAPPE_SITE_NAME_HEADER=erpnext, so changing the domain or the certificate never touches the site. The frontend passes the panel's X-Forwarded-Proto on, so ERPNext generates https links. Outgoing email and absolute links in background jobs use the host_name site setting, which is not set; set it under System Settings or with bench set-config host_name if you send email.",
+        "Upgrades: the image's entrypoint links the assets baked into the image on every start. A newer ERPNext image needs bench --site erpnext migrate run in the backend container after the update.",
+        "Secrets: ADMIN_PASSWORD (the Administrator login) and DB_ROOT_PASSWORD (MariaDB root, used by bench to create the site database and its user), each 32 alphanumeric characters. MariaDB 11.8.9 is the current patch release of the 11.8 series pwd.yml pins; redis is 6.2.24, the current 6.2 patch release.",
+        "Memory: the frontend takes the app limit (floor 256m); backend 2g (gunicorn, and the site creation runs in it), queue-long and queue-short 1g each, scheduler and websocket 512m; MariaDB and both Redis use the panel database default."
+    ]
+}

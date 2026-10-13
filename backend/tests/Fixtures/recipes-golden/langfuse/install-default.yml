@@ -1,0 +1,235 @@
+name: sv-app-4242
+
+services:
+  langfuse-web:
+    image: langfuse/langfuse:4.57.0
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3000"
+
+    command: ["sh", "-c", "export ENCRYPTION_KEY=$$(printf %s $$ENCRYPTION_KEY_SEED | sha256sum | cut -c1-64) && unset ENCRYPTION_KEY_SEED && exec node ./web/server.js --keepAliveTimeout 110000"]
+
+    environment:
+      NEXTAUTH_URL: "https://langfuse.golden.test"
+      NEXTAUTH_SECRET: "bd86ccf7a7acc7713b4b6cdac313e894"
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: "postgresql://postgres:69103874502542af4d419be1ff3b8f24@postgres:5432/postgres"
+      SALT: "7d4eb650353f43ad46c438e6da2bdee4"
+      ENCRYPTION_KEY_SEED: "59f05ba45e3e882c8920da46ff1effb3"
+      AUTH_DISABLE_SIGNUP: "true"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: "81389e010d04864b8eff1f07c1701d9d"
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: "db5dd0a33efe100787b75c1f94b6efa4"
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: "db5dd0a33efe100787b75c1f94b6efa4"
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: "22c23b7b07453e417f9c9b3d685b808d"
+      LANGFUSE_INIT_ORG_ID: default-org
+      LANGFUSE_INIT_ORG_NAME: Default organization
+      LANGFUSE_INIT_PROJECT_ID: default-project
+      LANGFUSE_INIT_PROJECT_NAME: Default project
+      LANGFUSE_INIT_USER_EMAIL: "owner@golden.test"
+      LANGFUSE_INIT_USER_NAME: Admin
+      LANGFUSE_INIT_USER_PASSWORD: "6cea32c0170e189ae393bd8ebda36ad4"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/public/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 600s
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:4.57.0
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["sh", "-c", "export ENCRYPTION_KEY=$$(printf %s $$ENCRYPTION_KEY_SEED | sha256sum | cut -c1-64) && unset ENCRYPTION_KEY_SEED && exec node worker/dist/index.js"]
+
+    environment:
+      NEXTAUTH_URL: "https://langfuse.golden.test"
+      DATABASE_URL: "postgresql://postgres:69103874502542af4d419be1ff3b8f24@postgres:5432/postgres"
+      SALT: "7d4eb650353f43ad46c438e6da2bdee4"
+      ENCRYPTION_KEY_SEED: "59f05ba45e3e882c8920da46ff1effb3"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: "81389e010d04864b8eff1f07c1701d9d"
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: "db5dd0a33efe100787b75c1f94b6efa4"
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: "db5dd0a33efe100787b75c1f94b6efa4"
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: "22c23b7b07453e417f9c9b3d685b808d"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12.11.4
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    user: "101:101"
+
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: "81389e010d04864b8eff1f07c1701d9d"
+
+    volumes:
+      - sv-app-4242_clickhouse:/var/lib/clickhouse
+      - sv-app-4242_clickhouse-logs:/var/log/clickhouse-server
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  minio:
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["sh", "-c", "mkdir -p /data/langfuse && exec silo server --address :9000 --console-address :9001 /data"]
+
+    environment:
+      MINIO_ROOT_USER: langfuse
+      MINIO_ROOT_PASSWORD: "db5dd0a33efe100787b75c1f94b6efa4"
+
+    volumes:
+      - sv-app-4242_minio:/data
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4.11
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["redis-server", "--requirepass", "22c23b7b07453e417f9c9b3d685b808d", "--maxmemory-policy", "noeviction"]
+
+    volumes:
+      - sv-app-4242_redis:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "22c23b7b07453e417f9c9b3d685b808d", "--no-auth-warning", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  postgres:
+    image: postgres:17.11
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "69103874502542af4d419be1ff3b8f24"
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
+
+volumes:
+  sv-app-4242_clickhouse:
+    external: true
+  sv-app-4242_clickhouse-logs:
+    external: true
+  sv-app-4242_minio:
+    external: true
+  sv-app-4242_redis:
+    external: true
+  sv-app-4242_db:
+    external: true

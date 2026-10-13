@@ -1,0 +1,153 @@
+{
+    "slug": "plane",
+    "container_port": 80,
+    "volume_roles": {
+        "api-logs": "/code/plane/logs",
+        "worker-logs": "/code/plane/logs",
+        "beat-logs": "/code/plane/logs",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data",
+        "mq": "/var/lib/rabbitmq",
+        "uploads": "/export"
+    },
+    "generated_secrets": [
+        "SECRET_KEY",
+        "LIVE_SERVER_SECRET_KEY",
+        "DB_PASSWORD",
+        "RABBITMQ_PASSWORD",
+        "MINIO_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "WEB_URL",
+    "default_memory_limit": "256m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "plane",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "256m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_api-logs",
+            "path": "/code/plane/logs"
+        },
+        {
+            "volume": "sv-app-4242_worker-logs",
+            "path": "/code/plane/logs"
+        },
+        {
+            "volume": "sv-app-4242_beat-logs",
+            "path": "/code/plane/logs"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        },
+        {
+            "volume": "sv-app-4242_redis",
+            "path": "/data"
+        },
+        {
+            "volume": "sv-app-4242_mq",
+            "path": "/var/lib/rabbitmq"
+        },
+        {
+            "volume": "sv-app-4242_uploads",
+            "path": "/export"
+        }
+    ],
+    "docker_secret_keys": [
+        "SECRET_KEY",
+        "LIVE_SERVER_SECRET_KEY",
+        "DB_PASSWORD",
+        "RABBITMQ_PASSWORD",
+        "MINIO_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Plane",
+            "tagline": "Project management with issues, cycles and docs, an open alternative to Jira and Linear"
+        },
+        "es": {
+            "title": "Plane",
+            "tagline": "Gestión de proyectos con incidencias, ciclos y documentos, una alternativa abierta a Jira y Linear"
+        },
+        "de": {
+            "title": "Plane",
+            "tagline": "Projektmanagement mit Issues, Zyklen und Dokumenten, eine offene Alternative zu Jira und Linear"
+        },
+        "fr": {
+            "title": "Plane",
+            "tagline": "Gestion de projet avec tickets, cycles et documents, une alternative ouverte à Jira et Linear"
+        },
+        "pt": {
+            "title": "Plane",
+            "tagline": "Gestão de projetos com issues, ciclos e documentos, uma alternativa aberta ao Jira e ao Linear"
+        },
+        "ja": {
+            "title": "Plane",
+            "tagline": "課題、サイクル、ドキュメントを備えたプロジェクト管理。Jira や Linear のオープンな代替"
+        },
+        "ru": {
+            "title": "Plane",
+            "tagline": "Управление проектами с задачами, циклами и документами, открытая альтернатива Jira и Linear"
+        },
+        "hi": {
+            "title": "Plane",
+            "tagline": "इश्यू, साइकिल और डॉक्स के साथ प्रोजेक्ट प्रबंधन, Jira और Linear का खुला विकल्प"
+        }
+    },
+    "catalog_en": {
+        "name": "plane",
+        "icon": "plane",
+        "category": "productivity",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}
