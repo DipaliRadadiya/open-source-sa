@@ -1,0 +1,29 @@
+name: sv-app-4242
+
+services:
+  gotify:
+    image: gotify/server:3.1.1
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      GOTIFY_DEFAULTUSER_NAME: admin
+      GOTIFY_DEFAULTUSER_PASS: "668350400f0b9635ff3d15304395f836"
+      GOTIFY_SERVER_SECURECOOKIE: "true"
+      GOTIFY_REGISTRATION: "false"
+
+    volumes:
+      - sv-app-4242_data:/app/data
+
+volumes:
+  sv-app-4242_data:
+    external: true

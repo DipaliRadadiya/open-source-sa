@@ -1,0 +1,75 @@
+{
+    "schema": 1,
+    "slug": "openobserve",
+    "version": 1,
+    "title": "OpenObserve",
+    "tagline": {
+        "en": "Logs, metrics and traces in one place: ingest over HTTP or OpenTelemetry, search and build dashboards",
+        "es": "Logs, métricas y trazas en un solo lugar: ingesta por HTTP u OpenTelemetry, búsqueda y paneles",
+        "de": "Logs, Metriken und Traces an einem Ort: Erfassung per HTTP oder OpenTelemetry, Suche und Dashboards",
+        "fr": "Logs, métriques et traces au même endroit : ingestion par HTTP ou OpenTelemetry, recherche et tableaux de bord",
+        "pt": "Logs, métricas e traces em um só lugar: ingestão por HTTP ou OpenTelemetry, busca e painéis",
+        "ja": "ログ、メトリクス、トレースを一か所に：HTTP または OpenTelemetry で取り込み、検索、ダッシュボード作成",
+        "ru": "Логи, метрики и трассировки в одном месте: приём по HTTP или OpenTelemetry, поиск и дашборды",
+        "hi": "लॉग, मेट्रिक्स और ट्रेस एक ही जगह: HTTP या OpenTelemetry से डेटा भेजें, खोजें और डैशबोर्ड बनाएं"
+    },
+    "category": "monitoring",
+    "icon": "openobserve",
+    "popular": false,
+    "catalog_order": 700,
+    "docs_url": "https://openobserve.ai/docs/getting-started/",
+    "images": {
+        "app": {
+            "ref": "public.ecr.aws/zinclabs/openobserve:v1.0.4",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "openobserve",
+            "role": "app"
+        }
+    ],
+    "container_port": 5080,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [
+        {
+            "key": "ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "ZO_WEB_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ROOT_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "OpenObserve creates its root user on the first start from ZO_ROOT_USER_EMAIL (the admin email you enter) and ZO_ROOT_USER_PASSWORD (a generated password shown on the first-run card). Sign in with that email and password. The same email and password also work as HTTP basic auth for the ingestion API (POST https://<your domain>/api/default/<stream>/_json). Once the root user exists these variables no longer change it: change the password in the web interface instead.",
+        "Single-node mode as in the official quick start: one container, all data (the metadata database, the write-ahead log and the stored Parquet files) on local disk in one named volume on /data. There is no object storage and no cluster; OpenObserve's high-availability mode needs S3-compatible storage and is a different deployment.",
+        "The image is the official one from AWS ECR Public (public.ecr.aws/zinclabs/openobserve, the registry the installation docs name), pinned to v1.0.4 (the image openobserve/openobserve on Docker Hub is the same build).",
+        "ZO_WEB_URL is the site's address (used for links and the allowed browser origin) and follows the domain. ZO_COOKIE_SECURE_ONLY keeps the session cookie on HTTPS; ZO_TELEMETRY is off so the server does not report usage to the vendor.",
+        "OpenObserve sizes its in-memory caches from the container's memory limit, so the memory floor of 1g is a starting point: give it more if you ingest a lot or keep long time ranges in dashboards.",
+        "Data is kept until you set a retention: by default streams keep data indefinitely and the volume grows with what you ingest. Set the stream retention in the stream settings (or ZO_COMPACT_DATA_RETENTION_DAYS) for anything with real volume."
+    ]
+}

@@ -128,6 +128,14 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `formbricks` | [official vector](https://raw.githubusercontent.com/formbricks/formbricks/5.4.5/docs/images/favicon.svg) | AGPL-3.0 (outside the ee/ directories) | Official favicon (the square mark on its gradient); unchanged. |
 | `answer` | [official vector](https://raw.githubusercontent.com/apache/answer/v2.0.3/docs/img/logo.svg) | Apache-2.0 | The speech-bubble mark of the official logo: the wordmark paths and the white background removed, viewBox cropped to the mark (6 6 32 32); path and colour (#0033FF) unchanged. |
 
+## RC-38 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `openobserve` | [official vector](https://raw.githubusercontent.com/openobserve/openobserve/v1.0.4/web/src/assets/images/pipeline/openobserve.svg) | AGPL-3.0 | Official mark (the four-colour ring with the pulse line); a white disc added behind the pulse so the dark line stays visible in the dark panel theme; paths and colours unchanged. |
+| `unleash` | [official vector](https://raw.githubusercontent.com/Unleash/unleash/v8.2.0/frontend/src/assets/icons/logoBg.svg) | Apache-2.0 | Official round mark on its dark background; unchanged (trailing newline added). |
+| `gotify` | [official vector](https://raw.githubusercontent.com/gotify/logo/25c1d2c08894fcb0ed39c36a2816316a161c0e57/gotify-logo-small.svg) | CC-BY-4.0 (gotify/logo) | Official small logo (the gopher with the envelope), by the Gotify authors; Illustrator/Inkscape metadata, the empty foreignObject, editor attributes and unused ids removed, the switch element turned into a group; paths, styles and colours unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
