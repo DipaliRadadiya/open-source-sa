@@ -331,14 +331,14 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    command: ["server", "/export", "--console-address", ":9090"]
+    command: ["server", "/data", "--console-address", ":9090"]
 
     environment:
       MINIO_ROOT_USER: plane
       MINIO_ROOT_PASSWORD: "{{ secret.MINIO_PASSWORD }}"
 
     volumes:
-      - {{ volume.uploads }}:/export
+      - {{ volume.uploads }}:/data
 
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]

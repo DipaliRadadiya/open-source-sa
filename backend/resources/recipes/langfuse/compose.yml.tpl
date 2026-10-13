@@ -26,6 +26,7 @@ services:
       NEXTAUTH_URL: "{{ url }}"
       NEXTAUTH_SECRET: "{{ secret.NEXTAUTH_SECRET }}"
       HOSTNAME: 0.0.0.0
+      NODE_OPTIONS: --max-old-space-size=1536
       DATABASE_URL: "postgresql://postgres:{{ secret.DB_PASSWORD }}@postgres:5432/postgres"
       SALT: "{{ secret.SALT }}"
       ENCRYPTION_KEY_SEED: "{{ secret.ENCRYPTION_KEY_SEED }}"

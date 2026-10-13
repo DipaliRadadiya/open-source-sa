@@ -119,7 +119,7 @@
         "db": "/var/lib/postgresql/data",
         "redis": "/data",
         "mq": "/var/lib/rabbitmq",
-        "uploads": "/export"
+        "uploads": "/data"
     },
     "secrets": [
         {
@@ -160,7 +160,7 @@
     "notes": [
         "First run: open https://<domain>/god-mode/ right after the install and create the instance admin (name, email, password). Until then anyone who reaches the site can claim the instance. Then sign in at the site's address with the same email and create your workspace. Email (invitations, magic links) stays off until SMTP is set under God mode, Email.",
         "Services from the official community compose file (deployments/cli/community/docker-compose.yml) of the v1.4.2 release: the Caddy proxy (the published app), web, space, admin, live, api, worker, beat-worker, PostgreSQL, Valkey, RabbitMQ and Silo for uploads. The one-shot migrator is folded into api's start command: it runs the upstream migrator script (Django migrate, idempotent) and then the upstream api entrypoint, so worker and beat-worker, which wait for migrations, start once it is done.",
-        "Object storage is pgsty/silo, the MinIO-compatible image Plane's own compose file uses on its preview branch (v1.4.2 still floats minio/minio:latest). The api creates the uploads bucket on start. Browsers upload attachments straight to https://<domain>/uploads/, which the Caddy proxy forwards to the storage service; MINIO_ENDPOINT_SSL=1 makes the signed upload URLs https, as Plane's variables.env says to do behind TLS termination.",
+        "Object storage is pgsty/silo, the MinIO-compatible image Plane's own compose file uses on its preview branch (v1.4.2 still floats minio/minio:latest). The api creates the uploads bucket on start. Storage runs on /data (upstream uses /export) because the image declares VOLUME /data: on /export Docker also attached an unused anonymous volume that a delete left behind, seen live on Ubuntu 24.04. Browsers upload attachments straight to https://<domain>/uploads/, which the Caddy proxy forwards to the storage service; MINIO_ENDPOINT_SSL=1 makes the signed upload URLs https, as Plane's variables.env says to do behind TLS termination.",
         "HTTPS: the panel's nginx terminates TLS; the Caddy proxy listens on plain HTTP (SITE_ADDRESS :80), trusts the forwarded headers (its default trusted_proxies) and passes X-Forwarded-Proto on, and Plane's production settings honour it (SECURE_PROXY_SSL_HEADER). WEB_URL is the url key; CORS_ALLOWED_ORIGINS is https://<domain>, which also makes the session and CSRF cookies Secure.",
         "Images: every Plane image is pinned to v1.4.2 (upstream defaults to the moving stable tag). PostgreSQL 15.19, Valkey 7.2.14 and RabbitMQ 3.13.7 are newer patch releases of the series upstream pins (15.7, 7.2.11, 3.13.6). RabbitMQ has a fixed hostname so its data directory survives a container recreate.",
         "Secrets: SECRET_KEY (Django), LIVE_SERVER_SECRET_KEY (shared by api and live), DB_PASSWORD, RABBITMQ_PASSWORD and MINIO_PASSWORD, each 32 alphanumeric characters. SECRET_KEY must never change after install.",

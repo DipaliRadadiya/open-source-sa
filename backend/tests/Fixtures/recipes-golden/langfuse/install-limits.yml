@@ -21,6 +21,7 @@ services:
       NEXTAUTH_URL: "https://langfuse.golden.test"
       NEXTAUTH_SECRET: "bd86ccf7a7acc7713b4b6cdac313e894"
       HOSTNAME: 0.0.0.0
+      NODE_OPTIONS: --max-old-space-size=1536
       DATABASE_URL: "postgresql://postgres:69103874502542af4d419be1ff3b8f24@postgres:5432/postgres"
       SALT: "7d4eb650353f43ad46c438e6da2bdee4"
       ENCRYPTION_KEY_SEED: "59f05ba45e3e882c8920da46ff1effb3"
