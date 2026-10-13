@@ -81,7 +81,7 @@ services:
   langfuse-worker:
     image: {{ image.worker }}
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 2g
     logging:
       driver: json-file
       options:
@@ -92,6 +92,7 @@ services:
 
     environment:
       NEXTAUTH_URL: "{{ url }}"
+      NODE_OPTIONS: --max-old-space-size=1536
       DATABASE_URL: "postgresql://postgres:{{ secret.DB_PASSWORD }}@postgres:5432/postgres"
       SALT: "{{ secret.SALT }}"
       ENCRYPTION_KEY_SEED: "{{ secret.ENCRYPTION_KEY_SEED }}"

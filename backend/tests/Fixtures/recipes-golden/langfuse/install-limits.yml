@@ -76,7 +76,7 @@ services:
   langfuse-worker:
     image: langfuse/langfuse-worker:4.57.0
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 2g
     logging:
       driver: json-file
       options:
@@ -87,6 +87,7 @@ services:
 
     environment:
       NEXTAUTH_URL: "https://langfuse.golden.test"
+      NODE_OPTIONS: --max-old-space-size=1536
       DATABASE_URL: "postgresql://postgres:69103874502542af4d419be1ff3b8f24@postgres:5432/postgres"
       SALT: "7d4eb650353f43ad46c438e6da2bdee4"
       ENCRYPTION_KEY_SEED: "59f05ba45e3e882c8920da46ff1effb3"
