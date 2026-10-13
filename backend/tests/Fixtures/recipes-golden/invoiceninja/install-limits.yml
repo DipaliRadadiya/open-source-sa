@@ -82,6 +82,8 @@ services:
         max-size: "10m"
         max-file: "3"
 
+    command: ["--performance-schema=OFF", "--innodb-log-buffer-size=16M"]
+
     environment:
       MYSQL_DATABASE: ninja
       MYSQL_USER: ninja

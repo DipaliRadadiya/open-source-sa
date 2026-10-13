@@ -4,7 +4,7 @@ services:
   actual:
     image: actualbudget/actual-server:26.10.0
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 256m
     logging:
       driver: json-file
       options:
