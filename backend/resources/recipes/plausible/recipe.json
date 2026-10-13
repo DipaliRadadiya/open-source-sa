@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "ghcr.io/plausible/community-edition:v3.2.1",
-            "tested": []
+            "tested": [
+                "ghcr.io/plausible/community-edition:v3.2.1"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         },
         "events": {
             "ref": "clickhouse/clickhouse-server:24.12.6.70-alpine",
-            "tested": []
+            "tested": [
+                "clickhouse/clickhouse-server:24.12.6.70-alpine"
+            ]
         }
     },
     "services": [
@@ -110,6 +116,7 @@
         "SECRET_KEY_BASE must be at least 64 bytes, so it is two 32-character secrets joined. TOTP_VAULT_KEY is 32 bytes, base64-encoded, as the official configuration page asks.",
         "ClickHouse uses the official compose file's four config files (console logs at warning level, IPv4-only listening, and the low-resource settings), written once to the site folder under etc/clickhouse-server and mounted read-only; the panel never overwrites an edited copy. As in the official setup, ClickHouse runs its default user without a password and is only reachable on the app's private network, with no published port.",
         "The ulimits (nofile) of the official compose file are kept for the app and ClickHouse. ClickHouse gets a fixed 1g memory limit: the official low-resource config allows a 500 MB mark cache, which does not fit the 512m database default.",
-        "To track a website, add it in the dashboard and paste the script snippet it shows into your pages; events go to https://<this site>/api/event."
+        "To track a website, add it in the dashboard and paste the script snippet it shows into your pages; events go to https://<this site>/api/event.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-32): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

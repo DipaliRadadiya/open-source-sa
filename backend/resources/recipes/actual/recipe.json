@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "actualbudget/actual-server:26.10.0",
-            "tested": []
+            "tested": [
+                "actualbudget/actual-server:26.10.0"
+            ]
         }
     },
     "services": [
@@ -51,6 +53,7 @@
         "Budget files, the server password hash and the sync data live in the data volume (/data), the path the official image and docker-compose.yml use. Nothing else needs to be configured: the official compose file sets no environment variables.",
         "Actual Budget runs in the browser and keeps a local copy of each budget; the server syncs those copies between devices. HTTPS is required for that (the browser refuses the needed features on plain http), which the panel provides.",
         "The healthcheck is the official one (node scripts/health-check.js, which asks the server's own /health).",
-        "The 256m floor fits the measured use: about 50 MiB idle and 105 MiB at peak with a budget open, on both Ubuntu 24.04 and 26.04."
+        "The 256m floor fits the measured use: about 50 MiB idle and 105 MiB at peak with a budget open, on both Ubuntu 24.04 and 26.04.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-32): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }
