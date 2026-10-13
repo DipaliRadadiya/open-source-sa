@@ -13,35 +13,48 @@ if (!preg_match('/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/', $domain)) {
     exit(0);
 }
 
+ini_set('display_errors', '0');
+ini_set('zend.exception_ignore_args', '1');
+
 $_SERVER['HTTP_HOST'] = $domain;
 $_SERVER['SERVER_NAME'] = $domain;
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_SERVER['REQUEST_URI'] = '/';
 chdir('/var/www/html');
-require '/var/www/html/config/config.inc.php';
 
-if (Shop::isFeatureActive()) {
-    echo "sync-domain: multistore is on, domains are left alone\n";
-    exit(0);
+try {
+    require '/var/www/html/config/config.inc.php';
+    sync_domain($domain);
+} catch (Throwable $e) {
+    // Only the class name: messages and traces can carry the database DSN.
+    echo 'sync-domain: skipped ('.get_class($e).")\n";
 }
 
-if (Configuration::get('PS_SHOP_DOMAIN') === $domain && Configuration::get('PS_SHOP_DOMAIN_SSL') === $domain) {
-    exit(0);
+function sync_domain(string $domain): void
+{
+    if (Shop::isFeatureActive()) {
+        echo "sync-domain: multistore is on, domains are left alone\n";
+        return;
+    }
+
+    if (Configuration::get('PS_SHOP_DOMAIN') === $domain && Configuration::get('PS_SHOP_DOMAIN_SSL') === $domain) {
+        return;
+    }
+
+    $url = ShopUrl::getShopUrls((int) Configuration::get('PS_SHOP_DEFAULT'))->where('main', '=', 1)->getFirst();
+    if ($url) {
+        $url->domain = $domain;
+        $url->domain_ssl = $domain;
+        $url->save();
+    }
+
+    Configuration::updateValue('PS_SHOP_DOMAIN', $domain);
+    Configuration::updateValue('PS_SHOP_DOMAIN_SSL', $domain);
+    Tools::generateHtaccess();
+    Tools::generateRobotsFile();
+    Tools::clearSmartyCache();
+    Media::clearCache();
+    Tools::clearSf2Cache();
+
+    echo "sync-domain: shop domain set to {$domain}\n";
 }
-
-$url = ShopUrl::getShopUrls((int) Configuration::get('PS_SHOP_DEFAULT'))->where('main', '=', 1)->getFirst();
-if ($url) {
-    $url->domain = $domain;
-    $url->domain_ssl = $domain;
-    $url->save();
-}
-
-Configuration::updateValue('PS_SHOP_DOMAIN', $domain);
-Configuration::updateValue('PS_SHOP_DOMAIN_SSL', $domain);
-Tools::generateHtaccess();
-Tools::generateRobotsFile();
-Tools::clearSmartyCache();
-Media::clearCache();
-Tools::clearSf2Cache();
-
-echo "sync-domain: shop domain set to {$domain}\n";
