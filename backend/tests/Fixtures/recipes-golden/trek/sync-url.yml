@@ -4,7 +4,7 @@ services:
   trek:
     image: mauriceboe/trek:4.3.3
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 768m
     logging:
       driver: json-file
       options:
@@ -14,6 +14,11 @@ services:
     ports:
       - "127.0.0.1:20101:3000"
 
+    command:
+      - sh
+      - -c
+      - '(if [ -f /trek-init/close-registration.cjs ]; then n=0; until gosu node node /trek-init/close-registration.cjs || [ $$n -ge 120 ]; do n=$$((n + 1)); sleep 5; done; fi &); exec /usr/local/bin/trek-entrypoint'
+
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -22,6 +27,7 @@ services:
       APP_URL: "http://trek.golden.test"
       ALLOWED_ORIGINS: "https://trek.golden.test"
       TRUST_PROXY: "1"
+      FORCE_HTTPS: "true"
       ENCRYPTION_KEY: "7b7c02387292ec8772e0431f3c668199"
       ADMIN_EMAIL: "owner@golden.test"
       ADMIN_PASSWORD: "c41d7528beeacf5ad44365d8d876d172"
@@ -29,6 +35,7 @@ services:
     volumes:
       - sv-app-4242_data:/app/data
       - sv-app-4242_uploads:/app/uploads
+      - /home/owner/golden-trek/public_html/public_html/trek-init:/trek-init:ro
 
 volumes:
   sv-app-4242_data:

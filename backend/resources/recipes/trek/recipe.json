@@ -31,7 +31,7 @@
         }
     ],
     "container_port": 3000,
-    "memory_floor": "512m",
+    "memory_floor": "768m",
     "volumes": {
         "data": "/app/data",
         "uploads": "/app/uploads"
@@ -55,7 +55,12 @@
             "required": true
         }
     ],
-    "starter_files": [],
+    "starter_files": [
+        {
+            "path": "/trek-init/close-registration.cjs",
+            "source": "starter/close-registration.cjs"
+        }
+    ],
     "first_run": {
         "kind": "credentials",
         "credentials": [
@@ -73,10 +78,12 @@
     "hook": null,
     "notes": [
         "The administrator is created on the first start from ADMIN_EMAIL (the admin email you enter) and ADMIN_PASSWORD (a generated password shown on the first-run card). TREK makes that account choose a new password at the first sign-in, so the card's password is only good for that first sign-in. TREK also prints the initial password once in its container log when it creates the account (upstream behaviour, no switch). It reads both values only while its database has no users, so changing them later does nothing: change the password in TREK's settings instead.",
+        "Public sign-up is switched off on a fresh install. TREK keeps that switch only in its database and ships it on, so anyone who found the site could create an account. A small starter script (trek-init/close-registration.cjs in the site folder, run by the start command as the node user, retried every 5 seconds for up to 10 minutes until the database exists) writes password_registration=false and oidc_registration=false with INSERT OR IGNORE, so turning sign-up back on in Admin > Settings survives restarts. Deleting the script switches the step off. Invite people from Admin > Users, or turn sign-up on there.",
         "One container, as in the official compose file: TREK keeps its SQLite database, logs and keys in /app/data and uploaded files (photos, documents, covers) in /app/uploads, one named volume each. The image starts as root only to fix the ownership of those two folders and then runs the server as the node user.",
         "ENCRYPTION_KEY is a generated secret. TREK derives its at-rest keys from it with SHA-256 (API keys, MFA secrets, SMTP and OIDC passwords), so any string works and the same secret keeps old data readable after the container is recreated. TREK also copies it into /app/data/.encryption_key.",
-        "Behind the panel's HTTPS proxy, TRUST_PROXY=1 trusts exactly one hop, so TREK sees the forwarded https scheme and sets secure cookies (it does that by itself with NODE_ENV=production). FORCE_HTTPS is left off because the panel's web server already sends visitors to HTTPS, and the panel's health check talks plain HTTP on 127.0.0.1. APP_URL is the site's address (used for email links and OIDC); ALLOWED_ORIGINS is the same origin, for CORS.",
+        "Behind the panel's HTTPS proxy, TRUST_PROXY=1 trusts exactly one hop, so TREK sees the forwarded https scheme and sets secure cookies (it does that by itself with NODE_ENV=production). FORCE_HTTPS=true makes TREK itself send plain-HTTP visitors to HTTPS (301; /api/health is exempt, and the panel's own health check accepts any answer): the panel's Force HTTPS switch is off by default, and over plain HTTP TREK's pages fail on CORS and its secure cookies. APP_URL is the site's address (used for email links, OIDC and that redirect); ALLOWED_ORIGINS is the same origin, for CORS.",
         "The official compose file also sets read_only, cap_drop and no-new-privileges. Recipes cannot carry security_opt or capability changes, so those hardening options are not used; the container runs with Docker's default capabilities.",
-        "Place search asks TREK's own Places service (places.liketrek.com) by default, as upstream ships it. Set TREK_PLACES_ENABLED=false in the panel's environment editor to search OpenStreetMap instead and send nothing to that host."
+        "Place search asks TREK's own Places service (places.liketrek.com) by default, as upstream ships it. Set TREK_PLACES_ENABLED=false in the panel's environment editor to search OpenStreetMap instead and send nothing to that host.",
+        "The memory floor is 768m: with 512m TREK sat at 302 to 342 MiB idle and 359 MiB after a few place searches (59 to 70 % of the limit, measured on Ubuntu 24.04 and 26.04), too close to the ceiling for a Node server."
     ]
 }

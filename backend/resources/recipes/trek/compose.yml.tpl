@@ -19,6 +19,11 @@ services:
     ports:
       - "127.0.0.1:{{ app_port }}:{{ container_port }}"
 
+    command:
+      - sh
+      - -c
+      - '(if [ -f /trek-init/close-registration.cjs ]; then n=0; until gosu node node /trek-init/close-registration.cjs || [ $$n -ge 120 ]; do n=$$((n + 1)); sleep 5; done; fi &); exec /usr/local/bin/trek-entrypoint'
+
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -27,6 +32,7 @@ services:
       APP_URL: "{{ url }}"
       ALLOWED_ORIGINS: "https://{{ domain }}"
       TRUST_PROXY: "1"
+      FORCE_HTTPS: "true"
       ENCRYPTION_KEY: "{{ secret.ENCRYPTION_KEY }}"
       ADMIN_EMAIL: "{{ input.admin_email }}"
       ADMIN_PASSWORD: "{{ secret.ADMIN_PASSWORD }}"
@@ -34,6 +40,7 @@ services:
     volumes:
       - {{ volume.data }}:/app/data
       - {{ volume.uploads }}:/app/uploads
+      - {{ site_root }}/trek-init:/trek-init:ro
 
 volumes:
   {{ volume.data }}:

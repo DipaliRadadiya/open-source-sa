@@ -12,7 +12,7 @@
     "complex_secrets": [],
     "panel_only_secrets": [],
     "url_env_key": "APP_URL",
-    "default_memory_limit": "512m",
+    "default_memory_limit": "768m",
     "method": "one_click",
     "serving_profile": "docker",
     "needs_database": false,
@@ -39,8 +39,8 @@
             "type": "text",
             "required": false,
             "advanced": false,
-            "placeholder": "512m",
-            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+            "placeholder": "768m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 768m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
         },
         {
             "name": "cpu_limit",
@@ -65,7 +65,9 @@
         "cpu_limit",
         "admin_email"
     ],
-    "starter_files": [],
+    "starter_files": {
+        "/trek-init/close-registration.cjs": "// Written once by the panel; yours to edit. The recipe's start command runs it on every start.\n// TREK keeps its sign-up switches only in its database and leaves them on, so anyone who finds\n// the site could create an account. This turns public sign-up off ONCE, on a fresh database:\n// INSERT OR IGNORE never touches a value already there, so a choice made later in\n// Admin > Settings (the same two keys) survives restarts. Exit 1 means \"not yet\" (the server has\n// not created the database or its tables); the start command retries every 5 seconds, for up to\n// 10 minutes. Delete this file to skip the step.\nconst Database = require(require.resolve('better-sqlite3', { paths: ['/app/server'] }));\n\ntry {\n    const db = new Database('/app/data/travel.db', { fileMustExist: true, timeout: 5000 });\n    const table = db.prepare(\"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'app_settings'\").get();\n\n    if (!table) {\n        process.exit(1);\n    }\n\n    const insert = db.prepare('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)');\n    let changed = 0;\n\n    for (const key of ['password_registration', 'oidc_registration']) {\n        changed += insert.run(key, 'false').changes;\n    }\n\n    db.close();\n\n    if (changed > 0) {\n        console.log('[recipe] Public sign-up switched off; Admin > Settings turns it back on.');\n    }\n} catch (error) {\n    process.exit(1);\n}\n"
+    },
     "first_run_claim": null,
     "volume_mounts": [
         {
