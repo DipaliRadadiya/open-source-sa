@@ -2,8 +2,10 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -26,8 +28,10 @@ use Illuminate\Support\Facades\Http;
  * allocated, so the process and the reverse proxy cannot disagree. Its `.env`
  * (loaded by the unit) sets the rest: see `environment()`.
  */
-class UptimeKumaInstaller extends AbstractNodeInstaller
+class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+
     public function siteType(): string
     {
         return 'uptimekuma';
@@ -282,5 +286,49 @@ class UptimeKumaInstaller extends AbstractNodeInstaller
         usort($tags, fn (string $a, string $b): int => version_compare(ltrim($b, 'v'), ltrim($a, 'v')));
 
         return $tags[0];
+    }
+
+    // ---- One-click update (ApplicationUpdater) ---------------------------
+
+    public function installedVersion(Application $application): ?string
+    {
+        $json = json_decode((string) $this->readSiteFile($application, $application->documentRoot().'/package.json'), true);
+        $version = is_array($json) ? ($json['version'] ?? null) : null;
+
+        return is_string($version) && $this->isStable($version) ? $this->normalizeVersion($version) : null;
+    }
+
+    public function availableVersions(Application $application, string $installed): array
+    {
+        $endpoint = trim((string) config('server.installers.uptimekuma.releases_api', ''));
+        $versions = $endpoint === '' ? [] : array_map(
+            fn (array $release): string => $this->normalizeVersion($release['tag_name']),
+            $this->githubReleases($endpoint),
+        );
+
+        return ['latest' => $this->highestInLine($versions, $installed), 'newest' => $this->highest($versions)];
+    }
+
+    /**
+     * The release tag checked out over the install's own clone, then the same
+     * `npm run setup` the install ran, then the site's service restarted —
+     * systemd here, not v7's pm2. `data/` and `.env` are untracked, so the
+     * checkout leaves them alone.
+     */
+    public function update(Application $application, string $from, string $to): void
+    {
+        $documentRoot = $application->documentRoot();
+
+        $this->runAsSiteUser('download', $application, [
+            'git', 'fetch', '--depth', '1', 'origin', "refs/tags/{$to}:refs/tags/{$to}",
+        ], null, $documentRoot);
+        $this->runAsSiteUser('extract', $application, ['git', 'checkout', '--force', $to], null, $documentRoot);
+        $this->runWithNode('install_app', $application, ['npm', 'run', 'setup'], $documentRoot);
+
+        $restarted = $this->supervisor->restart($application);
+
+        if ($restarted->failed()) {
+            throw ProvisioningFailedException::fromResult('restart', $restarted);
+        }
     }
 }

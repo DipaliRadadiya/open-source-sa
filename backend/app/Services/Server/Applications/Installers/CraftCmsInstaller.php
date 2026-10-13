@@ -2,7 +2,9 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -35,8 +37,10 @@ use Illuminate\Support\Str;
  * server at the root would publish the application's own source, `.env`
  * included.
  */
-class CraftCmsInstaller extends AbstractPhpInstaller
+class CraftCmsInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+
     public function siteType(): string
     {
         return 'craftcms';
@@ -150,5 +154,32 @@ class CraftCmsInstaller extends AbstractPhpInstaller
                 ...$this->phpCommand($application), 'craft', 'clear-caches/all', '--interactive=0',
             ], null, $projectRoot);
         }
+    }
+
+    // ---- One-click update (ApplicationUpdater) ---------------------------
+
+    public function installedVersion(Application $application): ?string
+    {
+        return $this->composerInstalledVersion($application, $application->codePath(), 'craftcms/cms');
+    }
+
+    public function availableVersions(Application $application, string $installed): array
+    {
+        $versions = $this->packagistVersions('craftcms/cms');
+
+        return ['latest' => $this->highestInLine($versions, $installed), 'newest' => $this->highest($versions)];
+    }
+
+    /**
+     * Craft's own updater, pinned to the target so it cannot cross a major.
+     * It runs the migrations itself; `--backup=0` because the backup is taken
+     * by the panel before the update, not by Craft into the site's storage.
+     */
+    public function update(Application $application, string $from, string $to): void
+    {
+        $this->runAsSiteUser('update_app', $application, [
+            ...$this->phpCommand($application), 'craft', 'update', 'craft:'.$to,
+            '--interactive=0', '--backup=0', '--migrate=1',
+        ], null, $application->codePath());
     }
 }

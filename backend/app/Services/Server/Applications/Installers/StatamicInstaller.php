@@ -2,7 +2,9 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
 
 /**
  * Statamic — flat-file CMS.
@@ -26,8 +28,10 @@ use App\Models\Application;
  * the second the command takes, on a machine whose only other accounts are the
  * site users this panel created, is the smaller risk of the two.
  */
-class StatamicInstaller extends AbstractPhpInstaller
+class StatamicInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+
     public function siteType(): string
     {
         return 'statamic';
@@ -105,5 +109,44 @@ class StatamicInstaller extends AbstractPhpInstaller
                 ...$this->phpCommand($application), 'artisan', 'config:clear',
             ], null, $application->codePath());
         }
+    }
+
+    // ---- One-click update (ApplicationUpdater) ---------------------------
+
+    public function installedVersion(Application $application): ?string
+    {
+        return $this->composerInstalledVersion($application, $application->codePath(), 'statamic/cms');
+    }
+
+    public function availableVersions(Application $application, string $installed): array
+    {
+        $versions = $this->packagistVersions('statamic/cms');
+
+        return ['latest' => $this->highestInLine($versions, $installed), 'newest' => $this->highest($versions)];
+    }
+
+    /**
+     * `composer update statamic/cms`, which keeps the project's own constraint
+     * (`^6.0`) and so stays inside the major. Statamic's update scripts run
+     * from its Composer hooks.
+     *
+     * v7 ran only `statamic:updates:run`, which runs those scripts and never
+     * updates the package — nothing changed version.
+     */
+    public function update(Application $application, string $from, string $to): void
+    {
+        $projectRoot = $application->codePath();
+
+        $this->runAsSiteUser('update_app', $application, array_merge(
+            $this->shim->envPrefixFor($application),
+            [
+                (string) config('server.composer_binary', 'composer'),
+                'update', 'statamic/cms', '--with-all-dependencies', '--no-interaction', '--no-progress',
+            ],
+        ), null, $projectRoot);
+
+        $this->runAsSiteUser('clear_cache', $application, [
+            ...$this->phpCommand($application), 'please', 'stache:refresh',
+        ], null, $projectRoot);
     }
 }

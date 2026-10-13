@@ -2,8 +2,10 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
@@ -22,8 +24,10 @@ use Illuminate\Support\Str;
  * Its package is also the first zip in the set, and a flat one: entries start
  * at `.env.test` and `favicon.ico`, with no wrapping directory.
  */
-class MauticInstaller extends AbstractPhpInstaller
+class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+
     public function siteType(): string
     {
         return 'mautic';
@@ -232,5 +236,66 @@ class MauticInstaller extends AbstractPhpInstaller
         $auth = $user === '' ? '' : rawurlencode($user).':'.rawurlencode((string) ($settings['mailer_password'] ?? '')).'@';
 
         return ($port === 465 ? 'smtps' : 'smtp').'://'.$auth.$host.':'.$port;
+    }
+
+    // ---- One-click update (ApplicationUpdater) ---------------------------
+
+    public function installedVersion(Application $application): ?string
+    {
+        $json = json_decode((string) $this->readSiteFile($application, $application->documentRoot().'/app/release_metadata.json'), true);
+        $version = is_array($json) ? ($json['version'] ?? null) : null;
+
+        return is_string($version) && $this->isStable($version) ? $this->normalizeVersion($version) : null;
+    }
+
+    public function availableVersions(Application $application, string $installed): array
+    {
+        $versions = array_map(
+            fn (array $release): string => $this->normalizeVersion($release['tag_name']),
+            $this->githubReleases($this->releasesList()),
+        );
+
+        return ['latest' => $this->highestInLine($versions, $installed), 'newest' => $this->highest($versions)];
+    }
+
+    /**
+     * Mautic's own manual method: the full package of the target release over
+     * the old files, then its migrations and a cache clear.
+     *
+     * Not v7's `mautic:update:find` / `mautic:update:apply`: Mautic removed
+     * those commands, and the release v8 installs (7.x) has neither — measured
+     * on a live site (2026-10-13). `config/local.php` survives the copy: the
+     * package does not ship one.
+     */
+    public function update(Application $application, string $from, string $to): void
+    {
+        $documentRoot = $application->documentRoot();
+        $release = collect($this->githubReleases($this->releasesList()))
+            ->first(fn (array $release): bool => $this->normalizeVersion($release['tag_name']) === $to);
+        $url = collect($release['assets'] ?? [])
+            ->pluck('browser_download_url')
+            ->first(fn ($candidate) => is_string($candidate)
+                && str_ends_with($candidate, '.zip')
+                && ! str_contains($candidate, '-update.'));
+
+        if (! is_string($url)) {
+            throw new ProvisioningFailedException('download', (string) Str::uuid(), 'release_not_found');
+        }
+
+        $this->downloadAndExtract($application, $url, $documentRoot);
+
+        $php = $this->phpCommand($application);
+        $this->runAsSiteUser('migrate', $application, [
+            ...$php, 'bin/console', 'doctrine:migrations:migrate', '--no-interaction', '--allow-no-migration',
+        ], null, $documentRoot);
+        $this->runAsSiteUser('clear_cache', $application, [
+            ...$php, 'bin/console', 'mautic:cache:clear', '--no-interaction',
+        ], null, $documentRoot);
+    }
+
+    /** The list, not `/latest`: an update stays within the installed major. */
+    private function releasesList(): string
+    {
+        return (string) config('server.installers.mautic.releases_list', 'https://api.github.com/repos/mautic/mautic/releases');
     }
 }

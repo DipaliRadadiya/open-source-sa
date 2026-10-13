@@ -2,7 +2,10 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -30,8 +33,10 @@ use Illuminate\Support\Str;
  * here: waiving it would let a weak password through, and letting the reset
  * fail would leave the account on a random password nobody knows.
  */
-class MoodleInstaller extends AbstractPhpInstaller
+class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+
     /**
      * What Moodle's installer demands, and the CLI default is 1000.
      *
@@ -199,5 +204,92 @@ class MoodleInstaller extends AbstractPhpInstaller
             'postgresql' => 'pgsql',
             default => 'mysqli',
         };
+    }
+
+    // ---- One-click update (ApplicationUpdater) ---------------------------
+
+    public function installedVersion(Application $application): ?string
+    {
+        $file = (string) $this->readSiteFile($application, $application->documentRoot().'/version.php');
+
+        return preg_match('/^\$release\s*=\s*\'(\d+\.\d+(?:\.\d+)?)/m', $file, $match) === 1
+            ? $this->threePart($match[1])
+            : null;
+    }
+
+    /**
+     * Moodle's line is the branch (5.0, 4.5), not the major: a branch is what
+     * `packaging.moodle.org/stable500` serves, and 5.0 → 5.1 moved the code
+     * under `public/`. The branch's own `version.php` names its newest build.
+     */
+    public function availableVersions(Application $application, string $installed): array
+    {
+        $branch = 'MOODLE_'.$this->branchCode($installed).'_STABLE';
+        $file = $this->rawFile("https://raw.githubusercontent.com/moodle/moodle/{$branch}/version.php");
+        $latest = $file !== null && preg_match('/^\$release\s*=\s*\'(\d+\.\d+(?:\.\d+)?)/m', $file, $match) === 1
+            ? $this->threePart($match[1])
+            : null;
+
+        $tags = collect($this->getJson('https://api.github.com/repos/moodle/moodle/tags', ['per_page' => 100]) ?? [])
+            ->pluck('name')
+            ->filter(fn ($tag): bool => is_string($tag) && $this->isStable($tag))
+            ->map(fn (string $tag): string => $this->normalizeVersion($tag))
+            ->all();
+
+        return ['latest' => $latest, 'newest' => $this->highest(array_values($tags))];
+    }
+
+    /**
+     * New code over the old, then Moodle's own upgrade, under maintenance mode.
+     *
+     * v7 ran only `admin/cli/upgrade.php`, which upgrades the database to the
+     * code already on disk — with no new code downloaded it never changed a
+     * version. `config.php` survives the copy: the package ships only
+     * `config-dist.php`. moodledata lives beside the code, not in it.
+     */
+    public function update(Application $application, string $from, string $to): void
+    {
+        $documentRoot = $application->documentRoot();
+        $php = [...$this->phpCommand($application), '-d', 'max_input_vars='.self::MIN_INPUT_VARS];
+        $code = $this->branchCode($to);
+        $url = str_replace('{branch}', $code, (string) config('server.installers.moodle.update_url', 'https://packaging.moodle.org/stable{branch}/moodle-latest-{branch}.tgz'));
+
+        $this->runAsSiteUser('maintenance_on', $application, [...$php, 'admin/cli/maintenance.php', '--enable'], null, $documentRoot);
+
+        try {
+            $this->downloadAndExtract($application, $url, $documentRoot);
+            $this->runAsSiteUser('upgrade', $application, [...$php, 'admin/cli/upgrade.php', '--non-interactive'], null, $documentRoot);
+        } finally {
+            // Best effort: a failed upgrade is reported by the step that failed,
+            // and Moodle itself refuses to serve a half-upgraded site.
+            $this->serverOps->run(
+                ['runuser', '-u', $application->systemUser->username, '--', ...$php, 'admin/cli/maintenance.php', '--disable'],
+                ['feature' => 'application', 'op' => 'update.maintenance_off', 'application' => $application->id],
+                cwd: $documentRoot,
+            );
+        }
+    }
+
+    private function branchCode(string $version): string
+    {
+        [$major, $minor] = array_pad(explode('.', $this->normalizeVersion($version)), 2, '0');
+
+        return $major.str_pad($minor, 2, '0', STR_PAD_LEFT);
+    }
+
+    private function threePart(string $version): string
+    {
+        return implode('.', array_pad(explode('.', $version), 3, '0'));
+    }
+
+    private function rawFile(string $url): ?string
+    {
+        try {
+            $response = Http::timeout(15)->withHeaders(['User-Agent' => 'control-panel'])->get($url);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $response->successful() ? $response->body() : null;
     }
 }

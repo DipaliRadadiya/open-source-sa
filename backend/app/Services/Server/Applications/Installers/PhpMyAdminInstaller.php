@@ -2,8 +2,10 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
 use App\Services\Server\Applications\PhpMyAdminSso;
 
 /**
@@ -26,8 +28,10 @@ use App\Services\Server\Applications\PhpMyAdminSso;
  *    public web root it is a configuration console on the open internet. It
  *    is removed.
  */
-class PhpMyAdminInstaller extends AbstractPhpInstaller
+class PhpMyAdminInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+
     public function siteType(): string
     {
         return 'phpmyadmin';
@@ -101,5 +105,41 @@ class PhpMyAdminInstaller extends AbstractPhpInstaller
         // The distribution's own advice is to secure the setup script. There
         // is nothing to secure it with here, so it goes.
         $this->run('harden', ['rm', '-rf', "{$documentRoot}/setup"], $application);
+    }
+
+    // ---- One-click update (ApplicationUpdater) ---------------------------
+
+    public function installedVersion(Application $application): ?string
+    {
+        $json = json_decode((string) $this->readSiteFile($application, $application->documentRoot().'/package.json'), true);
+        $version = is_array($json) ? ($json['version'] ?? null) : null;
+
+        return is_string($version) && $this->isStable($version) ? $this->normalizeVersion($version) : null;
+    }
+
+    public function availableVersions(Application $application, string $installed): array
+    {
+        $json = $this->getJson((string) config('server.installers.phpmyadmin.version_url', 'https://www.phpmyadmin.net/home_page/version.json'));
+        $versions = collect($json['releases'] ?? [])
+            ->pluck('version')
+            ->filter(fn ($version): bool => is_string($version) && $this->isStable($version))
+            ->values()
+            ->all();
+
+        return ['latest' => $this->highestInLine($versions, $installed), 'newest' => $this->highest($versions)];
+    }
+
+    /**
+     * The target release over the old files. `config.inc.php` survives: the
+     * package ships only `config.sample.inc.php`.
+     */
+    public function update(Application $application, string $from, string $to): void
+    {
+        $url = str_replace('{version}', $to, (string) config(
+            'server.installers.phpmyadmin.release_url',
+            'https://files.phpmyadmin.net/phpMyAdmin/{version}/phpMyAdmin-{version}-all-languages.tar.gz',
+        ));
+
+        $this->downloadAndExtract($application, $url, $application->documentRoot());
     }
 }

@@ -3297,6 +3297,57 @@ On failure: `status: "failed", "status_title: "Clone failed", "reason": "…"`.
 
 ---
 
+## Application — One-click update
+
+Updates a site's own software in place, as v7 did, for **Moodle, Mautic, Statamic, Craft CMS, Uptime Kuma and phpMyAdmin**.
+Updates stay **inside the installed line** — the major version (Moodle: the branch, e.g. 5.0). A newer line is reported in
+`newer_major` and never applied. The panel does **not** take a backup: the screen offers one first (backups screen) and shows
+`last_backup_at`. Every command runs as the site's user on the site's own PHP/Node.
+
+| App | What the update does |
+|---|---|
+| Moodle | maintenance on → newest package of the installed branch over the code (`config.php` kept, moodledata is outside) → `admin/cli/upgrade.php --non-interactive` → maintenance off (also on failure) |
+| Mautic | full release package of the target over the code (`config/local.php` kept) → `doctrine:migrations:migrate` → `mautic:cache:clear`. (v7's `mautic:update:*` commands no longer exist in Mautic 7.) |
+| Statamic | `composer update statamic/cms --with-all-dependencies` (keeps the project's constraint) → `please stache:refresh` |
+| Craft CMS | `craft update craft:{target} --interactive=0 --backup=0 --migrate=1` |
+| Uptime Kuma | `git fetch` + `git checkout --force {tag}` → `npm run setup` → restart the site's systemd unit (`data/`, `.env` kept) |
+| phpMyAdmin | the versioned release package over the code (`config.inc.php` kept) |
+
+Success is decided by the version the files carry afterwards; an update that ran but left the old version fails with `version_unchanged`.
+
+### GET `/applications/{application}/update`
+Permission `application` (view). Also the poll while an update runs (`throttle:progress`).
+
+```json
+{
+  "update": {
+    "supported": true,
+    "installed_version": "5.0.9",
+    "latest_version": "5.0.11",
+    "newest_version": "5.3.0",
+    "update_available": true,
+    "newer_major": "5.3.0",
+    "blocked_reason": null,
+    "last_backup_at": "2026-10-13 09:10:02"
+  },
+  "history": [ { "id": 3, "from_version": "5.0.8", "to_version": "5.0.9", "status": "completed", "status_title": "Updated",
+                 "reason": null, "reason_title": null, "step": null, "reference": null, "user": "admin",
+                 "started_at": "…", "finished_at": "…", "created_at": "…" } ]
+}
+```
+`blocked_reason`: `null` (can update) · `unsupported` · `not_active` (not active, or disabled) · `version_unknown` (installed version unreadable) ·
+`lookup_failed` (release lookup failed — not cached, retried next time) · `up_to_date` · `running`.
+Release lookups are cached for 30 minutes per type and installed version.
+
+### POST `/applications/{application}/update`
+Permission `application` **manage**, `throttle:10,1`. No body: the target is `latest_version`.
+**202** `{"update": {…status: "pending"…}}` — runs on the queue; poll GET until `history[0].status` is `completed` or `failed`.
+**409** an update of this site is already running. **422** `errors.update[0]` = the readable `blocked_reason`.
+A pending update whose job never started is released (`abandoned`) after 60 minutes.
+Failure `reason`: `step_failed` (with `step` + `reference` into the server-ops log), `version_unchanged`, `release_not_found`,
+`download_unreachable`, `out_of_memory`, `composer_platform`, `no_build_tools`, `worker` (job died/timed out), `abandoned`, `failed`.
+Activity: `application.update_started`, `application.updated`, `application.update_failed`.
+
 ## Backups
 
 ### GET `/backup-targets`

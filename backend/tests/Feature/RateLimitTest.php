@@ -141,6 +141,9 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/backups/{backup}',
         'api/restores/{restore}',
         'api/clones/{clone}',
+        // Polled while a one-click update runs: Moodle's upgrade and Uptime
+        // Kuma's rebuild take many minutes.
+        'api/applications/{application}/update',
         'api/fail2ban',
         // Polled while apt installs the compiler toolchain — up to
         // fifteen minutes, which the global limiter would cut short.
