@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "gotify/server:3.1.1",
-            "tested": []
+            "tested": [
+                "gotify/server:3.1.1"
+            ]
         }
     },
     "services": [
@@ -65,6 +67,7 @@
         "One container with one named volume on /app/data, where the image keeps everything by default: the SQLite database (gotify.db), uploaded application images and plugins. Gotify also supports MySQL and PostgreSQL, which a single notification server rarely needs.",
         "To send a message: create an application in the web interface, then POST https://<your domain>/message with its token (header X-Gotify-Key or ?token=) and a title, message and priority. Clients (the web interface, the Android app, CLI) receive messages over a WebSocket stream, which the panel's proxy passes through.",
         "GOTIFY_SERVER_SECURECOOKIE marks the session cookie Secure, since the site is served over HTTPS. Public registration stays off (GOTIFY_REGISTRATION=false, the upstream default): the administrator creates users.",
-        "Gotify needs very little memory: the 128m floor is the starting point."
+        "Gotify needs very little memory: with 128m it sat at 9 to 12 MiB idle and peaked at 17 MiB (Ubuntu 24.04 and 26.04).",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-38): created from the 1-Click Recipes tab, Running in 32 s, sign-in as admin with the generated password (admin / admin refused), an application created in the web interface, a message sent with curl to /message with its token and shown live in the web interface over the WebSocket, registration closed (401), a Secure session cookie, and a restart that keeps the data; every image ref below is in its tested list."
     ]
 }

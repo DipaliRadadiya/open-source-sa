@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "public.ecr.aws/zinclabs/openobserve:v1.0.4",
-            "tested": []
+            "tested": [
+                "public.ecr.aws/zinclabs/openobserve:v1.0.4"
+            ]
         }
     },
     "services": [
@@ -70,7 +72,9 @@
         "Single-node mode as in the official quick start: one container, all data (the metadata database, the write-ahead log and the stored Parquet files) on local disk in one named volume on /data. There is no object storage and no cluster; OpenObserve's high-availability mode needs S3-compatible storage and is a different deployment.",
         "The image is the official one from AWS ECR Public (public.ecr.aws/zinclabs/openobserve, the registry the installation docs name), pinned to v1.0.4 (the image openobserve/openobserve on Docker Hub is the same build). The published image is distroless: it has no shell and no curl, so the healthcheck runs the server binary's own probe (/openobserve node status, exit 0 while the server answers, 1 when it does not) instead of a shell command.",
         "ZO_WEB_URL is the site's address (used for links and the allowed browser origin) and follows the domain. ZO_COOKIE_SECURE_ONLY keeps the session cookie on HTTPS; ZO_TELEMETRY is off so the server does not report usage to the vendor.",
-        "OpenObserve sizes its in-memory caches from the container's memory limit, so the memory floor of 1g is a starting point: give it more if you ingest a lot or keep long time ranges in dashboards.",
-        "Data is kept until you set a retention: by default streams keep data indefinitely and the volume grows with what you ingest. Set the stream retention in the stream settings (or ZO_COMPACT_DATA_RETENTION_DAYS) for anything with real volume."
+        "OpenObserve sizes its in-memory caches from the container's memory limit. With 1g it sat at 140 to 243 MiB idle and reached 376 to 395 MiB while logs were ingested and searched (14 to 39 % of the limit, Ubuntu 24.04 and 26.04); give it more if you ingest a lot or keep long time ranges in dashboards.",
+        "Data is kept until you set a retention: by default streams keep data indefinitely and the volume grows with what you ingest. Set the stream retention in the stream settings (or ZO_COMPACT_DATA_RETENTION_DAYS) for anything with real volume.",
+        "On the first start the server fetches a GeoIP database and checks GitHub for releases; if outgoing traffic is blocked it logs a warning and carries on. The healthcheck's output starts with a harmless 'No .env file found' error line from the probe; only its exit code counts.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-38): created from the 1-Click Recipes tab, Running and healthy in 17 s (image cached), sign-in with the admin email and the generated password, 3 JSON log lines ingested with curl and basic auth and found in the Logs UI (and level='error' finds exactly one), wrong credentials refused with 401, a Secure session cookie, and a restart that keeps the data; every image ref below is in its tested list."
     ]
 }
