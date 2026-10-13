@@ -1,0 +1,55 @@
+{
+    "schema": 1,
+    "slug": "actual",
+    "version": 1,
+    "title": "Actual Budget",
+    "tagline": {
+        "en": "Private envelope budgeting with fast sync across your devices",
+        "es": "Presupuesto privado por sobres con sincronización rápida entre tus dispositivos",
+        "de": "Privates Umschlag-Budgetieren mit schneller Synchronisierung zwischen deinen Geräten",
+        "fr": "Budget par enveloppes privé avec synchronisation rapide entre vos appareils",
+        "pt": "Orçamento privado por envelopes com sincronização rápida entre seus dispositivos",
+        "ja": "デバイス間で高速に同期できる、プライベートな封筒式家計管理",
+        "ru": "Личный бюджет по методу конвертов с быстрой синхронизацией между устройствами",
+        "hi": "आपके डिवाइसों के बीच तेज़ सिंक के साथ निजी एनवेलप बजटिंग"
+    },
+    "category": "productivity",
+    "icon": "actual",
+    "popular": false,
+    "catalog_order": 500,
+    "docs_url": "https://actualbudget.org/docs/install/docker",
+    "images": {
+        "app": {
+            "ref": "actualbudget/actual-server:26.10.0",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "actual",
+            "role": "app"
+        }
+    ],
+    "container_port": 5006,
+    "memory_floor": "512m",
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Actual has no default login: the first visitor sets the server password on the welcome screen, and that password then protects every budget file on this server. Open the site and set it immediately after install.",
+        "There is one password per server, not per person (the default password login method). Everyone who should use these budgets shares it; change it later under Settings, Server.",
+        "Budget files, the server password hash and the sync data live in the data volume (/data), the path the official image and docker-compose.yml use. Nothing else needs to be configured: the official compose file sets no environment variables.",
+        "Actual Budget runs in the browser and keeps a local copy of each budget; the server syncs those copies between devices. HTTPS is required for that (the browser refuses the needed features on plain http), which the panel provides.",
+        "The healthcheck is the official one (node scripts/health-check.js, which asks the server's own /health)."
+    ]
+}

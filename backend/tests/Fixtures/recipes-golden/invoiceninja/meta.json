@@ -1,0 +1,148 @@
+{
+    "slug": "invoiceninja",
+    "container_port": 80,
+    "volume_roles": {
+        "public": "/var/www/html/public",
+        "storage": "/var/www/html/storage",
+        "db": "/var/lib/mysql",
+        "redis": "/data"
+    },
+    "generated_secrets": [
+        "APP_KEY",
+        "ADMIN_PASSWORD",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "APP_URL",
+    "default_memory_limit": "256m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "business",
+    "icon": "invoiceninja",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "256m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": {
+        "/etc/nginx/conf.d/laravel.conf": "# https://laravel.com/docs/master/deployment#nginx\nserver {\n    listen 80 default_server;\n    server_name _;   \n    root /var/www/html/public;\n\n    add_header X-Frame-Options \"SAMEORIGIN\";\n    add_header X-Content-Type-Options \"nosniff\";\n\n    index index.php;\n \n    charset utf-8;\n \n    location / {\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n \n    location = /favicon.ico { access_log off; log_not_found off; }\n    location = /robots.txt  { access_log off; log_not_found off; }\n \n    error_page 404 /index.php;\n\n    location ~ \\.php$ {\n        fastcgi_pass app:9000;\n        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n}\n",
+        "/etc/nginx/conf.d/invoiceninja.conf": "# https://nginx.org/en/docs/http/ngx_http_core_module.html\nclient_max_body_size 10M;\nclient_body_buffer_size 10M;\nserver_tokens off;\n\n# https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html\nfastcgi_buffers 32 16K;\n\n# https://nginx.org/en/docs/http/ngx_http_gzip_module.html\ngzip on;\ngzip_comp_level 2;\ngzip_min_length 1M;\ngzip_proxied any;\ngzip_types *;\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_public",
+            "path": "/var/www/html/public"
+        },
+        {
+            "volume": "sv-app-4242_storage",
+            "path": "/var/www/html/storage"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        },
+        {
+            "volume": "sv-app-4242_redis",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "APP_KEY",
+        "ADMIN_PASSWORD",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Invoice Ninja",
+            "tagline": "Invoices, quotes, payments and expenses for freelancers and small businesses"
+        },
+        "es": {
+            "title": "Invoice Ninja",
+            "tagline": "Facturas, presupuestos, pagos y gastos para autónomos y pequeñas empresas"
+        },
+        "de": {
+            "title": "Invoice Ninja",
+            "tagline": "Rechnungen, Angebote, Zahlungen und Ausgaben für Freelancer und kleine Unternehmen"
+        },
+        "fr": {
+            "title": "Invoice Ninja",
+            "tagline": "Factures, devis, paiements et dépenses pour indépendants et petites entreprises"
+        },
+        "pt": {
+            "title": "Invoice Ninja",
+            "tagline": "Faturas, orçamentos, pagamentos e despesas para freelancers e pequenas empresas"
+        },
+        "ja": {
+            "title": "Invoice Ninja",
+            "tagline": "フリーランスや小規模ビジネス向けの請求書、見積書、支払い、経費管理"
+        },
+        "ru": {
+            "title": "Invoice Ninja",
+            "tagline": "Счета, сметы, платежи и расходы для фрилансеров и малого бизнеса"
+        },
+        "hi": {
+            "title": "Invoice Ninja",
+            "tagline": "फ्रीलांसरों और छोटे व्यवसायों के लिए इनवॉइस, कोटेशन, भुगतान और खर्च"
+        }
+    },
+    "catalog_en": {
+        "name": "invoiceninja",
+        "icon": "invoiceninja",
+        "category": "business",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

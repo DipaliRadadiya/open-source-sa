@@ -1,0 +1,124 @@
+{
+    "slug": "snipeit",
+    "container_port": 80,
+    "volume_roles": {
+        "data": "/var/lib/snipeit",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "APP_KEY",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "APP_URL",
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "business",
+    "icon": "snipeit",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/var/lib/snipeit"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "APP_KEY",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Snipe-IT",
+            "tagline": "IT asset management: track hardware, licences and who has what"
+        },
+        "es": {
+            "title": "Snipe-IT",
+            "tagline": "Gestión de activos de TI: controla hardware, licencias y quién tiene qué"
+        },
+        "de": {
+            "title": "Snipe-IT",
+            "tagline": "IT-Asset-Management: Hardware, Lizenzen und wer was hat im Blick"
+        },
+        "fr": {
+            "title": "Snipe-IT",
+            "tagline": "Gestion des actifs informatiques : suivez le matériel, les licences et qui a quoi"
+        },
+        "pt": {
+            "title": "Snipe-IT",
+            "tagline": "Gestão de ativos de TI: acompanhe hardware, licenças e quem está com o quê"
+        },
+        "ja": {
+            "title": "Snipe-IT",
+            "tagline": "IT 資産管理:ハードウェア、ライセンス、誰が何を持っているかを追跡"
+        },
+        "ru": {
+            "title": "Snipe-IT",
+            "tagline": "Учёт ИТ-активов: оборудование, лицензии и кто чем пользуется"
+        },
+        "hi": {
+            "title": "Snipe-IT",
+            "tagline": "IT एसेट प्रबंधन: हार्डवेयर, लाइसेंस और किसके पास क्या है, इसका हिसाब रखें"
+        }
+    },
+    "catalog_en": {
+        "name": "snipeit",
+        "icon": "snipeit",
+        "category": "business",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

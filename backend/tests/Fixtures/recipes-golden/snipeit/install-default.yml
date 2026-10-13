@@ -1,0 +1,76 @@
+name: sv-app-4242
+
+services:
+  snipeit:
+    image: snipe/snipe-it:v8.8.0
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      APP_URL: "https://snipeit.golden.test"
+      APP_KEY: "base64:NGU2NDBhNWY3NTcxYmZhMjUwOWM1NGYzMGRiMmNjYzc="
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: UTC
+      APP_LOCALE: en-US
+      APP_TRUSTED_PROXIES: "127.0.0.1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8"
+      APP_FORCE_TLS: "false"
+      SECURE_COOKIES: "true"
+      PRIVATE_FILESYSTEM_DISK: local
+      PUBLIC_FILESYSTEM_DISK: local_public
+      DB_CONNECTION: mariadb
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: snipeit
+      DB_USERNAME: snipeit
+      DB_PASSWORD: "51c40a5a45e5721b19b255029703a8e8"
+      DB_CHARSET: utf8mb4
+      DB_COLLATION: utf8mb4_unicode_ci
+      MAIL_MAILER: log
+      LOG_CHANNEL: stderr
+
+    volumes:
+      - sv-app-4242_data:/var/lib/snipeit
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11.4.13
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MYSQL_DATABASE: snipeit
+      MYSQL_USER: snipeit
+      MYSQL_PASSWORD: "51c40a5a45e5721b19b255029703a8e8"
+      MYSQL_ROOT_PASSWORD: "7e3e84ae0ec833c054ac780b58142d90"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true

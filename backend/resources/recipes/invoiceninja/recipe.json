@@ -1,0 +1,127 @@
+{
+    "schema": 1,
+    "slug": "invoiceninja",
+    "version": 1,
+    "title": "Invoice Ninja",
+    "tagline": {
+        "en": "Invoices, quotes, payments and expenses for freelancers and small businesses",
+        "es": "Facturas, presupuestos, pagos y gastos para autónomos y pequeñas empresas",
+        "de": "Rechnungen, Angebote, Zahlungen und Ausgaben für Freelancer und kleine Unternehmen",
+        "fr": "Factures, devis, paiements et dépenses pour indépendants et petites entreprises",
+        "pt": "Faturas, orçamentos, pagamentos e despesas para freelancers e pequenas empresas",
+        "ja": "フリーランスや小規模ビジネス向けの請求書、見積書、支払い、経費管理",
+        "ru": "Счета, сметы, платежи и расходы для фрилансеров и малого бизнеса",
+        "hi": "फ्रीलांसरों और छोटे व्यवसायों के लिए इनवॉइस, कोटेशन, भुगतान और खर्च"
+    },
+    "category": "business",
+    "icon": "invoiceninja",
+    "popular": false,
+    "catalog_order": 530,
+    "docs_url": "https://invoiceninja.github.io/en/self-host-installation/#docker",
+    "images": {
+        "app": {
+            "ref": "invoiceninja/invoiceninja-debian:5.13.47",
+            "tested": []
+        },
+        "web": {
+            "ref": "nginx:1.30.5-alpine",
+            "tested": []
+        },
+        "db": {
+            "ref": "mysql:8.4.11",
+            "tested": []
+        },
+        "cache": {
+            "ref": "redis:8.8.3-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "nginx",
+            "role": "app"
+        },
+        {
+            "name": "app",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "256m",
+    "volumes": {
+        "public": "/var/www/html/public",
+        "storage": "/var/www/html/storage",
+        "db": "/var/lib/mysql",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "APP_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "APP_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [
+        {
+            "path": "/etc/nginx/conf.d/laravel.conf",
+            "source": "starter/laravel.conf"
+        },
+        {
+            "path": "/etc/nginx/conf.d/invoiceninja.conf",
+            "source": "starter/invoiceninja.conf"
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first account is created on first start from IN_USER_EMAIL (the admin email you enter) and IN_PASSWORD (a generated password shown on the first-run card); the image's init script runs ninja:create-account once, when the database has no account yet. Sign in at the site's address with them, and change the password under Settings, User Details.",
+        "Four services, as in the official Debian compose file: the PHP-FPM app (with the queue workers and scheduler under supervisord), an nginx in front of it that serves the public folder and is the only published port, MySQL 8.4 and Redis (cache, sessions and queue). The nginx config files are the official ones, written once to the site folder under etc/nginx/conf.d and mounted read-only; the panel never overwrites an edited copy.",
+        "PDFs are rendered inside the app container by the bundled Google Chrome (PDF_GENERATOR=snappdf, as in the official .env). That is why the PHP container gets a fixed 2g memory limit; the panel's memory setting applies to nginx (the published service).",
+        "Behind the panel's HTTPS proxy, TRUSTED_PROXIES='*' (the official value) makes Laravel trust the forwarded https scheme and host; REQUIRE_HTTPS stays false because TLS ends at the panel's web server. APP_URL is the site's HTTPS address.",
+        "Mail goes to the application log (MAIL_MAILER=log, the official default) until you configure SMTP with the MAIL_* variables in the panel's environment editor; invoices cannot be emailed before that, but they can be downloaded as PDF.",
+        "The public and storage volumes are shared between the app and nginx, as in the official file: the image copies its public folder into the volume on every start, so updates replace it."
+    ]
+}

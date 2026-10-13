@@ -88,6 +88,15 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `cyberchef` | [official vector](https://raw.githubusercontent.com/gchq/CyberChef/v11.5.0/src/web/static/images/logo/cyberchef.svg) | Apache-2.0 | Official application mark (Crown Copyright, GCHQ); Inkscape/Sodipodi metadata and namespaces removed to fit the 32 KiB limit, viewBox rounded to 512x512; drawing unchanged. |
 | `cloudreve` | [selfh.st vector](https://raw.githubusercontent.com/selfhst/icons/2053b70b283ffed5f2cc1424d1e17d9c554a846d/svg/cloudreve.svg) | CC-BY-4.0 (selfh.st icons) | The official Cloudreve frontend ships the mark only inside a 125 KB wordmark (public/static/img/logo.svg); this is selfh.st's square vector of the same mark, unchanged. |
 
+## RC-32 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `actual` | [selfh.st vector](https://raw.githubusercontent.com/selfhst/icons/2053b70b283ffed5f2cc1424d1e17d9c554a846d/svg/actual-budget.svg) | CC-BY-4.0 (selfh.st icons) | The official mark (packages/component-library/src/icons/logo/logo.svg at v26.10.0, MIT) is white-only and unreadable on a light background; this is selfh.st's square vector of the same mark on the purple backing, unchanged. |
+| `plausible` | [selfh.st vector](https://raw.githubusercontent.com/selfhst/icons/2053b70b283ffed5f2cc1424d1e17d9c554a846d/svg/plausible.svg) | CC-BY-4.0 (selfh.st icons) | Plausible CE v3.2.1 ships the mark only inside its logo-plus-wordmark (priv/static/images/ce/logo_light.svg); this is selfh.st's square vector of the same mark, unchanged. |
+| `snipeit` | [official raster](https://raw.githubusercontent.com/grokability/snipe-it/v8.8.0/public/img/snipe-logo-bug.png) | AGPL-3.0 | The official mark is raster-only (no SVG in the repository or on snipeitapp.com). Four-colour vector trace (potrace, colours sampled from the PNG, centred in a square viewBox); no raster embedded. |
+| `invoiceninja` | [Simple Icons vector](https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/invoiceninja.svg) | CC0-1.0 (Simple Icons) | Simple Icons' vector of the official round logo (its source: invoiceninja/invoiceninja public/images/round_logo.png); path unchanged, black on a rounded white square so it stays legible in both panel themes. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.

@@ -1,0 +1,141 @@
+{
+    "slug": "plausible",
+    "container_port": 8000,
+    "volume_roles": {
+        "data": "/var/lib/plausible",
+        "db": "/var/lib/postgresql/data",
+        "events": "/var/lib/clickhouse",
+        "events-logs": "/var/log/clickhouse-server"
+    },
+    "generated_secrets": [
+        "SECRET_KEY_BASE",
+        "SECRET_KEY_BASE_2",
+        "TOTP_VAULT_KEY",
+        "DB_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "BASE_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "analytics",
+    "icon": "plausible",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": {
+        "/etc/clickhouse-server/config.d/logs.xml": "<clickhouse>\n    <logger>\n        <level>warning</level>\n        <console>true</console>\n    </logger>\n\n    <query_log replace=\"1\">\n        <database>system</database>\n        <table>query_log</table>\n        <flush_interval_milliseconds>7500</flush_interval_milliseconds>\n        <engine>\n            ENGINE = MergeTree\n            PARTITION BY event_date\n            ORDER BY (event_time)\n            TTL event_date + interval 30 day\n            SETTINGS ttl_only_drop_parts=1\n        </engine>\n    </query_log>\n\n    <!-- Stops unnecessary logging -->\n    <metric_log remove=\"remove\" />\n    <asynchronous_metric_log remove=\"remove\" />\n    <query_thread_log remove=\"remove\" />\n    <text_log remove=\"remove\" />\n    <trace_log remove=\"remove\" />\n    <session_log remove=\"remove\" />\n    <part_log remove=\"remove\" />\n</clickhouse>\n",
+        "/etc/clickhouse-server/config.d/ipv4-only.xml": "<clickhouse>\n    <listen_host>0.0.0.0</listen_host>\n</clickhouse>\n",
+        "/etc/clickhouse-server/config.d/low-resources.xml": "<clickhouse>\n    <!-- https://clickhouse.com/docs/en/operations/server-configuration-parameters/settings#mark_cache_size -->\n    <mark_cache_size>524288000</mark_cache_size>\n</clickhouse>\n",
+        "/etc/clickhouse-server/users.d/default-profile-low-resources-overrides.xml": "<!-- https://clickhouse.com/docs/en/operations/tips#using-less-than-16gb-of-ram -->\n<clickhouse>\n    <profiles>\n        <default>\n            <!-- https://clickhouse.com/docs/en/operations/settings/settings#max_threads -->\n            <max_threads>1</max_threads>\n            <!-- https://clickhouse.com/docs/en/operations/settings/settings#max_block_size -->\n            <max_block_size>8192</max_block_size>\n            <!-- https://clickhouse.com/docs/en/operations/settings/settings#max_download_threads -->\n            <max_download_threads>1</max_download_threads>\n            <!--\n            https://clickhouse.com/docs/en/operations/settings/settings#input_format_parallel_parsing -->\n            <input_format_parallel_parsing>0</input_format_parallel_parsing>\n            <!--\n            https://clickhouse.com/docs/en/operations/settings/settings#output_format_parallel_formatting -->\n            <output_format_parallel_formatting>0</output_format_parallel_formatting>\n        </default>\n    </profiles>\n</clickhouse>\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/var/lib/plausible"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        },
+        {
+            "volume": "sv-app-4242_events",
+            "path": "/var/lib/clickhouse"
+        },
+        {
+            "volume": "sv-app-4242_events-logs",
+            "path": "/var/log/clickhouse-server"
+        }
+    ],
+    "docker_secret_keys": [
+        "SECRET_KEY_BASE",
+        "SECRET_KEY_BASE_2",
+        "TOTP_VAULT_KEY",
+        "DB_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Plausible Analytics",
+            "tagline": "Lightweight, privacy-friendly web analytics without cookies"
+        },
+        "es": {
+            "title": "Plausible Analytics",
+            "tagline": "Analítica web ligera y respetuosa con la privacidad, sin cookies"
+        },
+        "de": {
+            "title": "Plausible Analytics",
+            "tagline": "Schlanke, datenschutzfreundliche Webanalyse ohne Cookies"
+        },
+        "fr": {
+            "title": "Plausible Analytics",
+            "tagline": "Analyse web légère et respectueuse de la vie privée, sans cookies"
+        },
+        "pt": {
+            "title": "Plausible Analytics",
+            "tagline": "Análise web leve e respeitosa com a privacidade, sem cookies"
+        },
+        "ja": {
+            "title": "Plausible Analytics",
+            "tagline": "Cookie を使わない、軽量でプライバシーに配慮したウェブ解析"
+        },
+        "ru": {
+            "title": "Plausible Analytics",
+            "tagline": "Лёгкая веб-аналитика без cookie, уважающая приватность"
+        },
+        "hi": {
+            "title": "Plausible Analytics",
+            "tagline": "कुकीज़ के बिना हल्का, निजता-अनुकूल वेब एनालिटिक्स"
+        }
+    },
+    "catalog_en": {
+        "name": "plausible",
+        "icon": "plausible",
+        "category": "analytics",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

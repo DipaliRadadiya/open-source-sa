@@ -1,0 +1,115 @@
+{
+    "schema": 1,
+    "slug": "plausible",
+    "version": 1,
+    "title": "Plausible Analytics",
+    "tagline": {
+        "en": "Lightweight, privacy-friendly web analytics without cookies",
+        "es": "Analítica web ligera y respetuosa con la privacidad, sin cookies",
+        "de": "Schlanke, datenschutzfreundliche Webanalyse ohne Cookies",
+        "fr": "Analyse web légère et respectueuse de la vie privée, sans cookies",
+        "pt": "Análise web leve e respeitosa com a privacidade, sem cookies",
+        "ja": "Cookie を使わない、軽量でプライバシーに配慮したウェブ解析",
+        "ru": "Лёгкая веб-аналитика без cookie, уважающая приватность",
+        "hi": "कुकीज़ के बिना हल्का, निजता-अनुकूल वेब एनालिटिक्स"
+    },
+    "category": "analytics",
+    "icon": "plausible",
+    "popular": false,
+    "catalog_order": 510,
+    "docs_url": "https://github.com/plausible/community-edition/wiki/configuration",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/plausible/community-edition:v3.2.1",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": []
+        },
+        "events": {
+            "ref": "clickhouse/clickhouse-server:24.12.6.70-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "plausible",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "events_db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8000,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/var/lib/plausible",
+        "db": "/var/lib/postgresql/data",
+        "events": "/var/lib/clickhouse",
+        "events-logs": "/var/log/clickhouse-server"
+    },
+    "secrets": [
+        {
+            "key": "SECRET_KEY_BASE",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SECRET_KEY_BASE_2",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "TOTP_VAULT_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "BASE_URL",
+    "inputs": [],
+    "starter_files": [
+        {
+            "path": "/etc/clickhouse-server/config.d/logs.xml",
+            "source": "starter/logs.xml"
+        },
+        {
+            "path": "/etc/clickhouse-server/config.d/ipv4-only.xml",
+            "source": "starter/ipv4-only.xml"
+        },
+        {
+            "path": "/etc/clickhouse-server/config.d/low-resources.xml",
+            "source": "starter/low-resources.xml"
+        },
+        {
+            "path": "/etc/clickhouse-server/users.d/default-profile-low-resources-overrides.xml",
+            "source": "starter/default-profile-low-resources-overrides.xml"
+        }
+    ],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Plausible CE has no default login: the first visitor registers the owner account on the welcome screen. Open the site and register immediately after install.",
+        "After that, registration is invite-only (DISABLE_REGISTRATION=invite_only, the Community Edition default, set explicitly here so it can be changed in the panel's environment editor): new people join through an invitation from a site or team owner. Set it to true to close registration completely, or false to open it.",
+        "Plausible sends no email until a mailer is configured (MAILER_ADAPTER and the SMTP_* variables in the official configuration page); email verification is off, so registering and inviting work without it, but invitation emails are not delivered until then.",
+        "Three services, as in the official compose file at v3.2.1: the app (port 8000), PostgreSQL 16 for accounts and sites, and ClickHouse 24.12 for the events. The official start command (db createdb, db migrate, run) is kept, so migrations run on every start.",
+        "SECRET_KEY_BASE must be at least 64 bytes, so it is two 32-character secrets joined. TOTP_VAULT_KEY is 32 bytes, base64-encoded, as the official configuration page asks.",
+        "ClickHouse uses the official compose file's four config files (console logs at warning level, IPv4-only listening, and the low-resource settings), written once to the site folder under etc/clickhouse-server and mounted read-only; the panel never overwrites an edited copy. As in the official setup, ClickHouse runs its default user without a password and is only reachable on the app's private network, with no published port.",
+        "The ulimits (nofile) of the official compose file are kept for the app and ClickHouse. ClickHouse gets a fixed 1g memory limit: the official low-resource config allows a 500 MB mark cache, which does not fit the 512m database default.",
+        "To track a website, add it in the dashboard and paste the script snippet it shows into your pages; events go to https://<this site>/api/event."
+    ]
+}
