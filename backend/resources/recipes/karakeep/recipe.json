@@ -47,7 +47,7 @@
         }
     ],
     "container_port": 3000,
-    "memory_floor": "1g",
+    "memory_floor": "1536m",
     "volumes": {
         "data": "/data",
         "meili": "/meili_data"
@@ -80,6 +80,6 @@
         "The crawler uses Karakeep's own Chrome image (the official compose's chrome service, pinned to the build the release tag pointed to). Its entrypoint supplies --no-sandbox itself, so the service needs no extra capability or security option. It has a fixed 1g limit.",
         "Search uses Meilisearch v1.41.0, the version the official compose file pins for this release; it has its own volume and no published port. The SQLite database, crawled assets and screenshots live in the data volume (/data), with WAL mode on.",
         "NEXTAUTH_URL is the site's HTTPS address. NEXTAUTH_SECRET signs sessions and MEILI_MASTER_KEY protects the search engine; both are generated.",
-        "The 1g floor covers the Next.js web app and its background workers, which run in the same container."
+        "The 1536m floor covers the Next.js web app and its background workers (crawler, asset processing, search indexing), which run in the same container. With 1g the web container idled at 42-49 % but peaked at 80-83 % while crawling a single page (RC-30, both Ubuntu versions)."
     ]
 }

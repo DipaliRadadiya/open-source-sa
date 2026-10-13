@@ -4,7 +4,7 @@ services:
   web:
     image: ghcr.io/karakeep-app/karakeep:0.33.2
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 1536m
     logging:
       driver: json-file
       options:
