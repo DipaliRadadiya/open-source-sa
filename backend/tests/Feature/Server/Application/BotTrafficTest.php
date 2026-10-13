@@ -217,3 +217,26 @@ it('reports legacy-only bot hits consistently with the v7 Yandex exemption', fun
     $bots = collect($response->json('bot_traffic.bots'))->keyBy('bot');
     expect($bots['Jasper']['hits'])->toBe(1)->and($bots['Jasper']['blocked'])->toBeTrue();
 });
+
+it('labels a bot from the v7 list as legacy, not as the owner\'s own rule', function () {
+    $this->application->forceFill(['ai_bot_policy' => 'legacy_v7'])->save();
+    // The owner did add this one: it stays theirs, even though v7's list has it too.
+    $this->application->botRules()->create(['type' => 'block', 'value' => 'Cohere']);
+    fakeAccessLog([accessLine('AIMatrix/1.0'), accessLine('Cohere/1.0'), accessLine('GPTBot/1.3')]);
+
+    $bots = collect($this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->assertOk()->json('bot_traffic.bots'))->keyBy('bot');
+
+    expect($bots['AIMatrix']['category'])->toBe('legacy')
+        ->and($bots['Cohere']['category'])->toBe('custom')
+        ->and($bots['GPTBot']['category'])->toBe('training');
+});
+
+it('never labels a bot legacy on a v8 policy', function () {
+    $this->application->forceFill(['ai_bot_policy' => 'block_all'])->save();
+    $this->application->botRules()->create(['type' => 'block', 'value' => 'AIMatrix']);
+    fakeAccessLog([accessLine('AIMatrix/1.0')]);
+
+    $bots = collect($this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->assertOk()->json('bot_traffic.bots'))->keyBy('bot');
+
+    expect($bots['AIMatrix']['category'])->toBe('custom');
+});

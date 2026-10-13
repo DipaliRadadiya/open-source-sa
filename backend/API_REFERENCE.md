@@ -2816,6 +2816,7 @@ Evidence for the policy decision: which bots hit this site recently, and whether
  ],
  "totals": {"bots": 1, "hits": 142, "blocked_hits": 120}}
 ```
+`category`: `training` | `search` | `agent` (v8's own lists) · `custom` (the site's own block/allow rule) · `legacy` (since 2026-10-13: a name from v7's list on a `legacy_v7` site that the owner did not add themselves).
 
 `blocked` is what the **current settings** would do to that bot. `blocked_hits` (per bot and in `totals`) is what the server **really refused** — the 403 lines in the access log — and `last_status` is the status its latest hit got (2026-10-07, AB-B: the count used to come from the current settings, so 200s and hits from before a block existed read as blocked).
 

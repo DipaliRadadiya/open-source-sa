@@ -132,7 +132,7 @@ class BotTrafficReporter
             $bots[] = [
                 'bot' => $name,
                 'hits' => $hits,
-                'category' => $this->categoryOf($name),
+                'category' => $this->categoryOf($name, $application),
                 // What the *current* settings would do to it, so the screen
                 // can show "this one is getting through" next to the count
                 // rather than making the user cross-reference two lists.
@@ -202,14 +202,29 @@ class BotTrafficReporter
         )));
     }
 
-    private function categoryOf(string $bot): string
+    /**
+     * Why a bot is on this site's list: one of v8's own buckets, the site's
+     * own rule, or v7's list on a legacy_v7 site. A v7 name was reported as
+     * `custom` ("Your own rule") although nobody added it (found in the
+     * browser, 2026-10-13); a name the owner did add stays theirs.
+     */
+    private function categoryOf(string $bot, Application $application): string
     {
+        $lower = mb_strtolower($bot);
+
         foreach (['training', 'search', 'agent'] as $bucket) {
             foreach ((array) config('ai_bots.'.$bucket) as $known) {
-                if (mb_strtolower($known) === mb_strtolower($bot)) {
+                if (mb_strtolower($known) === $lower) {
                     return $bucket;
                 }
             }
+        }
+
+        $ownRule = $application->botRules->contains(fn ($rule) => mb_strtolower((string) $rule->value) === $lower);
+
+        if (! $ownRule && $application->ai_bot_policy === AiBotPolicy::LegacyV7
+            && in_array($lower, array_map(mb_strtolower(...), (array) config('ai_bots_v7')), true)) {
+            return 'legacy';
         }
 
         return 'custom';
