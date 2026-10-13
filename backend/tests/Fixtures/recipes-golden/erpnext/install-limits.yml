@@ -189,6 +189,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
+    volumes:
+      - sv-app-4242_redis-cache:/data
+
   redis-queue:
     image: redis:6.2.24-alpine
     restart: unless-stopped
@@ -208,6 +211,8 @@ volumes:
   sv-app-4242_logs:
     external: true
   sv-app-4242_db:
+    external: true
+  sv-app-4242_redis-cache:
     external: true
   sv-app-4242_redis-queue:
     external: true

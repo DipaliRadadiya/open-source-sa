@@ -5,6 +5,7 @@
         "sites": "/home/frappe/frappe-bench/sites",
         "logs": "/home/frappe/frappe-bench/logs",
         "db": "/var/lib/mysql",
+        "redis-cache": "/data",
         "redis-queue": "/data"
     },
     "generated_secrets": [
@@ -74,6 +75,10 @@
         {
             "volume": "sv-app-4242_db",
             "path": "/var/lib/mysql"
+        },
+        {
+            "volume": "sv-app-4242_redis-cache",
+            "path": "/data"
         },
         {
             "volume": "sv-app-4242_redis-queue",

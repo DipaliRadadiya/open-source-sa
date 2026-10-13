@@ -194,6 +194,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
+    volumes:
+      - {{ volume.redis-cache }}:/data
+
   redis-queue:
     image: {{ image.redis }}
     restart: unless-stopped
@@ -213,6 +216,8 @@ volumes:
   {{ volume.logs }}:
     external: true
   {{ volume.db }}:
+    external: true
+  {{ volume.redis-cache }}:
     external: true
   {{ volume.redis-queue }}:
     external: true
