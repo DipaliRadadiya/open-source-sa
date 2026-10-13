@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "hasura/graphql-engine:v2.50.3",
-            "tested": []
+            "tested": [
+                "hasura/graphql-engine:v2.50.3"
+            ]
         },
         "db": {
             "ref": "postgres:15.19-alpine",
-            "tested": []
+            "tested": [
+                "postgres:15.19-alpine"
+            ]
         }
     },
     "services": [
@@ -73,8 +77,9 @@
         "Open the site to reach the Hasura console: it asks for the admin secret, which is the token on the first-run card (HASURA_GRAPHQL_ADMIN_SECRET, 32 characters). The GraphQL endpoint is /v1/graphql; requests need the x-hasura-admin-secret header, or a JWT/webhook once you configure one. Without either, Hasura refuses the request.",
         "The admin secret bypasses every permission. Keep it on servers only; give browsers and apps JWTs or a webhook with role-based permissions.",
         "Hasura Community Edition v2 with its own PostgreSQL 15.19 database (the major version of the official compose file). The same database holds Hasura's metadata (HASURA_GRAPHQL_METADATA_DATABASE_URL) and is connected as the \"default\" data source (HASURA_GRAPHQL_DATABASE_URL), so tables you create in the console live there. The database has its own volume and no published port; back it up.",
-        "The console is on (HASURA_GRAPHQL_ENABLE_CONSOLE) and its assets are served by the server itself (/srv/console-assets) instead of Hasura's CDN. Dev mode is off, so errors do not include internal details, and telemetry is off.",
+        "The console is on (HASURA_GRAPHQL_ENABLE_CONSOLE) and its assets are served by the server itself (/srv/console-assets) instead of Hasura's CDN. Dev mode is off, so errors do not include internal details, and server telemetry is off. The console page itself still contacts hasura.io (release and news checks) and YouTube (the getting-started video) from your browser.",
         "The official compose file's data-connector-agent (for Athena, MySQL, Oracle and Snowflake sources) is not included; PostgreSQL sources need nothing extra.",
-        "The healthcheck calls /healthz with the curl that ships in the image. The 512m floor covers the GraphQL engine for a typical schema; the database uses the panel database-memory default."
+        "The healthcheck calls /healthz with the curl that ships in the image. The 512m floor covers the GraphQL engine for a typical schema; the database uses the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-31): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

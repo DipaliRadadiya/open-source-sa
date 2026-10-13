@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "cloudreve/cloudreve:4.19.1",
-            "tested": []
+            "tested": [
+                "cloudreve/cloudreve:4.19.1"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         },
         "cache": {
             "ref": "redis:8.8.3-alpine",
-            "tested": []
+            "tested": [
+                "redis:8.8.3-alpine"
+            ]
         }
     },
     "services": [
@@ -76,6 +82,7 @@
         "Database and Redis settings use Cloudreve's CR_CONF_<Section>__<Key> overrides (the double-underscore form of the documented CR_CONF_<Section>.<Key>, so every variable name stays editable in the panel). PostgreSQL 17.11 (the official compose file's major version) uses a generated password instead of the official file's trust authentication; it and Redis 8.8 have their own volumes and no published port.",
         "Uploaded files, thumbnails and conf.ini live in the data volume (/cloudreve/data, the default local storage policy). TZ is set to UTC: the image otherwise defaults to Asia/Shanghai.",
         "Only the web port is published. The aria2 downloader for offline downloads runs inside the container, but its BitTorrent listen port (6888) is not exposed, so torrent downloads work without incoming peers.",
-        "The healthcheck calls /api/v4/site/ping with the image's busybox wget. The 1g floor leaves room for the thumbnail generators bundled in the image (LibreOffice, ffmpeg, libvips), which run inside the same container when previews are made."
+        "The healthcheck calls /api/v4/site/ping with the image's busybox wget. The 1g floor leaves room for the thumbnail generators bundled in the image (LibreOffice, ffmpeg, libvips), which run inside the same container when previews are made.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-31): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

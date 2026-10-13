@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "getmeili/meilisearch:v1.55.0",
-            "tested": []
+            "tested": [
+                "getmeili/meilisearch:v1.55.0"
+            ]
         }
     },
     "services": [
@@ -61,6 +63,7 @@
         "Use the master key only to manage keys. Create scoped API keys with POST /keys (a search-only key for browsers, an admin key for your back end) and never put the master key in front-end code.",
         "MEILI_ENV is production, so a master key is mandatory and the built-in search preview page is turned off: opening the address in a browser shows a JSON message, not a dashboard. Search from your own application, or from a client that sends a key.",
         "Indexes and documents live in the data volume (/meili_data). The healthcheck calls GET /health with the curl that ships in the image. Anonymous telemetry is off (MEILI_NO_ANALYTICS).",
-        "The 512m floor covers small and medium indexes. Indexing large datasets uses more memory; raise the limit if indexing tasks fail or the container is killed."
+        "The 512m floor covers small and medium indexes. Indexing large datasets uses more memory; raise the limit if indexing tasks fail or the container is killed.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-31): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

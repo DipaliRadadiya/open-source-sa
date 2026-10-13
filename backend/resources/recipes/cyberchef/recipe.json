@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "ghcr.io/gchq/cyberchef:11.5.0",
-            "tested": []
+            "tested": [
+                "ghcr.io/gchq/cyberchef:11.5.0"
+            ]
         }
     },
     "services": [
@@ -46,6 +48,7 @@
     "notes": [
         "CyberChef runs entirely in your browser and stores nothing on the server, like IT-Tools: there is no login, no database and no volume. Recipes and inputs stay in the browser (and in the page URL when you share a recipe link).",
         "There is no sign-in, so anyone who can reach the site can use it. That is harmless for a static toolbox, but restrict access in front of it if you do not want it public.",
-        "The official image is a static build served by unprivileged nginx, which listens on port 8080 (not 80). The 128m floor is generous for nginx serving static files."
+        "The official image is a static build served by unprivileged nginx, which listens on port 8080 (not 80). The 128m floor is generous for nginx serving static files.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-31): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }
