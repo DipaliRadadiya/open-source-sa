@@ -33,6 +33,7 @@ services:
       CLIENT_MAX_BODY_SIZE: 50m
 
     volumes:
+      - {{ site_root }}/templates/nginx:/templates/nginx:ro
       - {{ volume.sites }}:/home/frappe/frappe-bench/sites
       - {{ volume.logs }}:/home/frappe/frappe-bench/logs
 

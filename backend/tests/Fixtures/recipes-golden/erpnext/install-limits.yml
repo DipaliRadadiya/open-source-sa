@@ -28,6 +28,7 @@ services:
       CLIENT_MAX_BODY_SIZE: 50m
 
     volumes:
+      - /home/owner/site/public_html/templates/nginx:/templates/nginx:ro
       - sv-app-4242_sites:/home/frappe/frappe-bench/sites
       - sv-app-4242_logs:/home/frappe/frappe-bench/logs
 
