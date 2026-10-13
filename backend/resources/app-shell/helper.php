@@ -25,7 +25,7 @@
  *     from a root-only map the panel writes. Nothing else is trusted: not the
  *     environment, not the working directory, not a name the user typed.
  *   - No docker option ever comes from the user. Only two fixed command shapes
- *     run: `docker exec [-i] [-t] <name> sh -c <string>` and
+ *     run: `docker exec [-i] [-t] <name> sh -c -- <string>` and
  *     `docker logs --tail N [-f] <name>`. The user's text is the `sh -c` string,
  *     interpreted by the container's shell and never by one on the host.
  *   - A container that is privileged or holds the Docker socket is refused even
@@ -316,7 +316,9 @@ function argv(string $docker, array $plan, bool $tty): array
 
     $exec = $tty ? [$docker, 'exec', '-i', '-t', $name] : [$docker, 'exec', '-i', $name];
 
-    return [...$exec, 'sh', '-c', $plan['action'] === 'shell' ? SHELL : (string) $plan['command']];
+    // `--` so a command that starts with `-` or `+` is the command and not an
+    // option of the container's sh (dash refused `--privileged` as one, live).
+    return [...$exec, 'sh', '-c', '--', $plan['action'] === 'shell' ? SHELL : (string) $plan['command']];
 }
 
 /**

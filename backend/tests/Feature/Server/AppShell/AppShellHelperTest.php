@@ -172,10 +172,11 @@ describe('what reaches docker', function () {
 
         expect($plan['action'])->toBe('exec')
             ->and(argv('/usr/bin/docker', $plan, false))
-            ->toBe(['/usr/bin/docker', 'exec', '-i', 'sv-app-3-openclaw-1', 'sh', '-c', $command]);
+            ->toBe(['/usr/bin/docker', 'exec', '-i', 'sv-app-3-openclaw-1', 'sh', '-c', '--', $command]);
     })->with([
         '--privileged',
         '-u root sh',
+        '+x',
         'ls; cat /etc/shadow',
         'echo $(id)',
         '`id`',
@@ -186,7 +187,7 @@ describe('what reaches docker', function () {
         $plan = plan('blogger', shellMap(), '');
 
         expect(argv('/usr/bin/docker', $plan, true))->toBe([
-            '/usr/bin/docker', 'exec', '-i', '-t', 'sv-app-4-ghost-1', 'sh', '-c',
+            '/usr/bin/docker', 'exec', '-i', '-t', 'sv-app-4-ghost-1', 'sh', '-c', '--',
             'if command -v bash >/dev/null 2>&1; then exec bash; fi; exec sh',
         ])->and(argv('/usr/bin/docker', $plan, false))->not->toContain('-t');
     });

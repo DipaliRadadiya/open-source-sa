@@ -6399,7 +6399,7 @@ Turns **container login** on for the app's owner (RC-28): sets its key and/or pa
 | Command | Does |
 |---|---|
 | `ssh -t u@host` | a shell (bash if present, else sh) in the main container |
-| `ssh u@host '<command…>'` | `docker exec -i <c> sh -c '<command…>'`; the text is interpreted by the container's shell only |
+| `ssh u@host '<command…>'` | `docker exec -i <c> sh -c -- '<command…>'`; the text is interpreted by the container's shell only |
 | `ssh -t u@host @<service>` / `ssh u@host @<service> <command…>` | the same in another container of the app (only when the user has one Docker app) |
 | `ssh -t u@host @<app>` / `@<app>/<service>` | picks one app when the user owns several; with no pick the list is printed and the exit code is 2 |
 | `ssh u@host @logs [<target>] [--tail N] [--follow]` | `docker logs --tail N [-f]` (default 200 lines) |
