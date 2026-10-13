@@ -247,8 +247,10 @@ export function FilesPanel({
         className={cn(
           "border-destructive/30 bg-destructive/5 text-destructive [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/15 dark:hover:text-destructive",
           // The toolbar is a card now, and outline buttons take the brand tint inside cards;
-          // Trash keeps its red over that.
+          // Trash keeps its red over that, hover included: the tint's hover text and border
+          // are blue, so leaving them out turned the label blue on a red fill (Krishna, 13 Oct).
           "in-[.bg-card]:border-destructive/30 in-[.bg-card]:bg-destructive/5 in-[.bg-card]:text-(--destructive-ink) in-[.bg-card]:hover:bg-destructive/10 in-[.bg-card]:dark:border-destructive/40 in-[.bg-card]:dark:bg-destructive/10 in-[.bg-card]:dark:text-destructive in-[.bg-card]:dark:hover:bg-destructive/15",
+          "in-[.bg-card]:hover:border-destructive/40 in-[.bg-card]:hover:text-[color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] in-[.bg-card]:dark:hover:border-destructive/50 in-[.bg-card]:dark:hover:text-destructive",
         )}
         asChild
       >
