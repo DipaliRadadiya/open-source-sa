@@ -69,14 +69,18 @@ class RequestCertificate
         // Same reasoning for an uploaded or self-signed pair: the job removes
         // it once the replacement is serving.
         $previousFiles = $existing !== null && $existing->type !== CertificateType::LetsEncrypt
-            ? array_values(array_filter([$existing->certificate_path, $existing->private_key_path]))
+            ? array_values(array_filter([
+                $existing->certificate_path,
+                $existing->private_key_path,
+                $existing->servesSeparateChain() ? $existing->chain_path : null,
+            ]))
             : [];
 
         // A self-signed pair goes into the server's own /etc/ssl tree (v7's
         // layout). Refused here, while nothing has changed, when either file
         // is already something else's — the job checks again before writing.
         if ($type === CertificateType::SelfSigned
-            && ($taken = $this->files->conflict($application->slug, $previousFiles)) !== null) {
+            && ($taken = $this->files->conflict($application->slug, $previousFiles, $application->domainNames())) !== null) {
             throw ValidationException::withMessages([
                 'type' => [__('certificate.file_taken', ['path' => $taken])],
             ]);

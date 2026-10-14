@@ -70,6 +70,21 @@ class Certificate extends Model
         return $name === '' || $name === '.' ? ($this->application?->slug ?: null) : $name;
     }
 
+    /**
+     * An uploaded certificate whose chain is a file of its own — v7's
+     * `{app}_ca_bundle.crt` on Apache and OpenLiteSpeed — so the vhost has to
+     * name it. Uploads made here bundle the chain into the `.crt` and have
+     * none; a Let's Encrypt `chain_path` is already inside `fullchain.pem`.
+     */
+    public function servesSeparateChain(): bool
+    {
+        // By its name, which only v7 gave a file: a row can still carry a
+        // Let's Encrypt `chain.pem` from before an upload, and that names a
+        // lineage this certificate has nothing to do with.
+        return $this->type === CertificateType::Custom
+            && str_ends_with((string) $this->chain_path, '_ca_bundle.crt');
+    }
+
     public function servable(): bool
     {
         return $this->status === CertificateStatus::Active

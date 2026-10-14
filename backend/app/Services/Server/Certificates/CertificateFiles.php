@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Certificates;
 
+use App\Models\Certificate;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -52,10 +53,18 @@ class CertificateFiles
      * certificate row already points at — asked of the disk, not of a list of
      * names someone thought of (the same rule as {@see SlugConflict}).
      *
+     * A pair v7 wrote for this same application ({@see v7Pair()}) is its own
+     * too: on a server moved from v7 it is exactly what the user is replacing.
+     *
      * @param  array<int, string|null>  $owned  paths the application's certificate row holds
+     * @param  array<int, string>  $domains  the application's domains, to recognise v7's pair
      */
-    public function conflict(string $name, array $owned): ?string
+    public function conflict(string $name, array $owned, array $domains = []): ?string
     {
+        if ($domains !== [] && ($v7 = $this->v7Pair($name, $domains)) !== null) {
+            $owned = [...$owned, $v7['certificate'], $v7['private_key']];
+        }
+
         foreach ($this->paths($name) as $path) {
             if (in_array($path, $owned, true)) {
                 continue;
@@ -77,6 +86,93 @@ class CertificateFiles
         }
 
         return null;
+    }
+
+    /**
+     * Where v7 kept an uploaded certificate's chain on Apache and
+     * OpenLiteSpeed: beside the `.crt`, not inside it (on nginx it appended
+     * the chain to the `.crt` instead). The panel never writes this file.
+     */
+    public function bundlePath(string $name): string
+    {
+        return $this->certsDir()."/{$name}_ca_bundle.crt";
+    }
+
+    /**
+     * The certificate v7 installed for this application, or null.
+     *
+     * v7 wrote an uploaded pair to the same two paths the panel uses now
+     * (agent ssl.go, customSSLCertificate), so on a server moved from v7 they
+     * are already there with no row behind them. They count as this
+     * application's only when all of it holds: both are plain files (no
+     * links), the key belongs to the certificate, and the certificate covers
+     * one of the application's domains — so the trust store, the distro's
+     * snakeoil pair or another site's files never qualify.
+     *
+     * The key is compared by its public half, worked out on the server: the
+     * private key itself is never read into the panel.
+     *
+     * @param  array<int, string>  $domains
+     * @return array{certificate: string, private_key: string, chain: ?string, domains: array<int, string>}|null
+     */
+    public function v7Pair(string $name, array $domains): ?array
+    {
+        $paths = $this->paths($name);
+
+        if (! $this->isPlainFile($paths['certificate']) || ! $this->isPlainFile($paths['private_key'])) {
+            return null;
+        }
+
+        $certificate = $this->serverOps->probe(['cat', '--', $paths['certificate']], ['feature' => 'certificate', 'op' => 'v7_read_certificate']);
+        $names = $certificate->ok ? $this->subjectNames($certificate->output()) : [];
+        $covering = new Certificate(['domains' => $names]);
+
+        if ($names === [] || ! collect($domains)->contains(fn (string $domain): bool => $covering->covers($domain))) {
+            return null;
+        }
+
+        $fromCertificate = $this->serverOps->probe(
+            ['openssl', 'x509', '-noout', '-pubkey', '-in', $paths['certificate']],
+            ['feature' => 'certificate', 'op' => 'v7_certificate_public_key'],
+        );
+        $fromKey = $this->serverOps->probe(
+            ['openssl', 'pkey', '-pubout', '-passin', 'pass:', '-in', $paths['private_key']],
+            ['feature' => 'certificate', 'op' => 'v7_key_public_key'],
+        );
+
+        if (! $fromCertificate->ok || ! $fromKey->ok || trim($fromCertificate->output()) === ''
+            || trim($fromCertificate->output()) !== trim($fromKey->output())) {
+            return null;
+        }
+
+        $bundle = $this->bundlePath($name);
+
+        return [
+            'certificate' => $paths['certificate'],
+            'private_key' => $paths['private_key'],
+            'chain' => $this->isPlainFile($bundle) ? $bundle : null,
+            'domains' => $names,
+        ];
+    }
+
+    /**
+     * Remove v7's separate chain file for this application, when there is
+     * one — after a certificate written here replaced v7's, whose chain it
+     * was. Only ever that one exact path, and only a plain file.
+     */
+    public function removeV7Bundle(string $name, int $applicationId): ?ServerOpsResult
+    {
+        $bundle = $this->bundlePath($name);
+
+        return $this->isPlainFile($bundle) ? $this->remove([$bundle], $name, $applicationId) : null;
+    }
+
+    /** A regular file — `stat` does not follow links, so a link is not one. */
+    private function isPlainFile(string $path): bool
+    {
+        $stat = $this->serverOps->probe(['stat', '-c', '%F', '--', $path], ['feature' => 'certificate', 'op' => 'v7_stat']);
+
+        return $stat->ok && trim($stat->output()) === 'regular file';
     }
 
     /**
@@ -278,7 +374,9 @@ class CertificateFiles
     public function managedFiles(array $paths, string $name): array
     {
         $directory = rtrim((string) config('server.certificates.custom_dir'), '/');
-        $own = array_values($this->paths($name));
+        // Plus v7's chain file for this application, which v7's own uninstall
+        // removed with the pair.
+        $own = [...array_values($this->paths($name)), $this->bundlePath($name)];
         $files = array_values(array_unique(array_filter($paths, fn (?string $path): bool => filled($path))));
 
         foreach ($files as $path) {

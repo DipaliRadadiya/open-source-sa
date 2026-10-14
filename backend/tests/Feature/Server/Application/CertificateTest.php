@@ -8,12 +8,14 @@ use App\Http\Resources\CertificateResource;
 use App\Jobs\IssueCertificate;
 use App\Models\Application;
 use App\Models\Certificate;
+use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
+use App\Services\Server\Sync\Discoverers\CertificateDiscoverer;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -1315,8 +1317,10 @@ describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function 
             ->assertUnprocessable()
             ->assertJsonPath('errors.certificate.0', __('certificate.file_taken', ['path' => '/etc/ssl/certs/ca-certificates.crt']));
 
+        // Read, at most — `test`, and the v7-pair check's `stat`/`cat`/`openssl`
+        // (2026-10-13), which then rejects it. Never written, moved or removed.
         Process::assertNotRan(fn ($process) => in_array('/etc/ssl/certs/ca-certificates.crt', (array) $process->command, true)
-            && ($process->command[0] ?? null) !== 'test');
+            && ! in_array($process->command[0] ?? null, ['test', 'stat', 'cat', 'openssl'], true));
     });
 
     it('replaces its own uploaded certificate in place', function () {
@@ -1432,4 +1436,235 @@ describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function 
 
         Process::assertNotRan(fn ($process) => ($process->command[0] ?? null) === 'rm');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| A certificate v7 left (2026-10-13, Dipali: "proper fix based v7")
+|--------------------------------------------------------------------------
+|
+| v7's agent (ssl.go, customSSLCertificate) wrote an uploaded pair to
+| /etc/ssl/certs/{app}.crt and /etc/ssl/private/{app}.key — the panel's own
+| paths since 37ae4522 — and, on Apache and OpenLiteSpeed, the chain to
+| /etc/ssl/certs/{app}_ca_bundle.crt. On a server moved from v7 those are
+| there with no row behind them.
+*/
+describe('a certificate v7 left', function () {
+    /**
+     * @param  array<string, mixed>  $options  files, links, key_matches, names
+     */
+    function fakeV7Pair(array $options = []): ArrayObject
+    {
+        $runs = new ArrayObject;
+        $files = $options['files'] ?? ['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key'];
+        $links = $options['links'] ?? [];
+        [$pem] = generateKeyPair($options['name'] ?? 'shop.example.com');
+
+        Process::fake(function ($process) use ($runs, $files, $links, $pem, $options) {
+            $command = (array) $process->command;
+            $runs[] = $command;
+            $last = (string) end($command);
+
+            return match (true) {
+                ($command[0] ?? null) === 'stat' => in_array($last, $links, true)
+                    ? Process::result(output: "symbolic link\n")
+                    : (in_array($last, $files, true) ? Process::result(output: "regular file\n") : Process::result(exitCode: 1)),
+                ($command[0] ?? null) === 'cat' && $last === '/etc/ssl/certs/shop.crt' => Process::result(output: $pem),
+                ($command[0] ?? null) === 'openssl' && in_array('-pubkey', $command, true) => Process::result(output: "-----BEGIN PUBLIC KEY-----\nAAA\n"),
+                ($command[0] ?? null) === 'openssl' && in_array('-pubout', $command, true) => Process::result(output: ($options['key_matches'] ?? true) ? "-----BEGIN PUBLIC KEY-----\nAAA\n" : "-----BEGIN PUBLIC KEY-----\nBBB\n"),
+                in_array('-enddate', $command, true) => Process::result(output: 'notAfter=Jan  1 00:00:00 2030 GMT'),
+                certPathProbe($process) => Process::result(exitCode: in_array($command[2], [...$files, ...$links], true) ? 0 : 1),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        return $runs;
+    }
+
+    it('recognises v7\'s pair for this site, with its separate chain', function () {
+        fakeV7Pair(['files' => ['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key', '/etc/ssl/certs/shop_ca_bundle.crt']]);
+
+        expect(app(CertificateFiles::class)->v7Pair('shop', ['shop.example.com']))->toMatchArray([
+            'certificate' => '/etc/ssl/certs/shop.crt',
+            'private_key' => '/etc/ssl/private/shop.key',
+            'chain' => '/etc/ssl/certs/shop_ca_bundle.crt',
+            'domains' => ['shop.example.com'],
+        ]);
+    });
+
+    it('does not take a pair that is not provably this site\'s', function (array $options) {
+        fakeV7Pair($options);
+
+        expect(app(CertificateFiles::class)->v7Pair('shop', ['shop.example.com']))->toBeNull();
+    })->with([
+        'key from another certificate' => [['key_matches' => false]],
+        'certificate for another name' => [['name' => 'other.example.com']],
+        'a link, not a file' => [['files' => ['/etc/ssl/private/shop.key'], 'links' => ['/etc/ssl/certs/shop.crt']]],
+        'no key' => [['files' => ['/etc/ssl/certs/shop.crt']]],
+    ]);
+
+    it('never reads the private key itself, only its public half', function () {
+        $runs = fakeV7Pair();
+
+        app(CertificateFiles::class)->v7Pair('shop', ['shop.example.com']);
+
+        expect(collect($runs)->filter(fn ($c) => ($c[0] ?? null) === 'cat' && in_array('/etc/ssl/private/shop.key', $c, true)))->toBeEmpty();
+    });
+
+    it('lets the owner upload over it instead of refusing the file as taken', function () {
+        $runs = fakeV7Pair(['files' => ['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key', '/etc/ssl/certs/shop_ca_bundle.crt']]);
+
+        uploadShopCertificate($this)->assertCreated();
+
+        expect($this->application->fresh()->certificate->certificate_path)->toBe('/etc/ssl/certs/shop.crt')
+            // The chain is bundled into the new .crt: v7's chain file goes.
+            ->and(collect($runs)->contains(fn ($c) => $c === ['rm', '-f', '--', '/etc/ssl/certs/shop_ca_bundle.crt']))->toBeTrue();
+    });
+
+    it('still refuses the same files when they are not v7\'s pair for this site', function () {
+        fakeV7Pair(['key_matches' => false]);
+
+        uploadShopCertificate($this)
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.certificate.0', __('certificate.file_taken', ['path' => '/etc/ssl/certs/shop.crt']));
+    });
+
+    it('lets a self-signed certificate replace it too', function () {
+        Queue::fake();
+        fakeV7Pair();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'self_signed'])
+            ->assertStatus(202);
+
+        Queue::assertPushed(IssueCertificate::class);
+    });
+
+    it('is adopted by Server Sync as an uploaded certificate', function () {
+        fakeV7Pair(['files' => ['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key', '/etc/ssl/certs/shop_ca_bundle.crt']]);
+        $discoverer = app(CertificateDiscoverer::class);
+
+        $items = $discoverer->discover(new SyncRun);
+
+        expect($items)->toHaveCount(1);
+        $certificate = $discoverer->adopt($items[0]);
+        expect($certificate->type)->toBe(CertificateType::Custom)
+            ->and($certificate->status)->toBe(CertificateStatus::Active)
+            ->and($certificate->application_id)->toBe($this->application->id)
+            ->and($certificate->chain_path)->toBe('/etc/ssl/certs/shop_ca_bundle.crt')
+            ->and($certificate->auto_renew)->toBeFalse()
+            ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
+    });
+
+    it('is not adopted for a site that already has a certificate', function () {
+        fakeV7Pair();
+        activeCertificate($this->application);
+
+        expect(app(CertificateDiscoverer::class)->discover(new SyncRun))->toBe([]);
+    });
+
+    it('serves v7\'s separate chain on Apache and OpenLiteSpeed', function (string $driver, string $directive) {
+        config(['server.web_server' => $driver]);
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::Custom,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'certificate_path' => '/etc/ssl/certs/shop.crt',
+            'private_key_path' => '/etc/ssl/private/shop.key',
+            'chain_path' => '/etc/ssl/certs/shop_ca_bundle.crt',
+        ]);
+
+        expect(renderedCertVhost($this->application, $driver))->toMatch('~^\s*'.$directive.'\s+/etc/ssl/certs/shop_ca_bundle\.crt$~m');
+    })->with([
+        'Apache' => ['apache', 'SSLCertificateChainFile'],
+        'OpenLiteSpeed' => ['openlitespeed', 'CACertFile'],
+    ]);
+
+    it('names no chain file for an upload made here or a Let\'s Encrypt certificate', function (string $driver) {
+        config(['server.web_server' => $driver]);
+        $certificate = activeCertificate($this->application);
+        $certificate->update(['chain_path' => '/etc/letsencrypt/live/shop/chain.pem']);
+
+        expect(renderedCertVhost($this->application, $driver))->not->toContain('SSLCertificateChainFile')->not->toContain('CACertFile');
+
+        $certificate->update(['type' => CertificateType::Custom, 'chain_path' => null]);
+
+        expect(renderedCertVhost($this->application, $driver))->not->toContain('SSLCertificateChainFile')->not->toContain('CACertFile');
+    })->with(['apache', 'openlitespeed']);
+
+    it('removes v7\'s chain file with the certificate, as v7\'s uninstall did', function () {
+        $runs = fakeV7Pair();
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::Custom,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'certificate_path' => '/etc/ssl/certs/shop.crt',
+            'private_key_path' => '/etc/ssl/private/shop.key',
+            'chain_path' => '/etc/ssl/certs/shop_ca_bundle.crt',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->deleteJson("/api/applications/{$this->application->id}/certificate")
+            ->assertSuccessful();
+
+        expect(collect($runs)->contains(fn ($c) => ($c[0] ?? null) === 'rm' && in_array('/etc/ssl/certs/shop_ca_bundle.crt', $c, true)
+            && in_array('/etc/ssl/certs/shop.crt', $c, true)))->toBeTrue();
+    });
+
+    it('accepts only this site\'s own chain file for removal', function () {
+        Process::fake();
+        $files = app(CertificateFiles::class);
+
+        expect($files->managedFiles(['/etc/ssl/certs/shop_ca_bundle.crt'], 'shop'))->toBe(['/etc/ssl/certs/shop_ca_bundle.crt']);
+        expect(fn () => $files->managedFiles(['/etc/ssl/certs/blog_ca_bundle.crt'], 'shop'))->toThrow(HttpException::class);
+    });
+});
+
+it('adopts a Let\'s Encrypt lineage named after the site, as v7 and the panel name it', function () {
+    [$pem] = generateKeyPair('shop.example.com');
+    Process::fake(function ($process) use ($pem) {
+        $command = (array) $process->command;
+
+        return match (true) {
+            ($command[0] ?? null) === 'find' => Process::result(output: "/etc/letsencrypt/live/shop\n/etc/letsencrypt/live/README\n"),
+            ($command[0] ?? null) === 'cat' && end($command) === '/etc/letsencrypt/live/shop/fullchain.pem' => Process::result(output: $pem),
+            in_array('-enddate', $command, true) => Process::result(output: 'notAfter=Jan  1 00:00:00 2030 GMT'),
+            default => Process::result(exitCode: 1),
+        };
+    });
+
+    $items = app(CertificateDiscoverer::class)->discover(new SyncRun);
+
+    expect($items)->toHaveCount(1)
+        ->and($items[0]['attributes']['application_id'])->toBe($this->application->id)
+        ->and($items[0]['attributes']['domains'])->toBe(['shop.example.com'])
+        ->and($items[0]['attributes']['certificate_path'])->toBe('/etc/letsencrypt/live/shop/fullchain.pem');
+});
+
+it('does not adopt a lineage named after the site when it covers none of its names', function () {
+    [$pem] = generateKeyPair('elsewhere.example.net');
+    Process::fake(fn ($process) => match (true) {
+        ($process->command[0] ?? null) === 'find' => Process::result(output: "/etc/letsencrypt/live/shop\n"),
+        ($process->command[0] ?? null) === 'cat' => Process::result(output: $pem),
+        default => Process::result(exitCode: 1),
+    });
+
+    expect(app(CertificateDiscoverer::class)->discover(new SyncRun))->toBe([]);
+});
+
+it('removes v7\'s chain file once a self-signed certificate replaced v7\'s', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::SelfSigned,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+    $runs = fakeV7Pair(['files' => ['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key', '/etc/ssl/certs/shop_ca_bundle.crt']]);
+
+    runIssueJob(new IssueCertificate($certificate->id));
+
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Active)
+        ->and(collect($runs)->contains(fn ($c) => $c === ['rm', '-f', '--', '/etc/ssl/certs/shop_ca_bundle.crt']))->toBeTrue();
 });

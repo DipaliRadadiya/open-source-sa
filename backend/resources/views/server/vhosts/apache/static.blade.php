@@ -42,6 +42,9 @@
     SSLEngine on
     SSLCertificateFile    {{ $certificate->certificate_path }}
     SSLCertificateKeyFile {{ $certificate->private_key_path }}
+@if ($certificate->servesSeparateChain())
+    SSLCertificateChainFile {{ $certificate->chain_path }}
+@endif
 
     {{-- TLS 1.2 as the floor. 1.0 and 1.1 are deprecated and fail PCI checks;
          allowing them buys compatibility only with browsers that stopped
@@ -88,6 +91,9 @@
     SSLEngine on
     SSLCertificateFile    {{ $certificate->certificate_path }}
     SSLCertificateKeyFile {{ $certificate->private_key_path }}
+@if ($certificate->servesSeparateChain())
+    SSLCertificateChainFile {{ $certificate->chain_path }}
+@endif
     SSLProtocol -all +TLSv1.2 +TLSv1.3
 
     Redirect {{ $redirect->redirect_status }} / {{ $redirect->redirectTarget() ?: $canonicalUrl }}/

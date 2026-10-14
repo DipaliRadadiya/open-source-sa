@@ -162,6 +162,17 @@ interface PhpStack
      */
     public function residualDir(string $version): ?string;
 
+    /**
+     * A directory belonging to this version alone, whose folders an uninstall
+     * may sweep once they are empty — never a file, never a folder with
+     * anything in it. Null when the stack has none.
+     *
+     * For what the purge leaves behind when the panel's own files (ionCube)
+     * sat in the version's tree: dpkg skips a folder that still held them,
+     * and deleting them afterwards leaves the folder.
+     */
+    public function emptyFoldersDir(string $version): ?string;
+
     /** The package that provides an extension: php8.4-mysql | lsphp84-mysql. */
     public function extensionPackage(string $version, string $extension): string;
 

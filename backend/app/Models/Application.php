@@ -575,6 +575,17 @@ class Application extends Model
     }
 
     /**
+     * Every name this site answers to, primary included — to recognise a
+     * certificate v7 left for it (CertificateFiles::v7Pair()).
+     *
+     * @return array<int, string>
+     */
+    public function domainNames(): array
+    {
+        return $this->domains->pluck('domain')->push($this->domain)->filter()->unique()->values()->all();
+    }
+
+    /**
      * The names that can go on a certificate, primary first.
      *
      * A subset of `serverNames()`: redirects are included, because a redirect

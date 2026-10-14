@@ -56,7 +56,7 @@ class UploadCertificate
         $taken = $this->files->conflict($application->slug, [
             $previousCertificate['certificate_path'] ?? null,
             $previousCertificate['private_key_path'] ?? null,
-        ]);
+        ], $application->domainNames());
 
         if ($taken !== null) {
             throw ValidationException::withMessages([
@@ -170,6 +170,15 @@ class UploadCertificate
      */
     private function removeReplaced(?array $previous, array $paths, Application $application): void
     {
+        // The chain is bundled into the new `.crt`, so v7's separate chain
+        // file for this site — whether or not a row ever pointed at it — now
+        // describes a certificate that is gone. Removed as v7's uninstall did.
+        try {
+            $this->files->removeV7Bundle($application->slug, $application->id);
+        } catch (Throwable) {
+            // Never fail a live upload over the old certificate.
+        }
+
         if ($previous === null) {
             return;
         }

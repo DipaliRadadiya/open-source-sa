@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\PhpStack;
 use App\Enums\InstallStatus;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Jobs\InstallPhpVersion;
@@ -10,6 +11,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\IonCubeLoader;
+use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -831,3 +833,42 @@ it('still answers 404 for a version that is neither installed nor failed', funct
 
     phpCall('DELETE', '/api/php/versions/8.2')->assertNotFound();
 });
+
+/*
+| OpenLiteSpeed: dpkg skipped the folders the panel's ionCube files were in,
+| and deleting those files afterwards left `lsphpNN/` as a skeleton of empty
+| folders (found on the OLS test server, 2026-10-13). Only empty folders are
+| swept, only on that stack, only when the panel's ionCube was there.
+*/
+it('sweeps the empty folders of an OpenLiteSpeed version once its ionCube files are gone', function () {
+    config(['server.php_stacks.lsphp.dir' => '/usr/local/lsws']);
+    app()->instance(PhpStack::class, app(LsphpPhpStack::class));
+    $ionCube = Mockery::mock(IonCubeLoader::class);
+    $ionCube->shouldReceive('panelFiles')->with('8.5')->andReturn(['/usr/local/lsws/lsphp85/etc/php/8.5/mods-available/01-ioncube.ini']);
+    app()->instance(IonCubeLoader::class, $ionCube);
+    $runs = fakePhp(default: '8.4');
+
+    app(PhpRuntime::class)->uninstall('8.5');
+
+    $commands = collect($runs)->pluck('command')->values();
+    $sweep = $commands->search(['find', '/usr/local/lsws/lsphp85', '-depth', '-type', 'd', '-empty', '-delete']);
+    expect($sweep)->not->toBeFalse()
+        ->and($sweep)->toBeGreaterThan($commands->search(['rm', '-f', '/usr/local/lsws/lsphp85/etc/php/8.5/mods-available/01-ioncube.ini']));
+});
+
+it('sweeps nothing when the panel had no ionCube there, or on PHP-FPM', function (bool $lsphp, array $files) {
+    if ($lsphp) {
+        app()->instance(PhpStack::class, app(LsphpPhpStack::class));
+    }
+    $ionCube = Mockery::mock(IonCubeLoader::class);
+    $ionCube->shouldReceive('panelFiles')->andReturn($files);
+    app()->instance(IonCubeLoader::class, $ionCube);
+    $runs = fakePhp(default: '8.4');
+
+    app(PhpRuntime::class)->uninstall('8.3');
+
+    expect(collect($runs)->pluck('command')->contains(fn ($c) => ($c[0] ?? null) === 'find' && in_array('-empty', $c, true)))->toBeFalse();
+})->with([
+    'OLS without ionCube' => [true, []],
+    'PHP-FPM with ionCube' => [false, ['/ext/ioncube_loader_lin_8.3.so']],
+]);

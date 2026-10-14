@@ -15,6 +15,9 @@ vhssl {
   keyFile                 {{ $certificate->private_key_path }}
   certFile                {{ $certificate->certificate_path }}
   certChain               1
+@if ($certificate->servesSeparateChain())
+  CACertFile              {{ $certificate->chain_path }}
+@endif
   {{-- TLS 1.2 as the floor. OLS spells the version set as a bitmask-style
        list; 1.0 and 1.1 are deprecated and fail PCI checks, and allowing them
        buys compatibility only with browsers that stopped receiving security

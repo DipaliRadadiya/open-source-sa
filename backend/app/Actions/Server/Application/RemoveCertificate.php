@@ -44,7 +44,12 @@ class RemoveCertificate
         // HTTPS was already off. Checked here, before anything changes.
         $files = $type === CertificateType::LetsEncrypt
             ? []
-            : $this->files->managedFiles([$certificate->certificate_path, $certificate->private_key_path], $application->slug);
+            : $this->files->managedFiles([
+                $certificate->certificate_path,
+                $certificate->private_key_path,
+                // v7's separate chain file, which its own uninstall removed too.
+                $certificate->servesSeparateChain() ? $certificate->chain_path : null,
+            ], $application->slug);
 
         try {
             // Change the application's own canonical URL first. `syncUrl()` is

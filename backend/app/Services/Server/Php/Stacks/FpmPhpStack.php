@@ -99,6 +99,16 @@ class FpmPhpStack implements PhpStack
         return $this->root()."/{$version}";
     }
 
+    /**
+     * None: the loader sits in `/usr/lib/php/{abi}`, which versions sharing
+     * an ABI share, and residualDir() already clears the version's own
+     * config tree.
+     */
+    public function emptyFoldersDir(string $version): ?string
+    {
+        return null;
+    }
+
     public function binaryPath(string $version): string
     {
         $pattern = (string) config('server.php_binary_pattern', '/usr/bin/php{version}');

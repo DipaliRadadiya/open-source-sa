@@ -44,6 +44,9 @@
     SSLEngine on
     SSLCertificateFile    {{ $certificate->certificate_path }}
     SSLCertificateKeyFile {{ $certificate->private_key_path }}
+@if ($certificate->servesSeparateChain())
+    SSLCertificateChainFile {{ $certificate->chain_path }}
+@endif
 
     SSLProtocol -all +TLSv1.2 +TLSv1.3
     SSLHonorCipherOrder off
@@ -89,6 +92,9 @@
     SSLEngine on
     SSLCertificateFile    {{ $certificate->certificate_path }}
     SSLCertificateKeyFile {{ $certificate->private_key_path }}
+@if ($certificate->servesSeparateChain())
+    SSLCertificateChainFile {{ $certificate->chain_path }}
+@endif
     SSLProtocol -all +TLSv1.2 +TLSv1.3
 
     Redirect {{ $redirect->redirect_status }} / {{ $redirect->redirectTarget() ?: $canonicalUrl }}/

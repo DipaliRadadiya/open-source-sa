@@ -275,6 +275,15 @@ class LsphpPhpStack implements PhpStack
         return null;
     }
 
+    /**
+     * `lsphpNN/`, LiteSpeed's tree for one version. Only its empty folders
+     * are ever swept — see residualDir() for why nothing more.
+     */
+    public function emptyFoldersDir(string $version): ?string
+    {
+        return $this->root().'/lsphp'.$this->compact($version);
+    }
+
     public function extensionPackage(string $version, string $extension): string
     {
         return $this->packagePrefix($version).$extension;

@@ -160,6 +160,16 @@ class IssueCertificate implements ShouldQueue
         // name writes to the same paths, so those are not touched.
         $staleFiles = array_values(array_diff($this->previousFiles, [$paths['certificate'], $paths['private_key']]));
 
+        // A self-signed pair written over a certificate v7 left here: v7's
+        // chain file beside it belonged to the certificate that was replaced.
+        if ($certificate->type === CertificateType::SelfSigned) {
+            try {
+                $files->removeV7Bundle((string) $certificate->application->slug, $certificate->application_id);
+            } catch (Throwable) {
+                // Same as below: never fail a certificate that is serving.
+            }
+        }
+
         if ($staleFiles !== []) {
             try {
                 $files->remove($staleFiles, (string) $certificate->application->slug, $certificate->application_id);
@@ -219,7 +229,7 @@ class IssueCertificate implements ShouldQueue
 
         // Asked again here, not only when it was requested: the queue may have
         // held the job while something else took the name in /etc/ssl.
-        if ($files->conflict($name, $this->previousFiles) !== null) {
+        if ($files->conflict($name, $this->previousFiles, $certificate->application->domainNames()) !== null) {
             $this->fail($certificate, 'file_taken');
 
             return null;

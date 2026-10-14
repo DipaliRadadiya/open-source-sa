@@ -649,6 +649,19 @@ class PhpRuntime implements Runtime
         foreach ($ionCube as $path) {
             $this->files->delete($path, ['feature' => 'runtime', 'op' => 'php_uninstall_ioncube', 'version' => $version]);
         }
+
+        // On OpenLiteSpeed dpkg kept the folders those two files were in, so
+        // the version's tree outlived it as a skeleton of empty folders.
+        // Empty folders only: `find -empty` never removes a file, nor a
+        // folder that still holds one.
+        $tree = $ionCube !== [] ? $this->stack->emptyFoldersDir($version) : null;
+
+        if ($tree !== null) {
+            $this->serverOps->run(
+                ['find', $tree, '-depth', '-type', 'd', '-empty', '-delete'],
+                ['feature' => 'runtime', 'op' => 'php_uninstall_empty_folders', 'version' => $version],
+            );
+        }
     }
 
     private function must(ServerOpsResult $result): void
