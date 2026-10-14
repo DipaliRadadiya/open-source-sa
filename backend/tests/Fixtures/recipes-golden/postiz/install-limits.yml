@@ -1,0 +1,138 @@
+name: sv-app-4242
+
+services:
+  postiz:
+    image: ghcr.io/gitroomhq/postiz-app:v2.25.1
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:5000"
+
+    environment:
+      FRONTEND_URL: "https://postiz.golden.test"
+      MAIN_URL: "https://postiz.golden.test"
+      NEXT_PUBLIC_BACKEND_URL: "https://postiz.golden.test/api"
+      JWT_SECRET: "b7d94067c9fabc60f1218029ecfa29d2"
+      DATABASE_URL: "postgresql://postiz:990765bf7e697051cc6f18fdd6fc4658@db:5432/postiz"
+      REDIS_URL: redis://redis:6379
+      BACKEND_INTERNAL_URL: http://localhost:3000
+      TEMPORAL_ADDRESS: temporal:7233
+      IS_GENERAL: "true"
+      DISABLE_REGISTRATION: "true"
+      RUN_CRON: "true"
+      STORAGE_PROVIDER: local
+      UPLOAD_DIRECTORY: /uploads
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: /uploads
+      API_LIMIT: "30"
+
+    volumes:
+      - sv-app-4242_config:/config
+      - sv-app-4242_uploads:/uploads
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "const r=require('http').get('http://127.0.0.1:5000/',res=>process.exit(res.statusCode<500?0:1));r.on('error',()=>process.exit(1));r.setTimeout(4000,()=>{r.destroy();process.exit(1)})"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: postiz
+      POSTGRES_USER: postiz
+      POSTGRES_PASSWORD: "990765bf7e697051cc6f18fdd6fc4658"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postiz", "-d", "postiz"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:8.8.3-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    volumes:
+      - sv-app-4242_redis:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: postiz
+      POSTGRES_PWD: "990765bf7e697051cc6f18fdd6fc4658"
+      POSTGRES_SEEDS: db
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+      SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES: "true"
+
+    volumes:
+      - /home/owner/site/public_html/etc/temporal/config/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "temporal:7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+volumes:
+  sv-app-4242_config:
+    external: true
+  sv-app-4242_uploads:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_redis:
+    external: true
