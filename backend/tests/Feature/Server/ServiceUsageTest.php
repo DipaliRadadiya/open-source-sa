@@ -17,11 +17,45 @@ beforeEach(function () {
     File::makeDirectory($this->procDir, 0755, true);
     File::put("{$this->procDir}/meminfo", "MemTotal:        8388608 kB\nMemFree:  1000 kB\n");
 
-    config(['server.proc_dir' => $this->procDir]);
+    // A fake cgroup mount, empty unless a test lays a unit's counters out.
+    $this->cgroupDir = sys_get_temp_dir().'/sv-oss-cgroup-'.getmypid();
+    File::deleteDirectory($this->cgroupDir);
+    File::makeDirectory($this->cgroupDir, 0755, true);
+
+    config(['server.proc_dir' => $this->procDir, 'server.cgroup_dir' => $this->cgroupDir]);
     Cache::flush();
 });
 
-afterEach(fn () => File::deleteDirectory($this->procDir));
+afterEach(function () {
+    File::deleteDirectory($this->procDir);
+    File::deleteDirectory($this->cgroupDir);
+});
+
+/**
+ * Lay out a unit's kernel counters the way cgroup v2 does.
+ */
+function cgroupCounters(string $controlGroup, array $files): void
+{
+    $dir = test()->cgroupDir.$controlGroup;
+    File::makeDirectory($dir, 0755, true, true);
+
+    foreach ($files as $name => $content) {
+        File::put("{$dir}/{$name}", $content);
+    }
+}
+
+/**
+ * What OpenLiteSpeed's own lshttpd.service makes systemd say:
+ * MemoryAccounting=false and TasksAccounting=false, CPU still counted.
+ */
+function olsState(array $overrides = []): string
+{
+    return unitState(array_merge([
+        'MemoryCurrent' => '[not set]',
+        'TasksCurrent' => '[not set]',
+        'ControlGroup' => '/system.slice/lshttpd.service',
+    ], $overrides));
+}
 
 /**
  * systemctl show output for a single unit.
@@ -145,5 +179,88 @@ it('reads state and usage in a single systemctl call per service', function () {
         // Restart is decided from it (ServiceManager::allowedActions), and
         // asking systemd a second time for one boolean is the cost this test
         // exists to prevent.
-        ->and($commands[0])->toContain('--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent');
+        ->and($commands[0])->toContain('--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent,ControlGroup');
+});
+
+it('reads memory and tasks from the kernel counters when systemd has accounting off, as OpenLiteSpeed ships', function () {
+    servicesFor('lshttpd');
+    cgroupCounters('/system.slice/lshttpd.service', ['memory.current' => "534179840\n", 'pids.current' => "18\n"]);
+    Process::fake(['*' => Process::result(output: olsState())]);
+
+    $usage = fetchServices()['usage'];
+
+    expect($usage['memory_bytes'])->toBe(534179840)
+        ->and($usage['memory_human'])->toBe('509.4 MB')
+        ->and($usage['memory_percent'])->toBe(6.2)   // of 8 GB
+        ->and($usage['tasks'])->toBe(18);
+});
+
+it('prefers the figure systemd reports over the counter file', function () {
+    servicesFor();
+    // Disagreeing on purpose: if the file were read, the test would see it.
+    cgroupCounters('/system.slice/nginx.service', ['memory.current' => '1', 'pids.current' => '1']);
+    Process::fake(['*' => Process::result(output: unitState(['ControlGroup' => '/system.slice/nginx.service']))]);
+
+    $usage = fetchServices()['usage'];
+
+    expect($usage['memory_bytes'])->toBe(419430400)
+        ->and($usage['tasks'])->toBe(7);
+});
+
+it('fills only the figure systemd left unset', function () {
+    servicesFor('lshttpd');
+    cgroupCounters('/system.slice/lshttpd.service', ['memory.current' => '1048576', 'pids.current' => '99']);
+    Process::fake(['*' => Process::result(output: olsState(['TasksCurrent' => '4']))]);
+
+    $usage = fetchServices()['usage'];
+
+    expect($usage['memory_bytes'])->toBe(1048576)
+        ->and($usage['tasks'])->toBe(4);
+});
+
+it('still reports memory as missing when the counter cannot be read', function (string $controlGroup, array $files) {
+    servicesFor('lshttpd');
+    cgroupCounters('/system.slice/lshttpd.service', $files);
+    // A file outside the unit's directory that a bad path could reach.
+    File::put(test()->cgroupDir.'/memory.current', '123456');
+    Process::fake(['*' => Process::result(output: olsState(['ControlGroup' => $controlGroup]))]);
+
+    $usage = fetchServices()['usage'];
+
+    // CPU is still counted, so there is a usage block — with memory missing.
+    expect($usage)->not->toBeNull()
+        ->and($usage['memory_bytes'])->toBeNull()
+        ->and($usage['memory_human'])->toBeNull()
+        ->and($usage['tasks'])->toBeNull();
+})->with([
+    'no file' => ['/system.slice/lshttpd.service', []],
+    'junk in the file' => ['/system.slice/lshttpd.service', ['memory.current' => 'max', 'pids.current' => '-1']],
+    'empty file' => ['/system.slice/lshttpd.service', ['memory.current' => '', 'pids.current' => '']],
+    'no control group (stopped)' => ['', ['memory.current' => '5', 'pids.current' => '5']],
+    'the root cgroup' => ['/', ['memory.current' => '5', 'pids.current' => '5']],
+    'steps out of the unit' => ['/system.slice/..', ['memory.current' => '5', 'pids.current' => '5']],
+    'relative path' => ['system.slice/lshttpd.service', ['memory.current' => '5', 'pids.current' => '5']],
+]);
+
+it('gives a postgres-style summed service the fallback too', function () {
+    config(['server.services' => [['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'instances' => 'postgresql@*']]]);
+    config(['server.php_dir' => '/nonexistent-php-dir']);
+    cgroupCounters('/system.slice/system-postgresql.slice/postgresql@18-main.service', ['memory.current' => '2097152', 'pids.current' => '3']);
+
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        if (($command[1] ?? null) === 'list-units') {
+            return Process::result(output: "postgresql@18-main.service loaded active running PostgreSQL Cluster 18-main\n");
+        }
+
+        return in_array('postgresql@18-main', $command, true) || in_array('postgresql@18-main.service', $command, true)
+            ? Process::result(output: olsState(['ControlGroup' => '/system.slice/system-postgresql.slice/postgresql@18-main.service']))
+            : Process::result(output: unitState(['MemoryCurrent' => '[not set]', 'TasksCurrent' => '[not set]']));
+    });
+
+    $usage = fetchServices()['usage'];
+
+    expect($usage['memory_bytes'])->toBe(2097152)
+        ->and($usage['tasks'])->toBe(3);
 });

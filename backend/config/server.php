@@ -3125,6 +3125,13 @@ return [
     'proc_dir' => env('SERVER_PROC_DIR', '/proc'),
 
     /*
+    | The cgroup v2 mount. Read only when systemd reports a unit's memory or
+    | task count as `[not set]` (OpenLiteSpeed turns its accounting off) —
+    | see ServiceUsage::withCgroupFallback(). Overridable for test fixtures.
+    */
+    'cgroup_dir' => env('SERVER_CGROUP_DIR', '/sys/fs/cgroup'),
+
+    /*
     | The cloud metadata service, used only to learn this server's own public
     | address when the machine cannot see it on any of its interfaces.
     |

@@ -539,7 +539,7 @@ class ServiceManager
      *
      * @var string
      */
-    private const SHOW_PROPERTIES = '--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent';
+    private const SHOW_PROPERTIES = '--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent,ControlGroup';
 
     private function inspect(string $unit): array
     {
@@ -605,11 +605,14 @@ class ServiceManager
             'status' => $this->property($output, 'ActiveState') ?: 'inactive',
             'enabled' => $this->property($output, 'UnitFileState') === 'enabled',
             'can_reload' => $this->property($output, 'CanReload') === 'yes',
-            'properties' => [
+            // Filled here rather than in ServiceUsage::build() so a service
+            // summed from its instances (postgresql@*) gets the fallback too.
+            'properties' => $this->usage->withCgroupFallback([
                 'MemoryCurrent' => $this->property($output, 'MemoryCurrent'),
                 'CPUUsageNSec' => $this->property($output, 'CPUUsageNSec'),
                 'TasksCurrent' => $this->property($output, 'TasksCurrent'),
-            ],
+                'ControlGroup' => $this->property($output, 'ControlGroup'),
+            ]),
         ];
     }
 

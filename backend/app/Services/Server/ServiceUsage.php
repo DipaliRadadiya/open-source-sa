@@ -50,6 +50,66 @@ class ServiceUsage
     }
 
     /**
+     * Fill in the memory and task figures systemd declined to report, from
+     * the kernel counters it would have read them from.
+     *
+     * OpenLiteSpeed ships `lshttpd.service` with `MemoryAccounting=false` and
+     * `TasksAccounting=false` ("do not want to be limited in anyway"), so
+     * `systemctl show` answers `[not set]` and the Services screen showed "—"
+     * for OLS forever. The kernel still counts: systemd's MemoryCurrent *is*
+     * the unit cgroup's `memory.current` (measured identical, byte for byte,
+     * on MariaDB/Redis/fail2ban), and the file exists because other units
+     * enable the controller. Read-only — the vendor's unit is not ours to
+     * edit, and an OLS update could overwrite it.
+     *
+     * A figure systemd does report always wins. A counter that is missing,
+     * unreadable or not a plain number is still reported as missing, never
+     * as zero.
+     *
+     * @param  array<string, string|null>  $properties  raw `systemctl show` values, incl. ControlGroup
+     * @return array<string, string|null>
+     */
+    public function withCgroupFallback(array $properties): array
+    {
+        $files = ['MemoryCurrent' => 'memory.current', 'TasksCurrent' => 'pids.current'];
+
+        foreach ($files as $property => $file) {
+            if ($this->number($properties[$property] ?? null) !== null) {
+                continue;
+            }
+
+            $dir = $this->cgroupDir($properties['ControlGroup'] ?? null);
+
+            if ($dir === null || ! is_readable("{$dir}/{$file}")) {
+                continue;
+            }
+
+            // Not validated here: build() reads it through number(), which
+            // reports anything but a plain count as missing, as for systemd.
+            $properties[$property] = trim((string) file_get_contents("{$dir}/{$file}"));
+        }
+
+        return $properties;
+    }
+
+    /**
+     * The unit's directory under the cgroup mount, or null when systemd gave
+     * no usable path. `ControlGroup` is empty for a stopped unit; anything that
+     * could step outside the mount is refused rather than resolved.
+     */
+    private function cgroupDir(?string $controlGroup): ?string
+    {
+        $controlGroup = trim((string) $controlGroup);
+
+        if (preg_match('#^(/[A-Za-z0-9@:_.\\\\-]+)+$#', $controlGroup) !== 1
+            || preg_match('#(^|/)\.\.?(/|$)#', $controlGroup) === 1) {
+            return null;
+        }
+
+        return rtrim((string) config('server.cgroup_dir', '/sys/fs/cgroup'), '/').$controlGroup;
+    }
+
+    /**
      * CPU used since the previous read of this unit, as a percentage of one
      * core (so a service saturating two cores reads 200%).
      */
