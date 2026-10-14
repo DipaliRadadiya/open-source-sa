@@ -41,10 +41,10 @@ test("lists where only one can run at a time lock the other rows and say why", (
   const php = read("components/php/extensions-card.jsx");
   assert.match(php, /pending && pending\.name !== extension\.name\s*\? t\("extensions\.waitForOther", \{ name: pending\.name \}\)/);
   assert.match(php, /async function toggle\(extension\) \{\s*if \(pending\) return;/);
-  // One deploy at a time.
+  // Deploy history has no per-row action since 14 Oct: "Deploy again" ignored the row and
+  // deployed the branch tip, the same as Deploy now at the top (Krishna).
   const deploy = read("components/applications/deployment/deploy-history-card.jsx");
-  assert.match(deploy, /disabled=\{!canManage \|\| busyId !== null \|\| running\}/);
-  assert.match(deploy, /t\("busy"\)/);
+  assert.doesNotMatch(deploy, /redeploy/);
 });
 
 test("the helper keeps every key, and removes only its own", () => {

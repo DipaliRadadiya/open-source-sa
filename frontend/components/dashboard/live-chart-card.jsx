@@ -90,12 +90,31 @@ export function LiveChartCard({
             </p>
           </div>
         ) : (
-          // Same height as the plot so nothing jumps, and it shows the current reading.
-          <div className={cn("flex flex-col items-center justify-center gap-2 px-6 text-center", plotHeight)}>
+          // Same height as the plot so nothing jumps. A faint chart shape rather than a blank
+          // box, which read as broken for the first seconds (Krishna, 13 Oct).
+          <div className={cn("relative flex flex-col items-center justify-center gap-2 px-6 text-center", plotHeight)}>
+            <svg
+              aria-hidden
+              viewBox="0 0 400 120"
+              preserveAspectRatio="none"
+              className="absolute inset-x-2 inset-y-4 h-[calc(100%-2rem)] w-[calc(100%-1rem)] text-muted-foreground/15"
+            >
+              {[10, 45, 80, 115].map((y) => (
+                <line key={y} x1="0" x2="400" y1={y} y2={y} stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              ))}
+              <path
+                d="M0 92 C40 88 60 70 100 74 S160 96 200 82 S260 52 300 60 S360 84 400 70"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                vectorEffect="non-scaling-stroke"
+                className="animate-pulse text-muted-foreground/30 motion-reduce:animate-none"
+              />
+            </svg>
             {summary ? (
-              <p className="text-lg font-semibold tabular-nums">{summary}</p>
+              <p className="relative text-lg font-semibold tabular-nums">{summary}</p>
             ) : null}
-            <p className="text-sm text-muted-foreground">
+            <p className="relative rounded-md bg-card/80 px-2 text-sm text-muted-foreground">
               {emptyMessage ?? t("charts.waiting")}
             </p>
           </div>

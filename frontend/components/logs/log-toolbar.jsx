@@ -202,7 +202,9 @@ export function LogToolbar({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+        {/* `contents`: each control wraps on its own. As one group, a narrow card (System Logs,
+            beside its source list) wrapped Clear log onto a line of its own (Krishna, 13 Oct). */}
+        <div className="contents">
           {/* Severity filters the loaded buffer, so it works while tailing (grep cannot). */}
           <div role="group" aria-label={t("severityLabel")} className="flex items-center gap-1">
             {SEVERITY_FILTERS.map((key) => (

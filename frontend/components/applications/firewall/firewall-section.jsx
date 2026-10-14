@@ -129,8 +129,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="space-y-4">
-        <Note icon={ShieldCheck}>{t("explainer")}</Note>
-  
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
             {/* A real <label> so the whole row toggles, not just the switch. */}
@@ -176,8 +174,11 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   
             <Collapsible open={!enabled}>
               <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
+                {/* One note, not a page banner plus this one (Krishna, 13 Oct): what it does,
+                    then when to turn it on. Once on, the status line says what it does. */}
                 <Note icon={Lightbulb} title={t("whenToUseTitle")}>
-                  {t("whenToUseBody")}
+                  <p>{t("explainer")}</p>
+                  <p className="mt-1">{t("whenToUseBody")}</p>
                 </Note>
               </CollapsibleContent>
             </Collapsible>

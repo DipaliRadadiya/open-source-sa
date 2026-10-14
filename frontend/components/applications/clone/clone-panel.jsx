@@ -93,7 +93,9 @@ export function CloneApplicationPanel({
     // so an on-submit message would never appear.
     mode: "onTouched",
     reValidateMode: "onChange",
-    defaultValues: { name: "", domain: "" },
+    // Prefilled with the suggestion: as a grey placeholder it looked filled in while
+    // Create stayed disabled (Krishna, 13 Oct). It is still an ordinary, editable value.
+    defaultValues: { name: "", domain: canManage ? suggestion : "" },
   });
 
   const domain = useWatch({ control: form.control, name: "domain" });
@@ -165,7 +167,7 @@ export function CloneApplicationPanel({
     setClone(null);
     setFinished(null);
     forgetClone(application.id);
-    form.reset({ name: "", domain: "" });
+    form.reset({ name: "", domain: canManage ? suggestion : "" });
   }
 
   // Keep the failed domain so it can be retried without retyping.
@@ -278,7 +280,7 @@ export function CloneApplicationPanel({
                               autoComplete="off"
                               spellCheck={false}
                               placeholder={
-                                suggestion || t("form.domainPlaceholder")
+                                t("form.domainPlaceholder")
                               }
                               className="font-mono"
                               disabled={!canManage || starting}

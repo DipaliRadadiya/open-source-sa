@@ -32,7 +32,8 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
         <Icon className="size-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium break-words text-muted-foreground">{label}</p>
+        {/* hyphens-auto: a long German compound broke mid-word ("Handlungsbed / arf") in a 2×2 phone grid. */}
+        <p className="text-xs font-medium break-words hyphens-auto text-muted-foreground">{label}</p>
         <p className={cn("text-[15px] font-semibold tracking-tight text-pretty break-words", t.value)}>{value}</p>
         {detail ? <p className="line-clamp-2 text-xs text-muted-foreground">{detail}</p> : null}
       </div>
@@ -44,7 +45,7 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
         <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", t.tile)}>
           <Icon className="size-[18px]" aria-hidden />
         </span>
-        <span className="min-w-0 flex-1 text-xs font-medium break-words text-muted-foreground">{label}</span>
+        <span className="min-w-0 flex-1 text-xs font-medium break-words hyphens-auto text-muted-foreground">{label}</span>
         {end}
       </div>
       <div className="min-w-0">

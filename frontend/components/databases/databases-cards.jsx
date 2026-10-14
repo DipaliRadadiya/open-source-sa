@@ -81,7 +81,8 @@ export function DatabasesCards({
                   ) : null}
                   {!backupsUnknown && !backup ? (
                     <Badge variant="muted" className="font-normal">
-                      {t("columns.neverExported")}
+                      {/* Standing alone, "Never" read as "never backed up". */}
+                      {t("columns.neverExportedBadge")}
                     </Badge>
                   ) : null}
                 </div>

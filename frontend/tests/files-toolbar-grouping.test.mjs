@@ -69,8 +69,9 @@ test("every control in the strip still looks like a control", () => {
    * and red text, never the solid `destructive` variant. Solid red stays
    * reserved for the controls that actually delete.
    */
-  // 1200: the class list grew an in-card copy (7 Oct) so the red survives the toolbar card.
-  const trash = panel.slice(panel.indexOf("files?trash=1") - 1200, panel.indexOf("files?trash=1"));
+  // 1200: the class list grew an in-card copy (7 Oct) so the red survives the toolbar card;
+  // 2000: and its own in-card hover text and border (13 Oct), or hover turned it blue.
+  const trash = panel.slice(panel.indexOf("files?trash=1") - 2000, panel.indexOf("files?trash=1"));
   assert.match(trash, /bg-destructive\/5 text-destructive/);
   assert.doesNotMatch(trash, /variant="destructive"/);
 });
@@ -101,8 +102,9 @@ test("the group divider is gated on a measured container width", () => {
    */
   assert.match(panel, /hidden @\[73rem\]\/toolbar:block/);
   assert.doesNotMatch(panel, /@\[7[024]rem\]\/toolbar:block/);
-  // The second rule sits mid-row and is safe at any width.
-  assert.match(panel, /<Separator orientation="vertical" className="mx-0\.5 !h-5 !self-center" \/>/);
+  // The second rule is gated too: on a phone the add row wraps and it stood alone at the
+  // start of a line, before Fix permissions (14 Oct). 52rem fits French, the widest row (815px).
+  assert.match(panel, /<Separator orientation="vertical" className="mx-0\.5 !h-5 !self-center hidden @\[52rem\]\/toolbar:block" \/>/);
 });
 
 test("the rules are centred against the buttons, not floated to the top", () => {

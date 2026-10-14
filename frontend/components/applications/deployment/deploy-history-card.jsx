@@ -1,21 +1,18 @@
 import { useCallback, useEffect, useImperativeHandle, useState } from "react";
-import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, GitCommitHorizontal, Loader2, RotateCw, Rocket } from "lucide-react";
+import { CircleAlert, CircleCheck, GitCommitHorizontal, Loader2, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fetchDeployment, redeployDeployment } from "@/lib/api/deployment";
+import { fetchDeployment } from "@/lib/api/deployment";
 import { deploymentResponseSchema } from "@/lib/schemas/deploy-history";
 import { apiMessage } from "@/lib/api/error-message";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RefreshButton } from "@/components/data-table/refresh-button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Dialog,
   DialogContent,
@@ -46,14 +43,12 @@ const TONE = {
 };
 
 // Build output is only on the detail call, so a row opens it.
-export function DeployHistoryCard({ ref, applicationId, deployments, canManage }) {
+export function DeployHistoryCard({ ref, applicationId, deployments }) {
   const t = useTranslations("applications.deployment.history");
-  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
   // A log that failed to load is not a deploy that printed nothing.
   const [logFailed, setLogFailed] = useState(false);
-  const [busyId, setBusyId] = useState(null);
 
   // The API decides what counts as running; no local list of terminal statuses.
   const running = deployments.some((deployment) => deployment.in_flight);
@@ -102,19 +97,6 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
   // Lets the Deploy card's failure banner open a build log here without an effect.
   useImperativeHandle(ref, () => ({ show }), [show]);
 
-  async function redeploy(deployment) {
-    if (busyId !== null) return;
-    setBusyId(deployment.id);
-    try {
-      await redeployDeployment(applicationId, deployment.id);
-      await refreshAndWait();
-      toast.success(t("redeployStarted"));
-    } catch (error) {
-      toast.error(apiMessage(error, t("redeployFailed")));
-    } finally {
-      setBusyId(null);
-    }
-  }
 
   if (deployments.length === 0) {
     return <EmptyState icon={Rocket} title={t("empty.title")} description={t("empty.description")} />;
@@ -178,32 +160,6 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
                   </span>
                 </button>
 
-                {/* One deploy at a time: while any redeploy is starting or a deploy is running,
-                    every row is disabled with the reason, so a second click cannot race the first. */}
-                <ReasonTooltip
-                  reason={
-                    !canManage
-                      ? t("noPermission")
-                      : running || (busyId !== null && busyId !== deployment.id)
-                        ? t("busy")
-                        : null
-                  }
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!canManage || busyId !== null || running}
-                    onClick={() => redeploy(deployment)}
-                  >
-                    {busyId === deployment.id ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <RotateCw className="size-4" />
-                    )}
-                    {t("redeploy")}
-                  </Button>
-                </ReasonTooltip>
               </li>
             );
           })}

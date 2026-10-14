@@ -278,7 +278,6 @@ export function DeploymentPanel({
             <DeployHistoryCard
               applicationId={application.id}
               deployments={deployments}
-              canManage={canManage}
               ref={historyRef}
             />
           )}

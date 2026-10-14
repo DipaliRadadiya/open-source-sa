@@ -149,7 +149,9 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
                 // Neutral, not outline: inside a card outline turns blue and overrides the verb's colour.
                 variant="neutral"
                 size="sm"
-                className={cn(ACTION_META[primary].tone)}
+                // Restart is every running row's button, so it stays plain: ten amber buttons
+                // read as ten warnings (Krishna, 13 Oct). Start on a stopped unit keeps its green.
+                className={cn(primary === "restart" ? null : ACTION_META[primary].tone)}
                 disabled={!canManage || busy}
                 onClick={() => trigger(primary)}
               >

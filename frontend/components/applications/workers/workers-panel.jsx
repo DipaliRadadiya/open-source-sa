@@ -108,6 +108,8 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       .map((state) => ({ state, count: counts[state] }));
   }
 
+  const starters = presets.filter((p) => !(p.kind === "custom" && !p.command));
+
   const toolbar = (
     <div className="flex items-center justify-between gap-3">
       {summaryParts ? (
@@ -141,19 +143,26 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       <WorkerChecksAlert checks={checks} />
 
       {workers.length === 0 ? (
-        <ListCard toolbar={toolbar}>
+        // No toolbar while empty: it held only a refresh button over the empty state (Krishna, 14 Oct).
+        <ListCard>
           <EmptyState
             icon={Cog}
             title={t("empty.title")}
-            description={t("empty.description")}
+            description={t(
+              presets.some((p) => p.kind === "queue" || p.kind === "horizon")
+                ? "empty.description"
+                : "empty.descriptionGeneric",
+            )}
             action={
               <div className="flex flex-col items-center gap-4">
                 {addButton}
-                {canManage && presets.length > 0 ? (
+                {/* A blank custom template is the Add worker form again, so only templates
+                    that fill something in are offered (a Node app had just that one). */}
+                {canManage && starters.length > 0 ? (
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-xs text-muted-foreground">{t("empty.starters")}</span>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {presets.map((p) => (
+                      {starters.map((p) => (
                         <Button
                           key={p.key}
                           variant="outline"

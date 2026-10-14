@@ -59,3 +59,29 @@ export function CheckRow({ check, labels }) {
     </div>
   );
 }
+
+// Passed checks need no reading, only proof they ran: one card, two columns of compact
+// rows, instead of a full card each (15 cards made a 2,000 px page; Krishna, 13 Oct).
+export function PassedChecks({ checks, title }) {
+  return (
+    <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+      <h2 className="flex items-center gap-2 border-b px-4 py-3 text-sm font-medium">
+        <CircleCheck className="size-4 text-success" aria-hidden />
+        {title}
+      </h2>
+      <ul className="-mb-px grid sm:grid-cols-2">
+        {checks.map((check) => (
+          <li key={check.key} className="flex min-w-0 items-start gap-2.5 border-b px-4 py-2.5 sm:odd:border-e">
+            <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-sm font-medium leading-tight">{check.title}</p>
+              {check.detail ? (
+                <p className="mt-0.5 font-mono text-xs break-words text-muted-foreground">{check.detail}</p>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

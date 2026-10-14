@@ -149,10 +149,13 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
 
           {/* The running count answers "is anything stuck?" in the header; idle
               connections stay a count. */}
-          <span className="min-w-0 text-sm tabular-nums text-muted-foreground">
-            {t("runningCount", { count: running.length })}
-            {idle.length > 0 ? ` · ${t("idleCount", { count: idle.length })}` : ""}
-          </span>
+          {/* Not when it would only say "nothing running": the empty state below says it. */}
+          {running.length > 0 || idle.length > 0 ? (
+            <span className="min-w-0 text-sm tabular-nums text-muted-foreground">
+              {t("runningCount", { count: running.length })}
+              {idle.length > 0 ? ` · ${t("idleCount", { count: idle.length })}` : ""}
+            </span>
+          ) : null}
         </div>
 
         {filterable ? (
@@ -181,7 +184,8 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
           {active.length === 0 ? (
             // "Nothing running" and "nothing matched your filter" are different
             // states; only the latter can be cleared.
-            <div className="space-y-2 py-5 text-center">
+            // Centred in the card when it is stretched beside the chart, not stuck at the top.
+            <div className={cn("space-y-2 py-5 text-center", fill && "flex flex-1 flex-col justify-center")}>
               <EmptyState
                 compact
                 icon={filtered ? SearchX : Activity}

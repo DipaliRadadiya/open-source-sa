@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
+import { BanAge } from "@/components/fail2ban/banned-card";
 
 // Cards for narrow screens, where the table would push Unban off the edge.
 export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, renderExpiry }) {
@@ -17,7 +18,7 @@ export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, ren
             </Badge>
             {ban.banned_at ? (
               <p className="break-words text-xs text-muted-foreground">
-                {t("banned.sinceShort", { at: ban.banned_at })}
+                {t.rich("banned.sinceShort", { at: <BanAge ban={ban} /> })}
               </p>
             ) : null}
           </div>

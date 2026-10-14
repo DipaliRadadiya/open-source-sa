@@ -22,7 +22,8 @@ test("table or cards is decided by the space the content has, not the screen", (
 });
 
 test("the row's main action keeps its own colour everywhere (neutral, not the in-card tint)", () => {
-  assert.match(read("components/services/service-actions.jsx"), /variant="neutral"\s*\n\s*size="sm"\s*\n\s*className=\{cn\(ACTION_META\[primary\]\.tone\)\}/);
+  // Restart, the button on every running row, is plain since 13 Oct; Start keeps its green.
+  assert.match(read("components/services/service-actions.jsx"), /variant="neutral"\s*\n\s*size="sm"[\s\S]{0,240}className=\{cn\(primary === "restart" \? null : ACTION_META\[primary\]\.tone\)\}/);
 });
 
 test("config test is a read and is open to view-only, as the API allows", () => {

@@ -541,7 +541,13 @@
         "app_bot_blocker": "Impede que rastreadores de IA leiam a aplicação.",
         "app_fail2ban": "Bane endereços que continuam falhando ao logar aqui.",
         "app_staging": "Uma cópia da aplicação para testar alterações.",
-        "app_clone": "Fazer uma cópia desta aplicação em outro lugar."
+        "app_clone": "Fazer uma cópia desta aplicação em outro lugar.",
+        "app_dashboard": "Visão geral e estado desta aplicação.",
+        "docker": "Redes e volumes do Docker no servidor.",
+        "registry": "Registros de imagens privados de onde os contêineres baixam.",
+        "app_container": "Iniciar, parar e inspecionar os contêineres desta aplicação.",
+        "app_compose": "O arquivo Docker Compose desta aplicação.",
+        "app_magic_login": "Entrar no admin da aplicação sem a senha dela."
       },
       "unsavedTitle": "Descartar alterações não salvas?",
       "unsavedDescription": "Você fez alterações neste papel que ainda não foram salvas. Se sair agora, serão perdidas.",
@@ -2847,6 +2853,7 @@
       "noUsers": "Sem usuários",
       "lastExport": "Última exportação",
       "neverExported": "Nunca",
+      "neverExportedBadge": "Nunca exportado",
       "application": "Aplicação",
       "notLinked": "Não vinculado",
       "applicationUnknown": "Outra aplicação",
@@ -3361,7 +3368,7 @@
       "howItWorks": "Como funciona",
       "stepsTitle": "Para começar, siga estes três passos:",
       "step1": "Crie um token no {provider} com acesso de leitura aos seus repositórios.",
-      "step2": "Cole o token no formulário acima.",
+      "step2": "Clique em Conectar conta e cole o token lá.",
       "step3": "Escolha esta conta ao criar uma aplicação."
     },
     "health": {
@@ -4342,9 +4349,6 @@
         },
         "noMessage": "Sem mensagem de commit",
         "system": "Sistema",
-        "redeploy": "Fazer deploy novamente",
-        "redeployStarted": "Fazendo deploy do código mais recente desta branch.",
-        "redeployFailed": "Não foi possível iniciar esse deploy.",
         "output": "Log de build",
         "copy": "Copiar log",
         "loadingLog": "Carregando o log de build…",
@@ -4353,7 +4357,6 @@
         "noPermission": "Seu papel não inclui Deploy para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "title": "Histórico de deploy",
         "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build.",
-        "busy": "Já há uma implantação em andamento. Aguarde terminar.",
         "pushStarted": "Novo deploy iniciado por um push para {branch}.",
         "loadFailed": "Não foi possível carregar o histórico e as configurações de deploy."
       },
@@ -4754,6 +4757,7 @@
     "workers": {
       "pageTitle": "Workers",
       "pageSubtitle": "Mantenha processos de longa duração — queue workers, Horizon ou seu próprio comando — em execução para esta aplicação.",
+      "pageSubtitleGeneric": "Mantém em execução os comandos de longa duração desta aplicação. Eles são reiniciados se pararem.",
       "loadFailed": "Não foi possível carregar os workers.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Os workers estarão disponíveis quando estiver em execução.",
       "addWorker": "Adicionar worker",
@@ -4763,7 +4767,8 @@
       "empty": {
         "title": "Nenhum worker ainda",
         "description": "Adicione um queue worker, Horizon ou um comando personalizado para mantê-lo em execução em segundo plano.",
-        "starters": "Ou comece a partir de um modelo"
+        "starters": "Ou comece a partir de um modelo",
+        "descriptionGeneric": "Adicione um comando que deve continuar rodando em segundo plano. Ele é reiniciado se parar."
       },
       "columns": {
         "name": "Nome",

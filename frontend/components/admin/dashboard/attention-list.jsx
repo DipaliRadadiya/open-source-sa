@@ -24,8 +24,10 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
           <Icon className="size-4" aria-hidden />
         </span>
         <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm leading-snug">
-          {/* The names give way first, so the problem itself stays readable. */}
-          <span className={cn("min-w-0 font-medium break-words", tone === "fail" && "text-destructive")}>{title}</span>
+          {/* The names give way first, so the problem itself stays readable. From md the
+              title keeps one line and only the summary truncates: shrinking both broke
+              "4 recent command failures" onto two lines (Krishna, 13 Oct). */}
+          <span className={cn("min-w-0 font-medium break-words md:shrink-0 md:whitespace-nowrap", tone === "fail" && "text-destructive")}>{title}</span>
           {summary ? (
             <span className="hidden min-w-0 shrink-[6] truncate text-muted-foreground md:inline">· {summary}</span>
           ) : null}

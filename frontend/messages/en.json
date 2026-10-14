@@ -541,7 +541,13 @@
         "app_bot_blocker": "Stops AI crawlers reading the application.",
         "app_fail2ban": "Bans addresses that keep failing to log in here.",
         "app_staging": "A copy of the application to try changes on.",
-        "app_clone": "Make a copy of this application somewhere else."
+        "app_clone": "Make a copy of this application somewhere else.",
+        "app_dashboard": "This application's overview and status.",
+        "docker": "Docker networks and volumes on the server.",
+        "registry": "Private image registries containers pull from.",
+        "app_container": "Start, stop and inspect this application's containers.",
+        "app_compose": "This application's Docker Compose file.",
+        "app_magic_login": "Sign in to the application's admin without its password."
       },
       "unsavedTitle": "Discard unsaved changes?",
       "unsavedDescription": "You've made changes to this role that haven't been saved. If you leave now, they'll be lost.",
@@ -2847,6 +2853,7 @@
       "noUsers": "No users",
       "lastExport": "Last export",
       "neverExported": "Never",
+      "neverExportedBadge": "Never exported",
       "application": "Application",
       "notLinked": "Not linked",
       "applicationUnknown": "Another application",
@@ -3361,7 +3368,7 @@
       "howItWorks": "How this works",
       "stepsTitle": "To get started, follow these three steps:",
       "step1": "Create a token on {provider} with read access to your repositories.",
-      "step2": "Paste the token into the form above.",
+      "step2": "Click Connect account and paste the token there.",
       "step3": "Choose this account when you create an application."
     },
     "health": {
@@ -4342,9 +4349,6 @@
         },
         "noMessage": "No commit message",
         "system": "System",
-        "redeploy": "Deploy again",
-        "redeployStarted": "Deploying the latest code on this branch.",
-        "redeployFailed": "That deployment could not be started.",
         "output": "Build log",
         "copy": "Copy log",
         "loadingLog": "Loading the build log…",
@@ -4353,7 +4357,6 @@
         "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log.",
-        "busy": "A deployment is already running. Wait for it to finish.",
         "pushStarted": "New deploy started from a push to {branch}.",
         "loadFailed": "The deploy history and settings could not be loaded."
       },
@@ -4754,6 +4757,7 @@
     "workers": {
       "pageTitle": "Workers",
       "pageSubtitle": "Keep long-running processes — queue workers, Horizon, or your own command — running for this application.",
+      "pageSubtitleGeneric": "Keep long-running commands running for this application. They are restarted if they stop.",
       "loadFailed": "Workers could not be loaded.",
       "provisioning": "This application is still being set up. Workers will be available once it's running.",
       "addWorker": "Add worker",
@@ -4763,7 +4767,8 @@
       "empty": {
         "title": "No workers yet",
         "description": "Add a queue worker, Horizon, or a custom command to keep it running in the background.",
-        "starters": "Or start from a template"
+        "starters": "Or start from a template",
+        "descriptionGeneric": "Add a command that should keep running in the background. It is restarted if it stops."
       },
       "columns": {
         "name": "Name",

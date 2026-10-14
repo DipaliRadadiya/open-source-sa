@@ -82,10 +82,10 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   return (
     <div className="space-y-6">
       {/* Colour only when something is wrong: amber for stopped, red for failed.
-          1 / 2 / 4 across by the page's own width: auto-fit split them 3 + 1, and two
-          to a phone row squeezed "Last checked" beside the refresh button mid-word. */}
+          2 / 4 across by the page's own width (auto-fit split them 3 + 1). Two on a phone
+          too: one per row filled the first screen with four short facts (Krishna, 13 Oct). */}
       <div className="@container/tiles">
-      <div className="grid gap-3 sm:gap-4 @min-[30rem]/tiles:grid-cols-2 @min-[52rem]/tiles:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 @min-[52rem]/tiles:grid-cols-4">
         <Tile
           compact
           icon={CircleCheck}

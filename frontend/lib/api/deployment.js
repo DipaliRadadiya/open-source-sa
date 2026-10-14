@@ -32,11 +32,6 @@ export function fetchDeployment(id, deploymentId) {
   return api.get(`/applications/${id}/deployments/${deploymentId}`);
 }
 
-/** Re-run a deploy: same branch, current tip, same script. */
-export function redeployDeployment(id, deploymentId) {
-  return api.post(`/applications/${id}/deployments/${deploymentId}/redeploy`);
-}
-
 // Send the toggle as `webhook_enabled`: the response calls it `auto_deploy`, but the
 // request silently drops that name.
 export function updateDeploySettings(id, payload) {

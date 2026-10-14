@@ -107,12 +107,13 @@ export function RestoresList({ restores, applications = [], hasFilters = false, 
           />
         </ListCard>
       ) : (
-        // The table needs 1000px of content; narrower, the rows are cards and the list has no frame.
-        <ListCard from="c1000" toolbar={toolbar} footer={pager}>
-          <div className="@min-[1000px]:hidden">
+        // The table needs 900px of content (a 1280 screen with the sidebar, like the Overview
+        // tab); narrower, the rows are cards and the list has no frame.
+        <ListCard from="c900" toolbar={toolbar} footer={pager}>
+          <div className="@min-[900px]:hidden">
             <RestoreCards restores={restores} canRestore={canRestore} />
           </div>
-          <div className="hidden @min-[1000px]:block">
+          <div className="hidden @min-[900px]:block">
             <DataTable bare columns={columns} data={restores} emptyMessage={t("empty.title")} meta={{ canRestore }} />
           </div>
         </ListCard>

@@ -123,15 +123,23 @@ function DestinationCell({ row }) {
 }
 
 function WhenCell({ row }) {
+  const t = useTranslations("backups.history");
+  const format = useFormatter();
   const backup = row.original;
   const duration = apiDuration(backup.started_at, backup.finished_at);
 
   return (
     <div className="min-w-0">
       <p className="truncate text-sm tabular-nums">{backup.created_at_human ?? backup.created_at}</p>
-      {duration ? (
-        <p className="truncate text-xs tabular-nums text-muted-foreground">{duration}</p>
-      ) : null}
+      <p className="truncate text-xs tabular-nums text-muted-foreground">
+        {duration}
+        {/* Inside a `history` container narrower than 1000px the Size column folds in here,
+            so German and Russian fit a 1280 screen. Outside one it never shows. */}
+        <span className="hidden @max-[1000px]/history:inline">
+          {duration ? " · " : null}
+          {sizeText(backup, t, format)}
+        </span>
+      </p>
     </div>
   );
 }
@@ -149,6 +157,12 @@ function SizeCell({ row }) {
       {size ? formatBytes(size, format) : (progress ?? sizeNote(row.original, t))}
     </span>
   );
+}
+
+function sizeText(backup, t, format) {
+  return backup.size_bytes
+    ? formatBytes(backup.size_bytes, format)
+    : (uploadProgress(backup, t, format) ?? sizeNote(backup, t));
 }
 
 // Null if not reported yet; a bare byte count when the total is unknown.
@@ -363,7 +377,7 @@ export function BackupsHistoryTable({
     {
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      meta: { className: "w-[10%] text-right whitespace-nowrap" },
+      meta: { className: "w-[10%] text-right whitespace-nowrap @max-[1000px]/history:hidden" },
       cell: SizeCell,
     },
     {

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { CircleCheck, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDoctor } from "@/lib/admin/get-doctor";
-import { CheckRow } from "@/components/admin/doctor/check-row";
+import { CheckRow, PassedChecks } from "@/components/admin/doctor/check-row";
 import { RecheckButton } from "@/components/admin/doctor/recheck-button";
 import { CopyReportButton } from "@/components/admin/doctor/copy-report-button";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -106,17 +106,9 @@ export default async function AdminDoctorPage() {
             {attention.map((check) => (
               <CheckRow key={check.key} check={check} labels={statusLabels} />
             ))}
-            {passed.length && attention.length ? (
-              <div className="flex items-center gap-3 pt-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t("passedGroup", { count: passed.length })}
-                </span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
+            {passed.length ? (
+              <PassedChecks checks={passed} title={t("passedGroup", { count: passed.length })} />
             ) : null}
-            {passed.map((check) => (
-              <CheckRow key={check.key} check={check} labels={statusLabels} />
-            ))}
           </div>
         </>
       )}

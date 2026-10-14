@@ -644,7 +644,8 @@ function RecentBackups({
             <BackupsCards {...listProps} />
           )}
         </div>
-        <div className="hidden xl:block">
+        {/* `history`: below 1000px the Size column folds under "When"; German overflowed by 30px. */}
+        <div className="hidden @container/history xl:block">
           <BackupsHistoryTable {...listProps} emptyMessage={emptyMessage} emptyIcon={Archive} bare />
         </div>
       </CardContent>

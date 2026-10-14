@@ -541,7 +541,13 @@
         "app_bot_blocker": "Empêche les robots IA de lire l'application.",
         "app_fail2ban": "Bannit les adresses qui échouent à se connecter ici.",
         "app_staging": "Une copie de l'application pour tester les modifications.",
-        "app_clone": "Faire une copie de cette application ailleurs."
+        "app_clone": "Faire une copie de cette application ailleurs.",
+        "app_dashboard": "Vue d'ensemble et état de cette application.",
+        "docker": "Réseaux et volumes Docker du serveur.",
+        "registry": "Registres d'images privés d'où les conteneurs sont tirés.",
+        "app_container": "Démarrer, arrêter et inspecter les conteneurs de cette application.",
+        "app_compose": "Le fichier Docker Compose de cette application.",
+        "app_magic_login": "Se connecter à l'administration de l'application sans son mot de passe."
       },
       "unsavedTitle": "Abandonner les modifications non enregistrées ?",
       "unsavedDescription": "Vous avez modifié ce rôle sans enregistrer. Si vous quittez maintenant, les modifications seront perdues.",
@@ -2847,6 +2853,7 @@
       "noUsers": "Aucun utilisateur",
       "lastExport": "Dernier export",
       "neverExported": "Jamais",
+      "neverExportedBadge": "Jamais exportée",
       "application": "Application",
       "notLinked": "Non lié",
       "applicationUnknown": "Autre application",
@@ -3361,7 +3368,7 @@
       "howItWorks": "Comment ça marche",
       "stepsTitle": "Pour commencer, suivez ces trois étapes :",
       "step1": "Créez un token sur {provider} avec accès en lecture à vos dépôts.",
-      "step2": "Collez le token dans le formulaire ci-dessus.",
+      "step2": "Cliquez sur « Connecter un compte » et collez-y le jeton.",
       "step3": "Choisissez ce compte lors de la création d'une application."
     },
     "health": {
@@ -4342,9 +4349,6 @@
         },
         "noMessage": "Aucun message de commit",
         "system": "Système",
-        "redeploy": "Redéployer",
-        "redeployStarted": "Déploiement du code le plus récent de cette branche.",
-        "redeployFailed": "Impossible de démarrer ce déploiement.",
         "output": "Journal de build",
         "copy": "Copier le journal",
         "loadingLog": "Chargement du journal de build…",
@@ -4353,7 +4357,6 @@
         "noPermission": "Votre rôle n'inclut pas Déploiement pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "title": "Historique des déploiements",
         "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build.",
-        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine.",
         "pushStarted": "Nouveau déploiement lancé par un push sur {branch}.",
         "loadFailed": "L'historique et les paramètres de déploiement n'ont pas pu être chargés."
       },
@@ -4754,6 +4757,7 @@
     "workers": {
       "pageTitle": "Workers",
       "pageSubtitle": "Maintenez les processus longs — workers de file, Horizon, ou votre propre commande — actifs pour cette application.",
+      "pageSubtitleGeneric": "Garde en marche les commandes longues de cette application. Elles sont relancées si elles s’arrêtent.",
       "loadFailed": "Chargement des workers impossible.",
       "provisioning": "Cette application est encore en cours de configuration. Les workers seront disponibles une fois opérationnelle.",
       "addWorker": "Ajouter un worker",
@@ -4763,7 +4767,8 @@
       "empty": {
         "title": "Aucun worker pour l'instant",
         "description": "Ajoutez un worker de file, Horizon, ou une commande personnalisée pour la maintenir active en arrière-plan.",
-        "starters": "Ou partez d'un modèle"
+        "starters": "Ou partez d'un modèle",
+        "descriptionGeneric": "Ajoutez une commande qui doit tourner en arrière-plan. Elle est relancée si elle s’arrête."
       },
       "columns": {
         "name": "Nom",

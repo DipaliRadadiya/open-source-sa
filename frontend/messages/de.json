@@ -541,7 +541,13 @@
         "app_bot_blocker": "Verhindert, dass KI-Crawler die Anwendung auslesen.",
         "app_fail2ban": "Sperrt Adressen mit wiederholt fehlgeschlagenen Anmeldungen hier.",
         "app_staging": "Eine Kopie der Anwendung zum Testen von Änderungen.",
-        "app_clone": "Eine Kopie dieser Anwendung an anderer Stelle erstellen."
+        "app_clone": "Eine Kopie dieser Anwendung an anderer Stelle erstellen.",
+        "app_dashboard": "Übersicht und Zustand dieser Anwendung.",
+        "docker": "Docker-Netzwerke und -Volumes auf dem Server.",
+        "registry": "Private Image-Registries, aus denen Container laden.",
+        "app_container": "Container dieser Anwendung starten, stoppen und prüfen.",
+        "app_compose": "Die Docker-Compose-Datei dieser Anwendung.",
+        "app_magic_login": "Ohne Passwort im Admin-Bereich der Anwendung anmelden."
       },
       "unsavedTitle": "Nicht gespeicherte Änderungen verwerfen?",
       "unsavedDescription": "Sie haben Änderungen an dieser Rolle vorgenommen, die nicht gespeichert wurden. Wenn Sie jetzt verlassen, gehen sie verloren.",
@@ -2847,6 +2853,7 @@
       "noUsers": "Keine Benutzer",
       "lastExport": "Letzter Export",
       "neverExported": "Nie",
+      "neverExportedBadge": "Nie exportiert",
       "application": "Anwendung",
       "notLinked": "Nicht verknüpft",
       "applicationUnknown": "Andere Anwendung",
@@ -3361,7 +3368,7 @@
       "howItWorks": "So funktioniert es",
       "stepsTitle": "Zum Start folgen Sie diesen drei Schritten:",
       "step1": "Erstellen Sie bei {provider} ein Token mit Lesezugriff auf Ihre Repositories.",
-      "step2": "Fügen Sie das Token oben im Formular ein.",
+      "step2": "Klicken Sie auf „Konto verbinden“ und fügen Sie dort das Token ein.",
       "step3": "Wählen Sie dieses Konto, wenn Sie eine Anwendung anlegen."
     },
     "health": {
@@ -4342,9 +4349,6 @@
         },
         "noMessage": "Keine Commit-Nachricht",
         "system": "System",
-        "redeploy": "Erneut deployen",
-        "redeployStarted": "Der neueste Code dieses Branches wird deployt.",
-        "redeployFailed": "Dieses Deployment konnte nicht gestartet werden.",
         "output": "Build-Protokoll",
         "copy": "Protokoll kopieren",
         "loadingLog": "Build-Protokoll wird geladen…",
@@ -4353,7 +4357,6 @@
         "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
         "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen.",
-        "busy": "Es läuft bereits ein Deployment. Warten Sie, bis es fertig ist.",
         "pushStarted": "Neues Deployment durch einen Push auf {branch} gestartet.",
         "loadFailed": "Der Deploy-Verlauf und die Einstellungen konnten nicht geladen werden."
       },
@@ -4754,6 +4757,7 @@
     "workers": {
       "pageTitle": "Worker",
       "pageSubtitle": "Halten Sie lang laufende Prozesse — Queue-Worker, Horizon oder Ihren eigenen Befehl — für diese Anwendung am Laufen.",
+      "pageSubtitleGeneric": "Hält lang laufende Befehle dieser Anwendung am Laufen. Sie werden neu gestartet, wenn sie anhalten.",
       "loadFailed": "Die Worker konnten nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Die Worker stehen bereit, sobald sie läuft.",
       "addWorker": "Worker hinzufügen",
@@ -4763,7 +4767,8 @@
       "empty": {
         "title": "Noch keine Worker",
         "description": "Fügen Sie einen Queue-Worker, Horizon oder einen eigenen Befehl hinzu, um ihn im Hintergrund laufen zu lassen.",
-        "starters": "Oder mit einer Vorlage beginnen"
+        "starters": "Oder mit einer Vorlage beginnen",
+        "descriptionGeneric": "Fügen Sie einen Befehl hinzu, der im Hintergrund weiterlaufen soll. Er wird neu gestartet, wenn er anhält."
       },
       "columns": {
         "name": "Name",

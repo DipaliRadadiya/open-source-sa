@@ -1,7 +1,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "@/components/ui/app-link";
@@ -35,6 +35,7 @@ import { BannedCards } from "@/components/fail2ban/banned-cards";
 import { useNavTransition } from "@/components/data-table/nav-transition";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { apiMessage } from "@/lib/api/error-message";
+import { banAgeSeconds } from "@/lib/fail2ban/ban-age";
 
 // 10: on a phone each ban is a card, and more strands the paging controls.
 const PAGE_SIZE = 10;
@@ -71,9 +72,19 @@ function JailCell({ row }) {
 function BannedAtCell({ row }) {
   return (
     <span className="block break-words whitespace-normal text-xs text-muted-foreground">
-      {row.original.banned_at || "—"}
+      <BanAge ban={row.original} />
     </span>
   );
+}
+
+// "4 minutes ago", like every other list; the exact server time stays in the tooltip.
+// A permanent ban has no expiry to measure from, so it keeps the server's stamp.
+export function BanAge({ ban }) {
+  const format = useFormatter();
+  const now = useNow();
+  const age = banAgeSeconds(ban);
+  if (age === null) return ban.banned_at || "—";
+  return <span title={ban.banned_at}>{format.relativeTime(now.getTime() - age * 1000, now)}</span>;
 }
 
 // No timing reported (older fail2ban) is Unknown, never "permanent"; dated without expiry is Permanent.

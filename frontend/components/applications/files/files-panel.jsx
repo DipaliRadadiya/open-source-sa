@@ -238,7 +238,9 @@ export function FilesPanel({
       </ReasonTooltip>
       {/* Neither is part of adding a file. Rank comes from Upload being the one filled
           button; grey text on this strip read as disabled. */}
-      <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
+      {/* Gated like the first one: wrapped onto a phone line it stood alone before Fix
+          permissions. 52rem fits the widest locale's row (French, 815px). */}
+      <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center hidden @[52rem]/toolbar:block" />
       <FixPermissionsButton appId={appId} canManage={canManage} />
       {/* Text is red mixed 22% toward foreground: plain `text-destructive` on this tint is under 4.5:1. */}
       <Button
