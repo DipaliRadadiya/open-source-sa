@@ -43,7 +43,7 @@ function NameCell({ row }) {
       // A usual name shows in full; past 13.5rem it ellipsises, so a long one cannot
       // widen the column over its neighbours (Krishna, 8 Oct). A max-width, not
       // max-w-0 on the cell: that cut every 27-character staging name too.
-      className="group flex min-w-0 items-center gap-1.5 font-mono font-medium text-primary underline-offset-4 hover:underline"
+      className="group flex min-w-0 items-center gap-1.5 font-mono font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
     >
       <span className="max-w-54 truncate">{row.original.name}</span>
       <ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />

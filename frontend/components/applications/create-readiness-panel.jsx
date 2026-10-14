@@ -17,8 +17,9 @@ export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, 
   return (
     <Card className={cn("@container gap-0 py-0", className)}>
       <CardHeader className="shrink-0 space-y-1 border-b py-4">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle as="h2">{t("guided.stageReview")}</CardTitle>
+        {/* The title keeps its line; the badge drops below it when the column is narrow. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          <CardTitle as="h2" className="shrink-0">{t("guided.stageReview")}</CardTitle>
           <Badge variant={complete ? "success" : "muted"} className="font-normal">
             {complete ? t("readiness.ready") : t("readiness.needsAttention")}
           </Badge>

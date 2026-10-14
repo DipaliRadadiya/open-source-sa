@@ -604,9 +604,14 @@
 /* Card headers over a hairline get their own lighter band, as in the prototype
    (#151918 in dark). The band runs to the card's top edge, so the card drops its
    top padding and the header takes it. */
-[data-slot="card"]:has(> [data-slot="card-header"].border-b) { padding-top: 0; }
+/* Every card that opens with a header and has a body below it gets the same head (Krishna,
+   14 Oct: "make all card headers the same"), not only those that asked for border-b. */
+[data-slot="card"]:has(> [data-slot="card-header"]:first-child:not(:only-child)) { padding-top: 0; }
+[data-slot="card"] > [data-slot="card-header"]:first-child:not(:only-child),
 [data-slot="card-header"].border-b {
   padding-top: var(--card-spacing);
+  padding-bottom: var(--card-spacing);
+  border-bottom: 1px solid var(--border);
   background: var(--card-head);
 }
 
@@ -666,3 +671,35 @@
     var(--steel-ring, 0 0 0 0 transparent);
 }
 :is([data-slot="button"], [data-slot$="-trigger"])[data-variant="destructive"]:active { background-image: none; }
+
+/* Small status dots outside badges (● MariaDB, ● Running…) become the square ■ too.
+   Matched by size and STATUS colour only, so a radio's dot, avatars and bars stay round. */
+:is(.size-1\.5, .size-2, .size-2\.5).rounded-full:is([class*="bg-success"], [class*="bg-warning"], [class*="bg-destructive"], [class*="bg-muted-foreground"], [class*="bg-emerald"], [class*="bg-amber"], [class*="bg-red"]) {
+  border-radius: 1px;
+}
+
+/* Notifications (Sonner): a bar in the type's colour on the left edge and the icon in a
+   square edged in that colour, like the badges and tiles. Sonner injects its own unlayered
+   rules with more specific selectors, hence the toaster prefix and the few !important. */
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] { border-radius: 2px !important; }
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-icon] {
+  margin: 0 !important;
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 2px !important;
+}
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] { box-shadow: inset 3px 0 0 var(--success), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] { box-shadow: inset 3px 0 0 var(--destructive), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] { box-shadow: inset 3px 0 0 var(--warning), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] { box-shadow: inset 3px 0 0 var(--primary), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] { border-color: color-mix(in oklch, var(--success) 45%, transparent); background: color-mix(in oklch, var(--success) 10%, transparent); }
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-icon] { border-color: color-mix(in oklch, var(--destructive) 45%, transparent); background: color-mix(in oklch, var(--destructive) 10%, transparent); }
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] [data-icon] { border-color: color-mix(in oklch, var(--warning) 45%, transparent); background: color-mix(in oklch, var(--warning) 10%, transparent); }
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] [data-icon] { border-color: color-mix(in oklch, var(--primary) 45%, transparent); background: color-mix(in oklch, var(--primary) 10%, transparent); }
+/* Sonner sets its own system font stack; notifications use the panel's. */
+[data-sonner-toaster] { font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important; }

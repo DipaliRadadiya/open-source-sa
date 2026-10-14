@@ -86,12 +86,12 @@ export function Section({
       {/* The same head as the cards on an application's page. Colour sits in the icon
           chip, never the title: a red title read as an error (Krishna, 12 Oct). */}
       {title ? (
-        <div className="flex min-w-0 items-start gap-3 border-b px-5 py-4">
+        <div className="flex min-w-0 items-start gap-3 border-b bg-[var(--card-head)] px-5 py-4">
           {Icon ? (
             <span
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-xl",
-                destructive ? "bg-destructive-soft text-destructive" : "bg-primary/10 text-primary",
+                "flex size-9 shrink-0 items-center justify-center rounded-[2px] border",
+                destructive ? "border-destructive/45 bg-destructive/10 text-destructive" : "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary",
               )}
             >
               <Icon className="size-[18px]" aria-hidden />
