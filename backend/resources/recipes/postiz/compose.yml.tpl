@@ -19,6 +19,8 @@ services:
     ports:
       - "127.0.0.1:{{ app_port }}:{{ container_port }}"
 
+    command: ["sh", "-c", "sed '/server_name _;/a proxy_cookie_domain ~.+ {{ domain }};' /etc/nginx/nginx.conf > /tmp/postiz-nginx.conf && nginx -c /tmp/postiz-nginx.conf && pnpm run pm2"]
+
     environment:
       FRONTEND_URL: "{{ url }}"
       MAIN_URL: "https://{{ domain }}"

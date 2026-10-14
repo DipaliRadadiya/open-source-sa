@@ -4,7 +4,7 @@ services:
   postiz:
     image: ghcr.io/gitroomhq/postiz-app:v2.25.1
     restart: unless-stopped
-    mem_limit: 2g
+    mem_limit: 3g
     logging:
       driver: json-file
       options:
@@ -13,6 +13,8 @@ services:
 
     ports:
       - "127.0.0.1:20101:5000"
+
+    command: ["sh", "-c", "sed '/server_name _;/a proxy_cookie_domain ~.+ postiz.golden.test;' /etc/nginx/nginx.conf > /tmp/postiz-nginx.conf && nginx -c /tmp/postiz-nginx.conf && pnpm run pm2"]
 
     environment:
       FRONTEND_URL: "http://postiz.golden.test"

@@ -55,7 +55,7 @@
         }
     ],
     "container_port": 5000,
-    "memory_floor": "2g",
+    "memory_floor": "3g",
     "volumes": {
         "config": "/config",
         "uploads": "/uploads",
@@ -95,7 +95,8 @@
         "Temporal stores its data and its visibility index in the same PostgreSQL (databases temporal and temporal_visibility, created on first start) instead of Elasticsearch, which needs a host sysctl. Its sample custom search attributes are skipped (SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES=true) so PostgreSQL's three Text slots stay free for the two that Postiz registers. The Temporal web UI is left out because it would need a second port.",
         "Temporal's dynamic config is the official development-sql.yaml, written as a starter file and mounted read-only.",
         "The app applies its database schema at every start with pnpm dlx prisma db push, which downloads Prisma from the npm registry, so the server needs outgoing internet access.",
+        "Postiz scopes its login cookie to the registrable domain of FRONTEND_URL (example.com for postiz.example.com), and on a temporary nip.io or sslip.io address that is the whole nip.io or sslip.io domain, so the session would be sent to every other site under it. The start command therefore runs the image's own nginx with one added line, proxy_cookie_domain, which rewrites every cookie's Domain to this site's own domain. The image's nginx.conf is otherwise unchanged.",
         "Uploaded media live in the uploads volume (STORAGE_PROVIDER=local, UPLOAD_DIRECTORY=/uploads, served by the app's nginx). JWT_SECRET signs sessions: keep it with your backups.",
-        "The 2g floor covers the frontend, backend and workflow workers that the app container runs; Temporal gets 1g, and the database and Redis use the panel database-memory default."
+        "The 3g floor covers the frontend, backend and workflow workers that the app container runs (measured live: about 1.6 GiB idle and 1.8 GiB peak with one user); Temporal gets 1g, and the database and Redis use the panel database-memory default."
     ]
 }

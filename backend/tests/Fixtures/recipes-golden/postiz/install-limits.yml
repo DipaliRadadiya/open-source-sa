@@ -15,6 +15,8 @@ services:
     ports:
       - "127.0.0.1:20101:5000"
 
+    command: ["sh", "-c", "sed '/server_name _;/a proxy_cookie_domain ~.+ postiz.golden.test;' /etc/nginx/nginx.conf > /tmp/postiz-nginx.conf && nginx -c /tmp/postiz-nginx.conf && pnpm run pm2"]
+
     environment:
       FRONTEND_URL: "https://postiz.golden.test"
       MAIN_URL: "https://postiz.golden.test"
