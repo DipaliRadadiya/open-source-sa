@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "ghcr.io/open-webui/open-webui:v0.12.0-slim",
-            "tested": []
+            "tested": [
+                "ghcr.io/open-webui/open-webui:v0.12.0-slim"
+            ]
         }
     },
     "services": [
@@ -77,6 +79,6 @@
         "WEBUI_SECRET_KEY (generated) signs sessions and encrypts stored OAuth data; it persists with the application's secrets. WEBUI_URL is the site's own HTTPS address.",
         "The official slim image is used on purpose: the full image downloads a local embedding model on its first start and took more than 15 minutes to become ready. The slim image has no local embeddings, reranking or speech-to-text; configure external providers for those features.",
         "Everything (the SQLite database, uploads and settings) lives in one named volume on /app/backend/data.",
-        "Exact release tags were verified for linux/amd64. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-39): created from the 1-Click Recipes tab, Running in 63 s (24.04) and 79 s (26.04); sign-in with the admin email and the generated password as an administrator; Ollama connection off; an OpenAI connection with a fake key saved and a chat returned the provider's clean \"Incorrect API key\" error in 3 s; sign-up refused (403, no sign-up link); restart keeps the account, connection and chats. Idle 280 to 313 MiB with the 1g floor (peak 379 MiB). Every image ref below is in its tested list."
     ]
 }
