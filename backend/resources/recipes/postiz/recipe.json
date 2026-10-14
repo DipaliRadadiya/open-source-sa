@@ -21,19 +21,27 @@
     "images": {
         "app": {
             "ref": "ghcr.io/gitroomhq/postiz-app:v2.25.1",
-            "tested": []
+            "tested": [
+                "ghcr.io/gitroomhq/postiz-app:v2.25.1"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         },
         "cache": {
             "ref": "redis:8.8.3-alpine",
-            "tested": []
+            "tested": [
+                "redis:8.8.3-alpine"
+            ]
         },
         "temporal": {
             "ref": "temporalio/auto-setup:1.28.1",
-            "tested": []
+            "tested": [
+                "temporalio/auto-setup:1.28.1"
+            ]
         }
     },
     "services": [
@@ -97,6 +105,8 @@
         "The app applies its database schema at every start with pnpm dlx prisma db push, which downloads Prisma from the npm registry, so the server needs outgoing internet access.",
         "Postiz scopes its login cookie to the registrable domain of FRONTEND_URL (example.com for postiz.example.com), and on a temporary nip.io or sslip.io address that is the whole nip.io or sslip.io domain, so the session would be sent to every other site under it. The start command therefore runs the image's own nginx with one added line, proxy_cookie_domain, which rewrites every cookie's Domain to this site's own domain. The image's nginx.conf is otherwise unchanged.",
         "Uploaded media live in the uploads volume (STORAGE_PROVIDER=local, UPLOAD_DIRECTORY=/uploads, served by the app's nginx). JWT_SECRET signs sessions: keep it with your backups.",
-        "The 3g floor covers the frontend, backend and workflow workers that the app container runs (measured live: about 1.6 GiB idle and 1.8 GiB peak with one user); Temporal gets 1g, and the database and Redis use the panel database-memory default."
+        "The 3g floor covers the frontend, backend and workflow workers that the app container runs (measured live with one user: about 1.4 to 1.8 GiB idle and up to 2 GiB during the first start); Temporal gets 1g, and the database and Redis use the panel database-memory default.",
+        "Postiz's sign-in and sign-up forms fall back to a plain GET submit when they are used before the page has finished loading (upstream behaviour), which puts the typed password in the URL and the access log: let the page load fully before submitting.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-40): created from the 1-Click Recipes tab, Running, HTTPS, first account registration, sign-up closed afterwards, login cookie scoped to the site's own domain, a media upload, the public API, Temporal health and a full-stack restart passed; every image ref below is in its tested list."
     ]
 }

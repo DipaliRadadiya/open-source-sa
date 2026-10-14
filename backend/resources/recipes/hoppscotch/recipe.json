@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "hoppscotch/hoppscotch:2026.9.0",
-            "tested": []
+            "tested": [
+                "hoppscotch/hoppscotch:2026.9.0"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         }
     },
     "services": [
@@ -74,6 +78,8 @@
         "TRUST_PROXY=true makes the backend read the visitor's address from X-Forwarded-For; without it every visitor appears to come from the image's internal proxy and shares one rate-limit bucket.",
         "WHITELISTED_ORIGINS contains this site's HTTPS address plus the desktop app's origins from the official example.",
         "PostgreSQL 17.11 has its own volume and no published port. The data volume keeps the bundle server's signing key, so it survives restarts.",
-        "The healthcheck calls /backend/ping on 127.0.0.1 with curl, which the image ships (the image's own healthcheck runs every 2 seconds)."
+        "The healthcheck calls /backend/ping on 127.0.0.1 with curl, which the image ships (the image's own healthcheck runs every 2 seconds).",
+        "On its very first start the app container restarts itself once, after writing its default settings to the database (upstream behaviour), so the panel may show one restart.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-40): created from the 1-Click Recipes tab, Running, HTTPS, the admin onboarding page, a request to echo.hoppscotch.io from the web app, the backend ping and GraphQL through this domain, and a restart passed; every image ref below is in its tested list."
     ]
 }
