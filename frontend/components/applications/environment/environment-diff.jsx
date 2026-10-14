@@ -67,9 +67,9 @@ export function EnvironmentDiff({ state }) {
           <table className="hidden w-full text-xs @md:table">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="w-1/4 px-3 py-2 text-start font-medium">{t("colKey")}</th>
-                <th className="px-3 py-2 text-start font-medium">{t("colBefore")}</th>
-                <th className="px-3 py-2 text-start font-medium">{t("colAfter")}</th>
+                <th data-slot="table-head" className="w-1/4 px-3 py-2 text-start font-medium">{t("colKey")}</th>
+                <th data-slot="table-head" className="px-3 py-2 text-start font-medium">{t("colBefore")}</th>
+                <th data-slot="table-head" className="px-3 py-2 text-start font-medium">{t("colAfter")}</th>
               </tr>
             </thead>
             <tbody className="divide-y">

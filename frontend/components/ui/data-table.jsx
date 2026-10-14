@@ -135,11 +135,12 @@ export function DataTable({
                   return (
                     <TableHead
                       key={header.id}
-                      // Sticky headers need an opaque background.
+                      // Sticky headers need an opaque background: the same shade as the
+                      // row's bg-muted/40 over a card, mixed solid, so they match every other table.
                       // `meta.className` lets a caller constrain a column's width;
                       // `meta.headClassName` styles the header cell alone (e.g. let it wrap).
                       className={cn(
-                        stickyHeader && "bg-muted",
+                        stickyHeader && "bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))]",
                         header.column.columnDef.meta?.className,
                         header.column.columnDef.meta?.headClassName,
                       )}

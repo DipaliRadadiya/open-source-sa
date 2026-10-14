@@ -44,6 +44,7 @@ import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 import { TurnOffBackupsDialog } from "@/components/applications/backups/turn-off-backups-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { hasNoDatabase } from "@/lib/backups/database-availability";
+import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 
 // How long "queued" is shown before reporting that the worker has not taken it.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
@@ -498,10 +499,11 @@ function ProtectionCard({ target, options = null, noneKept = false, canManage, r
 
       {target ? (
         <CardContent className="px-5 py-4">
-          <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
+          <div className={FACT_FRAME}>
+          <dl className={cn(FACT_GRID, "sm:grid-cols-3")}>
             {facts.map((fact) => (
-              <div key={fact.label} className="min-w-0">
-                <dt className="text-xs text-muted-foreground">
+              <div key={fact.label} className={FACT_CELL}>
+                <dt className={FACT_LABEL}>
                   {fact.label}
                 </dt>
                 <dd className="mt-0.5 truncate text-sm font-medium tabular-nums">
@@ -510,6 +512,7 @@ function ProtectionCard({ target, options = null, noneKept = false, canManage, r
               </div>
             ))}
           </dl>
+          </div>
 
           {/* Exclusions change what a restore returns, so they are shown even
               when there are no patterns to list. */}

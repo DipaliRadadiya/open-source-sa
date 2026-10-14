@@ -10,15 +10,25 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 
+// Literal classes for Tailwind; a series token maps to its swatch.
+export const SWATCH = {
+  "chart-1": "bg-chart-1",
+  "chart-2": "bg-chart-2",
+  "chart-3": "bg-chart-3",
+  "chart-4": "bg-chart-4",
+  "chart-5": "bg-chart-5",
+};
+
 // The dot maps the pill to its line; the value stays at full contrast.
 export function ChartPill({ dotClassName, label, value, note }) {
   return (
     /* Tighter label–value gap than to the note: "Read 4.5 MB/s" is one reading, "210 IOPS" a second. */
-    <span className="inline-flex items-center gap-2 rounded-lg border bg-muted/40 px-2.5 py-1.5 text-xs">
-      <span className={cn("size-2 shrink-0 rounded-full", dotClassName)} />
+    // Steel UI: a square mono chip with a square swatch (prototype).
+    <span className="inline-flex items-center gap-2 rounded-[2px] border bg-muted/40 px-2 py-1 font-mono text-xs tracking-[0.04em]">
+      <span className={cn("size-2 shrink-0", dotClassName)} />
       <span className="flex items-center gap-1.5">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium tabular-nums text-foreground">{value}</span>
+        <span className="text-muted-foreground uppercase">{label}</span>
+        {value !== undefined ? <span className="font-medium tabular-nums text-foreground">{value}</span> : null}
       </span>
       {note ? <span className="tabular-nums text-muted-foreground">{note}</span> : null}
     </span>
@@ -49,14 +59,15 @@ export function LiveChartCard({
     // Dimmed on a dead poll: a frozen feed draws a flat line that looks like a calm server.
     <Card
       className={cn(
-        "h-full transition-opacity [--card-spacing:--spacing(5)]",
+        "h-full gap-0 transition-opacity [--card-spacing:--spacing(4)]",
         PANEL_CARD,
         stale && "opacity-60",
       )}
     >
       {/* The plot is bottom-anchored so paired charts start on the same line. */}
-      <CardHeader className="flex flex-col items-stretch gap-1 space-y-0">
-        <div className="min-w-0 space-y-1">
+      {/* Title and readings over a hairline; the description opens the body (prototype). */}
+      <CardHeader className="flex flex-col items-stretch gap-1 space-y-0 border-b">
+        <div className="min-w-0">
           {/* h3, not h2: these cards sit inside a section whose heading is the h2. */}
           {/* justify-between, not ml-auto: a wrapped pill group lands at the start. No width breakpoint: widths vary by locale. */}
           <CardTitle
@@ -69,12 +80,12 @@ export function LiveChartCard({
             </span>
             {badges ? <span className="flex flex-wrap gap-2">{badges}</span> : null}
           </CardTitle>
-          {/* Two lines reserved so paired cards align when descriptions wrap differently. */}
-          <CardDescription className="min-h-10">{description}</CardDescription>
         </div>
       </CardHeader>
-      {/* pt-0: Card already spaces header and content. mt-auto aligns paired charts. */}
-      <CardContent className="mt-auto pt-0">
+      {/* Two lines reserved so paired cards align when descriptions wrap differently. */}
+      <CardDescription className="min-h-10 px-(--card-spacing) pt-4">{description}</CardDescription>
+      {/* mt-auto aligns paired charts. */}
+      <CardContent className="mt-auto pt-2">
         {/* A line needs two points; until then say so. */}
         {ready ? (
           children

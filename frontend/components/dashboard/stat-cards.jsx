@@ -1,47 +1,78 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { cn } from "@/lib/utils";
 import { pct, usageStatus } from "@/lib/metrics/usage-level";
-import { UsageRing } from "@/components/ui/usage-ring";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBytes } from "@/lib/format/bytes";
 
-const STATUS_TEXT = {
-  normal: "text-success",
-  watch: "text-warning",
-  high: "text-destructive",
-  off: "text-muted-foreground",
-  unknown: "text-muted-foreground",
+// Steel UI (Krishna's prototype, 14 Oct): the level is a square chip and the bar
+// takes the level's colour; "off"/"unknown" stay grey.
+const STATUS_VARIANT = {
+  normal: "success",
+  watch: "warning",
+  high: "destructive",
+  off: "muted",
+  unknown: "muted",
+};
+const BAR_FILL = {
+  normal: "bg-success",
+  watch: "bg-warning",
+  high: "bg-destructive",
 };
 
-// One reading: the ring carries the number, the words say whether it matters.
-// No "… free" line: "1.9 GB of 5.8 GB" already says it, and five across has no room.
+// One reading per cell: label and level chip on top, the number large, a thin bar,
+// then the detail in mono. No "… free" line: "1.9 GB of 5.8 GB" already says it.
 // The label wraps rather than truncates; five across clipped most locales once.
 function UsageTile({ label, value, ringValue, hint, sub, percent, loading, status = null }) {
+  const width = Math.max(0, Math.min(100, Number(percent) || 0));
   return (
-    <div className="@container/tile min-w-0 rounded-xl bg-muted/40 p-3 ring-1 ring-border/70">
-      <div className="flex min-w-0 items-center gap-3 @max-[11rem]/tile:flex-col @max-[11rem]/tile:items-start">
-        <UsageRing percent={loading ? null : percent} label={label}>
-          {loading ? <Skeleton className="h-3.5 w-8" /> : (ringValue ?? value)}
-        </UsageRing>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium break-words">{label}</p>
-          {loading ? (
-            <Skeleton className="mt-1.5 h-3.5 w-24" />
-          ) : (
-            <>
-              {hint ? <p className="text-xs break-words tabular-nums text-muted-foreground">{keepUnits(hint)}</p> : null}
-              {status || sub ? (
-                <p className="mt-1 text-xs break-words tabular-nums">
-                  {status ? <span className={cn("font-medium", STATUS_TEXT[status.key])}>{status.label}</span> : null}
-                  {status && sub ? <span className="text-muted-foreground"> · </span> : null}
-                  {sub ? <span className="text-muted-foreground">{keepUnits(sub)}</span> : null}
-                </p>
-              ) : null}
-            </>
-          )}
-        </div>
+    <div className="min-w-0 bg-card p-4 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+        <p className="font-mono text-xs font-medium tracking-[0.1em] break-words text-muted-foreground uppercase">{label}</p>
+        {status && !loading ? (
+          <Badge variant={STATUS_VARIANT[status.key] ?? "muted"}>
+            <span aria-hidden className="size-1.5 bg-current" />
+            {status.label}
+          </Badge>
+        ) : null}
       </div>
+      {loading ? (
+        <Skeleton className="mt-2 h-[22px] w-14" />
+      ) : (
+        <p className="mt-2 text-[22px] leading-none font-semibold tracking-tight tabular-nums"><BigValue text={ringValue ?? value} /></p>
+      )}
+      {/* Segmented, as in the prototype: the track and the fill share one mask, so
+          their segments line up. */}
+      <div className={cn("mt-3 h-1 bg-muted", SEGMENTS)} aria-hidden>
+        {status && BAR_FILL[status.key] && !loading ? (
+          <div className={cn("h-full transition-[width] duration-500", BAR_FILL[status.key], SEGMENTS)} style={{ width: `${width}%` }} />
+        ) : null}
+      </div>
+      {loading ? (
+        <Skeleton className="mt-2.5 h-3.5 w-24" />
+      ) : hint || sub ? (
+        <p className="mt-2.5 font-mono text-xs break-words tabular-nums text-muted-foreground">
+          {hint ? keepUnits(hint) : null}
+          {hint && sub ? " · " : null}
+          {sub ? keepUnits(sub) : null}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+const SEGMENTS = "[mask-image:repeating-linear-gradient(90deg,#000_0_6px,transparent_6px_8px)]";
+
+// "2%" / "2 %" (fr, de): the unit at a smaller size beside the number, as in the
+// prototype. Anything without a trailing % (load, a dash) prints as is.
+function BigValue({ text }) {
+  const match = typeof text === "string" ? /^(.*?\d)(\s?%)$/u.exec(text) : null;
+  if (!match) return text;
+  return (
+    <>
+      {match[1]}
+      <span className="ms-0.5 text-sm font-medium text-muted-foreground">%</span>
+    </>
   );
 }
 
@@ -97,7 +128,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
     <div
       aria-busy={loading}
       className={cn(
-        "grid gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
+        // Cells share hairlines: each draws its right and bottom edge inside itself, and
+        // the -1px margins tuck the outermost ones under the card's clipped edge.
+        "-mr-px -mb-px grid transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
         // Polling is failing: the numbers are last-known, not current.
         stale && "opacity-60",
       )}
@@ -107,7 +140,7 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         // A rate needs two samples and the API returns 0 until then; a dash means "not applicable".
         value={ratesReady ? percentText(cpu?.percent, 1) : t("measuring")}
         // The ring cannot hold "Measuring…"; the hint says it instead.
-        ringValue={ratesReady ? percentText(cpu?.percent, 0) : "…"}
+        ringValue={ratesReady ? percentText(cpu?.percent, 0) : "—"}
         percent={ratesReady ? cpu?.percent : null}
         // No level word until the second sample lands.
         status={ratesReady ? statusFor(cpu?.percent) : null}

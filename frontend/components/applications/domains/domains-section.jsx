@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 // Site types whose installer rewrites the stored address on a primary change (backend `syncUrl`).
 const ADDRESS_SYNCED_TYPES = new Set([
@@ -232,9 +233,11 @@ export function DomainsSection({
           /* Edge to edge in the card, as a list: one row per name, the same columns on
              every row so several domains scan like a table. */
           <div className="-mx-(--card-spacing) -mb-(--card-spacing) border-t">
+            {/* data-slot: typed like every table header (globals.css), so they cannot drift. */}
             <div
               aria-hidden
-              className={cn(ROW_GRID, "hidden gap-x-4 border-b bg-muted/40 px-5 py-3 text-sm font-medium text-muted-foreground md:grid")}
+              data-slot="table-head"
+              className={cn(ROW_GRID, "hidden h-11 gap-x-4 border-b bg-muted/40 px-5 text-muted-foreground md:grid md:items-center")}
             >
               <span>{t("columns.domain")}</span>
               <span>{t("columns.dns")}</span>
@@ -483,13 +486,13 @@ export function DomainsSection({
         {/* Shows the swap; the title cannot show the name being replaced. */}
         {promoteTarget?.from ? (
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1.5 rounded-lg border p-3">
-            <dt className="text-xs text-muted-foreground">
+            <dt className={FACT_LABEL}>
               {t("promote.nowLabel")}
             </dt>
             <dd className="font-mono text-sm break-all text-muted-foreground">
               {promoteTarget.from}
             </dd>
-            <dt className="text-xs text-muted-foreground">
+            <dt className={FACT_LABEL}>
               {t("promote.afterLabel")}
             </dt>
             <dd className="font-mono text-sm break-all">

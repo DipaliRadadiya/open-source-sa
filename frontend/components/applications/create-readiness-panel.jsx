@@ -64,7 +64,8 @@ export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, 
                 <button
                   type="button"
                   onClick={() => onSelectItem(item.target ?? item.key)}
-                  className="rounded-sm text-left font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  // Amber, not the link green: green means "done" in the steel UI (Krishna, 14 Oct).
+                  className="rounded-sm text-left font-medium text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] underline decoration-dotted underline-offset-4 hover:decoration-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-warning"
                 >
                   {t(item.invalid ? "readiness.fix" : "readiness.complete", { field: item.label })}
                 </button>

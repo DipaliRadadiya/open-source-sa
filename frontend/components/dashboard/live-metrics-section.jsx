@@ -62,23 +62,25 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
       <span
         className={cn(
           // A solid soft pill, as in the redesign.
-          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-          failed ? "bg-destructive-soft text-destructive" : "bg-success-soft text-success",
+          "inline-flex h-[1.375rem] items-center gap-1.5 rounded-[2px] border px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase",
+          failed
+            ? "border-destructive/45 bg-destructive/10 text-destructive"
+            : "border-success/45 bg-success/10 text-success",
         )}
       >
         {failed ? (
           <CircleAlert className="size-3.5" />
         ) : (
-          <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75 motion-reduce:hidden" />
-            <span className="relative inline-flex size-2 rounded-full bg-success" />
+          <span className="relative flex size-1.5">
+            <span className="absolute inline-flex size-full animate-ping bg-success opacity-75 motion-reduce:hidden" />
+            <span className="relative inline-flex size-1.5 bg-success" />
           </span>
         )}
         {failed ? t("offline") : t("live")}
       </span>
       {/* Kept visible while failing — "how old is this?" matters most then. */}
       {updatedAt ? (
-        <span className="text-xs tabular-nums text-muted-foreground">
+        <span className="font-mono text-xs tracking-[0.08em] tabular-nums text-muted-foreground uppercase">
           {t("updated", { time: clock(updatedAt) })}
         </span>
       ) : null}
@@ -97,7 +99,7 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
 function SectionHeading({ title, children }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <h2 className="text-base font-semibold tracking-tight">
+      <h2 className="font-mono text-xs font-medium tracking-[0.12em] text-muted-foreground uppercase">
         {title}
       </h2>
       {children}
@@ -119,9 +121,10 @@ export function LiveMetricsSection({ timeZone, history = [], between = null }) {
       <ConnectionAnnouncement failed={failed} />
 
       {/* The Live pill is this section's status, so it sits in the heading row. */}
-      <Card className="[--card-spacing:--spacing(5)]">
+      {/* Header over a hairline, then the cells flush to the card's edges (prototype). */}
+      <Card className="gap-0 pb-0 [--card-spacing:--spacing(4)]">
         {/* Stacked on a phone: beside the title the pill squeezed it onto two lines. */}
-        <CardHeader className="max-sm:grid-cols-1">
+        <CardHeader className="border-b max-sm:grid-cols-1">
           <CardTitle as="h2">
             {t("liveLabel")}
           </CardTitle>
@@ -129,7 +132,7 @@ export function LiveMetricsSection({ timeZone, history = [], between = null }) {
             <LiveStatus failed={failed} reason={reason} updatedAt={updatedAt} timeZone={timeZone} />
           </CardAction>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
         </CardContent>
       </Card>

@@ -23,6 +23,7 @@ import { ClearFiltersButton } from "@/components/data-table/clear-filters-button
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 import { UndoRestoreButton } from "@/components/backups/undo-restore-button";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 // The key comes from the API and `t()` throws on a miss, so fall back to the raw status.
 function statusLabel(restore, t) {
@@ -233,11 +234,11 @@ function RestoreCards({ restores, canRestore = false }) {
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-3">
                 <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">{t("columns.type")}</dt>
+                  <dt className={FACT_LABEL}>{t("columns.type")}</dt>
                   <dd className="truncate text-sm">{restore.type_title ?? restore.type}</dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">{t("columns.when")}</dt>
+                  <dt className={FACT_LABEL}>{t("columns.when")}</dt>
                   <dd className="truncate text-sm tabular-nums">
                     {restore.started_at_human ?? restore.started_at ?? (
                       <span className="text-muted-foreground">{t("notStarted")}</span>

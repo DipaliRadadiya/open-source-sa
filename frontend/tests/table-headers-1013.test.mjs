@@ -6,10 +6,15 @@ import fs from "node:fs";
 // the icon-only button on Automatic cleanup needs a tooltip.
 const read = (p) => fs.readFileSync(p, "utf8");
 
-test("table headers are 14px and 44px tall everywhere", () => {
+test("table headers are 44px tall and typed the same everywhere", () => {
   assert.match(read("components/ui/table.jsx"), /"h-11 px-4 text-left align-middle text-sm font-medium whitespace-nowrap/);
-  assert.match(read("components/runtime/versions-table.jsx"), /bg-muted\/40 px-4 py-3 text-sm font-medium/);
-  assert.match(read("components/applications/domains/domains-section.jsx"), /px-5 py-3 text-sm font-medium text-muted-foreground md:grid/);
+  // Steel UI (Krishna, 14 Oct: "keep 12px uppercase; every table the same"): hand-built
+  // header rows take the shared header type through data-slot, not their own classes.
+  for (const file of ["components/runtime/versions-table.jsx", "components/applications/domains/domains-section.jsx"]) {
+    assert.match(read(file), /aria-hidden\s+data-slot="table-head"/, file);
+  }
+  const css = read("app/globals.css");
+  assert.match(css, /\[data-slot="table-head"\],[\s\S]{0,240}font-size: 12px;[\s\S]{0,60}text-transform: uppercase;/);
   const db = read("components/databases/database-tables.jsx");
   assert.match(db, /text-left text-sm text-muted-foreground/);
   assert.match(db, /"h-11 px-3 font-medium sm:px-5"/);

@@ -64,7 +64,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
   const controls = (
     <>
       {/* Outlined, like every other button: as bare icons they read as decoration (7 Oct). */}
-      {copy ? <CopyButton value={String(value)} className="border border-border/80 bg-card shadow-xs" /> : null}
+      {copy ? <CopyButton value={String(value)} outlined className="border border-border/80 bg-card shadow-xs" /> : null}
       {/* One menu when the tile has several actions (probe, set type by hand). */}
       {menu?.length ? (
         <DropdownMenu>
@@ -154,16 +154,24 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
   // `strip`: a label over its value, no box, for the facts row in the page header.
   if (strip) {
     return (
-      <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="flex min-h-7 min-w-0 items-center gap-1">
+      // Steel UI: one cell of a hairline grid with a mono caps label, like Server
+      // information on the dashboard (Krishna's prototype). Edges are drawn inside the cell.
+      <div className="group/fact min-w-0 px-5 py-3 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]">
+        <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
+        <dd className="flex min-h-7 min-w-0 items-center gap-2">
           <span
             className={`min-w-0 truncate text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
             title={typeof value === "string" ? value : undefined}
           >
             {value}
           </span>
-          {controls}
+          {/* Steel UI (Krishna, 14 Oct): with a mouse, the buttons appear when the pointer
+              is on this fact, for a cleaner header. They stay visible on touch screens (no
+              hover there), for keyboard focus, while a menu is open and while busy. Hidden
+              by opacity, not removed, so nothing shifts when they appear. */}
+          <span className="flex items-center gap-1.5 transition-opacity duration-150 pointer-fine:opacity-0 pointer-fine:group-hover/fact:opacity-100 pointer-fine:group-focus-within/fact:opacity-100 pointer-fine:has-[[aria-expanded=true]]:opacity-100 pointer-fine:has-[.animate-spin]:opacity-100">
+            {controls}
+          </span>
         </dd>
         {noteNode ? <dd>{noteNode}</dd> : null}
       </div>
@@ -463,7 +471,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     return (
       <>
         {/* One row up to six facts; seven or eight go four across, so none is left alone. */}
-        <dl className={`grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 ${facts.length > 6 ? "xl:grid-cols-4" : "xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]"} ${className ?? ""}`}>
+        <dl className={`-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 ${facts.length > 6 ? "xl:grid-cols-4" : "xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]"} ${className ?? ""}`}>
           {facts.map((fact) => (
             <Fact key={fact.label} editLabel={t("webRoot.title")} strip {...fact} />
           ))}

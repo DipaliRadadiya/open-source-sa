@@ -8,13 +8,16 @@ import { isRedeploying } from "@/lib/applications/settled";
 import { isProcessDown } from "@/components/applications/application-status-badge";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";
 
+// Steel UI (Krishna's prototype, 14 Oct): the icon sits in a square edged in its tone.
 const TONE = {
-  success: { tile: "bg-success-soft text-success", value: "text-foreground" },
-  warning: { tile: "bg-warning-soft text-warning", value: "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" },
-  destructive: { tile: "bg-destructive-soft text-destructive", value: "text-destructive" },
-  info: { tile: "bg-primary/10 text-primary", value: "text-foreground" },
-  neutral: { tile: "bg-muted text-muted-foreground", value: "text-foreground" },
+  success: { tile: "border-success/45 bg-success/10 text-success", value: "text-foreground" },
+  warning: { tile: "border-warning/45 bg-warning/10 text-warning", value: "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" },
+  destructive: { tile: "border-destructive/45 bg-destructive/10 text-destructive", value: "text-destructive" },
+  info: { tile: "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary", value: "text-foreground" },
+  neutral: { tile: "border-border bg-muted/40 text-muted-foreground", value: "text-foreground" },
 };
+// The label in mono caps, like the dashboard's stat cells.
+const LABEL = "font-mono text-xs font-medium tracking-[0.1em] break-words hyphens-auto text-muted-foreground uppercase";
 
 // Also drawn on the Services page; `action` sits where a linked tile shows its chevron.
 // `compact` puts label and value beside the icon in one row, for short values that
@@ -28,12 +31,12 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
   );
   const body = compact ? (
     <div className="flex items-center gap-3">
-      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", t.tile)}>
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-[2px] border", t.tile)}>
         <Icon className="size-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
         {/* hyphens-auto: a long German compound broke mid-word ("Handlungsbed / arf") in a 2×2 phone grid. */}
-        <p className="text-xs font-medium break-words hyphens-auto text-muted-foreground">{label}</p>
+        <p className={LABEL}>{label}</p>
         <p className={cn("text-[15px] font-semibold tracking-tight text-pretty break-words", t.value)}>{value}</p>
         {detail ? <p className="line-clamp-2 text-xs text-muted-foreground">{detail}</p> : null}
       </div>
@@ -42,10 +45,10 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
   ) : (
     <>
       <div className="flex items-center gap-3">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", t.tile)}>
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[2px] border", t.tile)}>
           <Icon className="size-[18px]" aria-hidden />
         </span>
-        <span className="min-w-0 flex-1 text-xs font-medium break-words hyphens-auto text-muted-foreground">{label}</span>
+        <span className={cn("min-w-0 flex-1", LABEL)}>{label}</span>
         {end}
       </div>
       <div className="min-w-0">

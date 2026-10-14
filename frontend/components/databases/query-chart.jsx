@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { clockFormatter } from "@/lib/format/time";
 import { historySeries } from "@/lib/server/history-series";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 /** Tokens this chart draws with, resolved from globals.css at runtime. */
 const TOKENS = [
@@ -197,7 +198,7 @@ export function QueryChart({ metrics = [], timeZone }) {
             <div key={label} className="flex items-center gap-3 rounded-xl border bg-muted/30 px-3 py-2.5">
               <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <div className="min-w-0">
-                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dt className={FACT_LABEL}>{label}</dt>
                 <dd className="text-[15px] font-semibold tabular-nums">
                   {value === null ? "—" : decimal(value)}
                 </dd>

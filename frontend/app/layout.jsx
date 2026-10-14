@@ -10,6 +10,8 @@ import { generatePalette } from "@/lib/theme/generate-palette";
 import { buildThemeStyles } from "@/lib/theme/apply-theme";
 import "./globals.css";
 
+const STEEL_PRIMARY = "#35B87A";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -37,7 +39,11 @@ export default async function RootLayout({ children }) {
   const locale = await getLocale();
   const messages = await getMessages();
   const branding = await getBranding();
-  const palette = generatePalette(branding.primary_color);
+  // Steel UI trial (feat/steel-ui, Krishna 14 Oct): green "for now", in place of the
+  // brand colour. Restore `branding.primary_color` before this branch is merged.
+  const palette = generatePalette(STEEL_PRIMARY);
+  // His prototype uses the same #35B87A in dark, not the generator's lighter 400 shade.
+  if (palette) palette.dark = palette.light;
   const themeStyles = buildThemeStyles(palette);
 
   return (

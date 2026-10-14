@@ -1,7 +1,7 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { Gauge } from "lucide-react";
 import { clockFormatter } from "@/lib/format/time";
-import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { ChartPill, LiveChartCard, SWATCH } from "@/components/dashboard/live-chart-card";
 import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
   seriesDataTable,
@@ -39,10 +39,12 @@ export function ResourceUsageChart({ history = [], timeZone }) {
   const series = [
     { key: "cpu", label: t("cpu"), token: "chart-1", kind: "area" },
     { key: "memory", label: t("memory"), token: "chart-2", kind: "area" },
-    ...(hasDisk ? [{ key: "disk", label: t("disk"), token: "chart-4", kind: "area" }] : []),
+    ...(hasDisk ? [{ key: "disk", label: t("disk"), token: "chart-3", kind: "area" }] : []),
   ];
 
   const option = timeSeriesOption({
+    // The header chips name each line (Steel UI).
+    legend: false,
     data: history,
     series,
     tokens,
@@ -66,6 +68,9 @@ export function ResourceUsageChart({ history = [], timeZone }) {
       title={t("charts.usage.title")}
       description={t("charts.usage.description")}
       ready={history.length >= 2}
+      badges={series.map((s) => (
+        <ChartPill key={s.key} dotClassName={SWATCH[s.token]} label={s.label} />
+      ))}
       compactEmpty
       emptyTitle={t("charts.noHistoryTitle")}
       emptyMessage={t("charts.noHistory")}

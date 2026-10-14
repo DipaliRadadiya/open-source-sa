@@ -362,7 +362,7 @@ export default async function ApplicationDetailPage({ params }) {
         </div>
         {/* Only once it is serving: before that there is no web root or size to show. */}
         {settled ? (
-          <div className="relative border-t bg-muted/20 px-5 py-3.5">
+          <div className="relative border-t">
             <SiteFactsCard
               application={application}
               canManage={canManage}

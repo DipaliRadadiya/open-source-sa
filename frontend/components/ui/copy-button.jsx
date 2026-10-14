@@ -15,7 +15,8 @@ import {
 const RESET_MS = 1500;
 
 // Only failure toasts: a clipboard write can be refused (insecure context, denied permission).
-export function CopyButton({ value, label, className, text = false }) {
+// `outlined`: drawn as a bordered button (beside other buttons), so it takes the steel button look.
+export function CopyButton({ value, label, className, text = false, outlined = false }) {
   const t = useTranslations("common");
   const [copied, setCopied] = useState(false);
 
@@ -61,6 +62,7 @@ export function CopyButton({ value, label, className, text = false }) {
           type="button"
           onClick={copy}
           aria-label={title}
+          data-variant={outlined ? "outline" : undefined}
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             className,

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CopyButton } from "@/components/ui/copy-button";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 /** The endpoint is throttled at 120/min; every 2s sits well inside that. */
 const POLL_MS = 2000;
@@ -217,7 +218,7 @@ function Completed({ clone, sourceApplication, onAgain }) {
         <div className="flex-1 space-y-4 px-5 py-5 sm:px-6">
           <dl className="grid gap-2 rounded-xl border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1.2fr)] sm:items-stretch">
             <div className="min-w-0 rounded-lg border bg-background/80 px-3 py-2.5">
-              <dt className="text-xs font-medium text-muted-foreground">
+              <dt className={FACT_LABEL}>
                 {t("source")}
               </dt>
               <dd className="mt-1 truncate text-sm font-medium">{sourceName ?? "—"}</dd>

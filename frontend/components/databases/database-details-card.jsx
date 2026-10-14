@@ -10,6 +10,7 @@ import { CardIcon } from "@/components/ui/card-icon";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 // The facts in one grid, with "Used by" among them rather than a card of its own,
 // and what that link means for backups underneath.
@@ -113,7 +114,7 @@ export function DatabaseDetailsCard({
             <div key={cell.key} className="min-w-0 space-y-1 bg-card px-5 py-3.5">
               {/* Wraps: in a sixth of the card, "Change" was cut off in Russian. */}
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-                <dt className="text-xs text-muted-foreground">{cell.label}</dt>
+                <dt className={FACT_LABEL}>{cell.label}</dt>
                 {cell.action ?? null}
               </div>
               <dd className="min-w-0 text-sm font-semibold">{cell.value}</dd>

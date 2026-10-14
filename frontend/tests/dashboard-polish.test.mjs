@@ -210,7 +210,8 @@ test("both clocks are named, not just the older one", () => {
   // No leading icon since the redesign: card titles are words, as in the prototype.
   assert.match(section, /<CardTitle as="h2">\s*\{t\("liveLabel"\)\}/);
   assert.match(section, /title=\{t\("historyLabel"\)\}/);
-  assert.match(section, /<h2 className="text-base font-semibold tracking-tight">/);
+  // Steel UI (14 Oct): the section label is mono caps, still an h2.
+  assert.match(section, /<h2 className="font-mono text-xs font-medium tracking-\[0\.12em\] text-muted-foreground uppercase">/);
 
   // And the old floating label is gone rather than left beside the new one.
   const code = section.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -247,8 +248,9 @@ test("the server facts fill whole rows at every width", () => {
    * or uptime: the banner shows both (Krishna, 6 Oct).
    */
   const info = fs.readFileSync("components/dashboard/server-info-card.jsx", "utf8");
-  assert.match(info, /<dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-4">/);
-  assert.equal((info.match(/<Fact icon=/g) ?? []).length, 8);
+  // Steel UI (14 Oct): hairline cells, no icons.
+  assert.match(info, /<dl className="-mr-px -mb-px grid sm:grid-cols-2 xl:grid-cols-4">/);
+  assert.equal((info.match(/<Fact label=/g) ?? []).length, 8);
   assert.doesNotMatch(info, /info\.ip"|info\.uptime"/);
 });
 
@@ -280,7 +282,8 @@ test("the value keeps foreground contrast; only the dot carries the series colou
    * number in a colour chosen to be legible as a 2px line rather than as text.
    */
   assert.match(chartCard, /font-medium tabular-nums text-foreground/);
-  assert.match(chartCard, /size-2 shrink-0 rounded-full/);
+  // Steel UI (14 Oct): a square swatch.
+  assert.match(chartCard, /<span className=\{cn\("size-2 shrink-0", dotClassName\)\} \/>/);
 });
 
 test("the live pills sit on the chart's title line", () => {
@@ -415,7 +418,8 @@ test("the services line says something in every case it can be in", () => {
 test("server information is one full-width card with the main software as equal tiles", () => {
   // Krishna, 6 Oct: nothing beside it to leave a hole, and the tiles fill the width.
   assert.match(info, /<MainSoftware\b/);
-  assert.match(info, /<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">/);
+  // Steel UI (14 Oct): hairline cells.
+  assert.match(info, /<ul className="-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">/);
   const page = fs.readFileSync("app/(app)/dashboard/page.jsx", "utf8");
   assert.doesNotMatch(page, /xl:grid-cols-\[minmax\(0,1fr\)_22rem\]/);
 });
@@ -511,7 +515,8 @@ test("the four chart plots start at the same height", () => {
    * nothing about where the contents start. Measured at 1440: 116px for all
    * four once the second line is reserved.
    */
-  assert.match(chartCard, /<CardDescription className="min-h-10">/);
+  // Steel UI (14 Oct): the description opens the body, still two lines reserved.
+  assert.match(chartCard, /<CardDescription className="min-h-10 px-\(--card-spacing\) pt-4">/);
 });
 
 test("the loading card is exactly as tall as the loaded one", () => {

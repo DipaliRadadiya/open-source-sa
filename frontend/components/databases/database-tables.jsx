@@ -49,6 +49,7 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
     const Icon = !active ? ArrowUpDown : sort.desc ? ArrowDown : ArrowUp;
     return (
       <th
+        data-slot="table-head"
         scope="col"
         aria-sort={active ? (sort.desc ? "descending" : "ascending") : "none"}
         className={cn("h-11 px-3 font-medium sm:px-5", className)}

@@ -189,12 +189,13 @@ const FACT_TONE = {
 function Fact({ icon: Icon, label, value, tone }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3">
-      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-8", FACT_TONE[tone] ?? FACT_TONE.muted)}>
+      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[2px] border border-current/30 sm:size-8", FACT_TONE[tone] ?? FACT_TONE.muted)}>
         <Icon className="size-4" aria-hidden />
       </span>
       {/* Label and value side by side on a phone row, stacked in a column cell. */}
       <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 sm:block">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        {/* Steel UI: mono caps label, as in the dashboard's stat cells. */}
+        <p className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</p>
         <p className="text-sm font-semibold tabular-nums">{value}</p>
       </div>
     </div>

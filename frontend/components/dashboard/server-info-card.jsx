@@ -1,25 +1,11 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
-import {
-  Server,
-  Cpu,
-  Terminal,
-  CircleCheck,
-  CircleAlert,
-  Monitor,
-  MemoryStick,
-  HardDrive,
-  Globe,
-  Hexagon,
-  Binary,
-  Database,
-  ChevronRight,
-} from "lucide-react";
+import { CircleAlert, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortVersion } from "@/lib/databases/short-version";
 
 // Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
@@ -27,58 +13,64 @@ const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
 
 // Product names, shown as-is in every language.
 const RUNTIMES = {
-  nginx: { name: "Nginx", logo: "/runtimes/nginx.svg", web: true },
-  apache: { name: "Apache", logo: "/runtimes/apache.svg", web: true },
-  openlitespeed: { name: "OpenLiteSpeed", logo: null, web: true },
-  php: { name: "PHP", logo: "/site-types/php.svg" },
-  node: { name: "Node.js", logo: "/runtimes/node.svg" },
-  redis: { name: "Redis", logo: "/runtimes/redis.svg" },
+  nginx: { name: "Nginx", mark: "NGX", web: true },
+  apache: { name: "Apache", mark: "APA", web: true },
+  openlitespeed: { name: "OpenLiteSpeed", mark: "OLS", web: true },
+  php: { name: "PHP", mark: "PHP" },
+  node: { name: "Node.js", mark: "NODE" },
+  redis: { name: "Redis", mark: "RDS" },
 };
 
 // What a site depends on: the web server, PHP, Node.js and one database. The
 // rest (Redis, a second engine) sits behind "+N more" on the Services page.
 const MAIN_RUNTIMES = new Set(["nginx", "apache", "openlitespeed", "php", "node"]);
 const MAIN_ENGINE_ORDER = ["mariadb", "mysql", "postgresql", "mongodb"];
-const ENGINE_MARKS = new Set(MAIN_ENGINE_ORDER);
+// Steel UI (Krishna's prototype, 14 Oct): a short mono code in a square instead of the
+// logo on a white tile, which looked odd on the dark theme (and the MariaDB seal is
+// dark blue, so a dark tile would hide it).
+const ENGINE_MARKS = { mariadb: "MDB", mysql: "MYSQL", postgresql: "PG", mongodb: "MGO" };
 
-function Fact({ icon: Icon, label, value, mono }) {
+// Steel UI (Krishna's prototype, 14 Oct): facts are cells in one hairline grid. Each
+// cell draws its right and bottom edge inside itself; the grid's -1px margins push
+// the outermost ones under the card's clipped edge or the next section's border.
+const CELL = "min-w-0 bg-card shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]";
+
+function Fact({ label, value, mono }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-lg px-2 py-2">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground ring-1 ring-border/70">
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="flex min-w-0 items-center gap-1">
-          {value ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  tabIndex={0}
-                  className={cn(
-                    "truncate text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                    mono && "font-mono tracking-tight",
-                  )}
-                >
-                  {value}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm break-all">{value}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <span className="text-sm font-medium">—</span>
-          )}
-        </dd>
-      </div>
+    <div className={cn(CELL, "px-4 py-3")}>
+      <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
+      <dd className="mt-1 flex min-w-0 items-center gap-1">
+        {value ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                className={cn(
+                  "truncate text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                  mono && "font-mono tracking-tight",
+                )}
+              >
+                {value}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm break-all">{value}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="text-sm font-medium">—</span>
+        )}
+      </dd>
     </div>
   );
 }
 
-function SoftwareChip({ logo, icon: Icon = Hexagon, name, version, title }) {
+function SoftwareChip({ mark, name, version, title }) {
   return (
-    <li title={title} className="flex min-w-0 items-center gap-3 rounded-xl bg-muted/40 p-3 ring-1 ring-border/70">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1 ring-1 ring-border/70 dark:bg-white">
-        {logo ?? <Icon className="size-4 text-muted-foreground" aria-hidden />}
+    <li title={title} className={cn(CELL, "flex items-center gap-3 px-4 py-3")}>
+      <span
+        aria-hidden
+        className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-[2px] border bg-muted/40 px-1 font-mono text-xs font-semibold tracking-[0.04em] text-[var(--primary-700,var(--primary))] dark:text-primary"
+      >
+        {mark ?? name.slice(0, 3).toUpperCase()}
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium">{name}</span>
@@ -116,22 +108,25 @@ export async function ServerInfoCard({ facts, health, engines = [], enginesFaile
     : null;
 
   return (
-    <Card className={cn("[--card-spacing:--spacing(5)]", PANEL_CARD)}>
-      <CardHeader>
+    <Card className={cn("gap-0 pb-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
+      {/* The description sits on the right in mono caps, as in the prototype. */}
+      <CardHeader className="border-b max-sm:grid-cols-1">
         <CardTitle as="h2">{t("info.title")}</CardTitle>
-        <CardDescription>{t("info.description")}</CardDescription>
+        <CardAction className="self-center max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-2 max-sm:justify-self-start">
+          <CardDescription className="font-mono text-xs tracking-[0.1em] uppercase">{t("info.description")}</CardDescription>
+        </CardAction>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="p-0">
         {/* Eight facts so the four-across rows are always full. */}
-        <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-4">
-          <Fact icon={Server} label={t("info.hostname")} value={facts.hostname} mono />
-          <Fact icon={Monitor} label={t("info.os")} value={facts.os} />
-          <Fact icon={Cpu} label={t("info.cpuModel")} value={processor} />
-          <Fact icon={MemoryStick} label={t("info.memory")} value={facts.memory_total_human} />
-          <Fact icon={HardDrive} label={t("info.disk")} value={facts.disk_total_human} />
-          <Fact icon={Terminal} label={t("info.kernel")} value={facts.kernel} mono />
-          <Fact icon={Binary} label={t("info.arch")} value={facts.arch} mono />
-          <Fact icon={Globe} label={t("info.timezone")} value={facts.timezone} mono />
+        <dl className="-mr-px -mb-px grid sm:grid-cols-2 xl:grid-cols-4">
+          <Fact label={t("info.hostname")} value={facts.hostname} mono />
+          <Fact label={t("info.os")} value={facts.os} />
+          <Fact label={t("info.cpuModel")} value={processor} />
+          <Fact label={t("info.memory")} value={facts.memory_total_human} />
+          <Fact label={t("info.disk")} value={facts.disk_total_human} />
+          <Fact label={t("info.kernel")} value={facts.kernel} mono />
+          <Fact label={t("info.arch")} value={facts.arch} mono />
+          <Fact label={t("info.timezone")} value={facts.timezone} mono />
         </dl>
         <MainSoftware
           facts={facts}
@@ -170,14 +165,14 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
 
 
   return (
-    <section className="border-t pt-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <section className="border-t">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-[var(--card-head)] px-4 py-3">
         <h3 className="text-sm font-semibold">{t("info.mainSoftware")}</h3>
         <ServiceHealthLine health={health} down={down} t={t} />
       </div>
       <div>
         {runtimes.length || installedEngines.length || enginesFailed ? (
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <ul className="-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
             {mainRuntimes.map(([name, version]) => {
               const known = RUNTIMES[name];
               return (
@@ -185,12 +180,7 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
                   key={name}
                   name={known?.name ?? name}
                   version={version}
-                  logo={
-                    known?.logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={known.logo} alt="" className="size-5 object-contain" />
-                    ) : null
-                  }
+                  mark={known?.mark}
                 />
               );
             })}
@@ -202,21 +192,14 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
                 // "10.11.14-MariaDB-0ubuntu0.24.04.1".
                 title={mainEngine.version ?? undefined}
                 version={shortVersion(mainEngine.version)}
-                // The mark only: a wordmark is unreadable at tile size, so the name is printed.
-                logo={
-                  ENGINE_MARKS.has(mainEngine.engine) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={`/runtimes/${mainEngine.engine}.svg`} alt="" className="size-5 object-contain" />
-                  ) : null
-                }
-                icon={Database}
+                mark={ENGINE_MARKS[mainEngine.engine]}
               />
             ) : null}
 
             {/* Stated, not omitted, so the row never contradicts the databases
                 page. Muted: nothing is broken on the server. */}
             {enginesFailed ? (
-              <li className="flex items-center">
+              <li className={cn(CELL, "flex items-center px-4 py-3")}>
                 <Badge
                   variant="outline"
                   className="gap-1.5 border-dashed bg-card py-1 font-normal text-muted-foreground"
@@ -228,18 +211,18 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
             ) : null}
 
             {more > 0 ? (
-              <li>
+              <li className={CELL}>
                 {canViewServices ? (
                   <Link
                     href="/services"
                     prefetch={false}
-                    className="flex h-full items-center justify-center gap-0.5 rounded-xl border border-dashed px-3 py-3 text-sm font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
+                    className="flex h-full min-h-15 items-center justify-center gap-0.5 px-3 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                   >
                     {t("info.moreSoftware", { count: more })}
                     <ChevronRight className="size-3.5" aria-hidden />
                   </Link>
                 ) : (
-                  <span className="flex h-full items-center justify-center rounded-xl border border-dashed px-3 py-3 text-sm text-muted-foreground">
+                  <span className="flex h-full min-h-15 items-center justify-center px-3 py-3 text-sm text-muted-foreground">
                     {t("info.moreSoftware", { count: more })}
                   </span>
                 )}
@@ -247,7 +230,7 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
             ) : null}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{t("info.noRuntimes")}</p>
+          <p className="px-4 py-3 text-sm text-muted-foreground">{t("info.noRuntimes")}</p>
         )}
       </div>
     </section>
@@ -278,7 +261,7 @@ function ServiceHealthLine({ health, down, t }) {
 
   return (
     <Badge variant="success" className="gap-1.5 py-1 font-medium">
-      <CircleCheck className="size-3.5 shrink-0" />
+      <span aria-hidden className="size-1.5 shrink-0 bg-current" />
       {t("info.servicesOk", { count: health.total })}
     </Badge>
   );
