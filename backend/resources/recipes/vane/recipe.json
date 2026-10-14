@@ -1,0 +1,79 @@
+{
+    "schema": 1,
+    "slug": "vane",
+    "version": 1,
+    "title": "Vane",
+    "tagline": {
+        "en": "AI answers with cited sources, formerly Perplexica",
+        "es": "Respuestas de IA con fuentes citadas, antes Perplexica",
+        "de": "KI-Antworten mit zitierten Quellen, früher Perplexica",
+        "fr": "Réponses d'IA avec sources citées, anciennement Perplexica",
+        "pt": "Respostas de IA com fontes citadas, antes Perplexica",
+        "ja": "出典付きで答える AI 検索（旧 Perplexica）",
+        "ru": "Ответы ИИ со ссылками на источники, ранее Perplexica",
+        "hi": "स्रोतों के हवालों के साथ AI जवाब, पहले Perplexica"
+    },
+    "category": "ai",
+    "icon": "vane",
+    "popular": false,
+    "catalog_order": 740,
+    "docs_url": "https://github.com/ItzCrazyKns/Vane#installation",
+    "images": {
+        "proxy": {
+            "ref": "caddy:2.11.7-alpine",
+            "tested": []
+        },
+        "vane": {
+            "ref": "itzcrazykns1337/vane:v1.12.2",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "proxy",
+            "role": "app"
+        },
+        {
+            "name": "vane",
+            "role": "worker"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/home/vane/data"
+    },
+    "secrets": [
+        {
+            "key": "GATE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "GATE_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Vane has no login of its own: up to v1.12.2 every API route is unauthenticated, and GET /api/config returns the configured AI provider API keys in plain text (upstream issues ItzCrazyKns/Vane#1122 and #1123). So the whole site sits behind a password gate: a Caddy proxy with HTTP basic authentication, user admin and the generated password shown on the first-run card. The gate can come off only when upstream adds authentication.",
+        "The Caddy proxy is the only published port. Its start command hashes the generated password with bcrypt (caddy hash-password) and writes its own Caddyfile: basic_auth on every path, then reverse_proxy to vane:3000 with flush_interval -1 so streamed answers arrive as they are written. Vane itself publishes nothing.",
+        "The first visit opens Vane's setup screen, where you pick the AI provider (OpenAI, Anthropic, Gemini, Groq, Ollama, any OpenAI-compatible API such as this panel's LiteLLM recipe, and more) and the chat and embedding models. Vane keeps that configuration, its SQLite chat history and uploaded files in one named volume on /home/vane/data.",
+        "The official image bundles SearXNG, which Vane uses for web search; it listens only inside the Vane container (port 8080) and needs no setup. Searches leave the server from the container, so the server needs outbound internet access.",
+        "The panel's memory limit applies to the Vane container, which runs Node, SearXNG and a headless Chromium for page scraping; the proxy has a fixed 128m.",
+        "Exact release tags were verified for linux/amd64. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+    ]
+}

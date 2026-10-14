@@ -1,0 +1,82 @@
+{
+    "schema": 1,
+    "slug": "openwebui",
+    "version": 1,
+    "title": "Open WebUI",
+    "tagline": {
+        "en": "ChatGPT-style AI chat for OpenAI, Anthropic or any compatible API",
+        "es": "Chat de IA al estilo ChatGPT para OpenAI, Anthropic o cualquier API compatible",
+        "de": "KI-Chat im ChatGPT-Stil für OpenAI, Anthropic oder jede kompatible API",
+        "fr": "Chat IA façon ChatGPT pour OpenAI, Anthropic ou toute API compatible",
+        "pt": "Chat de IA no estilo ChatGPT para OpenAI, Anthropic ou qualquer API compatível",
+        "ja": "OpenAI、Anthropic、または互換 API で使える ChatGPT 風の AI チャット",
+        "ru": "ИИ-чат в стиле ChatGPT для OpenAI, Anthropic или любого совместимого API",
+        "hi": "OpenAI, Anthropic या किसी भी संगत API के लिए ChatGPT जैसी AI चैट"
+    },
+    "category": "ai",
+    "icon": "openwebui",
+    "popular": false,
+    "catalog_order": 730,
+    "docs_url": "https://docs.openwebui.com/",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/open-webui/open-webui:v0.12.0-slim",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "openwebui",
+            "role": "app"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/app/backend/data"
+    },
+    "secrets": [
+        {
+            "key": "WEBUI_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "WEBUI_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "No model is bundled. After signing in, add a connection in Admin Settings → Connections: OpenAI, Anthropic, any OpenAI-compatible API (for example this panel's LiteLLM recipe) or your own Ollama server's URL.",
+        "The built-in Ollama connection is switched off (ENABLE_OLLAMA_API=false), so nothing calls a local Ollama that does not exist. Open WebUI stores this setting in its database on the first start; turn it back on in Admin Settings → Connections if you add your own Ollama.",
+        "WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD create the administrator only while no users exist, and creating that administrator closes sign-up, so a second sign-up is refused. Later changes to these variables do nothing: change the password in the web interface.",
+        "WEBUI_SECRET_KEY (generated) signs sessions and encrypts stored OAuth data; it persists with the application's secrets. WEBUI_URL is the site's own HTTPS address.",
+        "The official slim image is used on purpose: the full image downloads a local embedding model on its first start and took more than 15 minutes to become ready. The slim image has no local embeddings, reranking or speech-to-text; configure external providers for those features.",
+        "Everything (the SQLite database, uploads and settings) lives in one named volume on /app/backend/data.",
+        "Exact release tags were verified for linux/amd64. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+    ]
+}
