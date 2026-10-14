@@ -321,6 +321,24 @@ describe('a run', function () {
             ->and($import->message())->toContain(__('database.import_failed.untouched'));
     });
 
+    it('refuses a cut-off .sql.gz before touching anything, even when what decompresses reads as whole statements', function () {
+        // Every statement is there; only the gzip trailer is missing. gzread()
+        // reads this without complaint, so without the check it loads "fine".
+        $cut = substr(gzencode("CREATE TABLE a (id int);\nCREATE TABLE b (id int);\n"), 0, -8);
+
+        $import = runImport(uploadedImport($this->database, $cut, 'dump.sql.gz'));
+
+        expect($import->reason)->toBe('truncated')
+            ->and($this->runs)->toBe([])
+            ->and($import->message())->toContain(__('database.import_failed.untouched'));
+    });
+
+    it('takes a whole .sql.gz, including one made of several gzip members', function () {
+        $import = runImport(uploadedImport($this->database, gzencode("CREATE TABLE a (id int);\n").gzencode("CREATE TABLE b (id int);\n"), 'dump.sql.gz'));
+
+        expect($import->status)->toBe(ImportStatus::Completed);
+    });
+
     it('refuses a PostgreSQL file with a psql command before touching anything, naming the line', function () {
         $pg = Database::factory()->create(['engine' => 'postgresql', 'name' => 'pg_db']);
         DatabaseUser::factory()->create(['database_id' => $pg->id, 'username' => 'pg_user']);

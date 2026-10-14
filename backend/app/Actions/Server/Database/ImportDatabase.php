@@ -148,6 +148,10 @@ class ImportDatabase
         $driver = $this->manager->driver($database->engine);
         $format = $info['format'] ?? null;
 
+        if (($info['gzip'] ?? false) && ! $this->files->gzipComplete($upload)) {
+            throw new ImportRefusedException('truncated');
+        }
+
         if ($driver === 'mongo') {
             if ($format !== ImportFiles::MONGO_ARCHIVE) {
                 throw new ImportRefusedException('wrong_format');

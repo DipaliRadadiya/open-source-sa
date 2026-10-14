@@ -155,6 +155,60 @@ class ImportFiles
         return null;
     }
 
+    /**
+     * Whether a gzip file reaches its end marker. gzread() hands back whatever
+     * decompresses and stays silent about the rest, so a cut-off .sql.gz reads
+     * as a shorter dump — and one cut between two statements loads "fine",
+     * missing every table after the cut. Read to the end once, before
+     * anything is dropped. Further members (`cat a.gz b.gz`) are followed;
+     * bytes after the last one that are not a member are ignored, as gzip does.
+     */
+    public function gzipComplete(string $path): bool
+    {
+        $in = @fopen($path, 'rb');
+
+        if ($in === false) {
+            return false;
+        }
+
+        try {
+            $inflate = inflate_init(ZLIB_ENCODING_GZIP);
+            $ended = false;
+
+            while (! feof($in)) {
+                $chunk = (string) fread($in, 1 << 20);
+
+                while ($chunk !== '') {
+                    if ($ended) {
+                        if (! str_starts_with($chunk, "\x1f\x8b")) {
+                            return true;
+                        }
+
+                        $inflate = inflate_init(ZLIB_ENCODING_GZIP);
+                        $ended = false;
+                    }
+
+                    $before = inflate_get_read_len($inflate);
+
+                    if (@inflate_add($inflate, $chunk, ZLIB_SYNC_FLUSH) === false) {
+                        return false;
+                    }
+
+                    if (inflate_get_status($inflate) !== ZLIB_STREAM_END) {
+                        break;
+                    }
+
+                    $chunk = substr($chunk, inflate_get_read_len($inflate) - $before);
+                    $ended = true;
+                }
+            }
+
+            return $ended;
+        } finally {
+            fclose($in);
+        }
+    }
+
     public function delete(DatabaseImport $import): void
     {
         @unlink($this->uploadPath($import));
