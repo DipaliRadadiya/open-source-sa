@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * One-click update of a site's own software (v7 parity): Moodle, Mautic,
- * Statamic, Craft CMS, Uptime Kuma, phpMyAdmin.
+ * Statamic, Craft CMS, Uptime Kuma, phpMyAdmin, Adminer.
  *
  * What matters here: an update stays inside the installed major, every
  * command runs as the site's user on the site's own PHP, the files that hold
@@ -421,6 +421,25 @@ it('updates phpMyAdmin from the versioned release, keeping config.inc.php', func
     expect($update->status)->toBe(ApplicationUpdateStatus::Completed)
         ->and(UpdateHost::ran('https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.tar.gz'))->toBeTrue()
         ->and(UpdateHost::ran('config.inc.php'))->toBeFalse();
+});
+
+it('updates Adminer by replacing adminer.php alone, keeping the panel\'s wrapper', function () {
+    $application = updateApp('adminer');
+    UpdateHost::$files[$application->documentRoot().'/adminer.php'] = ["<?php\nconst\nVERSION=\"6.1.1\";", "<?php\nconst\nVERSION=\"6.1.2\";"];
+    UpdateHost::$finalStep = 'cp -r';
+    Http::fake(['api.github.com/repos/vrana/adminer/releases*' => Http::response([
+        ['tag_name' => 'v6.1.2', 'draft' => false, 'prerelease' => false],
+        ['tag_name' => 'v5.4.1', 'draft' => false, 'prerelease' => false],
+    ])]);
+
+    $update = runUpdateJob(pendingUpdate($application, '6.1.1', '6.1.2'));
+
+    // The version is read back from the compiled file's own `const VERSION`,
+    // which the release build splits over two lines.
+    expect($update->status)->toBe(ApplicationUpdateStatus::Completed)
+        ->and(UpdateHost::ran('https://github.com/vrana/adminer/releases/download/v6.1.2/adminer-6.1.2.php'))->toBeTrue()
+        ->and(UpdateHost::ran('index.php'))->toBeFalse()
+        ->and(UpdateHost::ran('sso.php'))->toBeFalse();
 });
 
 it('marks an update the worker abandoned as failed instead of running forever', function () {

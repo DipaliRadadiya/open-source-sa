@@ -61,6 +61,7 @@ return [
     'database.connection_updated' => 'Обновил настройки подключения :engine',
     'database.user_updated' => 'Обновил пользователя базы данных :username в :database',
     'database.phpmyadmin_signed_in' => 'Открыл :name в phpMyAdmin от имени :username',
+    'database.adminer_signed_in' => 'Открыл(а) :name в Adminer как :username',
     'database.process_killed' => 'Завершил процесс :process (:engine)',
     'build_tools.install_started' => 'Начата установка инструментов сборки',
     'build_tools.installed' => 'Инструменты сборки установлены',

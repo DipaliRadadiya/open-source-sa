@@ -32,6 +32,7 @@ return [
         'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'Creador de blogs y sitios web: se ejecuta en un contenedor con su propia MariaDB'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Creador de blogs y sitios web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gestione sus bases de datos en el navegador'],
+        'adminer' => ['title' => 'Adminer', 'tagline' => 'Gestiona bases de datos MySQL, MariaDB y PostgreSQL en el navegador'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorización de disponibilidad y páginas de estado'],
         'n8n' => ['title' => 'n8n', 'tagline' => 'Automatización de flujos de trabajo (licencia fair-code)'],
         'nodered' => ['title' => 'Node-RED', 'tagline' => 'Conecta dispositivos, APIs y servicios'],

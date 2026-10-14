@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Server\AdminerSsoController;
 use App\Http\Controllers\API\Server\DatabaseConnectionController;
 use App\Http\Controllers\API\Server\DatabaseController;
 use App\Http\Controllers\API\Server\DatabaseMonitorController;
@@ -116,6 +117,11 @@ Route::middleware('manages-databases')->group(function (): void {
     | changing a database's contents.
     */
     Route::post('/databases/{database}/phpmyadmin-sso', PhpmyadminSsoController::class)
+        ->middleware('permission:database,manage');
+
+    // Adminer's one-click sign-in: the same bar as phpMyAdmin's, for the same
+    // reason — the session it opens is the database user's, and it can write.
+    Route::post('/databases/{database}/adminer-sso', AdminerSsoController::class)
         ->middleware('permission:database,manage');
     Route::middleware('permission:database,manage')->scopeBindings()->group(function () {
         Route::post('/databases/{database}/users', [DatabaseUserController::class, 'store']);

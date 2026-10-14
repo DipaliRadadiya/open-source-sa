@@ -32,6 +32,7 @@ return [
         'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'ブログとサイトの構築 — 専用の MariaDB とともにコンテナとして動作します'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],
+        'adminer' => ['title' => 'Adminer', 'tagline' => 'ブラウザで MySQL、MariaDB、PostgreSQL のデータベースを管理'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => '稼働監視とステータスページ'],
         'n8n' => ['title' => 'n8n', 'tagline' => 'ワークフロー自動化 (フェアコードライセンス)'],
         'nodered' => ['title' => 'Node-RED', 'tagline' => 'デバイス・API・サービスをつなぐ'],

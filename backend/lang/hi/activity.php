@@ -61,6 +61,7 @@ return [
     'database.connection_updated' => ':engine कनेक्शन सेटिंग्स अपडेट कीं',
     'database.user_updated' => ':database पर डेटाबेस उपयोगकर्ता :username अपडेट किया',
     'database.phpmyadmin_signed_in' => ':name को :username के रूप में phpMyAdmin में खोला',
+    'database.adminer_signed_in' => ':name को Adminer में :username के रूप में खोला',
     'database.process_killed' => ':engine प्रोसेस :process समाप्त किया',
     'build_tools.install_started' => 'बिल्ड टूल्स की इंस्टॉलेशन शुरू की',
     'build_tools.installed' => 'बिल्ड टूल्स इंस्टॉल किए',

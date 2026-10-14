@@ -4359,6 +4359,34 @@ Signing in this way writes a `database.phpmyadmin_signed_in` row to the activity
 
 ---
 
+### POST `/databases/{database}/adminer-sso`
+**Permission:** `database` (**manage**) — the same bar as phpMyAdmin's sign-in, for the same reason: the session it opens is the database user's, and it can write. Hide the button for view-only users; they get `403`.
+
+*Added 2026-10-14.* One-click sign-in to **Adminer** for the database's user. Adminer is a site type (`site_type: "adminer"`, installed from the application catalog like phpMyAdmin) that opens **MySQL, MariaDB and PostgreSQL** — the browser client PostgreSQL databases had no equivalent of before. MongoDB is refused (`422`): Adminer's MongoDB driver needs a PHP extension the panel does not install.
+
+Same contract as `phpmyadmin-sso` above: redirect the browser to `redirect_url` as given. It is always `https://`, holds a one-time token (TTL 60 s) that the site's `sso.php` deletes before use, and lands the browser in Adminer signed in and opened on this database.
+
+The Adminer site is locked to this server's own database servers: its login form offers "MySQL / MariaDB" and "PostgreSQL" from a list instead of a free-text host, so it cannot be used to reach other machines or open SQLite files by path. Typing a database user's own credentials there still works.
+
+**Query (optional):** `?database_user_id=1` — sign in as a specific database user (default: the first one). `?application_id=7` — which Adminer, when the server has more than one (default: the oldest Active one). Picker: `GET /applications?filter[site_type]=adminer`.
+
+**Response `200`:**
+```json
+{"redirect_url": "https://adminer.example.com/sso.php?token=***"}
+```
+
+**Response `422`** — each with a readable `message`:
+- the database is MongoDB: `Adminer cannot open MongoDB databases. It opens MySQL, MariaDB and PostgreSQL.`
+- no Active Adminer site on the server, or `application_id` names something that is not one (two different messages, as for phpMyAdmin);
+- the database has no users, or `database_user_id` belongs to another database;
+- **the panel does not know the user's password** — a user adopted from another panel (e.g. v7), whose engine holds only a hash. The message names the user and says to set a new password first;
+- the Adminer site has no HTTPS (offer to issue a certificate);
+- the Adminer site shares the server-wide PHP pool, so the token file would be readable by other sites.
+
+Signing in writes a `database.adminer_signed_in` row to the activity log (panel user, database, database account).
+
+---
+
 ### GET `/databases/processes`
 **Permission:** `database` (view)
 

@@ -61,6 +61,7 @@ return [
     'database.connection_updated' => 'Verbindungseinstellungen für :engine aktualisiert',
     'database.user_updated' => 'Datenbankbenutzer :username in :database aktualisiert',
     'database.phpmyadmin_signed_in' => ':name in phpMyAdmin als :username geöffnet',
+    'database.adminer_signed_in' => ':name in Adminer als :username geöffnet',
     'database.process_killed' => ':engine-Prozess :process beendet',
     'build_tools.install_started' => 'Installation der Build-Tools gestartet',
     'build_tools.installed' => 'Build-Tools installiert',

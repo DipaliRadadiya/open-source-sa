@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Applications\Types\AdminerSiteType;
 use App\Services\Applications\Types\AkauntingSiteType;
 use App\Services\Applications\Types\BookStackSiteType;
 use App\Services\Applications\Types\ChatwootSiteType;
@@ -43,6 +44,7 @@ use App\Services\Git\GitlabProvider;
 use App\Services\Git\Webhooks\BitbucketWebhook;
 use App\Services\Git\Webhooks\GithubWebhook;
 use App\Services\Git\Webhooks\GitlabWebhook;
+use App\Services\Server\Applications\Installers\AdminerInstaller;
 use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use App\Services\Server\Applications\Installers\CraftCmsInstaller;
 use App\Services\Server\Applications\Installers\DockerAppInstaller;
@@ -1750,6 +1752,21 @@ return [
             'download_url' => env('SERVER_PHPMYADMIN_URL', 'https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz'),
             'db_host' => env('SERVER_PHPMYADMIN_DB_HOST', '127.0.0.1'),
         ],
+
+        'adminer' => [
+            'driver' => AdminerInstaller::class,
+            // The newest stable release is asked for at install time, the way
+            // Uptime Kuma's is: a pin in a one-click installer stops being
+            // noticed. `version` is only the fallback for when GitHub cannot
+            // be asked — set it, and empty `releases_api`, to hold one.
+            'releases_api' => env('SERVER_ADMINER_RELEASES_API', 'https://api.github.com/repos/vrana/adminer/releases'),
+            'version' => env('SERVER_ADMINER_VERSION', '6.1.2'),
+            // The single-file build with every bundled driver and language.
+            // Both hops (github.com -> objects.githubusercontent.com) are
+            // https, which the download step requires.
+            'download_url' => env('SERVER_ADMINER_URL', 'https://github.com/vrana/adminer/releases/download/v{version}/adminer-{version}.php'),
+            'db_host' => env('SERVER_ADMINER_DB_HOST', '127.0.0.1'),
+        ],
     ],
 
     'git_credential_dir' => env('SERVER_GIT_CREDENTIAL_DIR', sys_get_temp_dir()),
@@ -2194,6 +2211,7 @@ return [
         StatamicSiteType::class,
         PrestaShopSiteType::class,
         PhpMyAdminSiteType::class,
+        AdminerSiteType::class,
         UptimeKumaSiteType::class,
         N8nSiteType::class,
         NodeRedSiteType::class,

@@ -32,6 +32,7 @@ return [
         'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'ब्लॉग और वेबसाइट बनाने का टूल — कंटेनर के रूप में अपने MariaDB के साथ चलता है'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ब्लॉग और वेबसाइट बिल्डर'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ब्राउज़र में अपने डेटाबेस प्रबंधित करें'],
+        'adminer' => ['title' => 'Adminer', 'tagline' => 'ब्राउज़र में MySQL, MariaDB और PostgreSQL डेटाबेस प्रबंधित करें'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'अपटाइम निगरानी और स्टेटस पेज'],
         'n8n' => ['title' => 'n8n', 'tagline' => 'वर्कफ़्लो स्वचालन (fair-code लाइसेंस)'],
         'nodered' => ['title' => 'Node-RED', 'tagline' => 'डिवाइस, API और सेवाओं को जोड़ें'],

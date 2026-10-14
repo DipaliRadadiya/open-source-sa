@@ -110,17 +110,17 @@ it('offers staging only where a staging recipe exists', function () {
         ->and(sidebarFor(makeFeatureApp('git')))->not->toContain('app_staging');
 });
 
-it('does not offer backups or cloning for phpMyAdmin', function () {
+it('does not offer backups or cloning for a database client', function (string $type) {
     // It holds no content of its own — it reads the databases already on the
     // server. Reinstalling is the honest recovery path.
-    $sidebar = sidebarFor(makeFeatureApp('phpmyadmin'));
+    $sidebar = sidebarFor(makeFeatureApp($type));
 
     expect($sidebar)->not->toContain('app_backup')
         ->and($sidebar)->not->toContain('app_clone')
         // Password protection stays: an exposed phpMyAdmin is a login page for
         // every database on the box.
         ->and($sidebar)->toContain('app_security');
-});
+})->with(['phpmyadmin', 'adminer']);
 
 it('offers cloning only where copying the files is the whole job', function () {
     // A clone of a database-backed site that copies only files is a site

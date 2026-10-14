@@ -61,6 +61,7 @@ return [
     'database.connection_updated' => ':engine の接続設定を更新しました',
     'database.user_updated' => ':database の データベースユーザー :username を更新しました',
     'database.phpmyadmin_signed_in' => ':name を :username として phpMyAdmin で開きました',
+    'database.adminer_signed_in' => ':name を Adminer で :username として開きました',
     'database.process_killed' => ':engine のプロセス :process を終了しました',
     'build_tools.install_started' => 'ビルドツールのインストールを開始しました',
     'build_tools.installed' => 'ビルドツールをインストールしました',

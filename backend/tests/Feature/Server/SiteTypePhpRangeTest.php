@@ -33,6 +33,7 @@ dataset('published ranges', [
     'akaunting' => ['akaunting', '8.1', null],
     'nextcloud' => ['nextcloud', '8.3', '8.5'],
     'phpmyadmin' => ['phpmyadmin', '7.2', null],
+    'adminer' => ['adminer', '7.4', null],
     'craftcms' => ['craftcms', '8.2', null],
     'statamic' => ['statamic', '8.3', null],
 ]);
