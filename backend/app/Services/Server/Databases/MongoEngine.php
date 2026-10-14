@@ -379,6 +379,44 @@ class MongoEngine implements DatabaseEngine
      * and create should leave them as they were — read in MongoDB's
      * documentation, not measured: no test server runs MongoDB.
      */
+    /**
+     * As the database's own user, authenticated against this database (where
+     * the panel creates Mongo users, with `readWrite` on it alone). Whatever
+     * the archive was dumped from is renamed into this database
+     * (`$db$.$coll$` → `{database}.$coll$`); the server's own databases are
+     * skipped, never renamed into it.
+     */
+    public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void
+    {
+        $client = (string) config('server.databases.engines.mongodb.restore_client', 'mongorestore');
+
+        $dir = rtrim((string) config('server.databases.auth_file_dir', sys_get_temp_dir()), '/');
+        $configFile = $dir.'/db-'.bin2hex(random_bytes(8)).'.yaml';
+        file_put_contents($configFile, 'password: '.json_encode($password)."\n");
+        @chmod($configFile, 0600);
+
+        try {
+            $result = $this->serverOps->run(array_values(array_filter([
+                $client, '--config='.$configFile,
+                '--host='.($this->connection->host ?: '127.0.0.1'),
+                '--port='.(int) ($this->connection->port ?: 27017),
+                '--username='.$username,
+                '--authenticationDatabase='.$database,
+                '--nsExclude=admin.*', '--nsExclude=config.*', '--nsExclude=local.*',
+                '--nsFrom=$db$.$coll$', '--nsTo='.$database.'.$coll$',
+                '--drop',
+                $gzip ? '--gzip' : null,
+                '--archive='.$path,
+            ])), ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'import'], (int) config('server.databases.import_timeout', 7200));
+
+            if ($result->failed()) {
+                throw new DatabaseOperationException($result->reference);
+            }
+        } finally {
+            @unlink($configFile);
+        }
+    }
+
     public function reattachUsers(string $database, array $usernames): void {}
 
     public function restore(string $database, string $path): void

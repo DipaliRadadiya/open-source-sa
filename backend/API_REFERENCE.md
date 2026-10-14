@@ -4183,6 +4183,65 @@ Poll `GET /databases/exports`.
 
 **One export per database at a time.** A second request while one is queued or running is a **`422`** naming that, rather than a second `mysqldump` writing another full copy to the same disk. A run whose worker was killed is closed out automatically before the check, so a stranded row cannot block a database permanently — it gets `status: failed`, `reason: worker`.
 
+*Since 2026-10-14:* also a **`422`** while an **import** into the same database is queued or running — a dump taken while the import drops and reloads the database would be a half-empty file that looks like a good one.
+
+---
+
+### Database import — `/databases/{database}/imports`
+*Added 2026-10-14.* Upload a dump and **replace** the database's contents with it (operator decision: replace, never merge — afterwards the database holds exactly the file). All four engines:
+
+| Engine | Accepted (judged by the file's bytes, not its name) |
+|---|---|
+| MySQL, MariaDB | `.sql`, `.sql.gz` |
+| PostgreSQL | `.sql`, `.sql.gz`, a `pg_dump -Fc` custom archive |
+| MongoDB | a `mongodump --archive` file, gzip or not |
+
+**Limit:** 2 GB per file (`SERVER_DB_IMPORT_MAX_BYTES`). **Permission:** `database` **manage** for everything but the list.
+
+**What a run does, in order — nothing is dropped before step 3:**
+1. **Checks** the file. SQL is decompressed and cleaned into what the database's own user can load: `CREATE DATABASE`/`USE`, definers, GTID lines (MySQL) and ownership/grants/role switches (PostgreSQL) are removed, the same things the panel's own exports leave out. A PostgreSQL file containing a **psql client command** (`\!`, `\connect`, `\copy`… outside strings, comments and data) is **refused**: psql runs those itself, and `\!` is a shell command.
+2. **Backs up** the database — an ordinary export, listed in `GET /databases/exports` with **`purpose: "import_safety"`** (label it *"Automatic backup before import"*), kept until the user deletes it.
+3. **Replaces**: drop, recreate, give the users back, load the file **as the database's own user** (never the admin account — a dump's `USE other_db` reaches nothing). PostgreSQL loads in one transaction.
+4. If the load fails, **puts the backup back** automatically.
+
+The import needs a user of this database whose password the panel knows and who connects from this server (`connection_preference` `localhost` or `anywhere`). A database with none — e.g. only users adopted from v7 — is refused **before** the upload, with a message saying to add one or set a new password.
+
+**Frontend:** before `start`, show what will happen in plain words and require an explicit confirmation — the API refuses without `confirm_replace`. Suggested wording: *"Importing replaces everything in `<database>` with the contents of `<file>`. The panel backs the database up first and puts it back automatically if the import fails; the backup stays in Exports."*
+
+#### POST `/databases/{database}/imports` — begin
+**Throttle:** 20/min. **Request:** `{"file_name": "shop.sql.gz", "size_bytes": 10485760}`
+
+**Response `201`:** `{"import": {…}, "max_chunk": 66584576}` — then send the file in chunks of at most `max_chunk` bytes.
+
+**`422`:** over the limit (`size_bytes`); not enough free disk space (`size_bytes`); no usable database user (`database`); another import of this database is open (`database`).
+
+#### PUT `/databases/{database}/imports/{import}/chunk` — one chunk
+**Raw body** (not multipart), appended in order. **Throttle:** 1200/min (per chunk; the global API throttle does not apply). **Response `200`:** `{"received": 4194304}` — bytes stored so far, also the resume point after a dropped connection. A body that would go past `size_bytes` is cut off and refused (`422`). `409` once the import is no longer uploading.
+
+#### POST `/databases/{database}/imports/{import}/start` — run it
+**Throttle:** 6/min. **Request:** `{"confirm_replace": true}` — **required**; without it `422` on `confirm_replace`.
+
+**Response `202`:** `{"import": {"status": "queued", …}}`. **`422`:** the file has not fully arrived (`file`); an export of this database is running (`database`). **`409`:** not uploading any more.
+
+#### GET `/databases/{database}/imports` — progress and history
+**Permission:** `database` (view). The latest 20, newest first. Poll this while one runs:
+```json
+{"imports": [{
+  "id": 7, "database": "shop_db", "engine": "mariadb", "file_name": "shop.sql.gz",
+  "size_bytes": 10485760, "size_human": "10 MB", "received_bytes": 10485760,
+  "status": "running", "step": "importing",
+  "reason": null, "message": null, "line": null, "reference": null,
+  "restored": false, "safety_export_id": 41, "requested_by": {"id": 1, "username": "admin"},
+  "created_at": "14-10-2026 11:02:10", "finished_at": null
+}]}
+```
+- `status`: `uploading` → `queued` → `running` → `completed` | `failed`.
+- `step` while running: `checking`, `backing_up`, `importing`, `rolling_back`.
+- On `failed`, **`message` always ends by saying what happened to the data**: *not changed* (failed before step 3), *put back from the automatic backup* (`restored: true`), or *could not be put back by itself — the backup is in Exports*. `reason` codes: `wrong_format`, `client_command` (with `line`), `truncated`, `unreadable`, `backup_failed`, `load_failed` (with `reference`), `no_account`, `database_missing`, `worker`, `abandoned` (upload not finished within a day — closed out automatically).
+
+#### DELETE `/databases/{database}/imports/{import}`
+Cancel an upload or clear a finished row; removes the uploaded file. **`409`** while queued or running.
+
 ---
 
 ### GET `/databases/exports`
@@ -4190,9 +4249,11 @@ Poll `GET /databases/exports`.
 
 All exports, newest first. Includes in-flight rows.
 
+**`purpose`** (added 2026-10-14): `null` for an export someone asked for; **`"import_safety"`** for the backup an import takes automatically before replacing a database — show it as *"Automatic backup before import"*. It is kept, downloadable and deletable like any other export.
+
 ```json
 {"exports": [{
-  "id": 1, "database_id": 1, "database": "shop_db", "engine": "mariadb",
+  "id": 1, "database_id": 1, "database": "shop_db", "engine": "mariadb", "purpose": null,
   "status": "completed", "file": "shop_db-2026-07-28-100000.sql.gz",
   "size_bytes": 2097152, "size_human": "2 MB",
   "reason": null, "message": null, "reference": null,

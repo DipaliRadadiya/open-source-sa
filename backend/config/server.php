@@ -3462,6 +3462,19 @@ return [
 
         // Where database exports (dumps) are written + streamed from.
         'export_dir' => env('SERVER_DB_EXPORT_DIR', storage_path('app/db-exports')),
+
+        // Uploaded files waiting to be imported into a database, and the
+        // cleaned SQL an import loads. The panel's own, 0700: no site user may
+        // read a customer's dump or swap the file before it is loaded.
+        'import_dir' => env('SERVER_DB_IMPORT_DIR', storage_path('app/db-imports')),
+
+        // The largest file an import accepts (operator decision 2026-10-14:
+        // 2 GB). The disk check runs against this as well as the free space.
+        'import_max_bytes' => (int) env('SERVER_DB_IMPORT_MAX_BYTES', 2 * 1024 * 1024 * 1024),
+
+        // A run: the safety backup, the load, and putting the backup back if
+        // the load fails — three passes over a database that can be gigabytes.
+        'import_timeout' => (int) env('SERVER_DB_IMPORT_TIMEOUT', 7200),
     ],
 
     /*

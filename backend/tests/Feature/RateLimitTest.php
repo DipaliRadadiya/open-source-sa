@@ -100,6 +100,9 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/applications/{application}/files/uploads',
         'api/applications/{application}/files/uploads/{uploadId}',
         'api/applications/{application}/files/uploads/{uploadId}/finalize',
+        // A database import's chunks, for the same reason as the file manager's:
+        // one large upload is hundreds of requests (2026-10-14).
+        'api/databases/{database}/imports/{import}/chunk',
         // Progress feeds. Watched screens poll these for as long as the work
         // runs, so sharing one budget with the rest of the panel meant a long
         // install ended in a 429 that read as the install having failed.

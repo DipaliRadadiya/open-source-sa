@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'database_id', 'database_name', 'engine', 'file', 'status',
+    'database_id', 'database_name', 'engine', 'purpose', 'file', 'status',
     'reason', 'reference', 'size_bytes', 'user_id', 'started_at', 'finished_at',
 ])]
 class DatabaseExport extends Model
@@ -31,6 +31,9 @@ class DatabaseExport extends Model
      *
      * @var array<int, string>
      */
+    /** The copy an import takes before it replaces anything (DatabaseImport). */
+    public const PURPOSE_IMPORT_SAFETY = 'import_safety';
+
     public const IN_FLIGHT = [
         ExportStatus::Queued->value,
         ExportStatus::Running->value,

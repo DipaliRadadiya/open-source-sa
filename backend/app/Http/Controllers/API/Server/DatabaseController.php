@@ -21,6 +21,7 @@ use App\Jobs\RunDatabaseExport;
 use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseExport;
+use App\Models\DatabaseImport;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
@@ -365,6 +366,20 @@ class DatabaseController extends Controller
         if ($inFlight) {
             throw ValidationException::withMessages([
                 'database' => [__('errors/database.export_already_running')],
+            ]);
+        }
+
+        // A dump taken while an import drops and reloads the database would be
+        // a half-empty file that looks like a good one.
+        $importing = DatabaseImport::query()
+            ->where('database_id', $database->id)
+            ->inFlight()
+            ->get()
+            ->contains(fn (DatabaseImport $import): bool => ! $import->isStale());
+
+        if ($importing) {
+            throw ValidationException::withMessages([
+                'database' => [__('errors/database.export_import_running')],
             ]);
         }
 

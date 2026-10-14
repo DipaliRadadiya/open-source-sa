@@ -2,6 +2,8 @@
 
 namespace App\Contracts;
 
+use App\Services\Server\Databases\Imports\ImportSanitizer;
+
 /**
  * A database engine strategy. `SqlEngine` covers MySQL + MariaDB (shared
  * client + DDL); `MongoEngine` covers MongoDB. Each is built for one
@@ -166,6 +168,20 @@ interface DatabaseEngine
      * inverse of dump() rather than a merge.
      */
     public function restore(string $database, string $path): void;
+
+    /**
+     * Load a user-supplied file into an existing, freshly recreated database,
+     * connected **as that database's own user** — never as the panel's admin
+     * account. That is the whole containment: a dump that says `USE other_db`
+     * or `\connect other_db` reaches only what this user may reach, which is
+     * this database.
+     *
+     * `$path` is already decompressed and cleaned for SQL engines
+     * ({@see ImportSanitizer}); for
+     * MongoDB it is the uploaded archive itself, gzip or not as `$gzip` says.
+     * Throws DatabaseOperationException on failure.
+     */
+    public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void;
 
     /**
      * Give a database that has just been dropped and created again back to

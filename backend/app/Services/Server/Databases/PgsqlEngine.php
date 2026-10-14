@@ -6,6 +6,7 @@ use App\Contracts\DatabaseEngine;
 use App\Contracts\ListensRemotely;
 use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Models\DatabaseConnection;
+use App\Services\Server\Databases\Imports\PgsqlLexer;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
@@ -854,6 +855,70 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
      * owner and the others could read none of them otherwise. One
      * transaction, inside the database.
      */
+    /**
+     * As the database's own user, over TCP to the admin connection's host —
+     * a site user authenticates with its password there, not over the local
+     * socket's peer rule. Connected as them, their `SET role = {db}#owner`
+     * applies, so what the file creates belongs to the database's owner group
+     * the way everything the panel creates does.
+     *
+     * One transaction (`--single-transaction`, `ON_ERROR_STOP`): a file that
+     * fails halfway leaves nothing behind it, and the caller puts the safety
+     * copy back. psql's own client commands are refused before this runs
+     * ({@see PgsqlLexer}) — psql has no switch to disable them, and this
+     * client runs as root.
+     */
+    public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void
+    {
+        $account = $this->connection->replicate();
+        $account->username = $username;
+        $account->password = $password;
+
+        if ($account->connection_type === 'socket') {
+            $account->connection_type = 'tcp';
+            $account->host = '127.0.0.1';
+        }
+
+        (new self($account, $this->serverOps))->load($database, $path);
+    }
+
+    private function load(string $database, string $path): void
+    {
+        $client = (string) config("server.databases.engines.{$this->engine()}.client", 'psql');
+
+        $this->mustRun([
+            $client,
+            ...$this->connectionArgs(),
+            '--dbname='.$database,
+            '--no-psqlrc',
+            '--set=ON_ERROR_STOP=1',
+            '--single-transaction',
+            '--quiet',
+            '--file='.$path,
+        ], 'import', (int) config('server.databases.import_timeout', 7200));
+    }
+
+    /**
+     * Turn a `pg_dump -Fc` archive into the plain SQL the import loads, so it
+     * goes through the same checks as any other file. `pg_restore --file`
+     * writes SQL without connecting to anything. Owner and privilege lines are
+     * left out here, as the panel's own exports leave them out.
+     */
+    public function customToPlain(string $archive, string $target): void
+    {
+        $client = (string) config("server.databases.engines.{$this->engine()}.restore_client", 'pg_restore');
+
+        $result = $this->serverOps->run(
+            [$client, '--no-owner', '--no-privileges', '--file='.$target, $archive],
+            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'import.convert'],
+            (int) config('server.databases.import_timeout', 7200),
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+    }
+
     public function reattachUsers(string $database, array $usernames): void
     {
         // Only roles that still exist: one dropped outside the panel would

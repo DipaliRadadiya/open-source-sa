@@ -504,6 +504,48 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
      */
     public function reattachUsers(string $database, array $usernames): void {}
 
+    /**
+     * As the database's own user, over the admin connection's transport, with
+     * `--binary-mode`: that switch turns off every client command but `\C` and
+     * `DELIMITER` for piped input, so `\! command` or `system command` in an
+     * uploaded file reaches the server as (failing) SQL instead of a shell —
+     * one run as root, since the client is elevated. Fed over stdin rather than
+     * `source`, which is itself a client command.
+     */
+    public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void
+    {
+        $account = $this->connection->replicate();
+        $account->username = $username;
+        $account->password = $password;
+
+        (new self($account, $this->serverOps))->load($database, $path);
+    }
+
+    private function load(string $database, string $path): void
+    {
+        $client = (string) config("server.databases.engines.{$this->connection->engine}.client", 'mysql');
+        $authFile = $this->writeAuthFile();
+        $input = fopen($path, 'rb');
+
+        try {
+            $result = $this->serverOps->run(
+                [$client, '--defaults-extra-file='.$authFile, '--batch', '--binary-mode', $database],
+                ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'import'],
+                (int) config('server.databases.import_timeout', 7200),
+                $input,
+            );
+
+            if ($result->failed()) {
+                throw new DatabaseOperationException($result->reference);
+            }
+        } finally {
+            if (is_resource($input)) {
+                fclose($input);
+            }
+            @unlink($authFile);
+        }
+    }
+
     public function restore(string $database, string $path): void
     {
         $client = (string) config("server.databases.engines.{$this->connection->engine}.client", 'mysql');

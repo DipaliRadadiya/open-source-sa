@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Server\AdminerSsoController;
 use App\Http\Controllers\API\Server\DatabaseConnectionController;
 use App\Http\Controllers\API\Server\DatabaseController;
+use App\Http\Controllers\API\Server\DatabaseImportController;
 use App\Http\Controllers\API\Server\DatabaseMonitorController;
 use App\Http\Controllers\API\Server\DatabaseUserController;
 use App\Http\Controllers\API\Server\PhpmyadminSsoController;
@@ -103,6 +104,27 @@ Route::middleware('manages-databases')->group(function (): void {
     */
     Route::post('/databases/{database}/export', [DatabaseController::class, 'export'])
         ->middleware(['permission:database,manage', 'throttle:6,1']);
+
+    /*
+    | Import a file into a database, replacing its contents (2026-10-14).
+    |
+    | `manage` throughout: it rewrites the whole database. The chunk route drops
+    | the global `throttle:api` for the reason the file manager's does — one
+    | large upload is legitimately hundreds of requests — and is bounded by the
+    | declared size, the 2 GB limit and the free-space check instead. `start`
+    | is the destructive one and is throttled hard.
+    */
+    Route::get('/databases/{database}/imports', [DatabaseImportController::class, 'index'])
+        ->middleware('permission:database');
+    Route::post('/databases/{database}/imports', [DatabaseImportController::class, 'store'])
+        ->middleware(['permission:database,manage', 'throttle:20,1']);
+    Route::put('/databases/{database}/imports/{import}/chunk', [DatabaseImportController::class, 'chunk'])
+        ->withoutMiddleware('throttle:api')
+        ->middleware(['permission:database,manage', 'throttle:1200,1']);
+    Route::post('/databases/{database}/imports/{import}/start', [DatabaseImportController::class, 'start'])
+        ->middleware(['permission:database,manage', 'throttle:6,1']);
+    Route::delete('/databases/{database}/imports/{import}', [DatabaseImportController::class, 'destroy'])
+        ->middleware(['permission:database,manage', 'throttle:20,1']);
 
     // Database users (nested — a user belongs to one database).
     Route::middleware('permission:database')->group(function () {

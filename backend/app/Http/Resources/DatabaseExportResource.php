@@ -23,6 +23,10 @@ class DatabaseExportResource extends JsonResource
             // dump of a since-deleted database still says what it was of.
             'database' => $this->database_name,
             'engine' => $this->engine,
+            // null for an export someone asked for; `import_safety` for the
+            // automatic copy an import takes first — label it as such
+            // ("Automatic backup before import") rather than as the user's own.
+            'purpose' => $this->purpose,
             'file' => $this->file,
             'status' => $this->status->value,
             'size_bytes' => $this->size_bytes,
