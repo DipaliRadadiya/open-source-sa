@@ -7,7 +7,10 @@ services:
   proxy:
     image: {{ image.proxy }}
     restart: unless-stopped
-    mem_limit: 128m
+    mem_limit: {{ memory_limit }}
+{{#if cpu_limit}}
+    cpus: {{ cpu_limit }}
+{{/if}}
     logging:
       driver: json-file
       options:
@@ -31,10 +34,7 @@ services:
   vane:
     image: {{ image.vane }}
     restart: unless-stopped
-    mem_limit: {{ memory_limit }}
-{{#if cpu_limit}}
-    cpus: {{ cpu_limit }}
-{{/if}}
+    mem_limit: 2g
     logging:
       driver: json-file
       options:

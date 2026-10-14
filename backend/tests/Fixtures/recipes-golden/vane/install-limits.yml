@@ -4,7 +4,8 @@ services:
   proxy:
     image: caddy:2.11.7-alpine
     restart: unless-stopped
-    mem_limit: 128m
+    mem_limit: 640m
+    cpus: 1.5
     logging:
       driver: json-file
       options:
@@ -28,8 +29,7 @@ services:
   vane:
     image: itzcrazykns1337/vane:v1.12.2
     restart: unless-stopped
-    mem_limit: 640m
-    cpus: 1.5
+    mem_limit: 2g
     logging:
       driver: json-file
       options:

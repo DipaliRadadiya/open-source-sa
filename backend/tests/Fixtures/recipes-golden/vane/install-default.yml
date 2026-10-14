@@ -4,7 +4,7 @@ services:
   proxy:
     image: caddy:2.11.7-alpine
     restart: unless-stopped
-    mem_limit: 128m
+    mem_limit: 256m
     logging:
       driver: json-file
       options:
