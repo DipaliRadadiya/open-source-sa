@@ -21,43 +21,63 @@
     "images": {
         "kong": {
             "ref": "kong/kong:3.9.3",
-            "tested": []
+            "tested": [
+                "kong/kong:3.9.3"
+            ]
         },
         "studio": {
             "ref": "supabase/studio:2026.09.07-sha-7996410",
-            "tested": []
+            "tested": [
+                "supabase/studio:2026.09.07-sha-7996410"
+            ]
         },
         "auth": {
             "ref": "supabase/gotrue:v2.196.0",
-            "tested": []
+            "tested": [
+                "supabase/gotrue:v2.196.0"
+            ]
         },
         "rest": {
             "ref": "postgrest/postgrest:v14.17",
-            "tested": []
+            "tested": [
+                "postgrest/postgrest:v14.17"
+            ]
         },
         "realtime": {
             "ref": "supabase/realtime:v2.134.10",
-            "tested": []
+            "tested": [
+                "supabase/realtime:v2.134.10"
+            ]
         },
         "storage": {
             "ref": "supabase/storage-api:v1.74.0",
-            "tested": []
+            "tested": [
+                "supabase/storage-api:v1.74.0"
+            ]
         },
         "imgproxy": {
             "ref": "darthsim/imgproxy:v3.31.4",
-            "tested": []
+            "tested": [
+                "darthsim/imgproxy:v3.31.4"
+            ]
         },
         "meta": {
             "ref": "supabase/postgres-meta:v0.99.0",
-            "tested": []
+            "tested": [
+                "supabase/postgres-meta:v0.99.0"
+            ]
         },
         "functions": {
             "ref": "supabase/edge-runtime:v1.76.2",
-            "tested": []
+            "tested": [
+                "supabase/edge-runtime:v1.76.2"
+            ]
         },
         "db": {
             "ref": "supabase/postgres:17.6.1.136",
-            "tested": []
+            "tested": [
+                "supabase/postgres:17.6.1.136"
+            ]
         }
     },
     "services": [
@@ -233,12 +253,15 @@
         "First run: open the site and sign in to Supabase Studio with the username and password shown here (Kong's HTTP basic auth, DASHBOARD_USERNAME/DASHBOARD_PASSWORD upstream). The anon and service_role API keys are in Studio under Project Settings > API. The anon key is safe in browser code with row level security on; the service_role key bypasses row level security, is admin-level and must stay server-side.",
         "Source: the official docker/ folder of supabase/supabase at the self-hosted/v0.8.2 release (commit 564eab8a), which is what the self-hosting docs pin; every image tag is the one that release pins. The release's default gateway is Envoy; this recipe uses its official Kong override (docker-compose.kong.yml, kong/kong:3.9.3) because Kong's declarative config and entrypoint are two small files, while Envoy's generated listener template is 58 KB. Kong is the one published service: Studio at /, and /auth/v1, /rest/v1, /graphql/v1, /realtime/v1, /storage/v1, /functions/v1 and /pg behind the anon/service_role key checks, exactly as upstream's kong.yml routes them.",
         "Left out: vector (it needs the Docker socket), analytics/Logflare (only useful with vector; upstream already ships both as the optional docker-compose.logs.yml, and Studio runs with ENABLED_FEATURES_LOGS_ALL=false), so Studio's Logs pages are not available. supavisor (the connection pooler) is left out too: under the panel's one-port rule PostgreSQL is not reachable from outside the stack, so use the REST/GraphQL APIs, the client libraries or Studio's SQL editor; direct Postgres connections are not exposed.",
+        "GraphQL: /graphql/v1 is routed and key-checked, but this Postgres release (supabase/postgres 17.6.1.136) turns the pg_graphql extension off by default, so it answers \"pg_graphql extension is not enabled\" until you enable it under Database > Extensions in Studio or run create extension pg_graphql; in the SQL editor (verified live: queries then return data).",
         "API keys: ANON_KEY and SERVICE_ROLE_KEY are the legacy HS256 JWTs signed with JWT_SECRET, which the release still documents as the default. The panel has no JWT filter, so starter/jwt-keys.sh derives them at container start from a fixed header and payload (role, iss supabase, iat 2025-10-14, exp 2035-10-12, as upstream's utils/generate-keys.sh but with fixed times): the same secret always gives the same keys in every container, with openssl where the image has it and node where it does not (storage). Kong, Studio and Storage source it in their start command; Realtime uses it for its health check. The new opaque publishable/secret keys and the asymmetric ES256 pair are not configured (they are optional in this release); their Kong variables are set empty so the gateway drops those credentials.",
         "Secrets, each 32 alphanumeric characters: POSTGRES_PASSWORD (the postgres, supabase_admin and service role passwords, as upstream), JWT_SECRET (signs every session and API key; changing it signs everyone out and changes both keys), DASHBOARD_PASSWORD, PG_META_CRYPTO_KEY, S3_PROTOCOL_ACCESS_KEY_ID and S3_PROTOCOL_ACCESS_KEY_SECRET (Storage's S3-compatible endpoint at /storage/v1/s3). Realtime's SECRET_KEY_BASE needs 64+ characters and is two secrets joined (SECRET_KEY_BASE + SECRET_KEY_BASE_2). Realtime's DB_ENC_KEY must be exactly 16 characters, so the start command takes the first 16 of REALTIME_DB_ENC_KEY. VAULT_ENC_KEY and the Logflare tokens belong to the services left out.",
         "URLs: SUPABASE_PUBLIC_URL (Studio and the functions runtime) is the url key. API_EXTERNAL_URL and the Auth issuer are https://<domain>/auth/v1, SITE_URL (Auth's default redirect) and STORAGE_PUBLIC_URL are https://<domain>. Add your front-end's URL to Auth's redirect allow list when you build an app on it.",
         "Email: the box needs no SMTP. ENABLE_EMAIL_AUTOCONFIRM is on, so a sign-up through /auth/v1/signup is confirmed at once and can sign in. To send real email (confirmations, magic links, password reset), set the auth service's GOTRUE_SMTP_HOST, GOTRUE_SMTP_PORT, GOTRUE_SMTP_USER, GOTRUE_SMTP_PASS, GOTRUE_SMTP_ADMIN_EMAIL and GOTRUE_SMTP_SENDER_NAME (https://supabase.com/docs/guides/self-hosting/docker) and turn GOTRUE_MAILER_AUTOCONFIRM off; the panel rewrites compose.yml on every deploy, so such a change has to be made again after each one. Phone sign-up is off (no SMS provider).",
-        "Starter files, written once into the site folder and never overwritten: the Kong config and entrypoint (home/kong), jwt-keys.sh (opt/supabase-keys), the seven database init scripts (docker-entrypoint-initdb.d, bind-mounted file by file next to the image's own; they run only when the database volume is empty) and the Edge Functions folder (home/deno/functions). Add a function as home/deno/functions/<name>/index.ts in the site folder and restart the functions container; Studio lists that folder read-only. The starter hello function replaces upstream's, which accepts only the opaque keys: it answers when the apikey header carries the anon or service_role key, checked against JWT_SECRET with Web Crypto. The functions router (main) loads jose from jsr.io on first start, so the box needs outbound internet once; the cache is kept in the deno-cache volume.",
+        "Starter files, written once into the site folder and never overwritten: the Kong config and entrypoint (home/kong), jwt-keys.sh (opt/supabase-keys), the seven database init scripts (docker-entrypoint-initdb.d, bind-mounted file by file next to the image's own; they run only when the database volume is empty) and the Edge Functions folder (home/deno/functions). Add a function as home/deno/functions/<name>/index.ts in the site folder and restart the functions container; Studio lists that folder read-only. The starter hello function replaces upstream's, which accepts only the opaque keys: it answers when the apikey header carries the anon or service_role key, checked against JWT_SECRET with Web Crypto. The functions router (main) imports jose from jsr.io when it starts and the container stays unhealthy until that download succeeds, so the box needs outbound internet on the first start; afterwards the cache in the deno-cache volume is used.",
         "Realtime keeps upstream's tenant: Kong reaches it as realtime-dev.supabase-realtime and Realtime takes the tenant id from that host name, so the realtime service carries that network alias instead of upstream's fixed container name (the panel never sets container names, so two installs never collide).",
-        "Memory: Kong takes the app limit (floor 1g); Studio, Realtime and Edge Functions 1g each; Storage and imgproxy 512m; Auth, PostgREST and postgres-meta 256m; PostgreSQL uses the panel database default. Storage keeps uploaded files in the storage volume (shared with imgproxy, which reads originals for image transforms), Studio keeps saved SQL snippets in the snippets volume."
+        "Memory: Kong takes the app limit (floor 1g); Studio, Realtime and Edge Functions 1g each; Storage and imgproxy 512m; Auth, PostgREST and postgres-meta 256m; PostgreSQL uses the panel database default. Storage keeps uploaded files in the storage volume (shared with imgproxy, which reads originals for image transforms), Studio keeps saved SQL snippets in the snippets volume.",
+        "Kong logs every request to the container log (upstream's KONG_PROXY_ACCESS_LOG). Realtime websocket URLs carry the API key as ?apikey=, so the anon key appears there; connect to Realtime with the anon key or a user session, never the service_role key, or that key ends up in the log too. Restarting the whole stack at once can make Auth start before PostgreSQL accepts connections: it exits once and Docker restarts it a second later (upstream behaviour).",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-41): every image ref above is in its tested list. Create to Running in 405 s and 312 s including fresh pulls of all ten images (about 7.9 GB, 233 s and 134 s of it). Studio basic auth, the derived keys (identical in Kong, Studio, Storage and Studio's Legacy API keys page), a table with an anon select policy read through /rest/v1 with the anon key, sign-up and sign-in through /auth/v1 (token issuer https://<domain>/auth/v1), a bucket and upload in Studio downloaded through /storage/v1 plus an imgproxy resize, the hello function, a Realtime websocket join and broadcast, and a full restart all passed. Measured idle (after use) against each limit: Kong 26%, Studio 28 to 32%, Realtime 20 to 22%, Edge Functions 4 to 11%, Storage 21 to 34%, imgproxy 4 to 19%, Auth 5 to 15%, PostgREST 14 to 16%, postgres-meta 46 to 47% (peak 53%), PostgreSQL 26 to 32% of 512m; the whole stack idles at 1.0 to 1.4 GB; no OOM kills."
     ]
 }
