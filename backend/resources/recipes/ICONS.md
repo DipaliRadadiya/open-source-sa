@@ -139,6 +139,7 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `vane` | [official raster](https://raw.githubusercontent.com/ItzCrazyKns/Vane/v1.12.2/public/icon.png) | MIT | The official mark is raster-only (no SVG in the repository). Monochrome vector trace (potrace, 50% threshold) of the 440 × 440 icon over a rounded white backing so the black mark stays legible in the dark panel theme; no raster embedded. |
 | `hoppscotch` | [source](https://raw.githubusercontent.com/hoppscotch/hoppscotch/2026.9.0/packages/hoppscotch-common/public/logo.svg) | MIT | Official application mark (rounded dark square with the planet); unmodified. |
 | `postiz` | [source](https://raw.githubusercontent.com/gitroomhq/postiz-app/v2.25.1/apps/frontend/public/postiz.svg) | AGPL-3.0 | Official application mark (the "p" tile); unmodified. |
+| `supabase` | [source](https://raw.githubusercontent.com/supabase/supabase/564eab8ad7840b13324f68b1bfac074ef8d51c21/packages/common/assets/images/supabase-logo-icon.svg) | Apache-2.0 (supabase/supabase repository) | Official mark (the green bolt), from the self-hosted/v0.8.2 release commit; unmodified. |
 
 ## Licence references
 
