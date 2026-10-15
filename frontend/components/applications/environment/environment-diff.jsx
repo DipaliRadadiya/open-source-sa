@@ -65,7 +65,7 @@ export function EnvironmentDiff({ state }) {
         // Table when the container fits three columns, stacked rows otherwise.
         <div className="@container">
           <table className="hidden w-full text-xs @md:table">
-            <thead className="bg-muted/50 text-muted-foreground">
+            <thead className="bg-muted/40 text-muted-foreground">
               <tr>
                 <th data-slot="table-head" className="w-1/4 px-3 py-2 text-start font-medium">{t("colKey")}</th>
                 <th data-slot="table-head" className="px-3 py-2 text-start font-medium">{t("colBefore")}</th>

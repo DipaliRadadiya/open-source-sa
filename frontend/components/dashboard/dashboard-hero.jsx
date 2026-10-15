@@ -97,7 +97,9 @@ export async function DashboardHero({
         </div>
 
         {canCreate || canViewLogs ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          // max-w-full: on a phone the pair is wider than the banner in German and Russian,
+          // and shrink-0 alone kept it on one line and cut "Create application" off.
+          <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
             {canViewLogs ? (
               <Button asChild variant="ghost" className="border border-[var(--hero-line)] text-[var(--hero-fg)] hover:bg-[var(--hero-wash)] hover:text-[var(--hero-fg)] dark:hover:bg-[var(--hero-wash)]">
                 <Link href="/logs" prefetch={false}>

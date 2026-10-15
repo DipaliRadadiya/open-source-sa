@@ -38,7 +38,9 @@ export function ActivityToolbar({ types, kinds = [], security = false, searchKey
       <SearchInput placeholder={t(searchKey)} extraQuery={extraQuery} />
 
       {/* Phone: the filter and Refresh share a row, so Refresh is not left alone on one. */}
-      <div className="flex items-center gap-3 sm:contents">
+      {/* flex-wrap + flex-auto: a filter whose label does not fit takes its own line rather
+          than cutting it ("Tous les événements"); sm:min-w-40, not w-40, for the same reason. */}
+      <div className="flex flex-wrap items-center gap-3 sm:contents">
         {hasFilters ? (
           <Select
             value={selectedType}
@@ -47,7 +49,7 @@ export function ActivityToolbar({ types, kinds = [], security = false, searchKey
               apply({ type: v === "all" ? undefined : v, action: undefined })
             }
           >
-            <SelectTrigger className={cn(SELECT_WELL, "min-w-0 flex-1 sm:w-40 sm:flex-none")} aria-label={t("table.type")}>
+            <SelectTrigger className={cn(SELECT_WELL, "min-w-0 flex-auto sm:w-auto sm:min-w-40 sm:flex-none")} aria-label={t("table.type")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper">
@@ -71,7 +73,7 @@ export function ActivityToolbar({ types, kinds = [], security = false, searchKey
               })
             }
           >
-            <SelectTrigger className={cn(SELECT_WELL, "min-w-0 flex-1 sm:w-40 sm:flex-none")} aria-label={t("filter.kind")}>
+            <SelectTrigger className={cn(SELECT_WELL, "min-w-0 flex-auto sm:w-auto sm:min-w-40 sm:flex-none")} aria-label={t("filter.kind")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper">

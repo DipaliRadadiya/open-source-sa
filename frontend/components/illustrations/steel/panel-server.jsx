@@ -105,15 +105,18 @@ function AppModule({ spec, state, more, step }) {
           />
         </g>
         <g transform={box.topT}>
-          <rect
-            x="8"
-            y="8"
-            width={w - 16}
-            height={spec.d - 16}
-            rx="3"
-            fill="url(#ps-perf)"
-            opacity="0.6"
-          />
+          {/* No vents on the "+N" module, so the number reads. */}
+          {more ? null : (
+            <rect
+              x="8"
+              y="8"
+              width={w - 16}
+              height={spec.d - 16}
+              rx="3"
+              fill="url(#ps-perf)"
+              opacity="0.6"
+            />
+          )}
           {more ? (
             <text
               x={w / 2}
@@ -182,8 +185,8 @@ export function PanelServer({
           <stop offset="0.65" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="ps-glass" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0d1512" />
-          <stop offset="1" stopColor="#0a2a1b" />
+          <stop className="sv-m-glass0" offset="0" stopColor="#0d1512" />
+          <stop className="sv-m-glass1" offset="1" stopColor="#0a2a1b" />
         </linearGradient>
         <pattern
           id="ps-perf"
@@ -191,7 +194,7 @@ export function PanelServer({
           height="7"
           patternUnits="userSpaceOnUse"
         >
-          <circle cx="3.5" cy="3.5" r="1.4" fill="#101215" />
+          <circle cx="3.5" cy="3.5" r="1.4" fill="#101215" className="sv-m-perf" />
         </pattern>
         <filter id="sv-soft" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="9" />

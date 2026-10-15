@@ -203,11 +203,13 @@ export function IgnoreListCard({ settings, canManage }) {
             ) : null}
           </div>
 
-          {/* Focusable native scrolling keeps warning, entry controls and Save outside. */}
+          {/* Focusable native scrolling keeps warning, entry controls and Save outside.
+              Side by side it shrinks to scroll but never grows: grown to the card's height,
+              its last row looked tall (Krishna, 15 Oct). */}
           <ul
             tabIndex={0}
             aria-label={t("settings.ignore")}
-            className="min-h-0 max-h-72 overflow-y-auto overscroll-contain rounded-lg border divide-y focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring xl:@4xl/fail2ban-rules:max-h-none xl:@4xl/fail2ban-rules:flex-1"
+            className="min-h-0 max-h-72 overflow-y-auto overscroll-contain rounded-lg border divide-y focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring xl:@4xl/fail2ban-rules:max-h-none"
           >
             {ips.length === 0 ? (
               <li className="px-3 py-4 text-sm text-muted-foreground">

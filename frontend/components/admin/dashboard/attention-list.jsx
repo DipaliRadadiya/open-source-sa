@@ -13,7 +13,7 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
         href={href}
         prefetch={false}
         title={summary ?? undefined}
-        className="group flex min-w-0 items-center gap-3 rounded-xl bg-card px-3 py-2.5 shadow-e1 ring-1 ring-border/70 transition-colors hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="group flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-card px-3 py-2.5 shadow-e1 ring-1 ring-border/70 transition-colors hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span
           className={cn(
@@ -23,7 +23,9 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
         >
           <Icon className="size-4" aria-hidden />
         </span>
-        <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm leading-snug">
+        {/* min-w-48 lets the action drop to its own line on a phone instead of squeezing
+            the title to two words a line (French, Russian; steel audit, 15 Oct). */}
+        <p className="flex min-w-48 flex-1 items-center gap-1.5 text-sm leading-snug">
           {/* The names give way first, so the problem itself stays readable. From md the
               title keeps one line and only the summary truncates: shrinking both broke
               "4 recent command failures" onto two lines (Krishna, 13 Oct). */}
@@ -33,7 +35,7 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
           ) : null}
           {summary ? <span className="sr-only md:hidden">{summary}</span> : null}
         </p>
-        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
           {action}
           <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>
@@ -107,7 +109,9 @@ export async function AttentionList({ checks = [], errorGroups = [] }) {
     // say something is wrong; these lines say what, and where to fix it.
     <section aria-label={t("title")}>
       {/* One per line: at most three rows, and the reason after each title needs the width. */}
-      <ul className="grid gap-2">
+      {/* grid-cols-1 (minmax(0, 1fr)), not a bare grid: an auto track grew to the long error
+          summary, so on a tablet each row ran 230-340px off screen with its link (steel audit). */}
+      <ul className="grid grid-cols-1 gap-2">
         {rows.map((row) => (
           <Row key={row.key} {...row} />
         ))}

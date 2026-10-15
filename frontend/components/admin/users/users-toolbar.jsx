@@ -35,7 +35,7 @@ export function UsersToolbar() {
             setQuery({ is_admin: v === "all" ? undefined : v }, { resetPage: true })
           }
         >
-          <SelectTrigger className={cn(SELECT_WELL, "w-full sm:w-44")} aria-label={t("columns.accountType")}>
+          <SelectTrigger className={cn(SELECT_WELL, "w-full sm:w-auto sm:min-w-44 sm:shrink-0")} aria-label={t("columns.accountType")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

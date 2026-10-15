@@ -137,10 +137,12 @@ export function DataTable({
                       key={header.id}
                       // Sticky headers need an opaque background: the same shade as the
                       // row's bg-muted/40 over a card, mixed solid, so they match every other table.
+                      // In srgb, as alpha blending is: oklch took the short way round the hue
+                      // wheel and tinted Firewall and Fail2ban red (Krishna, 15 Oct).
                       // `meta.className` lets a caller constrain a column's width;
                       // `meta.headClassName` styles the header cell alone (e.g. let it wrap).
                       className={cn(
-                        stickyHeader && "bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))]",
+                        stickyHeader && "bg-[color-mix(in_srgb,var(--muted)_40%,var(--card))]",
                         header.column.columnDef.meta?.className,
                         header.column.columnDef.meta?.headClassName,
                       )}
