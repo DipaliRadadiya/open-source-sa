@@ -3151,7 +3151,66 @@
       "inProgress": "Exportation…",
       "diskUsed": "{count, plural, one {# export conservé} other {# exports conservés}} — {size}. Rien ne les supprime pour vous.",
       "takingLonger": "Cela prend plus de temps que d'habitude. Les bases volumineuses peuvent prendre quelques minutes.",
-      "loadFailed": "Impossible de charger les exports."
+      "loadFailed": "Impossible de charger les exports.",
+      "importSafety": "Sauvegarde automatique avant importation",
+      "showAll": "Tout afficher ({count})",
+      "showLess": "Afficher moins"
+    },
+    "import": {
+      "title": "Importer un fichier",
+      "description": "Remplace cette base de données par le contenu d'un fichier de dump.",
+      "drop": "Déposez un fichier de dump ici",
+      "choose": "Choisir un fichier",
+      "formats": {
+        "sql": "MySQL et MariaDB : .sql ou .sql.gz",
+        "pgsql": "PostgreSQL : .sql, .sql.gz ou une archive personnalisée pg_dump",
+        "mongo": "MongoDB : un fichier mongodump --archive, compressé en gzip ou non"
+      },
+      "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
+      "engineDown": "{engine} n'est pas en cours d'exécution, donc rien ne peut être importé.",
+      "busy": "Une importation est déjà en cours.",
+      "confirmTitle": "Remplacer tout le contenu de {name} ?",
+      "confirmDescription": "Tout le contenu de cette base de données est remplacé par ce fichier :",
+      "confirmSafety": "Une sauvegarde est faite d'abord, puis rétablie automatiquement si l'importation échoue.",
+      "mismatch": "Ce fichier ressemble à un dump {fileEngine}, mais cette base de données est {engine}. L'importation échouera très probablement.",
+      "confirmLabel": "Remplacer la base de données",
+      "cancel": "Annuler",
+      "steps": {
+        "uploading": "Envoi",
+        "checking": "Vérification du fichier",
+        "backing_up": "Sauvegarde",
+        "importing": "Importation"
+      },
+      "rollingBack": "Rétablissement de la sauvegarde",
+      "cancelUpload": "Annuler l'envoi",
+      "keepOpen": "Gardez cette page ouverte jusqu'à la fin de l'envoi.",
+      "serverNote": "L'envoi est terminé. L'importation continue sur le serveur, vous pouvez quitter cette page.",
+      "status": {
+        "uploading": "Envoi",
+        "queued": "En attente",
+        "running": "Importation",
+        "completed": "Importé",
+        "failed": "Échec"
+      },
+      "started": "Importation lancée.",
+      "completed": "{file} a été importé dans {name}.",
+      "failedFallback": "L'importation a échoué.",
+      "cancelled": "Envoi annulé.",
+      "startFailed": "L'importation n'a pas pu démarrer.",
+      "uploadFailed": "L'envoi a échoué.",
+      "history": "Importations précédentes",
+      "showAll": "Tout afficher ({count})",
+      "showLess": "Afficher moins",
+      "by": "par {user}",
+      "startAgain": "Lancer l'importation",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer cette importation ?",
+      "removeDescription": "Le fichier envoyé est supprimé. La base de données n'est pas modifiée.",
+      "removed": "Importation supprimée.",
+      "removeFailed": "Impossible de supprimer cette importation.",
+      "uploadUnfinished": "L'envoi ne s'est pas terminé.",
+      "backupNote": "Chaque importation conserve une sauvegarde de la base de données dans Exports, sous le nom « Sauvegarde automatique avant importation ». Rien ne les supprime : retirez-y les anciennes pour libérer de l'espace disque.",
+      "backupDownload": "Télécharger la sauvegarde faite avant cette importation"
     },
     "manage": "Gérer",
     "monitor": {
@@ -3284,7 +3343,7 @@
     "tabs": {
       "users": "Utilisateurs",
       "tables": "Tables",
-      "exports": "Exports",
+      "exports": "Import et export",
       "overview": "Vue d'ensemble"
     },
     "phpmyadmin": {

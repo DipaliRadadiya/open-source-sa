@@ -3151,7 +3151,66 @@
       "inProgress": "Exportando…",
       "diskUsed": "{count, plural, one {# exportação} other {# exportações}} mantida(s) aqui — {size}. Nada as exclui por você.",
       "takingLonger": "Está demorando mais que o normal. Bancos de dados grandes podem levar alguns minutos.",
-      "loadFailed": "Não foi possível carregar as exportações."
+      "loadFailed": "Não foi possível carregar as exportações.",
+      "importSafety": "Backup automático antes da importação",
+      "showAll": "Mostrar todas ({count})",
+      "showLess": "Mostrar menos"
+    },
+    "import": {
+      "title": "Importar um arquivo",
+      "description": "Substitui este banco de dados pelo conteúdo de um arquivo de dump.",
+      "drop": "Solte um arquivo de dump aqui",
+      "choose": "Escolher arquivo",
+      "formats": {
+        "sql": "MySQL e MariaDB: .sql ou .sql.gz",
+        "pgsql": "PostgreSQL: .sql, .sql.gz ou um arquivo personalizado do pg_dump",
+        "mongo": "MongoDB: um arquivo mongodump --archive, com ou sem gzip"
+      },
+      "noPermission": "Seu papel não inclui Banco de dados com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
+      "engineDown": "{engine} não está em execução, então nada pode ser importado.",
+      "busy": "Já há uma importação em andamento.",
+      "confirmTitle": "Substituir tudo em {name}?",
+      "confirmDescription": "Todo o conteúdo deste banco de dados é substituído por este arquivo:",
+      "confirmSafety": "Antes é feito um backup, que é restaurado automaticamente se a importação falhar.",
+      "mismatch": "Este arquivo parece um dump de {fileEngine}, mas este é um banco de dados {engine}. A importação provavelmente vai falhar.",
+      "confirmLabel": "Substituir banco de dados",
+      "cancel": "Cancelar",
+      "steps": {
+        "uploading": "Enviando",
+        "checking": "Verificando o arquivo",
+        "backing_up": "Fazendo backup",
+        "importing": "Importando"
+      },
+      "rollingBack": "Restaurando o backup",
+      "cancelUpload": "Cancelar envio",
+      "keepOpen": "Mantenha esta página aberta até o envio terminar.",
+      "serverNote": "O envio terminou. A importação continua no servidor, então você pode sair desta página.",
+      "status": {
+        "uploading": "Enviando",
+        "queued": "Aguardando",
+        "running": "Importando",
+        "completed": "Importado",
+        "failed": "Falhou"
+      },
+      "started": "Importação iniciada.",
+      "completed": "{file} foi importado em {name}.",
+      "failedFallback": "A importação falhou.",
+      "cancelled": "Envio cancelado.",
+      "startFailed": "Não foi possível iniciar a importação.",
+      "uploadFailed": "O envio falhou.",
+      "history": "Importações anteriores",
+      "showAll": "Mostrar todas ({count})",
+      "showLess": "Mostrar menos",
+      "by": "por {user}",
+      "startAgain": "Iniciar importação",
+      "remove": "Excluir",
+      "removeTitle": "Excluir esta importação?",
+      "removeDescription": "O arquivo enviado é excluído. O banco de dados não é alterado.",
+      "removed": "Importação excluída.",
+      "removeFailed": "Não foi possível excluir esta importação.",
+      "uploadUnfinished": "O envio não terminou.",
+      "backupNote": "Cada importação guarda um backup do banco de dados em Exportações, como “Backup automático antes da importação”. Nada os exclui, então remova os antigos ali para liberar espaço em disco.",
+      "backupDownload": "Baixar o backup feito antes desta importação"
     },
     "manage": "Gerenciar",
     "monitor": {
@@ -3284,7 +3343,7 @@
     "tabs": {
       "users": "Usuários",
       "tables": "Tabelas",
-      "exports": "Exportações",
+      "exports": "Importar e exportar",
       "overview": "Visão geral"
     },
     "phpmyadmin": {

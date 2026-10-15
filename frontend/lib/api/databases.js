@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { chunkSizeFor } from "@/lib/files/chunk-size";
 
 /** Engine capability list — also the poll target while an install runs. */
 export function getEngines({ signal } = {}) {
@@ -105,6 +106,79 @@ export function getExports({ signal } = {}) {
 /** Removes the row AND the file. Keyed by id: a queued row has no filename. */
 export function deleteExport(id) {
   return api.delete(`/databases/exports/${id}`);
+}
+
+/** This database's latest 20 imports, newest first; polled while one runs. */
+export function getImports(databaseId, { signal } = {}) {
+  return api.get(`/databases/${databaseId}/imports`, { signal });
+}
+
+/** Cancels an upload or clears a finished row (409 while queued or running). */
+export function deleteImport(databaseId, importId) {
+  return api.delete(`/databases/${databaseId}/imports/${importId}`);
+}
+
+const IMPORT_CHUNK_RETRIES = 3;
+
+// Begin, send the file in sequential raw chunks, then start. The user confirmed
+// the replacement before this runs, so `confirm_replace` is sent with start.
+// Chunks are clamped like the file manager's: the server's `max_chunk` is PHP's
+// post_max_size, but nginx buffers less (lib/files/chunk-size.js).
+export async function uploadAndStartImport(databaseId, file, { onProgress, onBegun, signal } = {}) {
+  const { data } = await api.post(
+    `/databases/${databaseId}/imports`,
+    { file_name: file.name, size_bytes: file.size },
+    { signal },
+  );
+  const importId = data.import.id;
+  onBegun?.(importId);
+  const base = `/databases/${databaseId}/imports/${importId}`;
+  const chunkSize = Math.min(chunkSizeFor(file.size), data.max_chunk || Infinity);
+
+  // No per-import GET: the list row's `received_bytes` is the resume point.
+  async function received() {
+    const { data: list } = await getImports(databaseId, { signal });
+    return list.imports.find((row) => row.id === importId)?.received_bytes ?? 0;
+  }
+
+  try {
+    let offset = 0;
+    while (offset < file.size) {
+      const end = Math.min(offset + chunkSize, file.size);
+      let attempt = 0;
+      for (;;) {
+        try {
+          const res = await api.put(`${base}/chunk`, file.slice(offset, end), {
+            signal,
+            headers: { "Content-Type": "application/octet-stream" },
+          });
+          offset = res.data.received;
+          break;
+        } catch (error) {
+          // A 4xx is an answer (too large, no longer uploading), not a dropped line.
+          const status = error?.response?.status;
+          if (signal?.aborted || (status && status < 500) || ++attempt > IMPORT_CHUNK_RETRIES) throw error;
+          offset = await received();
+          if (offset >= end) break;
+        }
+      }
+      onProgress?.(file.size ? offset / file.size : 1);
+    }
+
+  } catch (error) {
+    // The server reaps an abandoned upload only after a day; free the disk now.
+    api.delete(base).catch(() => {});
+    throw error;
+  }
+
+  // Not inside the cleanup above: a refused start (an export running) keeps the
+  // uploaded file, and its row offers Start again.
+  return startImport(databaseId, importId);
+}
+
+/** Runs an uploaded import. `confirm_replace` is required by the API. */
+export function startImport(databaseId, importId) {
+  return api.post(`/databases/${databaseId}/imports/${importId}/start`, { confirm_replace: true });
 }
 
 export function getEngineStatus(engine, { signal } = {}) {

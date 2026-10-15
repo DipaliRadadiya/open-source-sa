@@ -3151,7 +3151,66 @@
       "inProgress": "エクスポート中…",
       "diskUsed": "{count, plural, other {エクスポート # 件を保持中 — {size}。これらは自動削除されません。}}",
       "takingLonger": "通常より時間がかかっています。大きいデータベースは数分かかる場合があります。",
-      "loadFailed": "エクスポートを読み込めませんでした。"
+      "loadFailed": "エクスポートを読み込めませんでした。",
+      "importSafety": "インポート前の自動バックアップ",
+      "showAll": "すべて表示（{count}）",
+      "showLess": "折りたたむ"
+    },
+    "import": {
+      "title": "ファイルをインポート",
+      "description": "ダンプファイルの内容でこのデータベースを置き換えます。",
+      "drop": "ここにダンプファイルをドロップ",
+      "choose": "ファイルを選択",
+      "formats": {
+        "sql": "MySQL と MariaDB: .sql または .sql.gz",
+        "pgsql": "PostgreSQL: .sql、.sql.gz、または pg_dump のカスタム形式アーカイブ",
+        "mongo": "MongoDB: mongodump --archive ファイル（gzip 圧縮の有無は問いません）"
+      },
+      "noPermission": "現在のロールには、データベースの管理権限が含まれていません。管理者に付与を依頼してください。",
+      "engineDown": "{engine} が実行されていないため、インポートできません。",
+      "busy": "インポートはすでに実行中です。",
+      "confirmTitle": "{name} の内容をすべて置き換えますか？",
+      "confirmDescription": "このデータベースの内容はすべて、このファイルの内容に置き換わります:",
+      "confirmSafety": "先にバックアップを取り、インポートが失敗した場合は自動的に元に戻します。",
+      "mismatch": "このファイルは {fileEngine} のダンプのようですが、このデータベースは {engine} です。インポートは失敗する可能性が高いです。",
+      "confirmLabel": "データベースを置き換える",
+      "cancel": "キャンセル",
+      "steps": {
+        "uploading": "アップロード中",
+        "checking": "ファイルを確認中",
+        "backing_up": "バックアップ中",
+        "importing": "インポート中"
+      },
+      "rollingBack": "バックアップから戻しています",
+      "cancelUpload": "アップロードをキャンセル",
+      "keepOpen": "アップロードが終わるまで、このページを開いたままにしてください。",
+      "serverNote": "アップロードが完了しました。インポートはサーバー上で続くため、このページを離れても構いません。",
+      "status": {
+        "uploading": "アップロード中",
+        "queued": "待機中",
+        "running": "インポート中",
+        "completed": "インポート済み",
+        "failed": "失敗しました"
+      },
+      "started": "インポートを開始しました。",
+      "completed": "{file} を {name} にインポートしました。",
+      "failedFallback": "インポートに失敗しました。",
+      "cancelled": "アップロードをキャンセルしました。",
+      "startFailed": "インポートを開始できませんでした。",
+      "uploadFailed": "アップロードに失敗しました。",
+      "history": "過去のインポート",
+      "showAll": "すべて表示（{count}）",
+      "showLess": "折りたたむ",
+      "by": "{user} が実行",
+      "startAgain": "インポートを開始",
+      "remove": "削除",
+      "removeTitle": "このインポートを削除しますか？",
+      "removeDescription": "アップロードしたファイルを削除します。データベースは変更されません。",
+      "removed": "インポートを削除しました。",
+      "removeFailed": "このインポートを削除できませんでした。",
+      "uploadUnfinished": "アップロードが完了していません。",
+      "backupNote": "インポートのたびに、データベースのバックアップが「インポート前の自動バックアップ」としてエクスポートに保存されます。自動では削除されないため、ディスク容量を空けるには古いものをそこで削除してください。",
+      "backupDownload": "このインポートの前に取ったバックアップをダウンロード"
     },
     "manage": "管理",
     "monitor": {
@@ -3284,7 +3343,7 @@
     "tabs": {
       "users": "ユーザー",
       "tables": "テーブル",
-      "exports": "エクスポート",
+      "exports": "インポートとエクスポート",
       "overview": "概要"
     },
     "phpmyadmin": {
