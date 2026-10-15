@@ -1,0 +1,117 @@
+{
+    "slug": "hermesagent",
+    "container_port": 9119,
+    "volume_roles": {
+        "data": "/opt/data"
+    },
+    "generated_secrets": [
+        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
+        "HERMES_DASHBOARD_BASIC_AUTH_SECRET"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "HERMES_DASHBOARD_PUBLIC_URL",
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "hermesagent",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/opt/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
+        "HERMES_DASHBOARD_BASIC_AUTH_SECRET"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Hermes Agent",
+            "tagline": "Self-improving AI agent with a web dashboard, memory, skills and chat apps"
+        },
+        "es": {
+            "title": "Hermes Agent",
+            "tagline": "Agente de IA que se mejora a sí mismo, con panel web, memoria, habilidades y apps de chat"
+        },
+        "de": {
+            "title": "Hermes Agent",
+            "tagline": "Selbstverbessernder KI-Agent mit Web-Dashboard, Gedächtnis, Skills und Chat-Apps"
+        },
+        "fr": {
+            "title": "Hermes Agent",
+            "tagline": "Agent IA qui s’améliore lui-même, avec un tableau de bord web, une mémoire, des compétences et des applis de chat"
+        },
+        "pt": {
+            "title": "Hermes Agent",
+            "tagline": "Agente de IA que se aprimora sozinho, com painel web, memória, habilidades e apps de chat"
+        },
+        "ja": {
+            "title": "Hermes Agent",
+            "tagline": "Web ダッシュボード、メモリー、スキル、チャットアプリ連携を備えた自己改善型 AI エージェント"
+        },
+        "ru": {
+            "title": "Hermes Agent",
+            "tagline": "Самосовершенствующийся ИИ-агент с веб-панелью, памятью, навыками и чат-приложениями"
+        },
+        "hi": {
+            "title": "Hermes Agent",
+            "tagline": "वेब डैशबोर्ड, मेमोरी, स्किल्स और चैट ऐप्स वाला खुद को बेहतर बनाने वाला AI एजेंट"
+        }
+    },
+    "catalog_en": {
+        "name": "hermesagent",
+        "icon": "hermesagent",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

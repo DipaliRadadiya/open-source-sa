@@ -1,0 +1,61 @@
+name: sv-app-4242
+
+services:
+  hermes:
+    image: nousresearch/hermes-agent:v0.22.2
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:9119"
+
+    environment:
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_PORT: "9119"
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: admin
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: "cea023de2c5c2d931c60da64484b27c3"
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: "19fc3eb87c0ca47ca4566fbf55883373"
+      HERMES_DASHBOARD_PUBLIC_URL: "http://hermesagent.golden.test"
+
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        PROXY=$$(python3 -c '
+        import socket, struct
+        for line in open("/proc/net/route").read().splitlines()[1:]:
+            fields = line.split()
+            if fields[1] == "00000000":
+                print(socket.inet_ntoa(struct.pack("<L", int(fields[2], 16))) + "/32")
+                break
+        else:
+            raise SystemExit("no default route")
+        ')
+        WANT="[\"$$PROXY\"]"
+        if [ "$$(hermes config get --json dashboard.trusted_proxies 2>/dev/null)" = "$$WANT" ]; then
+          echo "[panel] dashboard.trusted_proxies already $$PROXY"
+        else
+          hermes config set dashboard.trusted_proxies "$$WANT"
+          /command/s6-svc -r /run/service/dashboard
+          echo "[panel] dashboard.trusted_proxies set to $$PROXY; dashboard restarted to read it"
+        fi
+        exec hermes gateway run
+
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9119/api/status', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
+    volumes:
+      - sv-app-4242_data:/opt/data
+
+volumes:
+  sv-app-4242_data:
+    external: true
