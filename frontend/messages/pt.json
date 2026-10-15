@@ -6227,8 +6227,7 @@
       "imageTooltip": "Implantado a partir da imagem {image}.",
       "composeTooltip": "Executa o arquivo compose que você forneceu.",
       "factLabel": "Origem",
-      "factRecipe": "Aplicativo com um clique · {title} (receita v{version})",
-      "factImage": "Imagem Docker · {image}"
+      "factRecipe": "Aplicativo com um clique · {title} (receita v{version})"
     },
     "containerAccess": {
       "title": "Acesso por linha de comando",

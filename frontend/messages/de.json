@@ -6227,8 +6227,7 @@
       "imageTooltip": "Aus dem Image {image} bereitgestellt.",
       "composeTooltip": "Führt die von Ihnen bereitgestellte Compose-Datei aus.",
       "factLabel": "Quelle",
-      "factRecipe": "Ein-Klick-App · {title} (Rezept v{version})",
-      "factImage": "Docker-Image · {image}"
+      "factRecipe": "Ein-Klick-App · {title} (Rezept v{version})"
     },
     "containerAccess": {
       "title": "Kommandozeilenzugriff",

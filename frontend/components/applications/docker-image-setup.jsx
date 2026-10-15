@@ -514,7 +514,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="break-all font-mono text-sm font-medium">{option.image}</span>
-                                {option.official ? <Badge variant="success" className="font-normal">{t("official")}</Badge> : null}
+                                {/* Labels, not states: the h-6 tinted pills (`success`, ...) mean a state in this panel. */}
+                                {option.official ? <Badge className="font-normal">{t("official")}</Badge> : null}
                                 {option.verified_publisher ? <Badge className="font-normal">{t("verified")}</Badge> : null}
                               </div>
                               {option.description ? (
@@ -578,7 +579,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                   <SelectItem key={item.name} value={item.name}>
                     <span className="font-mono">{item.name}</span>
                     {item.name === tags.recommended ? (
-                      <Badge variant="success" className="ms-2 font-normal">{t("recommended")}</Badge>
+                      <Badge className="ms-2 font-normal">{t("recommended")}</Badge>
                     ) : null}
                   </SelectItem>
                 ))}
@@ -793,10 +794,13 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                               <Input
                                 aria-label={t("envValueFor", { key: row.key || "…" })}
                                 placeholder={row.required ? t("envRequiredPlaceholder") : t("envValuePlaceholder")}
-                                className={cn("order-3 col-span-2 font-mono text-xs sm:order-2 sm:col-span-1", missing && "border-warning")}
+                                className={cn("order-3 col-span-2 font-mono text-xs sm:order-2 sm:col-span-1", missing && !valueError && "border-warning")}
                                 spellCheck={false}
                                 maxLength={DOCKER_LIMITS.envValue}
-                                aria-invalid={missing || valueError ? true : undefined}
+                                aria-required={row.required ? true : undefined}
+                                // Empty and required is a heads-up (amber, with its note), not an error yet:
+                                // `aria-invalid` brings the red ring, which is for a value that was refused.
+                                aria-invalid={valueError ? true : undefined}
                                 aria-describedby={missing || valueError ? describedBy : undefined}
                                 value={row.value}
                                 onChange={(event) => updateEnv(index, { value: event.target.value })}

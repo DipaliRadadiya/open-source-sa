@@ -352,16 +352,25 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       : formatBytes(application.volume_size_bytes, format);
 
   const origin = application.origin;
+  // For an image the value is the image reference alone, copyable: "Docker image" is
+  // already the origin pill in the header, and as a prefix it pushed the reference
+  // out of the truncated value ("Docker image · tr…" on a phone).
   const originValue = origin?.kind === "recipe" && origin.recipe
     ? t("origin.factRecipe", { title: origin.recipe.title, version: origin.recipe.version })
     : origin?.kind === "image"
-      ? t("origin.factImage", { image: origin.image ?? "—" })
+      ? origin.image || "—"
       : origin?.kind === "compose"
         ? t("origin.compose")
         : null;
 
   const facts = [
-    { icon: Package, label: t("origin.factLabel"), value: originValue, mono: origin?.kind === "image" },
+    {
+      icon: Package,
+      label: t("origin.factLabel"),
+      value: originValue,
+      mono: origin?.kind === "image",
+      copy: origin?.kind === "image" && Boolean(origin.image),
+    },
     {
       icon: Package,
       label: t("columns.type"),

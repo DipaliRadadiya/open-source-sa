@@ -26,6 +26,8 @@ for (const [origin, label] of [[recipe, "One-click app"], [{ kind: "image", imag
     show(origin);
     const badge = screen.getByLabelText(label);
     assert.equal(badge.dataset.variant, "muted");
+    // Still a badge to the theme, although it is the tooltip's trigger.
+    assert.equal(badge.dataset.slot, "badge");
     assert.equal(badge.textContent, label);
     assert.ok(badge.querySelector("svg.size-3"));
   });

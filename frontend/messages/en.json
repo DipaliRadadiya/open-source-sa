@@ -6227,8 +6227,7 @@
       "imageTooltip": "Deployed from the image {image}.",
       "composeTooltip": "Runs the compose file you provided.",
       "factLabel": "Source",
-      "factRecipe": "One-click app · {title} (recipe v{version})",
-      "factImage": "Docker image · {image}"
+      "factRecipe": "One-click app · {title} (recipe v{version})"
     },
     "containerAccess": {
       "title": "Command-line access",

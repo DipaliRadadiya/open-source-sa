@@ -130,12 +130,14 @@ export function FirstRunCredentials({ application, className }) {
             <p>{error}</p>
           </Caution>
         ) : (
-          // Flat divided rows, not a bordered box inside the card.
-          <ul className="divide-y">
+          // Flat divided rows, not a bordered box inside the card. In a narrow card the
+          // name sits above its value: side by side, the unbreakable password took the
+          // row and clipped the name ("MYSQL_ROOT_PA…").
+          <ul className="@container/creds divide-y">
             {rows.map((row) => (
               <li
                 key={row.key}
-                className="flex items-center justify-between gap-3 py-2.5"
+                className="flex flex-col items-start gap-1 py-2.5 @md/creds:flex-row @md/creds:items-center @md/creds:justify-between @md/creds:gap-3"
               >
                 <span className={row.curated ? "min-w-0 text-xs text-muted-foreground" : "min-w-0 truncate font-mono text-xs text-muted-foreground"}>
                   {row.label}

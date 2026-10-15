@@ -6227,8 +6227,7 @@
       "imageTooltip": "{image} इमेज से डिप्लॉय किया गया।",
       "composeTooltip": "आपकी दी गई compose फ़ाइल चलाता है।",
       "factLabel": "स्रोत",
-      "factRecipe": "एक-क्लिक ऐप · {title} (रेसिपी v{version})",
-      "factImage": "Docker इमेज · {image}"
+      "factRecipe": "एक-क्लिक ऐप · {title} (रेसिपी v{version})"
     },
     "containerAccess": {
       "title": "कमांड-लाइन एक्सेस",

@@ -6227,8 +6227,7 @@
       "imageTooltip": "イメージ{image}からデプロイしました。",
       "composeTooltip": "指定したcomposeファイルを実行します。",
       "factLabel": "ソース",
-      "factRecipe": "ワンクリックアプリ · {title}（レシピv{version}）",
-      "factImage": "Docker イメージ · {image}"
+      "factRecipe": "ワンクリックアプリ · {title}（レシピv{version}）"
     },
     "containerAccess": {
       "title": "コマンドラインアクセス",

@@ -6227,8 +6227,7 @@
       "imageTooltip": "Развёрнуто из образа {image}.",
       "composeTooltip": "Использует предоставленный вами файл compose.",
       "factLabel": "Источник",
-      "factRecipe": "Приложение в один клик · {title} (рецепт v{version})",
-      "factImage": "Образ Docker · {image}"
+      "factRecipe": "Приложение в один клик · {title} (рецепт v{version})"
     },
     "containerAccess": {
       "title": "Доступ через командную строку",
