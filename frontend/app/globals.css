@@ -712,3 +712,31 @@
   margin-top: calc(-1 * var(--card-spacing));
   border-top-width: 0;
 }
+
+/* The panel's server drawing (components/illustrations/steel): the landing sites' machined
+   material, our own subject. Green comes from the brand colour; only amber lights move. */
+.sv-contact { fill: rgb(0 0 0 / 0.62); }
+:root:not(.dark) .sv-contact { fill: rgb(15 23 42 / 0.35); }
+.sv-glass { stroke: rgb(255 255 255 / 0.07); stroke-width: 1; }
+.sv-glow { fill: var(--primary); filter: drop-shadow(0 0 4px var(--primary)); }
+.sv-glow.is-warn { fill: var(--warning); filter: drop-shadow(0 0 4px var(--warning)); }
+/* Status lights: steady green; amber pulses slowly (something wants a look); grey is unlit. */
+.sv-led { fill: var(--primary); filter: drop-shadow(0 0 3px var(--primary)); }
+.sv-led.is-warn {
+  fill: var(--warning);
+  filter: drop-shadow(0 0 3px var(--warning));
+  animation: sv-led-blink 2.2s var(--d, 0s) ease-in-out infinite both;
+}
+.sv-led.is-off { fill: rgb(214 222 230 / 0.35); filter: none; }
+/* An empty application bay on the server's top. */
+.sv-bay { fill: rgb(0 0 0 / 0.25); stroke: rgb(214 222 230 / 0.45); stroke-width: 1; stroke-dasharray: 3 3; }
+.sv-etched { fill: rgb(214 222 230 / 0.8); font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 20px; font-weight: 700; }
+/* Once, on first paint: each module drops into its bay back to front, then its light comes on. */
+.sv-drop { animation: sv-drop 420ms calc(150ms + var(--i, 0) * 90ms) cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.sv-power { animation: sv-power 240ms calc(450ms + var(--i, 0) * 90ms) ease-out both; }
+@keyframes sv-drop { from { opacity: 0; transform: translateY(-26px); } }
+@keyframes sv-power { from { opacity: 0; } }
+@keyframes sv-led-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .sv-led.is-warn, .sv-drop, .sv-power { animation: none; }
+}

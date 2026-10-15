@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { CircleAlert, FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import { IsoStack } from "@/components/illustrations/iso-stack";
+import { PanelServer } from "@/components/illustrations/steel/panel-server";
 
 // Square mono chips, as in the prototype.
 // One height for both chips, the IP one included (its copy button made it taller).
@@ -59,7 +59,12 @@ export async function DashboardHero({
           the buttons stand alone on the right. Chips share the summary line. */}
       <div className="relative flex items-center gap-6 px-5 py-6 md:px-8">
         {/* -my so the drawing never sets the banner's height. */}
-        <IsoStack className="pointer-events-none hidden h-28 w-auto shrink-0 sm:block" />
+        <PanelServer
+          total={applications ? applications.length : null}
+          online={online}
+          alert={down > 0}
+          className="pointer-events-none hidden h-28 w-auto shrink-0 sm:block"
+        />
         {/* Words and buttons wrap inside their own box, so on a narrow screen the
             buttons drop under the words rather than under the drawing. */}
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-4">
