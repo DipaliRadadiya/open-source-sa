@@ -44,7 +44,7 @@ test("last_backup_at in either date format; fresh means under a day", () => {
 });
 
 test("the dashboard asks only for the six updatable types, and streams it", () => {
-  assert.deepEqual([...UPDATABLE_SITE_TYPES].sort(), ["adminer", "craftcms", "mautic", "moodle", "phpmyadmin", "statamic", "uptimekuma"]);
+  assert.deepEqual([...UPDATABLE_SITE_TYPES].sort(), ["adminer", "craftcms", "mautic", "moodle", "n8n", "nodered", "phpmyadmin", "statamic", "uptimekuma"]);
   const page = read("app/(app)/applications/[application]/page.jsx");
   assert.match(page, /UPDATABLE_SITE_TYPES\.includes\(application\.site_type\)[\s\S]{0,80}<Suspense fallback=\{<UpdateCardSkeleton \/>\}>/);
   // Every message key the card uses exists in English.

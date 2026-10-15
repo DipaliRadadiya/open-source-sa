@@ -31,6 +31,7 @@
     "collapseSidebar": "Seitenleiste einklappen",
     "copy": "Kopieren",
     "copied": "Kopiert",
+    "typeToConfirm": "Tippen Sie dies, um zu bestätigen",
     "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen",
     "select": "Auswählen…",
     "search": "Suchen…",
@@ -183,7 +184,6 @@
     "delete": {
       "title": "Systembenutzer löschen?",
       "description": "Dies entfernt {username}, das Home-Verzeichnis und die Cronjobs endgültig. Dies kann nicht rückgängig gemacht werden.",
-      "confirmLabel": "Geben Sie {username} zur Bestätigung ein",
       "cancel": "Abbrechen",
       "confirm": "Benutzer löschen",
       "deleting": "Wird gelöscht…",
@@ -2954,7 +2954,6 @@
       "title": "{name} löschen?",
       "description": "Das löscht die Datenbank und alles darin endgültig. Es lässt sich nicht zurücknehmen.",
       "descriptionWithUsers": "{count, plural, one {Das löscht die Datenbank, alles darin und den # Benutzer, der sich damit verbindet, endgültig.} other {Das löscht die Datenbank, alles darin und die # Benutzer, die sich damit verbinden, endgültig.}} Es lässt sich nicht zurücknehmen.",
-      "confirmLabel": "Tippen Sie {name}, um zu bestätigen",
       "submit": "Datenbank löschen",
       "deleting": "Wird gelöscht…",
       "deleted": "{name} gelöscht.",
@@ -3995,7 +3994,6 @@
       "removeFilesOff": "Die Dateien bleiben auf dem Server. Die Backups der Anwendung verlassen das Panel mit ihr, ihre Archive bleiben aber in Ihrem Speicher — löschen Sie sie dort, wenn Sie sie nicht mehr wollen.",
       "filesKept": "Ihre Dateien werden nicht entfernt: Ohne den Systembenutzer weiß das Panel nicht, wo sie liegen. Sie bleiben auf dem Server.",
       "systemUserStays": "Der Systembenutzer {username} wird nicht entfernt. Wenn keine andere Anwendung ihn nutzt, können Sie ihn unter Systembenutzer löschen.",
-      "confirmLabel": "Tippen Sie <code>{domain}</code>, um zu bestätigen",
       "submit": "Anwendung löschen",
       "deleting": "Wird gelöscht…",
       "done": "{name} wurde gelöscht.",
@@ -5630,7 +5628,6 @@
           }
         },
         "backupFirst": "Nach dem Abschluss gibt es kein Zurück – <link>machen Sie zuerst ein Backup</link>.",
-        "confirmLabel": "Tippen Sie {domain}, um zu bestätigen",
         "pickMode": "Wählen Sie, was kopiert wird",
         "typeToUnlock": "Tippen Sie die Produktions-Domain, um zu bestätigen",
         "cancel": "Abbrechen",
@@ -7084,7 +7081,6 @@
         }
       },
       "safetyPromise": "Von der Anwendung wird vorher eine Kopie im jetzigen Zustand erstellt, das lässt sich also zurücknehmen.",
-      "confirmLabel": "Tippen Sie {domain}, um zu bestätigen",
       "cancel": "Abbrechen",
       "submit": "Anwendung wiederherstellen",
       "starting": "Wird gestartet…",
@@ -7104,7 +7100,6 @@
         "size": "Größe",
         "sizeUnknown": "Unbekannt"
       },
-      "confirmLabelPlain": "Tippen Sie dies, um zu bestätigen",
       "copyDomain": "Domain kopieren",
       "whatToRestoreHint": "Stellt die Dateien, die Datenbank oder beides wieder her. Das Wiederherstellen der Datenbank ersetzt alle aktuellen Inhalte der Seite."
     },

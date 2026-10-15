@@ -31,6 +31,7 @@
     "collapseSidebar": "Recolher barra lateral",
     "copy": "Copiar",
     "copied": "Copiado",
+    "typeToConfirm": "Digite isso para confirmar",
     "copyFailed": "Não foi possível copiar para a área de transferência",
     "select": "Selecionar…",
     "search": "Buscar…",
@@ -183,7 +184,6 @@
     "delete": {
       "title": "Excluir usuário de sistema?",
       "description": "Isso remove permanentemente {username}, seu diretório home e seus cron jobs. Isso não pode ser desfeito.",
-      "confirmLabel": "Digite {username} para confirmar",
       "cancel": "Cancelar",
       "confirm": "Excluir usuário",
       "deleting": "Excluindo…",
@@ -2954,7 +2954,6 @@
       "title": "Excluir {name}?",
       "description": "Isso exclui permanentemente o banco de dados e tudo o que há nele. Não pode ser desfeito.",
       "descriptionWithUsers": "{count, plural, one {Isso exclui permanentemente o banco de dados, tudo o que há nele e o # usuário que se conecta a ele.} other {Isso exclui permanentemente o banco de dados, tudo o que há nele e os # usuários que se conectam a ele.}} Não pode ser desfeito.",
-      "confirmLabel": "Digite {name} para confirmar",
       "submit": "Excluir banco de dados",
       "deleting": "Excluindo…",
       "deleted": "{name} excluído.",
@@ -3995,7 +3994,6 @@
       "removeFilesOff": "Os arquivos permanecem no servidor. Os backups da aplicação saem do painel junto com ela, mas os arquivos ficam no seu storage — exclua-os lá se não quiser mais mantê-los.",
       "filesKept": "Os arquivos não são removidos: sem o usuário do sistema, o painel não sabe onde eles estão. Eles permanecem no servidor.",
       "systemUserStays": "O usuário do sistema {username} não é removido. Se nenhum outro aplicativo o usa, você pode excluí-lo em Usuários do sistema.",
-      "confirmLabel": "Digite <code>{domain}</code> para confirmar",
       "submit": "Excluir aplicação",
       "deleting": "Excluindo…",
       "done": "{name} foi excluído.",
@@ -5630,7 +5628,6 @@
           }
         },
         "backupFirst": "Não tem como desfazer depois de concluído — <link>faça um backup antes</link>.",
-        "confirmLabel": "Digite {domain} para confirmar",
         "pickMode": "Escolha o que copiar",
         "typeToUnlock": "Digite o domínio de produção para confirmar",
         "cancel": "Cancelar",
@@ -7084,7 +7081,6 @@
         }
       },
       "safetyPromise": "Uma cópia da aplicação como está agora é feita antes, para que isso possa ser desfeito.",
-      "confirmLabel": "Digite {domain} para confirmar",
       "cancel": "Cancelar",
       "submit": "Restaurar aplicação",
       "starting": "Iniciando…",
@@ -7104,7 +7100,6 @@
         "size": "Tamanho",
         "sizeUnknown": "Desconhecido"
       },
-      "confirmLabelPlain": "Digite isso para confirmar",
       "copyDomain": "Copiar domínio",
       "whatToRestoreHint": "Restaurar os arquivos, o banco de dados ou ambos. Restaurar o banco de dados substitui todo o conteúdo atual da aplicação."
     },

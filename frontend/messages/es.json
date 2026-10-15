@@ -31,6 +31,7 @@
     "collapseSidebar": "Contraer barra lateral",
     "copy": "Copiar",
     "copied": "Copiado",
+    "typeToConfirm": "Escribe esto para confirmar",
     "copyFailed": "No se pudo copiar al portapapeles",
     "select": "Seleccionar…",
     "search": "Buscar…",
@@ -841,7 +842,6 @@
     "delete": {
       "title": "¿Eliminar usuario del sistema?",
       "description": "Esto elimina permanentemente a {username}, su directorio personal y sus tareas cron. Esta acción no se puede deshacer.",
-      "confirmLabel": "Escribe {username} para confirmar",
       "cancel": "Cancelar",
       "confirm": "Eliminar usuario",
       "deleting": "Eliminando…",
@@ -2954,7 +2954,6 @@
       "title": "¿Eliminar {name}?",
       "description": "Esto elimina de forma permanente la base de datos y todo su contenido. No se puede deshacer.",
       "descriptionWithUsers": "{count, plural, one {Esto elimina de forma permanente la base de datos, todo su contenido y el # usuario que se conecta a ella.} other {Esto elimina de forma permanente la base de datos, todo su contenido y los # usuarios que se conectan a ella.}} No se puede deshacer.",
-      "confirmLabel": "Escribe {name} para confirmar",
       "submit": "Eliminar base de datos",
       "deleting": "Eliminando…",
       "deleted": "{name} eliminada.",
@@ -3995,7 +3994,6 @@
       "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad de la aplicación desaparecen del panel junto con ella, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
       "filesKept": "Sus archivos no se eliminan: sin el usuario del sistema, el panel no sabe dónde están. Permanecen en el servidor.",
       "systemUserStays": "El usuario del sistema {username} no se elimina. Si ninguna otra aplicación lo usa, puedes borrarlo en Usuarios del sistema.",
-      "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",
       "deleting": "Eliminando…",
       "done": "{name} se eliminó.",
@@ -5630,7 +5628,6 @@
           }
         },
         "backupFirst": "No se puede deshacer una vez terminado: <link>haz antes una copia de seguridad</link>.",
-        "confirmLabel": "Escribe {domain} para confirmar",
         "pickMode": "Elige qué copiar",
         "typeToUnlock": "Escribe el dominio de producción para confirmar",
         "cancel": "Cancelar",
@@ -7084,7 +7081,6 @@
         }
       },
       "safetyPromise": "Primero se toma una copia de la aplicación tal y como está ahora, así que esto se puede deshacer.",
-      "confirmLabel": "Escribe {domain} para confirmar",
       "cancel": "Cancelar",
       "submit": "Restaurar aplicación",
       "starting": "Iniciando…",
@@ -7104,7 +7100,6 @@
         "size": "Tamaño",
         "sizeUnknown": "Desconocido"
       },
-      "confirmLabelPlain": "Escribe esto para confirmar",
       "copyDomain": "Copiar dominio",
       "whatToRestoreHint": "Restaurar los archivos, la base de datos o ambos. Restaurar la base de datos reemplaza todo el contenido actual de la aplicación."
     },

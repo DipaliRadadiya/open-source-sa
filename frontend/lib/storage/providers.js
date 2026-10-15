@@ -30,7 +30,7 @@ const KEY_DOCS = {
   aws: "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
   r2: "https://developers.cloudflare.com/r2/api/tokens/",
   b2: "https://www.backblaze.com/docs/cloud-storage-application-keys",
-  wasabi: "https://docs.wasabi.com/v1/docs/create-a-user-and-access-key",
+  wasabi: "https://docs.wasabi.com/docs/creating-a-new-access-key",
   spaces: "https://docs.digitalocean.com/products/spaces/how-to/manage-access/",
   // Unused by the form (`GoogleDriveSetup` links each Console page per step);
   // kept so the entry exists.

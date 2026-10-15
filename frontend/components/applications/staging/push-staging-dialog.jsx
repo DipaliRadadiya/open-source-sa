@@ -14,17 +14,15 @@ import {
   Loader2,
   TriangleAlert,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { PUSH_MODES } from "@/lib/schemas/application-staging";
 
 const MODE_ICONS = { files: FileText, database: Database, full: Layers };
 import { pushApplicationStaging } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { ChoiceField } from "@/components/ui/choice-field";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CopyButton } from "@/components/ui/copy-button";
+import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   AlertDialog,
@@ -152,22 +150,15 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
 
           <p className="text-xs leading-5 text-muted-foreground">{t("whileRunning")}</p>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="staging-push-confirm">{t("confirmLabel", { domain })}</Label>
-              <CopyButton value={domain} label={t("copyDomain")} className="size-6 shrink-0" />
-            </div>
-            <Input
-              id="staging-push-confirm"
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
-              disabled={pending}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={domain}
-              className={cn("font-mono", matches && "border-success focus-visible:border-success")}
-            />
-          </div>
+          <TypeToConfirm
+            id="staging-push-confirm"
+            value={domain}
+            copyLabel={t("copyDomain")}
+            confirm={confirm}
+            onChange={setConfirm}
+            disabled={pending}
+            matches={matches}
+          />
         </div>
 
         <AlertDialogFooter>
