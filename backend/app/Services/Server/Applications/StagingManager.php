@@ -209,6 +209,68 @@ class StagingManager
     }
 
     /**
+     * Update staging from live — the reverse of a push (v7's sync-to-staging).
+     *
+     * Staging's files and/or database are replaced with live's, and staging
+     * stays staging: its own wp-config (database, URL, cron off), mail trap and
+     * noindex are never overwritten, and the strategy re-asserts them after.
+     *
+     * v7 did this with no copy of staging and with live's config copied over
+     * staging's — a non-WordPress staging site came out connected to the live
+     * database. Here staging is snapshotted and its database dumped first, and
+     * a failure puts both back. Live is only read, never disabled.
+     *
+     * Both sites are locked: live's lock is the one a push takes, so a push and
+     * a pull of the same pair cannot run together; staging's is the one its own
+     * safety-copy restore takes.
+     */
+    public function pull(Application $production, string $mode): void
+    {
+        $staging = $production->staging;
+
+        if ($staging === null || $this->strategyFor($production) === null) {
+            throw new StagingOperationException((string) Str::uuid());
+        }
+
+        if (Restore::inProgressFor($production->id) || Restore::inProgressFor($staging->id)) {
+            throw ValidationException::withMessages([
+                'mode' => [__('backup.errors.restore_already_running')],
+            ]);
+        }
+
+        $liveLock = Cache::lock(self::lockKey($production->id), 3600);
+
+        if (! $liveLock->get()) {
+            throw ValidationException::withMessages([
+                'mode' => [__('errors/application.staging_push_running')],
+            ]);
+        }
+
+        $stagingLock = Cache::lock(self::lockKey($staging->id), 3600);
+
+        if (! $stagingLock->get()) {
+            $liveLock->release();
+
+            throw ValidationException::withMessages([
+                'mode' => [__('errors/application.staging_push_running')],
+            ]);
+        }
+
+        Cache::put(self::markerKey($staging->id), true, 3600);
+
+        try {
+            $strategy = $this->strategyFor($production);
+            $this->replace($staging, $production, $mode, fn () => $strategy->pull($production, $staging, $mode));
+        } finally {
+            Cache::forget(self::markerKey($staging->id));
+            $stagingLock->release();
+            $liveLock->release();
+        }
+
+        $this->pruneSafetyDumps($staging);
+    }
+
+    /**
      * ST-B3: the pre-push copies of the live database, newest first.
      *
      * Each push that replaces the database writes one, and three are kept —
@@ -378,8 +440,28 @@ class StagingManager
             throw new StagingOperationException((string) Str::uuid());
         }
 
-        $production->load('systemUser');
-        $staging->load('systemUser');
+        $this->replace($production, $staging, $mode, fn () => $strategy->push($production, $staging, $mode));
+    }
+
+    /**
+     * Replace `$target`'s files and/or database with `$source`'s — a push
+     * (target = live) or a pull (target = staging). The target is snapshotted
+     * and its database dumped first, disabled while it is swapped, and put
+     * back from those copies if anything fails; the source is only read.
+     *
+     * @param  callable(): void  $strategyStep  the type's database half
+     */
+    private function replace(Application $target, Application $source, string $mode, callable $strategyStep): void
+    {
+        // Both sites are the same type, so either answers.
+        $strategy = $this->strategyFor($target);
+
+        if ($strategy === null) {
+            throw new StagingOperationException((string) Str::uuid());
+        }
+
+        $target->load('systemUser');
+        $source->load('systemUser');
 
         // Each mode moves one half, the other, or both. Named here so the
         // branches below read as intent rather than as string comparisons
@@ -387,7 +469,7 @@ class StagingManager
         $pushesFiles = in_array($mode, ['files', 'full'], true);
         $pushesDatabase = in_array($mode, ['database', 'full'], true);
 
-        $rollbackDirectory = $production->panelPath().'/staging-rollbacks/'.Str::uuid();
+        $rollbackDirectory = $target->panelPath().'/staging-rollbacks/'.Str::uuid();
         $fileSnapshot = $rollbackDirectory.'/files';
         $databaseSnapshot = null;
 
@@ -396,9 +478,9 @@ class StagingManager
         // slow way to protect files that cannot change.
         if ($pushesFiles) {
             try {
-                $this->snapshotFiles($production, $fileSnapshot);
+                $this->snapshotFiles($target, $fileSnapshot);
             } catch (Throwable $failure) {
-                $this->discardFileSnapshot($production, $rollbackDirectory);
+                $this->discardFileSnapshot($target, $rollbackDirectory);
 
                 throw $failure;
             }
@@ -412,9 +494,9 @@ class StagingManager
         // there would be real cost to protect data that comes back anyway.
         if ($pushesDatabase) {
             try {
-                $databaseSnapshot = $this->safetyDump($production);
+                $databaseSnapshot = $this->safetyDump($target);
             } catch (Throwable $failure) {
-                $this->discardFileSnapshot($production, $rollbackDirectory);
+                $this->discardFileSnapshot($target, $rollbackDirectory);
 
                 throw $failure;
             }
@@ -424,9 +506,9 @@ class StagingManager
         // the same "unavailable" page enable/disable already trusts, reused
         // rather than a second maintenance-mode mechanism invented here.
         try {
-            $this->provisioner->disable($production);
+            $this->provisioner->disable($target);
         } catch (Throwable $failure) {
-            $this->discardFileSnapshot($production, $rollbackDirectory);
+            $this->discardFileSnapshot($target, $rollbackDirectory);
 
             throw $failure;
         }
@@ -434,16 +516,16 @@ class StagingManager
         try {
             if ($pushesFiles) {
                 $this->rsync(
-                    $this->provisioner->documentRoot($staging),
-                    $this->provisioner->documentRoot($production),
-                    $production,
+                    $this->provisioner->documentRoot($source),
+                    $this->provisioner->documentRoot($target),
+                    $target,
                     $strategy->syncExcludes(),
                     $strategy->mergePaths(),
                 );
             }
 
-            $strategy->push($production, $staging, $mode);
-            $this->provisioner->enable($production);
+            $strategyStep();
+            $this->provisioner->enable($target);
         } catch (Throwable $pushFailure) {
             try {
                 // Only restore halves that were snapshotted. A database-only
@@ -451,7 +533,7 @@ class StagingManager
                 // a directory that was never written would replace the live
                 // document root with nothing.
                 if ($pushesFiles) {
-                    $this->restoreFiles($production, $fileSnapshot);
+                    $this->restoreFiles($target, $fileSnapshot);
                 }
 
                 if ($databaseSnapshot !== null) {
@@ -459,20 +541,20 @@ class StagingManager
                     $this->databases->engine($database->engine)->restore($database->name, $databaseSnapshot['path']);
                 }
 
-                $production->refresh();
+                $target->refresh();
 
-                if ($production->disabled_at !== null) {
-                    $this->provisioner->enable($production);
+                if ($target->disabled_at !== null) {
+                    $this->provisioner->enable($target);
                 }
 
-                $this->discardFileSnapshot($production, $rollbackDirectory);
+                $this->discardFileSnapshot($target, $rollbackDirectory);
             } catch (Throwable $rollbackFailure) {
                 $reference = $this->failureReference($rollbackFailure);
 
                 Log::channel('server-ops')->critical('staging push rollback failed', [
                     'feature' => 'application',
                     'op' => 'staging_push_rollback',
-                    'application' => $production->id,
+                    'application' => $target->id,
                     'reference' => $reference,
                     'push_reference' => $this->failureReference($pushFailure),
                     'rollback_reference' => $reference,
@@ -485,7 +567,7 @@ class StagingManager
             throw $pushFailure;
         }
 
-        $this->discardFileSnapshot($production, $rollbackDirectory);
+        $this->discardFileSnapshot($target, $rollbackDirectory);
     }
 
     private function strategyFor(Application $production): ?StagingStrategy

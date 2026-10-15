@@ -2898,6 +2898,25 @@ When recovery itself fails, production deliberately remains disabled and the pri
 
 ---
 
+### POST `/applications/{application}/staging/pull`
+**Permission:** `app_staging` (manage) | **Throttle:** 5/min — added 2026-10-15 (v7's sync-to-staging)
+
+**Update staging from live** — the reverse of a push. Call it on the **live** application. Staging's files and/or database are replaced with live's; **live is only read**, never disabled.
+
+**Request:** `{"mode": "files|database|full"}` — same meanings as a push, pointed at staging.
+
+What stays staging's own, every mode: `wp-config.php` (its database, URL, `DISABLE_WP_CRON`), the mail trap and noindex mu-plugins (both written again after the copy), and search-engine visibility (`blog_public = 0`, forced and then checked). Media copies additively, as in a push (a file deleted on live stays on staging). URLs in the copied database are rewritten live → staging.
+
+Safety, as for a push but on staging: staging's files are snapshotted and (for `database`/`full`) its database saved first. If anything fails — including staging coming out connected to live's database or URL, or visible to search engines — staging is put back from those copies. Staging's saved database copies are listed and restorable through the safety-copies endpoints below **called on the staging application**.
+
+Refused (`422`, `errors.mode`) while a push or pull of the pair, or a safety-copy restore on staging, is running (`errors/application.staging_push_running`), or a backup restore of either site is running. `422` on `errors.application` when there is no staging copy.
+
+**Response `200`:** `{"staging": {...the staging application...}}`. Activity: `application.staging_pulled_files|database|full`.
+
+**Frontend:** warn before running — *"This replaces the staging site's files/database with the live site's. Changes made only on staging will be lost (a copy of staging is saved first)."*
+
+---
+
 ### GET `/applications/{application}/staging/safety-copies`
 **Permission:** `app_staging` (view) — added 2026-10-08 (ST-B3)
 

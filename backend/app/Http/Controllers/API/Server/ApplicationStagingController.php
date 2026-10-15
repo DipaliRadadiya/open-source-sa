@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Application\CreateStaging;
+use App\Actions\Server\Application\PullStaging;
 use App\Actions\Server\Application\PushStaging;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\CreateStagingRequest;
+use App\Http\Requests\Server\Application\PullStagingRequest;
 use App\Http\Requests\Server\Application\PushStagingRequest;
 use App\Http\Requests\Server\Application\RestoreStagingSafetyCopyRequest;
 use App\Http\Resources\ApplicationResource;
@@ -43,6 +45,16 @@ class ApplicationStagingController extends Controller
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
             // FS-B10: the backup taken first, or null when none was asked for.
             'backup' => $backup ? BackupResource::make($backup)->resolve() : null,
+        ]);
+    }
+
+    /** Update staging from live. Returns the staging site as it now is. */
+    public function pull(PullStagingRequest $request, Application $application, PullStaging $action): JsonResponse
+    {
+        $action->execute($application, $request->mode());
+
+        return response()->json([
+            'staging' => ApplicationResource::make($application->staging()->firstOrFail()->load('systemUser'))->resolve(),
         ]);
     }
 

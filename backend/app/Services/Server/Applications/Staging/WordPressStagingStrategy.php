@@ -220,6 +220,78 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
+     * Update staging from live. Staging's wp-config never moved (it is in
+     * `syncExcludes()`), so staging keeps its own database, URL and
+     * DISABLE_WP_CRON; this copies live's rows in, points every URL in them at
+     * staging, and re-asserts what makes staging safe to have: hidden from
+     * search engines and unable to email live customers. Live's rows carry
+     * live's `blog_public` and none of the panel's mu-plugins, so both are
+     * written again rather than trusted to have survived.
+     */
+    public function pull(Application $production, Application $staging, string $mode): void
+    {
+        $stagingDocumentRoot = $this->provisioner->documentRoot($staging);
+
+        if ($mode !== 'files') {
+            $productionDatabase = Database::where('application_id', $production->id)->first();
+            $stagingDatabase = Database::where('application_id', $staging->id)->first();
+
+            if ($productionDatabase === null || $stagingDatabase === null) {
+                throw new StagingOperationException((string) Str::uuid());
+            }
+
+            $engine = $this->databases->engine($productionDatabase->engine);
+            $dumpPath = '/tmp/panel-staging-pull-'.Str::uuid()->toString().'.sql';
+
+            $engine->dump($productionDatabase->name, $dumpPath);
+            $engine->restore($stagingDatabase->name, $dumpPath);
+
+            $this->serverOps->run(['rm', '-f', $dumpPath], $this->context($staging, 'staging_pull_dump_cleanup'));
+
+            $this->rewriteUrls($staging, $stagingDocumentRoot, $production, $staging);
+            $this->updateOption($staging, $stagingDocumentRoot, 'blog_public', '0');
+            $this->flushRewrites($staging, $stagingDocumentRoot);
+        }
+
+        $this->writeMailTrap($staging, $stagingDocumentRoot);
+        $this->writeNoIndexPlugin($staging, $stagingDocumentRoot);
+        $this->flushCaches($staging, $stagingDocumentRoot);
+
+        $this->assertStagingIntact($production, $staging, $stagingDocumentRoot);
+
+        if ($mode !== 'files') {
+            $this->assertVisibilityPreserved($staging, $stagingDocumentRoot, '0');
+        }
+    }
+
+    /**
+     * The mirror of `assertProductionIntact()`: a pull must never leave
+     * staging connected to live's database or pinned to live's URL — that is
+     * the v7 failure, a staging copy that writes to the live shop.
+     */
+    private function assertStagingIntact(Application $production, Application $staging, string $documentRoot): void
+    {
+        $config = $this->serverOps->run(
+            ['cat', "{$documentRoot}/wp-config.php"],
+            $this->context($staging, 'staging_pull_verify_config'),
+        );
+
+        if ($config->failed()) {
+            throw new StagingOperationException($config->reference);
+        }
+
+        $contents = $config->output();
+        $productionDatabase = Database::where('application_id', $production->id)->first();
+
+        if (($productionDatabase !== null && str_contains($contents, "'{$productionDatabase->name}'"))
+            // Quoted, as wp-config writes it: a staging domain built on live's
+            // (`shop.com.staging…`) contains live's URL as a prefix.
+            || str_contains($contents, "'".$production->url()."'")) {
+            throw new StagingOperationException((string) Str::uuid());
+        }
+    }
+
+    /**
      * Replace every spelling of the source URL — see WordPressUrlVariants.
      */
     private function rewriteUrls(Application $application, string $documentRoot, Application $from, Application $to): void

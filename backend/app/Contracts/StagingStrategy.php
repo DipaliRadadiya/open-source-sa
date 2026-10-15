@@ -30,6 +30,15 @@ interface StagingStrategy
     public function push(Application $production, Application $staging, string $mode): void;
 
     /**
+     * The reverse: live's files are already copied onto staging by the time
+     * this runs. `database`/`full` copy live's database into staging's and
+     * rewrite the URLs the other way; every mode must leave staging still
+     * staging (its own config, hidden from search engines, mail trapped) and
+     * throw if it does not, so the manager rolls staging back.
+     */
+    public function pull(Application $production, Application $staging, string $mode): void;
+
+    /**
      * Paths rsync must never carry between the two sites, in either
      * direction.
      *

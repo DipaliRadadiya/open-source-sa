@@ -1602,3 +1602,180 @@ describe('the database copies a push saves first (ST-B3)', function () {
         expect($restores)->toBeEmpty();
     });
 });
+
+/*
+ * Update staging from live (v7's sync-to-staging): the reverse of a push.
+ * What matters: staging is replaced from live and stays staging — its own
+ * database, URL, mail trap and noindex — live is only read, staging is saved
+ * first and put back on failure, and a push and a pull never run together.
+ */
+/** Commands a pull ran, in order — a static, because a Pest test's properties cannot be appended to from inside a fake. */
+final class PullHost
+{
+    /** @var array<int, array{args: array<int, string>, input: string}> */
+    public static array $runs = [];
+}
+
+describe('updating staging from live', function () {
+    beforeEach(function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+        $this->staging = Application::where('production_application_id', $this->production->id)->first();
+        $this->stagingDb = Database::where('application_id', $this->staging->id)->first();
+        PullHost::$runs = [];
+    });
+
+    /** The server during a pull: staging answers `blog_public = 0` unless told otherwise. */
+    function fakePullServer(string $visibility = '0', ?callable $override = null): void
+    {
+        Process::fake(function ($process) use ($visibility, $override) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            PullHost::$runs[] = ['args' => $args, 'input' => (string) $process->input];
+
+            if ($override !== null && ($result = $override($args)) !== null) {
+                return $result;
+            }
+
+            if (in_array('option', $args, true) && in_array('get', $args, true)) {
+                return Process::result(output: $visibility."\n");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    function pullRan(string $needle): ?int
+    {
+        foreach (PullHost::$runs as $i => $run) {
+            if (str_contains(implode(' ', $run['args']).' '.$run['input'], $needle)) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    it('copies live into staging and leaves staging pointing at itself, hidden and mail-trapped', function () {
+        fakePullServer();
+        $live = '/home/siteowner/shop/public_html';
+        $stage = "/home/siteowner/{$this->staging->slug}/public_html";
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/pull', ['mode' => 'full'])
+            ->assertOk()
+            ->assertJsonPath('staging.id', $this->staging->id);
+
+        $rsync = collect(PullHost::$runs)->first(fn ($r) => ($r['args'][0] ?? '') === 'rsync' && in_array('--delete', $r['args'], true)
+            && in_array("{$live}/", $r['args'], true));
+
+        expect($rsync)->not->toBeNull()
+            // Live → staging, never the other way, and staging's identity files stay out.
+            ->and(array_slice($rsync['args'], -2))->toBe(["{$live}/", "{$stage}/"])
+            ->and($rsync['args'])->toContain('wp-config.php', 'wp-content/mu-plugins/panel-staging-mail-trap.php')
+            // Staging's own database dumped first, before live's is loaded into it.
+            ->and(pullRan("--result-file=/home/siteowner/{$this->staging->slug}/.panel/staging-backups/pre-push-"))->not->toBeNull()
+            ->and(pullRan('--result-file=/tmp/panel-staging-pull-'))->toBeGreaterThan(pullRan("/home/siteowner/{$this->staging->slug}/.panel/staging-backups/pre-push-"))
+            ->and(pullRan('search-replace https://shop.test http://staging.shop.test --path=/home/siteowner/'.$this->staging->slug.'/public_html'))->not->toBeNull()
+            ->and(pullRan('option update blog_public 0'))->not->toBeNull()
+            // `tee`, not the bare name: that also matches the rsync exclude.
+            ->and(pullRan("tee {$stage}/wp-content/mu-plugins/panel-staging-mail-trap.php"))->not->toBeNull()
+            ->and(pullRan("tee {$stage}/wp-content/mu-plugins/panel-staging-noindex.php"))->not->toBeNull()
+            ->and($this->production->fresh()->disabled_at)->toBeNull()
+            ->and($this->staging->fresh()->disabled_at)->toBeNull()
+            ->and(ActivityLog::where('action', 'staging_pulled_full')->exists())->toBeTrue();
+    });
+
+    it('never disables or writes to the live site', function () {
+        fakePullServer();
+        $live = '/home/siteowner/shop/public_html';
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'full'])->assertOk();
+
+        $writesLive = collect(PullHost::$runs)->contains(function ($r) use ($live) {
+            $args = $r['args'];
+            $last = (string) end($args);
+
+            return (($args[0] ?? '') === 'rsync' && str_starts_with($last, $live))
+                || (in_array('tee', $args, true) && str_starts_with($last, $live))
+                || (in_array('search-replace', $args, true) && in_array("--path={$live}", $args, true));
+        });
+
+        expect($writesLive)->toBeFalse()
+            ->and(pullRan('/home/siteowner/shop/.panel/staging-backups'))->toBeNull();
+    });
+
+    it('leaves the staging database alone on a files-only update', function () {
+        fakePullServer();
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])->assertOk();
+
+        expect(pullRan('mysqldump'))->toBeNull()
+            ->and(pullRan('search-replace'))->toBeNull()
+            ->and(pullRan("tee /home/siteowner/{$this->staging->slug}/public_html/wp-content/mu-plugins/panel-staging-mail-trap.php"))->not->toBeNull()
+            ->and(ActivityLog::where('action', 'staging_pulled_files')->exists())->toBeTrue();
+    });
+
+    it('rolls staging back when it came out connected to the live database', function () {
+        fakePullServer(override: fn (array $args) => ($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), $this->staging->slug.'/public_html/wp-config.php')
+            ? Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\n")
+            : null);
+        $stage = "/home/siteowner/{$this->staging->slug}/public_html";
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'full'])->assertStatus(500);
+
+        $restoredFiles = collect(PullHost::$runs)->contains(fn ($r) => ($r['args'][0] ?? '') === 'rsync'
+            && str_contains(implode(' ', $r['args']), '/staging-rollbacks/') && end($r['args']) === "{$stage}/");
+
+        expect($restoredFiles)->toBeTrue()
+            ->and(pullRan('source /home/siteowner/'.$this->staging->slug.'/.panel/staging-backups/pre-push-'))->not->toBeNull()
+            ->and($this->staging->fresh()->disabled_at)->toBeNull();
+    });
+
+    it('refuses to call it done if staging is visible to search engines afterwards', function () {
+        fakePullServer('1');
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'database'])->assertStatus(500);
+    });
+
+    it('cannot run while a push holds live, or while staging restores a safety copy', function (string $which) {
+        fakePullServer();
+        $id = $which === 'live' ? $this->production->id : $this->staging->id;
+        $held = Cache::lock('staging-push:'.$id, 60);
+        $held->get();
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/pull', ['mode' => 'files'])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => __('errors/application.staging_push_running')]);
+
+        $held->release();
+        // Neither lock is left behind by the refusal.
+        expect(Cache::lock('staging-push:'.$this->production->id, 1)->get())->toBeTrue();
+    })->with(['live', 'staging']);
+
+    it('refuses while a restore of either site is running', function (string $which) {
+        fakePullServer();
+        Restore::forceCreate(['application_id' => $which === 'live' ? $this->production->id : $this->staging->id, 'status' => RestoreStatus::Running, 'type' => 'full']);
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])->assertStatus(422);
+    })->with(['live', 'staging']);
+
+    it('accepts the three modes only, needs a staging copy, and needs manage', function () {
+        fakePullServer();
+
+        // The test client keeps the first token's user for the rest of the
+        // test (beforeEach created staging as admin), so forget it first.
+        app('auth')->forgetGuards();
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_staging', view: true, manage: false);
+        $this->withHeaders(['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken])
+            ->postJson(stagingUrl().'/pull', ['mode' => 'files'])->assertForbidden();
+        app('auth')->forgetGuards();
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'everything'])->assertStatus(422);
+
+        $this->staging->delete();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])
+            ->assertStatus(422)->assertJsonValidationErrors('application');
+    });
+});

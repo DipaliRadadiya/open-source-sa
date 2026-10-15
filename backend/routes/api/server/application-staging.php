@@ -17,6 +17,9 @@ Route::post('/applications/{application}/staging', [ApplicationStagingController
 Route::post('/applications/{application}/staging/push', [ApplicationStagingController::class, 'push'])
     ->middleware(['permission:app_staging,manage', 'throttle:5,1']);
 
+// Update staging from live (v7's sync-to-staging): the reverse of a push.
+Route::post('/applications/{application}/staging/pull', [ApplicationStagingController::class, 'pull'])
+    ->middleware(['permission:app_staging,manage', 'throttle:5,1']);
 // ST-B3: the live database copies a push saves first — list them, put one back.
 Route::get('/applications/{application}/staging/safety-copies', [ApplicationStagingController::class, 'safetyCopies'])
     ->middleware('permission:app_staging');
