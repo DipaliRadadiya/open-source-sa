@@ -71,13 +71,16 @@ class ContainerSupervisor
      * @throws ProvisioningFailedException
      */
     /**
-     * Service names from the last pasted compose file this instance rendered.
+     * The services of the last pasted compose file this instance rendered, keyed
+     * by name, each with its resolved definition.
      *
      * Set by `contents()` and read by `writeOverride()`, because the override has
-     * to name each service and only the resolved document knows what they are.
+     * to name each service and only the resolved document knows what they are —
+     * and what limits each one already sets, which decides the key the override
+     * may use without Compose refusing the pair (RC-42).
      * Empty for a generated file, whose template carries its own limits.
      *
-     * @var list<string>
+     * @var array<string, array<string, mixed>>
      */
     private array $pastedServices = [];
 
@@ -493,7 +496,13 @@ class ContainerSupervisor
             // RESOLVED document rather than by reading the user's text: compose
             // accepts `extends`, anchors and profiles, and the resolved document
             // is the only place their result is visible.
-            $this->pastedServices = array_keys((array) ($verdict['resolved']['services'] ?? []));
+            //
+            // The definitions are kept as well as the names: a service that sets
+            // its own limit has to be overridden under the same key (RC-42).
+            $this->pastedServices = array_map(
+                fn (mixed $definition): array => (array) $definition,
+                (array) ($verdict['resolved']['services'] ?? []),
+            );
 
             // The validator's file, not the user's. They differ when a port
             // was published to every address and the panel bound it to
@@ -709,9 +718,31 @@ class ContainerSupervisor
 
         $lines = ['# Written by the panel. Merged over compose.yml by `docker compose -f`.', 'services:'];
 
-        foreach ($this->pastedServices as $service) {
+        foreach ($this->pastedServices as $service => $definition) {
             $lines[] = "  {$service}:";
-            $lines[] = "    mem_limit: {$limit}";
+
+            // **The key the user's service already uses (RC-42).** Compose refuses
+            // `mem_limit` next to `deploy.resources.limits.memory` with a different
+            // value — "can't set distinct values" — and the override merges over the
+            // user's file, so writing the other spelling made a pasted file with its
+            // own `deploy:` limits a site that never started. The same pair exists
+            // for `cpus`. A service that spells one both ways gets both, with one
+            // value, which Compose accepts.
+            //
+            // The panel's number is a ceiling, not a replacement: a service that
+            // asks for less than it keeps what it asked for.
+            $limits = (array) ($definition['deploy']['resources']['limits'] ?? []);
+            $deploy = [];
+
+            $memory = $this->lowerMemory($limit, $definition['mem_limit'] ?? $limits['memory'] ?? null);
+
+            if (isset($limits['memory'])) {
+                $deploy['memory'] = $memory;
+            }
+
+            if (isset($definition['mem_limit']) || ! isset($limits['memory'])) {
+                $lines[] = "    mem_limit: {$memory}";
+            }
 
             // Applied to EVERY service in the pasted file, unlike the generated
             // single-service template. There is no way to tell which of a
@@ -720,8 +751,27 @@ class ContainerSupervisor
             // sites most likely to need it. Each service gets the quota, so the
             // number is a per-container ceiling and not a budget shared out.
             if ($cpus !== null) {
-                $lines[] = "    cpus: {$cpus}";
+                $quota = $this->lowerCpus((string) $cpus, $definition['cpus'] ?? $limits['cpus'] ?? null);
+
+                if (isset($limits['cpus'])) {
+                    $deploy['cpus'] = $quota;
+                }
+
+                if (isset($definition['cpus']) || ! isset($limits['cpus'])) {
+                    $lines[] = "    cpus: {$quota}";
+                }
             }
+
+            if ($deploy !== []) {
+                $lines[] = '    deploy:';
+                $lines[] = '      resources:';
+                $lines[] = '        limits:';
+
+                foreach ($deploy as $key => $value) {
+                    $lines[] = "          {$key}: {$value}";
+                }
+            }
+
             $lines[] = '    logging:';
             $lines[] = '      driver: json-file';
             $lines[] = '      options:';
@@ -738,6 +788,72 @@ class ContainerSupervisor
         }
 
         return $path;
+    }
+
+    /**
+     * The lower of the panel's memory ceiling and a service's own limit.
+     *
+     * `docker compose config` resolves every size to bytes, so the comparison is in
+     * bytes. The answer is always a value the panel produced — its own validated
+     * shorthand, or a byte count — never text copied out of the user's file, because
+     * it is written into YAML unquoted.
+     *
+     * If either side does not parse, the panel's value is used: a ceiling that
+     * cannot be compared is still a ceiling.
+     */
+    private function lowerMemory(string $ceiling, mixed $own): string
+    {
+        $ceilingBytes = self::memoryBytes($ceiling);
+        $ownBytes = is_int($own) || is_string($own) ? self::memoryBytes((string) $own) : null;
+
+        if ($ceilingBytes === null || $ownBytes === null || $ownBytes <= 0 || $ownBytes >= $ceilingBytes) {
+            return $ceiling;
+        }
+
+        return (string) $ownBytes;
+    }
+
+    /**
+     * Compose's own size shorthand, in bytes: `b`, `k`, `m`, `g`, any case, and a
+     * bare number meaning bytes. Null for anything else.
+     */
+    private static function memoryBytes(string $value): ?int
+    {
+        if (preg_match('/^(\d+)([bkmg])?$/i', trim($value), $matches) !== 1) {
+            return null;
+        }
+
+        $unit = match (strtolower($matches[2] ?? '')) {
+            'k' => 1024,
+            'm' => 1024 * 1024,
+            'g' => 1024 * 1024 * 1024,
+            default => 1,
+        };
+
+        // A number too big for an integer is not a size anybody can compare.
+        if (strlen($matches[1]) > 18 || (int) $matches[1] > intdiv(PHP_INT_MAX, $unit)) {
+            return null;
+        }
+
+        return (int) $matches[1] * $unit;
+    }
+
+    /**
+     * The lower of the site's CPU quota and a service's own.
+     *
+     * A service quota of `0` is Docker's spelling of "no limit", so it never wins.
+     * As with memory, an own value that is not a plain number leaves the site's.
+     */
+    private function lowerCpus(string $ceiling, mixed $own): string
+    {
+        $own = is_int($own) || is_float($own) || is_string($own) ? trim((string) $own) : '';
+
+        if (! is_numeric($ceiling) || preg_match('/^\d+(\.\d+)?$/', $own) !== 1
+            || (float) $own <= 0 || (float) $own >= (float) $ceiling) {
+            return $ceiling;
+        }
+
+        return $own;
     }
 
     /**
