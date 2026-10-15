@@ -1203,7 +1203,7 @@ it('writes the memory ceiling under deploy when the pasted service sets it there
     $web = $override['services']['web'];
 
     // The user's 128 MiB is below the default 512m ceiling, so it stays.
-    expect($web['deploy']['resources']['limits']['memory'])->toBe(134217728)
+    expect($web['deploy']['resources']['limits']['memory'])->toBe('134217728')
         ->and($web)->not->toHaveKey('mem_limit')
         ->and($web['logging']['options']['max-size'])->toBe('10m');
 });
@@ -1249,7 +1249,7 @@ it('adds no cpu key under deploy for a site with no cpu quota', function () {
         'web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['cpus' => '2', 'memory' => '134217728']]]]),
     ]);
 
-    expect($override['services']['web']['deploy']['resources']['limits'])->toBe(['memory' => 134217728]);
+    expect($override['services']['web']['deploy']['resources']['limits'])->toBe(['memory' => '134217728']);
 });
 
 it('keeps a pasted service\'s own mem_limit when it is below the ceiling', function () {
@@ -1284,13 +1284,30 @@ it('gives each pasted service the limit form it uses itself', function () {
     $web = $override['services']['web'];
     $worker = $override['services']['worker'];
 
-    expect($web['deploy']['resources']['limits'])->toBe(['memory' => 134217728, 'cpus' => 0.5])
+    expect($web['deploy']['resources']['limits'])->toBe(['memory' => '134217728', 'cpus' => 0.5])
         ->and($web)->not->toHaveKey('mem_limit')
         ->and($web)->not->toHaveKey('cpus')
         ->and($worker['mem_limit'])->toBe('512m')
         ->and($worker['cpus'])->toBe(0.5)
         ->and($worker)->not->toHaveKey('deploy');
 });
+
+it('quotes the deploy memory limit, which Compose only accepts as a string', function (string $own, ?string $siteLimit, string $expected) {
+    // RC-42-FIX, found live: `deploy.resources.limits.memory: 134217728` fails
+    // `docker compose config` with "must be a string", so the site never starts.
+    // `mem_limit` takes a number; this key does not. Both the service's own
+    // value and the ceiling must reach Compose as a string.
+    $override = pastedOverride(
+        ['web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => $own]]]])],
+        $siteLimit === null ? [] : ['memory_limit' => $siteLimit],
+    );
+
+    expect($override['services']['web']['deploy']['resources']['limits']['memory'])->toBe($expected)
+        ->and((string) overrideWritten())->toContain("          memory: \"{$expected}\"\n");
+})->with([
+    'own 128m, below the default ceiling' => ['134217728', null, '134217728'],
+    'own 2g, above the ceiling' => ['2147483648', '1g', '1g'],
+]);
 
 /*
  * Where the site's own directory is mounted (DS-01).

@@ -745,8 +745,13 @@ class ContainerSupervisor
 
             $memory = $this->lowerMemory($limit, $definition['mem_limit'] ?? $limits['memory'] ?? null);
 
+            // Quoted, unlike `mem_limit` (RC-42-FIX): Compose's schema takes a number
+            // for `mem_limit` but only a string here, and refuses the whole file —
+            // "deploy.resources.limits.memory must be a string" — over a byte count
+            // YAML read as an integer. Safe to quote: the value is always one the
+            // panel produced (see lowerMemory), never text from the user's file.
             if (isset($limits['memory'])) {
-                $deploy['memory'] = $memory;
+                $deploy['memory'] = "\"{$memory}\"";
             }
 
             if (isset($definition['mem_limit']) || ! isset($limits['memory'])) {
