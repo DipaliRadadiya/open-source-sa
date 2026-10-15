@@ -5,9 +5,7 @@ import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteDatabase } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CopyButton } from "@/components/ui/copy-button";
+import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 
@@ -78,23 +76,13 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
             : t("delete.usedByUnknown")}
         </Caution>
       ) : null}
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <Label htmlFor="delete-db-confirm" className="text-sm">
-            {t("delete.confirmLabel", { name })}
-          </Label>
-          <CopyButton value={name} label={t("delete.copyName")} className="size-6 shrink-0" />
-        </div>
-        <Input
-            placeholder={name}
-          id="delete-db-confirm"
-          value={confirm}
-          onChange={(event) => setConfirm(event.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          className="font-mono"
-        />
-      </div>
+      <TypeToConfirm
+        id="delete-db-confirm"
+        value={name}
+        copyLabel={t("delete.copyName")}
+        confirm={confirm}
+        onChange={setConfirm}
+      />
     </ConfirmDialog>
   );
 }

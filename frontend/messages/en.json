@@ -31,6 +31,7 @@
     "collapseSidebar": "Collapse sidebar",
     "copy": "Copy",
     "copied": "Copied",
+    "typeToConfirm": "Type this to confirm",
     "copyFailed": "Could not copy to the clipboard",
     "select": "Select…",
     "search": "Search…",
@@ -183,7 +184,6 @@
     "delete": {
       "title": "Delete system user?",
       "description": "This permanently removes {username}, its home directory, and its cron jobs. This cannot be undone.",
-      "confirmLabel": "Type {username} to confirm",
       "cancel": "Cancel",
       "confirm": "Delete user",
       "deleting": "Deleting…",
@@ -2951,7 +2951,6 @@
       "title": "Delete {name}?",
       "description": "This permanently deletes the database and everything in it. It can't be undone.",
       "descriptionWithUsers": "{count, plural, one {This permanently deletes the database, everything in it, and the # user that connects to it.} other {This permanently deletes the database, everything in it, and the # users that connect to it.}} It can't be undone.",
-      "confirmLabel": "Type {name} to confirm",
       "submit": "Delete database",
       "deleting": "Deleting…",
       "deleted": "{name} deleted.",
@@ -3991,7 +3990,6 @@
       "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
       "filesKept": "Its files are not removed: without the system user the panel can't tell where they are. They stay on the server.",
       "systemUserStays": "The system user {username} is not removed. If no other application uses it, you can delete it from System Users.",
-      "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
       "deleting": "Deleting…",
       "done": "{name} was deleted.",
@@ -5624,7 +5622,6 @@
           }
         },
         "backupFirst": "There is no undo once it finishes — <link>take a backup first</link>.",
-        "confirmLabel": "Type {domain} to confirm",
         "pickMode": "Choose what to copy",
         "typeToUnlock": "Type the production domain to confirm",
         "cancel": "Cancel",
@@ -6882,7 +6879,6 @@
         }
       },
       "safetyPromise": "A copy of the application as it is right now is taken first, so this can be undone.",
-      "confirmLabel": "Type {domain} to confirm",
       "cancel": "Cancel",
       "submit": "Restore application",
       "starting": "Starting…",
@@ -6902,7 +6898,6 @@
         "size": "Size",
         "sizeUnknown": "Unknown"
       },
-      "confirmLabelPlain": "Type this to confirm",
       "copyDomain": "Copy domain",
       "whatToRestoreHint": "Put back the files, the database, or both. Restoring the database replaces all of the application's current content."
     },

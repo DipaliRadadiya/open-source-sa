@@ -3,10 +3,9 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteSystemUser } from "@/lib/api/system-users";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CopyButton } from "@/components/ui/copy-button";
+import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 import { apiMessage } from "@/lib/api/error-message";
@@ -111,24 +110,13 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
           <p className="text-xs leading-5 text-muted-foreground">{t("delete.endSessionsHint", { username })}</p>
         </div>
       </div>
-      <div className="space-y-2">
-        {/* Copy button, because the name must be typed exactly; matches the
-            delete-application dialog. */}
-        <div className="flex items-start justify-between gap-2">
-          <Label htmlFor="delete-su-confirm" className="text-sm">
-            {t("delete.confirmLabel", { username })}
-          </Label>
-          <CopyButton value={username} label={t("delete.copyUsername")} className="size-6 shrink-0" />
-        </div>
-        <Input
-          placeholder={username}
-          id="delete-su-confirm"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          autoComplete="off"
-          className="font-mono"
-        />
-      </div>
+      <TypeToConfirm
+        id="delete-su-confirm"
+        value={username}
+        copyLabel={t("delete.copyUsername")}
+        confirm={confirm}
+        onChange={setConfirm}
+      />
     </ConfirmDialog>
   );
 }

@@ -31,6 +31,7 @@
     "collapseSidebar": "Replier la barre latérale",
     "copy": "Copier",
     "copied": "Copié",
+    "typeToConfirm": "Tapez ceci pour confirmer",
     "copyFailed": "Impossible de copier dans le presse-papiers",
     "select": "Sélectionner…",
     "search": "Rechercher…",
@@ -183,7 +184,6 @@
     "delete": {
       "title": "Supprimer l'utilisateur système ?",
       "description": "Ceci supprime définitivement {username}, son répertoire personnel et ses tâches cron. Action irréversible.",
-      "confirmLabel": "Saisissez {username} pour confirmer",
       "cancel": "Annuler",
       "confirm": "Supprimer l'utilisateur",
       "deleting": "Suppression…",
@@ -2951,7 +2951,6 @@
       "title": "Supprimer {name} ?",
       "description": "Ceci supprime définitivement la base et tout ce qu'elle contient. C'est irréversible.",
       "descriptionWithUsers": "{count, plural, one {Ceci supprime définitivement la base, tout ce qu'elle contient et le # utilisateur qui s'y connecte.} other {Ceci supprime définitivement la base, tout ce qu'elle contient et les # utilisateurs qui s'y connectent.}} C'est irréversible.",
-      "confirmLabel": "Tapez {name} pour confirmer",
       "submit": "Supprimer la base",
       "deleting": "Suppression…",
       "deleted": "{name} supprimée.",
@@ -3991,7 +3990,6 @@
       "removeFilesOff": "Les fichiers restent sur le serveur. Les sauvegardes de l'application quittent le panneau avec elle, mais leurs archives restent dans votre stockage — supprimez-les là-bas si vous n'en voulez plus.",
       "filesKept": "Ses fichiers ne sont pas supprimés : sans l'utilisateur système, le panneau ne sait pas où ils se trouvent. Ils restent sur le serveur.",
       "systemUserStays": "L'utilisateur système {username} n'est pas supprimé. Si aucune autre application ne l'utilise, vous pouvez le supprimer dans Utilisateurs système.",
-      "confirmLabel": "Tapez <code>{domain}</code> pour confirmer",
       "submit": "Supprimer l'application",
       "deleting": "Suppression…",
       "done": "{name} a été supprimé.",
@@ -5624,7 +5622,6 @@
           }
         },
         "backupFirst": "Impossible d'annuler une fois terminé — <link>faites d'abord une sauvegarde</link>.",
-        "confirmLabel": "Saisissez {domain} pour confirmer",
         "pickMode": "Choisissez ce qu'il faut copier",
         "typeToUnlock": "Saisissez le domaine de production pour confirmer",
         "cancel": "Annuler",
@@ -6882,7 +6879,6 @@
         }
       },
       "safetyPromise": "Une copie de l'application telle qu'elle est maintenant est prise d'abord, pour que cela soit annulable.",
-      "confirmLabel": "Saisissez {domain} pour confirmer",
       "cancel": "Annuler",
       "submit": "Restaurer l'application",
       "starting": "Démarrage…",
@@ -6902,7 +6898,6 @@
         "size": "Taille",
         "sizeUnknown": "Inconnu"
       },
-      "confirmLabelPlain": "Tapez ceci pour confirmer",
       "copyDomain": "Copier le domaine",
       "whatToRestoreHint": "Restaurez les fichiers, la base de données, ou les deux. Restaurer la base de données remplace tout le contenu actuel de l'application."
     },

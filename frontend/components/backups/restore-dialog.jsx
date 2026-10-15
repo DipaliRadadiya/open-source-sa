@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { History, Loader2, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { BACKUP_IN_FLIGHT, restorableTypes } from "@/lib/schemas/backup";
 import { startRestore } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
-import { Input } from "@/components/ui/input";
-import { CopyButton } from "@/components/ui/copy-button";
+import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { Label } from "@/components/ui/label";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -115,26 +113,15 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
             <p>{t("safetyPromise")}</p>
           </div>
 
-          <div className="space-y-1.5">
-            {/* The domain is shown in the label, never prefilled: typing it IS the safeguard. */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Label htmlFor="restore-confirm">{t("confirmLabelPlain")}</Label>
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.8125rem] font-medium">
-                {domain}
-              </span>
-              <CopyButton value={domain} label={t("copyDomain")} />
-            </div>
-            <Input
-              id="restore-confirm"
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
-              disabled={pending}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={domain}
-              className={cn("font-mono", matches && "border-success focus-visible:border-success")}
-            />
-          </div>
+          <TypeToConfirm
+            id="restore-confirm"
+            value={domain}
+            copyLabel={t("copyDomain")}
+            confirm={confirm}
+            onChange={setConfirm}
+            disabled={pending}
+            matches={matches}
+          />
 
           {failure ? (
             <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">

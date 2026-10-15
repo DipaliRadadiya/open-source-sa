@@ -4,14 +4,13 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRefresh } from "@/hooks/use-refresh";
 import { TriangleAlert } from "lucide-react";
-import { CopyButton } from "@/components/ui/copy-button";
+import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { deleteApplication } from "@/lib/api/applications";
 import { getDatabasesForApplication } from "@/lib/api/databases";
 import { z } from "zod";
 import { databaseSchema } from "@/lib/schemas/database";
 import { apiMessage } from "@/lib/api/error-message";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -274,38 +273,13 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           </p>
         ) : null}
 
-        <div className="space-y-2">
-          {/* `block` keeps the sentence flowing (Label is flex); one key so word order can vary. */}
-          <div className="flex items-start justify-between gap-2">
-            <Label
-              htmlFor="delete-app-confirm"
-              className="block text-sm leading-5 font-normal"
-            >
-              {t.rich("confirmLabel", {
-                domain,
-                code: (chunks) => (
-                  <span className="font-mono font-medium break-all text-foreground">
-                    {chunks}
-                  </span>
-                ),
-              })}
-            </Label>
-            <CopyButton
-              value={domain}
-              label={t("copyDomain")}
-              className="size-6 shrink-0"
-            />
-          </div>
-          <Input
-            placeholder={domain}
-            id="delete-app-confirm"
-            value={confirm}
-            onChange={(event) => setConfirm(event.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-            className="font-mono"
-          />
-        </div>
+        <TypeToConfirm
+          id="delete-app-confirm"
+          value={domain}
+          copyLabel={t("copyDomain")}
+          confirm={confirm}
+          onChange={setConfirm}
+        />
       </div>
     </ConfirmDialog>
   );
