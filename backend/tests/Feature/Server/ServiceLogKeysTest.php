@@ -95,7 +95,7 @@ it('lists Postfix, linked to the mail log', function () {
     File::put("{$this->logDir}/mail.log", "postfix/master: daemon started\n");
 
     config([
-        'server.services' => array_values(array_filter($shipped['services'], fn ($s) => $s['key'] === 'postfix')),
+        'server.services' => $postfix = array_values(array_filter($shipped['services'], fn ($s) => $s['key'] === 'postfix')),
         'server.service_logs' => $shipped['service_logs'],
         'server.logs' => [['key' => 'mail', 'label' => 'System — Mail', 'group' => 'system', 'path' => "{$this->logDir}/mail.log"]],
     ]);
@@ -104,6 +104,10 @@ it('lists Postfix, linked to the mail log', function () {
         ->assertJsonPath('services.0.key', 'postfix')
         ->assertJsonPath('services.0.unit', 'postfix')
         ->assertJsonPath('services.0.log_keys', ['mail']);
+
+    // 26.04 has a dead postfix@ template beside the real unit: `instances`
+    // would sum its empty figures and enable a second master at boot.
+    expect($postfix[0])->not->toHaveKey('instances');
 });
 
 it('derives the log key for each php-fpm version', function () {
