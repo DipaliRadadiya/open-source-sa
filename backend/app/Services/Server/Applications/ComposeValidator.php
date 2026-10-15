@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Models\Application;
 use App\Services\Server\ServerOps;
 
 /**
@@ -207,6 +208,77 @@ class ComposeValidator
         }
 
         return null;
+    }
+
+    /**
+     * Why this file cannot have its ports, when another application holds one.
+     *
+     * `applications.app_port` is unique, and for a good reason: two sites on one
+     * port means nginx sends one site's traffic to the other. A pasted file chooses
+     * its own port, so the form has to ask before the row exists. Unasked, the
+     * file was accepted with a 201 and the provisioning job then died on the
+     * index when it recorded the port, leaving a `failed` site with no reason
+     * (RC-43, measured on 2026-10-15).
+     *
+     * Every port the file publishes is checked, not only the proxied one: the
+     * other application's container listens on its port, so this one could not
+     * bind there either. The proxied port is named first, because that is the
+     * clash the user is most likely to recognise.
+     *
+     * @param  array<string, mixed>  $resolved
+     * @param  int|null  $except  the application being edited; its own port is no clash
+     */
+    public function portTaken(array $resolved, ?int $containerPort, ?int $except = null): ?string
+    {
+        $held = Application::query()
+            ->where('app_port', '>', 0)
+            ->when($except !== null, fn ($query) => $query->whereKeyNot($except))
+            ->orderBy('app_port')
+            ->pluck('name', 'app_port');
+
+        if ($held->isEmpty()) {
+            return null;
+        }
+
+        $ranges = $this->publishedRanges($resolved);
+
+        if (($proxied = $this->publishedPort($resolved, $containerPort)) !== null) {
+            array_unshift($ranges, [$proxied, $proxied]);
+        }
+
+        foreach ($ranges as [$low, $high]) {
+            foreach ($held as $port => $name) {
+                if ($port >= $low && $port <= $high) {
+                    return __('errors/application.compose_port_taken', ['port' => $port, 'application' => $name]);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Every host port the file publishes, as `[low, high]` in file order.
+     *
+     * A range (`"8000-8010:8000-8010"`) resolves to `published: "8000-8010"`; a
+     * plain `(int)` would read that as 8000 and miss the other ten.
+     *
+     * @param  array<string, mixed>  $resolved
+     * @return list<array{0: int, 1: int}>
+     */
+    private function publishedRanges(array $resolved): array
+    {
+        $ranges = [];
+
+        foreach (($resolved['services'] ?? []) as $service) {
+            foreach ((array) (is_array($service) ? ($service['ports'] ?? []) : []) as $port) {
+                if (is_array($port) && preg_match('/^(\d+)(?:-(\d+))?$/', (string) ($port['published'] ?? ''), $m) === 1) {
+                    $ranges[] = [(int) $m[1], (int) ($m[2] ?? $m[1])];
+                }
+            }
+        }
+
+        return $ranges;
     }
 
     /**

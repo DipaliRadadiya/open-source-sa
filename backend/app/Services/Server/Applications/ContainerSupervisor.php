@@ -489,6 +489,15 @@ class ContainerSupervisor
             }
 
             if ($application->app_port !== $port) {
+                // Held by another site: the forms refuse that file, but a row they
+                // never saw reaches here too. Left to the unique index it was a
+                // QueryException out of the job and a `failed` site with no
+                // reason (RC-43). A reason code, titled in the viewer's language
+                // like every other one, not a sentence in the job's.
+                if (Application::query()->where('app_port', $port)->whereKeyNot($application->getKey())->exists()) {
+                    throw new ProvisioningFailedException('compose_port_taken', '', 'compose_port_taken');
+                }
+
                 $application->forceFill(['app_port' => $port])->save();
             }
 

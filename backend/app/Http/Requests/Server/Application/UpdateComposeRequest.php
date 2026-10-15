@@ -56,13 +56,27 @@ class UpdateComposeRequest extends FormRequest
                 // existing site that tree is the thing to check against — a file
                 // that passes against /tmp and mounts the neighbours' data is the
                 // failure this rule exists to stop.
-                $verdict = app(ComposeValidator::class)->validate(
+                $composeValidator = app(ComposeValidator::class);
+                $verdict = $composeValidator->validate(
                     (string) $this->input('compose'),
                     app(ApplicationProvisioner::class)->documentRoot($application),
                 );
 
                 foreach ($verdict['errors'] as $error) {
                     $validator->errors()->add('compose', $error);
+                }
+
+                // A port another site holds (RC-43), leaving this one out: its own
+                // port is not a clash with itself. Unasked, the save got as far as
+                // recording the port and answered 500 on the unique index.
+                $taken = $verdict['resolved'] === null ? null : $composeValidator->portTaken(
+                    $verdict['resolved'],
+                    $application->container_port ? (int) $application->container_port : null,
+                    $application->getKey(),
+                );
+
+                if ($taken !== null) {
+                    $validator->errors()->add('compose', $taken);
                 }
             },
         ];

@@ -510,10 +510,22 @@ class StoreApplicationRequest extends FormRequest
                 // application's own directory has not been created yet at
                 // validation time. The site root it will get is under the
                 // system user's home, so that is the shape to check against.
-                $verdict = app(ComposeValidator::class)->validate($compose, sys_get_temp_dir());
+                $composeValidator = app(ComposeValidator::class);
+                $verdict = $composeValidator->validate($compose, sys_get_temp_dir());
 
                 foreach ($verdict['errors'] as $error) {
                     $validator->errors()->add('compose', $error);
+                }
+
+                // A port another site holds (RC-43). Accepted, it failed later on
+                // the unique index, with no reason on the site.
+                $taken = $verdict['resolved'] === null ? null : $composeValidator->portTaken(
+                    $verdict['resolved'],
+                    filled($this->input('container_port')) ? (int) $this->input('container_port') : null,
+                );
+
+                if ($taken !== null) {
+                    $validator->errors()->add('compose', $taken);
                 }
             },
 
