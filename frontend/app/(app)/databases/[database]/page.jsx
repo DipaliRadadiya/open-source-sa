@@ -9,6 +9,7 @@ import { supportsRemoteUsers } from "@/lib/databases/engine-capabilities";
 import {
   getAllApplications,
   getPhpmyadminSite,
+  getAdminerSite,
   getSiteTypes,
 } from "@/lib/applications/get-applications";
 import { getTables } from "@/lib/databases/get-monitor";
@@ -18,6 +19,7 @@ import { ConnectionDetails } from "@/components/databases/connection-details";
 import { DatabaseTabs } from "@/components/databases/database-tabs";
 import { DatabaseDetailsCard } from "@/components/databases/database-details-card";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
+import { AdminerButton } from "@/components/databases/adminer-button";
 import { parseApiDate } from "@/lib/format/api-date";
 import { DatabaseTables } from "@/components/databases/database-tables";
 import { DatabaseExports } from "@/components/databases/database-exports";
@@ -52,6 +54,7 @@ export default async function DatabasePage({ params, searchParams }) {
     exportList,
     tables,
     phpmyadmin,
+    adminer,
     appList,
     dbCounts,
     catalogue,
@@ -64,6 +67,7 @@ export default async function DatabasePage({ params, searchParams }) {
     getExports(),
     getTables(id),
     getPhpmyadminSite(),
+    getAdminerSite(),
     // `DatabaseResource` has only `application_id`, so sites are joined here.
     // The counts drive the picker's "already has one".
     getAllApplications(),
@@ -124,14 +128,25 @@ export default async function DatabasePage({ params, searchParams }) {
             data.created_at_human ? t("detail.createdWhen", { when: data.created_at_human }) : null,
           ]}
           // The one thing people open a database page to do, so it is the filled button.
+          // PostgreSQL has only Adminer, so it takes the filled look there; beside
+          // phpMyAdmin it is the second, quieter client.
           actions={
-            <PhpmyadminButton
-              database={data}
-              canManage={canManage}
-              sites={phpmyadmin.known ? phpmyadmin.sites : null}
-              variant="default"
-              size="default"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <PhpmyadminButton
+                database={data}
+                canManage={canManage}
+                sites={phpmyadmin.known ? phpmyadmin.sites : null}
+                variant="default"
+                size="default"
+              />
+              <AdminerButton
+                database={data}
+                canManage={canManage}
+                sites={adminer.known ? adminer.sites : null}
+                variant={data.driver === "pgsql" ? "default" : "outline"}
+                size="default"
+              />
+            </div>
           }
         />
       </div>

@@ -3298,6 +3298,15 @@
       "choose": "Quel phpMyAdmin ?",
       "signingShort": "Connexion en cours…"
     },
+    "adminer": {
+      "open": "Ouvrir dans Adminer",
+      "failed": "Adminer n'a pas pu être ouvert.",
+      "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
+      "install": "Installer Adminer",
+      "needsUser": "Ajoutez d'abord un utilisateur de base de données — Adminer se connecte en tant qu'utilisateur.",
+      "choose": "Quel Adminer ?",
+      "signingShort": "Connexion en cours…"
+    },
     "usedBy": {
       "title": "Utilisé par",
       "included": "Inclus dans les sauvegardes de cette application.",

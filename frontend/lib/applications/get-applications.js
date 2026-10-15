@@ -172,3 +172,15 @@ export const getPhpmyadminSite = cache(async function getPhpmyadminSite() {
   const sites = result.data?.applications ?? [];
   return { sites, site: sites[0] ?? null, known: true };
 });
+
+// Active Adminer sites, the same lookup for the other database client.
+export const getAdminerSite = cache(async function getAdminerSite() {
+  const result = await read("/applications", applicationsResponseSchema, {
+    searchParams: { "filter[site_type]": "adminer", "filter[status]": "active", per_page: 100 },
+  });
+
+  if (result.failed) return { sites: null, site: null, known: false };
+
+  const sites = result.data?.applications ?? [];
+  return { sites, site: sites[0] ?? null, known: true };
+});

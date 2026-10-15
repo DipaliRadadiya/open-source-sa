@@ -3298,6 +3298,15 @@
       "choose": "कौन-सा phpMyAdmin?",
       "signingShort": "आपको लॉगिन किया जा रहा है…"
     },
+    "adminer": {
+      "open": "Adminer में खोलें",
+      "failed": "Adminer नहीं खोला जा सका।",
+      "noPermission": "आपकी भूमिका में डेटाबेस का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
+      "install": "Adminer इंस्टॉल करें",
+      "needsUser": "पहले एक डेटाबेस उपयोगकर्ता जोड़ें — Adminer उसी के रूप में साइन इन करता है।",
+      "choose": "कौन-सा Adminer?",
+      "signingShort": "आपको लॉगिन किया जा रहा है…"
+    },
     "usedBy": {
       "title": "द्वारा उपयोग",
       "included": "इस ऐप्लिकेशन के बैकअप में शामिल है।",

@@ -3298,6 +3298,15 @@
       "choose": "¿Qué phpMyAdmin?",
       "signingShort": "Iniciando su sesión…"
     },
+    "adminer": {
+      "open": "Abrir en Adminer",
+      "failed": "No se pudo abrir Adminer.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "install": "Instalar Adminer",
+      "needsUser": "Añade primero un usuario de la base de datos — Adminer inicia sesión como uno.",
+      "choose": "¿Qué Adminer?",
+      "signingShort": "Iniciando su sesión…"
+    },
     "usedBy": {
       "title": "Usada por",
       "included": "Incluida en las copias de seguridad de esta aplicación.",

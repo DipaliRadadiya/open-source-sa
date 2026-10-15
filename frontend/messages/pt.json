@@ -3298,6 +3298,15 @@
       "choose": "Qual phpMyAdmin?",
       "signingShort": "A iniciar a sua sessão…"
     },
+    "adminer": {
+      "open": "Abrir no Adminer",
+      "failed": "Não foi possível abrir o Adminer.",
+      "noPermission": "Seu papel não inclui Banco de dados com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
+      "install": "Instalar Adminer",
+      "needsUser": "Adicione um usuário de banco de dados primeiro — o Adminer entra como um deles.",
+      "choose": "Qual Adminer?",
+      "signingShort": "A iniciar a sua sessão…"
+    },
     "usedBy": {
       "title": "Usado por",
       "included": "Incluído nos backups desta aplicação.",

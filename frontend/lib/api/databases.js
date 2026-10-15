@@ -151,3 +151,15 @@ export function phpmyadminSso(databaseId, databaseUserId, applicationId) {
     params: Object.keys(params).length > 0 ? params : undefined,
   });
 }
+
+// Adminer's sign-in: the same contract as phpMyAdmin's (single-use, 60s token).
+// Opens MySQL, MariaDB and PostgreSQL; MongoDB is a 422.
+export function adminerSso(databaseId, databaseUserId, applicationId) {
+  const params = {};
+  if (databaseUserId) params.database_user_id = databaseUserId;
+  if (applicationId) params.application_id = applicationId;
+
+  return api.post(`/databases/${databaseId}/adminer-sso`, null, {
+    params: Object.keys(params).length > 0 ? params : undefined,
+  });
+}

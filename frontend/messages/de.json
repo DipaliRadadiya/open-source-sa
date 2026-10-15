@@ -3298,6 +3298,15 @@
       "choose": "Welches phpMyAdmin?",
       "signingShort": "Sie werden angemeldet…"
     },
+    "adminer": {
+      "open": "In Adminer öffnen",
+      "failed": "Adminer konnte nicht geöffnet werden.",
+      "noPermission": "Ihre Rolle enthält nicht „Datenbank“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "install": "Adminer installieren",
+      "needsUser": "Fügen Sie zuerst einen Datenbankbenutzer hinzu — Adminer meldet sich als einer an.",
+      "choose": "Welches Adminer?",
+      "signingShort": "Sie werden angemeldet…"
+    },
     "usedBy": {
       "title": "Genutzt von",
       "included": "In den Backups dieser Anwendung enthalten.",

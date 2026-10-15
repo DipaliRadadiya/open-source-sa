@@ -3298,6 +3298,15 @@
       "choose": "Which phpMyAdmin?",
       "signingShort": "Signing you in…"
     },
+    "adminer": {
+      "open": "Open in Adminer",
+      "failed": "Adminer could not be opened.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
+      "install": "Install Adminer",
+      "needsUser": "Add a database user first — Adminer signs in as one.",
+      "choose": "Which Adminer?",
+      "signingShort": "Signing you in…"
+    },
     "usedBy": {
       "title": "Used by",
       "included": "Included in this application's backups.",

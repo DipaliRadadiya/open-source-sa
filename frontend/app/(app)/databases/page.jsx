@@ -12,6 +12,7 @@ import { getExports } from "@/lib/databases/get-exports";
 import {
   getAllApplications,
   getPhpmyadminSite,
+  getAdminerSite,
   getSiteTypes,
 } from "@/lib/applications/get-applications";
 import {
@@ -101,6 +102,7 @@ export default async function DatabasesPage({ searchParams }) {
     connections,
     exportList,
     phpmyadmin,
+    adminer,
     appList,
     dbCounts,
     unlinkedCount,
@@ -116,6 +118,8 @@ export default async function DatabasesPage({ searchParams }) {
     usable ? getExports() : Promise.resolve({ exports: [], failed: false }),
   // Whether this server has a phpMyAdmin to open at all.
     usable ? getPhpmyadminSite() : Promise.resolve(null),
+    // And an Adminer, the client that also opens PostgreSQL.
+    usable ? getAdminerSite() : Promise.resolve(null),
   // The create dialog's site picker and which sites already have a database.
     usable && canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
     usable && canManage ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
@@ -203,6 +207,7 @@ export default async function DatabasesPage({ searchParams }) {
             backupsUnknown={exportList.failed}
             // Null when the lookup failed, which must not read as "none".
             phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
+            adminerSites={adminer?.known ? adminer.sites : null}
             applications={appList.applications}
             databaseCounts={dbCounts.counts}
             databasesKnown={dbCounts.known}

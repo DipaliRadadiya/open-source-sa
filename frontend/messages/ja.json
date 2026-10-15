@@ -3298,6 +3298,15 @@
       "choose": "どちらの phpMyAdmin を使用しますか？",
       "signingShort": "ログインしています…"
     },
+    "adminer": {
+      "open": "Adminer で開く",
+      "failed": "Adminer を開けませんでした。",
+      "noPermission": "現在のロールには、データベースの管理権限が含まれていません。管理者に付与を依頼してください。",
+      "install": "Adminer をインストール",
+      "needsUser": "先にデータベースユーザーを追加してください — Adminer はそのユーザーでサインインします。",
+      "choose": "どちらの Adminer を使用しますか？",
+      "signingShort": "ログインしています…"
+    },
     "usedBy": {
       "title": "使用箇所",
       "included": "このアプリケーションのバックアップに含まれています。",
