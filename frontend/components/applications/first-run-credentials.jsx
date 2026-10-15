@@ -10,7 +10,7 @@ import {
   getContainerSecrets,
 } from "@/lib/api/docker";
 import { apiMessage } from "@/lib/api/error-message";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
@@ -43,10 +43,21 @@ export function FirstRunCredentials({ application, className }) {
   const t = useTranslations("applications.container.firstRun");
   const router = useRouter();
   const [secrets, setSecrets] = useState(null);
+  const [credentials, setCredentials] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const keys = application.container_secret_keys ?? [];
+  const LABELS = {
+    username: t("labels.username"),
+    password: t("labels.password"),
+    email: t("labels.email"),
+    url: t("labels.url"),
+    token: t("labels.token"),
+  };
+  const rows = Array.isArray(credentials)
+    ? credentials.map((item, index) => ({ key: `${item.label}-${index}`, label: LABELS[item.label], value: item.value, curated: true }))
+    : keys.map((key) => ({ key, label: key, value: secrets?.[key], curated: false }));
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +65,10 @@ export function FirstRunCredentials({ application, className }) {
     async function load() {
       try {
         const { data } = await getContainerSecrets(application.id);
-        if (!cancelled) setSecrets(data?.secrets ?? {});
+        if (!cancelled) {
+          setSecrets(data?.secrets ?? {});
+          setCredentials(data?.credentials ?? null);
+        }
       } catch (requestError) {
         // Shown rather than swallowed. A card that promises credentials and
         // renders nothing is worse than no card — the user has no way to tell
@@ -89,15 +103,24 @@ export function FirstRunCredentials({ application, className }) {
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <CardTitle
-          as="h2"
-          className="flex items-center gap-2"
-        >
-          {t("title")}
-        </CardTitle>
+      {/* The application page's card head: the title, and the card's one button beside it. */}
+      <CardHeader className="items-center border-b">
+        <CardTitle as="h2">{t("title")}</CardTitle>
+        <CardAction className="row-span-1 self-center">
+          {/* Enabled only once the values are on screen. A dismiss button beside a
+              row of spinners invites the one click that cannot be undone. */}
+          <Button
+            size="sm"
+            onClick={acknowledge}
+            disabled={saving || !secrets}
+            disabledReason={!secrets ? t("valuesNotShown") : null}
+          >
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            {t("acknowledge")}
+          </Button>
+        </CardAction>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         <Caution size="md" icon={KeyRound}>
           <p>{t("body")}</p>
         </Caution>
@@ -107,24 +130,27 @@ export function FirstRunCredentials({ application, className }) {
             <p>{error}</p>
           </Caution>
         ) : (
-          <ul className="divide-y rounded-lg border">
-            {keys.map((key) => (
+          // Flat divided rows, not a bordered box inside the card. In a narrow card the
+          // name sits above its value: side by side, the unbreakable password took the
+          // row and clipped the name ("MYSQL_ROOT_PA…").
+          <ul className="@container/creds divide-y">
+            {rows.map((row) => (
               <li
-                key={key}
-                className="flex items-center justify-between gap-3 px-3 py-2"
+                key={row.key}
+                className="flex flex-col items-start gap-1 py-2.5 @md/creds:flex-row @md/creds:items-center @md/creds:justify-between @md/creds:gap-3"
               >
-                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-                  {key}
+                <span className={row.curated ? "min-w-0 text-xs text-muted-foreground" : "min-w-0 truncate font-mono text-xs text-muted-foreground"}>
+                  {row.label}
                 </span>
                 {secrets ? (
                   <span className="flex min-w-0 items-center gap-1.5">
                     {/* Not truncated. A password clipped to fit is a password
                         somebody transcribes wrongly, and this card exists for
                         exactly the one reading where that matters. */}
-                    <code className="min-w-0 break-all font-mono text-xs">
-                      {secrets[key]}
+                    <code className="min-w-0 break-all font-mono text-[13px] font-medium">
+                      {row.value}
                     </code>
-                    <CopyButton value={secrets[key] ?? ""} />
+                    <CopyButton value={row.value ?? ""} />
                   </span>
                 ) : (
                   <Loader2
@@ -137,19 +163,7 @@ export function FirstRunCredentials({ application, className }) {
           </ul>
         )}
 
-        {/* Enabled only once the values are on screen. A dismiss button beside a
-            row of spinners invites the one click that cannot be undone. */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            onClick={acknowledge}
-            disabled={saving || !secrets}
-            disabledReason={!secrets ? t("valuesNotShown") : null}
-          >
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
-            {t("acknowledge")}
-          </Button>
-          <p className="text-xs text-muted-foreground">{t("laterHint")}</p>
-        </div>
+        <p className="border-t pt-3 text-xs text-muted-foreground">{t("laterHint")}</p>
       </CardContent>
     </Card>
   );

@@ -1,0 +1,138 @@
+{
+    "slug": "directus",
+    "container_port": 8055,
+    "volume_roles": {
+        "uploads": "/directus/uploads",
+        "extensions": "/directus/extensions",
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "SECRET",
+        "DB_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "PUBLIC_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "development",
+    "icon": "directus",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_uploads",
+            "path": "/directus/uploads"
+        },
+        {
+            "volume": "sv-app-4242_extensions",
+            "path": "/directus/extensions"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "SECRET",
+        "DB_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Directus",
+            "tagline": "Instant REST and GraphQL API with an admin app for your database"
+        },
+        "es": {
+            "title": "Directus",
+            "tagline": "API REST y GraphQL instantánea con una aplicación de administración para tu base de datos"
+        },
+        "de": {
+            "title": "Directus",
+            "tagline": "Sofortige REST- und GraphQL-API mit einer Admin-App für Ihre Datenbank"
+        },
+        "fr": {
+            "title": "Directus",
+            "tagline": "API REST et GraphQL instantanée avec une application d’administration pour votre base de données"
+        },
+        "pt": {
+            "title": "Directus",
+            "tagline": "API REST e GraphQL instantânea com um aplicativo de administração para seu banco de dados"
+        },
+        "ja": {
+            "title": "Directus",
+            "tagline": "データベース向けの管理アプリ付き、即時利用できる REST・GraphQL API"
+        },
+        "ru": {
+            "title": "Directus",
+            "tagline": "Мгновенный REST и GraphQL API с админ-приложением для вашей базы данных"
+        },
+        "hi": {
+            "title": "Directus",
+            "tagline": "आपके डेटाबेस के लिए एडमिन ऐप के साथ तुरंत REST और GraphQL API"
+        }
+    },
+    "catalog_en": {
+        "name": "directus",
+        "icon": "directus",
+        "category": "development",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

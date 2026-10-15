@@ -1,0 +1,115 @@
+{
+    "slug": "joplin",
+    "container_port": 22300,
+    "volume_roles": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "DB_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "APP_BASE_URL",
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "joplin",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "DB_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Joplin Server",
+            "tagline": "Sync server for the Joplin note-taking apps, with sharing and user accounts"
+        },
+        "es": {
+            "title": "Joplin Server",
+            "tagline": "Servidor de sincronización para las apps de notas Joplin, con uso compartido y cuentas de usuario"
+        },
+        "de": {
+            "title": "Joplin Server",
+            "tagline": "Synchronisationsserver für die Joplin-Notizen-Apps, mit Freigaben und Benutzerkonten"
+        },
+        "fr": {
+            "title": "Joplin Server",
+            "tagline": "Serveur de synchronisation pour les applications de notes Joplin, avec partage et comptes utilisateurs"
+        },
+        "pt": {
+            "title": "Joplin Server",
+            "tagline": "Servidor de sincronização para os apps de notas Joplin, com compartilhamento e contas de usuário"
+        },
+        "ja": {
+            "title": "Joplin Server",
+            "tagline": "共有とユーザーアカウントに対応した、Joplin ノートアプリ用の同期サーバー"
+        },
+        "ru": {
+            "title": "Joplin Server",
+            "tagline": "Сервер синхронизации для приложений заметок Joplin с общим доступом и учётными записями"
+        },
+        "hi": {
+            "title": "Joplin Server",
+            "tagline": "Joplin नोट लेने वाले ऐप्स के लिए सिंक सर्वर, साझाकरण और उपयोगकर्ता खातों के साथ"
+        }
+    },
+    "catalog_en": {
+        "name": "joplin",
+        "icon": "joplin",
+        "category": "productivity",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

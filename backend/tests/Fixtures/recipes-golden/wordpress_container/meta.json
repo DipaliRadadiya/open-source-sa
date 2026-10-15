@@ -1,0 +1,122 @@
+{
+    "slug": "wordpress_container",
+    "container_port": 80,
+    "volume_roles": {
+        "app": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "DATABASE_PASSWORD",
+        "MARIADB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "WORDPRESS_SITE_URL",
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "cms",
+    "icon": "wordpress",
+    "popular": true,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_app",
+            "path": "/var/www/html"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "DATABASE_PASSWORD",
+        "MARIADB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "WordPress",
+            "tagline": "Blog and website builder — runs as a container with its own MariaDB"
+        },
+        "es": {
+            "title": "WordPress",
+            "tagline": "Creador de blogs y sitios web: se ejecuta en un contenedor con su propia MariaDB"
+        },
+        "de": {
+            "title": "WordPress",
+            "tagline": "Blog- und Website-Baukasten — läuft als Container mit eigener MariaDB"
+        },
+        "fr": {
+            "title": "WordPress",
+            "tagline": "Création de blogs et de sites — fonctionne en conteneur avec son propre MariaDB"
+        },
+        "pt": {
+            "title": "WordPress",
+            "tagline": "Criação de blogues e sites — corre como contentor com a sua própria MariaDB"
+        },
+        "ja": {
+            "title": "WordPress",
+            "tagline": "ブログとサイトの構築 — 専用の MariaDB とともにコンテナとして動作します"
+        },
+        "ru": {
+            "title": "WordPress",
+            "tagline": "Блоги и сайты — работает в контейнере со своей MariaDB"
+        },
+        "hi": {
+            "title": "WordPress",
+            "tagline": "ब्लॉग और वेबसाइट बनाने का टूल — कंटेनर के रूप में अपने MariaDB के साथ चलता है"
+        }
+    },
+    "catalog_en": {
+        "name": "wordpress_container",
+        "icon": "wordpress",
+        "category": "cms",
+        "popular": true,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

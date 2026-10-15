@@ -1,0 +1,122 @@
+{
+    "slug": "ghost",
+    "container_port": 2368,
+    "volume_roles": {
+        "content": "/var/lib/ghost/content",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "MYSQL_ROOT_PASSWORD",
+        "GHOST_DB_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "url",
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "cms",
+    "icon": "ghost",
+    "popular": true,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_content",
+            "path": "/var/lib/ghost/content"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "MYSQL_ROOT_PASSWORD",
+        "GHOST_DB_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Ghost",
+            "tagline": "Publishing and newsletters — runs with its own MySQL"
+        },
+        "es": {
+            "title": "Ghost",
+            "tagline": "Publicación y boletines: funciona con su propio MySQL"
+        },
+        "de": {
+            "title": "Ghost",
+            "tagline": "Publizieren und Newsletter — läuft mit eigenem MySQL"
+        },
+        "fr": {
+            "title": "Ghost",
+            "tagline": "Publication et newsletters — fonctionne avec son propre MySQL"
+        },
+        "pt": {
+            "title": "Ghost",
+            "tagline": "Publicação e newsletters — funciona com o seu próprio MySQL"
+        },
+        "ja": {
+            "title": "Ghost",
+            "tagline": "パブリッシングとニュースレター — 専用の MySQL 付きで動作"
+        },
+        "ru": {
+            "title": "Ghost",
+            "tagline": "Публикации и рассылки — работает со своим MySQL"
+        },
+        "hi": {
+            "title": "Ghost",
+            "tagline": "प्रकाशन और न्यूज़लेटर — अपने MySQL के साथ चलता है"
+        }
+    },
+    "catalog_en": {
+        "name": "ghost",
+        "icon": "ghost",
+        "category": "cms",
+        "popular": true,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

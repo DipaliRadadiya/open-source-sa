@@ -2,29 +2,14 @@
 
 use App\Services\Applications\Types\AdminerSiteType;
 use App\Services\Applications\Types\AkauntingSiteType;
-use App\Services\Applications\Types\BookStackSiteType;
-use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
-use App\Services\Applications\Types\ExcalidrawSiteType;
-use App\Services\Applications\Types\ForgejoSiteType;
-use App\Services\Applications\Types\FreshRssSiteType;
-use App\Services\Applications\Types\GhostSiteType;
-use App\Services\Applications\Types\GiteaSiteType;
 use App\Services\Applications\Types\GitSiteType;
-use App\Services\Applications\Types\GlanceSiteType;
-use App\Services\Applications\Types\GrafanaSiteType;
-use App\Services\Applications\Types\HomepageSiteType;
-use App\Services\Applications\Types\ItToolsSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
-use App\Services\Applications\Types\MatomoSiteType;
-use App\Services\Applications\Types\MattermostSiteType;
 use App\Services\Applications\Types\MauticSiteType;
-use App\Services\Applications\Types\MetabaseSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\N8nSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
-use App\Services\Applications\Types\NocoDbSiteType;
 use App\Services\Applications\Types\NodeBbSiteType;
 use App\Services\Applications\Types\NodeRedSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
@@ -32,11 +17,7 @@ use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
-use App\Services\Applications\Types\StirlingPdfSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
-use App\Services\Applications\Types\VaultwardenSiteType;
-use App\Services\Applications\Types\WikiJsSiteType;
-use App\Services\Applications\Types\WordPressContainerSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
@@ -47,7 +28,6 @@ use App\Services\Git\Webhooks\GitlabWebhook;
 use App\Services\Server\Applications\Installers\AdminerInstaller;
 use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use App\Services\Server\Applications\Installers\CraftCmsInstaller;
-use App\Services\Server\Applications\Installers\DockerAppInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
@@ -245,6 +225,10 @@ return [
             // /usr/bin/mysql, which is a symlink to mariadb on this very box.
             'psql', 'pg_dump', 'pg_restore', 'pg_isready', 'pg_lsclusters',
             'ufw', 'fail2ban-client', 'sshd',
+            // Container login (RC-28) installs its own sudoers drop-in, and a
+            // sudoers file is only ever moved into place after `visudo -cqf`
+            // has accepted it -- the same rule PanelSudoers follows as root.
+            'visudo',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
@@ -293,6 +277,7 @@ return [
             'phpdismod' => ['/usr/sbin/phpdismod'],
             'ufw' => ['/usr/sbin/ufw'],
             'sshd' => ['/usr/sbin/sshd'],
+            'visudo' => ['/usr/sbin/visudo'],
             'mkswap' => ['/usr/sbin/mkswap'],
             'swapon' => ['/usr/sbin/swapon'],
             'swapoff' => ['/usr/sbin/swapoff'],
@@ -939,6 +924,8 @@ return [
             // nginx would be told about "nginx" while an OpenLiteSpeed user got
             // "OpenLiteSpeed" — the same sentence in two registers.
             'label' => 'Nginx',
+            // Read/merge only when nginx diagnoses an undersized hostname hash.
+            'config_path' => env('SERVER_NGINX_CONFIG_PATH', '/etc/nginx/nginx.conf'),
             // The symlink nginx actually reads via its sites-enabled/* include.
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
             // Where the real file is written; sites_dir then symlinks to it.
@@ -1598,89 +1585,6 @@ return [
         | nobody asked for.
         */
 
-        // Every Docker app maps to the one installer: the differences between
-        // them live entirely in the site type — template, port, volumes, secrets
-        // — so a class per app would be five methods of delegation each.
-        'matomo' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'grafana' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'bookstack' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'wordpress_container' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'mattermost' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'chatwoot' => [
-
-            'driver' => DockerAppInstaller::class,
-
-        ],
-
-        'excalidraw' => [
-
-            'driver' => DockerAppInstaller::class,
-
-        ],
-
-        'metabase' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'nocodb' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'wikijs' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'forgejo' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'freshrss' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'gitea' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'glance' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'homepage' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'ittools' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'stirlingpdf' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'vaultwarden' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
-        'ghost' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
         'uptimekuma' => [
             'driver' => UptimeKumaInstaller::class,
             'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
@@ -1851,6 +1755,18 @@ return [
         // deploy that was working and got killed.
         'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
 
+        // The first install of a Docker app — every recipe and the Container
+        // tab — pulls its images inside the provisioning job, and recipes and
+        // `docker` have no `installers.<type>.timeout`, so they got the 300 s
+        // default: 420 s with the overhead. Open WebUI + Ollama (3.8 GB) died
+        // at step `worker` twice that way on an ordinary link (RC-16), and
+        // Immich and Dify are the same size. This is both the job's installer
+        // allowance (`ProvisioningBudget`) and the timeout of that first
+        // `compose up`; later `up`/`pull` calls keep `command_timeout`.
+        // Stays under the queue worker's 1800 s TimeoutStopSec, so a restart
+        // still drains a running install (RC-F04).
+        'install_timeout' => (int) env('DOCKER_INSTALL_TIMEOUT', 1200),
+
         // Where a registry credential is materialised for the length of one
         // pull. Mirrors `git_credential_dir`, and for the identical reason: the
         // secret has to reach a CLI that only reads it from a file, so it is
@@ -1873,6 +1789,124 @@ return [
         // The endpoint is throttled as well — a slow registry must not become a
         // way to occupy the panel's workers.
         'login_timeout' => (int) env('DOCKER_LOGIN_TIMEOUT', 30),
+
+        /*
+        | Image discovery (DS-02): reading an image from its registry without
+        | pulling it. Every call is a request to somebody else's server while a
+        | user waits on a form, so the timeouts are short and the answers cached.
+        */
+        'images' => [
+            'connect_timeout' => (int) env('DOCKER_IMAGES_CONNECT_TIMEOUT', 5),
+            'timeout' => (int) env('DOCKER_IMAGES_TIMEOUT', 10),
+
+            // A tag can be re-pushed, so its answer is cached briefly; a config
+            // blob is content-addressed and never changes, so it is kept longer.
+            'inspect_cache_minutes' => 10,
+            'config_cache_minutes' => 60,
+            'tags_cache_minutes' => 10,
+            'search_cache_minutes' => 10,
+
+            // Pages of `tags/list` followed at most. Images that tag every
+            // commit (`sha-…`) have thousands; a picker needs the recent ones.
+            'max_tag_pages' => 5,
+
+            // The largest answer read from a registry, in bytes. A config blob
+            // is tens of KB and a page of a thousand tags well under one MB;
+            // the registry is user-chosen and every answer is decoded whole.
+            'max_response_bytes' => 2 * 1024 * 1024,
+
+            // "This image is X GB" from this size up.
+            'large_bytes' => 1024 ** 3,
+
+            // Null = the panel's own machine type, which is the server Docker
+            // runs on. Set only to inspect for a different architecture.
+            'architecture' => env('DOCKER_IMAGES_ARCHITECTURE'),
+
+            // ENV keys that are build plumbing, not settings — hidden from the
+            // form. `Str::is` patterns. Changing `NGINX_VERSION` does not change
+            // the nginx in the image; changing `PATH` breaks it.
+            'hidden_env' => [
+                'PATH', 'HOME', 'HOSTNAME', 'TERM', 'SHELL', 'USER', 'PWD',
+                'LANG', 'LANGUAGE', 'LC_*', 'container', 'DEBIAN_FRONTEND',
+                'GPG_KEY', 'GPG_KEYS', '*_VERSION', '*_SHA256', '*_SHA512', '*_SHA1', '*_CHECKSUM',
+                '*_DOWNLOAD_URL', '*_DOWNLOAD_SHA256', 'PYTHON_*', 'PIP_*', 'PYTHONDONTWRITEBYTECODE',
+                'PYTHONUNBUFFERED', 'VIRTUAL_ENV', 'NODE_VERSION', 'YARN_VERSION', 'JAVA_HOME',
+                'S6_*', 'LSIO_*', 'VERSION', 'BUILD_DATE', 'PHPIZE_DEPS', 'PHP_INI_DIR', 'PHP_*FLAGS',
+                'PHP_URL', 'PHP_ASC_URL', 'PHP_SHA256', 'PHP_EXTRA_*', 'NGINX_*', 'NJS_*', 'PKG_RELEASE',
+                'DYNPKG_RELEASE', 'GOSU_*', 'PG_MAJOR', 'PGDATA', 'LD_*', 'SSL_CERT_*',
+                'NVIDIA_*', 'MALLOC_*', 'XDG_*', 'PS1', 'PHP_INI_SCAN_DIR', 'NODE_PATH', 'NPM_CONFIG_*',
+                'PYTHONPATH', 'UV_*',
+            ],
+
+            // Settings an image will not start without, by repository. Images
+            // cannot declare this, so it is never guessed (see
+            // ImageInspector::environment()); each entry is from the image's
+            // own documentation.
+            'required_env' => [
+                'postgres' => ['POSTGRES_PASSWORD'],
+                'mysql' => ['MYSQL_ROOT_PASSWORD'],
+                'mariadb' => ['MARIADB_ROOT_PASSWORD'],
+                // Crash-loops on `TypeError: Invalid URL` without it (DS-07).
+                'umamisoftware/umami' => ['DATABASE_URL'],
+                'ghcr.io/umami-software/umami' => ['DATABASE_URL'],
+            ],
+
+            // Images that listen on a port without declaring it (no EXPOSE),
+            // by repository as users write it. Reported as `guessed`.
+            'known_ports' => [
+                'ghcr.io/open-webui/open-webui' => 8080,
+                'ghcr.io/umami-software/umami' => 3000,
+                'ghcr.io/gethomepage/homepage' => 3000,
+                'ghcr.io/mealie-recipes/mealie' => 9000,
+                'outlinewiki/outline' => 3000,
+                'requarks/wiki' => 3000,
+                'n8nio/n8n' => 5678,
+            ],
+
+            // Folders an image keeps its data in without declaring them
+            // (no VOLUME), by repository. Added to the declared ones, so the
+            // data survives the container being recreated on an update.
+            // Measured 2026-10-07: Uptime Kuma 1.x declared /app/data, 2.x no
+            // longer does, and changedetection.io, Gotify, Actual and
+            // code-server declare nothing; the paths are from each image's
+            // own documentation.
+            'known_volumes' => [
+                'louislam/uptime-kuma' => ['/app/data'],
+                'dgtlmoon/changedetection.io' => ['/datastore'],
+                'ghcr.io/dgtlmoon/changedetection.io' => ['/datastore'],
+                'gotify/server' => ['/app/data'],
+                'actualbudget/actual-server' => ['/data'],
+                'codercom/code-server' => ['/home/coder'],
+                'n8nio/n8n' => ['/home/node/.n8n'],
+                'ghcr.io/open-webui/open-webui' => ['/app/backend/data'],
+                'ghcr.io/gethomepage/homepage' => ['/app/config'],
+            ],
+
+            // Read the image while creating a site from it (DS-03): the port
+            // when none was typed, a warning when the typed one is not one the
+            // image declares, and its VOLUMEs as the default volumes. Off in
+            // the test suite, which must not reach Docker Hub.
+            'inspect_on_create' => (bool) env('DOCKER_INSPECT_ON_CREATE', true),
+        ],
+
+        /*
+        | After `compose up`, how long the panel waits for the site to answer
+        | (DS-03). The container has to be running — not restarting — and
+        | something has to answer HTTP on its loopback port, any status. A
+        | first boot that runs migrations can take a minute, hence 90 s.
+        */
+        'readiness' => [
+            // A wall-clock deadline (DS-09), capped at
+            // ContainerReadinessCheck::MAX_TIMEOUT whatever is set here.
+            'timeout' => (int) env('DOCKER_READINESS_TIMEOUT', 90),
+            'interval' => (int) env('DOCKER_READINESS_INTERVAL', 3),
+            // How long a single-image site may keep restarting, with nothing
+            // answering, before the deploy stops early. A pasted compose file
+            // is never stopped early: its services wait on each other.
+            'restart_grace' => (int) env('DOCKER_READINESS_RESTART_GRACE', 30),
+            // Log lines kept on the application beside a failure.
+            'log_lines' => 50,
+        ],
     ],
 
     /*
@@ -2040,167 +2074,8 @@ return [
         ],
     ],
 
-    'docker_apps' => [
-        'matomo' => [
-            'image' => env('DOCKER_APP_MATOMO_IMAGE', 'matomo:5-apache'),
-            // MariaDB, not MySQL: Matomo's own documentation and its schema
-            // assumptions are written against it, and 10.11 is the LTS line.
-            'db_image' => env('DOCKER_APP_MATOMO_DB_IMAGE', 'mariadb:10.11'),
-        ],
-
-        'grafana' => [
-            // The 13.2 line rather than `latest`, for the reason this whole list
-            // is versioned: `latest` moves a running site onto a new major the day
-            // upstream tags one, and because the rendered compose is stored per
-            // site that only ever reaches NEW sites. 13.2 tracks its own patches.
-            'image' => env('DOCKER_APP_GRAFANA_IMAGE', 'grafana/grafana:13.2'),
-        ],
-
-        'bookstack' => [
-            // `latest`, like Metabase and NocoDB above, and for the same reason
-            // they have it: linuxserver publishes only immutable
-            // `version-vX.Y.Z` tags and `latest` — there is no minor line to
-            // track. An exact pin here would stop being noticed and every site
-            // created afterwards would get an old release, which is the failure
-            // this list's comment warns about. A running site is unaffected
-            // either way: its compose file is stored, so a moving tag reaches
-            // only NEW sites.
-            //
-            // `26.09` was here first and does not exist. The repository was
-            // verified alive and the tag was then assumed from the version
-            // pattern — `26.09.1` and `26.09.20260929` are real, a bare `26.09`
-            // is not, and the install failed at `docker pull`. Check the tag,
-            // not just the repository.
-            'image' => env('DOCKER_APP_BOOKSTACK_IMAGE', 'lscr.io/linuxserver/bookstack:latest'),
-            // 11.4 is the current MariaDB LTS, supported to 2029 and comfortably
-            // above BookStack's 10.6 floor. Matomo pins 10.11 because Matomo's own
-            // documentation does; there is no such constraint here.
-            'db_image' => env('DOCKER_APP_BOOKSTACK_DB_IMAGE', 'mariadb:11.4'),
-        ],
-
-        'wordpress_container' => [
-            // 7.1-apache: the current line, and the apache variant because it
-            // serves HTTP itself — the fpm variants need a second container in
-            // front, which is a web server inside a container behind the web
-            // server on the host.
-            //
-            // Tag verified against the registry's per-tag endpoint, not by reading
-            // a page of recent tags: that page is the 60 most recently UPDATED and
-            // gives false negatives, which is how `mariadb:11.4` looked missing
-            // while pulling fine.
-            'image' => env('DOCKER_APP_WORDPRESS_IMAGE', 'wordpress:7.1-apache'),
-            'db_image' => env('DOCKER_APP_WORDPRESS_DB_IMAGE', 'mariadb:11.4'),
-        ],
-
-        'mattermost' => [
-            'image' => env('DOCKER_APP_MATTERMOST_IMAGE', 'mattermost/mattermost-team-edition:release-10'),
-            'db_image' => env('DOCKER_APP_MATTERMOST_DB_IMAGE', 'postgres:16-alpine'),
-        ],
-
-        // pgvector, not postgres: Chatwoot's schema declares the `vector`
-        // extension and plain Postgres refuses the migration. Pinned to pg16
-        // rather than tracking newest -- Postgres 18, mongo 8 and MariaDB 12.3
-        // each broke an app in this catalog by being the default.
-        'chatwoot' => [
-            'image' => env('DOCKER_APP_CHATWOOT_IMAGE', 'chatwoot/chatwoot:v4.17.1'),
-            'db_image' => env('DOCKER_APP_CHATWOOT_DB_IMAGE', 'pgvector/pgvector:pg16'),
-            'redis_image' => env('DOCKER_APP_CHATWOOT_REDIS_IMAGE', 'redis:7-alpine'),
-        ],
-
-        // `latest` is the only tag worth naming: of nearly a thousand published
-        // tags the rest are `sha-<commit>`, and there is no semver at all. Lower
-        // risk than it would be elsewhere -- a static frontend has no data and no
-        // migration, so a bad image is a broken page a redeploy fixes.
-        'excalidraw' => [
-            'image' => env('DOCKER_APP_EXCALIDRAW_IMAGE', 'excalidraw/excalidraw:latest'),
-        ],
-
-        'metabase' => [
-            'image' => env('DOCKER_APP_METABASE_IMAGE', 'metabase/metabase:latest'),
-            'db_image' => env('DOCKER_APP_METABASE_DB_IMAGE', 'postgres:16-alpine'),
-        ],
-
-        'nocodb' => [
-            'image' => env('DOCKER_APP_NOCODB_IMAGE', 'nocodb/nocodb:latest'),
-            'db_image' => env('DOCKER_APP_NOCODB_DB_IMAGE', 'postgres:16-alpine'),
-        ],
-
-        'wikijs' => [
-            // Pinned to the 2 line: Wiki.js 3 is a rewrite still in beta, and
-            // `latest` would move a one-click onto it the day it ships.
-            'image' => env('DOCKER_APP_WIKIJS_IMAGE', 'ghcr.io/requarks/wiki:2'),
-            'db_image' => env('DOCKER_APP_WIKIJS_DB_IMAGE', 'postgres:16-alpine'),
-        ],
-
-        'forgejo' => [
-            // Pinned to a major line: `latest` did not resolve on the registry, and a
-            // one-click that follows a rolling tag moves sites onto a new major
-            // the day it ships.
-            'image' => env('DOCKER_APP_FORGEJO_IMAGE', 'codeberg.org/forgejo/forgejo:9'),
-        ],
-
-        'freshrss' => [
-            'image' => env('DOCKER_APP_FRESHRSS_IMAGE', 'freshrss/freshrss:latest'),
-        ],
-
-        'gitea' => [
-            // Major line, not `latest`: a Gitea major upgrade migrates its database and
-            // is not something a site should do because a tag moved.
-            'image' => env('DOCKER_APP_GITEA_IMAGE', 'gitea/gitea:1'),
-        ],
-
-        'glance' => [
-            'image' => env('DOCKER_APP_GLANCE_IMAGE', 'glanceapp/glance:latest'),
-        ],
-
-        'homepage' => [
-            'image' => env('DOCKER_APP_HOMEPAGE_IMAGE', 'ghcr.io/gethomepage/homepage:latest'),
-        ],
-
-        'ittools' => [
-            'image' => env('DOCKER_APP_ITTOOLS_IMAGE', 'corentinth/it-tools:latest'),
-        ],
-
-        'stirlingpdf' => [
-            'image' => env('DOCKER_APP_STIRLINGPDF_IMAGE', 'stirlingtools/stirling-pdf:latest'),
-        ],
-
-        'vaultwarden' => [
-            // `latest` on purpose here: Vaultwarden tracks Bitwarden's client protocol,
-            // and running behind on it breaks the apps rather than merely ageing.
-            'image' => env('DOCKER_APP_VAULTWARDEN_IMAGE', 'vaultwarden/server:latest'),
-        ],
-
-        'ghost' => [
-            'image' => env('DOCKER_APP_GHOST_IMAGE', 'ghost:5-alpine'),
-            // 8.0 rather than 8.4: Ghost 5 documents 8.0, and MySQL 8.4 changed
-            // the default authentication plugin — a combination that fails at
-            // connect time with an error about a plugin, not about a version.
-            'db_image' => env('DOCKER_APP_GHOST_DB_IMAGE', 'mysql:8.0'),
-        ],
-    ],
-
     'site_types' => [
         DockerSiteType::class,
-        GhostSiteType::class,
-        VaultwardenSiteType::class,
-        GiteaSiteType::class,
-        ForgejoSiteType::class,
-        FreshRssSiteType::class,
-        StirlingPdfSiteType::class,
-        ItToolsSiteType::class,
-        GlanceSiteType::class,
-        HomepageSiteType::class,
-        NocoDbSiteType::class,
-        MatomoSiteType::class,
-        MattermostSiteType::class,
-        ChatwootSiteType::class,
-        ExcalidrawSiteType::class,
-        MetabaseSiteType::class,
-        WikiJsSiteType::class,
-        GrafanaSiteType::class,
-        BookStackSiteType::class,
-        WordPressContainerSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,
@@ -2792,6 +2667,37 @@ return [
     'hosts_file' => env('SERVER_HOSTS_FILE', '/etc/hosts'),
 
     'sshd_config_dir' => env('SERVER_SSHD_CONFIG_DIR', '/etc/ssh/sshd_config.d'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Container login (RC-28)
+    |--------------------------------------------------------------------------
+    |
+    | A Docker app's own system user logs in straight into the app's container:
+    | sshd forces every login of a member of `group` through `login`, which runs
+    | `helper` as root through one NOPASSWD rule, and the helper reaches only
+    | the containers `map` says that user owns. See AppShellInstaller.
+    |
+    | `sshd_drop_in` sorts right after SecuritySettings' 00-panel.conf: sshd
+    | keeps the FIRST value it reads for a keyword, so the block has to come
+    | before anything that might set forwarding or a forced command globally.
+    |
+    | `sync` is off under phpunit (see phpunit.xml) for the same reason
+    | privilege.sudo is: the suite asserts on the commands a feature runs, and
+    | a map rewrite after every Application save would be in all of them.
+    | AppShellMapTest turns it on.
+    |
+    */
+
+    'app_shell' => [
+        'group' => env('SERVER_APP_SHELL_GROUP', 'sv-app-shell'),
+        'map' => env('SERVER_APP_SHELL_MAP', '/etc/panel-app-shell/map.json'),
+        'helper' => env('SERVER_APP_SHELL_HELPER', '/usr/local/libexec/panel/app-shell'),
+        'login' => env('SERVER_APP_SHELL_LOGIN', '/usr/local/libexec/panel/app-login'),
+        'sudoers' => env('SERVER_APP_SHELL_SUDOERS', '/etc/sudoers.d/panel-app-shell'),
+        'sshd_drop_in' => '01-panel-app-shell.conf',
+        'sync' => (bool) env('SERVER_APP_SHELL_SYNC', true),
+    ],
 
     'unattended_upgrades_file' => env('SERVER_UNATTENDED_UPGRADES', '/etc/apt/apt.conf.d/99-panel-upgrades'),
 

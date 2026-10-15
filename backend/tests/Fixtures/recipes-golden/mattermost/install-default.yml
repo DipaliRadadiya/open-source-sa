@@ -1,0 +1,65 @@
+name: sv-app-4242
+
+services:
+  mattermost:
+    image: mattermost/mattermost-team-edition:release-10
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8065"
+
+    environment:
+      
+      MM_SERVICESETTINGS_SITEURL: https://mattermost.golden.test
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      
+      MM_SQLSETTINGS_DATASOURCE: "postgres://mattermost:6185f1b1e12a6709727f82f2c1893a04@db:5432/mattermost?sslmode=disable&connect_timeout=10"
+
+    volumes:
+      - sv-app-4242_data:/mattermost/data
+      - sv-app-4242_config:/mattermost/config
+      - sv-app-4242_plugins:/mattermost/plugins
+      
+      - sv-app-4242_client-plugins:/mattermost/client/plugins
+      - sv-app-4242_logs:/mattermost/logs
+
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: mattermost
+      POSTGRES_USER: mattermost
+      POSTGRES_PASSWORD: 6185f1b1e12a6709727f82f2c1893a04
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_config:
+    external: true
+  sv-app-4242_plugins:
+    external: true
+  sv-app-4242_client-plugins:
+    external: true
+  sv-app-4242_logs:
+    external: true
+  sv-app-4242_db:
+    external: true

@@ -30,7 +30,28 @@ class UpdateContainerRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->canManage('app_container') ?? false;
+        $user = $this->user();
+
+        if ($user === null || ! $user->canManage('app_container')) {
+            return false;
+        }
+
+        // Pointing the site at a stored registry credential needs what
+        // choosing one at create needs (`StoreApplicationRequest`, DS-08):
+        // `registry` (view) — otherwise its id is an oracle for somebody
+        // else's credential (DS-12). Only a CHANGE: the form sends the site's
+        // current registry back on every save, and keeping the credential the
+        // site already pulls with is no new power.
+        $registry = $this->input('registry_id');
+
+        // Nothing chosen, or not an id at all — the rules refuse the latter.
+        if ($registry === null || $registry === '' || ! is_scalar($registry)) {
+            return true;
+        }
+
+        $current = $this->route('application')?->registry_id;
+
+        return (string) $registry === (string) $current || $user->canView('registry');
     }
 
     /**
@@ -43,7 +64,12 @@ class UpdateContainerRequest extends FormRequest
             // to. Not `app_port`: that is the host-side port the panel
             // allocated, and conflating the two publishes a container on a
             // port another site already holds.
-            'container_port' => ['sometimes', 'nullable', 'integer', 'between:1,65535'],
+            //
+            // Optional, never null (DS-09). Since DS-03 null means "read it from
+            // the image", which only the create path can do; here it was saved,
+            // rendered as port 80, and the site proxied to a port nothing in
+            // the image listens on. Leave the key out to keep the current port.
+            'container_port' => ['sometimes', 'required', 'integer', 'between:1,65535'],
 
             // A ceiling, never absent — null here falls back to the configured
             // default at render time rather than to no limit at all.
@@ -89,8 +115,12 @@ class UpdateContainerRequest extends FormRequest
                 'string',
                 'max:255',
                 // Absolute, because a relative mount target is not a path
-                // Docker will accept and the error it gives says so badly.
-                'regex:/^\//',
+                // Docker will accept and the error it gives says so badly —
+                // and one line of plain characters, because the value is
+                // written into the compose file as YAML: a newline in it was a
+                // new key (`privileged: true`, a bind of `/`).
+                new SingleLine,
+                'regex:'.ContainerMountPath::PATTERN,
                 // No traversal. The value is a path inside the container rather
                 // than on the host, so this is not the same hole a bind mount
                 // would be — but it still reaches a compose file, and a target

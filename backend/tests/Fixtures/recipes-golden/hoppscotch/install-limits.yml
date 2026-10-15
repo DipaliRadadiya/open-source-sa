@@ -1,0 +1,77 @@
+name: sv-app-4242
+
+services:
+  hoppscotch:
+    image: hoppscotch/hoppscotch:2026.9.0
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    command: ["sh", "-c", "pnpm exec prisma migrate deploy && exec node /usr/src/app/aio_run.mjs"]
+
+    environment:
+      DATABASE_URL: "postgresql://hoppscotch:6f7cff1b0484d8461041caa8f4de5a9e@db:5432/hoppscotch?connect_timeout=300"
+      DATA_ENCRYPTION_KEY: "ddede48691742f94d94e03553a2c0676"
+      WHITELISTED_ORIGINS: "https://hoppscotch.golden.test,app://localhost_3200,app://hoppscotch"
+      TRUST_PROXY: "true"
+      ENABLE_SUBPATH_BASED_ACCESS: "true"
+      VITE_BASE_URL: "https://hoppscotch.golden.test"
+      VITE_SHORTCODE_BASE_URL: "https://hoppscotch.golden.test"
+      VITE_ADMIN_URL: "https://hoppscotch.golden.test/admin"
+      VITE_BACKEND_GQL_URL: "https://hoppscotch.golden.test/backend/graphql"
+      VITE_BACKEND_WS_URL: "wss://hoppscotch.golden.test/backend/graphql"
+      VITE_BACKEND_API_URL: "https://hoppscotch.golden.test/backend/v1"
+      VITE_APP_TOS_LINK: https://docs.hoppscotch.io/support/terms
+      VITE_APP_PRIVACY_POLICY_LINK: https://docs.hoppscotch.io/support/privacy
+
+    volumes:
+      - sv-app-4242_data:/data
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:80/backend/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: hoppscotch
+      POSTGRES_USER: hoppscotch
+      POSTGRES_PASSWORD: "6f7cff1b0484d8461041caa8f4de5a9e"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "hoppscotch", "-d", "hoppscotch"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true

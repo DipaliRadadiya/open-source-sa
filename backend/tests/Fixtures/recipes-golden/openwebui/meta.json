@@ -1,0 +1,126 @@
+{
+    "slug": "openwebui",
+    "container_port": 8080,
+    "volume_roles": {
+        "data": "/app/backend/data"
+    },
+    "generated_secrets": [
+        "WEBUI_SECRET_KEY",
+        "ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "WEBUI_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "openwebui",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/app/backend/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "WEBUI_SECRET_KEY",
+        "ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Open WebUI",
+            "tagline": "ChatGPT-style AI chat for OpenAI, Anthropic or any compatible API"
+        },
+        "es": {
+            "title": "Open WebUI",
+            "tagline": "Chat de IA al estilo ChatGPT para OpenAI, Anthropic o cualquier API compatible"
+        },
+        "de": {
+            "title": "Open WebUI",
+            "tagline": "KI-Chat im ChatGPT-Stil für OpenAI, Anthropic oder jede kompatible API"
+        },
+        "fr": {
+            "title": "Open WebUI",
+            "tagline": "Chat IA façon ChatGPT pour OpenAI, Anthropic ou toute API compatible"
+        },
+        "pt": {
+            "title": "Open WebUI",
+            "tagline": "Chat de IA no estilo ChatGPT para OpenAI, Anthropic ou qualquer API compatível"
+        },
+        "ja": {
+            "title": "Open WebUI",
+            "tagline": "OpenAI、Anthropic、または互換 API で使える ChatGPT 風の AI チャット"
+        },
+        "ru": {
+            "title": "Open WebUI",
+            "tagline": "ИИ-чат в стиле ChatGPT для OpenAI, Anthropic или любого совместимого API"
+        },
+        "hi": {
+            "title": "Open WebUI",
+            "tagline": "OpenAI, Anthropic या किसी भी संगत API के लिए ChatGPT जैसी AI चैट"
+        }
+    },
+    "catalog_en": {
+        "name": "openwebui",
+        "icon": "openwebui",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

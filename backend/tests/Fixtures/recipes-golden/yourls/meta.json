@@ -1,0 +1,128 @@
+{
+    "slug": "yourls",
+    "container_port": 8080,
+    "volume_roles": {
+        "user": "/var/www/html/user",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "YOURLS_PASS",
+        "YOURLS_COOKIEKEY",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "YOURLS_SITE",
+    "default_memory_limit": "256m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "marketing",
+    "icon": "yourls",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "256m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": {
+        "/docker-entrypoint-init.d/front-page.php": "<?php\n// Written once by the panel; yours to edit. The official image runs every .php file in\n// /docker-entrypoint-init.d on each start, before Apache. YOURLS ships no front page, so\n// the bare domain answers 403; this sends it to the admin area instead. Short links are\n// not affected: Apache only serves index.php for \"/\" itself.\n$index = '/var/www/html/index.php';\n\nif (! file_exists($index)) {\n    file_put_contents($index, \"<?php\\nheader('Location: /admin/', true, 302);\\n\");\n}\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_user",
+            "path": "/var/www/html/user"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "YOURLS_PASS",
+        "YOURLS_COOKIEKEY",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "YOURLS",
+            "tagline": "Your own URL shortener with click statistics, custom keywords and a bookmarklet"
+        },
+        "es": {
+            "title": "YOURLS",
+            "tagline": "Tu propio acortador de URL con estadísticas de clics, palabras clave personalizadas y un marcador"
+        },
+        "de": {
+            "title": "YOURLS",
+            "tagline": "Dein eigener URL-Kürzer mit Klickstatistiken, eigenen Kürzeln und einem Bookmarklet"
+        },
+        "fr": {
+            "title": "YOURLS",
+            "tagline": "Votre propre raccourcisseur d'URL avec statistiques de clics, mots-clés personnalisés et un bookmarklet"
+        },
+        "pt": {
+            "title": "YOURLS",
+            "tagline": "O seu próprio encurtador de URL com estatísticas de cliques, palavras-chave personalizadas e um bookmarklet"
+        },
+        "ja": {
+            "title": "YOURLS",
+            "tagline": "クリック統計、カスタムキーワード、ブックマークレットを備えた自分専用の URL 短縮サービス"
+        },
+        "ru": {
+            "title": "YOURLS",
+            "tagline": "Собственный сокращатель ссылок со статистикой переходов, своими ключевыми словами и букмарклетом"
+        },
+        "hi": {
+            "title": "YOURLS",
+            "tagline": "क्लिक आंकड़ों, कस्टम कीवर्ड और बुकमार्कलेट के साथ आपका अपना URL शॉर्टनर"
+        }
+    },
+    "catalog_en": {
+        "name": "yourls",
+        "icon": "yourls",
+        "category": "marketing",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

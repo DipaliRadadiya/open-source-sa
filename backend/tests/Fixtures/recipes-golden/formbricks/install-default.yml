@@ -1,0 +1,100 @@
+name: sv-app-4242
+
+services:
+  formbricks:
+    image: ghcr.io/formbricks/formbricks:5.4.5
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3000"
+
+    command:
+      - sh
+      - -c
+      - 'export ENCRYPTION_KEY="$$(printf %s "$$ENCRYPTION_SEED" | sha256sum | cut -c1-64)" && exec /home/nextjs/start.sh'
+
+    environment:
+      WEBAPP_URL: "https://formbricks.golden.test"
+      NEXTAUTH_URL: "https://formbricks.golden.test"
+      BETTER_AUTH_URL: "https://formbricks.golden.test"
+      DATABASE_URL: "postgresql://formbricks:1584ba6551058d91537ee0f066eb2bc9@db:5432/formbricks?schema=public"
+      NEXTAUTH_SECRET: "33b885c6870f71c737fe541141d85ca8"
+      BETTER_AUTH_SECRET: "bf31e8260125833116716aff63f1ba69"
+      CRON_SECRET: "7c6f2e9ceb1b3468bb1aa1d215870568"
+      ENCRYPTION_SEED: "6ce9d398b91451af21196087e0e7daf8"
+      REDIS_URL: redis://redis:6379
+      HUB_API_URL: http://127.0.0.1:9
+      HUB_API_KEY: not-configured
+      CUBEJS_API_URL: http://127.0.0.1:9
+      CUBEJS_API_SECRET: not-configured
+      EMAIL_VERIFICATION_DISABLED: "1"
+      PASSWORD_RESET_DISABLED: "1"
+      TELEMETRY_DISABLED: "1"
+
+    volumes:
+      - sv-app-4242_uploads:/home/nextjs/apps/web/uploads
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:0.8.7-pg18
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: formbricks
+      POSTGRES_USER: formbricks
+      POSTGRES_PASSWORD: "1584ba6551058d91537ee0f066eb2bc9"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "formbricks", "-d", "formbricks"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: valkey/valkey:8.1.10-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+
+    volumes:
+      - sv-app-4242_redis:/data
+
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  sv-app-4242_uploads:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_redis:
+    external: true

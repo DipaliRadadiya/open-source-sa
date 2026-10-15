@@ -1,0 +1,145 @@
+name: sv-app-4242
+
+services:
+  mautic:
+    image: mautic/mautic:7.2.1-apache
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    entrypoint:
+      - /bin/bash
+      - -c
+      - 'if [ -f /mautic-init/start.sh ]; then exec /bin/bash /mautic-init/start.sh; fi; exec /entrypoint.sh'
+
+    environment:
+      DOCKER_MAUTIC_ROLE: mautic_web
+      MAUTIC_URL: "https://mautic-container.golden.test"
+      MAUTIC_ADMIN_EMAIL: "owner@golden.test"
+      MAUTIC_ADMIN_PASSWORD: "9e426c6d276fc868e0c4916b4c1f89df"
+      MAUTIC_DB_HOST: db
+      MAUTIC_DB_PORT: "3306"
+      MAUTIC_DB_DATABASE: mautic
+      MAUTIC_DB_USER: mautic
+      MAUTIC_DB_PASSWORD: "06115a784e4525a4864befacd08e82b5"
+      MAUTIC_MESSENGER_DSN_EMAIL: doctrine://default
+      MAUTIC_MESSENGER_DSN_HIT: doctrine://default
+
+    volumes:
+      - sv-app-4242_config:/var/www/html/config
+      - sv-app-4242_logs:/var/www/html/var/logs
+      - sv-app-4242_files:/var/www/html/docroot/media/files
+      - sv-app-4242_images:/var/www/html/docroot/media/images
+      - /home/owner/site/public_html/mautic-init:/mautic-init:ro
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cron:
+    image: mautic/mautic:7.2.1-apache
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      DOCKER_MAUTIC_ROLE: mautic_cron
+      MAUTIC_DB_HOST: db
+      MAUTIC_DB_PORT: "3306"
+      MAUTIC_DB_DATABASE: mautic
+      MAUTIC_DB_USER: mautic
+      MAUTIC_DB_PASSWORD: "06115a784e4525a4864befacd08e82b5"
+      MAUTIC_MESSENGER_DSN_EMAIL: doctrine://default
+      MAUTIC_MESSENGER_DSN_HIT: doctrine://default
+
+    volumes:
+      - sv-app-4242_config:/var/www/html/config
+      - sv-app-4242_logs:/var/www/html/var/logs
+      - sv-app-4242_files:/var/www/html/docroot/media/files
+      - sv-app-4242_images:/var/www/html/docroot/media/images
+
+    depends_on:
+      mautic:
+        condition: service_started
+
+  worker:
+    image: mautic/mautic:7.2.1-apache
+    restart: unless-stopped
+    mem_limit: 768m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      DOCKER_MAUTIC_ROLE: mautic_worker
+      DOCKER_MAUTIC_WORKERS_CONSUME_EMAIL: "1"
+      DOCKER_MAUTIC_WORKERS_CONSUME_HIT: "1"
+      DOCKER_MAUTIC_WORKERS_CONSUME_FAILED: "1"
+      MAUTIC_DB_HOST: db
+      MAUTIC_DB_PORT: "3306"
+      MAUTIC_DB_DATABASE: mautic
+      MAUTIC_DB_USER: mautic
+      MAUTIC_DB_PASSWORD: "06115a784e4525a4864befacd08e82b5"
+      MAUTIC_MESSENGER_DSN_EMAIL: doctrine://default
+      MAUTIC_MESSENGER_DSN_HIT: doctrine://default
+
+    volumes:
+      - sv-app-4242_config:/var/www/html/config
+      - sv-app-4242_logs:/var/www/html/var/logs
+      - sv-app-4242_files:/var/www/html/docroot/media/files
+      - sv-app-4242_images:/var/www/html/docroot/media/images
+
+    depends_on:
+      mautic:
+        condition: service_started
+
+  db:
+    image: mariadb:11.8.9
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MYSQL_DATABASE: mautic
+      MYSQL_USER: mautic
+      MYSQL_PASSWORD: "06115a784e4525a4864befacd08e82b5"
+      MYSQL_ROOT_PASSWORD: "743b38b621977bca98a3617da0ecc484"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+volumes:
+  sv-app-4242_config:
+    external: true
+  sv-app-4242_logs:
+    external: true
+  sv-app-4242_files:
+    external: true
+  sv-app-4242_images:
+    external: true
+  sv-app-4242_db:
+    external: true

@@ -115,6 +115,8 @@ return [
     'system_user.shell_changed' => 'सिस्टम उपयोगकर्ता :username का शेल :shell में बदला',
     'system_user.ssh_enabled' => 'सिस्टम उपयोगकर्ता :username के लिए SSH एक्सेस सक्षम किया',
     'system_user.ssh_disabled' => 'सिस्टम उपयोगकर्ता :username के लिए SSH एक्सेस अक्षम किया',
+    'system_user.container_login_enabled' => 'सिस्टम उपयोगकर्ता :username के लिए कंटेनर लॉगिन चालू किया',
+    'system_user.container_login_disabled' => 'सिस्टम उपयोगकर्ता :username के लिए कंटेनर लॉगिन बंद किया',
     'cronjob.created' => 'क्रॉन जॉब :name बनाई',
     'cronjob.updated' => 'क्रॉन जॉब :name अपडेट की',
     'cronjob.deleted' => 'क्रॉन जॉब :name हटाई',

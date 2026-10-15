@@ -2,10 +2,15 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\CertificateStatus;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Git\Webhooks\WebhookManager;
+use App\Services\Recipes\ApplicationOrigin;
+use App\Services\Server\Applications\ContainerLiveness;
+use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\Request;
@@ -41,6 +46,17 @@ class ApplicationResource extends JsonResource
             // on every site that has no certificate yet — and every site has
             // no certificate for the first few minutes of its life.
             'url' => $this->resource->url(),
+            // A certificate has been asked for and is not serving yet (DS-14).
+            // A new site goes active before its Let's Encrypt job has run, and
+            // for those 10–60 s `https://` fails the TLS handshake — `url` is
+            // still http, but a user typing https sees a broken site. True
+            // while the certificate is pending or issuing, so the UI can say
+            // "HTTPS is on its way" instead.
+            'certificate_pending' => in_array(
+                $this->resource->certificate?->status,
+                [CertificateStatus::Pending, CertificateStatus::Issuing],
+                true,
+            ),
             // Where the site is on disk. Two fields because they are two
             // different directories on Craft and Statamic, and a cron job
             // pointed at the wrong one runs a file that is not there and
@@ -56,7 +72,8 @@ class ApplicationResource extends JsonResource
             'document_root' => $this->resource->systemUser ? $this->resource->documentRoot() : null,
             'path' => $this->resource->systemUser ? $this->resource->codePath() : null,
             'site_type' => $this->site_type,
-            'site_type_title' => __("application.types.{$this->site_type}.title"),
+            'site_type_title' => app(SiteTypeText::class)->title((string) $this->site_type),
+            'origin' => app(ApplicationOrigin::class)->describe($this->resource),
             // What the last Detect found, and whether there is anything to
             // offer the user about it. `suggested` is null unless relabelling
             // would actually be allowed, so the frontend tests one field and
@@ -229,6 +246,24 @@ class ApplicationResource extends JsonResource
             // and never acknowledged still answers false, deliberately.
             'credentials_acknowledged' => $this->credentials_seen_at !== null,
 
+            // What the last deploy's readiness check saw (DS-03): `running`,
+            // `restarting`, `exited` or `not_answering`, and for an image with
+            // its own HEALTHCHECK `starting` or `unhealthy` (DS-14). Null when
+            // no check has run — every site deployed before it existed. A
+            // one-click container app reports what Docker says (DS-14).
+            //
+            // A stored `running` is asked of Docker first (DS-09): nothing
+            // reports a container that stops after the deploy, and a green
+            // badge over a 502 is what this field exists to prevent. A stored
+            // `exited` is asked too, the other way round (DS-12).
+            'container_status' => $this->liveContainerStatus(),
+            // Why the last deploy failed, in words, with the container's own last
+            // log lines. Cleared by the next deploy that answers, and not shown
+            // once a container that had exited is running again. The log only
+            // for someone who may read this site's logs (`app_log`), the same
+            // bar as the Logs screen it is a copy of.
+            'last_failure' => $this->restarted() ? null : $this->lastFailure($request),
+
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,
             // which have nothing to run — render no controls for those rather
@@ -375,6 +410,134 @@ class ApplicationResource extends JsonResource
 
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
+        ];
+    }
+
+    /**
+     * The stored readiness status, except that a `running` Docker says is not
+     * running reads `exited` (DS-09), and an `exited` Docker says is running
+     * again reads null (DS-12). Docker unreachable: the stored value.
+     */
+    private function liveContainerStatus(): ?string
+    {
+        $stored = $this->container_status;
+        $liveness = app(ContainerLiveness::class);
+
+        // The image's own healthcheck, read live (DS-14): `starting` until it
+        // has a verdict, `unhealthy` once it fails — a running container that
+        // serves an error page is not Running.
+        if (in_array($stored, ['running', 'starting'], true)) {
+            $running = $liveness->running($this->resource);
+
+            if ($running === false) {
+                return 'exited';
+            }
+
+            return match ($running ? $liveness->health($this->resource) : null) {
+                'unhealthy' => 'unhealthy',
+                'starting' => 'starting',
+                'healthy' => 'running',
+                default => $stored,
+            };
+        }
+
+        if ($this->healthRecovered()) {
+            return 'running';
+        }
+
+        // A one-click app's status is set by its deploy and dropped by a Start
+        // or Restart, which check nothing (DS-14). Its deploy check is only
+        // "running and not bouncing", so Docker answers it as well as the
+        // stored value would — and the API stops saying nothing while the
+        // panel page says Running. Only an `up` answer: a stopped one-click
+        // was most likely stopped on purpose.
+        if ($stored === null
+            && $this->serving_profile === 'docker'
+            && app(ContainerSupervisor::class)->panelRendered($this->resource)
+            && $liveness->running($this->resource) === true) {
+            return match ($liveness->health($this->resource)) {
+                'unhealthy' => 'unhealthy',
+                'starting' => 'starting',
+                default => 'running',
+            };
+        }
+
+        // Null, not `running`: something has started the container since the
+        // check failed — a Start, which runs no check — and "up" is not
+        // "answering", so this says what `forgetReadiness()` says after a
+        // Start: nothing has been checked since.
+        return $this->restarted() ? null : $stored;
+    }
+
+    /**
+     * Whether the last check saw the container exit and Docker now has it
+     * running again (DS-12). Without this the badge only ever moved one way:
+     * a site fixed and started kept its red "failed" until the next deploy.
+     *
+     * Only `exited`. `not_answering` is a running container already, and
+     * `restarting` spends part of every bounce in the running state, so for
+     * either a running container says nothing about whether it was fixed.
+     */
+    private function restarted(): bool
+    {
+        return ($this->container_status === 'exited'
+            && app(ContainerLiveness::class)->running($this->resource) === true)
+            || $this->healthRecovered();
+    }
+
+    /**
+     * A deploy failed because the image's healthcheck said unhealthy, and the
+     * same check says healthy now (DS-14). The check is a real verdict, so
+     * unlike a bare restart this proves the site was fixed.
+     */
+    private function healthRecovered(): bool
+    {
+        return $this->container_status === 'unhealthy'
+            && app(ContainerLiveness::class)->health($this->resource) === 'healthy';
+    }
+
+    /**
+     * `{reason, message, last_line, log, at}`, the message titled in the
+     * viewer's locale from the stored reason and its values.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function lastFailure(Request $request): ?array
+    {
+        $failure = $this->last_failure;
+
+        if (! is_array($failure) || ! isset($failure['reason'])) {
+            return null;
+        }
+
+        $params = (array) ($failure['params'] ?? []);
+        $lastLine = (string) ($params['last_line'] ?? '');
+        // A failure with no container port to name — a pasted compose file —
+        // says so rather than naming the panel's host port as the container's.
+        $key = $failure['reason'] === 'container_not_answering' && ! isset($params['port'])
+            ? 'container_not_answering_no_port'
+            : $failure['reason'];
+        $message = __('application.container_failure.'.$key, $params);
+        $readsLogs = $request->user()?->canView('app_log') ?? false;
+
+        // What the image's own healthcheck printed (DS-14) is output from
+        // inside the container, so it gets the log's bar too.
+        $check = (string) ($params['check'] ?? '');
+
+        if ($readsLogs && $check !== '') {
+            $message .= ' '.__('application.container_failure.health_check', ['output' => $check]);
+        }
+
+        if ($readsLogs && $lastLine !== '') {
+            $message .= ' '.__('application.container_failure.last_line', ['line' => $lastLine]);
+        }
+
+        return [
+            'reason' => (string) $failure['reason'],
+            'message' => $message,
+            'last_line' => $readsLogs ? $lastLine : null,
+            'log' => $readsLogs ? (string) ($failure['log'] ?? '') : null,
+            'at' => $failure['at'] ?? null,
         ];
     }
 }

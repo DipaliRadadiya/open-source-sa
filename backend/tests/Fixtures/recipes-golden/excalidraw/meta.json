@@ -1,0 +1,104 @@
+{
+    "slug": "excalidraw",
+    "container_port": 80,
+    "volume_roles": [],
+    "generated_secrets": [],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "excalidraw",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [],
+    "docker_secret_keys": [],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Excalidraw",
+            "tagline": "Whiteboard — drawings stay in your browser; sharing and live collaboration go through excalidraw.com"
+        },
+        "es": {
+            "title": "Excalidraw",
+            "tagline": "Pizarra — los dibujos se quedan en tu navegador; compartir y colaborar en vivo pasan por excalidraw.com"
+        },
+        "de": {
+            "title": "Excalidraw",
+            "tagline": "Whiteboard — Zeichnungen bleiben im Browser; Teilen und Live-Zusammenarbeit laufen über excalidraw.com"
+        },
+        "fr": {
+            "title": "Excalidraw",
+            "tagline": "Tableau blanc — les dessins restent dans votre navigateur ; le partage et la collaboration en direct passent par excalidraw.com"
+        },
+        "pt": {
+            "title": "Excalidraw",
+            "tagline": "Quadro branco — os desenhos ficam no seu navegador; partilha e colaboração ao vivo passam pelo excalidraw.com"
+        },
+        "ja": {
+            "title": "Excalidraw",
+            "tagline": "ホワイトボード — 描いた内容はブラウザー内に保存されます。共有とライブ共同編集は excalidraw.com を経由します"
+        },
+        "ru": {
+            "title": "Excalidraw",
+            "tagline": "Доска для рисования — рисунки остаются в браузере; общий доступ и совместная работа идут через excalidraw.com"
+        },
+        "hi": {
+            "title": "Excalidraw",
+            "tagline": "व्हाइटबोर्ड — चित्र आपके ब्राउज़र में ही रहते हैं; साझा करना और लाइव सहयोग excalidraw.com से होकर जाता है"
+        }
+    },
+    "catalog_en": {
+        "name": "excalidraw",
+        "icon": "excalidraw",
+        "category": "productivity",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

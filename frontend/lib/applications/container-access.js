@@ -1,0 +1,32 @@
+// Recipes and Container-tab apps; the endpoint refuses every other site.
+export function showsContainerAccess(application) {
+  return application?.serving_profile === "docker";
+}
+
+export function defaultContainer(containers) {
+  return (containers ?? []).find((container) => container.main) ?? containers?.[0] ?? null;
+}
+
+// The server's line opens the main container. Another one is picked with
+// `@<service>`, or `@<app>/<service>` when the owner has several Docker apps and
+// the line already ends in `@<app>`. Only the tail changes, so quoting and `-p`
+// stay exactly as the API wrote them.
+export function shellCommandFor(access, container) {
+  const command = access?.commands?.shell ?? "";
+  if (!command || !container || container.main) return command;
+  const appPick = access.app ? ` @${access.app}` : null;
+  if (appPick && command.endsWith(appPick)) return `${command}/${container.service}`;
+  return `${command} @${container.service}`;
+}
+
+// Which sign-in the turn-on step must collect, so the owner is never left with
+// no way in. The API refuses the same cases. The key field shows whenever the
+// owner has no key; this only decides what is required.
+export function turnOnNeeds(access) {
+  const owner = access?.owner;
+  if (!owner || owner.ssh_keys > 0) return "nothing";
+  if (access.password_login === false) return "key";
+  // An unread sshd setting: the server decides.
+  if (access.password_login !== true) return "nothing";
+  return owner.has_password ? "nothing" : "keyOrPassword";
+}

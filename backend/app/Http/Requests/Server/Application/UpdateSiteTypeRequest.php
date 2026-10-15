@@ -5,6 +5,7 @@ namespace App\Http\Requests\Server\Application;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeDetector;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -153,7 +154,7 @@ class UpdateSiteTypeRequest extends FormRequest
 
         if ($verdict->siteType !== $target || $verdict->confidence < $floor) {
             $validator->errors()->add('site_type', __('application.site_type_change.no_evidence', [
-                'type' => __("application.types.{$target}.title"),
+                'type' => app(SiteTypeText::class)->title($target),
             ]));
         }
     }

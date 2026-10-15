@@ -12,6 +12,7 @@ use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\SshUsersGroup;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -41,6 +42,9 @@ class SecuritySettings implements SettingGroup
     // so an upgraded box does not keep both — two files setting the same
     // keyword is exactly the failure mode above, just against ourselves.
     private const LEGACY_DROP_IN = '99-panel.conf';
+
+    // See port(). Holds the port and whether passwords are accepted.
+    private const PORT_CACHE = 'server.ssh_login.effective';
 
     public function __construct(
         private ServerOps $serverOps,
@@ -85,6 +89,49 @@ class SecuritySettings implements SettingGroup
             'save_enforces_ssh_access' => ($effective['allowusers'] ?? '') === ''
                 && ! in_array('ssh-users', preg_split('/\s+/', trim((string) ($effective['allowgroups'] ?? ''))) ?: [], true),
         ];
+    }
+
+    /**
+     * The port SSH listens on, and nothing else.
+     *
+     * For the Command-line access card (RC-23), which is on every Docker app's
+     * dashboard. `read()` shells out to `sshd -T` and then looks for keys, so
+     * this reads the port alone and keeps it for five minutes; `apply()` drops
+     * it the moment it writes a new one.
+     */
+    public function port(): int
+    {
+        return $this->loginSummary()['port'];
+    }
+
+    /**
+     * Whether sshd accepts passwords, from the same cached read as port().
+     *
+     * The card turns container login on with a key or a password (RC-28), and
+     * offers the password only where it would work. The same answer read()
+     * gives as `password_authentication`, without its key lookup.
+     */
+    public function passwordLogin(): bool
+    {
+        return $this->loginSummary()['password_authentication'];
+    }
+
+    /**
+     * @return array{port: int, password_authentication: bool}
+     */
+    private function loginSummary(): array
+    {
+        // A new key, not the old `server.ssh_port.effective`: that one held the
+        // bare port, and a value cached by the previous release must not be
+        // read back as this shape.
+        return Cache::remember(self::PORT_CACHE, now()->addMinutes(5), function (): array {
+            $effective = $this->effectiveConfig();
+
+            return [
+                'port' => (int) ($effective['port'] ?? config('server.ssh_port', 22)),
+                'password_authentication' => ($effective['passwordauthentication'] ?? 'yes') === 'yes',
+            ];
+        });
     }
 
     /**
@@ -142,6 +189,10 @@ class SecuritySettings implements SettingGroup
         if ($write->failed()) {
             throw new SettingOperationException($write->reference);
         }
+
+        // `sshd -T` reads the files, not the running daemon, so from here on it
+        // answers with the new port whether or not the rest of this succeeds.
+        Cache::forget(self::PORT_CACHE);
 
         // Refuse to reload on a bad config — the running SSH daemon stays up.
         $test = $this->serverOps->run(['sshd', '-t'], ['feature' => 'setting', 'group' => 'security', 'op' => 'test']);

@@ -1,0 +1,82 @@
+name: sv-app-4242
+
+services:
+  affine:
+    image: ghcr.io/toeverything/affine:0.27.4
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3010"
+
+    environment:
+      REDIS_SERVER_HOST: redis
+      DATABASE_URL: "postgresql://affine:855a4c228fc58c8211df77c15f85848a@postgres:5432/affine"
+      AFFINE_INDEXER_ENABLED: "false"
+      AFFINE_SERVER_EXTERNAL_URL: "https://affine.golden.test"
+
+    command: ["sh", "-c", "node ./scripts/self-host-predeploy.js && exec node ./dist/main.js"]
+
+    volumes:
+      - sv-app-4242_storage:/root/.affine/storage
+      - sv-app-4242_config:/root/.affine/config
+
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.4.7-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: pgvector/pgvector:0.8.2-pg16-bookworm
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_USER: affine
+      POSTGRES_DB: affine
+      POSTGRES_PASSWORD: "855a4c228fc58c8211df77c15f85848a"
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "affine", "-d", "affine"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sv-app-4242_storage:
+    external: true
+  sv-app-4242_config:
+    external: true
+  sv-app-4242_db:
+    external: true

@@ -1,0 +1,15 @@
+name: sv-app-4242
+
+services:
+  cyberchef:
+    image: ghcr.io/gchq/cyberchef:11.5.0
+    restart: unless-stopped
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"

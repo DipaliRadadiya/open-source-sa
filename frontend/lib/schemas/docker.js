@@ -1,4 +1,6 @@
 import { z } from "zod";
+// Relative: node tests import this file without the `@/` alias.
+import { passwordField, sshKeySchema } from "./system-user.js";
 
 /**
  * A Docker network as the panel presents it.
@@ -239,3 +241,134 @@ export const volumeMountSchema = z.object({
     .regex(/^\//)
     .refine((path) => !/(^|\/)\.\.(\/|$)/.test(path)),
 });
+
+/**
+ * Image discovery responses (DS-02 contract). Lenient on the optional parts:
+ * one missing count must not reject a whole result list.
+ */
+export const imageSearchResponseSchema = z.object({
+  results: z
+    .array(
+      z.object({
+        image: z.string(),
+        registry: z.string().nullish(),
+        description: z.string().nullish(),
+        stars: z.number().nullish(),
+        pulls: z.number().nullish(),
+        official: z.boolean().default(false),
+        verified_publisher: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  offline: z.boolean().default(false),
+});
+
+export const imageTagsResponseSchema = z.object({
+  image: z.string().nullish(),
+  recommended: z.string().nullish(),
+  tags: z
+    .array(
+      z.object({
+        name: z.string(),
+        updated_at: z.string().nullish(),
+        stable: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+});
+
+export const imageInspectResponseSchema = z.object({
+  image: z.string().nullish(),
+  found: z.boolean(),
+  message: z.string().nullish(),
+  exposed_ports: z.array(z.number()).default([]),
+  suggested_port: z.number().int().nullish(),
+  port_confidence: z.enum(["declared", "guessed", "none"]).catch("none"),
+  volumes: z.array(z.string()).default([]),
+  suggested_volumes: z
+    .array(z.object({ path: z.string(), name: z.string().nullish() }))
+    .default([]),
+  env: z
+    .array(
+      z.object({
+        key: z.string(),
+        default: z.string().nullish(),
+        required: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  size_bytes: z.number().nullish(),
+  architectures: z.array(z.string()).default([]),
+  uses_app_dir: z.boolean().default(false),
+  warnings: z.array(z.string()).default([]),
+});
+
+/** Matches DS-03's create rule for env keys. */
+export const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * `GET /applications/{id}/container/access` (RC-23, RC-28): the app's own system
+ * user, whether its SSH login opens the container, and the exact lines to copy.
+ * POST and DELETE on the same path turn that container login on and off.
+ */
+export const containerAccessSchema = z.object({
+  // What `@<app>` picks when the owner has several Docker apps.
+  app: z.string().min(1),
+  owner: z.object({
+    username: z.string().min(1),
+    ssh_access: z.boolean().default(false),
+    container_login: z.boolean().default(false),
+    has_password: z.boolean().default(false),
+    ssh_keys: z.number().int().nonnegative().default(0),
+    // Non-Docker apps: their SSH and SFTP stop once container login is on.
+    other_apps: z.number().int().nonnegative().default(0),
+  }),
+  // Null when the server could not read sshd's setting: neither on nor off.
+  password_login: z.boolean().nullish(),
+  commands: z
+    .object({
+      shell: z.string().min(1),
+      exec_example: z.string().min(1),
+      logs: z.string().min(1),
+    })
+    .nullish(),
+  cli_examples: z
+    .array(z.object({ label: z.string().min(1), command: z.string().min(1) }))
+    .default([]),
+  host: z.string().min(1),
+  ssh_port: z.number().int().nullish(),
+  containers: z
+    .array(
+      z.object({
+        service: z.string(),
+        name: z.string().min(1),
+        main: z.boolean().default(false),
+      }),
+    )
+    .min(1),
+});
+
+/**
+ * The turn-on step. Key and password go through the System Users rules; which
+ * one is required, and whether the container-only switch must be confirmed,
+ * depends on the owner and on sshd (`turnOnNeeds`).
+ */
+export function containerLoginSchema({ needs = "nothing", confirm = false } = {}) {
+  return z
+    .object({
+      ssh_key: z.union([z.literal(""), sshKeySchema.shape.public_key]),
+      password: z.union([z.literal(""), passwordField]),
+      confirm_container_only: z.boolean(),
+    })
+    .superRefine((values, ctx) => {
+      if (needs === "key" && !values.ssh_key) {
+        ctx.addIssue({ code: "custom", path: ["ssh_key"], message: "sshKeyRequired" });
+      }
+      if (needs === "keyOrPassword" && !values.ssh_key && !values.password) {
+        ctx.addIssue({ code: "custom", path: ["ssh_key"], message: "sshKeyOrPassword" });
+      }
+      if (confirm && !values.confirm_container_only) {
+        ctx.addIssue({ code: "custom", path: ["confirm_container_only"], message: "confirmContainerOnly" });
+      }
+    });
+}

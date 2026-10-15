@@ -1,0 +1,51 @@
+name: sv-app-4242
+
+services:
+  nocodb:
+    image: nocodb/nocodb:latest
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"
+
+    environment:
+      
+      NC_PUBLIC_URL: https://nocodb.golden.test
+      NC_DB: "pg://db:5432?u=nocodb&p=d71d9fcff78300b3a9dfaf693cb94af8&d=nocodb"
+
+    volumes:
+      - sv-app-4242_data:/usr/app/data
+
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: nocodb
+      POSTGRES_USER: nocodb
+      POSTGRES_PASSWORD: d71d9fcff78300b3a9dfaf693cb94af8
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true

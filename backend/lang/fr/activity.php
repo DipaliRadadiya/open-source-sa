@@ -115,6 +115,8 @@ return [
     'system_user.shell_changed' => "A changé le shell de l'utilisateur système :username en :shell",
     'system_user.ssh_enabled' => "A activé l'accès SSH pour l'utilisateur système :username",
     'system_user.ssh_disabled' => "A désactivé l'accès SSH pour l'utilisateur système :username",
+    'system_user.container_login_enabled' => 'A activé la connexion au conteneur pour l\'utilisateur système :username',
+    'system_user.container_login_disabled' => 'A désactivé la connexion au conteneur pour l\'utilisateur système :username',
     'cronjob.created' => 'A créé la tâche cron :name',
     'cronjob.updated' => 'A mis à jour la tâche cron :name',
     'cronjob.deleted' => 'A supprimé la tâche cron :name',

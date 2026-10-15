@@ -1,0 +1,85 @@
+{
+    "schema": 1,
+    "slug": "odoo",
+    "version": 1,
+    "title": "Odoo Community",
+    "tagline": {
+        "en": "Open-source business applications with PostgreSQL",
+        "es": "Aplicaciones empresariales de código abierto con PostgreSQL",
+        "de": "Open-Source-Geschäftsanwendungen mit PostgreSQL",
+        "fr": "Applications métier open source avec PostgreSQL",
+        "pt": "Aplicações empresariais de código aberto com PostgreSQL",
+        "ja": "PostgreSQL を使用したオープンソースの業務アプリケーション",
+        "ru": "Бизнес-приложения с открытым исходным кодом и PostgreSQL",
+        "hi": "PostgreSQL के साथ ओपन-सोर्स व्यावसायिक अनुप्रयोग"
+    },
+    "category": "business",
+    "icon": "odoo",
+    "popular": false,
+    "catalog_order": 250,
+    "docs_url": "https://www.odoo.com/documentation/19.0/administration/on_premise/deploy.html",
+    "images": {
+        "app": {
+            "ref": "odoo:19.0-20260926",
+            "tested": [
+                "odoo:19.0-20260926"
+            ]
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "odoo",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8069,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/var/lib/odoo",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MASTER_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "password",
+                "secret": "MASTER_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first-run password is the database manager's master password, not a user login. Use it to create the first database and choose your own administrator email and password; leave Demo Data unchecked.",
+        "The generated master password is stored as admin_passwd in a private configuration file on the owned data volume. Startup atomically updates that setting without duplicate lines, preserving the official addons_path and data_dir defaults and other existing settings.",
+        "The official image receives HOST, USER and PASSWORD for PostgreSQL. The startup wrapper additionally uses MASTER_PASSWORD and ODOO_RC to configure the master password before returning to the official entrypoint.",
+        "Proxy mode is enabled, demo data is disabled, and workers=0 keeps HTTP and WebSockets on port 8069 in threaded mode; no separate bus port is published.",
+        "Odoo 19 requires PostgreSQL 13 or newer. PostgreSQL 16.15 is private to this project's network and persists in its own named volume; Odoo's filestore and configuration persist in the data volume.",
+        "The exact official Odoo 19 dated image is pinned even though a newer major exists. The 1g application floor is provisional until measured on both supported Ubuntu releases; tested image lists remain empty until live verification."
+    ]
+}

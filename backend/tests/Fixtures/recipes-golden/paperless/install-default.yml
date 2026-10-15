@@ -1,0 +1,74 @@
+name: sv-app-4242
+
+services:
+  webserver:
+    image: paperlessngx/paperless-ngx:3.3
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8000"
+
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBPASS: "2a7ceab5da27bdf865ea16f091596dd2"
+      PAPERLESS_SECRET_KEY: "f190c47ec8873bf0387c226856be090d"
+      PAPERLESS_URL: "https://paperless.golden.test"
+      PAPERLESS_ADMIN_USER: admin
+      PAPERLESS_ADMIN_PASSWORD: "0e20ebc4025db85ef909b6e279dd3844"
+
+    volumes:
+      - sv-app-4242_data:/usr/src/paperless/data
+      - sv-app-4242_media:/usr/src/paperless/media
+
+    depends_on:
+      - broker
+      - db
+
+  broker:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    volumes:
+      - sv-app-4242_broker:/data
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: "2a7ceab5da27bdf865ea16f091596dd2"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_media:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_broker:
+    external: true

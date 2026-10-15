@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "slug": "template_panel_only_secret_rendered",
+  "version": 1,
+  "title": "Demo",
+  "tagline": {
+    "en": "Demo application"
+  },
+  "category": "utility",
+  "icon": "demo",
+  "catalog_order": 30,
+  "images": {
+    "app": {
+      "ref": "ghost:5-alpine",
+      "tested": []
+    }
+  },
+  "services": [
+    {
+      "name": "app",
+      "role": "app"
+    }
+  ],
+  "container_port": 80,
+  "volumes": {
+    "data": "/data"
+  },
+  "secrets": [
+    {
+      "key": "PASSWORD",
+      "complexity": "alnum",
+      "panel_only": false
+    },
+    {
+      "key": "ADMIN_PASSWORD",
+      "complexity": "complex",
+      "panel_only": true
+    }
+  ],
+  "url_env_key": "APP_URL",
+  "first_run": {
+    "kind": "credentials",
+    "credentials": [
+      {
+        "label": "password",
+        "secret": "PASSWORD"
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "name": "admin_email",
+      "required": true
+    }
+  ],
+  "after_install": {
+    "type": "http_form_claim",
+    "path": "/setup",
+    "fields": {
+      "name": "{{ app.name }}",
+      "email": "{{ input.admin_email }}",
+      "password": "{{ secret.ADMIN_PASSWORD }}"
+    }
+  }
+}

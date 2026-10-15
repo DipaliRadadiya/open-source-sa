@@ -1,0 +1,34 @@
+name: sv-app-4242
+
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.55.0
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:7700"
+
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: "41d05fceda81fa5b293da924c104bee0"
+      MEILI_NO_ANALYTICS: "true"
+
+    volumes:
+      - sv-app-4242_data:/meili_data
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  sv-app-4242_data:
+    external: true

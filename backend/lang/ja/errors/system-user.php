@@ -21,4 +21,11 @@ return [
     'shell_not_installed' => 'シェル :shell はこのサーバーにインストールされていません。先にインストールするか、別のシェルを選択してください。',
     'username_taken_on_server' => 'この名前のユーザーまたはグループはサーバー上に既に存在します。別のユーザー名を選択してください。',
     'has_processes' => ':username はまだサインイン中か、何かを実行中です（開いている SSH セッションや実行中のジョブなど）。サインアウトするか終了を待つか、「セッションを終了」をオンにしてもう一度削除してください（先に終了させます）。',
+
+    // Container login (RC-28).
+    'container_login_failed' => 'システムユーザーのコンテナーログインを有効にできませんでした。',
+    'container_login_unsupported' => 'このサーバーの SSH 設定はコンテナーログインを適用しません（sshd_config が sshd_config.d を読み込んでいません）。そのため有効にしませんでした。',
+    'container_login_no_owner' => 'このアプリにはシステムユーザーがありません。',
+    'container_login_confirm' => '{1} :username は他に :count 個のアプリを所有しています。SSH と SFTP はこのコンテナーだけを開くようになります。続行するには確認してください。|[2,*] :username は他に :count 個のアプリを所有しています。SSH と SFTP はこのコンテナーだけを開くようになります。続行するには確認してください。',
+    'container_login_needs_key' => 'このサーバーではパスワードログインが無効なため、:username には SSH 鍵が必要です。コンテナーログインを有効にするには鍵を追加してください。',
 ];

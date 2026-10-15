@@ -1,0 +1,70 @@
+{
+    "schema": 1,
+    "slug": "appsmith",
+    "version": 1,
+    "title": "Appsmith",
+    "tagline": {
+        "en": "Low-code builder for internal tools, admin panels and dashboards",
+        "es": "Constructor low-code de herramientas internas, paneles de administración y dashboards",
+        "de": "Low-Code-Builder für interne Tools, Admin-Panels und Dashboards",
+        "fr": "Outil low-code pour créer des outils internes, des panneaux d'administration et des tableaux de bord",
+        "pt": "Construtor low-code de ferramentas internas, painéis de administração e dashboards",
+        "ja": "社内ツール、管理パネル、ダッシュボードを作るローコードビルダー",
+        "ru": "Low-code-конструктор внутренних инструментов, админ-панелей и дашбордов",
+        "hi": "आंतरिक टूल, एडमिन पैनल और डैशबोर्ड बनाने के लिए लो-कोड बिल्डर"
+    },
+    "category": "development",
+    "icon": "appsmith",
+    "popular": false,
+    "catalog_order": 410,
+    "docs_url": "https://docs.appsmith.com/getting-started/setup/installation-guides/docker",
+    "images": {
+        "app": {
+            "ref": "appsmith/appsmith-ce:v2.5.0",
+            "tested": [
+                "appsmith/appsmith-ce:v2.5.0"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "appsmith",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "4g",
+    "volumes": {
+        "stacks": "/appsmith-stacks"
+    },
+    "secrets": [
+        {
+            "key": "APPSMITH_ENCRYPTION_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "APPSMITH_ENCRYPTION_SALT",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: open the site right after the install and create the admin account; the first visitor becomes the instance administrator. Further sign-ups can be turned off in Admin Settings.",
+        "Appsmith Community is one all-in-one container: the editor (Caddy), the Java backend, the realtime server and an embedded MongoDB and Redis all run under supervisord. Everything they keep, including the generated docker.env and the database, lives in the stacks volume at /appsmith-stacks.",
+        "APPSMITH_ENCRYPTION_PASSWORD and APPSMITH_ENCRYPTION_SALT encrypt saved datasource credentials. They are set from secrets so they do not depend on the docker.env the container writes on its first start (variables set from outside take precedence). Never change them: saved credentials cannot be decrypted afterwards.",
+        "APPSMITH_CUSTOM_DOMAIN is left unset on purpose: it makes the container's own Caddy request a Let's Encrypt certificate, while the panel already terminates HTTPS in front of it. Appsmith's Caddy trusts forwarded headers from private addresses by default, which covers the panel's proxy.",
+        "Telemetry is off (APPSMITH_DISABLE_TELEMETRY=true).",
+        "Memory floor 4g, kept from the card's estimate. The Java backend, MongoDB, the realtime and MCP servers share the container: in the RC-27 live smoke it idled at 1.44-1.61 GiB (36-40%) and peaked at 1.82-1.89 GiB (44-47%) through first start, setup, editing and deploying, and the Java heap grows with real workloads. The first start is slow while the embedded database initialises, so the healthcheck (the image's own /opt/appsmith/healthcheck.sh) is given five minutes.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-27): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

@@ -9,6 +9,7 @@ import { formatBytes } from "@/lib/format/bytes";
 import { ArchiveRestore, ChevronRight, SearchX, AppWindow } from "lucide-react";
 import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { ApplicationOriginBadge } from "@/components/applications/application-origin-badge";
 import { Badge } from "@/components/ui/badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { Button } from "@/components/ui/button";
@@ -178,9 +179,9 @@ function ActionsCell({ row, table }) {
   );
 }
 
-function NameCell({ row, missingDatabase = false, gitProvider = null }) {
+function NameCell({ row, missingDatabase = false, gitProvider = null, iconDataUri }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3">{/* On its own tile, so marks of every shape line up. */}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3">{/* On its own tile, so marks of every shape line up. */}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} iconDataUri={iconDataUri} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -303,7 +304,7 @@ function ApplicationsList({
     () => [
       // `col` must be on the API's sort whitelist (else 422). Status sits right after
       // the name: beside it, PHP's short value read as part of the domain (7 Oct).
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={siteTypes.find((type) => type.name === row.original.site_type)?.recipe?.icon_data_uri} /> },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: widths.status, sortKey: "status" }, cell: StatusCell },
       { id: "runsOn", header: t("columns.runsOn"), meta: { className: `${widths.runsOn} h-auto min-h-10 whitespace-normal` }, cell: RunsOnCell },
       ...(withBackups ? [{ id: "lastBackup", header: t("columns.lastBackup"), meta: { className: `${widths.lastBackup} h-auto min-h-10 whitespace-normal` }, cell: LastBackupCell }] : []),
@@ -317,7 +318,7 @@ function ApplicationsList({
     ],
     // `missingDatabase` is a dependency: attaching a database refreshes the route,
     // and a stale closure would keep the badge.
-    [t, missingDatabase, withBackups, widths],
+    [t, missingDatabase, withBackups, widths, gitProviders, siteTypes],
   );
 
   const filters = <Filters statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
@@ -357,7 +358,7 @@ function ApplicationsList({
     // Below lg the rows are cards of their own, so the list drops its frame there.
     <ListCard from="lg" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
       {/* Cards below lg, the table from lg up. */}
-      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} gitProviders={gitProviders} /></div>
+      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} gitProviders={gitProviders} siteTypes={siteTypes} /></div>
       {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
       <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin, canRemoveSystemUser, backupStanding }} fixedLayout bare roomy /></div>
     </ListCard>

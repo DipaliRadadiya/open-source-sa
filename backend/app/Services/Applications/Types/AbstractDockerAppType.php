@@ -10,16 +10,13 @@ use App\Services\Server\HostCpus;
 /**
  * A one-click application that runs as containers.
  *
- * The shared half of every Docker app card. A subclass says what the app IS —
- * its compose template, the port to proxy, the volumes it keeps data in, the
- * secrets it needs generating — and nothing about how any of that is applied.
+ * The shared behavior of recipe-backed Docker app cards. `RecipeSiteType`
+ * supplies each app's port, volumes and generated secrets from its recipe.
  *
- * **Why these are site types and not a catalogue file.** They sit beside the
- * sixteen host-installed one-click types and are read by the same catalog, the
- * same stack gate and the same create form. A YAML list would be quicker to
- * extend and would need its own loader, its own validation and its own answer
- * to every question `AbstractSiteType` already answers — and the first time one
- * app needed a rule the others did not, it would grow a scripting language.
+ * Recipes live in `resources/recipes` as validated JSON metadata and a closed
+ * compose template language. `RecipeSiteType` exposes them to the same catalog,
+ * stack gate and create form as the host-installed types. Rendering stays in
+ * `RecipeRenderer`, with exceptional first-run logic behind PHP recipe hooks.
  *
  * **Why `method() === 'one_click'` and `servingProfile() === 'docker'`.** The
  * profile is what the stack gate reads, so these appear on a Docker box and are
@@ -34,33 +31,6 @@ use App\Services\Server\HostCpus;
  */
 abstract class AbstractDockerAppType extends AbstractSiteType
 {
-    /**
-     * The blade template that renders this app's compose file.
-     *
-     * Defaults to the shared single-container template. An app overrides it when
-     * it has something structural to say — a second service, a database to wire —
-     * which is why Ghost and the rest have their own files and the eight
-     * one-container apps share one.
-     */
-    public function composeTemplate(): string
-    {
-        return 'server.docker.apps.simple';
-    }
-
-    /**
-     * Environment this app needs beyond its URL, as key => value.
-     *
-     * Only for values the PANEL knows: a port, a public URL, a mode. Anything the
-     * user has to decide belongs on the Environment screen, and anything secret
-     * belongs in `generatedSecrets()`.
-     *
-     * @return array<string, string>
-     */
-    public function environment(Application $application): array
-    {
-        return [];
-    }
-
     /**
      * The port INSIDE the app's own container, which nginx is proxied to.
      *
@@ -216,7 +186,7 @@ abstract class AbstractDockerAppType extends AbstractSiteType
      * already owns.
      *
      * Declared here rather than inferred from the template, because two things
-     * need it and neither can read a blade file usefully: `syncUrl()` has nothing
+     * need it and neither should infer it from a template: `syncUrl()` has nothing
      * to reconcile when it is null, and the tests would otherwise be guessing at
      * a key name — which they were, and they failed on the second app, looking
      * for `URL` in a file that never had one.

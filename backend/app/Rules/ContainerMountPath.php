@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use App\Services\Server\Docker\Images\CreateDefaults;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -56,6 +57,21 @@ class ContainerMountPath implements ValidationRule
      */
     public const LEGACY_SITE_MOUNT = '/app';
 
+    /**
+     * The characters a mount path may be written in, and nothing else.
+     *
+     * A positive list, because the value is written into a YAML file: a newline
+     * in it ends the `volumes:` entry and starts whatever key comes next —
+     * `privileged: true`, or a bind of `/` — and the generated file never passes
+     * through `ComposeValidator`. Refusing newlines alone would leave the next
+     * YAML-significant character (`#`, `:`, `{`) for somebody to find. `/D`
+     * because `$` alone accepts one trailing newline.
+     *
+     * Image-declared paths go through this too ({@see CreateDefaults::volumes()}),
+     * so a registry cannot write the file either.
+     */
+    public const PATTERN = '/^\/[A-Za-z0-9._\/-]*$/D';
+
     private readonly string $siteMount;
 
     /**
@@ -73,6 +89,12 @@ class ContainerMountPath implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (blank($value)) {
+            return;
+        }
+
+        if (! is_string($value) || preg_match(self::PATTERN, $value) !== 1) {
+            $fail(__('validation.docker_mount_characters'));
+
             return;
         }
 

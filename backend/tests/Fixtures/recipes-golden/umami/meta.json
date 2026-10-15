@@ -1,0 +1,117 @@
+{
+    "slug": "umami",
+    "container_port": 3000,
+    "volume_roles": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "APP_SECRET",
+        "DATABASE_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "analytics",
+    "icon": "umami",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "APP_SECRET",
+        "DATABASE_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Umami",
+            "tagline": "Privacy-focused web analytics with PostgreSQL"
+        },
+        "es": {
+            "title": "Umami",
+            "tagline": "Analítica web centrada en la privacidad con PostgreSQL"
+        },
+        "de": {
+            "title": "Umami",
+            "tagline": "Datenschutzorientierte Webanalyse mit PostgreSQL"
+        },
+        "fr": {
+            "title": "Umami",
+            "tagline": "Analyse web axée sur la confidentialité avec PostgreSQL"
+        },
+        "pt": {
+            "title": "Umami",
+            "tagline": "Análise web focada na privacidade com PostgreSQL"
+        },
+        "ja": {
+            "title": "Umami",
+            "tagline": "PostgreSQL を使用したプライバシー重視のウェブ解析"
+        },
+        "ru": {
+            "title": "Umami",
+            "tagline": "Веб-аналитика с защитой конфиденциальности и PostgreSQL"
+        },
+        "hi": {
+            "title": "Umami",
+            "tagline": "PostgreSQL के साथ गोपनीयता-केंद्रित वेब विश्लेषण"
+        }
+    },
+    "catalog_en": {
+        "name": "umami",
+        "icon": "umami",
+        "category": "analytics",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

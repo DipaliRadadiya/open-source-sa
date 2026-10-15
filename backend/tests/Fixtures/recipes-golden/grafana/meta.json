@@ -1,0 +1,115 @@
+{
+    "slug": "grafana",
+    "container_port": 3000,
+    "volume_roles": {
+        "data": "/var/lib/grafana"
+    },
+    "generated_secrets": [
+        "GF_SECURITY_ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "GF_SERVER_ROOT_URL",
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "analytics",
+    "icon": "grafana",
+    "popular": true,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/var/lib/grafana"
+        }
+    ],
+    "docker_secret_keys": [
+        "GF_SECURITY_ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Grafana",
+            "tagline": "Dashboards and alerts over your metrics — the admin password is generated per site"
+        },
+        "es": {
+            "title": "Grafana",
+            "tagline": "Paneles y alertas sobre sus métricas: la contraseña de administrador se genera por sitio"
+        },
+        "de": {
+            "title": "Grafana",
+            "tagline": "Dashboards und Alarme über Ihre Metriken — das Admin-Passwort wird pro Site erzeugt"
+        },
+        "fr": {
+            "title": "Grafana",
+            "tagline": "Tableaux de bord et alertes sur vos métriques — le mot de passe admin est généré par site"
+        },
+        "pt": {
+            "title": "Grafana",
+            "tagline": "Painéis e alertas sobre as suas métricas — a palavra-passe de administrador é gerada por site"
+        },
+        "ja": {
+            "title": "Grafana",
+            "tagline": "メトリクスのダッシュボードとアラート — 管理者パスワードはサイトごとに生成されます"
+        },
+        "ru": {
+            "title": "Grafana",
+            "tagline": "Панели и оповещения по вашим метрикам — пароль администратора создаётся для каждого сайта"
+        },
+        "hi": {
+            "title": "Grafana",
+            "tagline": "आपके मेट्रिक्स पर डैशबोर्ड और अलर्ट — एडमिन पासवर्ड हर साइट के लिए बनाया जाता है"
+        }
+    },
+    "catalog_en": {
+        "name": "grafana",
+        "icon": "grafana",
+        "category": "analytics",
+        "popular": true,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

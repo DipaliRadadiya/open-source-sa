@@ -115,6 +115,8 @@ return [
     'system_user.shell_changed' => 'Shell des Systembenutzers :username auf :shell geändert',
     'system_user.ssh_enabled' => 'SSH-Zugriff für Systembenutzer :username aktiviert',
     'system_user.ssh_disabled' => 'SSH-Zugriff für Systembenutzer :username deaktiviert',
+    'system_user.container_login_enabled' => 'Container-Anmeldung für Systembenutzer :username aktiviert',
+    'system_user.container_login_disabled' => 'Container-Anmeldung für Systembenutzer :username deaktiviert',
     'cronjob.created' => 'Cronjob :name erstellt',
     'cronjob.updated' => 'Cronjob :name aktualisiert',
     'cronjob.deleted' => 'Cronjob :name gelöscht',

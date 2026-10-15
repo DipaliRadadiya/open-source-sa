@@ -1,0 +1,112 @@
+{
+    "schema": 1,
+    "slug": "postiz",
+    "version": 1,
+    "title": "Postiz",
+    "tagline": {
+        "en": "Social media scheduling with AI: plan and publish posts across your channels",
+        "es": "Programación de redes sociales con IA: planifica y publica en todos tus canales",
+        "de": "Social-Media-Planung mit KI: Beiträge für alle Kanäle planen und veröffentlichen",
+        "fr": "Planification des réseaux sociaux avec IA : planifiez et publiez sur tous vos canaux",
+        "pt": "Agendamento de redes sociais com IA: planeje e publique em todos os seus canais",
+        "ja": "AI 搭載のソーシャルメディア予約投稿。すべてのチャネルへの投稿を計画・公開",
+        "ru": "Планирование соцсетей с ИИ: планируйте и публикуйте посты во всех каналах",
+        "hi": "AI के साथ सोशल मीडिया शेड्यूलिंग: सभी चैनलों पर पोस्ट की योजना बनाएँ और प्रकाशित करें"
+    },
+    "category": "marketing",
+    "icon": "postiz",
+    "popular": false,
+    "catalog_order": 760,
+    "docs_url": "https://docs.postiz.com/self-host/installation/docker-compose",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/gitroomhq/postiz-app:v2.25.1",
+            "tested": [
+                "ghcr.io/gitroomhq/postiz-app:v2.25.1"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
+        },
+        "cache": {
+            "ref": "redis:8.8.3-alpine",
+            "tested": [
+                "redis:8.8.3-alpine"
+            ]
+        },
+        "temporal": {
+            "ref": "temporalio/auto-setup:1.28.1",
+            "tested": [
+                "temporalio/auto-setup:1.28.1"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "postiz",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        },
+        {
+            "name": "temporal",
+            "role": "worker"
+        }
+    ],
+    "container_port": 5000,
+    "memory_floor": "3g",
+    "volumes": {
+        "config": "/config",
+        "uploads": "/uploads",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "JWT_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "FRONTEND_URL",
+    "inputs": [],
+    "starter_files": [
+        {
+            "path": "/etc/temporal/config/dynamicconfig/development-sql.yaml",
+            "source": "starter/development-sql.yaml"
+        }
+    ],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first account becomes the owner; sign-up then closes. DISABLE_REGISTRATION=true lets Postiz create an account only while no organisation exists, so open the site and register right after install. Accounts are active at once when no email provider is set.",
+        "To publish, connect channels: each social network needs your own developer-app keys (X, LinkedIn, Facebook, Instagram, YouTube, TikTok and others), set as environment variables. See https://docs.postiz.com/self-host/providers/overview for the list of providers and their variables.",
+        "The stack follows the official postiz-docker-compose v1.1 file: the app (port 5000, its own nginx serves the frontend and the backend under /api), PostgreSQL, Redis and a Temporal server for the post workflows. FRONTEND_URL (the docs' required browser URL) is the site's HTTPS address; MAIN_URL, NEXT_PUBLIC_BACKEND_URL (/api) and BACKEND_INTERNAL_URL follow the same file, as do RUN_CRON=true and IS_GENERAL=true.",
+        "Temporal stores its data and its visibility index in the same PostgreSQL (databases temporal and temporal_visibility, created on first start) instead of Elasticsearch, which needs a host sysctl. Its sample custom search attributes are skipped (SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES=true) so PostgreSQL's three Text slots stay free for the two that Postiz registers. The Temporal web UI is left out because it would need a second port.",
+        "Temporal's dynamic config is the official development-sql.yaml, written as a starter file and mounted read-only.",
+        "The app applies its database schema at every start with pnpm dlx prisma db push, which downloads Prisma from the npm registry, so the server needs outgoing internet access.",
+        "Postiz scopes its login cookie to the registrable domain of FRONTEND_URL (example.com for postiz.example.com), and on a temporary nip.io or sslip.io address that is the whole nip.io or sslip.io domain, so the session would be sent to every other site under it. The start command therefore runs the image's own nginx with one added line, proxy_cookie_domain, which rewrites every cookie's Domain to this site's own domain. The image's nginx.conf is otherwise unchanged.",
+        "Uploaded media live in the uploads volume (STORAGE_PROVIDER=local, UPLOAD_DIRECTORY=/uploads, served by the app's nginx). JWT_SECRET signs sessions: keep it with your backups.",
+        "The 3g floor covers the frontend, backend and workflow workers that the app container runs (measured live with one user: about 1.4 to 1.8 GiB idle and up to 2 GiB during the first start); Temporal gets 1g, and the database and Redis use the panel database-memory default.",
+        "Postiz's sign-in and sign-up forms fall back to a plain GET submit when they are used before the page has finished loading (upstream behaviour), which puts the typed password in the URL and the access log: let the page load fully before submitting.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-40): created from the 1-Click Recipes tab, Running, HTTPS, first account registration, sign-up closed afterwards, login cookie scoped to the site's own domain, a media upload, the public API, Temporal health and a full-stack restart passed; every image ref below is in its tested list."
+    ]
+}

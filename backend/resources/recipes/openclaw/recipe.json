@@ -1,0 +1,80 @@
+{
+    "schema": 1,
+    "slug": "openclaw",
+    "version": 1,
+    "title": "OpenClaw",
+    "tagline": {
+        "en": "Personal AI assistant gateway with a browser Control UI",
+        "es": "Gateway de asistente personal de IA con una interfaz de control en el navegador",
+        "de": "Gateway für einen persönlichen KI-Assistenten mit Control UI im Browser",
+        "fr": "Passerelle d’assistant IA personnel avec une interface de contrôle dans le navigateur",
+        "pt": "Gateway de assistente pessoal de IA com uma interface de controle no navegador",
+        "ja": "ブラウザーのコントロール UI を備えたパーソナル AI アシスタントのゲートウェイ",
+        "ru": "Шлюз персонального ИИ-ассистента с панелью управления в браузере",
+        "hi": "ब्राउज़र कंट्रोल UI के साथ निजी AI असिस्टेंट गेटवे"
+    },
+    "category": "ai",
+    "icon": "openclaw",
+    "popular": false,
+    "catalog_order": 260,
+    "docs_url": "https://docs.openclaw.ai/web/control-ui/connect-and-pair",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/openclaw/openclaw:2026.10.2",
+            "tested": [
+                "ghcr.io/openclaw/openclaw:2026.10.2"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "openclaw",
+            "role": "app"
+        }
+    ],
+    "container_port": 18789,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [
+        {
+            "key": "OPENCLAW_GATEWAY_TOKEN",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "OPENCLAW_CONTROL_UI_ORIGIN",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "token",
+                "secret": "OPENCLAW_GATEWAY_TOKEN"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "cli_examples": [
+        {
+            "label": "List pending browsers",
+            "command": "openclaw devices list"
+        },
+        {
+            "label": "Approve a browser",
+            "command": "openclaw devices approve <requestId>"
+        }
+    ],
+    "notes": [
+        "Sign in to the Control UI with the generated gateway token. OpenClaw then asks you to approve each new browser once, from the server: the approval runs inside the container. Log in as the app's system user (Command-line access card on the app page, which turns container login on and shows the exact commands): `ssh <app-user>@<server> 'openclaw devices list'` shows the waiting request, and `ssh <app-user>@<server> 'openclaw devices approve <requestId>'` approves it with the request id the browser shows. No sudo is needed. The waiting browser connects on its own a few seconds later. Run `devices list` right before approving, because a retrying browser gets a new request id. Once one browser is approved, further browsers can also be approved from its Settings, Devices screen.",
+        "Model providers and API keys are set from the Control UI after the browser is approved; the recipe ships no provider key.",
+        "There is no docker.sock in the container, so OpenClaw's agent sandboxing stays off and the container itself is the boundary. Agent tools run with the container's access to the /data volume and the internet.",
+        "The container starts as root only to create /data/.openclaw and /data/workspace and give them to the image's node user (Northflank layout); the gateway and its config writes run as node via setpriv. `-u node` with docker exec is preferred; a root exec (as the Command-line access card opens) also approves and was verified to leave nothing root-owned in /data, and every start re-owns anything root left there.",
+        "Before the gateway starts, `config set --batch-json` writes gateway.mode=local, gateway.bind=lan, the panel's HTTPS origin as the only allowed Control UI origin, and the container's own bridge gateway (/32, read from /proc/net/route at every start) as the only trusted proxy. The panel's nginx reaches the container through that address, and without it OpenClaw rejects proxied requests with proxy_attribution_required. Token auth stays on.",
+        "OPENCLAW_CONTROL_UI_ORIGIN is the url key, so a domain change or a new certificate re-renders the allowed origin. The Control UI needs HTTPS: browser device identity requires a secure context.",
+        "The exact 2026.10.2 stable release is pinned (not latest, main or extended-stable), and the plain image is used rather than the -browser variant. Live smoke on Ubuntu 24.04 and 26.04 (RC-17): Running in about 5.5 minutes, about 0.95 to 1.1 GiB idle with the Control UI open (47 to 55 percent of the 2g floor), no restarts or OOM. Docker reports health as starting for up to 3 minutes after a restart only because the image's healthcheck runs every 180 s; the gateway itself is ready in about 25 s."
+    ]
+}

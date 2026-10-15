@@ -16,25 +16,6 @@ return [
 
     'types' => [
         'docker' => ['title' => 'Docker container', 'tagline' => 'Any image, from any registry, proxied by nginx.'],
-        'ghost' => ['title' => 'Ghost', 'tagline' => 'Publishing and newsletters — runs with its own MySQL'],
-        'matomo' => ['title' => 'Matomo', 'tagline' => 'Web analytics on your own server — a Google Analytics replacement'],
-        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'Team chat — runs with its own PostgreSQL'],
-        'chatwoot' => ['title' => 'Chatwoot', 'tagline' => 'Customer support inbox — runs with its own PostgreSQL and Redis'],
-        'excalidraw' => ['title' => 'Excalidraw', 'tagline' => 'Whiteboard — drawings stay in your browser; sharing and live collaboration go through excalidraw.com'],
-        'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Git hosting — community-governed fork of Gitea'],
-        'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'Self-hosted feed reader'],
-        'gitea' => ['title' => 'Gitea', 'tagline' => 'Git hosting with issues and pull requests'],
-        'glance' => ['title' => 'Glance', 'tagline' => 'Dashboard for feeds, monitors and bookmarks'],
-        'homepage' => ['title' => 'Homepage', 'tagline' => 'Start page for the services on your server'],
-        'ittools' => ['title' => 'IT-Tools', 'tagline' => 'Developer utilities — nothing is stored'],
-        'stirlingpdf' => ['title' => 'Stirling PDF', 'tagline' => 'Split, merge, sign and convert PDFs in the browser'],
-        'vaultwarden' => ['title' => 'Vaultwarden', 'tagline' => 'Password manager, compatible with Bitwarden apps'],
-        'nocodb' => ['title' => 'NocoDB', 'tagline' => 'Spreadsheet interface for a database — runs with its own PostgreSQL'],
-        'metabase' => ['title' => 'Metabase', 'tagline' => 'Dashboards and questions over your data — runs with its own PostgreSQL'],
-        'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Documentation wiki — runs with its own PostgreSQL'],
-        'grafana' => ['title' => 'Grafana', 'tagline' => 'Dashboards and alerts over your metrics — the admin password is generated per application'],
-        'bookstack' => ['title' => 'BookStack', 'tagline' => 'Documentation in shelves, books and pages — runs with its own MariaDB'],
-        'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder — runs as a container with its own MariaDB'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],
         'adminer' => ['title' => 'Adminer', 'tagline' => 'Manage MySQL, MariaDB and PostgreSQL databases in the browser'],
@@ -63,6 +44,7 @@ return [
     ],
 
     'unavailable' => [
+        'deprecated' => 'This one-click app has been retired. Existing sites keep running, but new ones can\'t be created.',
         'stack' => 'This server runs containers only, so it does not host this kind of application.',
         'stack_profile' => 'This server is not set up to host this kind of application.',
         'profile' => 'This server does not serve :profile applications, so this rendering type cannot be used here. Choose one this server serves.',
@@ -224,6 +206,7 @@ return [
         'write_config' => 'Writing the application config',
         'test_config' => 'Testing the config',
         'reload' => 'Reloading the web server',
+        'write_env' => 'Writing the environment variables',
         'start_app' => 'Starting the application',
         'write_unit' => 'Preparing the service',
         'restart_app' => 'Restarting the application',
@@ -261,6 +244,7 @@ return [
         'download_unreachable' => 'The download did not happen: the server could not reach the host it downloads from. Check the server\'s internet access and DNS, then retry.',
         'release_not_found' => 'The release list was reached but held no version this server can install. Check the PHP version, or retry later.',
         'verify_http' => 'After the deploy the application answered with a server error (HTTP 5xx) instead of a page. Check its log — the deployment log has the exact status.',
+        'container_port_missing' => 'This site has no container port, so the panel cannot tell which port inside the container to proxy to. Set Container port to the port the application listens on and save.',
         'attached_database_engine_mismatch' => 'This application already has a database attached, but it runs on an engine this application cannot use. Detach it, or attach one on a supported engine, and try again.',
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
@@ -276,6 +260,35 @@ return [
         'script_git_auth' => 'Your deploy script runs a git command (usually git pull) that needs to log in to the repository, and the script has no login, so it fails on a private repository. You do not need it: the panel already downloads the latest code with the connected account before your script runs. Remove that line from the deploy script and deploy again.',
         'script_php_missing' => 'Your deploy script uses a {PHPxx} variable for a PHP version that is not installed on this server. Install that version on the PHP screen, or use {php} for the application\'s own version, then deploy again.',
         'composer_dependencies_missing' => 'This project requires Composer dependencies and none were installed, so the application has no vendor/autoload.php and every request to it will fail. Add a build step that runs composer install to the deployment script, then deploy again.',
+        'container_exited' => 'The container stopped right after starting, so the site cannot serve. Its own log says why.',
+        'container_port_mismatch' => 'Nothing answers on the container port this site proxies to, and the image listens on a different one. Change the container port to the one the image declares and deploy again.',
+        'container_not_answering' => 'The container is running but nothing answered on its port. Check its log, and that the container port is the one the application listens on.',
+        'container_unhealthy' => 'The container is running, but the image\'s own health check says it is not working. Its log, and the health check output shown here, say why.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'The container keeps restarting.',
+        'container_exited' => 'The container stopped right after starting.',
+        'container_port_mismatch' => 'Nothing answers on container port :port — the image listens on :image_ports. Set the container port to :image_ports and deploy again.',
+        'container_not_answering' => 'Nothing answered on container port :port within :seconds seconds.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'Nothing answered on this site\'s port within :seconds seconds.',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker reports this container as unhealthy: the image\'s own health check fails.',
+        'health_check' => 'Health check said: :output',
+        'last_line' => 'Last log line: :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'This image does not say which port it listens on. Enter the container port — the port the application listens on inside the container.',
+        'image_not_found' => 'This image could not be found, so its port cannot be read. Check the name and tag, or enter the container port yourself.',
+        'image_unreadable' => 'The registry could not be reached to read this image\'s port. Enter the container port yourself.',
+        'port_mismatch' => 'The image listens on :image_ports, not :port. The site will not answer unless the application really listens on :port.',
+        'env_key_invalid' => 'Use letters, digits and underscores only, not starting with a digit.',
+        'env_key_duplicate' => 'The variable :key is set twice.',
+        'env_required' => 'This image will not start without :keys. Add a value for each before creating the site.',
     ],
 
     'port_free' => 'Port :port is free.',

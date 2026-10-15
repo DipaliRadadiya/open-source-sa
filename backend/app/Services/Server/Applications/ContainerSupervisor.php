@@ -4,11 +4,14 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Docker\RegistryAuth;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 
 /**
  * Runs an application that is a container.
@@ -26,11 +29,23 @@ use Illuminate\Support\Facades\View;
  */
 class ContainerSupervisor
 {
+    /**
+     * The ceiling for a question about containers that already exist —
+     * `ps`, `logs` — as opposed to `up`/`pull`, which may download gigabytes
+     * and get `server.docker.command_timeout`. The readiness check asks these
+     * on every try and once more after its deadline, and a `compose ps` that
+     * has not answered in half a minute is not going to (DS-12).
+     */
+    public const QUERY_TIMEOUT = 30;
+
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
         private ComposeValidator $validator,
         private RegistryAuth $registryAuth,
+        // Optional so a supervisor built by hand still works; it then checks
+        // through its own ServerOps, never a second one from the container.
+        private ?ContainerReadinessCheck $readiness = null,
     ) {}
 
     /**
@@ -66,7 +81,13 @@ class ContainerSupervisor
      */
     private array $pastedServices = [];
 
-    public function apply(Application $application, string $documentRoot, bool $start = true): void
+    /**
+     * `$install` marks the first install, from the provisioning job: its `up`
+     * pulls every image for the first time and gets
+     * `server.docker.install_timeout` rather than `command_timeout` (RC-20).
+     * Every other caller runs inside a request or a shorter job and keeps 600 s.
+     */
+    public function apply(Application $application, string $documentRoot, bool $start = true, bool $install = false): void
     {
         $path = $this->composePath($application, $documentRoot);
 
@@ -99,6 +120,7 @@ class ContainerSupervisor
                 'compose_up',
                 $override,
                 $auth,
+                $install ? (int) config('server.docker.install_timeout', 1200) : null,
             ),
         );
 
@@ -108,6 +130,16 @@ class ContainerSupervisor
             // that refused the pull. Everything else still classifies to null and
             // is answered by the reference, which is the rule that class states.
             throw ProvisioningFailedException::fromResult('container_start', $result);
+        }
+
+        // A site the user described — an image, or a pasted file — waits until
+        // it answers on its port (DS-03), and a failure is stored on the site
+        // with the reason and the container's log. One-click apps keep the
+        // checks below: their installers wait for first boot themselves.
+        if (! $this->panelRendered($application) && (int) $application->app_port > 0) {
+            $this->readiness()->verify($application, $documentRoot, $this);
+
+            return;
         }
 
         // `up` succeeding is not the container running. Asked separately, and
@@ -127,6 +159,28 @@ class ContainerSupervisor
         if ($this->crashLooping($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_restarting', $result->reference, 'container_restarting');
         }
+
+        $this->recordUp($application);
+    }
+
+    /**
+     * A container that passed the checks above — a one-click app, whose
+     * installer does its own first-boot waiting after this — reports
+     * `running`, the word an image site's readiness check stores (DS-14). It
+     * was left null, so the API said nothing while the panel page said
+     * Running.
+     */
+    private function recordUp(Application $application): void
+    {
+        $application->forceFill([
+            'container_status' => 'running',
+            'last_failure' => null,
+        ])->save();
+    }
+
+    private function readiness(): ContainerReadinessCheck
+    {
+        return $this->readiness ??= new ContainerReadinessCheck($this->serverOps);
     }
 
     /**
@@ -150,9 +204,9 @@ class ContainerSupervisor
      * failing a deploy because a status query did not parse would turn a working
      * site into a reported failure — the opposite of the mistake it exists to stop.
      */
-    private function crashLooping(Application $application, string $documentRoot): bool
+    public function crashLooping(Application $application, string $documentRoot): bool
     {
-        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_state');
+        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_state', timeout: self::QUERY_TIMEOUT);
 
         if (! $result->answered) {
             return false;
@@ -186,6 +240,101 @@ class ContainerSupervisor
         }
 
         return false;
+    }
+
+    /**
+     * What the image's own HEALTHCHECK says, across this project (DS-14).
+     *
+     * `unhealthy` if any container is, then `starting` if any still is, then
+     * `healthy` — or null when no container has a healthcheck at all, or the
+     * question could not be answered. Null is "Docker has no opinion", never
+     * "fine": the caller falls back to asking the port.
+     *
+     * The image's author knows what "ready" means for it far better than a
+     * GET of `/` does. Kanboard answered `/` with a 200 error page while its
+     * own check had already called it unhealthy, and the panel said Running.
+     */
+    public function health(Application $application, string $documentRoot): ?string
+    {
+        $seen = [];
+
+        foreach ($this->psRows($application, $documentRoot) as $row) {
+            $health = strtolower((string) ($row['Health'] ?? ''));
+
+            if (in_array($health, ['healthy', 'starting', 'unhealthy'], true)) {
+                $seen[$health] = true;
+            }
+        }
+
+        foreach (['unhealthy', 'starting', 'healthy'] as $health) {
+            if (isset($seen[$health])) {
+                return $health;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The last thing a failing healthcheck printed, from the first unhealthy
+     * container — the reason in the image's own words. Empty when unreadable:
+     * a diagnostic must never be the thing that fails.
+     */
+    public function healthOutput(Application $application, string $documentRoot): string
+    {
+        foreach ($this->psRows($application, $documentRoot) as $row) {
+            $name = (string) ($row['Name'] ?? '');
+
+            if (strtolower((string) ($row['Health'] ?? '')) !== 'unhealthy' || $name === '') {
+                continue;
+            }
+
+            $inspect = $this->serverOps->run(
+                ['docker', 'inspect', '--format', '{{json .State.Health.Log}}', $name],
+                ['feature' => 'application', 'op' => 'container_health'],
+                timeout: 20,
+            );
+
+            $log = json_decode(trim($inspect->output()), true);
+            $last = is_array($log) && $log !== [] ? end($log) : null;
+
+            return is_array($last) ? trim((string) ($last['Output'] ?? '')) : '';
+        }
+
+        return '';
+    }
+
+    /**
+     * `compose ps --format json`, one decoded row per container. Compose
+     * prints one object per line; older releases printed one array.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function psRows(Application $application, string $documentRoot): array
+    {
+        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_health', timeout: self::QUERY_TIMEOUT);
+
+        if (! $result->answered) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $decoded = json_decode(trim($line), true);
+
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            foreach (array_is_list($decoded) ? $decoded : [$decoded] as $row) {
+                if (is_array($row)) {
+                    $rows[] = $row;
+                }
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -269,11 +418,21 @@ class ContainerSupervisor
             }
         });
 
+        // A redeploy is where a fixed port or env is proved, so it gets the
+        // same readiness check as the first deploy, and clears its failure.
+        if (! $this->panelRendered($application) && (int) $application->app_port > 0) {
+            $this->readiness()->verify($application, $documentRoot, $this);
+
+            return;
+        }
+
         // Asked after the credential window closes, because it needs no
         // credential and the window should be as short as the work requires.
         if (! $this->running($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_exited', '');
         }
+
+        $this->recordUp($application);
     }
 
     /**
@@ -358,11 +517,21 @@ class ContainerSupervisor
      */
     public function generated(Application $application, string $documentRoot): string
     {
-        return View::make('server.docker.compose', [
+        // No port, no file — never a default (DS-12). `?: 80` rendered a
+        // site with no container port as one listening on 80, and nginx
+        // proxied to a port nothing in the image listened on while the panel
+        // said Running. Create and `PUT /container` both refuse a missing
+        // port now; this is the weld behind them, for a row that arrives
+        // without one by any other route.
+        if ((int) $application->container_port <= 0) {
+            throw new ProvisioningFailedException('compose_no_port', '', 'container_port_missing');
+        }
+
+        $values = [
             'project' => $this->project($application),
             'image' => (string) $application->image,
             'appPort' => (int) $application->app_port,
-            'containerPort' => (int) ($application->container_port ?: 80),
+            'containerPort' => (int) $application->container_port,
             'documentRoot' => rtrim($documentRoot, '/'),
             'siteMount' => $application->siteMountPath(),
             'envPath' => $application->envPath(),
@@ -393,7 +562,53 @@ class ContainerSupervisor
                     && ($mount['volume'] ?? '') !== ''
                     && ($mount['path'] ?? '') !== '',
             )),
-        ])->render();
+        ];
+
+        $this->refuseLineBreaks($application, $values);
+
+        return View::make('server.docker.compose', $values)->render();
+    }
+
+    /**
+     * Refuse to render a value that would start a new line of the file.
+     *
+     * The template writes every value as a bare YAML scalar, and Blade's escaping
+     * leaves newlines alone, so a value with a line break in it is not one value:
+     * the text after the break is a new key — `privileged: true`, a bind of `/` —
+     * in a file nothing validates after this point. Each field is validated where
+     * it is accepted; this is the one check every field passes through, so a
+     * field added later, or a row written by something other than a request,
+     * cannot reopen it. Byte-for-byte the same output for every legitimate site.
+     *
+     * @param  array<string, mixed>  $values
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function refuseLineBreaks(Application $application, array $values): void
+    {
+        $scalars = [];
+
+        array_walk_recursive($values, function (mixed $value, int|string $key) use (&$scalars): void {
+            if (is_string($value)) {
+                $scalars[] = [$key, $value];
+            }
+        });
+
+        foreach ($scalars as [$key, $value]) {
+            if (preg_match('/[\r\n]/', $value) === 1) {
+                $reference = (string) Str::uuid();
+
+                Log::channel('server-ops')->error('Refused to render a compose file: a value contains a line break', [
+                    'reference' => $reference,
+                    'feature' => 'application',
+                    'op' => 'compose_render',
+                    'application' => $application->id,
+                    'field' => $key,
+                ]);
+
+                throw new ProvisioningFailedException('compose_write', $reference);
+            }
+        }
     }
 
     /**
@@ -425,19 +640,16 @@ class ContainerSupervisor
     /**
      * Did the panel write this site's `compose` column itself?
      *
-     * True for every one-click app, because `DockerAppInstaller` renders that
-     * app's template into the column — so the file is the panel's own work and
+     * True for every recipe app, because `DockerAppInstaller` renders that
+     * recipe's template into the column — so the file is the panel's own work and
      * already carries everything the override exists to add.
      *
-     * Asked of `docker_apps`, the same registry the installer reads the image
-     * from, rather than by matching the site type against a class. A type that is
-     * in that list is by definition one whose compose file the panel generates,
-     * and the two cannot drift: a new one-click has to be registered there or it
-     * has no image.
+     * The recipe registry is the source of truth, including deprecated recipes
+     * that must still resolve for existing sites.
      */
-    private function panelRendered(Application $application): bool
+    public function panelRendered(Application $application): bool
     {
-        return config("server.docker_apps.{$application->site_type}") !== null;
+        return app(RecipeRegistry::class)->has((string) $application->site_type);
     }
 
     /**
@@ -542,6 +754,7 @@ class ContainerSupervisor
             $documentRoot,
             ['ps', '--status', 'running', '--quiet'],
             'compose_ps',
+            timeout: self::QUERY_TIMEOUT,
         );
 
         return $result->answered && trim($result->output()) !== '';
@@ -558,23 +771,39 @@ class ContainerSupervisor
         // correct on disk and this is a read of the record, not of the container.
         $this->contents($application, $documentRoot);
 
-        return $this->compose(
+        return $this->forgetReadiness($application, $this->compose(
             $application,
             $documentRoot,
             ['up', '-d'],
             'compose_up',
             $this->writeOverride($application, $documentRoot, $context),
-        );
+        ));
     }
 
     public function stop(Application $application, string $documentRoot): ServerOpsResult
     {
-        return $this->compose($application, $documentRoot, ['stop'], 'compose_stop');
+        return $this->forgetReadiness($application, $this->compose($application, $documentRoot, ['stop'], 'compose_stop'));
     }
 
     public function restart(Application $application, string $documentRoot): ServerOpsResult
     {
-        return $this->compose($application, $documentRoot, ['restart'], 'compose_restart');
+        return $this->forgetReadiness($application, $this->compose($application, $documentRoot, ['restart'], 'compose_restart'));
+    }
+
+    /**
+     * Drop what the last readiness check saw once the containers have been
+     * started, stopped or restarted without one (DS-09). `running` from the
+     * deploy before a Stop is a green badge over a 502; no check at all is
+     * what these paths have, and null says exactly that. A failure stays: it
+     * is still the last thing known to have gone wrong.
+     */
+    private function forgetReadiness(Application $application, ServerOpsResult $result): ServerOpsResult
+    {
+        if ($application->container_status === 'running') {
+            $application->forceFill(['container_status' => null])->save();
+        }
+
+        return $result;
     }
 
     /**
@@ -621,6 +850,7 @@ class ContainerSupervisor
             $documentRoot,
             ['logs', '--tail', (string) $lines, '--no-color'],
             'compose_logs',
+            timeout: self::QUERY_TIMEOUT,
         );
 
         return $this->plain($result->output() !== '' ? $result->output() : $result->errorOutput());
@@ -694,6 +924,7 @@ class ContainerSupervisor
         string $op,
         ?string $override = null,
         ?string $auth = null,
+        ?int $timeout = null,
     ): ServerOpsResult {
         // The override is passed only where it matters, which is container
         // CREATION — `up`. `down`, `logs`, `ps`, `stop` and `restart` do not read
@@ -722,7 +953,7 @@ class ContainerSupervisor
                 '-p', $this->project($application),
             ], $arguments),
             ['feature' => 'application', 'op' => $op, 'application' => $application->id],
-            timeout: (int) config('server.docker.command_timeout', 600),
+            timeout: $timeout ?? (int) config('server.docker.command_timeout', 600),
         );
     }
 }

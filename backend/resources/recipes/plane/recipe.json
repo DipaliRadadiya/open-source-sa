@@ -1,0 +1,190 @@
+{
+    "schema": 1,
+    "slug": "plane",
+    "version": 1,
+    "title": "Plane",
+    "tagline": {
+        "en": "Project management with issues, cycles and docs, an open alternative to Jira and Linear",
+        "es": "Gestión de proyectos con incidencias, ciclos y documentos, una alternativa abierta a Jira y Linear",
+        "de": "Projektmanagement mit Issues, Zyklen und Dokumenten, eine offene Alternative zu Jira und Linear",
+        "fr": "Gestion de projet avec tickets, cycles et documents, une alternative ouverte à Jira et Linear",
+        "pt": "Gestão de projetos com issues, ciclos e documentos, uma alternativa aberta ao Jira e ao Linear",
+        "ja": "課題、サイクル、ドキュメントを備えたプロジェクト管理。Jira や Linear のオープンな代替",
+        "ru": "Управление проектами с задачами, циклами и документами, открытая альтернатива Jira и Linear",
+        "hi": "इश्यू, साइकिल और डॉक्स के साथ प्रोजेक्ट प्रबंधन, Jira और Linear का खुला विकल्प"
+    },
+    "category": "productivity",
+    "icon": "plane",
+    "popular": false,
+    "catalog_order": 540,
+    "docs_url": "https://developers.plane.so/self-hosting/methods/docker-compose",
+    "images": {
+        "proxy": {
+            "ref": "makeplane/plane-proxy:v1.4.2",
+            "tested": [
+                "makeplane/plane-proxy:v1.4.2"
+            ]
+        },
+        "web": {
+            "ref": "makeplane/plane-frontend:v1.4.2",
+            "tested": [
+                "makeplane/plane-frontend:v1.4.2"
+            ]
+        },
+        "space": {
+            "ref": "makeplane/plane-space:v1.4.2",
+            "tested": [
+                "makeplane/plane-space:v1.4.2"
+            ]
+        },
+        "admin": {
+            "ref": "makeplane/plane-admin:v1.4.2",
+            "tested": [
+                "makeplane/plane-admin:v1.4.2"
+            ]
+        },
+        "live": {
+            "ref": "makeplane/plane-live:v1.4.2",
+            "tested": [
+                "makeplane/plane-live:v1.4.2"
+            ]
+        },
+        "backend": {
+            "ref": "makeplane/plane-backend:v1.4.2",
+            "tested": [
+                "makeplane/plane-backend:v1.4.2"
+            ]
+        },
+        "db": {
+            "ref": "postgres:15.19-alpine",
+            "tested": [
+                "postgres:15.19-alpine"
+            ]
+        },
+        "redis": {
+            "ref": "valkey/valkey:7.2.14-alpine",
+            "tested": [
+                "valkey/valkey:7.2.14-alpine"
+            ]
+        },
+        "mq": {
+            "ref": "rabbitmq:3.13.7-management-alpine",
+            "tested": [
+                "rabbitmq:3.13.7-management-alpine"
+            ]
+        },
+        "minio": {
+            "ref": "pgsty/silo:RELEASE.2026-09-16T00-00-00Z",
+            "tested": [
+                "pgsty/silo:RELEASE.2026-09-16T00-00-00Z"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "proxy",
+            "role": "app"
+        },
+        {
+            "name": "web",
+            "role": "worker"
+        },
+        {
+            "name": "space",
+            "role": "worker"
+        },
+        {
+            "name": "admin",
+            "role": "worker"
+        },
+        {
+            "name": "live",
+            "role": "worker"
+        },
+        {
+            "name": "api",
+            "role": "worker"
+        },
+        {
+            "name": "worker",
+            "role": "worker"
+        },
+        {
+            "name": "beat-worker",
+            "role": "worker"
+        },
+        {
+            "name": "plane-db",
+            "role": "database"
+        },
+        {
+            "name": "plane-redis",
+            "role": "cache"
+        },
+        {
+            "name": "plane-mq",
+            "role": "worker"
+        },
+        {
+            "name": "plane-minio",
+            "role": "worker"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "256m",
+    "volumes": {
+        "api-logs": "/code/plane/logs",
+        "worker-logs": "/code/plane/logs",
+        "beat-logs": "/code/plane/logs",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data",
+        "mq": "/var/lib/rabbitmq",
+        "uploads": "/data"
+    },
+    "secrets": [
+        {
+            "key": "SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "LIVE_SERVER_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "RABBITMQ_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MINIO_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "WEB_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: open https://<domain>/god-mode/ right after the install and create the instance admin (name, email, password). Until then anyone who reaches the site can claim the instance. Then sign in at the site's address with the same email and create your workspace. Email (invitations, magic links) stays off until SMTP is set under God mode, Email.",
+        "Services from the official community compose file (deployments/cli/community/docker-compose.yml) of the v1.4.2 release: the Caddy proxy (the published app), web, space, admin, live, api, worker, beat-worker, PostgreSQL, Valkey, RabbitMQ and Silo for uploads. The one-shot migrator is folded into api's start command: it runs the upstream migrator script (Django migrate, idempotent) and then the upstream api entrypoint, so worker and beat-worker, which wait for migrations, start once it is done.",
+        "Object storage is pgsty/silo, the MinIO-compatible image Plane's own compose file uses on its preview branch (v1.4.2 still floats minio/minio:latest). The api creates the uploads bucket on start. Storage runs on /data (upstream uses /export) because the image declares VOLUME /data: on /export Docker also attached an unused anonymous volume that a delete left behind, seen live on Ubuntu 24.04. Browsers upload attachments straight to https://<domain>/uploads/, which the Caddy proxy forwards to the storage service; MINIO_ENDPOINT_SSL=1 makes the signed upload URLs https, as Plane's variables.env says to do behind TLS termination.",
+        "HTTPS: the panel's nginx terminates TLS; the Caddy proxy listens on plain HTTP (SITE_ADDRESS :80), trusts the forwarded headers (its default trusted_proxies) and passes X-Forwarded-Proto on, and Plane's production settings honour it (SECURE_PROXY_SSL_HEADER). WEB_URL is the url key; CORS_ALLOWED_ORIGINS is https://<domain>, which also makes the session and CSRF cookies Secure.",
+        "Images: every Plane image is pinned to v1.4.2 (upstream defaults to the moving stable tag). PostgreSQL 15.19, Valkey 7.2.14 and RabbitMQ 3.13.7 are newer patch releases of the series upstream pins (15.7, 7.2.11, 3.13.6). RabbitMQ has a fixed hostname so its data directory survives a container recreate.",
+        "Secrets: SECRET_KEY (Django), LIVE_SERVER_SECRET_KEY (shared by api and live), DB_PASSWORD, RABBITMQ_PASSWORD and MINIO_PASSWORD, each 32 alphanumeric characters. SECRET_KEY must never change after install.",
+        "Memory: the proxy takes the app limit (floor 256m); api and worker 1g each, beat-worker 512m, space and live 512m (Node), web and admin 256m (static nginx), RabbitMQ and storage 512m; PostgreSQL and Valkey use the panel database default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-33): every image ref above is in its tested list. Create to Running in 280 to 371 s (the api runs about 150 migrations first; the panel waits for its healthcheck). God mode admin set up, then sign-in, workspace, project and work item; an attachment uploaded from the browser to https://<domain>/uploads (204) and downloaded again (200); project Pages kept text over the /live/ websocket; everything survived a fresh sign-in and a restart of api, worker and proxy. Measured idle as a share of each limit: proxy 6 to 23%, api 15 to 21%, worker 35 to 46%, live and space 20 to 43%, RabbitMQ about 38% (peak 53%), PostgreSQL 19 to 35%; no restarts or OOM kills."
+    ]
+}

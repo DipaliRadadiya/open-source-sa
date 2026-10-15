@@ -1,0 +1,72 @@
+{
+    "schema": 1,
+    "slug": "nanobot",
+    "version": 1,
+    "title": "nanobot",
+    "tagline": {
+        "en": "Personal AI agent with a browser WebUI, memory, files and scheduled tasks",
+        "es": "Agente personal de IA con WebUI en el navegador, memoria, archivos y tareas programadas",
+        "de": "Persönlicher KI-Agent mit WebUI im Browser, Gedächtnis, Dateien und geplanten Aufgaben",
+        "fr": "Agent IA personnel avec une WebUI dans le navigateur, une mémoire, des fichiers et des tâches planifiées",
+        "pt": "Agente pessoal de IA com WebUI no navegador, memória, arquivos e tarefas agendadas",
+        "ja": "ブラウザーの WebUI、メモリー、ファイル、スケジュールタスクを備えたパーソナル AI エージェント",
+        "ru": "Персональный ИИ-агент с веб-интерфейсом в браузере, памятью, файлами и задачами по расписанию",
+        "hi": "ब्राउज़र WebUI, मेमोरी, फ़ाइलों और शेड्यूल किए गए कार्यों वाला निजी AI एजेंट"
+    },
+    "category": "ai",
+    "icon": "nanobot",
+    "popular": false,
+    "catalog_order": 570,
+    "docs_url": "https://github.com/HKUDS/nanobot/blob/v0.3.5/docs/webui.md",
+    "images": {
+        "app": {
+            "ref": "python:3.12.15-slim-bookworm",
+            "tested": [
+                "python:3.12.15-slim-bookworm"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "nanobot",
+            "role": "app"
+        }
+    ],
+    "container_port": 8765,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/home/nanobot/.nanobot",
+        "venv": "/home/nanobot/.venv"
+    },
+    "secrets": [
+        {
+            "key": "NANOBOT_WEB_TOKEN",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "NANOBOT_PUBLIC_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "token",
+                "secret": "NANOBOT_WEB_TOKEN"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "nanobot (HKUDS/nanobot) publishes no Docker image of its own: upstream's Docker guide builds one from the repository, and it calls third-party Docker Hub images unverified. This recipe runs the official python:3.12.15-slim-bookworm image and installs the pinned PyPI release nanobot-ai==0.3.5 (the release the panel was tested with) on the first start. The wheel bundles the WebUI, so nothing is built on the server.",
+        "The install goes into its own volume (/home/nanobot/.venv) as the nanobot user. A marker file records the package and Python version; later starts skip pip, and a recipe that pins a different version (or a different Python) wipes that volume and installs again. The first start downloads about 370 MB from PyPI (about 100 s on the test servers), so the panel can show the container as running before nanobot answers; the container's healthcheck (GET / on port 8765, start period 20 minutes, the RC-20 install window) reports starting until the WebUI is up. Deleting the venv volume only forces a reinstall; the data volume is untouched.",
+        "Sign in with the generated token: the WebUI opens on nanobot's \"Connect to nanobot\" page, which asks for the WebUI password; enter the Token from the panel's credentials card (Container, Reveal). The page's \"Where can I find the password?\" hint points at config.json, but there the field holds only the ${NANOBOT_WEB_TOKEN} placeholder, which is rejected as a password. Nothing (WebUI bootstrap, REST API or WebSocket) answers without the token, and the WebUI remembers it in the browser's local storage.",
+        "No model provider ships with the recipe. Add one in the WebUI under Settings, Models (API key and model); until then the gateway runs and replies that no provider is configured.",
+        "config.json follows upstream's Render blueprint (render-config.json at v0.3.5) and is written on the first start only, so settings saved in the WebUI survive restarts. On every start the panel re-asserts just the keys it owns: gateway host 127.0.0.1 and port 18790 (the unauthenticated health endpoint stays inside the container, as in the blueprint), and the WebSocket channel on 0.0.0.0:8765 with websocketRequiresToken, tokenIssueSecret ${NANOBOT_WEB_TOKEN} (resolved by nanobot from the environment, so the token never sits in the file) and publicWsUrl wss://<domain>/ derived from NANOBOT_PUBLIC_URL. NANOBOT_PUBLIC_URL is the url key, so a domain change re-renders it and the next start updates publicWsUrl.",
+        "The blueprint's tools defaults are written on the first start: restrictToWorkspace on, webuiAllowRemotePackageInstall off and my.allowSet off. They can be changed in the WebUI afterwards; the panel does not reset them.",
+        "The agent can run shell commands, but only inside its own container, which is the boundary: no docker.sock, no extra capabilities and no host mounts. The container starts as root only to create the nanobot user (uid 1000) and hand both volumes to it; pip, the config write and the gateway all run as nanobot via setpriv, as upstream's entrypoint does. A root docker exec (the Command-line access card) is fine, and every start re-owns anything root left in the volumes.",
+        "Live smoke (RC-34) on Ubuntu 24.04 and 26.04 with nanobot-ai 0.3.5: the first-start pip install took 102 to 141 s and the panel showed the app starting, then running, once the WebUI answered (125 to 162 s after Create); restart and container recreate skip pip and are ready in 3 to 5 s with config and chat history kept; idle about 75 to 180 MiB of the 1g limit (7 to 18 percent), peak 623 MiB during the install (mostly page cache), no restarts or OOM. The 1g floor is kept for the agent's own shell and package work, which a smoke without a real model key cannot exercise."
+    ]
+}

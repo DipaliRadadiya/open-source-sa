@@ -1,0 +1,115 @@
+{
+    "slug": "openclaw",
+    "container_port": 18789,
+    "volume_roles": {
+        "data": "/data"
+    },
+    "generated_secrets": [
+        "OPENCLAW_GATEWAY_TOKEN"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "OPENCLAW_CONTROL_UI_ORIGIN",
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "openclaw",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "OPENCLAW_GATEWAY_TOKEN"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "OpenClaw",
+            "tagline": "Personal AI assistant gateway with a browser Control UI"
+        },
+        "es": {
+            "title": "OpenClaw",
+            "tagline": "Gateway de asistente personal de IA con una interfaz de control en el navegador"
+        },
+        "de": {
+            "title": "OpenClaw",
+            "tagline": "Gateway für einen persönlichen KI-Assistenten mit Control UI im Browser"
+        },
+        "fr": {
+            "title": "OpenClaw",
+            "tagline": "Passerelle d’assistant IA personnel avec une interface de contrôle dans le navigateur"
+        },
+        "pt": {
+            "title": "OpenClaw",
+            "tagline": "Gateway de assistente pessoal de IA com uma interface de controle no navegador"
+        },
+        "ja": {
+            "title": "OpenClaw",
+            "tagline": "ブラウザーのコントロール UI を備えたパーソナル AI アシスタントのゲートウェイ"
+        },
+        "ru": {
+            "title": "OpenClaw",
+            "tagline": "Шлюз персонального ИИ-ассистента с панелью управления в браузере"
+        },
+        "hi": {
+            "title": "OpenClaw",
+            "tagline": "ब्राउज़र कंट्रोल UI के साथ निजी AI असिस्टेंट गेटवे"
+        }
+    },
+    "catalog_en": {
+        "name": "openclaw",
+        "icon": "openclaw",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

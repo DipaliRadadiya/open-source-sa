@@ -10,11 +10,13 @@ use App\Http\Middleware\EnsureServerRunsHostApplications;
 use App\Http\Middleware\NotCentral;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ThrottleRequestsPerRoute;
+use App\Http\Middleware\TrimStringsPreservingCpuLineBreaks;
 use App\Services\Admin\ApiErrorLogWriter;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\TrimStrings;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,6 +65,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // manager (`content`). Trimming them dropped the final newline on
         // every save, and the file manager also lost leading indentation.
         $middleware->trimStrings(except: ['contents', 'content']);
+
+        // A terminal CPU newline must fail validation, not disappear into a
+        // valid decimal before the FormRequest sees it (RC-F02).
+        $middleware->replace(TrimStrings::class, TrimStringsPreservingCpuLineBreaks::class);
 
         // The panel takes itself down to update, and these are the routes that
         // have to keep answering while it does.

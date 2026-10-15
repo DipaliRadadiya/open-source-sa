@@ -1,0 +1,111 @@
+{
+    "schema": 1,
+    "slug": "penpot",
+    "version": 1,
+    "title": "Penpot",
+    "tagline": {
+        "en": "Open-source design and prototyping for product teams",
+        "es": "Diseño y prototipado de código abierto para equipos de producto",
+        "de": "Open-Source-Design und Prototyping für Produktteams",
+        "fr": "Design et prototypage open source pour les équipes produit",
+        "pt": "Design e prototipagem de código aberto para equipas de produto",
+        "ja": "プロダクトチーム向けのオープンソースのデザインとプロトタイピング",
+        "ru": "Дизайн и прототипирование с открытым исходным кодом для продуктовых команд",
+        "hi": "प्रोडक्ट टीमों के लिए ओपन-सोर्स डिज़ाइन और प्रोटोटाइपिंग"
+    },
+    "category": "productivity",
+    "icon": "penpot",
+    "popular": false,
+    "catalog_order": 300,
+    "docs_url": "https://help.penpot.app/technical-guide/getting-started/docker/",
+    "images": {
+        "frontend": {
+            "ref": "penpotapp/frontend:2.18.3",
+            "tested": [
+                "penpotapp/frontend:2.18.3"
+            ]
+        },
+        "backend": {
+            "ref": "penpotapp/backend:2.18.3",
+            "tested": [
+                "penpotapp/backend:2.18.3"
+            ]
+        },
+        "exporter": {
+            "ref": "penpotapp/exporter:2.18.3",
+            "tested": [
+                "penpotapp/exporter:2.18.3"
+            ]
+        },
+        "db": {
+            "ref": "postgres:15.18-bookworm",
+            "tested": [
+                "postgres:15.18-bookworm"
+            ]
+        },
+        "cache": {
+            "ref": "valkey/valkey:8.1.5-alpine",
+            "tested": [
+                "valkey/valkey:8.1.5-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "penpot-frontend",
+            "role": "app"
+        },
+        {
+            "name": "penpot-backend",
+            "role": "worker"
+        },
+        {
+            "name": "penpot-exporter",
+            "role": "worker"
+        },
+        {
+            "name": "penpot-postgres",
+            "role": "database"
+        },
+        {
+            "name": "penpot-valkey",
+            "role": "cache"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "512m",
+    "volumes": {
+        "assets": "/opt/data/assets",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "PENPOT_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "PENPOT_PUBLIC_URI",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "open_registration",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Registration is open: anyone who can reach the site can create an account, and the first account has no special rights. Register your own account first; disable registration later by removing enable-registration from PENPOT_FLAGS if the site is public.",
+        "PENPOT_FLAGS enables registration and password login and disables email verification and SMTP, because no mail server is configured. Secure session cookies stay on (the upstream compose turns them off only for plain-HTTP localhost). The admin console, MCP server and mailcatcher from the upstream compose are left out; the frontend nginx only routes to them when their flags are set.",
+        "The frontend nginx is the only published service. It proxies to penpot-backend (6060) and penpot-exporter (6061) on the project network; the exporter renders boards through http://penpot-frontend:8080. Assets are a named volume shared by frontend and backend at /opt/data/assets, as upstream.",
+        "PENPOT_SECRET_KEY signs sessions and tokens and must never change after install. It is 32 alphanumeric characters; upstream suggests 512-bit base64, but the pinned config accepts any string.",
+        "Valkey keeps no disk volume: upstream uses it only for websocket coordination and a 128mb volatile-lfu cache, set here on the command line instead of VALKEY_EXTRA_FLAGS. PostgreSQL keeps the upstream --data-checksums init argument and SIGINT stop signal.",
+        "Upload limit inside Penpot is 350 MiB (upstream default). The panel's own nginx limit in front of the site follows the application post_max_size (default 128M), so larger single uploads fail until that setting is raised.",
+        "Memory: frontend floor 512m, backend 2g (JVM sizes its heap from the limit), exporter 1g (headless Chromium for PNG/PDF export); PostgreSQL and Valkey use the panel database default. Images are the exact 2.18.3 release; the upstream compose floats 2.18, postgres:15 and valkey:8.1, pinned here to verified releases. Verified live on Ubuntu 24.04 and 26.04 (RC-18): every image ref below is in its tested list. Measured idle: frontend about 26%, backend 37%, exporter 38% of their limits after a PNG export."
+    ]
+}

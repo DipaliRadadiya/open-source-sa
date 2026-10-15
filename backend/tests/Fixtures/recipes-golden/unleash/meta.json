@@ -1,0 +1,117 @@
+{
+    "slug": "unleash",
+    "container_port": 4242,
+    "volume_roles": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "DB_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "UNLEASH_URL",
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "development",
+    "icon": "unleash",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "DB_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Unleash",
+            "tagline": "Feature flags for your apps: gradual rollouts, environments and API tokens for your SDKs"
+        },
+        "es": {
+            "title": "Unleash",
+            "tagline": "Feature flags para tus aplicaciones: despliegues graduales, entornos y tokens de API para tus SDK"
+        },
+        "de": {
+            "title": "Unleash",
+            "tagline": "Feature-Flags für Ihre Apps: schrittweise Rollouts, Umgebungen und API-Tokens für Ihre SDKs"
+        },
+        "fr": {
+            "title": "Unleash",
+            "tagline": "Feature flags pour vos applications : déploiements progressifs, environnements et jetons d'API pour vos SDK"
+        },
+        "pt": {
+            "title": "Unleash",
+            "tagline": "Feature flags para seus aplicativos: lançamentos graduais, ambientes e tokens de API para seus SDKs"
+        },
+        "ja": {
+            "title": "Unleash",
+            "tagline": "アプリのためのフィーチャーフラグ：段階的なロールアウト、環境、SDK 用の API トークン"
+        },
+        "ru": {
+            "title": "Unleash",
+            "tagline": "Фича-флаги для ваших приложений: постепенные выкатки, окружения и API-токены для SDK"
+        },
+        "hi": {
+            "title": "Unleash",
+            "tagline": "आपके ऐप्स के लिए फ़ीचर फ़्लैग: धीरे-धीरे रोलआउट, एनवायरनमेंट और आपके SDK के लिए API टोकन"
+        }
+    },
+    "catalog_en": {
+        "name": "unleash",
+        "icon": "unleash",
+        "category": "development",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

@@ -1,0 +1,55 @@
+{
+    "schema": 1,
+    "slug": "memos",
+    "version": 1,
+    "title": "Memos",
+    "tagline": {
+        "en": "A lightweight workspace for notes and ideas",
+        "es": "Un espacio de trabajo ligero para notas e ideas",
+        "de": "Ein schlanker Arbeitsbereich für Notizen und Ideen",
+        "fr": "Un espace de travail léger pour les notes et les idées",
+        "pt": "Um espaço de trabalho leve para notas e ideias",
+        "ja": "メモとアイデアのための軽量なワークスペース",
+        "ru": "Лёгкое рабочее пространство для заметок и идей",
+        "hi": "नोट्स और विचारों के लिए हल्का कार्यक्षेत्र"
+    },
+    "category": "productivity",
+    "icon": "memos",
+    "popular": false,
+    "catalog_order": 200,
+    "docs_url": "https://github.com/usememos/memos",
+    "images": {
+        "app": {
+            "ref": "neosmemo/memos:0.31.0",
+            "tested": [
+                "neosmemo/memos:0.31.0"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 5230,
+    "memory_floor": null,
+    "volumes": {
+        "data": "/var/opt/memos"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "open_registration",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The named /var/opt/memos volume preserves the SQLite database and uploaded resources.",
+        "The first visitor registers; no generated administrator password or public URL environment setting is required.",
+        "The 0.31.0 stable release and Docker Hub tag were verified for RC-09; live acceptance remains RC-13."
+    ]
+}

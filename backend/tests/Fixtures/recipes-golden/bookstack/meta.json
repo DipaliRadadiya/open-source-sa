@@ -1,0 +1,124 @@
+{
+    "slug": "bookstack",
+    "container_port": 80,
+    "volume_roles": {
+        "config": "/config",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "APP_KEY",
+        "DATABASE_PASSWORD",
+        "MARIADB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "APP_URL",
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "bookstack",
+    "popular": true,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_config",
+            "path": "/config"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "APP_KEY",
+        "DATABASE_PASSWORD",
+        "MARIADB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "BookStack",
+            "tagline": "Documentation in shelves, books and pages — runs with its own MariaDB"
+        },
+        "es": {
+            "title": "BookStack",
+            "tagline": "Documentación en estantes, libros y páginas: funciona con su propia MariaDB"
+        },
+        "de": {
+            "title": "BookStack",
+            "tagline": "Dokumentation in Regalen, Büchern und Seiten — läuft mit eigener MariaDB"
+        },
+        "fr": {
+            "title": "BookStack",
+            "tagline": "Documentation en étagères, livres et pages — fonctionne avec son propre MariaDB"
+        },
+        "pt": {
+            "title": "BookStack",
+            "tagline": "Documentação em estantes, livros e páginas — funciona com a sua própria MariaDB"
+        },
+        "ja": {
+            "title": "BookStack",
+            "tagline": "棚・本・ページで整理するドキュメント — 専用の MariaDB とともに動作します"
+        },
+        "ru": {
+            "title": "BookStack",
+            "tagline": "Документация в виде полок, книг и страниц — работает со своей MariaDB"
+        },
+        "hi": {
+            "title": "BookStack",
+            "tagline": "शेल्फ़, किताबों और पेजों में दस्तावेज़ीकरण — अपने MariaDB के साथ चलता है"
+        }
+    },
+    "catalog_en": {
+        "name": "bookstack",
+        "icon": "bookstack",
+        "category": "productivity",
+        "popular": true,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

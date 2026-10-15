@@ -1,0 +1,67 @@
+name: sv-app-4242
+
+services:
+  open_notebook:
+    image: lfnovo/open_notebook:1.15.0
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8502"
+
+    environment:
+      API_URL: "https://opennotebook.golden.test"
+      OPEN_NOTEBOOK_PASSWORD: "e3e3203899fa7e773cd513ba418c3cc4"
+      OPEN_NOTEBOOK_ENCRYPTION_KEY: "e122819e6ead0d9ae3adb040d19cba9f"
+      SURREAL_URL: ws://surrealdb:8000/rpc
+      SURREAL_USER: "035048372d7813a986c5fd69a4dd66f1"
+      SURREAL_PASSWORD: "c37b348efd8047fee30b61a151c54756"
+      SURREAL_NAMESPACE: open_notebook
+      SURREAL_DATABASE: open_notebook
+      CORS_ORIGINS: "https://opennotebook.golden.test"
+
+    volumes:
+      - sv-app-4242_data:/app/data
+
+    depends_on:
+      surrealdb:
+        condition: service_started
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:5055/health && curl -fsS -o /dev/null http://127.0.0.1:8502/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 600s
+
+  surrealdb:
+    image: surrealdb/surrealdb:v2.7.0
+    user: root
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["start", "--log", "info", "rocksdb:/mydata/mydatabase.db"]
+    environment:
+      SURREAL_USER: "035048372d7813a986c5fd69a4dd66f1"
+      SURREAL_PASS: "c37b348efd8047fee30b61a151c54756"
+      SURREAL_EXPERIMENTAL_GRAPHQL: "true"
+
+    volumes:
+      - sv-app-4242_db:/mydata
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true

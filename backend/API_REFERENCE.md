@@ -560,6 +560,8 @@ backend then mistakes for the user's own.
 
 One entry per installable site type. Each carries its own field schema — the frontend writes one generic form renderer.
 
+One-click Docker apps are data-driven recipes in `backend/resources/recipes/<slug>/`: `recipe.json` holds their metadata and `compose.yml.tpl` their compose template. Their `site_type` values remain the recipe slugs, so existing applications keep the same identity and rendered compose. Native one-click types and the generic `docker` type are unchanged.
+
 **Which types a server offers (fixed 2026-10-05).** `site_types` is always a JSON **array**. What a server hosts follows how it was installed: LEMP, LAMP and OLS serve PHP, Node.js and static sites (the four one-click Node apps included); MERN serves Node.js and static; Docker serves containers only. Types the server will never host are left out of the list. A git site is offered wherever any of its rendering types can be served, and the chosen `rendering_type` must be one the server serves: `php` on a MERN server is a `422` on `rendering_type`, on create and on `PUT /applications/{application}`. The refusal for a type the server does not host says "containers only" on a Docker server and "not set up to host this kind of application" elsewhere.
 
 ```json
@@ -653,6 +655,136 @@ nothing installable fixes them, so a card must not offer a button that cannot wo
 
 ---
 
+## Recipes (one-click apps)
+
+### GET `/recipes`
+**Permission:** `application` (view), authenticated. Same API throttle as `/site-types`.
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/recipes"
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/recipes/ghost"
+```
+
+Returns `{"recipes": [<catalog entry>, ...]}`: exactly the entries from `/site-types` whose `recipe` is non-null, in the same order. `recipes` is always a JSON array, never a keyed object. The shipped Docker catalog contains nineteen recipes. On a non-Docker server it returns `{"recipes": []}`. Native one-click installers are not Docker recipes and are not included here.
+
+### GET `/recipes/{slug}`
+**Permission:** `application` (view), authenticated.
+
+Returns `{"recipe": <catalog entry>}`. The outer `recipe` is the complete site-type entry; its nested `recipe` contains public recipe metadata. Unknown, deprecated, non-recipe or stack-filtered slugs return `404`. Slugs match `[a-z][a-z0-9_]{1,39}`. Both routes return `401` without authentication and `403` without application view permission.
+
+Example Ghost response on a Docker server (the existing field labels/help are localized; the CPU count in help reflects that server):
+
+<!-- rc08-ghost-response -->
+```json
+{
+  "recipe": {
+    "name": "ghost",
+    "title": "Ghost",
+    "tagline": "Publishing and newsletters — runs with its own MySQL",
+    "icon": "ghost",
+    "category": "cms",
+    "popular": true,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "accepted_engines": [],
+    "available": true,
+    "unavailable_reason": null,
+    "unavailable_code": null,
+    "installable_runtime": null,
+    "has_installer": true,
+    "node_version_range": null,
+    "php_version_range": null,
+    "fields": [
+      {
+        "name": "memory_limit",
+        "label": "Memory limit",
+        "type": "text",
+        "required": false,
+        "advanced": false,
+        "placeholder": "512m",
+        "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+      },
+      {
+        "name": "cpu_limit",
+        "label": "CPU limit",
+        "type": "text",
+        "required": false,
+        "advanced": false,
+        "placeholder": "No limit",
+        "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 8, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+      }
+    ],
+    "recipe": {
+      "slug": "ghost",
+      "version": 1,
+      "description": null,
+      "services": [
+        {
+          "name": "ghost",
+          "role": "app"
+        },
+        {
+          "name": "db",
+          "role": "database"
+        }
+      ],
+      "volumes": [
+        {
+          "role": "content",
+          "path": "/var/lib/ghost/content"
+        },
+        {
+          "role": "db",
+          "path": "/var/lib/mysql"
+        }
+      ],
+      "images": [
+        {
+          "role": "app",
+          "ref": "ghost:5-alpine",
+          "tested": ["ghost:5-alpine"]
+        },
+        {
+          "role": "db",
+          "ref": "mysql:8.0",
+          "tested": ["mysql:8.0"]
+        }
+      ],
+      "memory_floor": null,
+      "first_run": {
+        "kind": "setup_wizard",
+        "credential_labels": []
+      },
+      "inputs": [],
+      "docs_url": null,
+      "icon_data_uri": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48cmVjdCB4PSIwLjAiIHk9IjAuMCIgd2lkdGg9IjI0LjAiIGhlaWdodD0iMjQuMCIgcng9IjIuODgiIGZpbGw9IiNmZmZmZmYiIC8+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0yNCAxMkMyNCAxOC42Mjc0IDE4LjYyNzQgMjQgMTIgMjRDNS4zNzI1OCAyNCAwIDE4LjYyNzQgMCAxMkMwIDUuMzcyNTggNS4zNzI1OCAwIDEyIDBDMTguNjI3NCAwIDI0IDUuMzcyNTggMjQgMTJaTTExLjgzMjYgMi4zMzg3OUM2LjM3Nzg1IDIuOTUxODkgMy45NTkwMSA1LjIwNzk3IDMuNDExMjYgOS43NDY5OUMzLjM0ODk2IDEwLjI2MzIgMy4yMjY0MiAxMC43ODA1IDMuMTA0NDMgMTEuMjk1NEMyLjkzMjc3IDEyLjAyIDIuNzYyMjEgMTIuNzQgMi43NjIyMSAxMy40NDU4QzIuNzYyMjEgMTcuOTg4NSA2LjU4NTYgMjEuNTU2IDExLjEyODMgMjEuNTU2QzEyLjg5NTkgMjEuNTU2IDE0LjQ0MzMgMjAuODE0NCAxNS44NzU2IDIwLjA0OEMxOS4wNTM2IDE4LjM0NzggMjIuMDMyOCAxNi4yNTk3IDIyLjAzMjggMTIuNTQxMUMyMi4wMzI4IDkuOTE1MTIgMjAuMTA1MSA3LjU2OTMyIDE4LjQ2NiA1LjU3NDdDMTguMzgzNCA1LjQ3NDE2IDE4LjMwMTUgNS4zNzQ1MSAxOC4yMjA2IDUuMjc1NzdDMTcuMzg2NiA0LjI1NzQyIDE0LjQzMzMgMi4wNDY0MyAxMS44MzI2IDIuMzM4NzlaIiBmaWxsPSIjMTUxNzFBIiAvPjwvc3ZnPgo="
+    }
+  }
+}
+```
+
+### The `recipe` block on `/site-types` and `/recipes`
+
+Every `/site-types` entry gains a final `recipe` key. It is null for `docker` and every native/non-recipe type. Recipe summaries have exactly these keys, in this order: `slug`, `version`, `description`, `services`, `volumes`, `images`, `memory_floor`, `first_run`, `inputs`, `docs_url`, `icon_data_uri`.
+
+- `description` is localized with English fallback, or null when absent.
+- `services` is a list of `{name, role}`; roles are `app`, `database`, `cache`, `worker`.
+- `volumes` is a list of `{role, path}` and `images` a list of `{role, ref, tested}`; `tested` is a list. These are recipe metadata, not an inspection of the installed containers. The frozen legacy image environment overrides may change an actual deployment's image without changing recipe metadata.
+- `memory_floor` is a size string or null. `first_run` is `{kind, credential_labels}`. Credential labels are the declared `username`, `password`, `email`, `url`, `token` names, or `[]`; no credential values or source secret keys appear here.
+- `inputs` is a list of names (e.g. Chatwoot's `["admin_email"]`), not input definitions. The existing `fields` key still drives validation/form rendering.
+- `docs_url` is HTTPS or null; `icon_data_uri` is the sanitized recipe SVG data URI or null. Ghost ships an SVG icon, so `icon_data_uri` is set; `docs_url` remains null (do not invent the optional URL shown in the design sketch).
+
+**Deprecation:** recipes declaring `deprecated: true` are omitted from both catalogs, and their detail endpoint is `404`. The existing create validator refuses them with `422` on `site_type`, using `application.unavailable.deprecated`: “This one-click app has been retired. Existing sites keep running, but new ones can't be created.” The underlying availability reason code is `deprecated`, with no installable runtime; it takes precedence over the stack/runtime gates. This does not add an `unavailable_code` property to validation responses. Existing sites still resolve/render through the registry and retain their recipe origin, with `deprecated: true` there.
+
+**Creation is unchanged.** A recipe posts its slug as `site_type` plus its existing fields. Direct Docker still posts `site_type: "docker"` with `docker_mode: "simple"` (image/manual/search) or `"compose"` (pasted compose). No new request fields or database columns are needed.
+
+### How to add a recipe
+
+Add `backend/resources/recipes/<slug>/recipe.json` and `compose.yml.tpl`, optionally `starter/` files declared by `starter_files` and a sanitized `icon.svg`. No PHP registration or installer config entry is needed. Follow the recipe schema, declare explicit tagged images, first-run behavior/curated credentials and safe placeholders; new recipes do not need legacy image override entries. Run `cd backend && php artisan recipes:validate`, add Pest coverage and new-recipe goldens, and run the full suite plus Pint. Existing `tests/Fixtures/recipes-golden/**` and `GoldenComposeTest.php` are immutable: add goldens for the new recipe only, never recapture or alter an existing application's fixtures.
+
+---
+
 ## Applications
 
 ### GET `/applications`
@@ -694,10 +826,22 @@ Filtering by system user or by server is deliberately not offered — ask rather
 
 Every application in the list carries the **same full shape** as `GET /applications/{application}` below — this is one resource, used everywhere. The list is not a trimmed variant.
 
+**`origin` (list and detail)** is derived from the existing `site_type`, registry, `image` and `compose`; there is no migration or new column. It appears immediately after `site_type_title` and always has `{kind, recipe, image}`:
+
+```json
+{"kind":"recipe","recipe":{"slug":"ghost","title":"Ghost","version":1,"deprecated":false},"image":null}
+{"kind":"image","recipe":null,"image":"neosmemo/memos:0.31.0"}
+{"kind":"compose","recipe":null,"image":null}
+{"kind":"other","recipe":null,"image":null}
+```
+
+Registry membership wins, including retired recipes and recipe sites with stored compose. Otherwise a `docker` site with null/empty/whitespace-only compose is `image` (its stored image reference is returned); nonempty compose is `compose`. Every other site is `other`. No secret values or curated credentials are added to the application resource.
+
 ```json
 {"applications": [{
   "id": 1, "name": "shop", "domain": "shop.example.com",
   "site_type": "wordpress", "site_type_title": "WordPress",
+  "origin": {"kind": "other", "recipe": null, "image": null},
   "serving_profile": "php", "rendering_type": null,
   "status": "active", "status_title": "Active", "deployed": true,
   "is_disabled": false, "disabled_at": null,
@@ -780,6 +924,8 @@ Never send the raw field list — `GET /site-types` publishes the fields for eac
 
 Full application record. Poll this while `status` is `provisioning` or `deploying`.
 
+**`certificate_pending` is `true` while a certificate has been requested and is not serving yet** (status `pending` or `issuing`, DS-14). A new site turns `active` before its Let's Encrypt job runs, and for those 10–60 s `https://<domain>` fails the TLS handshake ("unrecognized name"). `url` is still `http://…` then; show "HTTPS is being set up" rather than letting the user try https and see a broken site. Poll the application until it turns `false`.
+
 **Link to `url`, never build one from `domain`.** `url` is `http://…` until the site has a servable certificate and `https://…` afterwards. Assembling `https://${domain}` in the client — which three screens used to do — produces a dead link for every site that has not been issued a certificate yet, which is every site for the first few minutes of its life.
 
 **`fail2ban_enabled` means "this site has a jail configured"** — it is derived from the same jail this resource's sibling endpoint reports, so a dashboard card and the site's fail2ban screen can no longer disagree. It went the other way until 2026-08-22: the field came from a stored boolean whose only writer was unreachable, so it read `false` for every site on the server, including ones with a jail actively running. **Do not read the `fail2ban_enabled` column directly** — it is orphaned and stays only because dropping it needs a schema change.
@@ -801,6 +947,7 @@ They are equal for fifteen of the seventeen site types, because most application
   "document_root": "/home/siteowner/shop/public_html",
   "path": "/home/siteowner/shop/public_html",
   "site_type": "wordpress", "site_type_title": "WordPress",
+  "origin": {"kind": "other", "recipe": null, "image": null},
   "serving_profile": "php", "rendering_type": null,
 
   "status": "active", "status_title": "Active", "deployed": true,
@@ -866,6 +1013,11 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `script_php_missing` | The deploy script uses a `{PHPxx}` variable for a PHP version not installed on this server; nothing ran. Install it on the PHP screen or use `{php}`. |
 | `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
+| `container_restarting` | A Docker site's container keeps restarting. See `last_failure` for its last log lines. |
+| `container_exited` | A Docker site's container stopped right after starting. |
+| `container_port_mismatch` | Nothing answered on the container port, and the image declares a different one (DS-03). `last_failure.message` names both. |
+| `container_not_answering` | The container is running but nothing answered on its port within the readiness timeout (90 s). |
+| `container_unhealthy` | The image's own `HEALTHCHECK` reports the container unhealthy (DS-14). `last_failure.message` carries the check's last output for users with `app_log` view. |
 
 The last two come from the `verify_serving` step, which is the final step of
 provisioning for any application that runs a process of its own. **Being
@@ -6361,6 +6513,230 @@ Probe credentials and reachability by uploading/reading/deleting a sentinel obje
 ```
 
 Always `200` — the request itself succeeded, `test.success` carries the verdict.
+
+---
+
+## Docker — Image discovery (search, versions, inspect)
+
+Added 2026-10-07 (DS-02). These three endpoints let the Docker create form fill itself in. They read registry APIs and **never pull**: nothing lands on the server until the user deploys. They are only on Docker servers (`409` elsewhere). Each needs `application` (view). Passing `registry_id` also needs `registry` (view).
+
+Two kinds of "no" are kept apart:
+- **An answer about the image** ("no such image", "no such version", "the credential cannot read it") comes back `200` with `found: false` (inspect) or an empty list (tags).
+- **"We could not ask the registry"** (no internet, timeout, 5xx, Docker Hub rate limit) is not a verdict. Search and tags return empty lists with `offline: true`. Inspect returns `503`, and the form should then ask the user for the port.
+
+### `GET /docker/images/search?q=<text>&limit=10`
+Throttle: 60/min. `q` 2–100 chars, `limit` 1–50. Searches Docker Hub and re-ranks: the exact name typed first, then official images, then most pulled. A repository whose namespace and name both contain the search term (`umamisoftware/umami`) counts its pulls five times, but only from 10,000 pulls up, so a near-empty look-alike never takes first place (DS-09). Cached 10 min.
+```json
+{ "results": [ { "image": "neosmemo/memos", "registry": "docker.io", "description": "A privacy-first, lightweight note-taking service.",
+  "stars": 233, "pulls": 11672941, "official": false, "verified_publisher": false } ] }
+```
+Offline: `{"results": [], "offline": true}`. `verified_publisher` is always `false` today, because Hub's search API does not report that badge. It stays in the contract so the shape does not change later.
+
+### `GET /docker/images/tags?image=<ref>&limit=20[&registry_id=]`
+Throttle: 30/min. `limit` 1–100. Tags are ordered like this:
+1. Plain version numbers, newest first. `0.31.0` comes before `0.31`.
+2. Variants such as `1.31.6-alpine`, `3.2.1-nextcloud`.
+3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`-rc1`, `-beta`, `-devel` — whole words only), most recently updated first.
+
+A date-shaped version (`2021.11.28`) beside plain ones is ranked after them, unless the registry's dates show the date tags are the newer scheme. An image that only publishes dates (Home Assistant) is ranked normally.
+
+`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version, a dotted one (`4.140.0`) before a bare number (`39`, code-server's Fedora build). If there is none, it is `latest`, `stable`, `release` or `lts`, then Hub's most recently pushed tag unless it is a pre-release, and otherwise **`null`** (the form asks). `recommended` is always one of the returned `tags`, even when it ranks past `limit`. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
+```json
+{ "image": "ghcr.io/usememos/memos", "recommended": "0.31.0",
+  "tags": [ { "name": "0.31.0", "updated_at": null, "stable": true }, { "name": "0.31", "updated_at": null, "stable": true } ] }
+```
+Unknown image: `tags: []`, `recommended: null`. Registry unreachable: the same, plus `"offline": true`.
+
+### `GET /docker/images/inspect?image=<ref>[&registry_id=]`
+Throttle: 30/min. `image` is any reference Docker accepts (`nginx`, `usememos/memos:0.31.0`, `ghcr.io/o/a@sha256:…`, `registry.example.com:5000/a`). No tag means `latest`. A reference Docker would refuse, for example an uppercase repository, is a `422` on `image`.
+
+The image is resolved for **this server's architecture**. A manifest list is narrowed to the server's platform before the config is read. Answers are cached 10 min per reference; config blobs are cached 1 h by digest.
+```json
+{ "image": "neosmemo/memos:0.31.0", "digest": "sha256:…", "found": true,
+  "exposed_ports": [5230], "suggested_port": 5230, "port_confidence": "declared",
+  "volumes": ["/var/opt/memos"], "suggested_volumes": [ { "path": "/var/opt/memos", "name": "memos-data" } ],
+  "env": [ { "key": "TZ", "default": "UTC", "required": false }, { "key": "MEMOS_PORT", "default": "5230", "required": false } ],
+  "workdir": "/var/opt/memos", "user": "", "size_bytes": 26239339, "architectures": ["arm64", "amd64", "arm/v7"],
+  "uses_app_dir": false, "warnings": [] }
+```
+- `exposed_ports`: TCP ports from `EXPOSE`. UDP is left out because nginx cannot proxy to it.
+- `suggested_port` and `port_confidence`:
+  - 443 and 8443 are never suggested: the panel proxies plain HTTP. An image that declares only those is treated as declaring none.
+  - One other declared port → that port, `declared`.
+  - Several → a web port is preferred (80, 8080, 3000, 5000, 8000, …); still `declared`, with a warning naming them all.
+  - None declared → the `server.docker.images.known_ports` table gives a port marked `guessed`; otherwise `null` with `none`, and **the UI must ask**.
+- `env`: the image's `ENV` without build plumbing (`PATH`, `*_VERSION`, checksums …; see `server.docker.images.hidden_env`).
+- **`required` is never inferred.** Images cannot declare a mandatory setting, and an empty `ENV` is not one: changedetection.io ships `LOGGER_LEVEL=` and starts fine without it. `required: true` comes only from `server.docker.images.required_env`, for example `postgres` → `POSTGRES_PASSWORD`. Empty values produce a softer warning instead.
+- `volumes`: the image's `VOLUME`s, plus the folders `server.docker.images.known_volumes` lists for images that keep data without declaring it (Uptime Kuma 2.x `/app/data`, changedetection.io, Gotify, Actual, code-server, n8n, Open WebUI, Homepage). An image in neither keeps nothing across an update unless the user adds storage.
+- `suggested_volumes`: one named volume per entry in `volumes`. One volume is named `<project>-data`; several are named `<project>-<last path segment>`.
+- `uses_app_dir`: whether the image keeps its program in `/app`, read from WORKDIR, entrypoint and build history. A `COPY --from` whose *source* is `/app` does not count, and neither does an empty `mkdir /app`.
+- `size_bytes`: the compressed download size for this architecture.
+- `warnings`: localised sentences:
+  - required settings
+  - empty settings
+  - no build for this server's architecture
+  - a download of 1 GB or more
+  - no declared port
+  - several ports
+
+Not found, `200`:
+```json
+{ "image": "nginx:nosuchtag", "found": false, "reason": "tag_not_found", "message": "The image nginx has no version nosuchtag. Pick one from the version list." }
+```
+`reason` is one of:
+- `not_found`: the repository does not exist, or it is private and no credential was sent. The registry answers both the same way.
+- `tag_not_found`
+- `credential_rejected`: a credential was sent and refused.
+
+Errors:
+- `503` `{message, reason: "unreachable"|"rate_limited"}`
+- `422` on `image` when the registry host is loopback or link-local. The panel never connects there, and the token realm and every redirect are checked the same way.
+
+**Credentials:** `registry_id` is sent only to the registry it was saved for. A GHCR token is never sent to Quay, even when asked to. It goes to the registry's token endpoint as basic auth and never appears in a response.
+
+---
+
+## Docker — creating a site from an image (DS-03)
+
+`POST /applications` with `site_type: "docker"` (simple mode, no `compose`):
+
+| Field | |
+|---|---|
+| `image` | Required. |
+| `container_port` | **Optional.** Empty → read from the image's `EXPOSE` (the `suggested_port` of `/docker/images/inspect`). An image that declares none, one that cannot be found, or a registry that cannot be reached is a `422` on `container_port` asking for it. There is no default of 80 any more (rows created before keep theirs). A port the image does not declare is accepted with a warning. On `PUT …/container` leave it out to keep the current port; `null` there is a `422` (DS-09). |
+| `env` | Optional, max 100: `[{key, value}]`. `key` matches `^[A-Za-z_][A-Za-z0-9_]*$`, unique; `value` may be multi-line. Written to the site's env file (the one `GET/PUT …/environment` edits) when it is provisioned, quoted so Compose reads it back literally (`$`, `#` and quotes included). Kept encrypted until then and never returned. |
+| `volume_mounts` | Optional, max 20: `[{path, volume?}]`, the same shape as `PUT …/container`. A missing `volume` is named `<site slug>-<last path segment>`, with `-2`, `-3`… if taken. An existing volume name is mounted as is; a new one is created. **Absent** (and no `volume_new`) → the image's own `VOLUME`s are used; `[]` means none. `volume_new` + `volume_path` still work and come first. |
+
+`env` and `volume_mounts` are refused (`422`) alongside a pasted `compose`, which says its own.
+
+An image listed in `server.docker.images.required_env` (e.g. Umami → `DATABASE_URL`) is refused with a `422` on `env` when any of those keys is missing or empty: *"This image will not start without DATABASE_URL. …"* (DS-09). Checked from config, so it applies even when the registry cannot be read.
+
+Response `201`: `{ application, warnings: [] }`. `warnings` is always a list of sentences, e.g.
+`"The image listens on 5230, not 8082. The site will not answer unless the application really listens on 8082."`
+
+### Readiness check, `container_status`, `last_failure`
+
+After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked until anything answers HTTP on `127.0.0.1:<app_port>` — **any status counts** — or until `DOCKER_READINESS_TIMEOUT` seconds (90) of wall-clock time have passed, capped at 150 (DS-09). The cap bounds the check, not the request: the wait and the diagnostics after it (`compose ps`/`logs`, at most 30 s each) stay inside the panel's 300 s request timeout, but the `compose up` and pull before it may take up to `DOCKER_COMMAND_TIMEOUT` (600 s) because an image can be gigabytes (the first install, which runs in the queued provisioning job rather than a request, gives that `compose up` `DOCKER_INSTALL_TIMEOUT` instead: 1200 s, for every one-click app and every Container-tab site, RC-20) — so on a slow pull the synchronous `PUT …/container` or Pull can still end in a gateway timeout. PHP normally carries on past the gateway and stores the outcome on the site, so re-read the application rather than treating a timeout as a failure (DS-12). A container that exits fails at once. One that keeps restarting with nothing answering fails after `DOCKER_READINESS_RESTART_GRACE` seconds (30) — except in a pasted compose file, whose services may restart while they wait for each other: there it fails only at the deadline. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure. `seconds` in a `container_not_answering` failure is the time actually waited. A pasted compose file has no single container port, so its message names none rather than the host port.
+
+**An image with its own `HEALTHCHECK` is judged by it instead (DS-14).** `healthy` passes, `unhealthy` fails at once with `container_unhealthy`, and while Docker still says `starting` the panel does not request `/` at all — Docker's check is already asking, and a second requester during a first boot is what left Kanboard's lazy migration half applied (DS-11). If the check is still `starting` at the deadline, one request to `/` decides: an answer passes the deploy with `container_status: starting`, which the live read below turns into `running` or `unhealthy` once Docker has a verdict. Images without a healthcheck are checked exactly as before.
+
+On the application:
+- `container_status`: `running` | `starting` | `unhealthy` | `restarting` | `exited` | `not_answering` | `null` (never checked). A stored `running` or `starting` is checked against Docker on every read (one `docker ps` per request): a container that has stopped since is reported as `exited`, and for an image with a healthcheck its live verdict is reported — `starting`, `unhealthy` (serving, but its own check fails: show it as failed) or `running`. A stored `unhealthy` whose check now says healthy reads `running` and its `last_failure` is dropped. Starting, stopping or restarting the containers without a new check resets `running` to `null` (DS-09).
+- **One-click container apps** (Ghost, Vaultwarden, …) store `running` when their deploy's check (container up, not restarting) passes, and with nothing stored report what Docker says while the container is up — `running`, `starting` or `unhealthy` — so the API agrees with the page (DS-14). A stopped one-click reads `null`.
+- `last_failure`: `null`, or
+```json
+{ "reason": "container_port_mismatch",
+  "message": "Nothing answers on container port 8082 — the image listens on 5230. Set the container port to 5230 and deploy again. Last log line: …",
+  "last_line": "…", "log": "<last 50 lines>", "at": "2026-10-07T18:40:00+00:00" }
+```
+`message` is in the viewer's locale. `log` and `last_line` (and the last line in `message`) only for users with `app_log` view; otherwise `null`. The failure is also on `failed_step` / `failed_reason` (see the table above).
+
+---
+
+## Application — Container credentials
+
+### GET `/applications/{application}/container/secrets`
+**Permission:** `app_container` (**manage**), authenticated. **Throttle:** 6/min. Non-container/site-type-unsupported applications return `404` through the existing feature gate.
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/applications/1/container/secrets"
+```
+
+The existing `secrets` map is unchanged. `credentials` adds the recipe's curated first-run rows, in declaration order; for example Grafana:
+
+```json
+{"secrets":{"GF_SECURITY_ADMIN_PASSWORD":"stored-admin-value"},"credentials":[{"label":"username","value":"admin","secret":false},{"label":"password","value":"stored-admin-value","secret":true}]}
+```
+
+The values above are fixture examples, not real credentials. Each row is `{label, value, secret}`. A literal uses `secret: false`; a declared secret reads the stored `docker_secrets[KEY]` with `secret: true`; an input reads `installSettings()[name]` with `secret: false`; a path reads the site's actual `url(path)` (HTTP until its certificate can serve HTTPS), also `secret: false`. No password is regenerated by this GET. Empty/missing values are skipped and remaining rows are always a JSON list.
+
+`credentials` is null for direct Docker/non-recipe sites or recipes declaring none (e.g. Ghost's setup wizard), so clients can use their existing legacy key-list fallback. If rows are declared but every value is absent, it is `[]`, not null. Chatwoot's curated list shows the admin email and password without database/cache rows; the unchanged legacy secrets map still includes all stored secrets, including ADMIN_PASSWORD and its database/cache secrets. Retirement does not hide an existing site's credentials.
+
+The existing `application.container_secrets_viewed` activity is still recorded before disclosure with secret **key names only**, never values. View-only callers receive `403`, unauthenticated callers `401`, and throttled requests `429`. This adds nothing to `ApplicationResource`, and never changes the site's acknowledgement state.
+
+---
+
+## Application — Command-line access
+
+### GET `/applications/{application}/container/access`
+**Permission:** `app_compose` (view), the same as reading the compose file. **Throttle:** 60/min. A site type without container screens (WordPress, PHP, Node, …) returns `404` through the feature gate; a container type on another serving profile returns `422` with `errors/application.not_a_container`, as `…/container/compose` does (RC-23).
+
+What the dashboard's Command-line access card needs. Since RC-28 the way in is the app's **own system user**: with container login on, `ssh -t <owner>@<host>` lands inside the app's main container, with no sudo grant and no docker group (see **Container login** below).
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/applications/12/container/access"
+```
+
+```json
+{
+  "host": "203.0.113.10",
+  "ssh_port": 22,
+  "project": "sv-app-12",
+  "containers": [
+    { "service": "openclaw", "name": "sv-app-12-openclaw-1", "main": true }
+  ],
+  "ssh_users": [
+    { "username": "adarsh", "ssh_access": true, "sudo": true, "has_password": true }
+  ],
+  "password_login": true,
+  "owner": {
+    "username": "adarsh-oc", "ssh_access": true, "container_login": true,
+    "has_password": false, "ssh_keys": 1, "other_apps": 0
+  },
+  "app": "openclaw",
+  "commands": {
+    "shell": "ssh -t adarsh-oc@203.0.113.10",
+    "exec_example": "ssh adarsh-oc@203.0.113.10 'ls -la'",
+    "logs": "ssh adarsh-oc@203.0.113.10 @logs --tail 100"
+  },
+  "cli_examples": [
+    { "label": "List pending browsers", "command": "ssh adarsh-oc@203.0.113.10 'openclaw devices list'" },
+    { "label": "Approve a browser", "command": "ssh adarsh-oc@203.0.113.10 'openclaw devices approve <requestId>'" }
+  ]
+}
+```
+
+- `host`: the server's public IP (`ServerPublicIp`, cached an hour). When it cannot be determined, the host this request came in on.
+- `ssh_port`: the port `sshd -T` reports (default `server.ssh_port`). Cached for **5 minutes**, and dropped as soon as Settings → Security writes a new port.
+- `project`: the Compose project, `sv-app-<id>`.
+- `containers`: read from the site's **stored compose file** (a Simple-mode site: the file the panel renders for it), never from `docker ps`. `name` is the service's `container_name` when set, otherwise `<project>-<service>-1`. `main: true` on the service that publishes the site's `app_port` (short or long port syntax, any host address); it comes first, then the rest in file order. Services under a Compose `profiles` key are left out (a plain `compose up` does not start them), and so is any name Docker would refuse (`[a-zA-Z0-9][a-zA-Z0-9_.-]*`): these are pasted into a terminal under `sudo`. A file that does not parse gives `[]`. A Simple-mode site with no container port gives the compose endpoint's `422` with `reason: container_port_missing`.
+- `ssh_users`: every system user with `ssh_access`, `sudo` and `has_password` (the panel knows a password, which is what `sudo` asks for), ordered by username — **only** for a caller who also holds `system_user` view; otherwise `[]`. Never a password, hash, key or home path.
+- `password_login`: whether sshd accepts passwords server-wide (`PasswordAuthentication`, from the same cached `sshd -T` read as `ssh_port`).
+- `owner`: the app's own system user, on this endpoint's permission (flags and counts only): `ssh_access`, `container_login` (in the `sv-app-shell` group), `has_password`, `ssh_keys` (a count) and `other_apps` (how many **non-Docker** apps it owns — those lose ordinary SSH/SFTP when container login is on). `null` for an app with no system user, with `commands: null`.
+- `app`: the name used in `@<app>`: the app's slug when it is 1–40 characters of `a-z 0-9 -`, otherwise (or on a clash) `app-<id>`.
+- `commands`: exact copyable lines. `-p <port>` only when SSH is not on 22; `@<app>` only when the owner has more than one Docker app (with one, the helper opens it by default).
+- `cli_examples`: the recipe's `cli_examples`, each as a full `ssh` one-liner run in the main container (`[]` for apps that are not recipes or have none).
+
+### POST `/applications/{application}/container/access`
+**Permission:** `system_user` (manage). **Throttle:** 10/min. Same `404`/`422` as the GET for sites that are not containers, answered before the body is validated.
+
+Turns **container login** on for the app's owner (RC-28): sets its key and/or password if sent, gives a `nologin` user `/bin/bash` (the forced command runs through the login shell), makes sure the server pieces are installed (`containers:sync-shell-access`), rewrites the access map, adds the user to `sv-app-shell`, asks `sshd -T -C user=<owner>` whether the Match block now applies, and only then turns `ssh_access` on through the System Users path. Answers `200` with the GET body.
+
+```json
+{ "ssh_key": "ssh-ed25519 AAAA… me@laptop", "password": null, "confirm_container_only": false }
+```
+
+- `ssh_key` (optional): validated like `POST /system-users/{id}/ssh-keys`; stored under the name "Container login".
+- `password` (optional): validated like `PUT /system-users/{id}/password`.
+- `422 confirm_container_only` when `owner.other_apps > 0` and this is not `true`: its SSH and SFTP will open this container only.
+- `422 ssh_key` when `password_login` is off, the user has no key, and none is sent.
+- `422 container_login` when sshd on this server does not apply the block (its `sshd_config` does not include `sshd_config.d`): the user is taken out of the group again and SSH access is left as it was.
+- `500` (`errors/system-user.container_login_failed`, with a reference) when the helper, sudo rule or sshd block could not be installed; nothing about the user is changed.
+
+### DELETE `/applications/{application}/container/access`
+**Permission:** `system_user` (manage). **Throttle:** 10/min. Takes the owner out of `sv-app-shell`. If `ssh_access` is still on, its next login is an ordinary one on the server. Answers `200` with the GET body.
+
+#### What the user can type (container login on)
+| Command | Does |
+|---|---|
+| `ssh -t u@host` | a shell (bash if present, else sh) in the main container |
+| `ssh u@host '<command…>'` | `docker exec -i <c> sh -c -- '<command…>'`; the text is interpreted by the container's shell only |
+| `ssh -t u@host @<service>` / `ssh u@host @<service> <command…>` | the same in another container of the app (only when the user has one Docker app) |
+| `ssh -t u@host @<app>` / `@<app>/<service>` | picks one app when the user owns several; with no pick the list is printed and the exit code is 2 |
+| `ssh u@host @logs [<target>] [--tail N] [--follow]` | `docker logs --tail N [-f]` (default 200 lines) |
+| `ssh u@host @list` | the user's apps and containers |
+
+Anything else after `@` is refused with `not your app` (exit 1), with no hint about other apps. sftp, scp and every kind of forwarding are off for these users. A container that is privileged or mounts the Docker socket is never opened. Each session writes one auth-log line: `app-shell[pid]: user=… app=… container=… action=shell|exec|logs|refused`.
 
 ---
 

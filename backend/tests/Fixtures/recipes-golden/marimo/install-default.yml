@@ -1,0 +1,33 @@
+name: sv-app-4242
+
+services:
+  marimo:
+    image: ghcr.io/marimo-team/marimo:0.25.1
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"
+
+    command: ["sh", "-c", "exec marimo -q edit --headless --host 0.0.0.0 --port 8080 --token-password-file - --skip-update-check --no-sandbox /app/data <<EOF\n$$MARIMO_PASSWORD\nEOF"]
+    environment:
+      MARIMO_PASSWORD: "01ec0b47be3f1e7eeb9ea683e56e0a17"
+
+    volumes:
+      - sv-app-4242_notebooks:/app/data
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  sv-app-4242_notebooks:
+    external: true

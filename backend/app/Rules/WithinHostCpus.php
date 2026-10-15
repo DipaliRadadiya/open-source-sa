@@ -37,6 +37,10 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class WithinHostCpus implements ValidationRule
 {
+    // Laravel skips ordinary rules when trim(value) is empty. A newline-only
+    // quota must still be refused, while optional/null quotas remain allowed.
+    public bool $implicit = true;
+
     /** Docker's floor, and the reason a bare `0` is not "unlimited" here. */
     private const MINIMUM = 0.01;
 
@@ -44,7 +48,23 @@ class WithinHostCpus implements ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        // Check before this rule's own trim, as well as before HTTP trimming.
+        // The same rule protects recipe/direct create, container PUT and DBs.
+        if (strpbrk((string) $value, "\r\n") !== false) {
+            $fail(__('validation.custom.cpu_limit.format'));
+
+            return;
+        }
+
         $raw = trim((string) $value);
+
+        if ($raw === '') {
+            return;
+        }
 
         // A decimal with at most two places. Refused rather than rounded: a
         // silently rounded limit is a container running at a number nobody chose.

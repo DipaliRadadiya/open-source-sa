@@ -65,6 +65,7 @@ class RequestCertificate
         $existing = Certificate::where('application_id', $application->id)->first();
 
         $previousCertName = $existing?->lineageName();
+        $previousUrl = $application->fresh(['certificate'])->url();
 
         // Same reasoning for an uploaded or self-signed pair: the job removes
         // it once the replacement is serving.
@@ -106,7 +107,7 @@ class RequestCertificate
             'type' => $type->value,
         ]);
 
-        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName, $previousFiles)
+        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName, $previousFiles, $previousUrl)
             ->onQueue(app(QueueWorker::class)->priorityQueue());
 
         return $certificate->refresh();

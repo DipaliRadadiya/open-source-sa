@@ -16,11 +16,13 @@ use App\Rules\SupportedNodeVersion;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Docker\Images\CreateDefaults;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Runtimes\NodeRuntime;
@@ -41,9 +43,62 @@ use Illuminate\Validation\Rules\Password;
  */
 class StoreApplicationRequest extends FormRequest
 {
+    /**
+     * What the image filled in (DS-03), set by `after()` for a Docker site.
+     *
+     * @var array{container_port: int|null, volume_mounts: list<array{path: string}>|null, warnings: list<string>, error: string|null, env_error: string|null}|null
+     */
+    private ?array $dockerDefaults = null;
+
+    /**
+     * The validated data plus what the image filled in: the container port
+     * when none was typed, its VOLUMEs when no volumes were named.
+     *
+     * @return array<string, mixed>
+     */
+    public function creation(): array
+    {
+        $data = $this->validated();
+        $defaults = $this->dockerDefaults;
+
+        if ($defaults === null) {
+            return $data;
+        }
+
+        if (blank($data['container_port'] ?? null) && $defaults['container_port'] !== null) {
+            $data['container_port'] = $defaults['container_port'];
+        }
+
+        if ($defaults['volume_mounts'] !== null) {
+            $data['volume_mounts'] = $defaults['volume_mounts'];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Things to tell the user about a site that was created anyway.
+     *
+     * @return list<string>
+     */
+    public function warnings(): array
+    {
+        return $this->dockerDefaults['warnings'] ?? [];
+    }
+
     public function authorize(): bool
     {
-        return $this->user()?->canManage('application') ?? false;
+        $user = $this->user();
+
+        if ($user === null || ! $user->canManage('application')) {
+            return false;
+        }
+
+        // A stored registry credential is used at create — to inspect the
+        // image and then to pull it — so choosing one needs what choosing one
+        // on the inspect endpoint needs (`DockerImageRequest`): `registry`
+        // (view). Otherwise its id is an oracle for someone else's credential.
+        return ! $this->filled('registry_id') || $user->canView('registry');
     }
 
     /**
@@ -200,7 +255,7 @@ class StoreApplicationRequest extends FormRequest
 
                     if (! in_array($value, $installer->acceptedEngines(), true)) {
                         $fail(__('errors/application.database_engine_unsupported', [
-                            'application' => __("application.types.{$type->name()}.title"),
+                            'application' => app(SiteTypeText::class)->title($type->name()),
                         ]));
 
                         return;
@@ -227,7 +282,7 @@ class StoreApplicationRequest extends FormRequest
 
                     if ($minimum !== null) {
                         $fail(__('errors/application.database_engine_too_old', [
-                            'application' => __("application.types.{$type->name()}.title"),
+                            'application' => app(SiteTypeText::class)->title($type->name()),
                             'engine' => (string) config("server.databases.engines.{$value}.label", $value),
                             'minimum' => $minimum,
                         ]));
@@ -295,7 +350,7 @@ class StoreApplicationRequest extends FormRequest
             $rules['node_version'][] = new SupportedNodeVersion(
                 $range['min'] ?? null,
                 $range['max'] ?? null,
-                __("application.types.{$type->name()}.title"),
+                app(SiteTypeText::class)->title($type->name()),
             );
         }
 
@@ -337,7 +392,7 @@ class StoreApplicationRequest extends FormRequest
         return new SupportedPhpVersion(
             $range['min'] ?? null,
             $range['max'] ?? null,
-            __("application.types.{$type->name()}.title"),
+            app(SiteTypeText::class)->title($type->name()),
             // What an empty field will actually run on: the field is
             // `nullable` and provisioning resolves a blank one to the server
             // default, so without this the range is enforced on every value
@@ -372,7 +427,7 @@ class StoreApplicationRequest extends FormRequest
 
         return $messages + [
             'web_root.in' => __('validation.web_root_fixed', [
-                'type' => __("application.types.{$type->name()}.title"),
+                'type' => app(SiteTypeText::class)->title($type->name()),
                 'web_root' => $fixed,
             ]),
         ];
@@ -459,6 +514,69 @@ class StoreApplicationRequest extends FormRequest
 
                 foreach ($verdict['errors'] as $error) {
                     $validator->errors()->add('compose', $error);
+                }
+            },
+
+            // A Docker image site: what the image says about itself (DS-03).
+            // Last of the cheap checks and only when everything else passed,
+            // because it may ask a registry. Port, default volumes and warnings
+            // are kept for the controller; see creation() and warnings().
+            function (Validator $validator) {
+                if ((string) $this->input('site_type') !== 'docker') {
+                    return;
+                }
+
+                if (filled($this->input('compose'))) {
+                    // Env and volumes are written into the GENERATED file. A
+                    // pasted one says its own, so honouring these would mean
+                    // editing the user's YAML; refused rather than dropped.
+                    foreach (['env', 'volume_mounts'] as $field) {
+                        if (filled($this->input($field))) {
+                            $validator->errors()->add($field, __('validation.prohibited', ['attribute' => $field]));
+                        }
+                    }
+
+                    return;
+                }
+
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                $seen = [];
+                foreach ((array) $this->input('env', []) as $index => $row) {
+                    $key = (string) ($row['key'] ?? '');
+
+                    if (isset($seen[$key])) {
+                        $validator->errors()->add("env.{$index}.key", __('application.docker_create.env_key_duplicate', ['key' => $key]));
+                    }
+
+                    $seen[$key] = true;
+                }
+
+                $paths = [];
+                foreach ((array) $this->input('volume_mounts', []) as $index => $mount) {
+                    $path = rtrim((string) ($mount['path'] ?? ''), '/');
+
+                    if (isset($paths[$path])) {
+                        $validator->errors()->add("volume_mounts.{$index}.path", __('validation.docker_mount_duplicate', ['path' => $path]));
+                    }
+
+                    $paths[$path] = true;
+                }
+
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                $this->dockerDefaults = app(CreateDefaults::class)->resolve($this->all());
+
+                if ($this->dockerDefaults['error'] !== null) {
+                    $validator->errors()->add('container_port', $this->dockerDefaults['error']);
+                }
+
+                if ($this->dockerDefaults['env_error'] !== null) {
+                    $validator->errors()->add('env', $this->dockerDefaults['env_error']);
                 }
             },
 

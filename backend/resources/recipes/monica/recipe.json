@@ -1,0 +1,95 @@
+{
+    "schema": 1,
+    "slug": "monica",
+    "version": 1,
+    "title": "Monica",
+    "tagline": {
+        "en": "Personal CRM to remember friends, family, birthdays and the conversations you had",
+        "es": "CRM personal para recordar amigos, familia, cumpleaños y las conversaciones que tuviste",
+        "de": "Persönliches CRM, um Freunde, Familie, Geburtstage und eure Gespräche nicht zu vergessen",
+        "fr": "CRM personnel pour se souvenir des amis, de la famille, des anniversaires et de vos conversations",
+        "pt": "CRM pessoal para lembrar amigos, família, aniversários e as conversas que você teve",
+        "ja": "友人、家族、誕生日、交わした会話を覚えておくためのパーソナル CRM",
+        "ru": "Личная CRM, чтобы помнить друзей, семью, дни рождения и ваши разговоры",
+        "hi": "दोस्तों, परिवार, जन्मदिनों और आपकी बातचीत को याद रखने के लिए निजी CRM"
+    },
+    "category": "productivity",
+    "icon": "monica",
+    "popular": false,
+    "catalog_order": 620,
+    "docs_url": "https://github.com/monicahq/docker/blob/main/README.md",
+    "images": {
+        "app": {
+            "ref": "monica:4.1.2-apache",
+            "tested": [
+                "monica:4.1.2-apache"
+            ]
+        },
+        "db": {
+            "ref": "mariadb:11.8.9",
+            "tested": [
+                "mariadb:11.8.9"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "monica",
+            "role": "app"
+        },
+        {
+            "name": "cron",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "512m",
+    "volumes": {
+        "storage": "/var/www/html/storage",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "APP_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "HASH_SALT",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "APP_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Setup wizard: the first person to open the site and register becomes the owner of the Monica account, so register right after the install. APP_DISABLE_SIGNUP is true: Monica always lets the first account register, and with this setting nobody can sign up after that. Set it to false in the panel's environment editor (both the monica and cron services) if you want other people to create their own accounts.",
+        "Monica 4 (the stable line; 5.0 is still a beta) on the official Apache image, which runs the database migrations and creates the API (Passport) keys on every start. APP_KEY is a Laravel key, so it is passed as base64 of 32 bytes; HASH_SALT is a generated secret too, so the IDs in links are not guessable from the default salt.",
+        "Three services, as in the official full example: the Apache app (the only published port), a cron service on the same image that runs Laravel's scheduler every minute (reminders and birthday notifications come from it), and MariaDB 11.8 (the LTS line). The image copies its .env.example to .env, so every setting that differs from it is set here: APP_ENV=production, LOG_CHANNEL=stderr (logs go to the container log) and MAIL_MAILER=log.",
+        "Behind the panel's HTTPS proxy, APP_TRUSTED_PROXIES='*' (the value in the official example) makes Laravel trust the forwarded https scheme; the app is only reachable through the panel's proxy because its port is published on 127.0.0.1. APP_URL is the site's HTTPS address, and SESSION_SECURE_COOKIE=true marks the session, XSRF and API cookies Secure (Monica's default leaves them without the flag).",
+        "Reminder emails, invitations and password resets go to the application log (MAIL_MAILER=log) until you set the MAIL_* variables for an SMTP server in the panel's environment editor. Reminders still show up inside Monica without mail.",
+        "The storage volume holds uploaded photos and documents, the Passport keys (oauth-*.key) and sessions; MariaDB keeps everything else. Back up both.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-36): created from the 1-Click Recipes tab, Running in 32 to 64 s, HTTPS, first registration, a contact with a reminder and a note, sign-up closed afterwards (403), Secure cookies and a restart all passed. Idle about 65 to 86 MiB for the app (of 512m), 2 MiB for cron and 105 to 150 MiB for MariaDB; every image ref below is in its tested list."
+    ]
+}

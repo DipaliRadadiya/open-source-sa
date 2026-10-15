@@ -1,0 +1,64 @@
+name: sv-app-4242
+
+services:
+  unleash:
+    image: unleashorg/unleash-server:8.2.0
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:4242"
+
+    environment:
+      DATABASE_URL: "postgres://unleash:19c08b9ee374d651802987ad2c4fc039@db:5432/unleash"
+      DATABASE_SSL: "false"
+      UNLEASH_URL: "http://unleash.golden.test"
+      UNLEASH_DEFAULT_ADMIN_USERNAME: admin
+      UNLEASH_DEFAULT_ADMIN_PASSWORD: "d9e685b44b0a35fc51f4575e3778899e"
+      SECURE_HEADERS: "true"
+      SEND_TELEMETRY: "false"
+      LOG_LEVEL: warn
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4242/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: unleash
+      POSTGRES_USER: unleash
+      POSTGRES_PASSWORD: "19c08b9ee374d651802987ad2c4fc039"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unleash -d unleash"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_db:
+    external: true

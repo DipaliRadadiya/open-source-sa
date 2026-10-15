@@ -28,6 +28,7 @@ class UpdateScript
     public const STEPS = [
         'preflight_git',
         'fetch_release',
+        'configure_queue_worker',
         'maintenance_on',
         'backup_database',
         'checkout_release',
@@ -36,6 +37,7 @@ class UpdateScript
         'seed_permissions',
         'configure_services',
         'sync_privileges',
+        'configure_app_shell',
         'resync_site_configs',
         'record_firewall_defaults',
         'resync_fail2ban',
@@ -45,7 +47,6 @@ class UpdateScript
         'repair_node_runtime',
         'optimize',
         'frontend_build',
-        'configure_queue_worker',
         'configure_frontend_unit',
         'restart_services',
         'maintenance_off',
@@ -193,6 +194,18 @@ class UpdateScript
         rollback() {
             local failed_step="\$STEP"
             note "rollback"
+            # No reconciliation / a failed initial drain means no permission
+            # to signal the queue, undo live code, or restore its database.
+            if [ "\$QUEUE_DRAIN_VERIFIED" != "1" ] || [ "\$QUEUE_STOP_FAILED" = "1" ] || [ "\$QUEUE_RESUMPTION_ATTEMPTED" = "1" ]; then
+                finish failed "\$failed_step" false
+                exit 1
+            fi
+            # Drain BEFORE reverting code/dependencies or copying a snapshot.
+            # Even a health failure must not strand a live job in an old tree.
+            if ! {$run}sudo systemctl stop {$this->service('queue')}; then
+                finish failed "\$failed_step" false
+                exit 1
+            fi
             {$run}{$git} checkout --force {$rollbackTo}
             # Back onto the branch too, when it still points at that commit.
             # A bare commit checkout left the box detached from `main`, and a
@@ -213,11 +226,11 @@ class UpdateScript
             # failed halfway left its table behind with no row in `migrations`,
             # so every later attempt at the same release failed on "table
             # already exists" (found on the test server, 2026-09-30). The
-            # queue worker is stopped first so nothing writes while the file
-            # is swapped; it is restarted just below with the others.
+            # queue worker was drained above, before the checkout too. The
+            # snapshot was captured AFTER the initial accepted job completed,
+            # so restoring it cannot resurrect that completed reservation.
             DB_SUFFIX=""
             if [ "\$DB_TOUCHED" = "1" ]; then
-                {$run}sudo systemctl stop {$this->service('queue')} || true
         {$restoreDatabase}
             fi
             # Clear workers and OPcache that may have loaded the failed tree.
@@ -229,6 +242,9 @@ class UpdateScript
             exit 1
         }
 
+        QUEUE_DRAIN_VERIFIED=0
+        QUEUE_STOP_FAILED=0
+        QUEUE_RESUMPTION_ATTEMPTED=0
         DEPS_CHANGED=0
         DB_TOUCHED=0
         DB_BACKUP=""
@@ -272,8 +288,21 @@ class UpdateScript
         note fetch_release
         {$forwardOnly}
 
+        # A refused reconciliation is fatal BEFORE maintenance/code/schema
+        # changes. Never turn it into a warning followed by an unsafe restart.
+        note configure_queue_worker
+        {$run}{$php} {$backend}/artisan panel:queue-worker
+        QUEUE_DRAIN_VERIFIED=1
+
         note maintenance_on
         {$asUser}{$php} {$backend}/artisan down --retry=60
+        # Quiesce the accepted job before snapshot/migrations. Keeping the
+        # worker stopped also prevents old code from accepting the next job.
+        if ! {$run}sudo systemctl stop {$this->service('queue')}; then
+            QUEUE_STOP_FAILED=1
+            STEP=configure_queue_worker
+            false
+        fi
 
         note backup_database
         # The last line of its output is the backup's path; the rollback needs
@@ -327,6 +356,17 @@ class UpdateScript
         # failure, and panel:doctor names the drift afterwards.
         note sync_privileges
         {$run}{$php} {$backend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
+
+        # Container login (RC-28): a Docker app's own system user logs straight
+        # into its container. Installs the group, the root helper, its sudo rule
+        # (visudo-checked) and the sshd Match block (sshd -t before any reload),
+        # then rebuilds the access map from the database -- which is how apps
+        # installed before this release get it. After sync_privileges, because
+        # the visudo check runs through the grant that step just wrote. As the
+        # panel user like every other artisan call; never fatal, because a
+        # failure leaves sshd and sudo exactly as they were.
+        note configure_app_shell
+        {$asUser}{$php} {$backend}/artisan containers:sync-shell-access || echo "WARNING: container login not set up; run 'artisan containers:sync-shell-access'"
 
         # A vhost is a rendered file, so the AI bot list, the 8G ruleset and
         # the templates shipped in this release do not reach an existing site
@@ -452,15 +492,6 @@ class UpdateScript
         {$asUser}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$frontend} ci --no-audit --no-fund
         {$asUser}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$frontend} run build
 
-        # Servers installed before the priority queue run a bare queue:work,
-        # which reads `default` only. This adds `--queue=high,default` to the
-        # unit so certificates stop waiting behind every queued install. Only
-        # rewrites the unit and reloads systemd; the restart below applies it.
-        # Never fatal: jobs go to `high` only once the running worker reads it,
-        # so a unit left as it was loses nothing.
-        note configure_queue_worker
-        {$run}{$php} {$backend}/artisan panel:queue-worker || echo "WARNING: queue worker unit not updated; run 'artisan panel:queue-worker' as root"
-
         # Bug #15: servers installed before the unit pinned a loopback HOSTNAME
         # serve the panel's interface on every address. Rewrites the unit and
         # reloads systemd; the restart below applies it. Never fatal.
@@ -473,7 +504,6 @@ class UpdateScript
         # the health endpoint is executing this release.
         {$run}sudo systemctl restart {$this->service('php_fpm')}
         {$run}sudo systemctl restart {$this->service('frontend')}
-        {$run}sudo systemctl restart {$this->service('queue')}
 
         note maintenance_off
         {$asUser}{$php} {$backend}/artisan up
@@ -482,6 +512,13 @@ class UpdateScript
         # a health check passes just as happily against the old release.
         note health_check
         {$this->healthCheck($healthUrl, $version, $dryRun)}
+
+        # Do not execute queued side effects until the new code is verified.
+        # The restart can complete a job BEFORE a failing ExecStartPost returns:
+        # commit to manual recovery BEFORE resumption, never rewind its ledger.
+        QUEUE_RESUMPTION_ATTEMPTED=1
+        STEP=restart_services
+        {$run}sudo systemctl restart {$this->service('queue')}
 
         finish succeeded
         BASH;
