@@ -1,0 +1,73 @@
+{
+    "schema": 1,
+    "slug": "anythingllm",
+    "version": 1,
+    "title": "AnythingLLM",
+    "tagline": {
+        "en": "Chat with your documents and run AI agents, with any LLM you choose",
+        "es": "Chatea con tus documentos y ejecuta agentes de IA con el LLM que elijas",
+        "de": "Mit deinen Dokumenten chatten und KI-Agenten ausführen, mit einem LLM deiner Wahl",
+        "fr": "Discutez avec vos documents et lancez des agents IA, avec le LLM de votre choix",
+        "pt": "Converse com seus documentos e execute agentes de IA com o LLM que você escolher",
+        "ja": "好きな LLM で、ドキュメントと対話し AI エージェントを動かす",
+        "ru": "Общайтесь со своими документами и запускайте ИИ-агентов с любой выбранной LLM",
+        "hi": "अपने चुने हुए किसी भी LLM के साथ अपने दस्तावेज़ों से चैट करें और AI एजेंट चलाएँ"
+    },
+    "category": "ai",
+    "icon": "anythingllm",
+    "popular": false,
+    "catalog_order": 790,
+    "docs_url": "https://docs.anythingllm.com/",
+    "images": {
+        "app": {
+            "ref": "mintplexlabs/anythingllm:1.18.0",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "anythingllm",
+            "role": "app"
+        }
+    ],
+    "container_port": 3001,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/app/server/storage"
+    },
+    "secrets": [
+        {
+            "key": "AUTH_TOKEN",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "JWT_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "password",
+                "secret": "AUTH_TOKEN"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The instance is password-protected from the first start: AUTH_TOKEN (generated) is the password and JWT_SECRET (generated) signs the sessions, so a public site never opens on an unclaimed setup screen. Sign in with the password shown here.",
+        "To give people their own logins, switch to multi-user mode in Settings → Security: you create the administrator account there, and after that everyone signs in with a username and password.",
+        "AnythingLLM keeps its settings (the LLM and embedder you pick, API keys, the password) in a .env file. Upstream bind-mounts that file from the host; here it lives on the data volume (/app/server/storage/.env) and the start command links it into place, so settings survive a container re-create. The generated password and JWT secret are written into that file only on the very first start, which means a password you change (or turn off) in Settings → Security stays changed.",
+        "No model is bundled. Pick an LLM provider and enter its API key during onboarding or later in Settings → AI Providers. The built-in embedder (it runs on the CPU and downloads a small model on first use) and the built-in LanceDB vector store need no extra service.",
+        "Web page import works without extra privileges: upstream asks for the SYS_ADMIN capability only so that the Chromium browser behind its website scraper can use its sandbox. This recipe adds no privileges and runs that browser unsandboxed instead (ANYTHINGLLM_CHROMIUM_ARGS), inside the app's own container.",
+        "The container starts as root only to hand the data volume to the image's anythingllm user and to link the .env file; the app itself runs as anythingllm (setpriv). Anonymous telemetry is turned off (DISABLE_TELEMETRY).",
+        "Everything (documents, vectors, the SQLite database, downloaded models and the settings file) lives in one named volume on /app/server/storage."
+    ]
+}

@@ -141,11 +141,18 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `postiz` | [source](https://raw.githubusercontent.com/gitroomhq/postiz-app/v2.25.1/apps/frontend/public/postiz.svg) | AGPL-3.0 | Official application mark (the "p" tile); unmodified. |
 | `supabase` | [source](https://raw.githubusercontent.com/supabase/supabase/564eab8ad7840b13324f68b1bfac074ef8d51c21/packages/common/assets/images/supabase-logo-icon.svg) | Apache-2.0 (supabase/supabase repository) | Official mark (the green bolt), from the self-hosted/v0.8.2 release commit; unmodified. |
 
+## RC-45 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `anythingllm` | [source](https://raw.githubusercontent.com/Mintplex-Labs/anything-llm/v1.18.0/frontend/src/media/illustrations/login-logo.svg) | MIT | Official application mark (the gradient infinity tile from the login screen); unmodified. |
+| `agentzero` | [source](https://raw.githubusercontent.com/agent0ai/agent-zero/v2.14/webui/public/icon.svg) | MIT | Official application icon (the "A" tile); the XML declaration, the external DOCTYPE, the editor namespace and the 100% width/height removed; paths and colours unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse), Xubin Ren and the nanobot contributors, Luis Novo (Open Notebook), Nick Sweeting (ArchiveBox), the YOURLS contributors and ItzCrazyKns (Vane); see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse), Xubin Ren and the nanobot contributors, Luis Novo (Open Notebook), Nick Sweeting (ArchiveBox), the YOURLS contributors and ItzCrazyKns (Vane), Mintplex Labs Inc. (AnythingLLM) and the Agent Zero contributors; see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
 - [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) — Marimo, Inc. (marimo); see the source repository for notices.
