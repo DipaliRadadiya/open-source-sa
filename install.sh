@@ -53,6 +53,13 @@ APP_USER="${APP_USER:-${PANEL_SLUG}}"
 # Self-update writes its runner script and progress here. Deliberately outside
 # APP_DIR: both would be destroyed by the checkout whose progress they record.
 UPDATE_STATE_DIR="${UPDATE_STATE_DIR:-/var/lib/${PANEL_SLUG}-update}"
+# What an administrator sees on SSH login while the panel installs and once it
+# has: the install keeps its progress here, and LOGIN_SCRIPT reads it (see
+# start_login_status). Outside APP_DIR for the same reason as the update state,
+# and readable by every account, because it holds step names and addresses and
+# never a secret. The login script decides who is shown it.
+INSTALL_STATE_DIR="${INSTALL_STATE_DIR:-/var/lib/${PANEL_SLUG}-install}"
+LOGIN_SCRIPT="/etc/profile.d/${PANEL_SLUG}-login.sh"
 PHP_VERSION="${PHP_VERSION:-8.4}"
 NODE_VERSION="${NODE_VERSION:-24}"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
@@ -139,8 +146,17 @@ STEP_NO=0
 # What we are doing right now, so a failure can say which part broke rather
 # than only which line number did.
 CURRENT_STEP="starting up"
+# The SSH login status (start_login_status). Off until the first change is
+# made: a refusal in preflight changed nothing, so there is nothing to report.
+LOGIN_STATUS=0
+STEP_TOTAL=0
+INSTALL_STARTED=0
 say()  { printf '%s\n' "$*"; }
-step() { STEP_NO=$((STEP_NO + 1)); CURRENT_STEP="$*"; printf '\n%s[%02d]%s %s%s%s\n' "$DIM" "$STEP_NO" "$RESET" "$BOLD" "$*" "$RESET"; }
+step() {
+    STEP_NO=$((STEP_NO + 1)); CURRENT_STEP="$*"
+    printf '\n%s[%02d]%s %s%s%s\n' "$DIM" "$STEP_NO" "$RESET" "$BOLD" "$*" "$RESET"
+    save_install_state installing
+}
 ok()   { printf '     %s✓%s %s\n' "$GREEN" "$RESET" "$*"; }
 skip() { printf '     %s·%s %s %s(already done)%s\n' "$DIM" "$RESET" "$*" "$DIM" "$RESET"; }
 warn() { printf '     %s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
@@ -162,6 +178,9 @@ log_tail() {
 # says: what broke, where, what the log holds, and what to do next.
 report_failure() {
     local headline="$1" detail="${2:-}"
+
+    # The headline only: the detail can be a full command line.
+    save_install_state failed "$headline"
 
     printf '\n%s%sInstall stopped%s during: %s%s%s\n\n' "$BOLD" "$RED" "$RESET" "$BOLD" "$CURRENT_STEP" "$RESET" >&2
     printf '  %s\n' "$headline" >&2
@@ -3748,6 +3767,364 @@ NGINX
     fi
 }
 
+# ─── SSH login status ────────────────────────────────────────────────────────
+#
+# Somebody who logged in while the install ran (a second session, or after
+# their first one dropped) found a half-built server with nothing saying what it
+# was doing. And once it finished, the address it printed lived only in the
+# terminal that ran it. So the install keeps its progress in one small file, and
+# a login script shows administrators the matching message:
+#
+#   installing    step N of M and its name, when it started, how to follow it
+#   failed        the step, the reason, where the log is, that a re-run is safe
+#   interrupted   "installing", but that installer is gone (the session closed,
+#                 it was killed, the server rebooted). Worked out at login from
+#                 the installer's PID and the boot id, since nobody is left to
+#                 write it down.
+#   installed     the addresses, version, stack, live service status, and a
+#                 warning while nobody has claimed the administrator account
+#
+# Shown to root and the sudo/admin group only, in interactive login shells.
+# Deliberately not /etc/update-motd.d: pam_motd runs those as root on every
+# login with no idea who is logging in, so every site's own SSH user (on a
+# white-labelled server, a reseller's customer) would get the administrator's
+# view. And nothing in here can stop an install: the status is a courtesy.
+
+# How many step() calls a real install makes, for "step N of M": the 3 before
+# the dry-run gate, then main()'s, where configure_fpm skips its step on
+# OpenLiteSpeed. Keep in step with main(). The login script drops the "of M"
+# when a count outruns it, so a forgotten bump reads oddly rather than wrongly.
+install_step_total() {
+    if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
+        echo 19
+    else
+        echo 20
+    fi
+}
+
+start_login_status() {
+    # Both end up inside a script every login shell sources, so plain names
+    # and paths only, or no login status at all.
+    if [[ ! "$PANEL_SLUG" =~ ^[a-z0-9][a-z0-9-]*$ || ! "$INSTALL_STATE_DIR" =~ ^/[A-Za-z0-9/._-]+$ ]]; then
+        warn "no SSH login status: PANEL_SLUG and INSTALL_STATE_DIR must be plain names and paths"
+        return 0
+    fi
+
+    STEP_TOTAL="$(install_step_total)"
+    INSTALL_STARTED="$(date +%s)"
+
+    if ! { mkdir -p "$INSTALL_STATE_DIR" && chmod 0755 "$INSTALL_STATE_DIR" && write_login_script; } >>"$LOG_FILE" 2>&1; then
+        warn "could not set up the SSH login status, so logins will not show this install's progress"
+        return 0
+    fi
+
+    LOGIN_STATUS=1
+    save_install_state installing
+    ok "SSH logins by administrators show this install's progress"
+}
+
+# One line, at most 200 characters: the login script reads the file line by line.
+one_line() {
+    local s="${1//$'\r'/ }"
+
+    s="${s//$'\n'/ }"
+    printf '%s' "${s:0:200}"
+}
+
+# BRANDING_NAME, when the operator set one: the same value the interface shows.
+branding_name() {
+    local v
+
+    v="$(sed -n 's/^BRANDING_NAME=//p' "${APP_DIR}/backend/.env" 2>/dev/null | tail -n 1)"
+    v="${v#\"}"
+    printf '%s' "${v%\"}"
+}
+
+# The units this install runs the panel on, in the order the login shows them.
+panel_units() {
+    local units=""
+
+    if [[ "$PANEL_PHP_SAPI" == "fpm" ]]; then
+        units="${PANEL_SLUG}-fpm "
+    fi
+    units+="${PANEL_SLUG}-queue ${PANEL_SLUG}-frontend"
+
+    case "$WEB_SERVER" in
+        nginx)         units+=" nginx" ;;
+        apache)        units+=" apache2" ;;
+        openlitespeed) units+=" lshttpd" ;;
+    esac
+
+    if [[ "$STACK" == "docker" ]]; then
+        units+=" docker"
+    fi
+    printf '%s' "$units"
+}
+
+# The version the panel itself reports (GET /api/basic-info), asked on this
+# machine so DNS and hairpin routing cannot get in the way. Blank if the panel
+# does not answer: it is shown, not relied on.
+installed_version() {
+    local port=443
+
+    if [[ "$SCHEME" == "http" ]]; then
+        port=80
+    fi
+    curl -fsSk --connect-timeout 2 --max-time 5 --resolve "${API_HOST}:${port}:127.0.0.1" \
+        "${SCHEME}://${API_HOST}/api/basic-info" 2>/dev/null \
+        | sed -n 's/.*"app_version":"\([^"]*\)".*/\1/p'
+}
+
+# Never fails and never prints. It runs inside step() and inside the failure
+# report, so a full disk or a missing tool must neither stop the install nor
+# re-enter the ERR trap. The file is replaced whole (a temp file, then a
+# rename), so a login never reads half of one.
+save_install_state() {
+    (( LOGIN_STATUS )) || return 0
+
+    (
+        trap - ERR
+        set +eu
+        state="$1"
+        reason="${2:-}"
+        tmp="$(mktemp "${INSTALL_STATE_DIR}/.state.XXXXXX")" || exit 0
+
+        {
+            printf 'STATE=%s\n' "$state"
+            printf 'STEP_NO=%s\n' "$STEP_NO"
+            printf 'STEP_TOTAL=%s\n' "$STEP_TOTAL"
+            printf 'STEP_TITLE=%s\n' "$(one_line "$CURRENT_STEP")"
+            printf 'STARTED_AT=%s\n' "$INSTALL_STARTED"
+            printf 'UPDATED_AT=%s\n' "$(date +%s)"
+            # $$ is the installer itself even in this subshell. With the boot id
+            # it tells the login script whether that installer is still alive.
+            printf 'PID=%s\n' "$$"
+            printf 'BOOT_ID=%s\n' "$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)"
+            printf 'LOG_FILE=%s\n' "$LOG_FILE"
+            printf 'REASON=%s\n' "$(one_line "$reason")"
+
+            if [[ "$state" == "installed" ]]; then
+                printf 'NAME=%s\n' "$(one_line "$(branding_name)")"
+                printf 'PANEL_URL=%s://%s\n' "$SCHEME" "$PANEL_HOST"
+                printf 'API_URL=%s://%s\n' "$SCHEME" "$API_HOST"
+                printf 'STACK=%s\n' "$STACK"
+                printf 'WEB_SERVER=%s\n' "$WEB_SERVER"
+                printf 'UNITS=%s\n' "$(panel_units)"
+                printf 'APP_DIR=%s\n' "$APP_DIR"
+                printf 'APP_USER=%s\n' "$APP_USER"
+                printf 'PHP_BIN=%s\n' "$PANEL_PHP_BIN"
+                printf 'VERSION=%s\n' "$(one_line "$(installed_version)")"
+            fi
+        } >"$tmp" && chmod 0644 "$tmp" && mv -f "$tmp" "${INSTALL_STATE_DIR}/state" || rm -f "$tmp"
+    ) >/dev/null 2>&1 || true
+}
+
+# The login script. Quoted heredoc: nothing in it is expanded here, only the
+# two paths are filled in. It is POSIX sh, because /etc/profile is also read
+# by dash.
+write_login_script() {
+    local tmp
+
+    tmp="$(mktemp "${LOGIN_SCRIPT}.XXXXXX")" || return 1
+
+    if ! sed -e "s|@STATE@|${INSTALL_STATE_DIR}/state|g" \
+             -e "s|@OFF@|/etc/${PANEL_SLUG}/login-banner.off|g" >"$tmp" <<'LOGIN'
+# Written by the control panel installer. At SSH login it shows administrators
+# what the install is doing or, once it is done, where the panel is and whether
+# it is healthy. Removing this file only hides that message. To hide it for every
+# account without removing it:  touch @OFF@
+#
+# /etc/profile sources this, so it must never get in the way of a login: it runs
+# in a subshell, leaves nothing behind, reads one status file, asks this
+# machine's own panel one question, and gives up quietly on anything odd.
+
+__cp_login_status() (
+    f='@STATE@'
+    [ -r "$f" ] && [ -t 1 ] || exit 0
+    [ -e '@OFF@' ] && exit 0
+    [ -e "${HOME:-/nonexistent}/.hushlogin" ] && exit 0
+
+    # Administrators only. A site's own SSH user (on a white-labelled server, a
+    # reseller's customer) gets nothing from this.
+    if [ "$(id -u)" != 0 ]; then
+        case " $(id -Gn 2>/dev/null) " in
+            *" sudo "* | *" admin "* | *" wheel "*) ;;
+            *) exit 0 ;;
+        esac
+    fi
+
+    state='' step='' total='' title='' started='' updated='' pid='' boot='' log='' reason=''
+    name='' panel='' api='' stack='' web='' units='' dir='' user='' php='' version=''
+    # Read, never sourced: a failure reason is free text.
+    while IFS= read -r line || [ -n "$line" ]; do
+        value=${line#*=}
+        case $line in
+            STATE=*) state=$value ;;
+            STEP_NO=*) step=$value ;;
+            STEP_TOTAL=*) total=$value ;;
+            STEP_TITLE=*) title=$value ;;
+            STARTED_AT=*) started=$value ;;
+            UPDATED_AT=*) updated=$value ;;
+            PID=*) pid=$value ;;
+            BOOT_ID=*) boot=$value ;;
+            LOG_FILE=*) log=$value ;;
+            REASON=*) reason=$value ;;
+            NAME=*) name=$value ;;
+            PANEL_URL=*) panel=$value ;;
+            API_URL=*) api=$value ;;
+            STACK=*) stack=$value ;;
+            WEB_SERVER=*) web=$value ;;
+            UNITS=*) units=$value ;;
+            APP_DIR=*) dir=$value ;;
+            APP_USER=*) user=$value ;;
+            PHP_BIN=*) php=$value ;;
+            VERSION=*) version=$value ;;
+        esac
+    done <"$f"
+    [ -n "$state" ] || exit 0
+    [ -n "$name" ] || name='Control panel'
+
+    B='' R='' G='' Y='' N=''
+    if [ "${TERM:-dumb}" != dumb ]; then
+        B=$(printf '\033[1m') R=$(printf '\033[31m') G=$(printf '\033[32m')
+        Y=$(printf '\033[33m') N=$(printf '\033[0m')
+    fi
+    case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+        *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) ok='✓' bad='✗' ;;
+        *) ok='+' bad='x' ;;
+    esac
+    sudo='sudo '
+    if [ "$(id -u)" = 0 ]; then sudo=; fi
+    now=$(date +%s)
+    case $started in '' | *[!0-9]*) started=$now ;; esac
+    case $updated in '' | *[!0-9]*) updated=$now ;; esac
+
+    clock() { date -d "@$1" '+%H:%M %Z' 2>/dev/null; }
+
+    case $step in '' | *[!0-9]*) step= ;; esac
+    case $total in '' | *[!0-9]*) total= ;; esac
+    where=''
+    if [ -n "$step" ]; then
+        where="step $step"
+        if [ -n "$total" ] && [ "$step" -le "$total" ]; then where="$where of $total"; fi
+    fi
+    if [ -n "$title" ]; then where="${where:+$where }($title)"; fi
+
+    if [ "$state" = installing ]; then
+        alive=''
+        if [ -d /proc/1 ]; then
+            # The same boot, and that PID is still a bash. Not just any live
+            # PID: after a reboot the number belongs to something else.
+            if [ -n "$pid" ] && [ "$boot" = "$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)" ]; then
+                case $( { tr '\0' ' ' <"/proc/$pid/cmdline"; } 2>/dev/null) in
+                    *bash*) alive=1 ;;
+                esac
+            fi
+        elif [ $((now - updated)) -lt 3600 ]; then
+            # /proc is mounted with hidepid, so root's processes are hidden
+            # from this account. A step reported within the hour will do.
+            alive=1
+        fi
+        [ -n "$alive" ] || state=interrupted
+    fi
+
+    case $state in
+        installing)
+            mins=$(((now - started) / 60))
+            printf '\n %s%s: installing, %s%s\n' "$B" "$name" "$where" "$N"
+            printf '   Started %s, %s min ago. Follow it: %stail -f %s\n' "$(clock "$started")" "$mins" "$sudo" "$log"
+            printf "   Please don't reboot the server or run apt until it finishes.\n\n"
+            ;;
+        failed)
+            printf '\n %s%s%s: install stopped at %s, %s%s\n' "$B" "$R" "$name" "$where" "$(clock "$updated")" "$N"
+            if [ -n "$reason" ]; then printf '   %s\n' "$reason"; fi
+            printf '   See why: %stail -n 50 %s\n' "$sudo" "$log"
+            printf '   Fix what it reports, then run the installer again. It is safe to re-run.\n\n'
+            ;;
+        interrupted)
+            printf '\n %s%s%s: install interrupted at %s, %s%s\n' "$B" "$Y" "$name" "$where" "$(clock "$updated")" "$N"
+            printf '   The installer is no longer running: its session closed, it was stopped, or the server restarted.\n'
+            printf '   Run the installer again. It is safe to re-run and skips what is already done.\n\n'
+            ;;
+        installed)
+            # One question to this machine's own panel: the live version, whether
+            # anyone has registered yet, and whether the API answers at all.
+            info=''
+            if [ -n "$api" ] && command -v curl >/dev/null 2>&1; then
+                rest=${api#*://}
+                host=${rest%%/*}
+                port=443
+                case $api in http://*) port=80 ;; esac
+                case $host in *:*) port=${host##*:} host=${host%%:*} ;; esac
+                info=$(curl -fsSk --connect-timeout 1 --max-time 2 --resolve "$host:$port:127.0.0.1" \
+                    "${api%/}/api/basic-info" 2>/dev/null)
+            fi
+            live=$(printf '%s' "$info" | sed -n 's/.*"app_version":"\([^"]*\)".*/\1/p')
+            if [ -n "$live" ]; then version=$live; fi
+
+            printf '\n %s%s%s\n' "$B" "$name" "$N"
+            printf '   Panel     %s\n' "$panel"
+            if [ -n "$api" ] && [ "$api" != "$panel" ]; then printf '   API       %s\n' "$api"; fi
+
+            about=$version
+            if [ -n "$stack" ]; then about="${about:+$about · }$stack stack"; fi
+            if [ -n "$web" ]; then about="${about:+$about · }$web"; fi
+            if [ -n "$about" ]; then printf '   Version   %s\n' "$about"; fi
+
+            svc=''
+            if [ -n "$units" ] && command -v systemctl >/dev/null 2>&1; then
+                # One call for all of them; it answers one line per unit, in order.
+                # shellcheck disable=SC2086
+                states=$(systemctl is-active $units 2>/dev/null)
+                i=0
+                for u in $units; do
+                    i=$((i + 1))
+                    s=$(printf '%s\n' "$states" | sed -n "${i}p")
+                    if [ "$s" = active ]; then
+                        svc="$svc  $G$ok$N $u"
+                    else
+                        svc="$svc  $R$bad $u${s:+ ($s)}$N"
+                    fi
+                done
+            fi
+            if [ -n "$info" ]; then
+                svc="$svc  $G$ok$N api"
+            elif [ -n "$api" ]; then
+                svc="$svc  $R$bad api (not answering)$N"
+            fi
+            if [ -n "$svc" ]; then printf '   Services%s\n' "$svc"; fi
+
+            # Exactly how install.sh runs it. From this account's home directory,
+            # which the panel account cannot enter, every check that starts a
+            # process fails with "posix_spawn() failed: Permission denied".
+            if [ -n "$user" ] && [ -n "$php" ] && [ -n "$dir" ]; then
+                printf "   Check     sudo -u %s -H sh -c 'cd %s/backend && exec %s artisan panel:doctor'\n" "$user" "$dir" "$php"
+            fi
+
+            case $info in
+                *'"registration_open":true'*)
+                    printf '\n %s%s! No administrator yet.%s Open the panel and register now: the first account\n' "$B" "$Y" "$N"
+                    printf '   becomes the administrator, and until then anyone who reaches it can claim it.\n'
+                    ;;
+            esac
+            printf '\n'
+            ;;
+    esac
+)
+
+case $- in
+    *i*) __cp_login_status ;;
+esac
+unset -f __cp_login_status
+LOGIN
+    then
+        rm -f "$tmp"
+        return 1
+    fi
+
+    chmod 0644 "$tmp" && mv -f "$tmp" "$LOGIN_SCRIPT"
+}
+
 # ─── Finish ──────────────────────────────────────────────────────────────────
 
 finish() {
@@ -3810,6 +4187,8 @@ finish() {
         warn "some checks failed — see above. The panel is installed but parts of it will not work until these are fixed."
     fi
 
+    save_install_state installed
+
     local scheme="$SCHEME"
 
     printf '\n%s%s The control panel is installed%s\n\n' "$BOLD" "$GREEN" "$RESET"
@@ -3817,7 +4196,9 @@ finish() {
     (( SINGLE_HOST )) || printf '  API:     %s://%s\n' "$scheme" "$API_HOST"
     printf '  Stack:   %s (%s)\n' "$STACK" "$WEB_SERVER"
     printf '  Log:     %s\n' "$LOG_FILE"
-    printf '  Files:   %s\n\n' "$APP_DIR"
+    printf '  Files:   %s\n' "$APP_DIR"
+    (( LOGIN_STATUS )) && printf '  SSH:     administrators see this address and the panel status at every login\n'
+    printf '\n'
 
     # Only while nobody has registered (FS-A3): a re-run on a panel with an
     # administrator told them anyone could claim the account.
@@ -3856,6 +4237,9 @@ main() {
         exit 0
     fi
 
+    # First, because everything after this changes the server: from here on an
+    # administrator who logs in can see how far it got.
+    start_login_status
     configure_swap
     install_packages
     # fnm's shared runtime tree is owned by the panel account, so that
