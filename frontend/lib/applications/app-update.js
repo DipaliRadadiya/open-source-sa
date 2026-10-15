@@ -4,7 +4,7 @@ import { UPDATE_IN_FLIGHT } from "../schemas/application-update.js";
 // Installers implementing ApplicationUpdater (backend cd4a443f). Only decides whether the
 // dashboard asks at all, so other types get no skeleton flash; the API's `supported` decides
 // the card. A new updatable type needs adding here.
-export const UPDATABLE_SITE_TYPES = ["moodle", "mautic", "statamic", "craftcms", "uptimekuma", "phpmyadmin", "adminer"];
+export const UPDATABLE_SITE_TYPES = ["moodle", "mautic", "statamic", "craftcms", "uptimekuma", "phpmyadmin", "adminer", "n8n", "nodered"];
 
 const BACKUP_FRESH_MS = 24 * 60 * 60 * 1000;
 
