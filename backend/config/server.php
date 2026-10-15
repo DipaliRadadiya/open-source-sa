@@ -2580,6 +2580,12 @@ return [
         ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
         ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
         ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban', 'install' => ['fail2ban', 'latest']],
+        // The server's own mail relay; install.sh sets it up (configure_mail),
+        // and v7 listed it here. Shown only where the unit exists. On Ubuntu
+        // 24.04 postfix.service is a wrapper and the daemon runs as
+        // postfix@-, enabled on its own — `instances` lets "Start on boot"
+        // reach it, as for PostgreSQL.
+        ['key' => 'postfix', 'unit' => 'postfix', 'label' => 'Postfix', 'instances' => 'postfix@*'],
     ],
 
     'protected_services' => array_values(array_filter(explode(
@@ -2608,6 +2614,7 @@ return [
         'mongodb' => ['mongodb'],
         'redis' => ['redis'],
         'supervisor' => ['supervisor'],
+        'postfix' => ['mail'],
     ],
 
     /*
