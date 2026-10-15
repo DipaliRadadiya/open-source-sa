@@ -3154,7 +3154,66 @@
       "inProgress": "Exportando…",
       "diskUsed": "{count, plural, one {# exportación} other {# exportaciones}} aquí — {size}. Nada las elimina por ti.",
       "takingLonger": "Esto está tardando más de lo habitual. Las bases de datos grandes pueden tardar unos minutos.",
-      "loadFailed": "No pudimos cargar las exportaciones."
+      "loadFailed": "No pudimos cargar las exportaciones.",
+      "importSafety": "Copia automática antes de importar",
+      "showAll": "Mostrar todas ({count})",
+      "showLess": "Mostrar menos"
+    },
+    "import": {
+      "title": "Importar un archivo",
+      "description": "Sustituye esta base de datos por el contenido de un archivo de volcado.",
+      "drop": "Suelta aquí un archivo de volcado",
+      "choose": "Elegir archivo",
+      "formats": {
+        "sql": "MySQL y MariaDB: .sql o .sql.gz",
+        "pgsql": "PostgreSQL: .sql, .sql.gz o un archivo personalizado de pg_dump",
+        "mongo": "MongoDB: un archivo de mongodump --archive, comprimido con gzip o no"
+      },
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "engineDown": "{engine} no está en ejecución, así que no se puede importar nada.",
+      "busy": "Ya hay una importación en curso.",
+      "confirmTitle": "¿Sustituir todo el contenido de {name}?",
+      "confirmDescription": "Todo el contenido de esta base de datos se sustituye por este archivo:",
+      "confirmSafety": "Antes se hace una copia de seguridad, que se restaura automáticamente si la importación falla.",
+      "mismatch": "Este archivo parece un volcado de {fileEngine}, pero esta es una base de datos {engine}. Lo más probable es que la importación falle.",
+      "confirmLabel": "Sustituir base de datos",
+      "cancel": "Cancelar",
+      "steps": {
+        "uploading": "Subiendo",
+        "checking": "Comprobando el archivo",
+        "backing_up": "Haciendo copia de seguridad",
+        "importing": "Importando"
+      },
+      "rollingBack": "Restaurando la copia de seguridad",
+      "cancelUpload": "Cancelar subida",
+      "keepOpen": "Mantén esta página abierta hasta que termine la subida.",
+      "serverNote": "La subida ha terminado. La importación continúa en el servidor, así que puedes salir de esta página.",
+      "status": {
+        "uploading": "Subiendo",
+        "queued": "En espera",
+        "running": "Importando",
+        "completed": "Importado",
+        "failed": "Fallido"
+      },
+      "started": "Importación iniciada.",
+      "completed": "{file} se ha importado en {name}.",
+      "failedFallback": "La importación ha fallado.",
+      "cancelled": "Subida cancelada.",
+      "startFailed": "No se pudo iniciar la importación.",
+      "uploadFailed": "La subida ha fallado.",
+      "history": "Importaciones anteriores",
+      "showAll": "Mostrar todas ({count})",
+      "showLess": "Mostrar menos",
+      "by": "por {user}",
+      "startAgain": "Iniciar importación",
+      "remove": "Eliminar",
+      "removeTitle": "¿Eliminar esta importación?",
+      "removeDescription": "Se elimina el archivo subido. La base de datos no cambia.",
+      "removed": "Importación eliminada.",
+      "removeFailed": "No se pudo eliminar esta importación.",
+      "uploadUnfinished": "La subida no terminó.",
+      "backupNote": "Cada importación guarda una copia de seguridad de la base de datos en Exportaciones, como «Copia automática antes de importar». Nada las elimina, así que borra allí las antiguas para liberar espacio en disco.",
+      "backupDownload": "Descargar la copia de seguridad hecha antes de esta importación"
     },
     "manage": "Gestionar",
     "monitor": {
@@ -3287,7 +3346,7 @@
     "tabs": {
       "users": "Usuarios",
       "tables": "Tablas",
-      "exports": "Exportaciones",
+      "exports": "Importar y exportar",
       "overview": "Resumen"
     },
     "phpmyadmin": {
@@ -3299,6 +3358,15 @@
       "install": "Instalar phpMyAdmin",
       "needsUser": "Añade primero un usuario de la base de datos — phpMyAdmin inicia sesión como uno.",
       "choose": "¿Qué phpMyAdmin?",
+      "signingShort": "Iniciando su sesión…"
+    },
+    "adminer": {
+      "open": "Abrir en Adminer",
+      "failed": "No se pudo abrir Adminer.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "install": "Instalar Adminer",
+      "needsUser": "Añade primero un usuario de la base de datos — Adminer inicia sesión como uno.",
+      "choose": "¿Qué Adminer?",
       "signingShort": "Iniciando su sesión…"
     },
     "usedBy": {

@@ -3477,7 +3477,7 @@ On failure: `status: "failed", "status_title: "Clone failed", "reason": "…"`.
 
 ## Application — One-click update
 
-Updates a site's own software in place, as v7 did, for **Moodle, Mautic, Statamic, Craft CMS, Uptime Kuma and phpMyAdmin**.
+Updates a site's own software in place, as v7 did, for **Moodle, Mautic, Statamic, Craft CMS, Uptime Kuma, phpMyAdmin, n8n and Node-RED** (the last two since 2026-10-15).
 Updates stay **inside the installed line** — the major version (Moodle: the branch, e.g. 5.0). A newer line is reported in
 `newer_major` and never applied. The panel does **not** take a backup: the screen offers one first (backups screen) and shows
 `last_backup_at`. Every command runs as the site's user on the site's own PHP/Node.
@@ -3490,6 +3490,7 @@ Updates stay **inside the installed line** — the major version (Moodle: the br
 | Craft CMS | `craft update craft:{target} --interactive=0 --backup=0 --migrate=1` |
 | Uptime Kuma | `git fetch` + `git checkout --force {tag}` → `npm run setup` → restart the site's systemd unit (`data/`, `.env` kept) |
 | phpMyAdmin | the versioned release package over the code (`config.inc.php` kept) |
+| n8n, Node-RED | refuse if the target's `engines.node` excludes the site's Node (`node_unsupported`) → `node_modules` moved aside → `npm install --omit=dev {package}@{target}` in the site → restart; n8n then waits for `/rest/settings` (it migrates its database on start). Install or start failing puts the previous `node_modules` back (`app_not_ready` for a start that never came up). `.env` (n8n's encryption key), `settings.js` and flows are never written. Target = npm's own tag for the line — `latest`, or Node-RED's `vN-maintenance` — never a plain-numbered pre-release such as n8n's `next`. |
 
 Success is decided by the version the files carry afterwards; an update that ran but left the old version fails with `version_unchanged`.
 
@@ -3523,7 +3524,7 @@ Permission `application` **manage**, `throttle:10,1`. No body: the target is `la
 **409** an update of this site is already running. **422** `errors.update[0]` = the readable `blocked_reason`.
 A pending update whose job never started is released (`abandoned`) after 60 minutes.
 Failure `reason`: `step_failed` (with `step` + `reference` into the server-ops log), `version_unchanged`, `release_not_found`,
-`download_unreachable`, `out_of_memory`, `composer_platform`, `no_build_tools`, `worker` (job died/timed out), `abandoned`, `failed`.
+`download_unreachable`, `out_of_memory`, `composer_platform`, `no_build_tools`, `node_unsupported`, `app_not_ready`, `worker` (job died/timed out), `abandoned`, `failed`.
 Activity: `application.update_started`, `application.updated`, `application.update_failed`.
 
 ## Backups

@@ -16,6 +16,7 @@ export function DatabasesCards({
   lastBackup = {},
   backupsUnknown = false,
   phpmyadminSites = null,
+  adminerSites = null,
   onDelete,
   // The site each database belongs to; it decides what gets backed up.
   applications = [],
@@ -143,6 +144,7 @@ export function DatabasesCards({
                 onDelete={onDelete}
                 canManage={canManage}
                 phpmyadminSites={phpmyadminSites}
+                adminerSites={adminerSites}
               />
             </div>
           </CardListItem>

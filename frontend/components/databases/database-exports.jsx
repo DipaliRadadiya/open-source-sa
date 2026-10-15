@@ -39,6 +39,10 @@ const POLL_MS = 3000;
 const CONFIRM_ABOVE_BYTES = 512 * 1024 * 1024;
 const IN_FLIGHT = ["queued", "running"];
 
+// The newest few stay in view; the rest fold away so a long list cannot push the
+// Import card below it out of reach (Krishna, 15 Oct). Newest first, so a running one shows.
+const ROWS_SHOWN = 5;
+
 // Past this a dump is flagged as slow; well under the server's abandonment window.
 const SLOW_AFTER_MS = 120_000;
 
@@ -71,6 +75,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
   // lock has expired; until then a large dump may legitimately still run.
   const [slow, setSlow] = useState(false);
   const [freeBytes, setFreeBytes] = useState(null);
+  const [showAll, setShowAll] = useState(false);
   const format = useFormatter();
 
   const all = polled ?? initial;
@@ -223,7 +228,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
             </div>
           ) : (
             <div className="divide-y">
-              {rows.map((row) => (
+              {(showAll ? rows : rows.slice(0, ROWS_SHOWN)).map((row) => (
                 <ExportRow
                   key={row.id}
                   row={row}
@@ -232,6 +237,13 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
                   slow={slow}
                 />
               ))}
+              {rows.length > ROWS_SHOWN ? (
+                <div className="py-2.5">
+                  <Button variant="link" size="sm" className="h-auto px-0" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? t("showLess") : t("showAll", { count: rows.length })}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </CardContent>
@@ -316,6 +328,12 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
             <span className="text-sm tabular-nums text-muted-foreground">
               {row.size_human}
             </span>
+          ) : null}
+          {/* Taken by an import before it replaced the database. */}
+          {row.purpose === "import_safety" ? (
+            <Badge variant="outline" className="font-normal">
+              {t("importSafety")}
+            </Badge>
           ) : null}
         </div>
 

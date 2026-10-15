@@ -7,8 +7,8 @@ use App\Models\Application;
 
 /**
  * A site type whose own software the panel can update in place — v7's
- * one-click "Update" for Moodle, Mautic, Statamic, Craft CMS, Uptime Kuma
- * and phpMyAdmin.
+ * one-click "Update" for Moodle, Mautic, Statamic, Craft CMS, Uptime Kuma,
+ * phpMyAdmin, n8n and Node-RED.
  *
  * Implemented by the site's installer, because an update needs exactly what
  * the install already knows: where the code lives, which PHP or Node it runs

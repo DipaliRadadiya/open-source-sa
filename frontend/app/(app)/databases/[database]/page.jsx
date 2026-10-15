@@ -9,6 +9,7 @@ import { supportsRemoteUsers } from "@/lib/databases/engine-capabilities";
 import {
   getAllApplications,
   getPhpmyadminSite,
+  getAdminerSite,
   getSiteTypes,
 } from "@/lib/applications/get-applications";
 import { getTables } from "@/lib/databases/get-monitor";
@@ -18,9 +19,12 @@ import { ConnectionDetails } from "@/components/databases/connection-details";
 import { DatabaseTabs } from "@/components/databases/database-tabs";
 import { DatabaseDetailsCard } from "@/components/databases/database-details-card";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
+import { AdminerButton } from "@/components/databases/adminer-button";
 import { parseApiDate } from "@/lib/format/api-date";
 import { DatabaseTables } from "@/components/databases/database-tables";
 import { DatabaseExports } from "@/components/databases/database-exports";
+import { DatabaseImport } from "@/components/databases/database-import";
+import { getImports } from "@/lib/databases/get-imports";
 import { applicationById } from "@/lib/backups/database-availability";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
 import { PageCrumb } from "@/components/sections/page-crumb";
@@ -52,6 +56,8 @@ export default async function DatabasePage({ params, searchParams }) {
     exportList,
     tables,
     phpmyadmin,
+    adminer,
+    importList,
     appList,
     dbCounts,
     catalogue,
@@ -64,6 +70,8 @@ export default async function DatabasePage({ params, searchParams }) {
     getExports(),
     getTables(id),
     getPhpmyadminSite(),
+    getAdminerSite(),
+    getImports(id),
     // `DatabaseResource` has only `application_id`, so sites are joined here.
     // The counts drive the picker's "already has one".
     getAllApplications(),
@@ -124,14 +132,25 @@ export default async function DatabasePage({ params, searchParams }) {
             data.created_at_human ? t("detail.createdWhen", { when: data.created_at_human }) : null,
           ]}
           // The one thing people open a database page to do, so it is the filled button.
+          // PostgreSQL has only Adminer, so it takes the filled look there; beside
+          // phpMyAdmin it is the second, quieter client.
           actions={
-            <PhpmyadminButton
-              database={data}
-              canManage={canManage}
-              sites={phpmyadmin.known ? phpmyadmin.sites : null}
-              variant="default"
-              size="default"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <PhpmyadminButton
+                database={data}
+                canManage={canManage}
+                sites={phpmyadmin.known ? phpmyadmin.sites : null}
+                variant="default"
+                size="default"
+              />
+              <AdminerButton
+                database={data}
+                canManage={canManage}
+                sites={adminer.known ? adminer.sites : null}
+                variant={data.driver === "pgsql" ? "default" : "outline"}
+                size="default"
+              />
+            </div>
           }
         />
       </div>
@@ -179,7 +198,8 @@ export default async function DatabasePage({ params, searchParams }) {
             users: data.users?.length ?? 0,
             // Null, not 0, when the list could not be read.
             tables: tables.failed || engineDown ? null : tables.tables.length,
-            exports: exportList.failed ? null : ownExports.length,
+            // No count: the tab holds imports and exports, and one number read as both.
+            exports: null,
           }}
           users={
             <DatabaseUsers
@@ -199,12 +219,24 @@ export default async function DatabasePage({ params, searchParams }) {
             />
           }
           exports={
-            <DatabaseExports
-              database={data}
-              exports={exportList.exports}
-              read={exportList}
-              canManage={canManage}
-            />
+            // Exports first: the everyday, safe action. Import replaces the data, so it
+            // sits below, as Delete does at the foot of Overview (Krishna, 15 Oct).
+            <div className="space-y-4">
+              <DatabaseExports
+                database={data}
+                exports={exportList.exports}
+                read={exportList}
+                canManage={canManage}
+              />
+              <DatabaseImport
+                database={data}
+                imports={importList.imports}
+                // Each import links to the backup it took first.
+                exports={exportList.exports}
+                canManage={canManage}
+                unavailable={engineDown ? engineName : null}
+              />
+            </div>
           }
         />
       </div>

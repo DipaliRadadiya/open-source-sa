@@ -122,7 +122,9 @@ test("Database page follows Krishna's reference: Overview tab, phpMyAdmin in the
   const tabs = fs.readFileSync(new URL("../components/databases/database-tabs.jsx", import.meta.url), "utf8");
   assert.match(tabs, /const VALUES = \["overview", "users", "tables", "exports"\]/);
   assert.match(tabs, /VALUES\.includes\(wanted\) \? wanted : "overview"/);
-  assert.match(page, /actions=\{\s*<PhpmyadminButton[\s\S]{0,200}variant="default"/);
+  // The header holds both database clients now (Adminer, 15 Oct); phpMyAdmin stays the filled one.
+  assert.match(page, /actions=\{\s*<div className="flex flex-wrap items-center gap-2">\s*<PhpmyadminButton[\s\S]{0,200}variant="default"/);
+  assert.match(page, /<AdminerButton[\s\S]{0,200}variant=\{data\.driver === "pgsql" \? "default" : "outline"\}/);
   assert.match(page, /overview=\{\s*<div className="space-y-4">\s*<ConnectionDetails[\s\S]*<DatabaseDetailsCard[\s\S]*<DeleteDatabaseCard/);
   assert.match(read("components/databases/phpmyadmin-button.jsx"), /^"use client";/);
 });

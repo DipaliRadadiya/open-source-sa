@@ -14,6 +14,7 @@ const LOGOS = {
   statamic: "statamic.svg",
   prestashop: "prestashop.svg",
   phpmyadmin: "phpmyadmin.png",
+  adminer: "adminer.png",
   uptimekuma: "uptime-kuma.svg",
   n8n: "n8n.svg",
   nodered: "node-red.svg",

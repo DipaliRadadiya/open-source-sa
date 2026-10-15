@@ -3154,7 +3154,66 @@
       "inProgress": "Exporting…",
       "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}. Nothing deletes these for you.",
       "takingLonger": "This is taking longer than usual. Large databases can take a few minutes.",
-      "loadFailed": "We couldn't load the exports."
+      "loadFailed": "We couldn't load the exports.",
+      "importSafety": "Automatic backup before import",
+      "showAll": "Show all ({count})",
+      "showLess": "Show less"
+    },
+    "import": {
+      "title": "Import a file",
+      "description": "Replace this database with the contents of a dump file.",
+      "drop": "Drop a dump file here",
+      "choose": "Choose file",
+      "formats": {
+        "sql": "MySQL and MariaDB: .sql or .sql.gz",
+        "pgsql": "PostgreSQL: .sql, .sql.gz or a pg_dump custom archive",
+        "mongo": "MongoDB: a mongodump --archive file, gzipped or not"
+      },
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
+      "engineDown": "{engine} is not running, so nothing can be imported.",
+      "busy": "An import is already in progress.",
+      "confirmTitle": "Replace everything in {name}?",
+      "confirmDescription": "Everything in this database is replaced with this file:",
+      "confirmSafety": "A backup is taken first, and put back automatically if the import fails.",
+      "mismatch": "This file looks like a {fileEngine} dump, but this is a {engine} database. The import will most likely fail.",
+      "confirmLabel": "Replace database",
+      "cancel": "Cancel",
+      "steps": {
+        "uploading": "Uploading",
+        "checking": "Checking the file",
+        "backing_up": "Backing up",
+        "importing": "Importing"
+      },
+      "rollingBack": "Putting the backup back",
+      "cancelUpload": "Cancel upload",
+      "keepOpen": "Keep this page open until the upload finishes.",
+      "serverNote": "The upload is done. The import continues on the server, so you can leave this page.",
+      "status": {
+        "uploading": "Uploading",
+        "queued": "Waiting",
+        "running": "Importing",
+        "completed": "Imported",
+        "failed": "Failed"
+      },
+      "started": "Import started.",
+      "completed": "{file} was imported into {name}.",
+      "failedFallback": "The import failed.",
+      "cancelled": "Upload cancelled.",
+      "startFailed": "The import could not start.",
+      "uploadFailed": "The upload failed.",
+      "history": "Earlier imports",
+      "showAll": "Show all ({count})",
+      "showLess": "Show less",
+      "by": "by {user}",
+      "startAgain": "Start import",
+      "remove": "Delete",
+      "removeTitle": "Delete this import?",
+      "removeDescription": "The uploaded file is deleted. The database is not changed.",
+      "removed": "Import deleted.",
+      "removeFailed": "This import could not be deleted.",
+      "uploadUnfinished": "The upload did not finish.",
+      "backupNote": "Each import keeps a backup of the database in Exports, as “Automatic backup before import”. Nothing deletes them, so remove old ones there to free disk space.",
+      "backupDownload": "Download the backup taken before this import"
     },
     "manage": "Manage",
     "monitor": {
@@ -3287,7 +3346,7 @@
     "tabs": {
       "users": "Users",
       "tables": "Tables",
-      "exports": "Exports",
+      "exports": "Import & export",
       "overview": "Overview"
     },
     "phpmyadmin": {
@@ -3299,6 +3358,15 @@
       "install": "Install phpMyAdmin",
       "needsUser": "Add a database user first — phpMyAdmin signs in as one.",
       "choose": "Which phpMyAdmin?",
+      "signingShort": "Signing you in…"
+    },
+    "adminer": {
+      "open": "Open in Adminer",
+      "failed": "Adminer could not be opened.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
+      "install": "Install Adminer",
+      "needsUser": "Add a database user first — Adminer signs in as one.",
+      "choose": "Which Adminer?",
       "signingShort": "Signing you in…"
     },
     "usedBy": {

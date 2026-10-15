@@ -39,14 +39,15 @@ function NameCell({ row }) {
     <Link
       href={`/databases/${row.original.id}`}
       title={row.original.name}
-      // Primary colour plus chevron, so the link does not rely on colour alone.
+      // Primary colour plus chevron, so the link does not rely on colour alone. The chevron
+      // always shows: with no Manage button in the row, the name is the way in (Krishna, 15 Oct).
       // A usual name shows in full; past 13.5rem it ellipsises, so a long one cannot
       // widen the column over its neighbours (Krishna, 8 Oct). A max-width, not
       // max-w-0 on the cell: that cut every 27-character staging name too.
       className="group flex min-w-0 items-center gap-1.5 font-mono font-medium text-primary underline-offset-4 hover:underline"
     >
       <span className="max-w-54 truncate">{row.original.name}</span>
-      <ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+      <ChevronRight className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
     </Link>
   );
 }
@@ -165,6 +166,8 @@ function RowActionsCell({ row, table }) {
       onDelete={table.options.meta.onDelete}
       canManage={table.options.meta.canManage}
       phpmyadminSites={table.options.meta.phpmyadminSites}
+      adminerSites={table.options.meta.adminerSites}
+      showManage={false}
     />
   );
 }
@@ -188,6 +191,7 @@ function DatabasesList({
   backupsUnknown = false,
   // null when the lookup failed — see getPhpmyadminSite.
   phpmyadminSites = null,
+  adminerSites = null,
   siteTypes = [],
   // For the create dialog's site picker.
   applications = [],
@@ -350,6 +354,7 @@ function DatabasesList({
               canManage={canManage}
               onDelete={setDeleting}
               phpmyadminSites={phpmyadminSites}
+              adminerSites={adminerSites}
               showEngine={showEngine}
               engineName={(engine) => t(`engines.${engine}`)}
               lastBackup={lastBackup}
@@ -371,6 +376,7 @@ function DatabasesList({
                 lastBackup,
                 backupsUnknown,
                 phpmyadminSites,
+                adminerSites,
               }}
             />
           </div>

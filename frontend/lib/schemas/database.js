@@ -299,6 +299,9 @@ export const exportSchema = z.object({
   // A copied name, so a dump outlives the database it came from.
   database: z.string().nullable().optional(),
   engine: z.string().nullable().optional(),
+  // null for an export someone asked for; "import_safety" for the backup an
+  // import takes before replacing the database.
+  purpose: z.string().nullable().optional(),
   file: z.string().nullable().optional(),
   // queued | running | completed | failed
   status: z.string(),
@@ -325,6 +328,37 @@ export const exportSchema = z.object({
 
 export const exportsResponseSchema = z.object({
   exports: z.array(exportSchema).default([]),
+});
+
+// One import: uploading → queued → running (step) → completed | failed.
+export const importSchema = z.object({
+  id: z.number(),
+  database_id: z.number().nullable().optional(),
+  database: z.string().nullable().optional(),
+  engine: z.string().nullable().optional(),
+  file_name: z.string().nullable().optional(),
+  size_bytes: z.number().nullable().optional(),
+  size_human: z.string().nullable().optional(),
+  received_bytes: z.number().nullable().optional(),
+  status: z.string(),
+  // checking | backing_up | importing | rolling_back, while running.
+  step: z.string().nullable().optional(),
+  reason: z.string().nullable().optional(),
+  // On failure it always ends by saying what happened to the data.
+  message: z.string().nullable().optional(),
+  line: z.number().nullable().optional(),
+  reference: z.string().nullable().optional(),
+  restored: z.boolean().nullable().optional(),
+  safety_export_id: z.number().nullable().optional(),
+  requested_by: z.object({ id: z.number(), username: z.string() }).nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  created_at_human: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+  finished_at_human: z.string().nullable().optional(),
+});
+
+export const importsResponseSchema = z.object({
+  imports: z.array(importSchema).default([]),
 });
 
 /** Engine health. Mongo returns nulls for the SQL-only fields. */

@@ -4,15 +4,21 @@ import { ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
+import { AdminerButton } from "@/components/databases/adminer-button";
 
 // No `flex-wrap`: the table's action column should widen, not stack. Cards pass their own layout.
-const TABLE_ROW = "flex items-center justify-end gap-1";
+// gap-2: at gap-1 Manage, phpMyAdmin and Adminer ran together (Krishna, 15 Oct).
+const TABLE_ROW = "flex items-center justify-end gap-2";
 
 export function DatabaseRowActions({
   database,
   onDelete,
   canManage,
   phpmyadminSites,
+  adminerSites = null,
+  // The table drops Manage: its name cell already links to the same page, and with two
+  // database clients the row no longer fitted (Krishna, 15 Oct).
+  showManage = true,
   className = TABLE_ROW,
 }) {
   const t = useTranslations("databases");
@@ -20,18 +26,26 @@ export function DatabaseRowActions({
   return (
     <div className={className}>
       {/* Spelled out: users, credentials and backups live on the detail page. */}
-      <Button asChild variant="outline" size="sm">
-        <Link href={`/databases/${database.id}`} prefetch={false}>
-          {t("manage")}
-          <ChevronRight className="size-3.5" />
-        </Link>
-      </Button>
+      {showManage ? (
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/databases/${database.id}`} prefetch={false}>
+            {t("manage")}
+            <ChevronRight className="size-3.5" />
+          </Link>
+        </Button>
+      ) : null}
 
       {/* On the row too: opening the database is what most visits are for. */}
       <PhpmyadminButton
         database={database}
         canManage={canManage}
         sites={phpmyadminSites}
+        compact
+      />
+      <AdminerButton
+        database={database}
+        canManage={canManage}
+        sites={adminerSites}
         compact
       />
 
