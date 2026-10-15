@@ -1,0 +1,78 @@
+{
+    "schema": 1,
+    "slug": "hermesagent",
+    "version": 1,
+    "title": "Hermes Agent",
+    "tagline": {
+        "en": "Self-improving AI agent with a web dashboard, memory, skills and chat apps",
+        "es": "Agente de IA que se mejora a sí mismo, con panel web, memoria, habilidades y apps de chat",
+        "de": "Selbstverbessernder KI-Agent mit Web-Dashboard, Gedächtnis, Skills und Chat-Apps",
+        "fr": "Agent IA qui s’améliore lui-même, avec un tableau de bord web, une mémoire, des compétences et des applis de chat",
+        "pt": "Agente de IA que se aprimora sozinho, com painel web, memória, habilidades e apps de chat",
+        "ja": "Web ダッシュボード、メモリー、スキル、チャットアプリ連携を備えた自己改善型 AI エージェント",
+        "ru": "Самосовершенствующийся ИИ-агент с веб-панелью, памятью, навыками и чат-приложениями",
+        "hi": "वेब डैशबोर्ड, मेमोरी, स्किल्स और चैट ऐप्स वाला खुद को बेहतर बनाने वाला AI एजेंट"
+    },
+    "category": "ai",
+    "icon": "hermesagent",
+    "popular": false,
+    "catalog_order": 780,
+    "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard",
+    "images": {
+        "app": {
+            "ref": "nousresearch/hermes-agent:v0.22.2",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "hermes",
+            "role": "app"
+        }
+    ],
+    "container_port": 9119,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/opt/data"
+    },
+    "secrets": [
+        {
+            "key": "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "HERMES_DASHBOARD_BASIC_AUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "HERMES_DASHBOARD_PUBLIC_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Sign in to the dashboard with the username and password from the panel's credentials card. They are Hermes's bundled username/password provider (HERMES_DASHBOARD_BASIC_AUTH_USERNAME and _PASSWORD); HERMES_DASHBOARD_BASIC_AUTH_SECRET is a second generated secret that signs the sessions, so a restart does not log you out. Upstream rejects a dashboard on a non-loopback address without a login provider, and wrong passwords are rate-limited.",
+        "Upstream describes this provider as one shared credential without MFA, meant for trusted networks. Here it sits behind the panel's HTTPS with a 32-character random password. For a dashboard that more people reach, switch to Hermes's self-hosted OIDC provider (HERMES_DASHBOARD_OIDC_ISSUER and HERMES_DASHBOARD_OIDC_CLIENT_ID) as the Hermes web dashboard docs describe.",
+        "No model provider ships with the recipe. After signing in, add your LLM key (Nous Portal, OpenRouter, OpenAI, Anthropic and others) under API Keys and pick a model under Config. Chat platforms such as Telegram, Discord and Slack are set up there too; the gateway picks them up when it restarts.",
+        "One container runs `gateway run` with HERMES_DASHBOARD=1: the image's s6 supervisor keeps the messaging gateway and the dashboard (port 9119, the only published port) running side by side. Upstream's separate dashboard container needs a shared PID namespace, which the panel does not allow. The OpenAI-compatible API server (port 8642) stays off; API_SERVER_ENABLED is not set.",
+        "All state (config.yaml, the .env with your provider keys, state.db, sessions, memories and skills) lives in the one volume at /opt/data. The image starts as root only to give that volume to its hermes user (uid 10000); the gateway, the dashboard and this recipe's start command run as hermes.",
+        "HERMES_DASHBOARD_PUBLIC_URL is the url key, so a domain change re-renders it; Hermes accepts that hostname in its Host and WebSocket Origin checks. On every start the recipe also makes the container's own bridge gateway (/32, read from /proc/net/route) the only entry in dashboard.trusted_proxies in config.yaml: the panel's nginx reaches the container through that address, and trusting it lets Hermes see HTTPS (Secure session cookies) and the real client address for its login rate limit. When it has to change that entry, which happens on the first start, it restarts the dashboard once so the dashboard reads it.",
+        "The agent's terminal is Hermes's default local backend, so commands the agent runs happen inside its own container, which is the boundary: no docker.sock, no Docker terminal backend, no extra capabilities and no host mounts. Hermes keeps the dashboard password and signing secret out of the environment of those commands.",
+        "The exact v0.22.2 stable image is pinned (not latest, stable, main, an rc.* build or a -desktop variant). It is about 1.1 GB and includes a full Chromium for Hermes's browser tools; upstream recommends 2 GB or more with browser tools, hence the 2g floor."
+    ]
+}
