@@ -19,6 +19,8 @@ return [
         'out_of_memory' => 'The server ran out of memory during the update.',
         'composer_platform' => 'The site\'s PHP version or extensions do not meet the new release\'s requirements.',
         'no_build_tools' => 'Build tools are missing on the server. Install them and try again.',
+        'node_unsupported' => 'The new release needs a Node.js version this site does not run. Change the site\'s Node.js version, then update.',
+        'app_not_ready' => 'The new version did not start, so the previous version was put back.',
     ],
     'errors' => [
         'running' => 'An update of this application is already running.',

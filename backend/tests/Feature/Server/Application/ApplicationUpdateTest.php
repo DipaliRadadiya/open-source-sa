@@ -52,6 +52,9 @@ final class UpdateHost
     /** Command (joined, substring) that fails. */
     public static ?string $failOn = null;
 
+    /** @var array<string, string> command substring => stdout */
+    public static array $outputs = [];
+
     /** @var array<int, array{command: array<int, string>, path: ?string}> */
     public static array $runs = [];
 
@@ -61,6 +64,7 @@ final class UpdateHost
         self::$updated = false;
         self::$finalStep = null;
         self::$failOn = null;
+        self::$outputs = [];
         self::$runs = [];
 
         Process::fake(function ($process) {
@@ -75,6 +79,11 @@ final class UpdateHost
                 $file = self::$files[$args[2]] ?? null;
 
                 return $file === null ? Process::result(exitCode: 1) : Process::result(output: $file[self::$updated ? 1 : 0]);
+            }
+            foreach (self::$outputs as $needle => $output) {
+                if (str_contains($joined, $needle)) {
+                    return Process::result(output: $output);
+                }
             }
             if (self::$finalStep !== null && str_contains($joined, self::$finalStep)) {
                 self::$updated = true;
@@ -470,4 +479,134 @@ it('creates and drops its table', function () {
 
     $migration->up();
     expect(Schema::hasTable('application_updates'))->toBeTrue();
+});
+
+/*
+ * n8n and Node-RED (v7's update-n8n / update-node-red). Installed from npm
+ * into the site, so the version is read from the site's node_modules and the
+ * update is an npm install there — as the site user, with the site's Node,
+ * inside the installed major, never to a pre-release npm tags `next`.
+ */
+function npmApp(string $type, string $installed, ?string $node = '24.11.0'): Application
+{
+    $application = updateApp($type, '/', null);
+    $application->forceFill(['serving_profile' => 'node', 'node_version' => $node, 'app_port' => 5678])->save();
+    $package = $type === 'n8n' ? 'n8n' : 'node-red';
+    UpdateHost::$files[$application->documentRoot()."/node_modules/{$package}/package.json"] = [
+        json_encode(['name' => $package, 'version' => $installed]), json_encode(['name' => $package, 'version' => 'AFTER']),
+    ];
+
+    return $application;
+}
+
+/** @param  array<string, string>  $versions  version => engines.node */
+function fakePackument(string $package, array $tags, array $versions): void
+{
+    Http::fake(['registry.npmjs.org/'.$package => Http::response([
+        'dist-tags' => $tags,
+        'versions' => collect($versions)->map(fn ($range) => ['engines' => ['node' => $range]])->all(),
+    ])]);
+}
+
+function n8nReady(): void
+{
+    UpdateHost::$outputs['/rest/settings'] = json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => false]]]);
+}
+
+it('offers n8n the release npm calls latest, never the higher-numbered `next`', function () {
+    $application = npmApp('n8n', '2.40.1');
+    fakePackument('n8n', ['latest' => '2.43.6', 'stable' => '2.43.6', 'next' => '2.44.2', 'beta' => '2.44.2'], [
+        '2.40.1' => '>=24.0.0', '2.43.6' => '>=24.0.0', '2.44.2' => '>=24.0.0', '1.123.81' => '>=20.19 <= 24.x',
+    ]);
+
+    $status = app(ApplicationUpdates::class)->status($application);
+
+    expect($status['installed_version'])->toBe('2.40.1')
+        ->and($status['latest_version'])->toBe('2.43.6')
+        ->and($status['update_available'])->toBeTrue();
+});
+
+it('keeps Node-RED on its major — the maintenance tag — and only reports the next major', function () {
+    $application = npmApp('nodered', '4.1.10');
+    fakePackument('node-red', ['latest' => '5.0.8', 'v4-maintenance' => '4.1.16', 'next' => '5.0.9'], [
+        '4.1.10' => '>=18.5', '4.1.16' => '>=18.5', '4.1.17' => '>=18.5', '5.0.8' => '>=22.9', '5.0.9' => '>=22.9',
+    ]);
+
+    $status = app(ApplicationUpdates::class)->status($application);
+
+    expect($status['latest_version'])->toBe('4.1.16')
+        ->and($status['newer_major'])->toBe('5.0.8');
+});
+
+it('falls back to the highest release of a line no tag covers (n8n 1.x)', function () {
+    $application = npmApp('n8n', '1.120.0', '22.11.0');
+    fakePackument('n8n', ['latest' => '2.43.6', 'next' => '2.44.2'], [
+        '1.120.0' => '>=20.19', '1.123.81' => '>=20.19', '2.43.6' => '>=24.0.0',
+    ]);
+
+    expect(app(ApplicationUpdates::class)->status($application)['latest_version'])->toBe('1.123.81');
+});
+
+it('updates n8n with npm in the site as its user, restarts it, waits until it is really up, and leaves .env alone', function () {
+    $application = npmApp('n8n', '2.40.1');
+    fakePackument('n8n', ['latest' => '2.43.6'], ['2.40.1' => '>=24.0.0', '2.43.6' => '>=24.0.0']);
+    UpdateHost::$files[$application->documentRoot().'/node_modules/n8n/package.json'][1] = '{"version":"2.43.6"}';
+    UpdateHost::$finalStep = 'npm install --omit=dev --no-audit --no-fund n8n@2.43.6';
+    n8nReady();
+
+    $update = runUpdateJob(pendingUpdate($application, '2.40.1', '2.43.6'));
+    $npm = UpdateHost::run('n8n@2.43.6');
+    $root = $application->documentRoot();
+
+    expect($update->status)->toBe(ApplicationUpdateStatus::Completed)
+        ->and($npm['command'])->toContain('runuser', 'siteuser')
+        ->and(implode(' ', $npm['command']))->toContain('PATH=')
+        ->and($npm['path'])->toBe($root)
+        ->and(UpdateHost::ran("mv -- {$root}/node_modules {$root}/.node_modules.pre-update"))->toBeTrue()
+        ->and(UpdateHost::ran('systemctl restart'))->toBeTrue()
+        ->and(UpdateHost::ran('/rest/settings'))->toBeTrue()
+        ->and(UpdateHost::ran("rm -rf -- {$root}/.node_modules.pre-update"))->toBeTrue()
+        // The encryption key lives in .env; the update must never write it.
+        ->and(collect(UpdateHost::$runs)->contains(fn ($r) => in_array("{$root}/.env", $r['command'], true) && $r['command'][0] !== 'cat'))->toBeFalse()
+        ->and(UpdateHost::ran('-g'))->toBeFalse();
+});
+
+it('refuses a release the site\'s Node cannot run, before anything is moved', function () {
+    $application = npmApp('nodered', '4.1.10', '20.18.0');
+    fakePackument('node-red', ['latest' => '4.1.16'], ['4.1.10' => '>=18.5', '4.1.16' => '>=22.9']);
+
+    $update = runUpdateJob(pendingUpdate($application, '4.1.10', '4.1.16'));
+
+    expect($update->status)->toBe(ApplicationUpdateStatus::Failed)
+        ->and($update->reason)->toBe('node_unsupported')
+        ->and(UpdateHost::ran('mv'))->toBeFalse()
+        ->and(UpdateHost::ran('npm install'))->toBeFalse();
+});
+
+it('puts the previous node_modules back when npm fails, and says which step', function () {
+    $application = npmApp('nodered', '4.1.10');
+    fakePackument('node-red', ['latest' => '4.1.16'], ['4.1.10' => '>=18.5', '4.1.16' => '>=18.5']);
+    UpdateHost::$failOn = 'node-red@4.1.16';
+    $root = $application->documentRoot();
+
+    $update = runUpdateJob(pendingUpdate($application, '4.1.10', '4.1.16'));
+
+    expect($update->status)->toBe(ApplicationUpdateStatus::Failed)
+        ->and($update->step)->toBe('install_app')
+        ->and(UpdateHost::ran("mv -- {$root}/.node_modules.pre-update {$root}/node_modules"))->toBeTrue()
+        ->and(UpdateHost::ran("mv -- {$root}/.package.json.pre-update {$root}/package.json"))->toBeTrue();
+});
+
+it('puts n8n back when the new version never comes up', function () {
+    config(['server.installers.n8n.ready_attempts' => 1]);
+    $application = npmApp('n8n', '2.40.1');
+    fakePackument('n8n', ['latest' => '2.43.6'], ['2.40.1' => '>=24.0.0', '2.43.6' => '>=24.0.0']);
+    UpdateHost::$failOn = '/rest/settings';
+    $root = $application->documentRoot();
+
+    $update = runUpdateJob(pendingUpdate($application, '2.40.1', '2.43.6'));
+
+    expect($update->status)->toBe(ApplicationUpdateStatus::Failed)
+        ->and($update->reason)->toBe('app_not_ready')
+        ->and(UpdateHost::ran("mv -- {$root}/.node_modules.pre-update {$root}/node_modules"))->toBeTrue();
 });

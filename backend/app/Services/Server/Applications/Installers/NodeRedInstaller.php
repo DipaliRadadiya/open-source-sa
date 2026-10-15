@@ -2,7 +2,10 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
+use App\Services\Server\Applications\Installers\Concerns\UpdatesNpmApp;
 
 /**
  * Node-RED — flow-based automation.
@@ -24,8 +27,16 @@ use App\Models\Application;
  *    which the unit mounts read-only (`ProtectHome=read-only`), so the default
  *    would start and then fail to save a flow.
  */
-class NodeRedInstaller extends AbstractNodeInstaller
+class NodeRedInstaller extends AbstractNodeInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+    use UpdatesNpmApp;
+
+    protected function npmPackage(): string
+    {
+        return 'node-red';
+    }
+
     public function siteType(): string
     {
         return 'nodered';

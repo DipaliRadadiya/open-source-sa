@@ -19,6 +19,8 @@ return [
         'out_of_memory' => 'Dem Server ist während des Updates der Arbeitsspeicher ausgegangen.',
         'composer_platform' => 'PHP-Version oder Erweiterungen der Website erfüllen die Anforderungen der neuen Version nicht.',
         'no_build_tools' => 'Auf dem Server fehlen Build-Tools. Installieren Sie sie und versuchen Sie es erneut.',
+        'node_unsupported' => 'Die neue Version benötigt eine Node.js-Version, die diese Website nicht verwendet. Ändern Sie die Node.js-Version der Website und aktualisieren Sie dann.',
+        'app_not_ready' => 'Die neue Version ist nicht gestartet, daher wurde die vorherige Version wiederhergestellt.',
     ],
     'errors' => [
         'running' => 'Für diese Anwendung läuft bereits ein Update.',

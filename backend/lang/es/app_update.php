@@ -19,6 +19,8 @@ return [
         'out_of_memory' => 'El servidor se quedó sin memoria durante la actualización.',
         'composer_platform' => 'La versión de PHP o las extensiones del sitio no cumplen los requisitos de la nueva versión.',
         'no_build_tools' => 'Faltan herramientas de compilación en el servidor. Instálalas y vuelve a intentarlo.',
+        'node_unsupported' => 'La nueva versión necesita una versión de Node.js que este sitio no usa. Cambia la versión de Node.js del sitio y vuelve a actualizar.',
+        'app_not_ready' => 'La nueva versión no arrancó, así que se restauró la versión anterior.',
     ],
     'errors' => [
         'running' => 'Ya hay una actualización en curso para esta aplicación.',

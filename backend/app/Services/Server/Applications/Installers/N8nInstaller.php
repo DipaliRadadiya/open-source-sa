@@ -2,8 +2,11 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\ApplicationUpdater;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
+use App\Services\Server\Applications\Installers\Concerns\UpdatesNpmApp;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
@@ -37,8 +40,11 @@ use Illuminate\Support\Str;
  * not OSI-licensed, and that is worth knowing before it goes in a catalog next
  * to GPL software.
  */
-class N8nInstaller extends AbstractNodeInstaller
+class N8nInstaller extends AbstractNodeInstaller implements ApplicationUpdater
 {
+    use ResolvesUpdates;
+    use UpdatesNpmApp;
+
     public function siteType(): string
     {
         return 'n8n';
@@ -106,6 +112,21 @@ class N8nInstaller extends AbstractNodeInstaller
         if ($this->waitForSetupState($application, $base)) {
             throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'owner_not_created');
         }
+    }
+
+    protected function npmPackage(): string
+    {
+        return 'n8n';
+    }
+
+    /**
+     * n8n migrates its database when it starts, and answers 200 with a
+     * "starting up" page meanwhile — a restart that "succeeded" proves
+     * nothing. Wait for the real settings JSON, as the install does.
+     */
+    protected function confirmStarted(Application $application): void
+    {
+        $this->waitForSetupState($application, 'http://127.0.0.1:'.((int) ($application->app_port ?: 5678)));
     }
 
     /**
