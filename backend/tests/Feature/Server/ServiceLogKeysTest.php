@@ -49,6 +49,47 @@ it('serves that key through the logs endpoint, so the association is real', func
         ->assertJsonPath('log.key', 'nginx_error');
 });
 
+it('links MariaDB to its journal log, where Ubuntu\'s MariaDB writes', function () {
+    config([
+        'server.services' => [['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB']],
+        // The shipped mapping, not a copy of it: that is what was wrong.
+        'server.service_logs' => (require config_path('server.php'))['service_logs'],
+        'server.logs' => [
+            ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => "{$this->logDir}/mysql-error.log"],
+            ['key' => 'mariadb', 'label' => 'MariaDB', 'group' => 'database', 'kind' => 'journal', 'identifier' => 'mariadbd', 'path' => '', 'hide_when_empty' => true],
+        ],
+    ]);
+    // The service probe and journalctl both answer; only the latter matters here.
+    Process::fake(fn ($p) => str_contains(implode(' ', (array) $p->command), 'journalctl')
+        ? Process::result(output: "Oct 15 mariadbd[1]: ready for connections.\n")
+        : Process::result(output: "LoadState=loaded\nActiveState=active\nUnitFileState=enabled\n"));
+
+    $this->withHeader('Authorization', 'Bearer '.$this->token)->getJson('/api/services')
+        ->assertJsonPath('services.0.key', 'mariadb')
+        ->assertJsonPath('services.0.log_keys', ['mariadb']);
+});
+
+it('links PostgreSQL to the log of each cluster on the server, and to nothing when there is none', function () {
+    config([
+        'server.services' => [['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL']],
+        'server.postgres_log_dir' => $this->logDir,
+    ]);
+
+    $keys = fn () => $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/services')->json('services.0.log_keys');
+
+    expect($keys())->toBe([]);
+
+    File::put("{$this->logDir}/postgresql-18-main.log", "LOG: ready\n");
+    File::put("{$this->logDir}/postgresql-16-main.log", "LOG: ready\n");
+
+    expect($keys())->toEqualCanonicalizing(['postgresql_16_main', 'postgresql_18_main']);
+
+    $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/logs/postgresql_18_main')
+        ->assertOk();
+});
+
 it('derives the log key for each php-fpm version', function () {
     $phpDir = sys_get_temp_dir().'/sv-oss-svc-php-'.getmypid();
     File::deleteDirectory($phpDir);

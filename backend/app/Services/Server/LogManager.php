@@ -603,6 +603,17 @@ class LogManager
     }
 
     /**
+     * The keys of the PostgreSQL cluster logs on this server, for the
+     * Services row to link to.
+     *
+     * @return array<int, string>
+     */
+    public function postgresKeys(): array
+    {
+        return array_column($this->postgresLogs(), 'key');
+    }
+
+    /**
      * One log per PostgreSQL cluster.
      *
      * Debian names the file after the version and cluster —

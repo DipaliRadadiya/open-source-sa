@@ -256,9 +256,14 @@ class ServiceManager
     public function logKeys(string $key): array
     {
         // php8.4-fpm → php8.4_fpm, the key LogManager derives per version.
-        $candidates = ($version = $this->stack->versionForService($key)) !== null
-            ? ["php{$version}_fpm"]
-            : (array) config("server.service_logs.{$key}", []);
+        $candidates = match (true) {
+            ($version = $this->stack->versionForService($key)) !== null => ["php{$version}_fpm"],
+            // One log per cluster, named after its version (`postgresql_18_main`),
+            // so no fixed entry in `service_logs` can hold it. The Logs screen
+            // listed it while this row offered no log at all.
+            $key === 'postgresql' => $this->logs->postgresKeys(),
+            default => (array) config("server.service_logs.{$key}", []),
+        };
 
         return array_values(array_filter(
             $candidates,

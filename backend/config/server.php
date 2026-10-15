@@ -2591,8 +2591,9 @@ return [
     | registry below. This maps a service row to the existing Logs feature
     | instead of giving services a second way to read a log — same reader,
     | same permission, and the incremental cursor already there means the
-    | frontend can poll for a live view. php-fpm is derived per version.
-    | Keys pointing at a file that doesn't exist are dropped at request time.
+    | frontend can poll for a live view. php-fpm and PostgreSQL (one log per
+    | cluster) are derived. Keys pointing at a file that doesn't exist are
+    | dropped at request time.
     */
 
     'service_logs' => [
@@ -2601,7 +2602,9 @@ return [
         'apache' => ['apache_error', 'apache_access'],
         'openlitespeed' => ['openlitespeed_error', 'openlitespeed_access'],
         'mysql' => ['mysql_error', 'mysql_slow'],
-        'mariadb' => ['mysql_error', 'mysql_slow'],
+        // Ubuntu's MariaDB logs to the journal, not /var/log/mysql — without
+        // `mariadb` its Services row had no log on any of our servers.
+        'mariadb' => ['mysql_error', 'mysql_slow', 'mariadb'],
         'mongodb' => ['mongodb'],
         'redis' => ['redis'],
         'supervisor' => ['supervisor'],
