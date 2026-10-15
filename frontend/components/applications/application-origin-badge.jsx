@@ -29,10 +29,12 @@ export function ApplicationOriginBadge({ origin, compact = false }) {
     return null;
   }
 
+  // A neutral pill (`muted`), the same height and shape as the status pill beside it;
+  // the icon, not a dot, says it is where the app came from rather than its state.
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Badge variant="outline" className="gap-1 font-normal" aria-label={label} tabIndex={0}>
+        <Badge variant="muted" className="gap-1.5 font-normal" aria-label={label} tabIndex={0}>
           <Icon className="size-3" aria-hidden="true" />
           <span className={compact ? "hidden sm:inline" : undefined}>{label}</span>
         </Badge>

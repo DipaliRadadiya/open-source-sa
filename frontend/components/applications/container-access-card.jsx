@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Copy, Loader2, Power, SquareTerminal, UserRound } from "lucide-react";
+import { Copy, Loader2, Power, UserRound } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import {
   disableContainerAccess,
@@ -22,13 +22,14 @@ import {
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { apiMessage } from "@/lib/api/error-message";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkForm } from "@/components/ui/skeleton-kit";
 import { Caution } from "@/components/ui/caution";
 import { Note } from "@/components/ui/note";
 import {
@@ -77,6 +78,7 @@ export function ContainerAccessCard({
   const enabled = showsContainerAccess(application);
   const [access, setAccess] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [offPending, setOffPending] = useState(false);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -114,33 +116,55 @@ export function ContainerAccessCard({
     }
   }
 
+  // The "on" state's one action, so it sits in the header like the other cards' buttons.
+  async function turnOff() {
+    setOffPending(true);
+    try {
+      const response = await disableContainerAccess(application.id);
+      toast.success(t("commands.turnedOff", { username: access.owner.username }));
+      await settle(response);
+    } catch (error) {
+      toast.error(apiMessage(error, t("commands.turnOffFailed")));
+    } finally {
+      setOffPending(false);
+    }
+  }
+
   const username = access?.owner.username;
+  const loginOn = Boolean(access?.owner.container_login);
   const systemUserHref = username
     ? `/system-users?search=${encodeURIComponent(username)}`
     : "/system-users";
 
   return (
     <Card className={className} aria-labelledby="container-access-heading">
-      <CardHeader>
-        <CardTitle
-          id="container-access-heading"
-          as="h2"
-          className="flex items-center gap-2 text-lg font-semibold"
-        >
-          <SquareTerminal className="size-4 text-primary" />
+      {/* The application page's card head: plain title, its line, the action on the right. */}
+      <CardHeader className="border-b">
+        <CardTitle id="container-access-heading" as="h2">
           {t("title")}
         </CardTitle>
         <CardDescription>{t("description")}</CardDescription>
+        {loginOn && canManageSystemUsers ? (
+          <CardAction className="self-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={turnOff}
+              disabled={offPending}
+            >
+              {offPending ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
+              {t("commands.turnOff")}
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent>
         {!access ? (
-          <div className="space-y-4" aria-busy="true" aria-label={t("loading")}>
+          // Shaped like what loads: the owner line, then labels over wells in two columns.
+          <div className="space-y-5" aria-busy="true" aria-label={t("loading")}>
             <Skeleton className="h-4 w-56" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <Skeleton className="h-8 w-48" />
+            <SkForm fields={2} />
           </div>
         ) : (
           <div className="space-y-5">
@@ -161,14 +185,8 @@ export function ContainerAccessCard({
               </span>
             </p>
 
-            {access.owner.container_login ? (
-              <Commands
-                access={access}
-                applicationId={application.id}
-                canSeeSystemUsers={canSeeSystemUsers}
-                canManage={canManageSystemUsers}
-                onChanged={settle}
-              />
+            {loginOn ? (
+              <Commands access={access} canSeeSystemUsers={canSeeSystemUsers} />
             ) : canManageSystemUsers ? (
               <TurnOn
                 access={access}
@@ -224,7 +242,8 @@ function TurnOn({ access, applicationId, canOpenSecurity, onEnabled }) {
       <form
         noValidate
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        className="space-y-4 rounded-lg border p-4"
+        // Flat under a hairline, not a box inside the card.
+        className="space-y-4 border-t pt-5"
         aria-labelledby="container-login-heading"
       >
         <div className="space-y-1">
@@ -337,25 +356,11 @@ function TurnOn({ access, applicationId, canOpenSecurity, onEnabled }) {
   );
 }
 
-function Commands({ access, applicationId, canSeeSystemUsers, canManage, onChanged }) {
+function Commands({ access, canSeeSystemUsers }) {
   const t = useTranslations("applications.containerAccess.commands");
   const [container, setContainer] = useState("");
-  const [offPending, setOffPending] = useState(false);
   const { containers, commands, owner } = access;
   const selected = containers.find((item) => item.name === container) ?? defaultContainer(containers);
-
-  async function turnOff() {
-    setOffPending(true);
-    try {
-      const response = await disableContainerAccess(applicationId);
-      toast.success(t("turnedOff", { username: owner.username }));
-      await onChanged(response);
-    } catch (error) {
-      toast.error(apiMessage(error, t("turnOffFailed")));
-    } finally {
-      setOffPending(false);
-    }
-  }
 
   return (
     <div className="space-y-5">
@@ -391,7 +396,7 @@ function Commands({ access, applicationId, canSeeSystemUsers, canManage, onChang
       </div>
 
       {access.cli_examples.length > 0 ? (
-        <section className="space-y-3" aria-labelledby="container-access-app-commands">
+        <section className="space-y-3 border-t pt-5" aria-labelledby="container-access-app-commands">
           <h3 id="container-access-app-commands" className="text-sm font-medium">
             {t("appCommands")}
           </h3>
@@ -409,34 +414,20 @@ function Commands({ access, applicationId, canSeeSystemUsers, canManage, onChang
         </section>
       ) : null}
 
-      <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-start sm:justify-between">
-        <p className="max-w-prose text-xs leading-5 text-muted-foreground">
-          {t.rich("note", {
-            username: owner.username,
-            link: (chunks) =>
-              canSeeSystemUsers ? (
-                <Link href="/system-users" prefetch={false} className={linkClass}>
-                  {chunks}
-                </Link>
-              ) : (
-                chunks
-              ),
-          })}
-        </p>
-        {canManage ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={turnOff}
-            disabled={offPending}
-            className="shrink-0 self-start"
-          >
-            {offPending ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
-            {t("turnOff")}
-          </Button>
-        ) : null}
-      </div>
+      {/* A footnote under a hairline; Turn off is in the card's header. */}
+      <p className="border-t pt-4 text-xs leading-5 text-muted-foreground">
+        {t.rich("note", {
+          username: owner.username,
+          link: (chunks) =>
+            canSeeSystemUsers ? (
+              <Link href="/system-users" prefetch={false} className={linkClass}>
+                {chunks}
+              </Link>
+            ) : (
+              chunks
+            ),
+        })}
+      </p>
     </div>
   );
 }
@@ -460,11 +451,12 @@ function CommandLine({ label, command, testId, aside = null, quiet = false }) {
         <p className={quiet ? "text-sm text-muted-foreground" : "text-sm font-medium"}>{label}</p>
         {aside}
       </div>
-      <div className="flex items-start gap-2">
-        {/* Wraps instead of scrolling so the whole line is visible at 390px. */}
+      {/* The line and its Copy in one well, like a database's connection string. Wraps
+          instead of scrolling so the whole line is visible at 390px. */}
+      <div className="flex items-start gap-2 rounded-lg border bg-muted/40 py-1.5 pr-1.5 pl-3">
         <pre
           data-testid={testId}
-          className="min-w-0 flex-1 rounded-md border bg-muted px-3 py-2 font-mono text-xs leading-5 wrap-anywhere whitespace-pre-wrap"
+          className="min-w-0 flex-1 py-1.5 font-mono text-xs leading-5 wrap-anywhere whitespace-pre-wrap"
         >
           {command}
         </pre>

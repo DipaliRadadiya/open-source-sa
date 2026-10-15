@@ -22,10 +22,10 @@ function show(origin, compact = false) {
     createElement(TooltipProvider, null, createElement(Badge, { origin, compact }))));
 }
 for (const [origin, label] of [[recipe, "One-click app"], [{ kind: "image", image: "nginx:1.27" }, "Docker image"], [{ kind: "compose" }, "Docker Compose"]]) {
-  test(`${origin.kind} renders its label and outline badge`, () => {
+  test(`${origin.kind} renders its label as a neutral pill beside the status pill`, () => {
     show(origin);
     const badge = screen.getByLabelText(label);
-    assert.equal(badge.dataset.variant, "outline");
+    assert.equal(badge.dataset.variant, "muted");
     assert.equal(badge.textContent, label);
     assert.ok(badge.querySelector("svg.size-3"));
   });

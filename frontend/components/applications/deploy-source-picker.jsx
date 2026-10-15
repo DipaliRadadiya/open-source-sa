@@ -3,12 +3,14 @@ import { useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { Container, FileCode2, PackageCheck, PenLine, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Caution } from "@/components/ui/caution";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { setDockerSource } from "@/lib/docker/create-request";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
 import { RecipeSummary } from "@/components/applications/recipe-summary";
+
+// Both tabs share one size, so a phone does not show them in two type sizes.
+const TAB = "min-w-0 whitespace-normal text-xs sm:text-sm";
 
 export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSource }) {
   const t = useTranslations("applications");
@@ -67,10 +69,10 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
   return (
     <Tabs value={tab} onValueChange={changeTab} className="min-w-0 gap-3">
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="recipes" className="min-w-0 whitespace-normal text-xs sm:text-sm">
+        <TabsTrigger value="recipes" className={TAB}>
           <PackageCheck className="size-4" aria-hidden />{t("recipes.tabOneClick")}
         </TabsTrigger>
-        <TabsTrigger ref={dockerTrigger} value="docker">
+        <TabsTrigger ref={dockerTrigger} value="docker" className={TAB}>
           <Container className="size-4" aria-hidden />{t("recipes.tabDocker")}
         </TabsTrigger>
       </TabsList>
@@ -84,12 +86,13 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
           onChange={chooseRecipe}
           searchPlaceholder={t("recipes.searchPlaceholder")}
           renderNoMatch={(query) => (
-            <Caution size="md">
-              <p className="break-words">{t("recipes.noMatch", { query })}</p>
-              <Button type="button" variant="outline" size="sm" className="h-auto max-w-full whitespace-normal break-all py-1.5 text-start" onClick={() => searchDocker(query)}>
+            // The picker's own no-result shape (dashed, centred), with the way out under it.
+            <div className="rounded-xl border border-dashed px-3 py-8 text-center">
+              <p className="text-sm wrap-anywhere text-muted-foreground">{t("recipes.noMatch", { query })}</p>
+              <Button type="button" variant="outline" size="sm" className="mt-3 h-auto max-w-full py-1.5 whitespace-normal wrap-anywhere" onClick={() => searchDocker(query)}>
                 {t("recipes.searchDockerInstead", { query })}
               </Button>
-            </Caution>
+            </div>
           )}
         />
         {selected ? <RecipeSummary type={selected} /> : null}

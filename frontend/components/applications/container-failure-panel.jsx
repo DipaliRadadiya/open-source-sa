@@ -13,7 +13,8 @@ import { portFixFor } from "@/lib/applications/container-state";
 import { useImageInspection } from "@/lib/docker/use-image-inspection";
 import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardIcon } from "@/components/ui/card-icon";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
@@ -127,92 +128,111 @@ export function ContainerFailurePanel({
 
   const working = busy !== null;
   const title = application.container_status === "restarting" ? t("titleRestarting") : t("title");
+  const usePort = fixPort && canManageContainer;
+  const hasActions = canManageContainer || canEditEnv || canSeeLogs || canRedeploy;
+  const waiting = working && !firstDeploy;
+  // No empty body under the header band when there is no log to show.
+  const hasBody = canSeeLogs || waiting;
 
   return (
-    <Card className={cn("gap-0 overflow-hidden border-destructive/30 py-0 shadow-sm", className)}>
-      <div className="flex items-start gap-3 border-b px-5 py-4">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
-          <CircleAlert className="size-6 text-destructive" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-medium">{title}</p>
-          <p className="text-sm text-muted-foreground">{t("lead")}</p>
-          {checkedAt ? (
-            // Server and browser clocks render "N seconds ago" differently.
-            <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-              {t("checkedAt", { time: format.relativeTime(Math.min(checkedAt, now.getTime()), now) })}
-            </p>
-          ) : null}
+    // The card is the problem; the red is in its edge and icon, never the title.
+    <Card className={cn("@container/failure border-destructive/30", className)}>
+      {/* Several fixes, so they stack under the title until the card is wide (as Source). */}
+      <CardHeader
+        className={cn(
+          "flex flex-col gap-3 @3xl/failure:flex-row @3xl/failure:items-start @3xl/failure:justify-between",
+          hasBody && "border-b",
+        )}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <CardIcon icon={CircleAlert} tone="destructive" />
+          <div className="min-w-0 space-y-0.5">
+            <CardTitle as="h2">{title}</CardTitle>
+            <CardDescription>{t("lead")}</CardDescription>
+            {checkedAt ? (
+              // Server and browser clocks render "N seconds ago" differently.
+              <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+                {t("checkedAt", { time: format.relativeTime(Math.min(checkedAt, now.getTime()), now) })}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
-
-      <CardContent className="space-y-4 px-5 py-4">
-        {canSeeLogs ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">{t("logTitle")}</p>
-              {log ? <CopyButton value={log} label={t("copyLog")} /> : null}
-            </div>
-            {log ? (
-              <pre
-                tabIndex={0}
-                aria-label={t("logTitle")}
-                className="max-h-72 overflow-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all"
+        {hasActions ? (
+          <div className="flex flex-wrap gap-2 @3xl/failure:max-w-[60%] @3xl/failure:shrink-0 @3xl/failure:justify-end">
+            {usePort ? (
+              <Button size="sm" onClick={() => run("usePort", () => applyPort(fixPort))} disabled={working}>
+                {busy === "usePort" ? <Loader2 className="size-4 animate-spin" /> : <Plug className="size-4" />}
+                {busy === "usePort" ? t("applying", { port: fixPort }) : t("usePort", { port: fixPort })}
+              </Button>
+            ) : null}
+            {canManageContainer ? (
+              <Button size="sm" variant="outline" onClick={openPortDialog} disabled={working}>
+                <Plug className="size-4" />
+                {t("changePort")}
+              </Button>
+            ) : null}
+            {canEditEnv ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/applications/${application.id}/environment`}>
+                  <SlidersHorizontal className="size-4" />
+                  {t("editEnv")}
+                </Link>
+              </Button>
+            ) : null}
+            {canSeeLogs ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/applications/${application.id}/logs`}>
+                  <FileText className="size-4" />
+                  {t("viewLogs")}
+                </Link>
+              </Button>
+            ) : null}
+            {canRedeploy ? (
+              <Button
+                size="sm"
+                variant={usePort ? "outline" : "default"}
+                onClick={() => run("redeploy", redeploy)}
+                disabled={working}
               >
-                {log}
-              </pre>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t("logEmpty")}</p>
-            )}
+                {busy === "redeploy" ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
+                {busy === "redeploy" ? t("redeploying") : t("redeploy")}
+              </Button>
+            ) : null}
           </div>
         ) : null}
+      </CardHeader>
 
-        <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:flex-wrap">
-          {fixPort && canManageContainer ? (
-            <Button onClick={() => run("usePort", () => applyPort(fixPort))} disabled={working}>
-              {busy === "usePort" ? <Loader2 className="size-4 animate-spin" /> : <Plug className="size-4" />}
-              {busy === "usePort" ? t("applying", { port: fixPort }) : t("usePort", { port: fixPort })}
-            </Button>
-          ) : null}
-          {canManageContainer ? (
-            <Button variant="outline" onClick={openPortDialog} disabled={working}>
-              <Plug className="size-4" />
-              {t("changePort")}
-            </Button>
-          ) : null}
-          {canEditEnv ? (
-            <Button asChild variant="outline">
-              <Link href={`/applications/${application.id}/environment`}>
-                <SlidersHorizontal className="size-4" />
-                {t("editEnv")}
-              </Link>
-            </Button>
-          ) : null}
+      {hasBody ? (
+        <CardContent className="space-y-3">
+          {waiting ? <WaitNote>{t("waitNote")}</WaitNote> : null}
+          {/* Raw output on the console surface, like a deploy's build log. */}
           {canSeeLogs ? (
-            <Button asChild variant="outline">
-              <Link href={`/applications/${application.id}/logs`}>
-                <FileText className="size-4" />
-                {t("viewLogs")}
-              </Link>
-            </Button>
+            <div className="overflow-hidden rounded-lg border border-console-border bg-console">
+              <div className="flex items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
+                <span className="font-mono text-xs text-console-muted">{t("logTitle")}</span>
+                {log ? (
+                  <CopyButton
+                    value={log}
+                    label={t("copyLog")}
+                    className="text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
+                  />
+                ) : null}
+              </div>
+              {log ? (
+                <pre
+                  tabIndex={0}
+                  aria-label={t("logTitle")}
+                  className="console-scroll max-h-72 overflow-auto p-3 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-console-foreground"
+                >
+                  {log}
+                </pre>
+              ) : (
+                <p className="p-3 text-xs text-console-muted">{t("logEmpty")}</p>
+              )}
+            </div>
           ) : null}
-          {canRedeploy ? (
-            <Button
-              variant={fixPort && canManageContainer ? "outline" : "default"}
-              onClick={() => run("redeploy", redeploy)}
-              disabled={working}
-            >
-              {busy === "redeploy" ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
-              {busy === "redeploy" ? t("redeploying") : t("redeploy")}
-            </Button>
-          ) : null}
-        </div>
-        {working && !firstDeploy ? (
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {t("waitNote")}
-          </p>
-        ) : null}
-      </CardContent>
+        </CardContent>
+      ) : null}
 
       <FormModal
         open={dialogOpen}
@@ -261,12 +281,18 @@ export function ContainerFailurePanel({
             <p className="text-xs text-muted-foreground">{t("portDialog.hint")}</p>
           )}
         </div>
-        {busy === "dialog" && !firstDeploy ? (
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {t("waitNote")}
-          </p>
-        ) : null}
+        {busy === "dialog" && !firstDeploy ? <WaitNote>{t("waitNote")}</WaitNote> : null}
       </FormModal>
     </Card>
+  );
+}
+
+// The panel's in-progress line (as Update and Source while they run).
+function WaitNote({ children }) {
+  return (
+    <p role="status" className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+      <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" aria-hidden />
+      <span>{children}</span>
+    </p>
   );
 }

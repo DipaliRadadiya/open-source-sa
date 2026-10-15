@@ -2,7 +2,6 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Explicit keys keep every first-run promise visible to check-i18n.
@@ -25,18 +24,20 @@ export function RecipeSummary({ type }) {
   const afterInstall = firstRunText(recipe.first_run?.kind, t);
 
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle as="h3" className="flex items-center gap-3">
+    // Framed like the required-services panel that shares this slot, not a card in a card.
+    <section className="overflow-hidden rounded-xl border" aria-labelledby="recipe-summary-heading">
+      <div className="border-b bg-muted/30 px-4 py-3">
+        <h3 id="recipe-summary-heading" className="flex items-center gap-3 text-sm font-medium">
           <SiteTypeLogo name={type.name} iconDataUri={recipe.icon_data_uri} />
           {t("recipes.detailsTitle")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4 sm:gap-y-2">
-          <dt className="text-muted-foreground">{t("recipes.servicesLabel")}</dt>
+        </h3>
+      </div>
+      <div className="space-y-3 p-4">
+        {/* Label and value on one line from sm, as in the panel's other two-column lists. */}
+        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:items-baseline sm:gap-x-4 sm:gap-y-2">
+          <dt className="text-xs text-muted-foreground">{t("recipes.servicesLabel")}</dt>
           <dd className="min-w-0 break-words">{recipe.services.map((service) => service.name).join(", ")}</dd>
-          <dt className="text-muted-foreground">{t("recipes.storageLabel")}</dt>
+          <dt className="text-xs text-muted-foreground">{t("recipes.storageLabel")}</dt>
           <dd className="min-w-0">
             {recipe.volumes.length ? (
               <ul className="space-y-1 font-mono text-xs">
@@ -46,7 +47,7 @@ export function RecipeSummary({ type }) {
           </dd>
           {afterInstall ? (
             <>
-              <dt className="text-muted-foreground">{t("recipes.firstRunLabel")}</dt>
+              <dt className="text-xs text-muted-foreground">{t("recipes.firstRunLabel")}</dt>
               <dd className="min-w-0 leading-relaxed">{afterInstall}</dd>
             </>
           ) : null}
@@ -77,7 +78,7 @@ export function RecipeSummary({ type }) {
             {t("recipes.docs")}<ExternalLink className="size-3.5" aria-hidden />
           </a>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

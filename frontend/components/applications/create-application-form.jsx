@@ -2256,17 +2256,21 @@ export function CreateApplicationForm({
                       onUseCompose={() => setDockerSource(form, "compose")}
                     />
                   ) : isDocker ? (
-                    <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                      {t("dockerImage.composeMode")}{" "}
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="h-auto p-0 text-sm"
-                        onClick={() => setDockerSource(form, "search")}
-                      >
-                        {t("dockerImage.useImage")}
-                      </Button>
-                    </p>
+                    // The form's note shape (as the DNS note above): icon on the first line.
+                    <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
+                      <Info className="mt-px size-3.5 shrink-0" aria-hidden />
+                      <p className="min-w-0">
+                        {t("dockerImage.composeMode")}{" "}
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto max-w-full p-0 text-start text-xs whitespace-normal"
+                          onClick={() => setDockerSource(form, "search")}
+                        >
+                          {t("dockerImage.useImage")}
+                        </Button>
+                      </p>
+                    </div>
                   ) : null}
                   {formStandardFields.length ? (
                     <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">

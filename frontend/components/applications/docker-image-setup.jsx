@@ -2,19 +2,15 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useFormatter, useTranslations } from "next-intl";
 import {
-  BadgeCheck,
+  Box,
   ChevronDown,
   FileCode2,
-  HardDrive,
   KeyRound,
   Loader2,
-  Network,
   Plus,
   Search,
-  SlidersHorizontal,
   Star,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   getDockerImageTags,
@@ -43,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Note } from "@/components/ui/note";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkForm } from "@/components/ui/skeleton-kit";
 import {
   Select,
   SelectContent,
@@ -60,6 +57,8 @@ import {
 } from "@/components/ui/form";
 
 const EXAMPLES = ["memos", "uptime-kuma", "nginx"];
+// Main's higher-contrast amber for warning TEXT; plain `text-warning` is faint on white.
+const WARNING_TEXT = "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning";
 const NO_REGISTRY = "__none__";
 // Set by the base image or the build, never a setting of the app itself.
 const SYSTEM_ENV = /^(PATH|HOME|HOSTNAME|TERM|LANG|LANGUAGE|LC_[A-Z]+|SHLVL|PWD|GPG_KEYS?|[A-Z0-9_]+_(VERSION|SHA256|SHA512|CHECKSUM|GPG_KEY))$/;
@@ -394,11 +393,14 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
           <FormItem data-field-name="image" className="min-w-0">
             <FormLabel required hint={t("imageHint")}>{mode === "manual" ? tm("manualImageLabel") : t("imageLabel")}</FormLabel>
             {chosen ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                <BadgeCheck className="size-4 shrink-0 text-success" aria-hidden />
-                <span className="min-w-0 break-all font-mono text-sm">{repository}</span>
-                <Button type="button" variant="ghost" size="sm" className="ms-auto" onClick={clearChoice}>
-                  <X className="size-3.5" aria-hidden />
+              // The type picker's chosen row (tile, name, Change), so a chosen image and a
+              // chosen 1-Click recipe look the same.
+              <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
+                  <Box className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1 break-all font-mono text-sm font-medium">{repository}</span>
+                <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={clearChoice}>
                   {t("changeImage")}
                 </Button>
               </div>
@@ -467,25 +469,26 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                   </Note>
                 ) : null}
                 {listOpen ? (
-                  <div className="rounded-lg border bg-card">
+                  // A flat tinted well under the search box; rows as in the panel's combobox.
+                  <div className="rounded-lg bg-muted/40 p-1">
                     {/* Announced as it changes: a screen reader is otherwise never told results arrived. */}
-                    <div role="status" aria-live="polite" className={cn(options.length && "[&>p:not(.sr-only)]:border-b")}>
+                    <div role="status" aria-live="polite">
                       {searchState === "loading" ? (
-                        <p className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
-                          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                        <p className="flex items-center gap-2 px-2.5 py-2 text-sm text-muted-foreground">
+                          <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden />
                           {t("searching")}
                         </p>
                       ) : searchState === "empty" ? (
-                        <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("noResults", { query: typed })}</p>
+                        <p className="px-2.5 py-2 text-sm text-muted-foreground">{t("noResults", { query: typed })}</p>
                       ) : searchState === "offline" ? (
-                        <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("offline")}</p>
+                        <p className="px-2.5 py-2 text-sm text-muted-foreground">{t("offline")}</p>
                       ) : searchState === "unavailable" ? (
-                        <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("searchUnavailable")}</p>
+                        <p className="px-2.5 py-2 text-sm text-muted-foreground">{t("searchUnavailable")}</p>
                       ) : searchState === "ready" ? (
                         <p className="sr-only">{t("resultsFound", { count: searchResults.length })}</p>
                       ) : null}
                     </div>
-                    <ul id={listId} role="listbox" aria-label={t("resultsLabel")} className="max-h-80 overflow-y-auto">
+                    <ul id={listId} role="listbox" aria-label={t("resultsLabel")} className="max-h-80 space-y-0.5 overflow-y-auto">
                       {options.map((option, index) => (
                         <li
                           key={`${option.typed ? "typed" : "hit"}-${option.image}`}
@@ -496,8 +499,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                           onClick={() => choose(option.image)}
                           onMouseEnter={() => setActive(index)}
                           className={cn(
-                            "flex cursor-pointer items-start gap-3 border-b px-3 py-2.5 last:border-b-0",
-                            index === active && "bg-muted/60",
+                            "flex cursor-pointer items-start gap-3 rounded-md px-2.5 py-2",
+                            index === active && "bg-accent text-accent-foreground",
                           )}
                         >
                           {option.typed ? (
@@ -511,8 +514,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="break-all font-mono text-sm font-medium">{option.image}</span>
-                                {option.official ? <Badge variant="success">{t("official")}</Badge> : null}
-                                {option.verified_publisher ? <Badge>{t("verified")}</Badge> : null}
+                                {option.official ? <Badge variant="success" className="font-normal">{t("official")}</Badge> : null}
+                                {option.verified_publisher ? <Badge className="font-normal">{t("verified")}</Badge> : null}
                               </div>
                               {option.description ? (
                                 <p className="line-clamp-2 text-xs text-muted-foreground">{option.description}</p>
@@ -542,8 +545,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                         key={example}
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="h-6 px-2 font-mono text-xs"
+                        size="xs"
+                        className="font-mono"
                         onClick={() => setQuery(example)}
                       >
                         {example}
@@ -563,7 +566,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
         <div data-field-name="image_tag" className="space-y-2">
           <Label htmlFor={versionId} hint={t("versionHint")}>{t("versionLabel")}</Label>
           {tags.state === "loading" ? (
-            <Skeleton className="h-9 w-full sm:w-72" />
+            <Skeleton className="h-9 w-full rounded-lg sm:w-72" />
           ) : tags.state === "ready" ? (
             <Select value={tag} onValueChange={setTag}>
               <SelectTrigger id={versionId} className="w-full sm:w-72">
@@ -575,7 +578,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                   <SelectItem key={item.name} value={item.name}>
                     <span className="font-mono">{item.name}</span>
                     {item.name === tags.recommended ? (
-                      <Badge variant="success" className="ms-2">{t("recommended")}</Badge>
+                      <Badge variant="success" className="ms-2 font-normal">{t("recommended")}</Badge>
                     ) : null}
                   </SelectItem>
                 ))}
@@ -599,10 +602,10 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
 
       {/* 3. What the image declares */}
       {chosen && reference ? (
-        <section aria-labelledby="docker-detected-heading" className="space-y-4 rounded-lg border p-4">
+        <section aria-labelledby="docker-detected-heading" className="space-y-4 border-t pt-5">
           <div>
             <h3 id="docker-detected-heading" className="font-medium">{t("detectedTitle")}</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
               {t.rich("detectedHint", {
                 image: reference,
                 mono: (chunks) => <span className="break-all font-mono">{chunks}</span>,
@@ -611,13 +614,13 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
           </div>
 
           {inspection.state === "loading" ? (
-            <div className="space-y-2" aria-busy="true">
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            // The panel's in-progress line, then the fields' shape from the skeleton kit.
+            <div className="space-y-4" aria-busy="true">
+              <p className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" aria-hidden />
                 {t("reading")}
               </p>
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-5 w-64" />
+              <SkForm fields={2} columns={1} />
             </div>
           ) : inspection.state === "notfound" ? (
             <Caution tone="destructive" size="md">
@@ -636,10 +639,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                 name="container_port"
                 render={({ field }) => (
                   <FormItem data-field-name="container_port" className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Network className="size-4 text-muted-foreground" aria-hidden />
-                      <FormLabel hint={t("portHint")} required={portAsked}>{t("portLabel")}</FormLabel>
-                    </div>
+                    <FormLabel hint={t("portHint")} required={portAsked}>{t("portLabel")}</FormLabel>
                     {portAsked || portEditing ? (
                       <>
                         <FormControl>
@@ -673,7 +673,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                       </>
                     ) : (
                       <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                        <span className="font-mono text-base font-medium">{field.value}</span>
+                        <span className="font-mono text-sm font-medium">{field.value}</span>
                         <span className="text-muted-foreground">
                           {detected?.port_confidence === "guessed" ? t("portGuessed") : t("portDetected")}
                         </span>
@@ -691,7 +691,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                       <FormDescription>{t("portOthers", { ports: otherPorts.join(", ") })}</FormDescription>
                     ) : null}
                     {portDiffers && !portEditing ? (
-                      <FormDescription className="text-warning">
+                      <FormDescription className={WARNING_TEXT}>
                         {t("portDiffers", { port: detected.suggested_port })}
                       </FormDescription>
                     ) : null}
@@ -703,10 +703,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
               {/* Storage */}
               {inspection.state === "ready" ? (
                 <div className="space-y-2" data-field-name="docker_volumes">
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    <HardDrive className="size-4 text-muted-foreground" aria-hidden />
-                    {t("storageLabel")}
-                  </p>
+                  <p className="text-sm font-medium">{t("storageLabel")}</p>
                   {volumes.length ? (
                     <ul className="space-y-2">
                       {volumes.map((volume, index) => {
@@ -764,10 +761,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
               {/* Settings (environment variables) */}
               {inspection.state === "ready" || envRows.length ? (
                 <div className="space-y-2" data-field-name="docker_env">
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden />
-                    <span>{t("settingsLabel")}</span>
-                  </p>
+                  <p className="text-sm font-medium">{t("settingsLabel")}</p>
                   <p className="text-sm text-muted-foreground">{t("settingsHint")}</p>
                   {envRows.length ? (
                     <ul className="space-y-2">
@@ -826,7 +820,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                             {keyError || valueError ? (
                               <p id={messageId} className="text-xs text-destructive">{keyError || valueError}</p>
                             ) : missing ? (
-                              <p id={messageId} className="text-xs text-warning">{t("envRequired")}</p>
+                              <p id={messageId} className={cn("text-xs", WARNING_TEXT)}>{t("envRequired")}</p>
                             ) : badKey ? (
                               <p id={messageId} className="text-xs text-destructive">{t("envKeyInvalid")}</p>
                             ) : null}

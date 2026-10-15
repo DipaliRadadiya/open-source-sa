@@ -379,7 +379,7 @@ export function ContainerCard({
                         <FormLabel hint={tImage("portHint")}>{t("containerPort")}</FormLabel>
                         {matches && !portEditing ? (
                           <p className="flex min-h-9 flex-wrap items-center gap-x-2 text-sm">
-                            <span className="font-mono text-base font-medium">{field.value}</span>
+                            <span className="font-mono text-sm font-medium">{field.value}</span>
                             <span className="text-muted-foreground">{tImage("portDetected")}</span>
                             {canManage ? (
                               <Button
@@ -403,7 +403,8 @@ export function ContainerCard({
                           </FormControl>
                         )}
                         {detectedPort && !matches ? (
-                          <FormDescription className="flex flex-wrap items-center gap-x-2 text-warning">
+                          // Main's higher-contrast amber for warning text; plain `text-warning` is faint on white.
+                          <FormDescription className="flex flex-wrap items-center gap-x-2 text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning">
                             <span>{tImage("portDiffers", { port: detectedPort })}</span>
                             {canManage ? (
                               <Button

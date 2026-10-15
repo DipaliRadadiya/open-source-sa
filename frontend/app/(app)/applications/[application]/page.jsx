@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ExternalLink } from "lucide-react";
+import { CircleAlert, ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { getSiteTypes } from "@/lib/applications/get-applications";
@@ -352,9 +352,11 @@ export default async function ApplicationDetailPage({ params }) {
                 {"\u2060"}
                 <CopyButton value={application.domain} className="-my-1 ml-0.5 inline-flex align-middle" />
               </p>
-              {/* The container's own words for why it is down; the fixes are in the panel below. */}
+              {/* The container's own words for why it is down; the fixes are in the panel below.
+                  A tinted tag like the list's status notes, not loose red text under the name. */}
               {containerFailed ? (
-                <p className="mt-1 max-w-prose text-sm break-words text-destructive">
+                <p className="mt-1.5 flex w-fit max-w-full items-start gap-1.5 rounded-md bg-destructive-soft px-2 py-1 text-xs leading-4 [overflow-wrap:anywhere] text-destructive">
+                  <CircleAlert className="mt-px size-3 shrink-0" aria-hidden />
                   {application.last_failure.message || t("containerFailure.noReason")}
                 </p>
               ) : null}

@@ -180,6 +180,7 @@ test("an image-origin row renders Docker image in the applications table", async
     const row = screen.getAllByRole("row").find(row => row.textContent.includes("Docker fixture"));
     assert.ok(row, "image fixture row exists");
     assert.ok(row.textContent.includes("Docker image"));
-    assert.equal(row.querySelector('[aria-label="Docker image"]')?.getAttribute("data-variant"), "outline");
+    // The origin is a neutral pill, the same shape as the status pill beside it.
+    assert.equal(row.querySelector('[aria-label="Docker image"]')?.getAttribute("data-variant"), "muted");
   } finally { cleanup(); }
 });
