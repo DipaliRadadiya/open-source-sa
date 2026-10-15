@@ -36,18 +36,11 @@ services:
         else:
             raise SystemExit("no default route")
         ')
-        if python3 - "$$PROXY" <<'PY'
-        import sys, yaml
-        try:
-            config = yaml.safe_load(open("/opt/data/config.yaml")) or {}
-        except OSError:
-            config = {}
-        sys.exit(0 if (config.get("dashboard") or {}).get("trusted_proxies") == [sys.argv[1]] else 1)
-        PY
-        then
+        WANT="[\"$$PROXY\"]"
+        if [ "$$(hermes config get --json dashboard.trusted_proxies 2>/dev/null)" = "$$WANT" ]; then
           echo "[panel] dashboard.trusted_proxies already $$PROXY"
         else
-          hermes config set dashboard.trusted_proxies "[\"$$PROXY\"]"
+          hermes config set dashboard.trusted_proxies "$$WANT"
           /command/s6-svc -r /run/service/dashboard
           echo "[panel] dashboard.trusted_proxies set to $$PROXY; dashboard restarted to read it"
         fi
