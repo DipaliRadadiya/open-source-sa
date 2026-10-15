@@ -22,7 +22,7 @@ export const getMe = cache(async () => {
   // explain them rather than show only a digest.
   let res;
   try {
-    res = await fetchWithRetry(() =>
+    res = await fetchWithRetry((signal) =>
       fetch(url, {
         headers: {
           Accept: "application/json",
@@ -34,6 +34,7 @@ export const getMe = cache(async () => {
           Origin: process.env.NEXT_PUBLIC_APP_URL,
         },
         cache: "no-store",
+        signal,
       }),
     );
   } catch (cause) {

@@ -1,0 +1,111 @@
+{
+    "slug": "freshrss",
+    "container_port": 80,
+    "volume_roles": {
+        "data": "/var/www/FreshRSS/data"
+    },
+    "generated_secrets": [],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "freshrss",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/var/www/FreshRSS/data"
+        }
+    ],
+    "docker_secret_keys": [],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "FreshRSS",
+            "tagline": "Self-hosted feed reader"
+        },
+        "es": {
+            "title": "FreshRSS",
+            "tagline": "Lector de feeds autoalojado"
+        },
+        "de": {
+            "title": "FreshRSS",
+            "tagline": "Selbst gehosteter Feed-Reader"
+        },
+        "fr": {
+            "title": "FreshRSS",
+            "tagline": "Lecteur de flux auto-hébergé"
+        },
+        "pt": {
+            "title": "FreshRSS",
+            "tagline": "Leitor de feeds auto-hospedado"
+        },
+        "ja": {
+            "title": "FreshRSS",
+            "tagline": "セルフホスト型フィードリーダー"
+        },
+        "ru": {
+            "title": "FreshRSS",
+            "tagline": "Читалка лент на своём сервере"
+        },
+        "hi": {
+            "title": "FreshRSS",
+            "tagline": "स्व-होस्टेड फ़ीड रीडर"
+        }
+    },
+    "catalog_en": {
+        "name": "freshrss",
+        "icon": "freshrss",
+        "category": "productivity",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

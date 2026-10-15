@@ -6,8 +6,8 @@ import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 
 // Fixed `h-7 w-12` slot so text beside the logo starts at the same x on every row.
 // `label` only where the mark is the sole indication; most marks do not spell their name.
-export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12", label = null }) {
-  const logo = siteTypeLogo(name);
+export function SiteTypeLogo({ name, provider, iconDataUri, className, size = "h-7 w-12", label = null }) {
+  const logo = iconDataUri || siteTypeLogo(name);
 
   return (
     <span
@@ -20,10 +20,11 @@ export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12", lab
     >
       {/* A git site shows its provider's mark when known (drawn `mono` so it does
           not outshout the names); otherwise the generic git mark. */}
-      {provider ? (
+      {provider && !iconDataUri ? (
         <ProviderLogo provider={provider} className="size-5" mono />
       ) : logo ? (
-        // Small local files, usually SVG; next/image cannot optimise SVG without
+        // Catalog data URIs and small local SVGs need no optimisation.
+        // next/image cannot optimise SVG without
         // `dangerouslyAllowSVG`, and there is nothing to optimise.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logo} alt="" aria-hidden className="max-h-full max-w-full object-contain" />

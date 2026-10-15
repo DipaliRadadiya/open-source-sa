@@ -11,6 +11,7 @@ use App\Http\Controllers\API\Server\ApplicationWebRootController;
 use App\Http\Controllers\API\Server\CertificateController;
 use App\Http\Controllers\API\Server\DeploymentController;
 use App\Http\Controllers\API\Server\MagicLoginController;
+use App\Http\Controllers\API\Server\RecipeController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/server/capabilities', [ServerCapabilityController::class, 'index'])->middleware('permission:application');
 
 Route::get('/site-types', [SiteTypeController::class, 'index'])->middleware('permission:application');
+
+Route::get('/recipes', [RecipeController::class, 'index'])->middleware('permission:application');
+Route::get('/recipes/{recipe}', [RecipeController::class, 'show'])
+    ->where('recipe', '[a-z][a-z0-9_]{1,39}')
+    ->middleware('permission:application');
 
 Route::get('/applications', [ApplicationController::class, 'index'])->middleware('permission:application');
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('permission:application,manage');
@@ -105,6 +111,21 @@ Route::put('/applications/{application}/container', [ApplicationContainerControl
 // different matter — it can stop the site.
 Route::get('/applications/{application}/container/compose', [ApplicationContainerController::class, 'compose'])
     ->middleware(['permission:app_compose', 'throttle:60,1']);
+
+// What the Command-line access card needs to write its `ssh … docker exec` line
+// (RC-23). Gated like reading the compose file, which is where the container names
+// come from; the system users in it are filtered on `system_user` inside.
+Route::get('/applications/{application}/container/access', [ApplicationContainerController::class, 'access'])
+    ->middleware(['permission:app_compose', 'throttle:60,1']);
+
+// Container login for the app's own system user (RC-28): on, its SSH login opens
+// this app's container. A change to that user's account, so gated on
+// `system_user` manage like the System Users switches it reuses. The controller
+// gives a site that is not a container the same 404/422 as the read above.
+Route::post('/applications/{application}/container/access', [ApplicationContainerController::class, 'enableAccess'])
+    ->middleware(['permission:system_user,manage', 'throttle:10,1']);
+Route::delete('/applications/{application}/container/access', [ApplicationContainerController::class, 'disableAccess'])
+    ->middleware(['permission:system_user,manage', 'throttle:10,1']);
 
 // Throttled like the other apply paths: each save recreates the container, and a
 // form that can be spammed is a site that can be restarted in a loop.

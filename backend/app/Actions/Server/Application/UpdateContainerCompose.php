@@ -72,19 +72,7 @@ class UpdateContainerCompose
         try {
             $this->containers->apply($application, $documentRoot);
         } catch (ProvisioningFailedException $e) {
-            // Put the working file back and bring the site up on it. Best effort:
-            // if the rollback itself fails the site is already down and the
-            // original error is still the one worth reporting, so it is not
-            // replaced by a second one about the restore.
-            $application->forceFill(['compose' => $previous, 'app_port' => $previousPort])->save();
-
-            try {
-                $this->containers->apply($application->fresh(), $documentRoot);
-            } catch (ProvisioningFailedException) {
-                // Intentionally swallowed — see above.
-            }
-
-            $this->record($application, $compose, $previous, applied: false, rolledBack: true);
+            $this->rollBack($application, $documentRoot, $compose, $previous, $previousPort, vhost: false);
 
             throw $e;
         }
@@ -95,13 +83,68 @@ class UpdateContainerCompose
         $application = $application->fresh(['systemUser']);
 
         if ($application->app_port !== $previousPort) {
-            $this->webServers->driver()->apply($application, $documentRoot);
-            $this->webServers->driver()->reload();
+            // Written, TESTED, then reloaded — the provisioner's order (DS-09).
+            // Unchecked, a vhost that did not write or did not pass `nginx -t`
+            // left the old one proxying to the old port behind a save that
+            // reported success: the 502 this reconcile exists to prevent.
+            $driver = $this->webServers->driver();
+
+            $steps = [
+                'write_config' => fn () => $driver->apply($application, $documentRoot),
+                'test_config' => fn () => $driver->test(),
+                'reload' => fn () => $driver->reload(),
+            ];
+
+            foreach ($steps as $step => $run) {
+                $result = $run();
+
+                if ($result->failed()) {
+                    $this->rollBack($application, $documentRoot, $compose, $previous, $previousPort, vhost: true);
+
+                    throw new ProvisioningFailedException($step, $result->reference);
+                }
+            }
         }
 
         $this->record($application, $compose, $previous, applied: true, rolledBack: false);
 
         return $application;
+    }
+
+    /**
+     * Put the working file back and bring the site up on it — and, when the
+     * vhost was already rewritten for the new port, the vhost too.
+     *
+     * Best effort: if the rollback itself fails the site is already down and
+     * the original error is still the one worth reporting, so it is not
+     * replaced by a second one about the restore.
+     */
+    private function rollBack(
+        Application $application,
+        string $documentRoot,
+        string $compose,
+        string $previous,
+        mixed $previousPort,
+        bool $vhost,
+    ): void {
+        $application->forceFill(['compose' => $previous, 'app_port' => $previousPort])->save();
+        $restored = $application->fresh(['systemUser']);
+
+        try {
+            $this->containers->apply($restored, $documentRoot);
+        } catch (ProvisioningFailedException) {
+            // Intentionally swallowed — see above.
+        }
+
+        if ($vhost) {
+            $driver = $this->webServers->driver();
+
+            if ($driver->apply($restored, $documentRoot)->ok && $driver->test()->ok) {
+                $driver->reload();
+            }
+        }
+
+        $this->record($application, $compose, $previous, applied: false, rolledBack: true);
     }
 
     /**

@@ -11,25 +11,6 @@ return [
 
     'types' => [
         'docker' => ['title' => 'Docker コンテナ', 'tagline' => '任意のレジストリの任意のイメージを nginx 経由で公開します。'],
-        'ghost' => ['title' => 'Ghost', 'tagline' => 'パブリッシングとニュースレター — 専用の MySQL 付きで動作'],
-        'matomo' => ['title' => 'Matomo', 'tagline' => '自分のサーバーで動くウェブ解析 — Google Analytics の代替'],
-        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'チームチャット — 専用の PostgreSQL 付きで動作'],
-        'chatwoot' => ['title' => 'Chatwoot', 'tagline' => 'カスタマーサポート受信箱 — 専用の PostgreSQL と Redis で動作します'],
-        'excalidraw' => ['title' => 'Excalidraw', 'tagline' => 'ホワイトボード — 描いた内容はブラウザー内に保存されます。共有とライブ共同編集は excalidraw.com を経由します'],
-        'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Git ホスティング — コミュニティ運営の Gitea フォーク'],
-        'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'セルフホスト型フィードリーダー'],
-        'gitea' => ['title' => 'Gitea', 'tagline' => 'Issue とプルリクエスト付きの Git ホスティング'],
-        'glance' => ['title' => 'Glance', 'tagline' => 'フィード・監視・ブックマークのダッシュボード'],
-        'homepage' => ['title' => 'Homepage', 'tagline' => 'サーバー上のサービスのスタートページ'],
-        'ittools' => ['title' => 'IT-Tools', 'tagline' => '開発者向けツール — 何も保存しません'],
-        'stirlingpdf' => ['title' => 'Stirling PDF', 'tagline' => 'ブラウザで PDF を分割・結合・署名・変換'],
-        'vaultwarden' => ['title' => 'Vaultwarden', 'tagline' => 'Bitwarden アプリと互換のパスワードマネージャー'],
-        'nocodb' => ['title' => 'NocoDB', 'tagline' => 'データベースをスプレッドシートとして操作 — 専用の PostgreSQL 付きで動作'],
-        'metabase' => ['title' => 'Metabase', 'tagline' => 'データのダッシュボードと分析 — 専用の PostgreSQL 付きで動作'],
-        'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'ドキュメント Wiki — 専用の PostgreSQL 付きで動作'],
-        'grafana' => ['title' => 'Grafana', 'tagline' => 'メトリクスのダッシュボードとアラート — 管理者パスワードはアプリケーションごとに生成されます'],
-        'bookstack' => ['title' => 'BookStack', 'tagline' => '棚・本・ページで整理するドキュメント — 専用の MariaDB とともに動作します'],
-        'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'ブログとサイトの構築 — 専用の MariaDB とともにコンテナとして動作します'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],
         'adminer' => ['title' => 'Adminer', 'tagline' => 'ブラウザで MySQL、MariaDB、PostgreSQL のデータベースを管理'],
@@ -58,6 +39,7 @@ return [
     ],
 
     'unavailable' => [
+        'deprecated' => 'このワンクリックアプリは提供を終了しました。既存のサイトは引き続き動作しますが、新しいサイトは作成できません。',
         'stack' => 'このサーバーはコンテナのみを実行するため、この種類のアプリケーションはホストしません。',
         'stack_profile' => 'このサーバーは、この種類のアプリケーションをホストするように設定されていません。',
         'profile' => 'このサーバーは :profile アプリケーションを配信しないため、このレンダリング方式はここでは使えません。このサーバーが対応している方式を選んでください。',
@@ -219,6 +201,7 @@ return [
         'write_config' => 'アプリケーション設定を書き込み中',
         'test_config' => '設定を検証中',
         'reload' => 'ウェブサーバーを再読み込み中',
+        'write_env' => '環境変数を書き込んでいます',
         'start_app' => 'アプリケーションを起動しています',
         'write_unit' => 'サービスを準備しています',
         'restart_app' => 'アプリケーションを再起動しています',
@@ -254,6 +237,7 @@ return [
         'release_not_found' => 'リリース一覧には届きましたが、このサーバーにインストールできるバージョンがありませんでした。PHP のバージョンを確認するか、後でもう一度お試しください。',
 
         'verify_http' => 'デプロイ後、アプリケーションはページではなくサーバーエラー（HTTP 5xx）を返しました。ログを確認してください。正確なステータスはデプロイログにあります。',
+        'container_port_missing' => 'このサイトにはコンテナポートが設定されていないため、パネルはコンテナ内のどのポートへプロキシすればよいか判断できません。「コンテナのポート」にアプリケーションが待ち受けるポートを設定して保存してください。',
         'attached_database_engine_mismatch' => 'このアプリケーションにはすでにデータベースが関連付けられていますが、このアプリケーションが使用できないエンジン上で動作しています。関連付けを解除するか、対応するエンジン上のデータベースを関連付けてから再試行してください。',
         'serving_error' => 'アプリケーションは起動しましたが、すべてのリクエストにエラーを返します。アセットが完全にビルドされていない可能性が高いため、アプリケーションログを確認してください。',
         'not_answering' => 'アプリケーションは起動しましたが、リクエストに一度も応答しませんでした。待ち受けていない理由をアプリケーションログで確認してください。',
@@ -269,6 +253,35 @@ return [
         'script_git_auth' => 'デプロイスクリプトがリポジトリへのログインが必要な git コマンド（通常は git pull）を実行していますが、スクリプトには認証情報がないため、プライベートリポジトリでは失敗します。この行は不要です。スクリプトの実行前に、パネルが接続済みアカウントで最新のコードをすでに取得しています。デプロイスクリプトからその行を削除して、もう一度デプロイしてください。',
         'script_php_missing' => 'デプロイスクリプトで、このサーバーにインストールされていない PHP バージョンの {PHPxx} 変数を使っています。PHP 画面でそのバージョンをインストールするか、アプリケーション自身のバージョンには {php} を使ってから、もう一度デプロイしてください。',
         'composer_dependencies_missing' => 'このプロジェクトにはComposerの依存関係が必要ですが、何もインストールされていません。そのためアプリケーションにvendor/autoload.phpが存在せず、すべてのリクエストが失敗します。デプロイスクリプトにcomposer installを実行する手順を追加してから、再度デプロイしてください。',
+        'container_exited' => 'コンテナが起動直後に停止したため、サイトを配信できません。理由はコンテナ自身のログに記録されています。',
+        'container_port_mismatch' => 'このサイトの転送先のコンテナポートで何も応答せず、イメージは別のポートで待ち受けています。コンテナポートをイメージが宣言しているポートに変更して、再度デプロイしてください。',
+        'container_not_answering' => 'コンテナは動作していますが、そのポートで何も応答しませんでした。ログと、コンテナポートがアプリケーションの待ち受けポートと一致しているかを確認してください。',
+        'container_unhealthy' => 'コンテナは動作していますが、イメージ自身のヘルスチェックが正常に動作していないと報告しています。理由はコンテナのログと、ここに表示されるヘルスチェックの出力で確認できます。',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'コンテナが再起動を繰り返しています。',
+        'container_exited' => 'コンテナが起動直後に停止しました。',
+        'container_port_mismatch' => 'コンテナポート :port で何も応答しません — イメージは :image_ports で待ち受けています。コンテナポートを :image_ports にして再度デプロイしてください。',
+        'container_not_answering' => 'コンテナポート :port で :seconds 秒以内に応答がありませんでした。',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'このサイトのポートで :seconds 秒以内に応答がありませんでした。',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker はこのコンテナを unhealthy と報告しています。イメージ自身のヘルスチェックが失敗しています。',
+        'health_check' => 'ヘルスチェックの出力: :output',
+        'last_line' => 'ログの最終行: :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'このイメージは待ち受けポートを宣言していません。コンテナポート(コンテナ内でアプリケーションが待ち受けるポート)を入力してください。',
+        'image_not_found' => 'このイメージが見つからないため、ポートを読み取れません。名前とタグを確認するか、コンテナポートを手動で入力してください。',
+        'image_unreadable' => 'レジストリに接続できず、このイメージのポートを読み取れませんでした。コンテナポートを手動で入力してください。',
+        'port_mismatch' => 'イメージは :port ではなく :image_ports で待ち受けています。アプリケーションが実際に :port で待ち受けない限り、サイトは応答しません。',
+        'env_key_invalid' => '英字・数字・アンダースコアのみ使用でき、数字で始めることはできません。',
+        'env_key_duplicate' => '変数 :key が2回設定されています。',
+        'env_required' => 'このイメージは :keys がないと起動しません。サイトを作成する前に、それぞれに値を入力してください。',
     ],
 
     'port_free' => 'ポート :port は空いています。',

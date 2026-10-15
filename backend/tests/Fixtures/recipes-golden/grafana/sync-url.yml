@@ -1,0 +1,32 @@
+name: sv-app-4242
+
+services:
+  app:
+    image: grafana/grafana:13.2
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    
+    ports:
+      - "127.0.0.1:20101:3000"
+
+    environment:
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: "http://grafana.golden.test"
+      GF_SECURITY_ADMIN_PASSWORD: "186f50af3e98456522a606fbc0dca32e"
+
+    volumes:
+      - sv-app-4242_data:/var/lib/grafana
+
+volumes:
+  sv-app-4242_data:
+    external: true

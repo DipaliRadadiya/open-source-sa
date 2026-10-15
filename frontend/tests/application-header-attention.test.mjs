@@ -45,7 +45,8 @@ test("problems the tiles already show are not repeated as lines", () => {
 
 test("the header is an identity card carrying the site's own mark", () => {
   assert.match(page, /import \{ SiteTypeLogo \}/);
-  assert.match(page, /<SiteTypeLogo\s+name=\{application\.site_type\}[\s\S]{0,120}size="h-6 w-6"\s*\/>/);
+  // {0,300}: the logo also carries the recipe's icon (`iconDataUri`) since 1-Click Recipes.
+  assert.match(page, /<SiteTypeLogo\s+name=\{application\.site_type\}[\s\S]{0,300}size="h-6 w-6"\s*\/>/);
   // Compact (Krishna, 6 and 7 Oct: the name read as a banner): an 18px name.
   assert.match(page, /<h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight break-words">/);
   // The actions sit beside the name block, never wrapped under it (7 Oct).

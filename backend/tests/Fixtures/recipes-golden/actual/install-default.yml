@@ -1,0 +1,29 @@
+name: sv-app-4242
+
+services:
+  actual:
+    image: actualbudget/actual-server:26.10.0
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:5006"
+
+    volumes:
+      - sv-app-4242_data:/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "node scripts/health-check.js"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  sv-app-4242_data:
+    external: true

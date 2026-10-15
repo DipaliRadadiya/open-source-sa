@@ -56,6 +56,27 @@ export const siteTypeSchema = z.object({
   php_version_range: versionRange,
   node_version_range: versionRange,
   fields: z.array(textField).default([]),
+  // Declared here or Zod would strip the recipe metadata from the catalog.
+  recipe: z.object({
+    slug: z.string(),
+    version: z.number(),
+    description: z.string().nullish(),
+    services: z.array(z.object({ name: z.string(), role: z.string() })).default([]),
+    volumes: z.array(z.object({ role: z.string(), path: z.string() })).default([]),
+    images: z.array(z.object({
+      role: z.string(),
+      ref: z.string(),
+      tested: z.array(z.string()).default([]),
+    })).default([]),
+    memory_floor: z.string().nullish(),
+    first_run: z.object({
+      kind: z.string(),
+      credential_labels: z.array(z.string()).default([]),
+    }).nullish(),
+    inputs: z.array(z.string()).default([]),
+    docs_url: z.string().nullish(),
+    icon_data_uri: z.string().nullish(),
+  }).nullish(),
 });
 
 export const siteTypesResponseSchema = z.object({
@@ -118,6 +139,16 @@ export const applicationSchema = z.object({
   url: z.string().nullish(),
   site_type: z.string(),
   site_type_title: z.string().nullish(),
+  origin: z.object({
+    kind: z.enum(["recipe", "image", "compose", "other"]).catch("other"),
+    recipe: z.object({
+      slug: z.string(),
+      title: z.string(),
+      version: z.number(),
+      deprecated: z.boolean().default(false),
+    }).nullish(),
+    image: z.string().nullish(),
+  }).nullish(),
   // Populated only once Detect is pressed. `suggested` is pre-validated, so accepting it cannot 422.
   site_type_detection: z
     .object({
@@ -256,6 +287,19 @@ export const applicationSchema = z.object({
   memory_limit: z.string().nullish(),
   cpu_limit: z.string().nullish(),
   registry_id: z.number().nullish(),
+  // The last deploy's readiness check; null when none ran (one-click apps, older sites).
+  container_status: z.string().nullish(),
+  // `log` and `last_line` are null for someone without `app_log`.
+  last_failure: z
+    .object({
+      reason: z.string().catch(""),
+      message: z.string().nullish(),
+      last_line: z.string().nullish(),
+      log: z.string().nullish(),
+      at: z.string().nullish(),
+    })
+    .nullish()
+    .catch(null),
   // Shown in the sites list; must be declared or Zod strips them.
   directory_size_bytes: z.number().nullish(),
   // The volumes' share of the total. Nullish is meaningful: absent means the site

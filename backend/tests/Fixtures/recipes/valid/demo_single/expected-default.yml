@@ -1,0 +1,20 @@
+name: sv-app-1
+services:
+  app:
+    image: ghost:5-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+    ports:
+      - "127.0.0.1:20001:80"
+    environment:
+      APP_URL: https://example.test
+      PASSWORD: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    volumes:
+      - sv-app-1_data:/data
+volumes:
+  sv-app-1_data:
+    external: true

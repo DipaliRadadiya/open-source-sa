@@ -1,7 +1,9 @@
 // The API's `category` is too fine to filter by, so it is folded into a few buckets; unknown ones go to `others`.
 export const CATEGORY_GROUPS = [
+  { key: "ai", categories: ["ai"] },
   { key: "cms", categories: ["cms", "ecommerce"] },
-  { key: "development", categories: ["developer"] },
+  // Recipes say `development`; the older site types say `developer`.
+  { key: "development", categories: ["developer", "development"] },
   { key: "tools", categories: ["utility", "automation", "monitoring"] },
   {
     key: "productivity",

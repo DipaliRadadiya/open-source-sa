@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "slug": "template_required",
+  "version": 1,
+  "title": "Demo",
+  "tagline": {
+    "en": "Demo application"
+  },
+  "category": "utility",
+  "icon": "demo",
+  "catalog_order": 20,
+  "images": {
+    "app": {
+      "ref": "ghost:5-alpine",
+      "tested": []
+    }
+  },
+  "services": [
+    {
+      "name": "app",
+      "role": "app"
+    }
+  ],
+  "container_port": 80,
+  "volumes": {
+    "data": "/data"
+  },
+  "secrets": [
+    {
+      "key": "PASSWORD",
+      "complexity": "alnum",
+      "panel_only": false
+    }
+  ],
+  "url_env_key": "APP_URL",
+  "first_run": {
+    "kind": "credentials",
+    "credentials": [
+      {
+        "label": "password",
+        "secret": "PASSWORD"
+      }
+    ]
+  }
+}

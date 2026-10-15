@@ -158,3 +158,28 @@ test("the badges wrap under the name instead of squeezing it", () => {
    */
   assert.match(table, /flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1/);
 });
+
+test("an image-origin row renders Docker image in the applications table", async () => {
+  const { installDom, loadComponent } = await import("./support/dom.mjs");
+  installDom();
+  const { createElement } = await import("react");
+  const { IntlProvider } = await import("use-intl");
+  const { render, screen, cleanup } = await import("@testing-library/react");
+  const { ApplicationsTable } = await loadComponent("components/applications/applications-table.jsx", {
+    "next/navigation": "tests/support/next-navigation-stub.js",
+    "@/components/ui/app-link": "tests/support/app-link-stub.jsx",
+  });
+  const { TooltipProvider } = await loadComponent("components/ui/tooltip.jsx");
+  const messages = JSON.parse(fs.readFileSync(path.join(root, "messages/en.json"), "utf8"));
+  const application = { id: 1, name: "Docker fixture", site_type: "docker", site_type_title: "Docker container", status: "active", domain: "image.example.test", deployed: true, origin: { kind: "image", recipe: null, image: "nginx:1.27" } };
+  try {
+    render(createElement(IntlProvider, { locale: "en", messages, timeZone: "UTC" },
+      createElement(TooltipProvider, null, createElement(ApplicationsTable, {
+        applications: [application], meta: { current_page: 1, per_page: 10, last_page: 1, total: 1 },
+      }))));
+    const row = screen.getAllByRole("row").find(row => row.textContent.includes("Docker fixture"));
+    assert.ok(row, "image fixture row exists");
+    assert.ok(row.textContent.includes("Docker image"));
+    assert.equal(row.querySelector('[aria-label="Docker image"]')?.getAttribute("data-variant"), "outline");
+  } finally { cleanup(); }
+});

@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "slug": "demo_multi",
+  "version": 1,
+  "title": "Demo",
+  "tagline": {
+    "en": "Demo application"
+  },
+  "category": "utility",
+  "icon": "demo",
+  "catalog_order": 10,
+  "images": {
+    "app": {
+      "ref": "ghost:5-alpine",
+      "tested": []
+    },
+    "db": {
+      "ref": "postgres:16-alpine",
+      "tested": [
+        "postgres:16-alpine"
+      ]
+    }
+  },
+  "services": [
+    {
+      "name": "app",
+      "role": "app"
+    },
+    {
+      "name": "db",
+      "role": "database"
+    }
+  ],
+  "container_port": 80,
+  "volumes": {
+    "data": "/data",
+    "db": "/var/lib/postgresql/data"
+  },
+  "secrets": [
+    {
+      "key": "PASSWORD",
+      "complexity": "alnum",
+      "panel_only": false
+    }
+  ],
+  "url_env_key": "APP_URL",
+  "first_run": {
+    "kind": "credentials",
+    "credentials": [
+      {
+        "label": "password",
+        "secret": "PASSWORD"
+      }
+    ]
+  },
+  "starter_files": [
+    {
+      "path": "/app/config/demo.yml",
+      "source": "starter/demo.yml"
+    }
+  ]
+}

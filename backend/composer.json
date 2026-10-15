@@ -15,7 +15,8 @@
         "league/flysystem-ftp": "^3.35",
         "league/flysystem-sftp-v3": "^3.36",
         "masbug/flysystem-google-drive-ext": "^2.5",
-        "spatie/laravel-translatable": "^6.14"
+        "spatie/laravel-translatable": "^6.14",
+        "symfony/yaml": "^8.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -27,8 +28,7 @@
         "nunomaduro/collision": "^8.6",
         "pestphp/pest": "^4.7",
         "pestphp/pest-plugin-laravel": "^4.1",
-        "phpunit/phpunit": "^12.5.12",
-        "symfony/yaml": "^8.1"
+        "phpunit/phpunit": "^12.5.12"
     },
     "autoload": {
         "psr-4": {

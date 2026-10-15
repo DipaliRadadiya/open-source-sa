@@ -1,0 +1,118 @@
+{
+    "schema": 1,
+    "slug": "librechat",
+    "version": 1,
+    "title": "LibreChat",
+    "tagline": {
+        "en": "Self-hosted AI chat for OpenAI, Anthropic, Google and other model providers",
+        "es": "Chat de IA autoalojado para OpenAI, Anthropic, Google y otros proveedores de modelos",
+        "de": "Selbst gehosteter KI-Chat für OpenAI, Anthropic, Google und weitere Modellanbieter",
+        "fr": "Chat IA auto-hébergé pour OpenAI, Anthropic, Google et d'autres fournisseurs de modèles",
+        "pt": "Chat de IA auto-hospedado para OpenAI, Anthropic, Google e outros provedores de modelos",
+        "ja": "OpenAI、Anthropic、Googleなど複数のモデルプロバイダーに対応するセルフホスト型AIチャット",
+        "ru": "Самостоятельно размещаемый ИИ-чат для OpenAI, Anthropic, Google и других поставщиков моделей",
+        "hi": "OpenAI, Anthropic, Google और अन्य मॉडल प्रदाताओं के लिए सेल्फ-होस्टेड AI चैट"
+    },
+    "category": "ai",
+    "icon": "librechat",
+    "popular": false,
+    "catalog_order": 390,
+    "docs_url": "https://www.librechat.ai/docs/local/docker",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/librechat-ai/librechat:v0.8.8",
+            "tested": [
+                "ghcr.io/librechat-ai/librechat:v0.8.8"
+            ]
+        },
+        "db": {
+            "ref": "mongo:8.0.20",
+            "tested": [
+                "mongo:8.0.20"
+            ]
+        },
+        "search": {
+            "ref": "getmeili/meilisearch:v1.35.1",
+            "tested": [
+                "getmeili/meilisearch:v1.35.1"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "api",
+            "role": "app"
+        },
+        {
+            "name": "mongodb",
+            "role": "database"
+        },
+        {
+            "name": "meilisearch",
+            "role": "cache"
+        }
+    ],
+    "container_port": 3080,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/app/data",
+        "uploads": "/app/uploads",
+        "images": "/app/client/public/images",
+        "db": "/data/db",
+        "search": "/meili_data"
+    },
+    "secrets": [
+        {
+            "key": "MONGO_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MEILI_MASTER_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "CREDS_KEY_SEED",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "CREDS_IV_SEED",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "JWT_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "JWT_REFRESH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "DOMAIN_CLIENT",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: open the site and register right after the install; the first account to register becomes the administrator. Registration stays open after that, so anyone who can reach the site can sign up. To close it, set ALLOW_REGISTRATION to \"false\" in the compose file (Container settings) and redeploy; existing accounts keep working.",
+        "The image moved: from v0.8.8 LibreChat publishes ghcr.io/librechat-ai/librechat (ghcr.io/danny-avila/librechat has no v0.8.8 tag). The official compose files now point at moving dev tags on registry.librechat.ai, so the recipe pins the release tag instead.",
+        "OpenAI, Anthropic and Google are enabled as user_provided endpoints: each user adds their own API key in the model picker, and it is stored encrypted with CREDS_KEY. Other providers need a librechat.yaml, which this recipe does not ship.",
+        "CREDS_KEY must be 64 hex characters and CREDS_IV 32. They are derived in the start command from the 32-character CREDS_KEY_SEED and CREDS_IV_SEED secrets with sha256sum (cut -c1-64 and cut -c1-32), so a recreated container gets the same keys; the seed variables are unset before LibreChat starts. Never change the seeds: saved API keys are encrypted under them.",
+        "Left out on purpose: the rag_api and vectordb services (file search and RAG need an embeddings API key) and the separate admin-panel container. The built-in Settings and admin role still work.",
+        "SCHEDULES_SINGLE_PROCESS=true: the recipe runs exactly one LibreChat process and no Redis, which is the case .env.example says to set it for. Without it v0.8.8 does not start its scheduler and every scheduled-chat write answers 503 (found in the RC-27 live smoke on both Ubuntu versions).",
+        "MongoDB 8.0.20 and Meilisearch 1.35.1 are the versions the official compose pins. MongoDB runs with authentication (the official file uses --noauth); Meilisearch runs in production mode with its own master key and powers conversation search (SEARCH=true). Neither publishes a port.",
+        "MongoDB 5 and later need a CPU with AVX. Every current cloud CPU has it; very old or emulated CPUs do not, and MongoDB then exits at start.",
+        "TRUST_PROXY=1 trusts the panel's reverse proxy for the client address. Password reset is off because no email service is configured.",
+        "The healthcheck probes /health on 127.0.0.1:3080 with the image's wget.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-27): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

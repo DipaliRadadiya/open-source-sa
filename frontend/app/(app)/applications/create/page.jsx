@@ -26,6 +26,7 @@ export async function generateMetadata() {
 
 export default async function CreateApplicationPage({ searchParams }) {
   const sp = await searchParams;
+  const initialDockerSource = ["search", "compose", "manual"].includes(sp?.mode) ? sp.mode : "search";
   const [permissions, t, tEngines, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
@@ -113,6 +114,7 @@ export default async function CreateApplicationPage({ searchParams }) {
 
       <CreateApplicationForm
         initialType={prefillType}
+        initialDockerSource={initialDockerSource}
         // A marketplace slug is a valid site name, and the temporary domain
         // is generated from the name.
         initialName={prefillType}

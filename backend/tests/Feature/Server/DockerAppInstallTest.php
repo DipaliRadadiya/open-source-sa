@@ -5,7 +5,10 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Applications\Types\AbstractDockerAppType;
+use App\Services\Applications\Types\RecipeSiteType;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Applications\Installers\DockerAppInstaller;
@@ -68,7 +71,8 @@ function dockerAppSite(string $type, int $port = 20101, string $user = 'owner'):
         'system_user_id' => $systemUser->id,
         'name' => ucfirst($type).' '.$port,
         'slug' => $type.'-'.$port,
-        'domain' => "{$type}-{$port}.example.com",
+        // Slugs may contain underscores; real hostnames accepted by the API may not.
+        'domain' => str_replace('_', '-', $type)."-{$port}.example.com",
         'web_root' => 'public_html',
         'site_type' => $type,
         'serving_profile' => 'docker',
@@ -111,7 +115,7 @@ dataset('docker apps', [
     'wikijs' => ['wikijs', 3000, ['db']],
     'mattermost' => ['mattermost', 8065, ['data', 'config', 'plugins', 'client-plugins', 'logs', 'db']],
     'matomo' => ['matomo', 80, ['app', 'db']],
-    // Group A: one container each, rendered from the shared template.
+    // Group A: one container each, with the shared legacy compose shape.
     'vaultwarden' => ['vaultwarden', 80, ['data']],
     'gitea' => ['gitea', 3000, ['data']],
     'forgejo' => ['forgejo', 3000, ['data']],
@@ -122,9 +126,8 @@ dataset('docker apps', [
     // because it is a file somebody edits. See the starter-files tests below.
     'glance' => ['glance', 8080, []],
     'homepage' => ['homepage', 3000, ['config']],
-    // Grafana is one container, but not from the shared template: its admin
-    // password is a generated SECRET, and that template renders `$environment`
-    // only. See GrafanaSiteType::composeTemplate().
+    // Grafana is one container with a generated admin secret, unlike the other
+    // single-container recipes that need no generated credentials.
     'grafana' => ['grafana', 3000, ['data']],
     'bookstack' => ['bookstack', 80, ['config', 'db']],
     'wordpress_container' => ['wordpress_container', 80, ['app', 'db']],
@@ -284,20 +287,18 @@ it('fails the provision when the app accepted the post and still has no owner', 
 });
 
 it('is wired to the Docker installer, for each app', function (string $type, int $port, array $roles) {
-    // **The test that was missing, and what it cost.** Registering an app takes
-    // three edits to `config/server.php`: the type class, the `docker_apps`
-    // definition, and an `installers.<name>.driver` entry. Chatwoot and
-    // Excalidraw shipped with the first two and not the third. Every test in this
-    // file still passed, because `installDockerApp()` calls the installer
-    // directly — so the suite proved the file renders and never asked whether
-    // anything would render it.
+    // **The test that was missing, and what it cost.** The old class-based
+    // catalog needed a separate installer registration. Chatwoot and Excalidraw
+    // shipped without it, while tests calling the installer directly still
+    // passed. Recipes now resolve through InstallerManager's registry fallback,
+    // and this assertion keeps that real provisioning path covered.
     //
     // On a real box the site fell back to the GENERIC Docker driver, which wrote
     // a compose file with an empty `image:` and a bind mount of the site
     // directory. `docker compose up` refused it: "services.app.image must be a
     // string". An app installed from the catalog, failing on an empty image.
     expect(app(InstallerManager::class)->hasInstaller($type))
-        ->toBeTrue("{$type} has no installers.{$type}.driver — it will fall back to the generic Docker site")
+        ->toBeTrue("{$type} has no recipe installer — it will fall back to the generic Docker site")
         ->and(app(InstallerManager::class)->installerForType($type))
         ->toBeInstanceOf(DockerAppInstaller::class);
 })->with('docker apps');
@@ -425,23 +426,24 @@ it('generates a different secret for every site', function (string $type, int $p
 it('ships no secret in the template itself', function (string $type, int $port, array $roles) {
     // Reading the template, not the render: a default that only shows up when a
     // caller forgets to pass a value is still a shipped credential.
-    $template = app(SiteTypeManager::class)->find($type)->composeTemplate();
-    $path = base_path('resources/views/'.str_replace('.', '/', $template).'.blade.php');
+    $siteType = app(SiteTypeManager::class)->find($type);
+    expect($siteType)->toBeInstanceOf(RecipeSiteType::class);
+    $source = $siteType->recipe()->template->source();
+    expect($source)->not->toBeEmpty();
 
-    $source = file_get_contents($path);
+    $panelOnly = $siteType->panelOnlySecrets();
 
-    $panelOnly = app(SiteTypeManager::class)->find($type)->panelOnlySecrets();
-
-    foreach (app(SiteTypeManager::class)->find($type)->generatedSecrets() as $key) {
+    foreach ($siteType->generatedSecrets() as $key) {
+        $pattern = '/\{\{\s*secret\.'.preg_quote($key, '/').'\s*(?:\|\s*base64\s*)?\}\}/';
         if (in_array($key, $panelOnly, true)) {
             // Must be ABSENT, not interpolated — asserted above.
-            expect($source)->not->toContain("\$secrets['{$key}']");
+            expect($source)->not->toMatch($pattern);
 
             continue;
         }
 
-        // Every secret is interpolated, never literal.
-        expect($source)->toContain("\$secrets['{$key}']");
+        // Every secret is interpolated, never literal (including base64 APP_KEY).
+        expect($source)->toMatch($pattern);
         expect($source)->not->toMatch('/'.preg_quote($key, '/').':\s*[A-Za-z0-9]{6,}\s*$/m');
     }
 })->with('docker apps');
@@ -914,7 +916,7 @@ it('tells BookStack its url, which it refuses to start without', function () {
 
 it('gives every Docker app an explicitly tagged image', function () {
     // An untagged reference is `latest` by omission, which is the one form nobody
-    // reading the config would notice.
+    // reading the recipe would notice.
     //
     // NOT asserting "never `latest`", which is what this test said first and was
     // wrong about: Metabase, NocoDB and BookStack all use it deliberately, because
@@ -925,12 +927,15 @@ it('gives every Docker app an explicitly tagged image', function () {
     // What this cannot check is that the tag EXISTS — that needs the registry, and
     // the one time it was skipped a bare `26.09` was invented from BookStack's
     // version pattern and the install died at `docker pull`.
-    foreach (array_keys((array) config('server.docker_apps')) as $app) {
-        $image = (string) config("server.docker_apps.{$app}.image");
+    $recipes = app(RecipeRegistry::class)->all();
+    expect($recipes)->not->toBeEmpty();
 
-        expect($image)->not->toBe('')
-            ->and(str_contains($image, ':'))
-            ->toBeTrue("{$app} has no explicit tag");
+    foreach ($recipes as $recipe) {
+        foreach ($recipe->images as $role => $image) {
+            expect($image['ref'])->not->toBe('')
+                ->and(str_contains($image['ref'], ':'))
+                ->toBeTrue("{$recipe->slug}.{$role} has no explicit tag");
+        }
     }
 });
 
@@ -982,9 +987,8 @@ it('follows a domain change through to the WordPress url', function () {
 });
 
 it('does not collide with the PHP WordPress it sits beside', function () {
-    // `name()` is the identifier: `find()` resolves by it and the catalog's
-    // translation keys are built from it, so two types called `wordpress` would be
-    // one type with the other shadowed.
+    // `name()` is the identifier: `find()` and SiteTypeText resolve by it, so
+    // two types called `wordpress` would be one type with the other shadowed.
     $php = app(SiteTypeManager::class)->find('wordpress');
     $container = app(SiteTypeManager::class)->find('wordpress_container');
 
@@ -993,8 +997,8 @@ it('does not collide with the PHP WordPress it sits beside', function () {
         ->and($container->servingProfile())->toBe('docker')
         // Same product, same title — they are never offered together, because each
         // is filtered out of the other's stack.
-        ->and(__('application.types.wordpress.title'))->toBe('WordPress')
-        ->and(__('application.types.wordpress_container.title'))->toBe('WordPress');
+        ->and(app(SiteTypeText::class)->title($php->name()))->toBe('WordPress')
+        ->and(app(SiteTypeText::class)->title($container->name()))->toBe('WordPress');
 });
 
 it('leaves the WordPress salts to the image', function () {

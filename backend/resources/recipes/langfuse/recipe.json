@@ -1,0 +1,169 @@
+{
+    "schema": 1,
+    "slug": "langfuse",
+    "version": 1,
+    "title": "Langfuse",
+    "tagline": {
+        "en": "Tracing, prompt management and evaluations for LLM and AI apps",
+        "es": "Trazas, gestión de prompts y evaluaciones para aplicaciones de LLM e IA",
+        "de": "Tracing, Prompt-Verwaltung und Evaluierungen für LLM- und KI-Apps",
+        "fr": "Traces, gestion des prompts et évaluations pour les applications LLM et d’IA",
+        "pt": "Rastreamento, gestão de prompts e avaliações para aplicações de LLM e IA",
+        "ja": "LLM・AI アプリのトレース、プロンプト管理、評価",
+        "ru": "Трассировка, управление промптами и оценка для LLM- и ИИ-приложений",
+        "hi": "LLM और AI ऐप के लिए ट्रेसिंग, प्रॉम्प्ट प्रबंधन और मूल्यांकन"
+    },
+    "category": "ai",
+    "icon": "langfuse",
+    "popular": false,
+    "catalog_order": 550,
+    "docs_url": "https://langfuse.com/self-hosting/deployment/docker-compose",
+    "images": {
+        "web": {
+            "ref": "langfuse/langfuse:4.57.0",
+            "tested": [
+                "langfuse/langfuse:4.57.0"
+            ]
+        },
+        "worker": {
+            "ref": "langfuse/langfuse-worker:4.57.0",
+            "tested": [
+                "langfuse/langfuse-worker:4.57.0"
+            ]
+        },
+        "clickhouse": {
+            "ref": "clickhouse/clickhouse-server:25.12.11.4",
+            "tested": [
+                "clickhouse/clickhouse-server:25.12.11.4"
+            ]
+        },
+        "minio": {
+            "ref": "pgsty/silo:RELEASE.2026-09-16T00-00-00Z",
+            "tested": [
+                "pgsty/silo:RELEASE.2026-09-16T00-00-00Z"
+            ]
+        },
+        "redis": {
+            "ref": "redis:7.4.11",
+            "tested": [
+                "redis:7.4.11"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11",
+            "tested": [
+                "postgres:17.11"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "langfuse-web",
+            "role": "app"
+        },
+        {
+            "name": "langfuse-worker",
+            "role": "worker"
+        },
+        {
+            "name": "clickhouse",
+            "role": "database"
+        },
+        {
+            "name": "minio",
+            "role": "worker"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        },
+        {
+            "name": "postgres",
+            "role": "database"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "2g",
+    "volumes": {
+        "clickhouse": "/var/lib/clickhouse",
+        "clickhouse-logs": "/var/log/clickhouse-server",
+        "minio": "/data",
+        "redis": "/data",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "NEXTAUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SALT",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ENCRYPTION_KEY_SEED",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "CLICKHOUSE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "REDIS_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MINIO_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "NEXTAUTH_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: sign in at the site's address with the admin email you entered and the generated password on the first-run card. Langfuse's headless initialization (LANGFUSE_INIT_*) creates that user as owner of the organization \"Default organization\" with the project \"Default project\" on the first start; it does nothing once they exist. Sign-up is off (AUTH_DISABLE_SIGNUP), so further users join by invitation from the organization settings. Change the password under the account settings after the first sign-in.",
+        "Services from the official docker-compose.yml of the v4.57.0 release: langfuse-web (the published app, port 3000), langfuse-worker, ClickHouse, Redis, PostgreSQL and S3 storage. The web image's own entrypoint runs the PostgreSQL and ClickHouse migrations on every start before the server starts. Every image is pinned exactly; upstream floats langfuse:4, clickhouse-server:25.12, redis:7 and postgres:17.",
+        "S3 storage is pgsty/silo, a MinIO-compatible image with pinned releases (the official compose uses cgr.dev/chainguard/minio, which only publishes latest). It is reachable only inside the app's network; its start command creates the langfuse bucket, as upstream's does. Ingested events and media are stored there under events/ and media/. Because the storage is not published, multimodal media that SDKs upload directly to S3 through presigned URLs cannot be uploaded; traces, observations, scores, prompts and evaluations work normally.",
+        "ENCRYPTION_KEY must be 64 hex characters. The panel's secrets are alphanumeric, so web and worker derive it at start from the 32-character ENCRYPTION_KEY_SEED with sha256sum (the same seed always gives the same key), then drop the seed from the environment. It encrypts stored LLM API keys; the seed must never change after install.",
+        "HOSTNAME=0.0.0.0 makes the Next.js server listen on every interface (it otherwise binds to the container's hostname), so the healthcheck can reach it on 127.0.0.1. NEXTAUTH_URL is the url key and sets the address used for sign-in callbacks and links.",
+        "Secrets: NEXTAUTH_SECRET, SALT, ENCRYPTION_KEY_SEED, ADMIN_PASSWORD, DB_PASSWORD, CLICKHOUSE_PASSWORD, REDIS_PASSWORD and MINIO_PASSWORD, each 32 alphanumeric characters. SALT hashes API keys; changing it invalidates every key.",
+        "Memory: langfuse-web takes the app limit (floor 2g) and runs with NODE_OPTIONS=--max-old-space-size=1536. With a 1g limit (the first draft) Node's default heap ceiling was about 560 MiB and the web server died with \"JavaScript heap out of memory\" seconds after every start, live on Ubuntu 24.04; it idles at about 1.1 GiB. If you raise the limit above 2g, raise the heap flag with it. langfuse-worker 2g with the same heap flag: at 1g its heap ceiling is also about 560 MiB, and live it idled at about 540 MiB of memory there (Ubuntu 26.04). ClickHouse 2g (it does not fit the 512m database default), storage 512m; PostgreSQL and Redis use the panel database default. Redis runs with maxmemory-policy noeviction, as upstream requires for its queues.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-33): every image ref above is in its tested list. Create to Running in 48 s with images cached. Signed in with the admin email and generated password, created an API key pair in the UI, sent a trace over OTLP (POST /api/public/otel/v1/traces; Langfuse 4 runs in events_only mode, where the legacy /api/public/ingestion accepts only scores) and saw it in the Traces view; the event landed in S3 and ClickHouse; sign-up was refused (422); traces survived restarts of web and worker. Measured: langfuse-web about 1 GiB of 2 GiB (peak 56%), langfuse-worker 26 to 29% of 2 GiB (peak 37%), ClickHouse 32 to 43% of 2 GiB; heap_size_limit 1632 MiB on both Node services; no restarts or OOM kills."
+    ]
+}

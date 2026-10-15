@@ -1,0 +1,134 @@
+{
+    "slug": "activepieces",
+    "container_port": 80,
+    "volume_roles": {
+        "cache": "/usr/src/app/cache",
+        "worker-cache": "/usr/src/app/cache",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "generated_secrets": [
+        "DB_PASSWORD",
+        "AP_ENCRYPTION_KEY_SEED",
+        "AP_JWT_SECRET"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "AP_FRONTEND_URL",
+    "default_memory_limit": "1536m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "automation",
+    "icon": "activepieces",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1536m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1536m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_cache",
+            "path": "/usr/src/app/cache"
+        },
+        {
+            "volume": "sv-app-4242_worker-cache",
+            "path": "/usr/src/app/cache"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        },
+        {
+            "volume": "sv-app-4242_redis",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "DB_PASSWORD",
+        "AP_ENCRYPTION_KEY_SEED",
+        "AP_JWT_SECRET"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Activepieces",
+            "tagline": "Open-source AI automation: build workflows and agents across hundreds of apps"
+        },
+        "es": {
+            "title": "Activepieces",
+            "tagline": "Automatización con IA de código abierto: crea flujos y agentes con cientos de aplicaciones"
+        },
+        "de": {
+            "title": "Activepieces",
+            "tagline": "Open-Source-KI-Automatisierung: Workflows und Agenten über Hunderte von Apps erstellen"
+        },
+        "fr": {
+            "title": "Activepieces",
+            "tagline": "Automatisation IA open source : créez des workflows et des agents avec des centaines d'applications"
+        },
+        "pt": {
+            "title": "Activepieces",
+            "tagline": "Automação com IA de código aberto: crie fluxos e agentes com centenas de aplicativos"
+        },
+        "ja": {
+            "title": "Activepieces",
+            "tagline": "オープンソースのAI自動化：数百のアプリをまたぐワークフローとエージェントを構築"
+        },
+        "ru": {
+            "title": "Activepieces",
+            "tagline": "ИИ-автоматизация с открытым исходным кодом: рабочие процессы и агенты для сотен приложений"
+        },
+        "hi": {
+            "title": "Activepieces",
+            "tagline": "ओपन-सोर्स AI ऑटोमेशन: सैकड़ों ऐप्स में वर्कफ़्लो और एजेंट बनाएँ"
+        }
+    },
+    "catalog_en": {
+        "name": "activepieces",
+        "icon": "activepieces",
+        "category": "automation",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

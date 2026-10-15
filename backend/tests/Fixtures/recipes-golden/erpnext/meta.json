@@ -1,0 +1,139 @@
+{
+    "slug": "erpnext",
+    "container_port": 8080,
+    "volume_roles": {
+        "sites": "/home/frappe/frappe-bench/sites",
+        "logs": "/home/frappe/frappe-bench/logs",
+        "db": "/var/lib/mysql",
+        "redis-cache": "/data",
+        "redis-queue": "/data"
+    },
+    "generated_secrets": [
+        "ADMIN_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "256m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "business",
+    "icon": "erpnext",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "256m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": {
+        "/templates/nginx/frappe.conf.template": "upstream backend-server {\n\tserver ${BACKEND} fail_timeout=0;\n}\n\nupstream socketio-server {\n\tserver ${SOCKETIO} fail_timeout=0;\n}\n\n# Parse the X-Forwarded-Proto header - if set - defaulting to $scheme.\nmap $http_x_forwarded_proto $proxy_x_forwarded_proto {\n\tdefault $scheme;\n\thttps https;\n}\n\nserver {\n\tlisten ${NGINX_LISTEN_PORT};\n\tserver_name ${FRAPPE_SITE_NAME_HEADER};\n  absolute_redirect off;\n\troot /home/frappe/frappe-bench/sites;\n\n\tproxy_buffer_size 128k;\n\tproxy_buffers 4 256k;\n\tproxy_busy_buffers_size 256k;\n\n\tinclude /etc/nginx/snippets/security_headers.conf;\n\n\tset_real_ip_from ${UPSTREAM_REAL_IP_ADDRESS};\n\treal_ip_header ${UPSTREAM_REAL_IP_HEADER};\n\treal_ip_recursive ${UPSTREAM_REAL_IP_RECURSIVE};\n\n\tlocation /assets {\n\t\ttry_files $uri =404;\n\t}\n\n\tlocation ~ ^/protected/(.*) {\n\t\tinternal;\n\t\ttry_files /${FRAPPE_SITE_NAME_HEADER}/$1 =404;\n\t}\n\n\tlocation /socket.io {\n\t\tproxy_http_version 1.1;\n\t\tproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\t\tproxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;\n\t\tproxy_set_header Upgrade $http_upgrade;\n\t\tproxy_set_header Connection \"upgrade\";\n\t\tproxy_set_header X-Frappe-Site-Name ${FRAPPE_SITE_NAME_HEADER};\n\t\t# Changed from frappe_docker v4.0.1 for the panel's recipe (RC-33): the socket\n\t\t# server refuses a connection whose Host and Origin hostnames differ, and calls\n\t\t# back to Frappe at the Origin. Both name this nginx by its compose service name,\n\t\t# so the callback stays inside the app network.\n\t\tproxy_set_header Origin http://frontend:${NGINX_LISTEN_PORT};\n\t\tproxy_set_header Host frontend:${NGINX_LISTEN_PORT};\n\n\t\tproxy_pass http://socketio-server;\n\t}\n\n\tlocation / {\n\t\trewrite ^(.+)/$ $1 permanent;\n\t\trewrite ^(.+)/index\\.html$ $1 permanent;\n\t\trewrite ^(.+)\\.html$ $1 permanent;\n\n\t\tlocation ~ ^/files/.*.(htm|html|svg|xml) {\n\t\t\tinclude /etc/nginx/snippets/security_headers.conf;\n\t\t\tadd_header Content-disposition \"attachment\";\n\t\t\ttry_files /${FRAPPE_SITE_NAME_HEADER}/public/$uri @webserver;\n\t\t}\n\n\t\ttry_files /${FRAPPE_SITE_NAME_HEADER}/public/$uri @webserver;\n\t}\n\n\tlocation @webserver {\n\t\tproxy_http_version 1.1;\n\t\tproxy_set_header X-Forwarded-For $remote_addr;\n\t\tproxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;\n\t\tproxy_set_header X-Frappe-Site-Name ${FRAPPE_SITE_NAME_HEADER};\n\t\tproxy_set_header Host $host;\n\t\tproxy_set_header X-Use-X-Accel-Redirect True;\n\t\tproxy_read_timeout ${PROXY_READ_TIMEOUT};\n\t\tproxy_redirect off;\n\n\t\tproxy_pass  http://backend-server;\n\t}\n\n\t# optimizations\n\tsendfile on;\n\tkeepalive_timeout 15;\n\tclient_max_body_size ${CLIENT_MAX_BODY_SIZE};\n\tclient_body_buffer_size 16K;\n\tclient_header_buffer_size 1k;\n\n\t# enable gzip compression\n\t# based on https://mattstauffer.co/blog/enabling-gzip-on-nginx-servers-including-laravel-forge\n\tgzip on;\n\tgzip_http_version 1.1;\n\tgzip_comp_level 5;\n\tgzip_min_length 256;\n\tgzip_proxied any;\n\tgzip_vary on;\n\tgzip_types\n\t\tapplication/atom+xml\n\t\tapplication/javascript\n\t\tapplication/json\n\t\tapplication/rss+xml\n\t\tapplication/vnd.ms-fontobject\n\t\tapplication/x-font-ttf\n\t\tapplication/font-woff\n\t\tapplication/x-web-app-manifest+json\n\t\tapplication/xhtml+xml\n\t\tapplication/xml\n\t\tfont/opentype\n\t\timage/svg+xml\n\t\timage/x-icon\n\t\ttext/css\n\t\ttext/plain\n\t\ttext/x-component;\n\t\t# text/html is always compressed by HttpGzipModule\n}\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_sites",
+            "path": "/home/frappe/frappe-bench/sites"
+        },
+        {
+            "volume": "sv-app-4242_logs",
+            "path": "/home/frappe/frappe-bench/logs"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        },
+        {
+            "volume": "sv-app-4242_redis-cache",
+            "path": "/data"
+        },
+        {
+            "volume": "sv-app-4242_redis-queue",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "ADMIN_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "ERPNext",
+            "tagline": "Full ERP for accounting, inventory, sales, purchasing, manufacturing and HR"
+        },
+        "es": {
+            "title": "ERPNext",
+            "tagline": "ERP completo para contabilidad, inventario, ventas, compras, fabricación y RR. HH."
+        },
+        "de": {
+            "title": "ERPNext",
+            "tagline": "Vollständiges ERP für Buchhaltung, Lager, Vertrieb, Einkauf, Fertigung und Personal"
+        },
+        "fr": {
+            "title": "ERPNext",
+            "tagline": "ERP complet pour la comptabilité, les stocks, les ventes, les achats, la production et les RH"
+        },
+        "pt": {
+            "title": "ERPNext",
+            "tagline": "ERP completo para contabilidade, estoque, vendas, compras, produção e RH"
+        },
+        "ja": {
+            "title": "ERPNext",
+            "tagline": "会計、在庫、販売、購買、製造、人事をカバーするフル機能の ERP"
+        },
+        "ru": {
+            "title": "ERPNext",
+            "tagline": "Полноценная ERP для бухгалтерии, склада, продаж, закупок, производства и кадров"
+        },
+        "hi": {
+            "title": "ERPNext",
+            "tagline": "लेखा, इन्वेंटरी, बिक्री, खरीद, विनिर्माण और HR के लिए पूर्ण ERP"
+        }
+    },
+    "catalog_en": {
+        "name": "erpnext",
+        "icon": "erpnext",
+        "category": "business",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

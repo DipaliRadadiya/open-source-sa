@@ -1,0 +1,44 @@
+name: sv-app-4242
+
+services:
+  proxy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'HASH=$$(caddy hash-password --plaintext "$$GATE_PASSWORD") && printf "{\n\tadmin off\n}\n:80 {\n\tbasic_auth {\n\t\tadmin %s\n\t}\n\treverse_proxy vane:3000 {\n\t\tflush_interval -1\n\t}\n}\n" "$$HASH" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      GATE_PASSWORD: "94eb010ad8729b0383dfeed8aba368c3"
+
+    depends_on:
+      - vane
+
+  vane:
+    image: itzcrazykns1337/vane:v1.12.2
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    volumes:
+      - sv-app-4242_data:/home/vane/data
+
+volumes:
+  sv-app-4242_data:
+    external: true

@@ -1,0 +1,126 @@
+{
+    "slug": "openobserve",
+    "container_port": 5080,
+    "volume_roles": {
+        "data": "/data"
+    },
+    "generated_secrets": [
+        "ROOT_PASSWORD"
+    ],
+    "complex_secrets": [
+        "ROOT_PASSWORD"
+    ],
+    "panel_only_secrets": [],
+    "url_env_key": "ZO_WEB_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "monitoring",
+    "icon": "openobserve",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "OpenObserve",
+            "tagline": "Logs, metrics and traces in one place: ingest over HTTP or OpenTelemetry, search and build dashboards"
+        },
+        "es": {
+            "title": "OpenObserve",
+            "tagline": "Logs, métricas y trazas en un solo lugar: ingesta por HTTP u OpenTelemetry, búsqueda y paneles"
+        },
+        "de": {
+            "title": "OpenObserve",
+            "tagline": "Logs, Metriken und Traces an einem Ort: Erfassung per HTTP oder OpenTelemetry, Suche und Dashboards"
+        },
+        "fr": {
+            "title": "OpenObserve",
+            "tagline": "Logs, métriques et traces au même endroit : ingestion par HTTP ou OpenTelemetry, recherche et tableaux de bord"
+        },
+        "pt": {
+            "title": "OpenObserve",
+            "tagline": "Logs, métricas e traces em um só lugar: ingestão por HTTP ou OpenTelemetry, busca e painéis"
+        },
+        "ja": {
+            "title": "OpenObserve",
+            "tagline": "ログ、メトリクス、トレースを一か所に：HTTP または OpenTelemetry で取り込み、検索、ダッシュボード作成"
+        },
+        "ru": {
+            "title": "OpenObserve",
+            "tagline": "Логи, метрики и трассировки в одном месте: приём по HTTP или OpenTelemetry, поиск и дашборды"
+        },
+        "hi": {
+            "title": "OpenObserve",
+            "tagline": "लॉग, मेट्रिक्स और ट्रेस एक ही जगह: HTTP या OpenTelemetry से डेटा भेजें, खोजें और डैशबोर्ड बनाएं"
+        }
+    },
+    "catalog_en": {
+        "name": "openobserve",
+        "icon": "openobserve",
+        "category": "monitoring",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

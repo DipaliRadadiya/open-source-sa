@@ -4,6 +4,7 @@ use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Enums\CertificateStatus;
 use App\Enums\CertificateType;
 use App\Enums\DomainType;
+use App\Http\Resources\ApplicationResource;
 use App\Jobs\IssueCertificate;
 use App\Models\Application;
 use App\Models\Certificate;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Services\Server\Applications\DnsVerifier;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
@@ -253,3 +255,29 @@ it('checks a domain pointed elsewhere once, so a new site does not wait for noth
 
     expect($checks)->toBe(1)->and(Certificate::count())->toBe(0);
 });
+
+it('says HTTPS is on its way while the certificate it queued has not been served yet (DS-14)', function (?CertificateStatus $status, bool $pending) {
+    // DS-11: n8n, freshrss, it-tools, stirling-pdf and adminer went active
+    // 10–60 s before their certificate was served, and https:// failed the
+    // TLS handshake in between with nothing in the API to say why.
+    if ($status !== null) {
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::LetsEncrypt,
+            'status' => $status,
+            'domains' => ['shop.example.com'],
+        ]);
+    }
+
+    $request = Request::create('/');
+    $request->setUserResolver(fn () => User::query()->first());
+    $shown = ApplicationResource::make($this->application->fresh())->toArray($request);
+
+    expect($shown['certificate_pending'])->toBe($pending)
+        ->and($shown['url'])->toBe('http://shop.example.com');
+})->with([
+    'none asked for' => [null, false],
+    'queued' => [CertificateStatus::Pending, true],
+    'issuing' => [CertificateStatus::Issuing, true],
+    'failed' => [CertificateStatus::Failed, false],
+]);

@@ -1,0 +1,69 @@
+{
+    "schema": 1,
+    "slug": "codeserver",
+    "version": 1,
+    "title": "code-server",
+    "tagline": {
+        "en": "VS Code in the browser, with a persistent home directory and terminal",
+        "es": "VS Code en el navegador, con un directorio personal persistente y terminal",
+        "de": "VS Code im Browser, mit dauerhaftem Home-Verzeichnis und Terminal",
+        "fr": "VS Code dans le navigateur, avec un répertoire personnel persistant et un terminal",
+        "pt": "VS Code no navegador, com diretório pessoal persistente e terminal",
+        "ja": "永続的なホームディレクトリとターミナルを備えたブラウザー版 VS Code",
+        "ru": "VS Code в браузере с постоянным домашним каталогом и терминалом",
+        "hi": "स्थायी होम डायरेक्टरी और टर्मिनल के साथ ब्राउज़र में VS Code"
+    },
+    "category": "development",
+    "icon": "codeserver",
+    "popular": false,
+    "catalog_order": 320,
+    "docs_url": "https://coder.com/docs/code-server/install#docker",
+    "images": {
+        "app": {
+            "ref": "codercom/code-server:4.141.0",
+            "tested": [
+                "codercom/code-server:4.141.0"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "code",
+            "role": "app"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "1g",
+    "volumes": {
+        "home": "/home/coder"
+    },
+    "secrets": [
+        {
+            "key": "PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "password",
+                "secret": "PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Sign in with the generated password (PASSWORD); code-server has no username. The official image starts code-server on 0.0.0.0:8080 with password authentication, which the PASSWORD variable overrides.",
+        "The whole /home/coder directory is one named volume, so projects, settings, installed extensions and the terminal's shell history survive restarts and image updates. Docker seeds the empty volume from the image on first start, keeping the coder user's ownership.",
+        "The built-in terminal runs inside the container as the coder user. There is no docker.sock, no host bind mount and no extra capability, so it cannot reach the server's other sites or Docker. The upstream image does give coder passwordless sudo, which is root inside this container only.",
+        "Extensions come from Open VSX (code-server's default marketplace), not Microsoft's marketplace.",
+        "The 1g floor covers the server and its extension host; heavy language servers or builds may need a larger memory limit.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-25): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

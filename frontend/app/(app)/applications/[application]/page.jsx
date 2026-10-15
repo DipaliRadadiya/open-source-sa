@@ -20,7 +20,11 @@ import {
   getApplicationCertificate,
 } from "@/lib/applications/get-application-domains";
 import { ProvisioningCard } from "@/components/applications/provisioning-card";
+import { ContainerFailurePanel } from "@/components/applications/container-failure-panel";
+import { hasContainerFailure } from "@/lib/applications/container-state";
 import { FirstRunCredentials } from "@/components/applications/first-run-credentials";
+import { ContainerAccessCard } from "@/components/applications/container-access-card";
+import { showsContainerAccess } from "@/lib/applications/container-access";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
 import { SourceCard } from "@/components/applications/source-card";
@@ -40,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MagicLoginLauncher } from "@/components/applications/magic-login-launcher";
 import { CopyButton } from "@/components/ui/copy-button";
+import { ApplicationOriginBadge } from "@/components/applications/application-origin-badge";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -88,6 +93,16 @@ export default async function ApplicationDetailPage({ params }) {
   const canSeeBackups = can(appPermissions, "app_backup", "view", "application");
   const canRunBackup = can(appPermissions, "app_backup", "manage", "application");
   const isGit = Boolean(application.repository || application.repository_url);
+  const containerFailed = hasContainerFailure(application);
+  const containerFailure = containerFailed ? (
+    <ContainerFailurePanel
+      application={application}
+      canManageContainer={can(appPermissions, "app_container", "manage", "application")}
+      canRetry={canManage}
+      canSeeLogs={can(appPermissions, "app_log", "view", "application")}
+      canEditEnv={can(appPermissions, "app_environment", "view", "application")}
+    />
+  ) : null;
   // Only a serving site has domains, a certificate or a running process.
   const settled = isSettled(application);
 
@@ -97,6 +112,11 @@ export default async function ApplicationDetailPage({ params }) {
     !application.credentials_acknowledged &&
     (application.container_secret_keys ?? []).length > 0 &&
     can(appPermissions, "app_container", "manage", "application");
+
+  // Gated like the compose file it is read from (RC-23).
+  const showContainerAccess =
+    showsContainerAccess(application) &&
+    can(appPermissions, "app_compose", "view", "application");
 
   // The payload has `git_account_id` but no provider. `cache()`d, no provider API call.
   const gitAccounts =
@@ -298,6 +318,7 @@ export default async function ApplicationDetailPage({ params }) {
               <SiteTypeLogo
                 name={application.site_type}
                 provider={gitProviderFor(application, providersByAccountId(gitAccounts))}
+                iconDataUri={siteTypes.siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
                 size="h-6 w-6"
               />
             </span>
@@ -305,6 +326,8 @@ export default async function ApplicationDetailPage({ params }) {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight break-words">{application.name}</h1>
                 <ApplicationStatusBadge application={application} />
+                {/* The type is the logo tile and the Type fact below; the badge says where it came from. */}
+                <ApplicationOriginBadge origin={application.origin} />
                 {/* Staging copies look like the site they copy; mark them where the name is. */}
                 {application.is_staging ? (
                   <Badge variant="warning" className="font-normal">
@@ -329,6 +352,12 @@ export default async function ApplicationDetailPage({ params }) {
                 {"\u2060"}
                 <CopyButton value={application.domain} className="-my-1 ml-0.5 inline-flex align-middle" />
               </p>
+              {/* The container's own words for why it is down; the fixes are in the panel below. */}
+              {containerFailed ? (
+                <p className="mt-1 max-w-prose text-sm break-words text-destructive">
+                  {application.last_failure.message || t("containerFailure.noReason")}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -378,11 +407,20 @@ export default async function ApplicationDetailPage({ params }) {
 
       {/* Until it is serving, the provisioning card is the whole page. */}
       {!settled ? (
-        <ProvisioningCard application={application} canManage={canManage} />
+        <div className="space-y-4">
+          {containerFailure}
+          {/* The panel's Redeploy is the same Retry; one button for one action. */}
+          <ProvisioningCard
+            application={application}
+            canManage={canManage && !containerFailed}
+          />
+        </div>
       ) : (
         <>
-          {/* It disappears for good once somebody says they have saved them, and
-              these cannot be rotated from the panel. */}
+          {/* Why the container is down and the one-click fixes, before anything else. */}
+          {containerFailure}
+          {/* Full width, above the tiles. It disappears for good once somebody says they
+              have saved them, and these cannot be rotated from the panel. */}
           {showFirstRunCredentials ? <FirstRunCredentials application={application} /> : null}
 
           {/* The four answers people come for (is it up, secure, restorable, deployed),
@@ -396,6 +434,17 @@ export default async function ApplicationDetailPage({ params }) {
             deploy={deployTile}
             alerts={alerts}
           />
+
+          {/* A container's command line: wide, like Source; a container site has no Deploy card.
+              Protection stays in the two-by-two grid below. */}
+          {showContainerAccess ? (
+            <ContainerAccessCard
+              application={application}
+              canSeeSystemUsers={can(permissions, "system_user", "view")}
+              canManageSystemUsers={can(permissions, "system_user", "manage")}
+              canOpenSecurity={can(permissions, "setting", "manage")}
+            />
+          ) : null}
 
           {/* Wide, like Source: three facts in one row. Streamed on its own because the
               first open can wait on a release lookup; renders nothing for other types. */}

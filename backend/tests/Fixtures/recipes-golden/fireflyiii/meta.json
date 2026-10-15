@@ -1,0 +1,126 @@
+{
+    "slug": "fireflyiii",
+    "container_port": 8080,
+    "volume_roles": {
+        "upload": "/var/www/html/storage/upload",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "APP_KEY",
+        "STATIC_CRON_TOKEN",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "APP_URL",
+    "default_memory_limit": "512m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "productivity",
+    "icon": "fireflyiii",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 512m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_upload",
+            "path": "/var/www/html/storage/upload"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "APP_KEY",
+        "STATIC_CRON_TOKEN",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Firefly III",
+            "tagline": "Personal finance manager: accounts, budgets, bills and reports on where your money goes"
+        },
+        "es": {
+            "title": "Firefly III",
+            "tagline": "Gestor de finanzas personales: cuentas, presupuestos, facturas e informes sobre a dónde va tu dinero"
+        },
+        "de": {
+            "title": "Firefly III",
+            "tagline": "Persönliche Finanzverwaltung: Konten, Budgets, Rechnungen und Berichte darüber, wohin dein Geld fließt"
+        },
+        "fr": {
+            "title": "Firefly III",
+            "tagline": "Gestionnaire de finances personnelles : comptes, budgets, factures et rapports sur où va votre argent"
+        },
+        "pt": {
+            "title": "Firefly III",
+            "tagline": "Gestor de finanças pessoais: contas, orçamentos, contas a pagar e relatórios sobre para onde vai o seu dinheiro"
+        },
+        "ja": {
+            "title": "Firefly III",
+            "tagline": "個人向け家計管理：口座、予算、請求書、お金の行き先がわかるレポート"
+        },
+        "ru": {
+            "title": "Firefly III",
+            "tagline": "Управление личными финансами: счета, бюджеты, регулярные платежи и отчёты о том, куда уходят деньги"
+        },
+        "hi": {
+            "title": "Firefly III",
+            "tagline": "निजी वित्त प्रबंधक: खाते, बजट, बिल और आपका पैसा कहां जाता है इसकी रिपोर्ट"
+        }
+    },
+    "catalog_en": {
+        "name": "fireflyiii",
+        "icon": "fireflyiii",
+        "category": "productivity",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

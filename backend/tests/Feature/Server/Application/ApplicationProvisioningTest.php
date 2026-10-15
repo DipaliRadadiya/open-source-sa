@@ -462,6 +462,63 @@ it('creates the env file a container site cannot start without', function () {
     ))->toBeTrue("nothing touched {$env}");
 });
 
+it('points nginx at the port a pasted compose file publishes, before calling the site active', function () {
+    // write_config renders the vhost with the allocated port; starting the
+    // container then moves app_port to the one the file publishes. Measured
+    // on 2026-10-07: nginx on 3014, the container on 3992, the site `active`
+    // and `running` and a 502 for good, because only the certificate step
+    // rewrote the vhost and it declines a domain not pointed here yet.
+    $ran = [];
+    $vhosts = [];
+    Process::fake(function ($process) use (&$ran, &$vhosts) {
+        $command = $process->command;
+        $ran[] = $command;
+        $line = implode(' ', (array) $command);
+
+        if (str_contains($line, 'tee /etc/nginx/sites-available/shop.conf')) {
+            $vhosts[] = (string) $process->input;
+        }
+
+        return match (true) {
+            str_contains($line, 'config --format json') => Process::result(json_encode(['services' => ['web' => [
+                'image' => 'traefik/whoami:v1.11',
+                'ports' => [['host_ip' => '127.0.0.1', 'published' => '3992', 'target' => 80]],
+            ]]])),
+            str_contains($line, '--status running') => Process::result("abc\n"),
+            str_contains($line, 'curl') => Process::result('200'),
+            default => Process::result(),
+        };
+    });
+
+    $app = makeApp([
+        'site_type' => 'docker',
+        'serving_profile' => 'docker',
+        'app_port' => 3014,
+        'compose' => "services:\n  web:\n    image: traefik/whoami:v1.11\n    ports:\n      - \"127.0.0.1:3992:80\"\n",
+        'web_root' => 'public_html',
+    ]);
+
+    (new ProvisionApplication($app->id))->handle(
+        app(ApplicationProvisioner::class),
+        app(ActivityLogger::class),
+    );
+
+    $app->refresh();
+
+    expect($app->status->value)->toBe('active')
+        ->and($app->app_port)->toBe(3992)
+        ->and($vhosts)->not->toBeEmpty()
+        ->and(end($vhosts))->toContain('127.0.0.1:3992')
+        ->and(end($vhosts))->not->toContain('127.0.0.1:3014');
+
+    // Reloaded after that rewrite, not only after the first one.
+    $lines = array_map(fn ($c): string => implode(' ', (array) $c), $ran);
+    $lastVhost = max(array_keys(array_filter($lines, fn (string $l): bool => str_contains($l, 'tee /etc/nginx/sites-available/shop.conf'))));
+    $reloads = array_keys(array_filter($lines, fn (string $l): bool => str_contains($l, 'reload nginx')));
+
+    expect(max($reloads))->toBeGreaterThan($lastVhost);
+});
+
 it('still does not create one for a PHP site, which has no use for it', function () {
     // The guard exists. Widening it to every site type would put a dotfile in
     // the root of every static and WordPress site for no reader.

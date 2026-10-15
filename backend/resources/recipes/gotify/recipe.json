@@ -1,0 +1,73 @@
+{
+    "schema": 1,
+    "slug": "gotify",
+    "version": 1,
+    "title": "Gotify",
+    "tagline": {
+        "en": "Self-hosted push notifications: send messages with a simple REST API and receive them in the browser or the Android app",
+        "es": "Notificaciones push autoalojadas: envía mensajes con una API REST sencilla y recíbelos en el navegador o en la app de Android",
+        "de": "Selbst gehostete Push-Benachrichtigungen: Nachrichten über eine einfache REST-API senden und im Browser oder in der Android-App empfangen",
+        "fr": "Notifications push auto-hébergées : envoyez des messages avec une API REST simple et recevez-les dans le navigateur ou l'app Android",
+        "pt": "Notificações push auto-hospedadas: envie mensagens com uma API REST simples e receba-as no navegador ou no app Android",
+        "ja": "セルフホスト型プッシュ通知：シンプルな REST API でメッセージを送信し、ブラウザや Android アプリで受信",
+        "ru": "Собственные push-уведомления: отправляйте сообщения через простой REST API и получайте их в браузере или в приложении для Android",
+        "hi": "सेल्फ-होस्टेड पुश नोटिफ़िकेशन: आसान REST API से संदेश भेजें और उन्हें ब्राउज़र या Android ऐप में पाएं"
+    },
+    "category": "utility",
+    "icon": "gotify",
+    "popular": false,
+    "catalog_order": 720,
+    "docs_url": "https://gotify.net/docs/install",
+    "images": {
+        "app": {
+            "ref": "gotify/server:3.1.1",
+            "tested": [
+                "gotify/server:3.1.1"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "gotify",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "128m",
+    "volumes": {
+        "data": "/app/data"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Gotify creates the administrator on the first start, while the database has no users, from GOTIFY_DEFAULTUSER_NAME (admin) and GOTIFY_DEFAULTUSER_PASS (a generated password shown on the first-run card) instead of the upstream default admin / admin. Later changes to these variables do nothing: change the password in the web interface (Users).",
+        "One container with one named volume on /app/data, where the image keeps everything by default: the SQLite database (gotify.db), uploaded application images and plugins. Gotify also supports MySQL and PostgreSQL, which a single notification server rarely needs.",
+        "To send a message: create an application in the web interface, then POST https://<your domain>/message with its token (header X-Gotify-Key or ?token=) and a title, message and priority. Clients (the web interface, the Android app, CLI) receive messages over a WebSocket stream, which the panel's proxy passes through.",
+        "GOTIFY_SERVER_SECURECOOKIE marks the session cookie Secure, since the site is served over HTTPS. Public registration stays off (GOTIFY_REGISTRATION=false, the upstream default): the administrator creates users.",
+        "Gotify needs very little memory: with 128m it sat at 9 to 12 MiB idle and peaked at 17 MiB (Ubuntu 24.04 and 26.04).",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-38): created from the 1-Click Recipes tab, Running in 32 s, sign-in as admin with the generated password (admin / admin refused), an application created in the web interface, a message sent with curl to /message with its token and shown live in the web interface over the WebSocket, registration closed (401), a Secure session cookie, and a restart that keeps the data; every image ref below is in its tested list."
+    ]
+}

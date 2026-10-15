@@ -1,0 +1,130 @@
+{
+    "schema": 1,
+    "slug": "mautic_container",
+    "version": 1,
+    "title": "Mautic",
+    "tagline": {
+        "en": "Open source marketing automation: contacts, segments, forms, landing pages, email campaigns",
+        "es": "Automatización de marketing de código abierto: contactos, segmentos, formularios, páginas de destino, campañas de email",
+        "de": "Open-Source-Marketing-Automation: Kontakte, Segmente, Formulare, Landingpages, E-Mail-Kampagnen",
+        "fr": "Automatisation marketing open source : contacts, segments, formulaires, pages d'atterrissage, campagnes e-mail",
+        "pt": "Automação de marketing de código aberto: contatos, segmentos, formulários, landing pages, campanhas de email",
+        "ja": "オープンソースのマーケティングオートメーション：連絡先、セグメント、フォーム、ランディングページ、メールキャンペーン",
+        "ru": "Автоматизация маркетинга с открытым кодом: контакты, сегменты, формы, лендинги, email-кампании",
+        "hi": "ओपन सोर्स मार्केटिंग ऑटोमेशन: संपर्क, सेगमेंट, फ़ॉर्म, लैंडिंग पेज, ईमेल अभियान"
+    },
+    "category": "marketing",
+    "icon": "mautic",
+    "popular": false,
+    "catalog_order": 670,
+    "docs_url": "https://docs.mautic.org/en/7.x/",
+    "images": {
+        "app": {
+            "ref": "mautic/mautic:7.2.1-apache",
+            "tested": [
+                "mautic/mautic:7.2.1-apache"
+            ]
+        },
+        "db": {
+            "ref": "mariadb:11.8.9",
+            "tested": [
+                "mariadb:11.8.9"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "mautic",
+            "role": "app"
+        },
+        {
+            "name": "cron",
+            "role": "worker"
+        },
+        {
+            "name": "worker",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "1g",
+    "volumes": {
+        "config": "/var/www/html/config",
+        "logs": "/var/www/html/var/logs",
+        "files": "/var/www/html/docroot/media/files",
+        "images": "/var/www/html/docroot/media/images",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "MAUTIC_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [
+        {
+            "path": "/mautic-init/start.sh",
+            "source": "starter/start.sh"
+        },
+        {
+            "path": "/mautic-init/install.php",
+            "source": "starter/install.php"
+        },
+        {
+            "path": "/mautic-init/sync-url.php",
+            "source": "starter/sync-url.php"
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The slug is mautic_container because mautic is already the panel's own PHP installer for Mautic (a web-server site, not Docker); two site types cannot share a name. Same pattern as wordpress_container.",
+        "Mautic is installed on the first start, before Apache serves anything, so its web installer is never reachable: a starter script (mautic-init/start.sh in the site folder) runs Mautic's own installer (bin/console mautic:install) as www-data with the username admin, MAUTIC_ADMIN_EMAIL (the admin email you enter) and MAUTIC_ADMIN_PASSWORD (a generated password shown on the first-run card). install.php reads them from the environment, so the password is not on any command line. Sign in with admin (or the email) and that password. They are read only while Mautic is not installed: change the password later in Mautic (your profile). The first start takes one to three minutes.",
+        "Four services, from the official docker-mautic basic example: the web app, a cron role (segments, campaigns and triggers every 15 minutes, the image's default crontab) and a worker role (the email, hit and failed-message queues) on the same image, and a private MariaDB 11.8 (the example uses MySQL; Mautic 7 supports both). The worker runs one consumer per queue instead of the image's two (DOCKER_MAUTIC_WORKERS_CONSUME_*) to save memory. Queues use the database (doctrine://default), as in the example's .mautic_env.",
+        "Mautic 7.2.1, the current stable release (the 5.x line the card mentions only gets security fixes; a new install should start on the current major). Configuration, logs, uploaded files and images are four named volumes shared by the three Mautic containers, as in the example.",
+        "Email: Mautic sends nothing until you set a transport in Settings > Configuration > Email Settings: an SMTP server (smtp://user:pass@host:port) or an API provider's DSN, plus the sender name and address. Campaign and segment emails then go through the worker's email queue.",
+        "HTTPS behind the panel's proxy: start.sh writes one Apache line (SetEnvIf X-Forwarded-Proto https HTTPS=on), so Mautic builds https links without trusting a proxy address. Mautic decides whether its session cookie is Secure from site_url when it compiles its Symfony cache, and the image ships a cache compiled without a site_url (cookie not Secure, found in the RC-37 smoke), so start.sh rebuilds the cache (bin/console cache:clear as www-data) once per container and address: the first start of a new or recreated container takes about a minute longer, a plain restart does not. Contacts' IP addresses are recorded as the proxy's unless you add the Docker gateway in Settings > Configuration > System Settings > Trusted proxies.",
+        "Domain changes: MAUTIC_URL is the site's address. On every start of an installed Mautic, mautic-init/sync-url.php writes it to site_url in config/local.php when they differ, so tracking scripts, form embeds and email links use the new address. Embeds already pasted into other sites keep the old one.",
+        "Deleting start.sh gives the image's own behaviour back (the web installer at the site address).",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-37): created from the 1-Click Recipes tab, Running in 32 s and /s/login about 40 to 70 s later (installation, then the one-time cache rebuild), no installer reachable, sign-in with admin and with the email, a contact, a segment filled by the cron container, a public form submission creating a contact, one consumer per queue in the worker, the site_url sync, a restart (no second install or cache rebuild) and a Secure session cookie. Web idle 127 to 259 MiB of 1g; the first start's cache rebuild briefly fills the limit with page cache (anonymous memory at most 418 MiB), never OOM. Every image ref below is in its tested list."
+    ]
+}

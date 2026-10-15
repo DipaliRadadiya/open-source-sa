@@ -10,10 +10,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 
 // `min-w-0` + `truncate` so a long title shortens instead of pushing the arrow off-centre.
-function TypeSide({ name, title, emphasis = false }) {
+function TypeSide({ name, title, iconDataUri, emphasis = false }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <SiteTypeLogo name={name} size="h-6 w-8" />
+      <SiteTypeLogo name={name} iconDataUri={iconDataUri} size="h-6 w-8" />
       <span
         className={cn(
           "truncate text-sm",
@@ -53,6 +53,7 @@ export function SiteTypeRelabelDialog({
   application,
   target,
   targetTitle,
+  siteTypes = [],
   // The file the verdict rests on; checkable, unlike a confidence score.
   matched = null,
 }) {
@@ -104,10 +105,11 @@ export function SiteTypeRelabelDialog({
           <TypeSide
             name={application.site_type}
             title={application.site_type_title ?? application.site_type}
+            iconDataUri={siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
           />
           <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           {/* The destination keeps foreground weight; the current type is muted. */}
-          <TypeSide name={target} title={targetTitle} emphasis />
+          <TypeSide name={target} title={targetTitle} iconDataUri={siteTypes.find((type) => type.name === target)?.recipe?.icon_data_uri} emphasis />
         </div>
 
         {/* Two labelled rows: what changes, and what does not. */}

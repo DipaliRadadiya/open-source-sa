@@ -1,0 +1,54 @@
+{
+    "schema": 1,
+    "slug": "cyberchef",
+    "version": 1,
+    "title": "CyberChef",
+    "tagline": {
+        "en": "The Cyber Swiss Army Knife: encode, decode, encrypt and analyse data in your browser",
+        "es": "La navaja suiza cibernética: codifica, decodifica, cifra y analiza datos en tu navegador",
+        "de": "Das Cyber-Schweizer-Taschenmesser: Daten im Browser kodieren, dekodieren, verschlüsseln und analysieren",
+        "fr": "Le couteau suisse cyber : encodez, décodez, chiffrez et analysez des données dans votre navigateur",
+        "pt": "O canivete suíço cibernético: codifique, decodifique, criptografe e analise dados no navegador",
+        "ja": "サイバー版スイスアーミーナイフ。ブラウザでデータのエンコード、デコード、暗号化、解析",
+        "ru": "Кибер-швейцарский нож: кодируйте, декодируйте, шифруйте и анализируйте данные в браузере",
+        "hi": "साइबर स्विस आर्मी नाइफ़: अपने ब्राउज़र में डेटा को एन्कोड, डिकोड, एन्क्रिप्ट और विश्लेषण करें"
+    },
+    "category": "development",
+    "icon": "cyberchef",
+    "popular": false,
+    "catalog_order": 480,
+    "docs_url": "https://github.com/gchq/CyberChef/wiki",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/gchq/cyberchef:11.5.0",
+            "tested": [
+                "ghcr.io/gchq/cyberchef:11.5.0"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "cyberchef",
+            "role": "app"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "128m",
+    "volumes": {},
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "none",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "CyberChef runs entirely in your browser and stores nothing on the server, like IT-Tools: there is no login, no database and no volume. Recipes and inputs stay in the browser (and in the page URL when you share a recipe link).",
+        "There is no sign-in, so anyone who can reach the site can use it. That is harmless for a static toolbox, but restrict access in front of it if you do not want it public.",
+        "The official image is a static build served by unprivileged nginx, which listens on port 8080 (not 80). The 128m floor is generous for nginx serving static files.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-31): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

@@ -1,0 +1,90 @@
+{
+    "schema": 1,
+    "slug": "unleash",
+    "version": 1,
+    "title": "Unleash",
+    "tagline": {
+        "en": "Feature flags for your apps: gradual rollouts, environments and API tokens for your SDKs",
+        "es": "Feature flags para tus aplicaciones: despliegues graduales, entornos y tokens de API para tus SDK",
+        "de": "Feature-Flags für Ihre Apps: schrittweise Rollouts, Umgebungen und API-Tokens für Ihre SDKs",
+        "fr": "Feature flags pour vos applications : déploiements progressifs, environnements et jetons d'API pour vos SDK",
+        "pt": "Feature flags para seus aplicativos: lançamentos graduais, ambientes e tokens de API para seus SDKs",
+        "ja": "アプリのためのフィーチャーフラグ：段階的なロールアウト、環境、SDK 用の API トークン",
+        "ru": "Фича-флаги для ваших приложений: постепенные выкатки, окружения и API-токены для SDK",
+        "hi": "आपके ऐप्स के लिए फ़ीचर फ़्लैग: धीरे-धीरे रोलआउट, एनवायरनमेंट और आपके SDK के लिए API टोकन"
+    },
+    "category": "development",
+    "icon": "unleash",
+    "popular": false,
+    "catalog_order": 710,
+    "docs_url": "https://docs.getunleash.io/deploy/getting-started",
+    "images": {
+        "app": {
+            "ref": "unleashorg/unleash-server:8.2.0",
+            "tested": [
+                "unleashorg/unleash-server:8.2.0"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "unleash",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 4242,
+    "memory_floor": "512m",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "UNLEASH_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Unleash Open Source (unleashorg/unleash-server). On the first start, with an empty database, it creates the administrator from UNLEASH_DEFAULT_ADMIN_USERNAME (admin) and UNLEASH_DEFAULT_ADMIN_PASSWORD (a generated password shown on the first-run card), instead of the documented default admin / unleash4all. Both variables are read only while there are no users, so later changes do nothing: change the password in the web interface (Profile).",
+        "LOG_LEVEL is warn, as in the official compose file: Unleash writes the initial admin password into its info log line when it creates the account, and warn keeps it out of the container log.",
+        "PostgreSQL 17.11 (the docs accept 15 or newer) runs in its own container with its own named volume and no published port; database migrations run on every start of the Unleash container. DATABASE_SSL is off because the database is only reachable on the app's private network.",
+        "UNLEASH_URL is the site's address (used in links and invitation emails) and follows the domain. SECURE_HEADERS turns on Unleash's security headers and marks the session cookie Secure; the panel's HTTPS proxy sends X-Forwarded-Proto, which Unleash trusts. SEND_TELEMETRY is off.",
+        "No API tokens are created for you (the official compose file's insecure demo tokens are deliberately left out). Create a backend token for your server-side SDKs, or a frontend token for browsers, in Admin settings > API access, and use it as the Authorization header against https://<your domain>/api/client/features.",
+        "Outgoing email (invitations, password resets) needs SMTP settings (EMAIL_HOST and related variables); without them, add users with a password or share the reset link the admin interface shows.",
+        "The memory floor is 512m: Unleash sat at 76 to 95 MiB idle and peaked at 111 MiB (15 to 22 % of the limit), PostgreSQL at 35 to 44 MiB, on Ubuntu 24.04 and 26.04.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-38): created from the 1-Click Recipes tab, Running in 48 s, sign-in as admin with the generated password (admin / unleash4all refused), a feature flag created and enabled in development, a backend API token created in the UI and GET /api/client/features listing the flag as enabled with that token, security headers and a Secure session cookie with no CSP errors, no admin password in the log, and a restart; every image ref below is in its tested list."
+    ]
+}

@@ -56,6 +56,11 @@ export const MANY_MEANINGS = {
     reason:
       "The verb on a service button and the noun for a start time. Most languages inflect one and not the other.",
   },
+  Runs: {
+    locales: ["es", "de", "ja", "ru", "hi"],
+    reason:
+      "A schedule's run time and a recipe's list of services it executes. Russian names the time in one and the execution verb in the other; these locales likewise need distinct labels.",
+  },
   Stopped: {
     // Scoped: only these inflect the adjective; everywhere else one word must serve.
     locales: ["es", "fr", "pt"],

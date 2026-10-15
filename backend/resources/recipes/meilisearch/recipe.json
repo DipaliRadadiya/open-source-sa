@@ -1,0 +1,69 @@
+{
+    "schema": 1,
+    "slug": "meilisearch",
+    "version": 1,
+    "title": "Meilisearch",
+    "tagline": {
+        "en": "Lightning-fast, typo-tolerant search engine with a simple REST API",
+        "es": "Motor de búsqueda ultrarrápido y tolerante a errores tipográficos, con una API REST sencilla",
+        "de": "Blitzschnelle, tippfehlertolerante Suchmaschine mit einfacher REST-API",
+        "fr": "Moteur de recherche ultra-rapide et tolérant aux fautes de frappe, avec une API REST simple",
+        "pt": "Mecanismo de busca ultrarrápido e tolerante a erros de digitação, com uma API REST simples",
+        "ja": "シンプルな REST API を備えた、高速でタイプミスに強い検索エンジン",
+        "ru": "Молниеносная поисковая система, устойчивая к опечаткам, с простым REST API",
+        "hi": "सरल REST API के साथ बेहद तेज़, टाइपो-सहिष्णु सर्च इंजन"
+    },
+    "category": "development",
+    "icon": "meilisearch",
+    "popular": false,
+    "catalog_order": 460,
+    "docs_url": "https://www.meilisearch.com/docs/resources/self_hosting/configuration/reference",
+    "images": {
+        "app": {
+            "ref": "getmeili/meilisearch:v1.55.0",
+            "tested": [
+                "getmeili/meilisearch:v1.55.0"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "meilisearch",
+            "role": "app"
+        }
+    ],
+    "container_port": 7700,
+    "memory_floor": "512m",
+    "volumes": {
+        "data": "/meili_data"
+    },
+    "secrets": [
+        {
+            "key": "MEILI_MASTER_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "token",
+                "secret": "MEILI_MASTER_KEY"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Meilisearch is an API, not a website: the site's HTTPS address is the endpoint your application talks to. The token shown on the first-run card is the master key (MEILI_MASTER_KEY, 32 characters); every request needs it, or a key made from it, in an Authorization: Bearer header.",
+        "Use the master key only to manage keys. Create scoped API keys with POST /keys (a search-only key for browsers, an admin key for your back end) and never put the master key in front-end code.",
+        "MEILI_ENV is production, so a master key is mandatory and the built-in search preview page is turned off: opening the address in a browser shows a JSON message, not a dashboard. Search from your own application, or from a client that sends a key.",
+        "Indexes and documents live in the data volume (/meili_data). The healthcheck calls GET /health with the curl that ships in the image. Anonymous telemetry is off (MEILI_NO_ANALYTICS).",
+        "The 512m floor covers small and medium indexes. Indexing large datasets uses more memory; raise the limit if indexing tasks fail or the container is killed.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-31): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

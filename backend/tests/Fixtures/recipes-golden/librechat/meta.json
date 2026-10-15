@@ -1,0 +1,145 @@
+{
+    "slug": "librechat",
+    "container_port": 3080,
+    "volume_roles": {
+        "data": "/app/data",
+        "uploads": "/app/uploads",
+        "images": "/app/client/public/images",
+        "db": "/data/db",
+        "search": "/meili_data"
+    },
+    "generated_secrets": [
+        "MONGO_PASSWORD",
+        "MEILI_MASTER_KEY",
+        "CREDS_KEY_SEED",
+        "CREDS_IV_SEED",
+        "JWT_SECRET",
+        "JWT_REFRESH_SECRET"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "DOMAIN_CLIENT",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "librechat",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/app/data"
+        },
+        {
+            "volume": "sv-app-4242_uploads",
+            "path": "/app/uploads"
+        },
+        {
+            "volume": "sv-app-4242_images",
+            "path": "/app/client/public/images"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/data/db"
+        },
+        {
+            "volume": "sv-app-4242_search",
+            "path": "/meili_data"
+        }
+    ],
+    "docker_secret_keys": [
+        "MONGO_PASSWORD",
+        "MEILI_MASTER_KEY",
+        "CREDS_KEY_SEED",
+        "CREDS_IV_SEED",
+        "JWT_SECRET",
+        "JWT_REFRESH_SECRET"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "LibreChat",
+            "tagline": "Self-hosted AI chat for OpenAI, Anthropic, Google and other model providers"
+        },
+        "es": {
+            "title": "LibreChat",
+            "tagline": "Chat de IA autoalojado para OpenAI, Anthropic, Google y otros proveedores de modelos"
+        },
+        "de": {
+            "title": "LibreChat",
+            "tagline": "Selbst gehosteter KI-Chat für OpenAI, Anthropic, Google und weitere Modellanbieter"
+        },
+        "fr": {
+            "title": "LibreChat",
+            "tagline": "Chat IA auto-hébergé pour OpenAI, Anthropic, Google et d'autres fournisseurs de modèles"
+        },
+        "pt": {
+            "title": "LibreChat",
+            "tagline": "Chat de IA auto-hospedado para OpenAI, Anthropic, Google e outros provedores de modelos"
+        },
+        "ja": {
+            "title": "LibreChat",
+            "tagline": "OpenAI、Anthropic、Googleなど複数のモデルプロバイダーに対応するセルフホスト型AIチャット"
+        },
+        "ru": {
+            "title": "LibreChat",
+            "tagline": "Самостоятельно размещаемый ИИ-чат для OpenAI, Anthropic, Google и других поставщиков моделей"
+        },
+        "hi": {
+            "title": "LibreChat",
+            "tagline": "OpenAI, Anthropic, Google और अन्य मॉडल प्रदाताओं के लिए सेल्फ-होस्टेड AI चैट"
+        }
+    },
+    "catalog_en": {
+        "name": "librechat",
+        "icon": "librechat",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

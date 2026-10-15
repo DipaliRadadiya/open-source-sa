@@ -1,0 +1,85 @@
+{
+    "schema": 1,
+    "slug": "hoppscotch",
+    "version": 1,
+    "title": "Hoppscotch",
+    "tagline": {
+        "en": "Open-source API development platform, a lightweight alternative to Postman",
+        "es": "Plataforma de código abierto para desarrollar APIs, una alternativa ligera a Postman",
+        "de": "Open-Source-Plattform für API-Entwicklung, eine schlanke Alternative zu Postman",
+        "fr": "Plateforme open source de développement d'API, une alternative légère à Postman",
+        "pt": "Plataforma de código aberto para desenvolvimento de APIs, uma alternativa leve ao Postman",
+        "ja": "オープンソースの API 開発プラットフォーム。Postman の軽量な代替",
+        "ru": "Платформа с открытым исходным кодом для разработки API, лёгкая альтернатива Postman",
+        "hi": "API विकास के लिए ओपन-सोर्स प्लेटफ़ॉर्म, Postman का हल्का विकल्प"
+    },
+    "category": "development",
+    "icon": "hoppscotch",
+    "popular": false,
+    "catalog_order": 750,
+    "docs_url": "https://docs.hoppscotch.io/documentation/self-host/community-edition/install-and-build",
+    "images": {
+        "app": {
+            "ref": "hoppscotch/hoppscotch:2026.9.0",
+            "tested": [
+                "hoppscotch/hoppscotch:2026.9.0"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "hoppscotch",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/data",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DATA_ENCRYPTION_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "VITE_BASE_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The API client at / works without signing in: requests, collections and environments are kept in the browser.",
+        "Signing in (team workspaces, shared collections, history sync) needs an email server (SMTP, for magic links) or an OAuth app (GitHub, Google or Microsoft). Open /admin to run the onboarding, which collects these settings; the first person to sign in becomes the administrator, so finish the onboarding right after install.",
+        "The official all-in-one image runs in sub-path mode (ENABLE_SUBPATH_BASED_ACCESS=true), so one port serves the app at /, the admin dashboard at /admin and the backend at /backend. The desktop app can connect to this instance through the same address.",
+        "Database migrations (prisma migrate deploy, as in the official docs) run in the start command before the server starts, so there is no one-shot migration container.",
+        "DATA_ENCRYPTION_KEY (32 characters, as the docs require) encrypts the settings stored in the database: keep it with your backups, because the stored settings cannot be read without it. The JWT and session secrets and the token lifetimes are not environment variables in this version: Hoppscotch generates them into the database on first start, and they can be changed in the admin dashboard.",
+        "TRUST_PROXY=true makes the backend read the visitor's address from X-Forwarded-For; without it every visitor appears to come from the image's internal proxy and shares one rate-limit bucket.",
+        "WHITELISTED_ORIGINS contains this site's HTTPS address plus the desktop app's origins from the official example.",
+        "PostgreSQL 17.11 has its own volume and no published port. The data volume keeps the bundle server's signing key, so it survives restarts.",
+        "The healthcheck calls /backend/ping on 127.0.0.1 with curl, which the image ships (the image's own healthcheck runs every 2 seconds).",
+        "On its very first start the app container restarts itself once, after writing its default settings to the database (upstream behaviour), so the panel may show one restart.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-40): created from the 1-Click Recipes tab, Running, HTTPS, the admin onboarding page, a request to echo.hoppscotch.io from the web app, the backend ping and GraphQL through this domain, and a restart passed; every image ref below is in its tested list."
+    ]
+}

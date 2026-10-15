@@ -1,0 +1,102 @@
+{
+    "schema": 1,
+    "slug": "directus",
+    "version": 1,
+    "title": "Directus",
+    "tagline": {
+        "en": "Instant REST and GraphQL API with an admin app for your database",
+        "es": "API REST y GraphQL instantánea con una aplicación de administración para tu base de datos",
+        "de": "Sofortige REST- und GraphQL-API mit einer Admin-App für Ihre Datenbank",
+        "fr": "API REST et GraphQL instantanée avec une application d’administration pour votre base de données",
+        "pt": "API REST e GraphQL instantânea com um aplicativo de administração para seu banco de dados",
+        "ja": "データベース向けの管理アプリ付き、即時利用できる REST・GraphQL API",
+        "ru": "Мгновенный REST и GraphQL API с админ-приложением для вашей базы данных",
+        "hi": "आपके डेटाबेस के लिए एडमिन ऐप के साथ तुरंत REST और GraphQL API"
+    },
+    "category": "development",
+    "icon": "directus",
+    "popular": false,
+    "catalog_order": 330,
+    "docs_url": "https://directus.com/docs/self-hosting/deploying",
+    "images": {
+        "app": {
+            "ref": "directus/directus:12.5.0",
+            "tested": [
+                "directus/directus:12.5.0"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "directus",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8055,
+    "memory_floor": "1g",
+    "volumes": {
+        "uploads": "/directus/uploads",
+        "extensions": "/directus/extensions",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "PUBLIC_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Directus bootstraps the database on its first start and creates the first administrator from ADMIN_EMAIL (the email entered at create time) and the generated ADMIN_PASSWORD. Later starts keep the existing users and password.",
+        "Directus 12 runs on the free Core tier without a licence key. SSO, custom permission rules and custom LLM connections need a Directus licence (free for organisations under $5M revenue and 50 employees).",
+        "The official example adds Redis for caching; it is left out because caching is off by default, which keeps the stack to the app and PostgreSQL. Plain PostgreSQL 17.11 replaces the example's PostGIS image; geometry fields need PostGIS.",
+        "PUBLIC_URL is the URL key. IP_TRUST_PROXY keeps the Directus 12 default (false), so activity logs record the proxy address rather than a header the client could forge.",
+        "Uploads and extensions live in their own named volumes; PostgreSQL has its own volume and no published port. Email (password resets, invitations) needs EMAIL_* settings that are not configured.",
+        "The healthcheck uses 127.0.0.1, not localhost: BusyBox wget in the image resolves localhost to ::1 first and Directus listens on IPv4 only, so a localhost probe was refused and the container stayed unhealthy (found live, RC-25).",
+        "The 1g application floor fits Directus's Node process with headroom for imports; the database uses the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-25): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

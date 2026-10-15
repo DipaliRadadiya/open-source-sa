@@ -1,0 +1,63 @@
+name: sv-app-4242
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm-database:v1.105.0
+    restart: unless-stopped
+    mem_limit: 1536m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:4000"
+
+    environment:
+      DATABASE_URL: "postgresql://litellm:26fb74e5c34361c339e7bef94b0b90e3@db:5432/litellm"
+      STORE_MODEL_IN_DB: "True"
+      LITELLM_MASTER_KEY: "sk-17f12ac0ef66f5c5cb1638096d4c60fa"
+      LITELLM_SALT_KEY: "sk-6cb06a391c7e0c3ccd8e2fcf3acb2520"
+      UI_USERNAME: admin
+      UI_PASSWORD: "9f6c212149d472bacea5ea141e4c76dc"
+      FORWARDED_ALLOW_IPS: "*"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness')"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  db:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: "26fb74e5c34361c339e7bef94b0b90e3"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  sv-app-4242_db:
+    external: true

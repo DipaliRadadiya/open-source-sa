@@ -4,9 +4,14 @@ namespace App\Providers;
 
 use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
+use App\Models\Application;
+use App\Models\SystemUser;
 use App\Models\User;
+use App\Observers\AppShellMapObserver;
 use App\Services\Admin\ApiErrorLogWriter;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Backups\Storage\GoogleHttpClient;
@@ -63,6 +68,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(RecipeRegistry::class);
+
         // The firewall engine — UFW today; swap the binding for firewalld later.
         $this->app->bind(Firewall::class, UfwFirewall::class);
 
@@ -96,6 +103,10 @@ class AppServiceProvider extends ServiceProvider
         // on a box with no record yet the first read shells out to detect —
         // a fresh instance per consumer turns that into one detection each.
         $this->app->scoped(ServerCapabilities::class);
+
+        // One `docker ps` per request, however many container sites a list
+        // shows (DS-09).
+        $this->app->scoped(ContainerLiveness::class);
 
         // Asked once per type by the site-type catalog; one answer per request.
         $this->app->scoped(ServerDefaultPhp::class);
@@ -155,6 +166,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('access-admin', fn (User $user): bool => $user->isAdmin());
+
+        // Container login (RC-28): the access map follows every change to a
+        // Docker app or its owner, whichever code path made it.
+        Application::observe(AppShellMapObserver::class);
+        SystemUser::observe(AppShellMapObserver::class);
 
         // Laravel ships no Google Drive driver, so `Storage::build()` cannot
         // resolve one without this. Registered here rather than inside

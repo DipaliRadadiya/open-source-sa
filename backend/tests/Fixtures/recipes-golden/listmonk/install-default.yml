@@ -1,0 +1,75 @@
+name: sv-app-4242
+
+services:
+  listmonk:
+    image: listmonk/listmonk:v6.2.0
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:9000"
+
+    command: ["sh", "-c", "./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''"]
+    environment:
+      LISTMONK_app__address: "0.0.0.0:9000"
+      LISTMONK_db__user: listmonk
+      LISTMONK_db__password: "c18e3ea60afadb431f1f9cf160777f44"
+      LISTMONK_db__database: listmonk
+      LISTMONK_db__host: db
+      LISTMONK_db__port: "5432"
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_db__max_open: "25"
+      LISTMONK_db__max_idle: "25"
+      LISTMONK_db__max_lifetime: 300s
+      TZ: Etc/UTC
+      LISTMONK_ADMIN_USER: admin
+      LISTMONK_ADMIN_PASSWORD: "e72747b649494fc0fe7f9e66bfda07a9"
+
+    volumes:
+      - sv-app-4242_uploads:/listmonk/uploads
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: listmonk
+      POSTGRES_USER: listmonk
+      POSTGRES_PASSWORD: "c18e3ea60afadb431f1f9cf160777f44"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk -d listmonk"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  sv-app-4242_uploads:
+    external: true
+  sv-app-4242_db:
+    external: true

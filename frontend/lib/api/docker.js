@@ -113,3 +113,45 @@ export function getContainerSecrets(id) {
 export function acknowledgeContainerSecrets(id) {
   return api.post(`/applications/${id}/container/secrets/acknowledge`);
 }
+
+/**
+ * The app's own system user and the lines to copy for the Command-line access
+ * card (RC-23, RC-28). A read, gated like the compose file.
+ */
+export function getContainerAccess(id) {
+  return api.get(`/applications/${id}/container/access`);
+}
+
+/**
+ * Turns container login on for the app's owner: its SSH login then opens the
+ * container (RC-28). `ssh_key`, `password` and `confirm_container_only` are
+ * optional; the first two go through the System Users rules.
+ */
+export function enableContainerAccess(id, payload = {}) {
+  return api.post(`/applications/${id}/container/access`, payload);
+}
+
+// The owner's SSH goes back to a normal host login if it is still on.
+export function disableContainerAccess(id) {
+  return api.delete(`/applications/${id}/container/access`);
+}
+
+/**
+ * Image discovery (DS-02). All three read the registry without pulling, so
+ * they are safe to call while the user types; `signal` lets a newer keystroke
+ * abandon an older request.
+ */
+export function searchDockerImages(q, { limit = 10, signal } = {}) {
+  return api.get("/docker/images/search", { params: { q, limit }, signal });
+}
+
+export function getDockerImageTags(image, { limit = 20, signal } = {}) {
+  return api.get("/docker/images/tags", { params: { image, limit }, signal });
+}
+
+export function inspectDockerImage(image, { registryId, signal } = {}) {
+  return api.get("/docker/images/inspect", {
+    params: { image, ...(registryId ? { registry_id: registryId } : {}) },
+    signal,
+  });
+}

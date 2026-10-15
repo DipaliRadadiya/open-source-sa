@@ -6,6 +6,7 @@ use App\Enums\SupervisorMode;
 use App\Models\Application;
 use App\Rules\SupportedNodeVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -49,7 +50,7 @@ class UpdateNodeVersionRequest extends FormRequest
             $rules['node_version'][] = new SupportedNodeVersion(
                 $range['min'] ?? null,
                 $range['max'] ?? null,
-                __("application.types.{$type->name()}.title"),
+                app(SiteTypeText::class)->title($type->name()),
             );
         }
 

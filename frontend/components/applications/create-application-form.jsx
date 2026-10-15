@@ -85,6 +85,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
+import { DeploySourcePicker } from "@/components/applications/deploy-source-picker";
 import { RequiredServices } from "@/components/applications/required-services";
 import { RuntimeRefresh } from "@/components/applications/runtime-refresh";
 import {
@@ -92,6 +93,15 @@ import {
   sharedFieldNames,
 } from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
+import { DockerImageSetup } from "@/components/applications/docker-image-setup";
+import {
+  DOCKER_LIMITS,
+  dockerCreateFields,
+  dockerEnvProblem,
+  dockerServerErrors,
+  dockerVolumeProblem,
+  setDockerSource,
+} from "@/lib/docker/create-request";
 import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
 
 const COMMON_FIELD_NAMES = new Set([
@@ -105,6 +115,17 @@ const COMMON_FIELD_NAMES = new Set([
   "repository_url",
   "branch",
 ]);
+
+// Rendered by DockerImageSetup in simple mode instead of as plain fields.
+const DOCKER_PICKER_FIELDS = new Set([
+  "image",
+  "container_port",
+  "registry_id",
+  "volume_new",
+  "volume_path",
+]);
+// Sizing and networking are the rare decisions on a container, so they wait under Advanced.
+const DOCKER_ADVANCED_FIELDS = new Set(["memory_limit", "cpu_limit"]);
 
 // Joomla's install fails silently on a prefix not starting with a letter and ending with "_".
 const FIELD_PATTERNS = {
@@ -663,6 +684,7 @@ function requiredByOtherField(requiredIf, values) {
 export function CreateApplicationForm({
   siteTypes = [],
   initialType = "",
+  initialDockerSource = "search",
   initialName = "",
   initialGitAccountId = "",
   systemUsers = [],
@@ -738,6 +760,10 @@ export function CreateApplicationForm({
       // Seeded from the URL when a caller links to a specific type (e.g. "Install
       // phpMyAdmin").
       site_type: initialType,
+      // UI-only deployment choice: never a backend type field or request key.
+      docker_source: initialDockerSource,
+      docker_search_query: "",
+      ...(initialType === "docker" ? { docker_mode: initialDockerSource === "compose" ? "compose" : "simple" } : {}),
       name: initialName,
       domain: "",
       // On by default; off for users who cannot create system users, since the API
@@ -841,6 +867,15 @@ export function CreateApplicationForm({
     [nodeVersions, selected],
   );
   const isGit = selected?.method === "git" || selected?.name === "git";
+  const containerServer = siteTypes.some((type) => type.name === "docker");
+  const isDocker = selected?.name === "docker";
+  const dockerMode = useWatch({ control: form.control, name: "docker_mode" });
+  const dockerSource = useWatch({ control: form.control, name: "docker_source" });
+  const isDockerSimple = isDocker && (dockerMode || "simple") === "simple";
+  const dockerImageState = useWatch({ control: form.control, name: "docker_image_state" });
+  const dockerEnv = useWatch({ control: form.control, name: "docker_env" });
+  const dockerRequiredEnv = useWatch({ control: form.control, name: "docker_required_env" });
+  const dockerVolumes = useWatch({ control: form.control, name: "docker_volumes" });
   const typeFields = (selected?.fields ?? []).filter(
     (config) =>
       !COMMON_FIELD_NAMES.has(config.name),
@@ -874,9 +909,26 @@ export function CreateApplicationForm({
     // `required_if` from the schema (start_command while rendering_type is "ssr").
     .map((config) =>
       requiredByOtherField(config.required_if, dependencyValues) ? { ...config, required: true } : config,
+    )
+    .map((config) =>
+      isDocker && DOCKER_ADVANCED_FIELDS.has(config.name)
+        ? { ...config, advanced: true }
+        : isDockerSimple && (config.name === "image" || config.name === "container_port")
+          ? { ...config, required: true }
+          : config,
     );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
+  // The mode is chosen by a link, and simple mode's image fields by the picker.
+  const renderedByForm = (config) =>
+    !(isDocker && config.name === "docker_mode") &&
+    !(isDockerSimple && DOCKER_PICKER_FIELDS.has(config.name));
+  const formStandardFields = standardFields.filter(renderedByForm);
+  const formAdvancedFields = advancedFields.filter(renderedByForm);
+  const registryOptions =
+    selected?.fields?.find((config) => config.name === "registry_id")?.options ?? [];
+  const dockerEnvBlocked = isDockerSimple && dockerEnvProblem(dockerEnv, dockerRequiredEnv);
+  const dockerVolumesBlocked = isDockerSimple && dockerVolumeProblem(dockerVolumes);
   const advancedFieldNames = new Set(advancedFields.map((config) => config.name));
   const advancedErrorCount = advancedFields.filter(
     (config) => form.formState.errors[config.name],
@@ -889,6 +941,7 @@ export function CreateApplicationForm({
     .filter(
       (config) =>
         !(config.name === "build_command" && hasDeployScript) &&
+        !(isDocker && config.name === "docker_mode") &&
         (config.required || hasConfigValue(config, values?.[config.name])),
     )
     .map((config) => {
@@ -896,6 +949,19 @@ export function CreateApplicationForm({
       const rule = FIELD_PATTERNS[values?.site_type]?.[config.name];
       const breaksRule = Boolean(rule) && String(value ?? "").trim() !== "" && !rule.pattern.test(String(value).trim());
       const ready = (!config.required || hasConfigValue(config, value)) && !breaksRule;
+      // The image is only ready once the registry has confirmed it exists.
+      if (isDockerSimple && config.name === "image" && hasConfigValue(config, value)) {
+        const imageState = dockerImageState || "checking";
+        const tooLong = String(value).length > DOCKER_LIMITS.image;
+        return {
+          key: `configuration-${config.name}`,
+          target: config.name,
+          label: fieldLabel(config),
+          value: imageState === "checking" ? t("dockerImage.checking") : String(value),
+          ready: (imageState === "ok" || imageState === "unknown") && !tooLong,
+          invalid: imageState === "notfound" || tooLong,
+        };
+      }
       return {
         key: `configuration-${config.name}`,
         target: config.name,
@@ -998,6 +1064,28 @@ export function CreateApplicationForm({
         ]
       : []),
     ...configurationSummaryItems,
+    ...(dockerEnvBlocked
+      ? [
+          {
+            key: "docker-env",
+            target: "docker_env",
+            label: t("dockerImage.settingsLabel"),
+            value: t("dockerImage.settingsIncomplete"),
+            ready: false,
+          },
+        ]
+      : []),
+    ...(dockerVolumesBlocked
+      ? [
+          {
+            key: "docker-volumes",
+            target: "docker_volumes",
+            label: t("dockerImage.storageLabel"),
+            value: t("dockerImage.storageLimit", { max: DOCKER_LIMITS.volumes }),
+            ready: false,
+          },
+        ]
+      : []),
   ];
   const missingReadinessItems = readinessItems.filter((item) => !item.ready);
 
@@ -1136,7 +1224,9 @@ export function CreateApplicationForm({
         field.source === "php_versions" ||
         field.source === "node_versions" ||
         field.default == null ||
-        field.default === ""
+        field.default === "" ||
+        // The picker fills it from the image; a default of 80 would be a guess.
+        (selected.name === "docker" && field.name === "container_port")
       )
         continue;
       const filled = Boolean(form.getValues(field.name));
@@ -1372,6 +1462,17 @@ export function CreateApplicationForm({
       if (value === undefined || value === "") continue;
       payload[config.name] = config.type === "number" ? Number(value) : value;
     }
+    let dockerSent = null;
+    if (isDockerSimple) {
+      dockerSent = dockerCreateFields({
+        applicationName: values.name,
+        volumes: values.docker_volumes ?? [],
+        envRows: values.docker_env ?? [],
+      });
+      delete payload.volume_new;
+      delete payload.volume_path;
+      Object.assign(payload, dockerSent.fields);
+    }
     if (isGit) {
       payload.git_source = gitSource;
       if (gitSource === "account") {
@@ -1405,6 +1506,11 @@ export function CreateApplicationForm({
           : "/applications",
       );
       toast.success(t("created"));
+      // E.g. a typed port the image does not declare. Kept on screen: the deploy is
+      // still running and this is the likely reason if it fails.
+      for (const warning of Array.isArray(data?.warnings) ? data.warnings : []) {
+        if (typeof warning === "string" && warning) toast.warning(warning, { duration: 20000 });
+      }
     } catch (error) {
       // The account's own errors come back as `system_user.*`; they belong on its fields.
       const errors = error.response?.data?.errors ?? {};
@@ -1412,9 +1518,25 @@ export function CreateApplicationForm({
       for (const [key, field] of Object.entries(userFields)) {
         if (errors[key]?.[0]) form.setError(field, { type: "server", message: errors[key][0] });
       }
-      handleValidationError(error, form);
+      // Settings and volumes are not site-type fields, so their errors are placed
+      // beside the row they came from rather than in a toast. Only for a reply that
+      // carried errors: the rewrap below reads `error.response.data`.
+      const docker = dockerSent && error.response?.data?.errors
+        ? dockerServerErrors(errors, {
+            ...dockerSent,
+            envRows: values.docker_env ?? [],
+            volumes: values.docker_volumes ?? [],
+          })
+        : null;
+      docker?.set.forEach(([name, message]) => form.setError(name, { type: "server", message }));
+      if (!docker?.set.length || Object.keys(docker.rest).length) {
+        handleValidationError(
+          docker ? { ...error, response: { ...error.response, data: { ...error.response.data, errors: docker.rest } } } : error,
+          form,
+        );
+      }
       // Surface backend field errors too, including inside the Advanced section.
-      revealErrors(Object.keys(errors).map((key) => userFields[key] ?? key));
+      revealErrors(Object.keys(errors ?? {}).map((key) => userFields[key] ?? key));
     }
   }
 
@@ -1487,14 +1609,29 @@ export function CreateApplicationForm({
                     {/* min-w-0: a grid item defaults to min-width:auto, so the trigger's long
                         tagline would widen the page instead of truncating. */}
                     <div className="min-w-0">
-                      <SiteTypePicker
-                        types={siteTypes}
-                        value={field.value}
-                        onChange={(next) => {
-                          dropTypeFields(next);
-                          field.onChange(next);
-                        }}
-                      />
+                      {containerServer ? (
+                        <DeploySourcePicker
+                          siteTypes={siteTypes}
+                          value={field.value}
+                          onChange={(next) => {
+                            // Not when the tabs clear the choice: a Container -> 1-Click
+                            // Recipes -> Container round-trip keeps the chosen image.
+                            if (next) dropTypeFields(next);
+                            field.onChange(next);
+                          }}
+                          form={form}
+                          initialSource={initialType === "docker" ? initialDockerSource : undefined}
+                        />
+                      ) : (
+                        <SiteTypePicker
+                          types={siteTypes}
+                          value={field.value}
+                          onChange={(next) => {
+                            dropTypeFields(next);
+                            field.onChange(next);
+                          }}
+                        />
+                      )}
                     </div>
                     {/* Only once an application is chosen. */}
                     {field.value ? (
@@ -2108,9 +2245,32 @@ export function CreateApplicationForm({
                       )}
                     </div>
                   ) : null}
-                  {standardFields.length ? (
+                  {isDockerSimple ? (
+                    <DockerImageSetup
+                      form={form}
+                      mode={dockerSource === "manual" ? "manual" : "search"}
+                      recipes={siteTypes.filter((type) => type.recipe)}
+                      onUseRecipe={(slug) => form.setValue("site_type", slug, { shouldDirty: true })}
+                      initialQuery={values.docker_search_query ?? ""}
+                      registryOptions={registryOptions}
+                      onUseCompose={() => setDockerSource(form, "compose")}
+                    />
+                  ) : isDocker ? (
+                    <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      {t("dockerImage.composeMode")}{" "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-sm"
+                        onClick={() => setDockerSource(form, "search")}
+                      >
+                        {t("dockerImage.useImage")}
+                      </Button>
+                    </p>
+                  ) : null}
+                  {formStandardFields.length ? (
                     <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
-                      {standardFields.map((config) => (
+                      {formStandardFields.map((config) => (
                         <ConfigField
                           key={`${selectedName}:${config.name}`}
                           config={config}
@@ -2128,7 +2288,7 @@ export function CreateApplicationForm({
                       ))}
                     </div>
                   ) : null}
-                  {advancedFields.length ? (
+                  {formAdvancedFields.length ? (
                     <Collapsible
                       className="border-t pt-4"
                       open={advancedOpen}
@@ -2157,7 +2317,7 @@ export function CreateApplicationForm({
                         </Button>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="grid grid-cols-1 items-start gap-4 pt-4 @2xl:grid-cols-2">
-                        {advancedFields.map((config) => (
+                        {formAdvancedFields.map((config) => (
                           <ConfigField
                             key={`${selectedName}:${config.name}`}
                             config={config}

@@ -1,0 +1,52 @@
+{
+    "schema": 1,
+    "slug": "vaultwarden",
+    "version": 1,
+    "title": "Vaultwarden",
+    "tagline": {
+        "en": "Password manager, compatible with Bitwarden apps",
+        "es": "Gestor de contraseñas compatible con las apps de Bitwarden",
+        "de": "Passwortmanager, kompatibel mit Bitwarden-Apps",
+        "fr": "Gestionnaire de mots de passe compatible avec les applis Bitwarden",
+        "pt": "Gestor de senhas compatível com as apps do Bitwarden",
+        "ja": "Bitwarden アプリと互換のパスワードマネージャー",
+        "ru": "Менеджер паролей, совместимый с приложениями Bitwarden",
+        "hi": "पासवर्ड मैनेजर, Bitwarden ऐप्स के साथ संगत"
+    },
+    "category": "security",
+    "icon": "vaultwarden",
+    "popular": false,
+    "catalog_order": 20,
+    "images": {
+        "app": {
+            "ref": "vaultwarden/server:latest",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": null,
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "open_registration",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "One named /data volume preserves SQLite, attachments and the RSA session-signing keypair; losing it loses every vault.",
+        "The first visitor registers. ADMIN_TOKEN is deliberately unset: an unrequested admin panel is a worse default than none.",
+        "The latest tag tracks Bitwarden client compatibility."
+    ]
+}

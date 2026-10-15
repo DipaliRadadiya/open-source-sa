@@ -1,0 +1,133 @@
+name: sv-app-4242
+
+services:
+  penpot-frontend:
+    image: penpotapp/frontend:2.18.3
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"
+
+    environment:
+      PENPOT_FLAGS: enable-registration enable-login-with-password disable-email-verification disable-smtp
+      PENPOT_PUBLIC_URI: "https://penpot.golden.test"
+      PENPOT_HTTP_SERVER_MAX_BODY_SIZE: "367001600"
+      PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: "367001600"
+
+    volumes:
+      - sv-app-4242_assets:/opt/data/assets
+
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+
+  penpot-backend:
+    image: penpotapp/backend:2.18.3
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      PENPOT_FLAGS: enable-registration enable-login-with-password disable-email-verification disable-smtp
+      PENPOT_PUBLIC_URI: "https://penpot.golden.test"
+      PENPOT_HTTP_SERVER_MAX_BODY_SIZE: "367001600"
+      PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: "367001600"
+      PENPOT_SECRET_KEY: "e08a3570064ce9e130039007e96989f7"
+      PENPOT_DATABASE_URI: postgresql://penpot-postgres/penpot
+      PENPOT_DATABASE_USERNAME: penpot
+      PENPOT_DATABASE_PASSWORD: "ae2baff6b471d87f64e6078a5faf7e02"
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+      PENPOT_OBJECTS_STORAGE_BACKEND: fs
+      PENPOT_OBJECTS_STORAGE_FS_DIRECTORY: /opt/data/assets
+
+    volumes:
+      - sv-app-4242_assets:/opt/data/assets
+
+    depends_on:
+      penpot-postgres:
+        condition: service_healthy
+      penpot-valkey:
+        condition: service_healthy
+
+  penpot-exporter:
+    image: penpotapp/exporter:2.18.3
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      PENPOT_FLAGS: enable-registration enable-login-with-password disable-email-verification disable-smtp
+      PENPOT_PUBLIC_URI: "https://penpot.golden.test"
+      PENPOT_SECRET_KEY: "e08a3570064ce9e130039007e96989f7"
+      PENPOT_INTERNAL_URI: http://penpot-frontend:8080
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+
+    depends_on:
+      penpot-valkey:
+        condition: service_healthy
+
+  penpot-postgres:
+    image: postgres:15.18-bookworm
+    restart: unless-stopped
+    mem_limit: 512m
+    stop_signal: SIGINT
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_DB: penpot
+      POSTGRES_USER: penpot
+      POSTGRES_PASSWORD: "ae2baff6b471d87f64e6078a5faf7e02"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penpot"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+      start_period: 2s
+
+  penpot-valkey:
+    image: valkey/valkey:8.1.5-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    command: ["valkey-server", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lfu"]
+
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+
+volumes:
+  sv-app-4242_assets:
+    external: true
+  sv-app-4242_db:
+    external: true

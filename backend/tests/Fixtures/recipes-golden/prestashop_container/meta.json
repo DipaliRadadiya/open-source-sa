@@ -1,0 +1,136 @@
+{
+    "slug": "prestashop_container",
+    "container_port": 80,
+    "volume_roles": {
+        "html": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "ADMIN_PASSWORD",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "PS_SHOP_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ecommerce",
+    "icon": "prestashop",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": {
+        "/ps-init/start.sh": "#!/bin/sh\n# Managed by the panel's PrestaShop recipe (RC-37). The container runs this\n# before the image's own /tmp/docker_run.sh.\nroot=/var/www/html\n\n# HTTPS behind the panel's proxy: PHP sees HTTPS=on for requests the proxy\n# received over HTTPS (PrestaShop's secure-mode check and the Symfony back\n# office both read it).\necho 'SetEnvIf X-Forwarded-Proto https HTTPS=on' > /etc/apache2/conf-enabled/zz-forwarded-https.conf\n\nif [ -f \"$root/app/config/parameters.php\" ]; then\n    # Installed, or an installation that stopped half-way (the image then\n    # takes its \"already installed\" path and would serve the web installer\n    # to anyone). A completed setup removes both install.lock and the\n    # installer folder, so either one still being there means the last\n    # installation never finished: remove the installer so it is not public.\n    if [ -e \"$root/install.lock\" ] || [ -d \"$root/$PS_FOLDER_INSTALL\" ]; then\n        echo \"[ps-init] the PrestaShop installation did not finish (see the first start's log); the web installer was removed so it is not public. Delete and recreate the app to install again.\"\n        rm -rf \"${root:?}/${PS_FOLDER_INSTALL:?}\"\n    fi\n    # Drop the installation-time alias (below) and follow a domain change.\n    if [ -L \"$root/admin-dev\" ]; then\n        rm -f \"$root/admin-dev\"\n    fi\n    if [ -f /ps-init/sync-domain.php ]; then\n        # The database may still be starting (a restart restarts it too):\n        # wait for it, up to about two minutes, with the password in the\n        # environment rather than on a command line. --connect-timeout keeps\n        # each try short: Docker's DNS fails for a stopped container and the\n        # client would otherwise retry for its 12-hour default. The script itself runs\n        # with exception arguments and error display off, so a failure can\n        # never print a connection string with the password into the log.\n        n=0\n        until MYSQL_PWD=\"$DB_PASSWD\" mysqladmin --connect-timeout=2 ping -h \"$DB_SERVER\" -P \"$DB_PORT\" -u \"$DB_USER\" --silent >/dev/null 2>&1 || [ \"$n\" -ge 60 ]; do\n            n=$((n + 1))\n            sleep 2\n        done\n        runuser -u www-data -- php -d zend.exception_ignore_args=1 -d display_errors=0 -d log_errors=0 /ps-init/sync-domain.php || true\n    fi\nelif [ ! -e \"$root/admin-dev\" ]; then\n    # PrestaShop 9.2's installer installs the back-office assets into admin/,\n    # or into admin-dev/ when admin/ is gone. The image has already renamed\n    # admin/ to PS_FOLDER_ADMIN by then, so the install died on a missing\n    # admin-dev/ and left the web installer public (RC-37 smoke). Point\n    # admin-dev at the real folder for the installation, and remove the alias\n    # as soon as the image reports the setup completed.\n    ln -s \"$PS_FOLDER_ADMIN\" \"$root/admin-dev\"\n    (\n        n=0\n        until [ -f \"$root/app/config/parameters.php\" ] && [ ! -e \"$root/install.lock\" ]; do\n            n=$((n + 1))\n            [ \"$n\" -ge 360 ] && exit 0\n            sleep 5\n        done\n        rm -f \"$root/admin-dev\"\n    ) &\nfi\n\nexec /tmp/docker_run.sh\n",
+        "/ps-init/sync-domain.php": "<?php\n// Managed by the panel's PrestaShop recipe (RC-37). Run by the container's start\n// command, as www-data, before Apache starts on an installed shop.\n//\n// PrestaShop keeps its domain in the database. The panel passes the site's\n// current domain as PS_DOMAIN, so after a domain change this moves the main shop\n// URL to it and regenerates what depends on it, the same steps as the image's\n// own docker_updt_ps_domains.php. Nothing happens when they already match.\n// Delete this file to manage the domain yourself (Shop Parameters > Traffic & SEO).\n\n$domain = strtolower((string) getenv('PS_DOMAIN'));\nif (!preg_match('/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/', $domain)) {\n    exit(0);\n}\n\nini_set('display_errors', '0');\nini_set('zend.exception_ignore_args', '1');\n\n$_SERVER['HTTP_HOST'] = $domain;\n$_SERVER['SERVER_NAME'] = $domain;\n$_SERVER['REQUEST_METHOD'] = 'GET';\n$_SERVER['REQUEST_URI'] = '/';\nchdir('/var/www/html');\n\ntry {\n    require '/var/www/html/config/config.inc.php';\n    sync_domain($domain);\n} catch (Throwable $e) {\n    // Only the class name: messages and traces can carry the database DSN.\n    echo 'sync-domain: skipped ('.get_class($e).\")\\n\";\n}\n\nfunction sync_domain(string $domain): void\n{\n    if (Shop::isFeatureActive()) {\n        echo \"sync-domain: multistore is on, domains are left alone\\n\";\n        return;\n    }\n\n    if (Configuration::get('PS_SHOP_DOMAIN') === $domain && Configuration::get('PS_SHOP_DOMAIN_SSL') === $domain) {\n        return;\n    }\n\n    $url = ShopUrl::getShopUrls((int) Configuration::get('PS_SHOP_DEFAULT'))->where('main', '=', 1)->getFirst();\n    if ($url) {\n        $url->domain = $domain;\n        $url->domain_ssl = $domain;\n        $url->save();\n    }\n\n    Configuration::updateValue('PS_SHOP_DOMAIN', $domain);\n    Configuration::updateValue('PS_SHOP_DOMAIN_SSL', $domain);\n    Tools::generateHtaccess();\n    Tools::generateRobotsFile();\n    Tools::clearSmartyCache();\n    Media::clearCache();\n    Tools::clearSf2Cache();\n\n    echo \"sync-domain: shop domain set to {$domain}\\n\";\n}\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_html",
+            "path": "/var/www/html"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "ADMIN_PASSWORD",
+        "DB_PASSWORD",
+        "DB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "PrestaShop",
+            "tagline": "Open source online store: catalog, cart and checkout, orders, payments and shipping"
+        },
+        "es": {
+            "title": "PrestaShop",
+            "tagline": "Tienda online de código abierto: catálogo, carrito y pago, pedidos, pagos y envíos"
+        },
+        "de": {
+            "title": "PrestaShop",
+            "tagline": "Open-Source-Onlineshop: Katalog, Warenkorb und Kasse, Bestellungen, Zahlungen und Versand"
+        },
+        "fr": {
+            "title": "PrestaShop",
+            "tagline": "Boutique en ligne open source : catalogue, panier et paiement, commandes, moyens de paiement et livraison"
+        },
+        "pt": {
+            "title": "PrestaShop",
+            "tagline": "Loja online de código aberto: catálogo, carrinho e checkout, pedidos, pagamentos e envios"
+        },
+        "ja": {
+            "title": "PrestaShop",
+            "tagline": "オープンソースのオンラインストア：カタログ、カートと決済、注文、支払い、配送"
+        },
+        "ru": {
+            "title": "PrestaShop",
+            "tagline": "Интернет-магазин с открытым кодом: каталог, корзина и оформление заказа, заказы, оплата и доставка"
+        },
+        "hi": {
+            "title": "PrestaShop",
+            "tagline": "ओपन सोर्स ऑनलाइन स्टोर: कैटलॉग, कार्ट और चेकआउट, ऑर्डर, भुगतान और शिपिंग"
+        }
+    },
+    "catalog_en": {
+        "name": "prestashop_container",
+        "icon": "prestashop",
+        "category": "ecommerce",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

@@ -1,0 +1,37 @@
+name: sv-app-4242
+
+services:
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v1.0.4
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:5080"
+
+    environment:
+      ZO_ROOT_USER_EMAIL: "owner@golden.test"
+      ZO_ROOT_USER_PASSWORD: "5e404ace35420bcdabf9bb732a169520"
+      ZO_DATA_DIR: /data
+      ZO_WEB_URL: "http://openobserve.golden.test"
+      ZO_COOKIE_SECURE_ONLY: "true"
+      ZO_TELEMETRY: "false"
+
+    volumes:
+      - sv-app-4242_data:/data
+
+    healthcheck:
+      test: ["CMD", "/openobserve", "node", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  sv-app-4242_data:
+    external: true

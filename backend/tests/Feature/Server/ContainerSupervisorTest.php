@@ -247,21 +247,22 @@ it('bounds the log read', function () {
     expect(collect($ran)->firstWhere('op', 'compose_logs')['command'])->toContain('--tail');
 });
 
-it('does not offer clone or backup, which would appear to work', function () {
-    // Both arrive in the default feature set and both would succeed while
-    // doing the wrong thing, which is worse than their absence: a missing
-    // screen prompts a question, one that succeeds without doing the job
-    // does not.
+it('does not offer clone, which would appear to work — and offers backup, which now does', function () {
+    // Clone arrives in the default feature set and would succeed while doing
+    // the wrong thing, which is worse than its absence: a missing screen
+    // prompts a question, one that succeeds without doing the job does not.
+    // It copies the served files — a container's are in its image and its
+    // state is in its volumes.
     //
-    // Clone copies the served files — a container's are in its image and its
-    // state is in its volumes. Backup takes the document root and a database —
-    // a container has a compose file and volumes the backup never sees.
+    // Backup was refused for the same reason until c3913c27 taught the
+    // pipeline to archive a container site's volumes and compose file; this
+    // test still said it was missing (DS-12).
     $docker = collect(app(SiteTypeManager::class)->all())
         ->first(fn ($type) => $type->name() === 'docker');
 
     expect($docker)->not->toBeNull()
         ->and($docker->features())->not->toContain('app_clone')
-        ->and($docker->features())->not->toContain('app_backup')
+        ->and($docker->features())->toContain('app_backup')
         // The ones it does keep, so this is a statement about two features
         // rather than an empty set.
         ->and($docker->features())->toContain('app_log')
@@ -430,7 +431,7 @@ it('persists the type fields that are columns', function () {
 
     // And it is CALLED, not merely written — the failure mode this whole file
     // exists to catch.
-    expect($create)->toContain('...$this->containerWiring($data)');
+    expect($create)->toContain('...$this->containerWiring($data, $slug, $takenVolumes)');
 
     foreach ($docker->fields() as $field) {
         $name = $field['name'];
@@ -1056,9 +1057,8 @@ it('writes no override for a file the panel rendered itself', function () {
     // The override is for a HAND-WRITTEN file, which has no limits of its own.
     // A generated one needs nothing added and must not have its numbers replaced.
     //
-    // Keyed on `docker_apps` — the same registry the installer reads the image
-    // from — so a new one-click cannot be added without being covered: a type
-    // missing from that list has no image either.
+    // Keyed on the recipe registry — the same source the installer renders
+    // from — so a new one-click cannot be added without being covered.
     $pasted = <<<'YAML'
     services:
       ghost:
@@ -1229,3 +1229,24 @@ it('leaves a pasted compose file alone, whatever the site mount', function () {
     expect($written)->not->toContain('/panel-site')
         ->and($written)->not->toContain(':/app');
 });
+
+it('refuses to render a compose file from a value with a line break in it (DS-08)', function (array $attributes) {
+    // Every field is validated where it is accepted; this is the check every
+    // field passes through on the way into the file, so a field added later —
+    // or a row written by something other than a request — cannot reopen it.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill($attributes)->save();
+
+    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->generated($application->fresh(), '/home/shop/shop/public_html'))
+        ->toThrow(ProvisioningFailedException::class);
+})->with([
+    'mount path' => [['volume_mounts' => [['volume' => 'shop-db', 'path' => "/data\n      - /:/hostfs:rw\n    privileged: true"]]]],
+    'second mount' => [['volume_mounts' => [['volume' => 'a', 'path' => '/a'], ['volume' => "b\n    privileged: true", 'path' => '/b']]]],
+    'image' => [['image' => "nginx\n    privileged: true"]],
+    'memory limit' => [['memory_limit' => "512m\n    privileged: true"]],
+]);

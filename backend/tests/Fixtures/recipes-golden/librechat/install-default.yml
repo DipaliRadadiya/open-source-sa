@@ -1,0 +1,116 @@
+name: sv-app-4242
+
+services:
+  api:
+    image: ghcr.io/librechat-ai/librechat:v0.8.8
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3080"
+
+    command: ["sh", "-c", "export CREDS_KEY=$$(printf %s $$CREDS_KEY_SEED | sha256sum | cut -c1-64) && export CREDS_IV=$$(printf %s $$CREDS_IV_SEED | sha256sum | cut -c1-32) && unset CREDS_KEY_SEED CREDS_IV_SEED && exec npm run backend"]
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3080"
+      NODE_ENV: production
+      MONGO_URI: "mongodb://librechat:5d66e9c8af0efc74ffb0d4abf853e419@mongodb:27017/LibreChat?authSource=admin"
+      SEARCH: "true"
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: "004aaefc32bb943d984761adf6523590"
+      MEILI_NO_ANALYTICS: "true"
+      SCHEDULES_SINGLE_PROCESS: "true"
+      CREDS_KEY_SEED: "63dfb42077f9c4f739f3f532017caa0d"
+      CREDS_IV_SEED: "9e3f33119c10bbc56e07136290c3de32"
+      JWT_SECRET: "9c27d1c8daeb0cd06f36068276890e35"
+      JWT_REFRESH_SECRET: "e932fa75d71a331e9a88e2ae978f4a6c"
+      DOMAIN_CLIENT: "https://librechat.golden.test"
+      DOMAIN_SERVER: "https://librechat.golden.test"
+      TRUST_PROXY: "1"
+      NO_INDEX: "true"
+      ALLOW_EMAIL_LOGIN: "true"
+      ALLOW_REGISTRATION: "true"
+      ALLOW_SOCIAL_LOGIN: "false"
+      ALLOW_SOCIAL_REGISTRATION: "false"
+      ALLOW_PASSWORD_RESET: "false"
+      ALLOW_UNVERIFIED_EMAIL_LOGIN: "true"
+      OPENAI_API_KEY: user_provided
+      ANTHROPIC_API_KEY: user_provided
+      GOOGLE_KEY: user_provided
+
+    volumes:
+      - sv-app-4242_data:/app/data
+      - sv-app-4242_uploads:/app/uploads
+      - sv-app-4242_images:/app/client/public/images
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 60s
+
+  mongodb:
+    image: mongo:8.0.20
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: librechat
+      MONGO_INITDB_ROOT_PASSWORD: "5d66e9c8af0efc74ffb0d4abf853e419"
+
+    volumes:
+      - sv-app-4242_db:/data/db
+
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.35.1
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: "004aaefc32bb943d984761adf6523590"
+      MEILI_NO_ANALYTICS: "true"
+
+    volumes:
+      - sv-app-4242_search:/meili_data
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_uploads:
+    external: true
+  sv-app-4242_images:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_search:
+    external: true

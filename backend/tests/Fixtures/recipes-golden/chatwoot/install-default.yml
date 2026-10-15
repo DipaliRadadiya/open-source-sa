@@ -1,0 +1,118 @@
+name: sv-app-4242
+
+services:
+  rails:
+    image: chatwoot/chatwoot:v4.17.1
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3000"
+
+    environment:
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      
+      FRONTEND_URL: "https://chatwoot.golden.test"
+      
+      SECRET_KEY_BASE: "d1927bcf271c35185a0a9353f5d6b04d"
+      POSTGRES_HOST: db
+      POSTGRES_USERNAME: chatwoot
+      POSTGRES_PASSWORD: "81f5cd31f22a49f0f821de99188909c4"
+      POSTGRES_DATABASE: chatwoot
+      REDIS_URL: "redis://:3d4949def7e8ff465982184493eaf8c3@redis:6379"
+      
+      ENABLE_ACCOUNT_SIGNUP: "false"
+
+    
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["sh", "-c", "bundle exec rails db:chatwoot_prepare && bundle exec rails s -p 3000 -b 0.0.0.0"]
+
+    volumes:
+      - sv-app-4242_storage:/app/storage
+
+    depends_on:
+      - db
+      - redis
+
+  sidekiq:
+    image: chatwoot/chatwoot:v4.17.1
+    
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      FRONTEND_URL: "https://chatwoot.golden.test"
+      SECRET_KEY_BASE: "d1927bcf271c35185a0a9353f5d6b04d"
+      POSTGRES_HOST: db
+      POSTGRES_USERNAME: chatwoot
+      POSTGRES_PASSWORD: "81f5cd31f22a49f0f821de99188909c4"
+      POSTGRES_DATABASE: chatwoot
+      REDIS_URL: "redis://:3d4949def7e8ff465982184493eaf8c3@redis:6379"
+
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+
+    
+    volumes:
+      - sv-app-4242_storage:/app/storage
+
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: chatwoot
+      POSTGRES_USER: chatwoot
+      
+      POSTGRES_PASSWORD: "81f5cd31f22a49f0f821de99188909c4"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    
+    command: ["redis-server", "--requirepass", "3d4949def7e8ff465982184493eaf8c3"]
+
+    volumes:
+      - sv-app-4242_redis:/data
+
+volumes:
+  sv-app-4242_storage:
+    external: true
+  sv-app-4242_db:
+    external: true
+  sv-app-4242_redis:
+    external: true

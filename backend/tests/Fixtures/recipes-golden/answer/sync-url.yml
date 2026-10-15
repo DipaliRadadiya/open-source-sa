@@ -1,0 +1,35 @@
+name: sv-app-4242
+
+services:
+  answer:
+    image: apache/answer:2.0.3
+    restart: unless-stopped
+    mem_limit: 384m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      AUTO_INSTALL: "true"
+      DB_TYPE: sqlite3
+      DB_FILE: /data/answer.db
+      LANGUAGE: en_US
+      SITE_NAME: Answer
+      SITE_URL: "http://answer.golden.test"
+      CONTACT_EMAIL: "owner@golden.test"
+      EXTERNAL_CONTENT_DISPLAY: always_display
+      ADMIN_NAME: admin
+      ADMIN_EMAIL: "owner@golden.test"
+      ADMIN_PASSWORD: "3012ed787990e0ed43ac7d75ea59e1b4"
+
+    volumes:
+      - sv-app-4242_data:/data
+
+volumes:
+  sv-app-4242_data:
+    external: true

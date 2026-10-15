@@ -11,25 +11,6 @@ return [
 
     'types' => [
         'docker' => ['title' => 'Conteneur Docker', 'tagline' => 'N\'importe quelle image, de n\'importe quel registre, servie via nginx.'],
-        'ghost' => ['title' => 'Ghost', 'tagline' => 'Publication et newsletters — fonctionne avec son propre MySQL'],
-        'matomo' => ['title' => 'Matomo', 'tagline' => 'Analyse web sur votre propre serveur — une alternative à Google Analytics'],
-        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'Chat d\'équipe — fonctionne avec son propre PostgreSQL'],
-        'chatwoot' => ['title' => 'Chatwoot', 'tagline' => 'Boîte de réception du support client — fonctionne avec son propre PostgreSQL et Redis'],
-        'excalidraw' => ['title' => 'Excalidraw', 'tagline' => 'Tableau blanc — les dessins restent dans votre navigateur ; le partage et la collaboration en direct passent par excalidraw.com'],
-        'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Hébergement Git — fork de Gitea géré par la communauté'],
-        'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'Lecteur de flux auto-hébergé'],
-        'gitea' => ['title' => 'Gitea', 'tagline' => 'Hébergement Git avec tickets et pull requests'],
-        'glance' => ['title' => 'Glance', 'tagline' => 'Tableau de bord pour flux, sondes et favoris'],
-        'homepage' => ['title' => 'Homepage', 'tagline' => 'Page d\'accueil des services de votre serveur'],
-        'ittools' => ['title' => 'IT-Tools', 'tagline' => 'Utilitaires pour développeurs — rien n\'est conservé'],
-        'stirlingpdf' => ['title' => 'Stirling PDF', 'tagline' => 'Diviser, fusionner, signer et convertir des PDF dans le navigateur'],
-        'vaultwarden' => ['title' => 'Vaultwarden', 'tagline' => 'Gestionnaire de mots de passe compatible avec les applis Bitwarden'],
-        'nocodb' => ['title' => 'NocoDB', 'tagline' => 'Interface tableur pour une base de données — fonctionne avec son propre PostgreSQL'],
-        'metabase' => ['title' => 'Metabase', 'tagline' => 'Tableaux de bord et analyses de vos données — fonctionne avec son propre PostgreSQL'],
-        'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Wiki de documentation — fonctionne avec son propre PostgreSQL'],
-        'grafana' => ['title' => 'Grafana', 'tagline' => 'Tableaux de bord et alertes sur vos métriques — le mot de passe admin est généré par application'],
-        'bookstack' => ['title' => 'BookStack', 'tagline' => 'Documentation en étagères, livres et pages — fonctionne avec son propre MariaDB'],
-        'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'Création de blogs et de sites — fonctionne en conteneur avec son propre MariaDB'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Créateur de blogs et de sites web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gérez vos bases de données dans le navigateur'],
         'adminer' => ['title' => 'Adminer', 'tagline' => 'Gérez vos bases MySQL, MariaDB et PostgreSQL dans le navigateur'],
@@ -58,6 +39,7 @@ return [
     ],
 
     'unavailable' => [
+        'deprecated' => 'Cette application en un clic a été retirée. Les sites existants continuent de fonctionner, mais il n’est plus possible d’en créer de nouveaux.',
         'stack' => 'Ce serveur n\'exécute que des conteneurs ; il n\'héberge donc pas ce type d\'application.',
         'stack_profile' => 'Ce serveur n\'est pas configuré pour héberger ce type d\'application.',
         'profile' => 'Ce serveur ne sert pas d’applications :profile ; ce type de rendu n\'est donc pas disponible ici. Choisissez-en un que ce serveur prend en charge.',
@@ -219,6 +201,7 @@ return [
         'write_config' => 'Écriture de la configuration de l’application',
         'test_config' => 'Test de la configuration',
         'reload' => 'Rechargement du serveur web',
+        'write_env' => 'Écriture des variables d\'environnement',
         'start_app' => 'Démarrage de l\'application',
         'write_unit' => 'Préparation du service',
         'restart_app' => 'Redémarrage de l\'application',
@@ -254,6 +237,7 @@ return [
         'release_not_found' => 'La liste des versions a été atteinte mais ne contient aucune version installable sur ce serveur. Vérifiez la version de PHP ou réessayez plus tard.',
 
         'verify_http' => 'Après le déploiement, l’application a répondu par une erreur serveur (HTTP 5xx) au lieu d’une page. Consultez son journal — le journal du déploiement indique le statut exact.',
+        'container_port_missing' => 'Ce site n\'a pas de port de conteneur : le panneau ne peut donc pas savoir vers quel port du conteneur rediriger. Indiquez dans Port du conteneur le port sur lequel l\'application écoute, puis enregistrez.',
         'attached_database_engine_mismatch' => 'Cette application a déjà une base de données associée, mais elle fonctionne sur un moteur que cette application ne peut pas utiliser. Détachez-la, ou associez-en une sur un moteur pris en charge, puis réessayez.',
         'serving_error' => 'L\'application a démarré mais répond à chaque requête par une erreur. Ses ressources n\'ont probablement pas été entièrement construites — voir le journal de l\'application.',
         'not_answering' => 'L\'application a démarré mais n\'a jamais répondu à une requête. Consultez le journal de l\'application pour savoir pourquoi elle n\'écoute pas.',
@@ -269,6 +253,35 @@ return [
         'script_git_auth' => 'Votre script de déploiement exécute une commande git (généralement git pull) qui doit se connecter au dépôt, et le script n’a pas d’identifiants : elle échoue donc sur un dépôt privé. Elle est inutile : le panneau télécharge déjà le code le plus récent avec le compte connecté avant l’exécution de votre script. Supprimez cette ligne du script de déploiement et redéployez.',
         'script_php_missing' => 'Votre script de déploiement utilise une variable {PHPxx} pour une version de PHP qui n’est pas installée sur ce serveur. Installez cette version depuis l’écran PHP, ou utilisez {php} pour la version propre à l’application, puis redéployez.',
         'composer_dependencies_missing' => 'Ce projet nécessite des dépendances Composer et aucune n’a été installée : l’application n’a pas de vendor/autoload.php et toutes les requêtes échoueront. Ajoutez une étape composer install au script de déploiement, puis redéployez.',
+        'container_exited' => 'Le conteneur s\'est arrêté juste après son démarrage, le site ne peut donc pas répondre. Son propre journal dit pourquoi.',
+        'container_port_mismatch' => 'Rien ne répond sur le port du conteneur vers lequel ce site redirige, et l\'image écoute sur un autre. Réglez le port du conteneur sur celui que déclare l\'image et redéployez.',
+        'container_not_answering' => 'Le conteneur tourne mais rien n\'a répondu sur son port. Vérifiez son journal, et que le port du conteneur est bien celui sur lequel l\'application écoute.',
+        'container_unhealthy' => 'Le conteneur tourne, mais le contrôle de santé de l\'image elle-même indique qu\'il ne fonctionne pas. Son journal et la sortie du contrôle affichée ici expliquent pourquoi.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'Le conteneur redémarre sans cesse.',
+        'container_exited' => 'Le conteneur s\'est arrêté juste après son démarrage.',
+        'container_port_mismatch' => 'Rien ne répond sur le port du conteneur :port — l\'image écoute sur :image_ports. Réglez le port du conteneur sur :image_ports et redéployez.',
+        'container_not_answering' => 'Rien n\'a répondu sur le port du conteneur :port en :seconds secondes.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'Rien n\'a répondu sur le port de ce site en :seconds secondes.',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker signale ce conteneur comme défaillant : le contrôle de santé de l\'image elle-même échoue.',
+        'health_check' => 'Le contrôle de santé a répondu : :output',
+        'last_line' => 'Dernière ligne du journal : :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'Cette image n\'indique pas sur quel port elle écoute. Saisissez le port du conteneur — le port sur lequel l\'application écoute dans le conteneur.',
+        'image_not_found' => 'Cette image est introuvable, son port ne peut donc pas être lu. Vérifiez le nom et le tag, ou saisissez vous-même le port du conteneur.',
+        'image_unreadable' => 'Le registre n\'a pas pu être joint pour lire le port de cette image. Saisissez vous-même le port du conteneur.',
+        'port_mismatch' => 'L\'image écoute sur :image_ports, pas sur :port. Le site ne répondra que si l\'application écoute vraiment sur :port.',
+        'env_key_invalid' => 'Lettres, chiffres et tirets bas uniquement, sans commencer par un chiffre.',
+        'env_key_duplicate' => 'La variable :key est définie deux fois.',
+        'env_required' => 'Cette image ne démarre pas sans :keys. Renseignez une valeur pour chacune avant de créer le site.',
     ],
 
     'port_free' => 'Le port :port est libre.',

@@ -1,0 +1,93 @@
+{
+    "schema": 1,
+    "slug": "docmost",
+    "version": 1,
+    "title": "Docmost",
+    "tagline": {
+        "en": "Collaborative wiki and documentation for teams, with real-time editing",
+        "es": "Wiki colaborativa y documentación para equipos, con edición en tiempo real",
+        "de": "Kollaboratives Wiki und Dokumentation für Teams, mit Echtzeit-Bearbeitung",
+        "fr": "Wiki collaboratif et documentation pour les équipes, avec édition en temps réel",
+        "pt": "Wiki colaborativa e documentação para equipes, com edição em tempo real",
+        "ja": "リアルタイム共同編集に対応した、チーム向けのコラボレーション Wiki とドキュメント",
+        "ru": "Совместная вики и документация для команд с редактированием в реальном времени",
+        "hi": "टीमों के लिए सहयोगी विकी और दस्तावेज़ीकरण, रीयल-टाइम संपादन के साथ"
+    },
+    "category": "productivity",
+    "icon": "docmost",
+    "popular": false,
+    "catalog_order": 420,
+    "docs_url": "https://docmost.com/docs/installation",
+    "images": {
+        "app": {
+            "ref": "docmost/docmost:0.96.0",
+            "tested": [
+                "docmost/docmost:0.96.0"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
+        },
+        "cache": {
+            "ref": "redis:8.8.3-alpine",
+            "tested": [
+                "redis:8.8.3-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "docmost",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "1g",
+    "volumes": {
+        "storage": "/app/data/storage",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "APP_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "APP_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor creates the workspace and its owner account on the setup page. Open the site and claim it immediately after install.",
+        "APP_URL is the site's HTTPS address; Docmost uses it for links, invitations and the real-time collaboration socket. APP_SECRET (32 characters, Docmost's documented minimum) signs sessions and tokens: keep it with your backups.",
+        "Docmost runs its database migrations itself at start-up. PostgreSQL 17.11 and Redis 8.8 have their own volumes and no published port; Redis runs with append-only persistence and the noeviction policy, as in the official compose file.",
+        "Attachments and images live in the storage volume (/app/data/storage, local storage driver). Telemetry is turned off.",
+        "Inviting members by email needs SMTP (MAIL_DRIVER/SMTP_* settings); invitation links can also be copied and shared from the members page.",
+        "The healthcheck probes /api/health/live on 127.0.0.1 with curl, which the image ships.",
+        "The 1g floor covers the Node server and its collaboration engine; the database and Redis use the panel database-memory default.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-30): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
+    ]
+}

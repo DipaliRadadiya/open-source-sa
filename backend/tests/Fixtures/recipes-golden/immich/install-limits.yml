@@ -1,0 +1,102 @@
+name: sv-app-4242
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v3.3.1@sha256:db996e352359771c6a3db121a0ed8761516b22f727fc092a0f46dcfef82c1bc1
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:2283"
+
+    environment:
+      TZ: Etc/UTC
+      DB_PASSWORD: "ff174f443d581a21a6cb519f4bb8fb15"
+      DB_USERNAME: postgres
+      DB_DATABASE_NAME: immich
+      DB_HOSTNAME: database
+      REDIS_HOSTNAME: redis
+
+    volumes:
+      - sv-app-4242_upload:/data
+
+    depends_on:
+      redis:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v3.3.1@sha256:513c831cfb010ad319341a0c86b42c575a0d5b688d3e8cae346ee624074a58ed
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      TZ: Etc/UTC
+
+    volumes:
+      - sv-app-4242_model-cache:/cache
+
+    healthcheck:
+      disable: false
+
+  redis:
+    image: valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    restart: unless-stopped
+    mem_limit: 2g
+    shm_size: 128mb
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_PASSWORD: "ff174f443d581a21a6cb519f4bb8fb15"
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      disable: false
+
+volumes:
+  sv-app-4242_upload:
+    external: true
+  sv-app-4242_model-cache:
+    external: true
+  sv-app-4242_db:
+    external: true

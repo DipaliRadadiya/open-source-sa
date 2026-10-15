@@ -26,6 +26,9 @@ class SystemUserResource extends JsonResource
             'shell_allows_login' => LoginShell::allowsLoginFor($this->shell),
             'sudo' => (bool) $this->sudo,
             'ssh_access' => (bool) $this->ssh_access,
+            // RC-28: its SSH login opens its Docker app's container instead of
+            // a shell here. Switched from the app's Command-line access card.
+            'container_login' => (bool) $this->container_login,
             // Plaintext, per operator decision — shown so an admin can copy it
             // for server login. Null until a password has been set.
             //

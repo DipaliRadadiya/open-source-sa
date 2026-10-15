@@ -351,7 +351,17 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       ? null
       : formatBytes(application.volume_size_bytes, format);
 
+  const origin = application.origin;
+  const originValue = origin?.kind === "recipe" && origin.recipe
+    ? t("origin.factRecipe", { title: origin.recipe.title, version: origin.recipe.version })
+    : origin?.kind === "image"
+      ? t("origin.factImage", { image: origin.image ?? "—" })
+      : origin?.kind === "compose"
+        ? t("origin.compose")
+        : null;
+
   const facts = [
+    { icon: Package, label: t("origin.factLabel"), value: originValue, mono: origin?.kind === "image" },
     {
       icon: Package,
       label: t("columns.type"),
@@ -407,7 +417,18 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       onEdit: canManage && !nodeSwitching ? () => setEditingNode(true) : null,
       editLabel: t("nodeVersion.title"),
     },
-    { icon: Plug, label: t("facts.port"), value: application.app_port, mono: true, copy: true },
+    // A container's `app_port` is the host side of nginx -> 127.0.0.1:app_port -> container;
+    // the port the user chose or the image declared is `container_port`.
+    application.container_port
+      ? {
+          icon: Plug,
+          label: t("facts.containerPort"),
+          value: application.container_port,
+          mono: true,
+          copy: true,
+          note: application.app_port ? t("facts.proxyPort", { port: application.app_port }) : null,
+        }
+      : { icon: Plug, label: t("facts.port"), value: application.app_port, mono: true, copy: true },
     {
       icon: HardDrive,
       label: t("columns.size"),
@@ -454,6 +475,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         /* Type titles are not in frontend i18n. No example lookup call here: check-i18n greps
            comments and would flag it as an unresolved key. */
         targetTitle={relabelTitle}
+        siteTypes={siteTypes}
         matched={relabelTo === suggestion ? detection?.matched : null}
       />
     </>

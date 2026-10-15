@@ -1,0 +1,100 @@
+{
+    "schema": 1,
+    "slug": "twenty",
+    "version": 1,
+    "title": "Twenty",
+    "tagline": {
+        "en": "Open-source CRM for managing contacts, companies and opportunities",
+        "es": "CRM de código abierto para gestionar contactos, empresas y oportunidades",
+        "de": "Open-Source-CRM zur Verwaltung von Kontakten, Unternehmen und Verkaufschancen",
+        "fr": "CRM open source pour gérer les contacts, les entreprises et les opportunités",
+        "pt": "CRM de código aberto para gerenciar contatos, empresas e oportunidades",
+        "ja": "連絡先、企業、商談を管理するオープンソース CRM",
+        "ru": "CRM с открытым исходным кодом для управления контактами, компаниями и возможностями продаж",
+        "hi": "संपर्कों, कंपनियों और अवसरों के प्रबंधन के लिए ओपन-सोर्स CRM"
+    },
+    "category": "business",
+    "icon": "twenty",
+    "popular": false,
+    "catalog_order": 280,
+    "docs_url": "https://docs.twenty.com/developers/self-host/capabilities/docker-compose",
+    "images": {
+        "app": {
+            "ref": "twentycrm/twenty:v2.46.0@sha256:bb4e94f0215cbd14c7356b0324d9b7ac10ccd077042cd6d5058ad02ef2080605",
+            "tested": [
+                "twentycrm/twenty:v2.46.0@sha256:bb4e94f0215cbd14c7356b0324d9b7ac10ccd077042cd6d5058ad02ef2080605"
+            ]
+        },
+        "db": {
+            "ref": "postgres:16.15@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d",
+            "tested": [
+                "postgres:16.15@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d"
+            ]
+        },
+        "cache": {
+            "ref": "redis:8.2.2@sha256:4521b581dbddea6e7d81f8fe95ede93f5648aaa66a9dacd581611bf6fe7527bd",
+            "tested": [
+                "redis:8.2.2@sha256:4521b581dbddea6e7d81f8fe95ede93f5648aaa66a9dacd581611bf6fe7527bd"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "server",
+            "role": "app"
+        },
+        {
+            "name": "worker",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "2g",
+    "volumes": {
+        "server-local-data": "/app/packages/twenty-server/.local-storage",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "APP_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "PG_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ENCRYPTION_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "SERVER_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first signup creates the workspace and becomes its administrator. Single-workspace mode is explicitly enabled: after the first workspace exists, new public signups are refused (verified live: the server answers FORBIDDEN and the form shows no error) and additional users need an invitation. Claim the instance immediately.",
+        "The upstream image entrypoint initializes the database, runs upgrades and registers cron jobs on the server. The worker runs yarn worker:prod with DISABLE_DB_MIGRATIONS=true and DISABLE_CRON_JOBS_REGISTRATION=true, and waits for the healthy server. The server healthcheck has a 300s start_period (not upstream): the first boot runs about two minutes of migrations, and without it the check turned unhealthy mid-migration on Ubuntu 24.04, so compose refused to start the worker and the install failed.",
+        "Only the server publishes a loopback port. Server and worker share the local-storage named volume; PostgreSQL has its own named volume. Redis uses the upstream noeviction policy and stores transient queue/cache data without a persistent volume, so pending jobs may be lost if its container is recreated.",
+        "Twenty v2.46.0 recommends a dedicated ENCRYPTION_KEY for new installs, in addition to APP_SECRET. Both are generated and shared by server and worker. Preserve the encryption key with backups: losing or changing it can make stored OAuth tokens and other encrypted secrets unreadable.",
+        "No SMTP, external object storage or OAuth provider is configured. Password authentication and the upstream default of no required email verification support initial setup; email invitations and password-reset delivery require configuring email later.",
+        "Upstream requires at least 2GB environment RAM. Server floor 2g; the worker gets a 2g literal because Node sizes its heap from the container limit: at 1g (about 560 MB of heap) the worker crashed four times with 'JavaScript heap out of memory' running GenerateSdkClientJob after the first workspace was created. Database and cache use the panel database-memory default.",
+        "The upstream PostgreSQL 16 and unversioned Redis images are pinned to verified exact 16.15 Debian and 8.2.2 releases with immutable digests. Verified live on Ubuntu 24.04 and 26.04 (RC-18): every image ref below is in its tested list."
+    ]
+}

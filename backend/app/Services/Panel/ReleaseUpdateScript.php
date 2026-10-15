@@ -43,6 +43,7 @@ class ReleaseUpdateScript
         'composer_install',
         'frontend_build',
         'sync_privileges',
+        'configure_queue_worker',
         'maintenance_on',
         'migrate',
         'swap',
@@ -115,6 +116,8 @@ class ReleaseUpdateScript
         SWAPPED=0
         MIGRATED=0
         PREVIOUS=""
+        QUEUE_DRAIN_VERIFIED=0
+        QUEUE_STOP_FAILED=0
 
         note() {
             STEP="\$1"
@@ -140,11 +143,22 @@ class ReleaseUpdateScript
             local failed_step="\$STEP"
             note "rollback"
 
+            # Refusal/failed initial drain must not fall through to a queue
+            # restart. For later failures, drain BEFORE flipping/removing code.
+            if [ "\$QUEUE_DRAIN_VERIFIED" = "1" ] && [ "\$QUEUE_STOP_FAILED" != "1" ]; then
+                if ! {$run}sudo systemctl stop {$this->service('queue')}; then
+                    finish failed "\$failed_step" false
+                    exit 1
+                fi
+            fi
+
             if [ "\$SWAPPED" = "1" ] && [ -n "\$PREVIOUS" ]; then
                 {$run}ln -sfn "\$PREVIOUS" {$root}/.current.pending
                 {$run}mv -T {$root}/.current.pending {$this->layout->currentLink()}
                 {$run}sudo systemctl restart {$this->service('php_fpm')}
                 {$run}sudo systemctl restart {$this->service('frontend')}
+            fi
+            if [ "\$QUEUE_DRAIN_VERIFIED" = "1" ] && [ "\$QUEUE_STOP_FAILED" != "1" ]; then
                 {$run}sudo systemctl restart {$this->service('queue')}
             fi
 
@@ -233,8 +247,19 @@ class ReleaseUpdateScript
 
         # ---- Past here, failures are visible to users.
 
+        # Reconcile only after the build-only safe region, against the live
+        # code. A refusal is fatal and grants no rollback queue actions.
+        note configure_queue_worker
+        {$run}{$php} {$liveBackend}/artisan panel:queue-worker
+        QUEUE_DRAIN_VERIFIED=1
+
         note maintenance_on
         {$asUser}{$php} {$liveBackend}/artisan down --retry=60
+        if ! {$run}sudo systemctl stop {$this->service('queue')}; then
+            QUEUE_STOP_FAILED=1
+            STEP=configure_queue_worker
+            false
+        fi
 
         # The hinge. Run against the NEW release, because the migrations belong
         # to the version being installed. Nothing after this is undone by the

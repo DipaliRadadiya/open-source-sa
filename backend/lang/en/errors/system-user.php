@@ -21,4 +21,11 @@ return [
     'shell_not_installed' => 'The :shell shell is not installed on this server. Install it first, or choose another shell.',
     'username_taken_on_server' => 'A user or group with this name already exists on the server. Choose a different username.',
     'has_processes' => ':username is still signed in or running something (for example an open SSH session or a running job). Sign them out or wait for it to finish — or delete again with “End sessions” on, which ends them first.',
+
+    // Container login (RC-28).
+    'container_login_failed' => 'Container login could not be turned on for the system user.',
+    'container_login_unsupported' => 'This server\'s SSH configuration does not apply container login (its sshd_config does not include sshd_config.d), so it was not turned on.',
+    'container_login_no_owner' => 'This app has no system user.',
+    'container_login_confirm' => '{1} :username also owns :count other app. Its SSH and SFTP will open this container only. Confirm to continue.|[2,*] :username also owns :count other apps. Its SSH and SFTP will open this container only. Confirm to continue.',
+    'container_login_needs_key' => 'Password login is off on this server, so :username needs an SSH key. Add one to turn on container login.',
 ];

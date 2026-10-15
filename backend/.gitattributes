@@ -9,3 +9,6 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+tests/Fixtures/recipes-golden/** whitespace=-blank-at-eol,-blank-at-eof
+resources/recipes/** whitespace=-blank-at-eol,-blank-at-eof
