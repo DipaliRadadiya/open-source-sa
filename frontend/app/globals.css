@@ -703,3 +703,12 @@
 [data-sonner-toaster] [data-sonner-toast][data-type="info"] [data-icon] { border-color: color-mix(in oklch, var(--primary) 45%, transparent); background: color-mix(in oklch, var(--primary) 10%, transparent); }
 /* Sonner sets its own system font stack; notifications use the panel's. */
 [data-sonner-toaster] { font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important; }
+
+/* An edge-to-edge list that opens a card's body sits right under the header band:
+   the band already draws the line, so the list drops its own and the gap between
+   (Krishna, 14 Oct: Domains looked "unaligned and messy" with two lines). */
+[data-slot="card"] > [data-slot="card-header"]:first-child + [data-slot="card-content"] > [class*="-mx-(--card-spacing)"].border-t:first-child,
+[data-slot="card"] > [data-slot="card-header"]:first-child + [data-slot="card-content"] > :first-child:not([class*="-mx-"]) > [class*="-mx-(--card-spacing)"].border-t:first-child {
+  margin-top: calc(-1 * var(--card-spacing));
+  border-top-width: 0;
+}

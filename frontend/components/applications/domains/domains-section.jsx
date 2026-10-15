@@ -106,6 +106,9 @@ function sslRowState(certificate, coverage, domain) {
 // Domain | DNS | HTTPS | actions, shared by the heading row and every domain row.
 // The actions column is fixed, not `auto`: header and rows are separate grids, and `auto`
 // sized each to its own content, so the headings drifted off their columns.
+// Top-aligned, with every column's first line on the 32px icon's centre line: the
+// status cells pad down 8px, the name centres on its icon (Krishna, 14 Oct: the name
+// sat 5px above the statuses and the row read "unaligned and messy").
 const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_10rem_10rem_13rem] md:items-start";
 
 export function DomainsSection({
@@ -258,9 +261,9 @@ export function DomainsSection({
                   key={domain.id}
                   className={cn("grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2.5 px-4 py-3.5 md:gap-x-4 md:px-5", ROW_GRID)}
                 >
-                  <div className="col-span-2 flex min-w-0 items-start gap-3 md:col-span-1">
+                  <div className="col-span-2 flex min-w-0 items-center gap-3 md:col-span-1">
                     <span
-                      className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground md:flex"
+                      className="hidden size-8 shrink-0 items-center justify-center rounded-[2px] border bg-muted/40 text-muted-foreground md:flex"
                       aria-hidden
                     >
                       <Globe2 className="size-4" />

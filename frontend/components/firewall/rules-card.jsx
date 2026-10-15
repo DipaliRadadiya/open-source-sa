@@ -456,8 +456,9 @@ export function RulesCard({
                 />
               </div>
 
-              {/* Edge to edge at the foot of the card, as every table inside a card. */}
-              <div className="-mx-(--card-spacing) -mb-(--card-spacing) hidden max-h-[30rem] overflow-auto border-t lg:block">
+              {/* Edge to edge at the foot of the card, as every table inside a card; up against
+                  the header band, whose line it shares (the phone cards before it are hidden). */}
+              <div className="-mx-(--card-spacing) -mb-(--card-spacing) hidden max-h-[30rem] overflow-auto lg:-mt-(--card-spacing) lg:block">
                 {/* The API owns sort order, so pages are never re-sorted locally. */}
                 <DataTable
                   bare
