@@ -1,4 +1,11 @@
 import { api } from "@/lib/api/client";
+import { applicationLogsResponseSchema } from "@/lib/schemas/application-log";
+
+// Re-read after a clear or a reload so each tab's size and last write stay current.
+export async function listApplicationLogs(appId) {
+  const res = await api.get(`/applications/${appId}/logs`);
+  return applicationLogsResponseSchema.parse(res.data).logs;
+}
 
 // No `after` cursor, so live-tail re-reads the last N lines (throttle 120/min).
 // `grep` is a literal, case-insensitive substring applied server-side.

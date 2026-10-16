@@ -68,6 +68,8 @@ export function LogToolbar({
   showDownload = true,
   downloadReason = null,
   followHint = null,
+  // Facts about the open source (e.g. its last write), before the clock note.
+  details = [],
   // Emptying the log; null when unavailable or without `manage` (hidden, not disabled).
   onClear = null,
   clearReason = null,
@@ -114,6 +116,7 @@ export function LogToolbar({
                     : wholeFile
                       ? t("wholeFile", { count: loaded })
                       : null,
+                ...details,
                 t("serverTime"),
                 followHint,
               ]

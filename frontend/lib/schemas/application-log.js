@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-// No byte cursor (the client re-reads the last N lines) and no group, size or readable flag.
-// `kind` is file | journal.
+// No byte cursor (the client re-reads the last N lines) and no group or readable flag.
+// `kind` is file | journal | container.
 export const applicationLogSourceSchema = z
   .object({
     key: z.string(),
@@ -9,6 +9,9 @@ export const applicationLogSourceSchema = z
     kind: z.string().nullish(),
     // false is normal: a site nobody has visited has no access log yet.
     exists: z.boolean().default(false),
+    // Null for a journal or container, a file not written yet, or a failed stat: unknown, not 0.
+    size: z.number().nullish(),
+    modified: z.string().nullish(),
   })
   .passthrough();
 

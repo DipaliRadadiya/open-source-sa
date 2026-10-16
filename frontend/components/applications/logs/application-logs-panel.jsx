@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Info } from "lucide-react";
 import {
   clearApplicationLog,
+  listApplicationLogs,
   readApplicationLog,
   applicationLogDownloadUrl,
 } from "@/lib/api/application-logs";
@@ -26,6 +27,8 @@ import {
   writeCookie,
 } from "@/lib/logs/app-log-prefs";
 import { cleanLines } from "@/lib/logs/clean-lines";
+import { formatBytes } from "@/lib/format/bytes";
+import { parseModified } from "@/lib/logs/recent";
 
 const POLL_MS = 3000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
@@ -36,7 +39,7 @@ const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
 
 export function ApplicationLogsPanel({
   appId,
-  sources,
+  sources: initialSources,
   selected,
   initial,
   initialLines,
@@ -46,6 +49,22 @@ export function ApplicationLogsPanel({
 }) {
   const t = useTranslations("logs");
   const tApp = useTranslations("applications.logs");
+  const format = useFormatter();
+
+  // Sizes and last writes, re-read after a clear or a reload; a new page read wins.
+  const [sources, setSources] = useState(initialSources);
+  const [sourcesProp, setSourcesProp] = useState(initialSources);
+  if (sourcesProp !== initialSources) {
+    setSourcesProp(initialSources);
+    setSources(initialSources);
+  }
+  const refreshSources = useCallback(async () => {
+    try {
+      setSources(await listApplicationLogs(appId));
+    } catch {
+      // The figures stay as they were; the lines are what the reader asked for.
+    }
+  }, [appId]);
 
   // Tabs switch client-side (a navigation re-rendered the whole page on the
   // server); the URL is still updated so a reload or link opens the same tab.
@@ -195,6 +214,10 @@ export function ApplicationLogsPanel({
   }, [follow, disabled, load]);
 
   const group = source ? groupFor(source.key) : undefined;
+  const modified = parseModified(source?.modified);
+  const writtenAt = modified
+    ? format.dateTime(modified, { dateStyle: "medium", timeStyle: "short" })
+    : null;
 
   const visible = useMemo(
     () =>
@@ -255,12 +278,13 @@ export function ApplicationLogsPanel({
       setSearchCapped(false);
       setConfirmClear(false);
       toast.success(tApp("clear.done", { label: source?.label ?? current }));
+      refreshSources();
     } catch (error) {
       toast.error(apiMessage(error, tApp("clear.failed")));
     } finally {
       setClearing(false);
     }
-  }, [appId, current, source, tApp]);
+  }, [appId, current, source, tApp, refreshSources]);
 
   const copy = useCallback(
     async (text, message) => {
@@ -314,6 +338,12 @@ export function ApplicationLogsPanel({
                 {sources.map((s) => (
                   <TabsTrigger key={s.key} value={s.key} className="!h-auto gap-2 px-3.5 py-1.5">
                     {s.label}
+                    {/* Which log is filling the disk, readable across the tabs. */}
+                    {s.size != null ? (
+                      <span className="text-xs font-normal tabular-nums text-muted-foreground">
+                        {formatBytes(s.size, format)}
+                      </span>
+                    ) : null}
                     {!s.exists ? (
                       <span className="text-xs font-normal text-muted-foreground">
                         {tApp("empty.badge")}
@@ -339,7 +369,10 @@ export function ApplicationLogsPanel({
           onWrapChange={setWrap}
           newestFirst={newestFirst}
           onNewestFirstChange={setNewestFirst}
-          onReload={() => load()}
+          onReload={() => {
+            load();
+            refreshSources();
+          }}
           onCopyVisible={() =>
             copy(
               visible.join("\n"),
@@ -353,6 +386,7 @@ export function ApplicationLogsPanel({
           disabled={disabled}
           reloadable={status === "failed"}
           reloadReason={status === "locked" ? t("locked.title") : status === "missing" ? t("missing.title") : null}
+          details={writtenAt ? [t("lastWritten", { time: writtenAt })] : []}
           searchRef={searchRef}
           tailState={effectiveTail}
           onResume={() => {

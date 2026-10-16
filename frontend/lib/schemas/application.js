@@ -97,11 +97,15 @@ export const systemUsersResponseSchema = z.object({
 });
 
 // Read live from systemd on every request; absent unless `has_process`.
-const processSchema = z.object({
+export const processSchema = z.object({
   state: z.string().nullish(),
   sub_state: z.string().nullish(),
   since: z.string().nullish(),
   memory: z.union([z.number(), z.string()]).nullish(),
+  // Percent of one core, so a cluster can pass 100. systemd's first read after a
+  // while is null: the backend needs two reads to work out a rate.
+  cpu_percent: z.number().nullish(),
+  pid: z.number().nullish(),
   restarts: z.number().nullish(),
 }).passthrough();
 

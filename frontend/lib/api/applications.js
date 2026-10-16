@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { processSchema } from "@/lib/schemas/application";
 
 export function createApplication(payload) {
   return api.post("/applications", payload);
@@ -171,6 +172,13 @@ export function lockApplicationRoot(id) {
 export async function getApplicationStatus(id) {
   const res = await api.get(`/applications/${id}`);
   return res.data?.application?.status ?? null;
+}
+
+// No process-only endpoint: the application read is the one that asks systemd.
+export async function getApplicationProcess(id, { signal } = {}) {
+  const res = await api.get(`/applications/${id}`, { signal });
+  const parsed = processSchema.nullish().safeParse(res.data?.application?.process);
+  return parsed.success ? (parsed.data ?? null) : null;
 }
 
 /** 202 while it switches (follow `node_version_change`), 200 if already on that version. */

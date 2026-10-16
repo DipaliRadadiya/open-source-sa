@@ -1,12 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowRightLeft, Loader2, Play, RotateCw, Square } from "lucide-react";
-import { controlApplicationProcess } from "@/lib/api/applications";
+import { controlApplicationProcess, getApplicationProcess } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,11 @@ const STATE_VARIANT = { active: "success", failed: "destructive", activating: "w
 
 // Spelled out, not `${action}ed` ("stoped"); literal keys stay greppable.
 const DONE_KEY = { start: "started", stop: "stopped", restart: "restarted" };
+
+// CPU is a rate the backend works out between two reads, so the page's own read
+// often has none: re-read soon, then keep it current while the card is on screen.
+const FIRST_READ_MS = 3000;
+const POLL_MS = 10000;
 
 // A new git site is `active` with a never-started process: "deploy to start",
 // not a fault, so not red.
@@ -35,7 +40,15 @@ export function ProcessCard({ application, canManage = false, className }) {
   // so the expected outcome of the last click decides how it reads.
   const [expected, setExpected] = useState(null);
 
-  const process = application.process ?? {};
+  // A fresher read than the page's; dropped when the page brings a new one.
+  const [live, setLive] = useState(null);
+  const [base, setBase] = useState(application.process);
+  if (base !== application.process) {
+    setBase(application.process);
+    setLive(null);
+  }
+
+  const process = live ?? application.process ?? {};
   const rawState = process.state ?? "unknown";
   const state =
     expected === "stopped" && rawState === "failed"
@@ -59,6 +72,30 @@ export function ProcessCard({ application, canManage = false, className }) {
       ? process.memory.trim()
       : "—");
   const notStartedYet = state !== "active" && !application.deployed;
+  const running = rawState === "active";
+
+  useEffect(() => {
+    if (!running || pending) return undefined;
+    let active = true;
+    const ctrl = new AbortController();
+    async function read() {
+      if (document.hidden) return;
+      try {
+        const next = await getApplicationProcess(application.id, { signal: ctrl.signal });
+        if (active && next) setLive(next);
+      } catch {
+        // A missed read keeps the last figures; the next tick tries again.
+      }
+    }
+    const first = window.setTimeout(read, FIRST_READ_MS);
+    const timer = window.setInterval(read, POLL_MS);
+    return () => {
+      active = false;
+      ctrl.abort();
+      window.clearTimeout(first);
+      window.clearInterval(timer);
+    };
+  }, [running, pending, application.id]);
 
   // Adopted from the old panel and still run by its PM2 daemon. A supported
   // state, not a broken one — so it is labelled rather than warned about, and
@@ -99,7 +136,10 @@ export function ProcessCard({ application, canManage = false, className }) {
     // No "State" row: the pill in the header already says it.
     // `since` is the last start time, meaningless on a stopped process.
     { label: t("since"), value: state === "active" ? formatSince(process.since, format) : null },
+    { label: t("cpu"), value: formatCpu(process.cpu_percent, format) },
     { label: t("memory"), value: memory },
+    // Plain digits: a process ID is an identifier, not a quantity to group.
+    { label: t("pid"), value: process.pid != null ? String(process.pid) : "—" },
     { label: t("restarts"), value: process.restarts },
     { label: t("workers"), value: workers },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
@@ -200,6 +240,12 @@ export function ProcessCard({ application, canManage = false, className }) {
       ) : null}
     </Card>
   );
+}
+
+// Percent of one core, as top shows it: a busy cluster passes 100%.
+function formatCpu(percent, format) {
+  if (typeof percent !== "number" || !Number.isFinite(percent)) return "—";
+  return format.number(percent / 100, { style: "percent", maximumFractionDigits: 1 });
 }
 
 // systemd's "Sat 2026-09-26 13:18:19 UTC", localised; other shapes pass through.
