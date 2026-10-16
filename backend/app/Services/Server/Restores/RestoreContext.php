@@ -4,6 +4,7 @@ namespace App\Services\Server\Restores;
 
 use App\Models\Application;
 use App\Models\Backup;
+use App\Models\Database;
 use App\Models\Restore;
 
 /**
@@ -27,13 +28,37 @@ class RestoreContext
     /** Whether this run stopped the application's process and owes it a start. */
     public bool $processStopped = false;
 
+    /**
+     * @param  Application|null  $application  the site being restored; null for a database on its own
+     * @param  Database|null  $database  the database a database backup is restored into — its own, or
+     *                                   (for an archived backup) the one the user chose
+     */
     public function __construct(
         public readonly Restore $restore,
         public readonly Backup $backup,
-        public readonly Application $application,
+        public readonly ?Application $application,
         /** Working directory for this run's local artefacts. */
         public readonly string $workingDirectory,
+        public readonly ?Database $database = null,
     ) {}
+
+    /** Restoring a database on its own: no site directory, no process, one dump. */
+    public function isDatabaseRestore(): bool
+    {
+        return $this->application === null;
+    }
+
+    /**
+     * Who this run is about, for the ops log.
+     *
+     * @return array<string, int|null>
+     */
+    public function logSubject(): array
+    {
+        return $this->isDatabaseRestore()
+            ? ['database' => $this->database?->id]
+            : ['application' => $this->application->id];
+    }
 
     public function track(string $path): string
     {

@@ -3851,6 +3851,43 @@ Same permission tier as restore and download rather than the per-site `app_backu
 
 ---
 
+## Backups of a database on its own
+*Added 2026-10-16* (v7's backup type "database" with only a database). A database **with no site** gets its own schedule; a site's database is backed up with the site's target (type `database`/`full`) and its schedule here is refused. **Permission: `database`** — view for reading, manage for everything else (decision 2026-10-16), not the server-wide Backups permission.
+
+The run is the site pipeline: dump that one database (all engines), pack it, upload under **`databases/{name}-{id}/`** on the destination, verify, prune to `retention_count`. Nothing of any site is read.
+
+### GET `/databases/{database}/backup-target`
+`{"backup_target": {…same shape as a site's, with "database_id"…} | null, "backed_up_with": null | {"application_id": 3, "application_name": "Shop"}}` — `backed_up_with` set means the database belongs to a site: show *"Backed up with site Shop"* instead of the form.
+
+### PUT `/databases/{database}/backup-target`
+**Throttle:** 20/min. `{"storage_destination_id": 1, "retention_count": 7, "frequency": "daily", "schedule_time": "02:00", "enabled": true}` — the frequencies and retention limits of `GET /backup-targets/options`. The type is always `database`; there are no excludes. **`422`** on `database` when the database belongs to a site (*"…is backed up with it. Set up backups on the site instead."*).
+
+### DELETE `/databases/{database}/backup-target`
+Same rules as a site's: refused while a run is in flight; refused while backups exist unless `?delete_backups=1` (each deleted archive-first).
+
+### GET `/databases/{database}/backups`
+Its backups — the shape and filters (`status`, `type`, `from`, `to`, `per_page`) of `GET /backups`.
+
+### POST `/databases/{database}/backups`
+Run now. **Throttle:** 6/min. **`202`** `{"backup_target": {…}}`. `422` when not configured, already running, or a restore/import of the database is running.
+
+### POST `/databases/{database}/backups/{backup}/restore`
+**Throttle:** 2/min. `{"confirm": "<the database name, typed>"}`. Restores **its own** backup, or an **archived** one (below) **of the same engine**, into this database. **`202`** `{"restore": {…}}`; poll `GET /restores/{id}`.
+
+A restore first takes a **safety backup** of the database as it is now (through this database's own schedule — so the database needs one), then drops, recreates, gives its users back and loads the dump. No site file and no process is touched.
+
+**`422`** — the backup is not verified; it belongs to another database and is not archived; engine differs (*"This backup is from a mysql database and cannot be restored into a postgresql database."*); the database has no backup schedule (*"Set up backups for this database first…"*); wrong `confirm`; a restore, import or export of this database is running. Imports and exports refuse while a restore runs, too.
+
+### GET `/databases/{database}/backups/{backup}/download` · DELETE `/databases/{database}/backups/{backup}`
+As `GET /backups/{backup}/download` and `DELETE /backups/{backup}`, for this database's own backups only (`404` otherwise).
+
+### Archived backups
+**Deleting a database archives its backups** instead of deleting them (decision 2026-10-16): the schedule goes, the backups stay — `database_id` becomes null, `archived: true`, and `database_name`/`database_engine` still say what they were. They stay listed in `GET /backups` (`?filter[archived]=1`, `?filter[engine]=mysql`), downloadable and deletable there, and restorable **into another database of the same engine** with the route above called on that database. Nothing deletes them automatically. Deleting a database is refused (`422`) while a backup or restore of it is running.
+
+`GET /backups` rows gained `database_id`, `database_name`, `database_engine`, `archived` (all null/false for a site's backup), and the filters `filter[database_id]`, `filter[archived]`, `filter[engine]`. **`POST /backups/{backup}/restore` refuses a database backup** (`422`, *"Restore a database backup from the database's own page."*).
+
+---
+
 ## Backup — Restores
 
 ### GET `/restores`

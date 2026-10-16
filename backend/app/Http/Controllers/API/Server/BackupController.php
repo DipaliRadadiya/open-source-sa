@@ -47,7 +47,7 @@ class BackupController extends Controller
      */
     public function index(IndexBackupsRequest $request): JsonResponse
     {
-        return $this->listBackups($request, $request->validated('filter.application_id'));
+        return $this->listBackups($request);
     }
 
     /**
@@ -55,12 +55,16 @@ class BackupController extends Controller
      */
     public function indexForApplication(IndexApplicationBackupsRequest $request, Application $application): JsonResponse
     {
-        return $this->listBackups($request, $application->id);
+        return $this->listBackups($request, ['application_id' => $application->id]);
     }
 
-    private function listBackups(IndexBackupsRequest $request, mixed $applicationId): JsonResponse
+    /**
+     * @param  array{application_id?: int, database_id?: int}  $scope  fixed by the URL, never by the query
+     */
+    public function listBackups(IndexBackupsRequest $request, array $scope = []): JsonResponse
     {
-        $filter = ['application_id' => $applicationId] + $request->validated('filter', []);
+        $filter = $scope + $request->validated('filter', []);
+        $archived = array_key_exists('archived', $filter) && $filter['archived'] !== null ? (bool) $filter['archived'] : null;
 
         $backups = Backup::query()
             // The destination comes through the target, and this list is
@@ -68,8 +72,9 @@ class BackupController extends Controller
             // its own destination, which is forty extra queries on a page of
             // twenty. `whenLoaded` in the resource is what makes the field
             // appear, so the two have to move together.
-            ->with(['application:id,name,domain', 'storageDestination:id,name'])
+            ->with(['application:id,name,domain', 'database:id,name,engine', 'storageDestination:id,name'])
             ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
+            ->tap(fn ($query) => $this->subjectFilters($query, $filter, $archived))
             ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filter['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
@@ -84,6 +89,7 @@ class BackupController extends Controller
         // Replaces four separate per_page=1 requests the frontend was making.
         $baseQuery = Backup::query()
             ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
+            ->tap(fn ($query) => $this->subjectFilters($query, $filter, $archived))
             ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filter['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
             ->when($filter['to'] ?? null, fn ($query, $to) => $query->where('created_at', '<=', Carbon::parse($to)->endOfDay()));
@@ -402,7 +408,7 @@ class BackupController extends Controller
         // for it belongs in the audit trail — the URL itself does not, since
         // it carries a working credential for those five minutes.
         $activity->log('backup.downloaded', $backup, [
-            'application' => $backup->application?->name,
+            'application' => $backup->subjectName(),
             'backup_id' => $backup->getKey(),
         ]);
 
@@ -450,7 +456,7 @@ class BackupController extends Controller
      */
     private function filename(Backup $backup): string
     {
-        $site = $backup->application?->domain ?? 'backup';
+        $site = $backup->application?->domain ?? ($backup->isDatabaseBackup() ? 'database-'.$backup->subjectName() : 'backup');
         $stamp = $backup->created_at?->format('Y-m-d-His') ?? 'unknown';
 
         // Dots become hyphens before slugging — Str::slug strips them, which
@@ -492,7 +498,11 @@ class BackupController extends Controller
             ]);
         }
 
-        if (Restore::inProgressFor($target->application_id)) {
+        $restoring = $target->isDatabaseTarget()
+            ? Restore::inProgressForDatabase($target->database_id)
+            : Restore::inProgressFor($target->application_id);
+
+        if ($restoring) {
             throw ValidationException::withMessages([
                 'application' => [__('backup.errors.restore_already_running')],
             ]);
@@ -544,13 +554,28 @@ class BackupController extends Controller
 
         $reaper->close($backup);
 
-        $activity->log('backup.cleared', $backup->application, [
-            'name' => $backup->application?->name ?? '',
+        $activity->log('backup.cleared', $backup->application ?? $backup->database ?? $backup, [
+            'name' => $backup->subjectName(),
         ]);
 
         return response()->json([
             'backup' => BackupResource::make($backup->fresh())->resolve(),
         ]);
+    }
+
+    /**
+     * The database half of the filters: a database's own backups, archived
+     * ones (no site and no database any more), and the engine they hold.
+     *
+     * @param  array<string, mixed>  $filter
+     */
+    private function subjectFilters(Builder $query, array $filter, ?bool $archived): void
+    {
+        $query
+            ->when($filter['database_id'] ?? null, fn ($q, $id) => $q->where('database_id', $id))
+            ->when($archived === true, fn ($q) => $q->whereNull('application_id')->whereNull('database_id')->whereNotNull('subject_engine'))
+            ->when($archived === false, fn ($q) => $q->where(fn ($q) => $q->whereNotNull('application_id')->orWhereNotNull('database_id')))
+            ->when($filter['engine'] ?? null, fn ($q, $engine) => $q->where('subject_engine', $engine));
     }
 
     /** A backup target that will actually run on its own. */

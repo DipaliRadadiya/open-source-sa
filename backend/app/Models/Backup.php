@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-#[Fillable(['backup_target_id', 'application_id', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'error_class', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at'])]
+#[Fillable(['backup_target_id', 'application_id', 'database_id', 'subject_name', 'subject_engine', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'error_class', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at'])]
 class Backup extends Model
 {
     protected function casts(): array
@@ -96,6 +96,39 @@ class Backup extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    public function database(): BelongsTo
+    {
+        return $this->belongsTo(Database::class);
+    }
+
+    /**
+     * A backup of a database on its own — still attached, or archived after
+     * the database was deleted. `subject_engine` is written for every one of
+     * them and for nothing else, so it survives the database going.
+     */
+    public function isDatabaseBackup(): bool
+    {
+        return $this->database_id !== null || ($this->application_id === null && $this->subject_engine !== null);
+    }
+
+    /**
+     * Its database was deleted: the backup stays, listed, downloadable and
+     * restorable into another database of the same engine, until someone
+     * deletes it.
+     */
+    public function isArchived(): bool
+    {
+        return $this->database_id === null && $this->application_id === null && $this->subject_engine !== null;
+    }
+
+    /** The site's name, or the database's — kept on the row, so an archived backup still says what it was. */
+    public function subjectName(): string
+    {
+        return $this->application_id !== null
+            ? (string) ($this->application?->name ?? '')
+            : (string) ($this->database?->name ?? $this->subject_name ?? '');
     }
 
     public function user(): BelongsTo

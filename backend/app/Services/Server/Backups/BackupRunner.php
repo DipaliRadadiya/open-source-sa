@@ -44,6 +44,12 @@ class BackupRunner
         $backup = Backup::create([
             'backup_target_id' => $target->id,
             'application_id' => $target->application_id,
+            // A database's backup records what it was taken from, so it still
+            // says so — and can be restored elsewhere — after the database is
+            // deleted (archived).
+            'database_id' => $target->database_id,
+            'subject_name' => $target->isDatabaseTarget() ? $target->database?->name : null,
+            'subject_engine' => $target->isDatabaseTarget() ? $target->database?->engine : null,
             'user_id' => $actorId,
             'type' => $target->type->value,
 
@@ -116,7 +122,7 @@ class BackupRunner
             Log::channel('server-ops')->error('backup failed', [
                 'feature' => 'backup',
                 'backup' => $backup->id,
-                'application' => $target->application_id,
+                ...$context->logSubject(),
                 'step' => $backup->reason,
                 'reference' => $backup->reference,
                 'log_key' => $logKey,

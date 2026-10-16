@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * frequency vocabulary as DiskCleanerSchedule.
  */
 #[Fillable([
-    'application_id', 'storage_destination_id', 'type', 'retention_count',
+    'application_id', 'database_id', 'storage_destination_id', 'type', 'retention_count',
     'file_excludes', 'database_excludes', 'volume_scope', 'enabled', 'frequency', 'schedule_time', 'last_run_at',
 ])]
 class BackupTarget extends Model
@@ -88,6 +88,28 @@ class BackupTarget extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    /**
+     * A database on its own (2026-10-16): a target belongs to a site or to a
+     * database, never both. See {@see self::subjectName()}.
+     */
+    public function database(): BelongsTo
+    {
+        return $this->belongsTo(Database::class);
+    }
+
+    public function isDatabaseTarget(): bool
+    {
+        return $this->database_id !== null;
+    }
+
+    /** What this target backs up, by name: the site's domain or the database's name. */
+    public function subjectName(): string
+    {
+        return $this->isDatabaseTarget()
+            ? (string) $this->database?->name
+            : (string) ($this->application?->name ?? '');
     }
 
     public function storageDestination(): BelongsTo

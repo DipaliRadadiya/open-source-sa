@@ -21,6 +21,8 @@ class BackupTargetResource extends JsonResource
         return [
             'id' => $this->id,
             'application_id' => $this->application_id,
+            // Added 2026-10-16: a target of a database on its own.
+            'database_id' => $this->database_id,
             'storage_destination_id' => $this->storage_destination_id,
             'storage_destination_name' => $this->whenLoaded(
                 'storageDestination',

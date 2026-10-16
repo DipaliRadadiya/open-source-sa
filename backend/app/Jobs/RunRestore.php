@@ -46,19 +46,24 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
      */
     public int $timeout;
 
-    public function __construct(public int $restoreId, public int $applicationId)
+    /**
+     * @param  int  $applicationId  the site; 0 for a database restore, which passes `$databaseId`
+     */
+    public function __construct(public int $restoreId, public int $applicationId, public ?int $databaseId = null)
     {
         $this->timeout = (int) config('server.backups.job_timeout', 21600);
     }
 
     public function uniqueId(): string
     {
-        return 'restore-application-'.$this->applicationId;
+        return $this->databaseId !== null
+            ? 'restore-database-'.$this->databaseId
+            : 'restore-application-'.$this->applicationId;
     }
 
     public function handle(RestoreRunner $runner, ActivityLogger $activity): void
     {
-        $restore = Restore::with(['backup.target.storageDestination', 'application.systemUser', 'user'])
+        $restore = Restore::with(['backup.target.storageDestination', 'application.systemUser', 'database.backupTarget', 'user'])
             ->find($this->restoreId);
 
         if ($restore === null) {
@@ -92,7 +97,7 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 : ($succeeded ? 'backup.restored' : 'backup.restore_failed'),
             $restore,
             [
-                'application' => $restore->application->name,
+                'application' => $restore->application?->name ?? $restore->database?->name ?? '',
                 'reason' => $restore->reason ?? '',
             ],
             $restore->user,
@@ -111,6 +116,7 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
             'op' => 'restore',
             'restore' => $this->restoreId,
             'application' => $this->applicationId,
+            'database' => $this->databaseId,
             'detail' => $e?->getMessage(),
         ]);
 

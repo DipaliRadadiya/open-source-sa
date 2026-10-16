@@ -263,9 +263,16 @@ class UploadArtifact implements BackupStep
     {
         $createdAt = $context->backup->created_at ?? now();
 
+        // A database's own folder, under `databases/`, so it can never share
+        // one with a site — a site's folder is its domain, and a domain cannot
+        // contain a slash.
+        $folder = $context->isDatabaseTarget()
+            ? 'databases/'.$context->database()?->name.'-'.$context->target->database_id
+            : ($context->application()->domain ?: 'application-'.$context->application()->id);
+
         return sprintf(
             '%s/%s-%s.tar.gz',
-            $context->application()->domain ?: 'application-'.$context->application()->id,
+            $folder,
             $createdAt->format('Y-m-d-Hi'),
             $context->backup->uid,
         );

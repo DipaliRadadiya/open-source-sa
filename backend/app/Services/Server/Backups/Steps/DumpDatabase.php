@@ -36,10 +36,21 @@ class DumpDatabase implements BackupStep
     {
         $excluded = (array) ($context->target->database_excludes ?? []);
 
-        $databases = Database::query()
-            ->where('application_id', $context->application()->id)
-            ->get()
-            ->reject(fn (Database $database): bool => in_array($database->name, $excluded, true));
+        // A database on its own is that database and nothing else; excludes
+        // are a site's list of which of *its* databases to skip.
+        $databases = $context->isDatabaseTarget()
+            ? collect([$context->database()])->filter()
+            : Database::query()
+                ->where('application_id', $context->application()->id)
+                ->get()
+                ->reject(fn (Database $database): bool => in_array($database->name, $excluded, true));
+
+        if ($context->isDatabaseTarget() && $databases->isEmpty()) {
+            // Its target outlived it for a moment (deleted between queueing
+            // and running). Uploading an empty archive and calling it verified
+            // is the one outcome that must not happen.
+            throw new RuntimeException('the database for this backup no longer exists');
+        }
 
         if ($databases->isEmpty()) {
             // Not an error for a files-only site that happens to be typed

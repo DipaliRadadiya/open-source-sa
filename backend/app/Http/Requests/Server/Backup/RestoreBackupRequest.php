@@ -49,6 +49,16 @@ class RestoreBackupRequest extends FormRequest
                 return;
             }
 
+            if ($backup->isDatabaseBackup()) {
+                // A database's own backup is restored from the database's
+                // page, under the database's permission, into a database the
+                // user names — archived ones included. See
+                // RestoreDatabaseBackupRequest.
+                $validator->errors()->add('backup', __('backup.errors.restore_database_backup_here'));
+
+                return;
+            }
+
             if ($backup->application === null) {
                 $validator->errors()->add('backup', __('backup.errors.restore_no_application'));
 

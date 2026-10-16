@@ -22,6 +22,7 @@ use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseExport;
 use App\Models\DatabaseImport;
+use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
@@ -380,6 +381,13 @@ class DatabaseController extends Controller
         if ($importing) {
             throw ValidationException::withMessages([
                 'database' => [__('errors/database.export_import_running')],
+            ]);
+        }
+
+        // Nor while a backup restore is replacing it (2026-10-16).
+        if (Restore::inProgressForDatabase($database->id)) {
+            throw ValidationException::withMessages([
+                'database' => [__('backup.errors.restore_database_busy')],
             ]);
         }
 

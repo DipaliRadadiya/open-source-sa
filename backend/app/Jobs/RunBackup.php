@@ -6,6 +6,7 @@ use App\Enums\BackupStatus;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\DatabaseImport;
 use App\Models\Restore;
 use App\Models\User;
 use App\Services\ActivityLogger;
@@ -96,7 +97,7 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
     public function handle(BackupRunner $runner, ActivityLogger $activity): void
     {
-        $target = BackupTarget::with(['application', 'storageDestination'])->find($this->backupTargetId);
+        $target = BackupTarget::with(['application', 'database', 'storageDestination'])->find($this->backupTargetId);
 
         if ($target === null) {
             // Dispatched by id so a target deleted between queueing and
@@ -113,7 +114,12 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
         // A scheduled run that falls during a restore: skipped, not queued
         // behind it — the next schedule takes the restored site. See
         // Restore::inProgressFor().
-        if (Restore::inProgressFor($target->application_id) || StagingManager::pushInProgress($target->application_id)) {
+        $busy = $target->isDatabaseTarget()
+            // A database on its own: its restore, or an import replacing it.
+            ? Restore::inProgressForDatabase($target->database_id) || DatabaseImport::query()->where('database_id', $target->database_id)->open()->exists()
+            : Restore::inProgressFor($target->application_id) || StagingManager::pushInProgress($target->application_id);
+
+        if ($busy) {
             Log::channel('server-ops')->info('backup skipped, a restore or staging push of this application is in progress', [
                 'feature' => 'backup',
                 'backup_target' => $this->backupTargetId,
@@ -127,6 +133,9 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 $skipped = Backup::create([
                     'backup_target_id' => $target->id,
                     'application_id' => $target->application_id,
+                    'database_id' => $target->database_id,
+                    'subject_name' => $target->isDatabaseTarget() ? $target->database?->name : null,
+                    'subject_engine' => $target->isDatabaseTarget() ? $target->database?->engine : null,
                     'user_id' => $this->actorId,
                     'type' => $target->type->value,
                     'is_safety' => false,
@@ -138,7 +147,7 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 ]);
 
                 $activity->log('backup.failed', $skipped, [
-                    'application' => $target->application->name,
+                    'application' => $target->subjectName(),
                     'reason' => __('backup.errors.restore_in_progress'),
                 ], User::find($this->actorId));
             }
@@ -161,7 +170,7 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
             $backup->status === BackupStatus::Verified ? 'backup.completed' : 'backup.failed',
             $backup,
             [
-                'application' => $target->application->name,
+                'application' => $target->subjectName(),
                 'reason' => $backup->reason ?? '',
             ],
             // Bug #46: whoever pressed "Back up now". Null for a scheduled

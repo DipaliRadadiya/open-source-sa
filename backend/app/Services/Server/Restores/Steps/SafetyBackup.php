@@ -52,7 +52,12 @@ class SafetyBackup implements RestoreStep
 
     public function run(RestoreContext $context): void
     {
-        $target = $context->backup->target;
+        // A database restore saves the database it is about to replace: its own
+        // target — which, for an archived backup restored somewhere else, is
+        // the *chosen* database's target, not the deleted one's.
+        $target = $context->isDatabaseRestore()
+            ? $context->database?->backupTarget
+            : $context->backup->target;
 
         if ($target === null) {
             throw new RuntimeException('the backup settings this backup came from no longer exist');

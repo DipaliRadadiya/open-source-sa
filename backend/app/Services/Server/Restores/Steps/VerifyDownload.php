@@ -53,7 +53,7 @@ class VerifyDownload implements RestoreStep
 
         $result = $this->serverOps->run(
             ['tar', '-tzf', $archive],
-            ['feature' => 'backup', 'op' => 'restore_verify', 'application' => $context->application->id],
+            ['feature' => 'backup', 'op' => 'restore_verify', ...$context->logSubject()],
             // `tar -tzf` reads the whole archive: 110s for 25 GB, so a 100 GB
             // one is already close to the old 1800s and a larger site is past
             // it. Bounded by the job, like every other size-scaling step.

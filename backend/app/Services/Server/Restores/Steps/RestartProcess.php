@@ -45,7 +45,9 @@ class RestartProcess implements RestoreStep
 
     public function appliesTo(RestoreContext $context): bool
     {
-        return $this->isContainerSite($context) || $this->processes->runs($context->application);
+        // A database on its own has no process of its own to restart.
+        return $context->application !== null
+            && ($this->isContainerSite($context) || $this->processes->runs($context->application));
     }
 
     public function run(RestoreContext $context): void
@@ -79,7 +81,7 @@ class RestartProcess implements RestoreStep
         // SwapFiles::cleanup carries the same guard, because a failure *in*
         // the swap means this step never ran and its cleanup never fires. The
         // flag makes running both harmless.
-        if (! $failed || ! $context->processStopped) {
+        if (! $failed || ! $context->processStopped || $context->application === null) {
             return;
         }
 

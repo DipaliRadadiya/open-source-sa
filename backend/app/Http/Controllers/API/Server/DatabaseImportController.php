@@ -12,6 +12,7 @@ use App\Jobs\RunDatabaseImport;
 use App\Models\Database;
 use App\Models\DatabaseExport;
 use App\Models\DatabaseImport;
+use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ChunkedUpload;
 use App\Services\Server\Databases\Imports\ImportFiles;
@@ -142,6 +143,13 @@ class DatabaseImportController extends Controller
         if (DatabaseExport::query()->where('database_id', $database->id)->inFlight()->get()->contains(fn ($e) => ! $e->isStale())) {
             throw ValidationException::withMessages([
                 'database' => [__('errors/database.import_export_running')],
+            ]);
+        }
+
+        // A backup restore replacing the same database (2026-10-16).
+        if (Restore::inProgressForDatabase($database->id)) {
+            throw ValidationException::withMessages([
+                'database' => [__('backup.errors.restore_database_busy')],
             ]);
         }
 

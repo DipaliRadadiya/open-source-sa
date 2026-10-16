@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'backup_id', 'application_id', 'user_id', 'type', 'status', 'current_step',
+    'backup_id', 'application_id', 'database_id', 'user_id', 'type', 'status', 'current_step',
     'reason', 'reference', 'safety_backup_id', 'rollback_path',
     'started_at', 'finished_at',
 ])]
@@ -44,6 +44,25 @@ class Restore extends Model
             ->where('application_id', $applicationId)
             ->whereIn('status', [RestoreStatus::Pending->value, RestoreStatus::Running->value])
             ->exists();
+    }
+
+    /**
+     * Whether this database (on its own, not through a site) has a restore
+     * queued or running. The same guard as {@see self::inProgressFor()}, for
+     * the same reason: a backup or an import taken mid-restore captures, or
+     * replaces, a half-restored database.
+     */
+    public static function inProgressForDatabase(int $databaseId): bool
+    {
+        return static::query()
+            ->where('database_id', $databaseId)
+            ->whereIn('status', [RestoreStatus::Pending->value, RestoreStatus::Running->value])
+            ->exists();
+    }
+
+    public function database(): BelongsTo
+    {
+        return $this->belongsTo(Database::class);
     }
 
     public function backup(): BelongsTo

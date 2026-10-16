@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\AdminerSsoController;
+use App\Http\Controllers\API\Server\DatabaseBackupController;
 use App\Http\Controllers\API\Server\DatabaseConnectionController;
 use App\Http\Controllers\API\Server\DatabaseController;
 use App\Http\Controllers\API\Server\DatabaseImportController;
@@ -125,6 +126,28 @@ Route::middleware('manages-databases')->group(function (): void {
         ->middleware(['permission:database,manage', 'throttle:6,1']);
     Route::delete('/databases/{database}/imports/{import}', [DatabaseImportController::class, 'destroy'])
         ->middleware(['permission:database,manage', 'throttle:20,1']);
+
+    /*
+    | Backups of a database on its own (2026-10-16, v7's type=database).
+    | Under the database's permission, by decision. A site's database is
+    | backed up with the site, so its target is refused (422).
+    */
+    Route::get('/databases/{database}/backup-target', [DatabaseBackupController::class, 'showTarget'])
+        ->middleware('permission:database');
+    Route::put('/databases/{database}/backup-target', [DatabaseBackupController::class, 'saveTarget'])
+        ->middleware(['permission:database,manage', 'throttle:20,1']);
+    Route::delete('/databases/{database}/backup-target', [DatabaseBackupController::class, 'destroyTarget'])
+        ->middleware(['permission:database,manage', 'throttle:12,1']);
+    Route::get('/databases/{database}/backups', [DatabaseBackupController::class, 'index'])
+        ->middleware('permission:database');
+    Route::post('/databases/{database}/backups', [DatabaseBackupController::class, 'run'])
+        ->middleware(['permission:database,manage', 'throttle:6,1']);
+    Route::post('/databases/{database}/backups/{backup}/restore', [DatabaseBackupController::class, 'restore'])
+        ->middleware(['permission:database,manage', 'throttle:2,1']);
+    Route::get('/databases/{database}/backups/{backup}/download', [DatabaseBackupController::class, 'download'])
+        ->middleware(['permission:database,manage', 'throttle:6,1']);
+    Route::delete('/databases/{database}/backups/{backup}', [DatabaseBackupController::class, 'destroy'])
+        ->middleware(['permission:database,manage', 'throttle:12,1']);
 
     // Database users (nested — a user belongs to one database).
     Route::middleware('permission:database')->group(function () {

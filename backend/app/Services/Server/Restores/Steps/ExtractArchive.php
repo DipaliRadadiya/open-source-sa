@@ -50,6 +50,12 @@ class ExtractArchive implements RestoreStep
         // decides both the entry name expected inside the archive and where
         // the staging directory sits, since staging is a sibling of the thing
         // being replaced.
+        if ($context->isDatabaseRestore()) {
+            $this->extractDatabaseDump($context, $archive);
+
+            return;
+        }
+
         $siteRoot = $this->roots->forBackup($context->backup, $context->application);
         $staging = dirname($siteRoot).'/.restore-'.$context->restore->id;
 
@@ -121,6 +127,34 @@ class ExtractArchive implements RestoreStep
             throw new RuntimeException(
                 'the archive does not contain the site directory '.basename($siteRoot),
             );
+        }
+    }
+
+    /**
+     * A database on its own: only its dump, unpacked inside the panel's own
+     * working directory. There is no site directory to sit beside, and none of
+     * a site's files are in the archive to begin with.
+     */
+    private function extractDatabaseDump(RestoreContext $context, string $archive): void
+    {
+        $staging = $context->workingDirectory.'/extract';
+
+        $created = $this->serverOps->run(['mkdir', '-p', $staging], ['feature' => 'backup', 'op' => 'restore_staging_create', ...$context->logSubject()]);
+
+        if ($created->failed()) {
+            throw new RuntimeException('the staging directory could not be created');
+        }
+
+        $context->stagingDirectory = $staging;
+
+        $result = $this->serverOps->run(
+            ['tar', '-xzf', $archive, '-C', $staging, '--wildcards', 'db-*.sql'],
+            ['feature' => 'backup', 'op' => 'restore_extract', ...$context->logSubject()],
+            timeout: (int) config('server.backups.job_timeout', 21600),
+        );
+
+        if ($result->failed()) {
+            throw new RuntimeException('the archive could not be extracted');
         }
     }
 

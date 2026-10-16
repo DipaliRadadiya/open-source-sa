@@ -55,7 +55,7 @@ class ArchiveFiles implements BackupStep
         // in its document root, so "back up the config" is the same tar of the
         // same directory — there is no second place to read them from. Only
         // which sites ask for it differs.
-        if ($context->wantsFiles() || $context->wantsConfig()) {
+        if (! $context->isDatabaseTarget() && ($context->wantsFiles() || $context->wantsConfig())) {
             // The application's own directory, not the served one — see
             // {@see BackupRoot}. The kind is recorded in the same breath,
             // because the restore reads it back to know what this archive
@@ -126,7 +126,7 @@ class ArchiveFiles implements BackupStep
 
         $result = $this->serverOps->run(
             $command,
-            ['feature' => 'backup', 'op' => 'archive', 'application' => $context->application()->id],
+            ['feature' => 'backup', 'op' => 'archive', ...$context->logSubject()],
             // The job's own ceiling, not a second hardcoded hour. This was
             // `3600`, and it is a trap the raised job timeout does not cover:
             // a 103 GB site takes ~67 minutes to archive with plain gzip, so

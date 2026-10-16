@@ -5,6 +5,7 @@ namespace App\Services\Server\Backups;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Database;
 
 /**
  * Everything one backup run carries between its steps.
@@ -40,9 +41,36 @@ class BackupContext
         public readonly string $workingDirectory,
     ) {}
 
+    /** The site being backed up. Only for a site's target — see {@see self::isDatabaseTarget()}. */
     public function application(): Application
     {
         return $this->target->application;
+    }
+
+    /**
+     * A database on its own (2026-10-16): only its dump is taken, uploaded
+     * under `databases/`, and nothing of any site is read.
+     */
+    public function isDatabaseTarget(): bool
+    {
+        return $this->target->isDatabaseTarget();
+    }
+
+    public function database(): ?Database
+    {
+        return $this->target->database;
+    }
+
+    /**
+     * Who this run is about, for the ops log: the site or the database.
+     *
+     * @return array<string, int|null>
+     */
+    public function logSubject(): array
+    {
+        return $this->isDatabaseTarget()
+            ? ['database' => $this->target->database_id]
+            : ['application' => $this->target->application_id];
     }
 
     /**

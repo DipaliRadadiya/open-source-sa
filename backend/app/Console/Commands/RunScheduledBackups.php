@@ -30,7 +30,7 @@ class RunScheduledBackups extends Command
         $due = BackupTarget::query()
             ->where('enabled', true)
             ->where('frequency', '!=', 'manual')
-            ->with(['application', 'storageDestination'])
+            ->with(['application', 'database', 'storageDestination'])
             ->get()
             ->filter(fn (BackupTarget $target): bool => $target->isDue($now));
 

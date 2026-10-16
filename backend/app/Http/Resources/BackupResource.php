@@ -24,6 +24,13 @@ class BackupResource extends JsonResource
             'application_id' => $this->application_id,
             'application_name' => $this->resource->application?->name,
             'application_domain' => $this->resource->application?->domain,
+            // Added 2026-10-16. A backup of a database on its own carries the
+            // database; after the database is deleted `database_id` is null,
+            // `archived` is true, and the name and engine are still here.
+            'database_id' => $this->database_id,
+            'database_name' => $this->resource->isDatabaseBackup() ? $this->resource->subjectName() : null,
+            'database_engine' => $this->subject_engine,
+            'archived' => $this->resource->isArchived(),
             // Where this archive actually went. Two backups of one site can
             // sit on different destinations — the target's destination is
             // editable, so the current setting does not say where an older

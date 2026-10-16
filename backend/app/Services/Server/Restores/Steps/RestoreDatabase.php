@@ -60,7 +60,11 @@ class RestoreDatabase implements RestoreStep
         // safety backup by hand. Nothing here touches the server.
         $plan = [];
 
-        foreach ($dumps as $dump) {
+        if ($context->isDatabaseRestore()) {
+            $plan[] = [$this->ownDatabase($context, $dumps), $dumps[0]];
+        }
+
+        foreach ($context->isDatabaseRestore() ? [] : $dumps as $dump) {
             $name = substr(basename($dump), strlen('db-'), -strlen('.sql'));
 
             // An empty dump is the one that costs the most: dropping a live
@@ -103,6 +107,37 @@ class RestoreDatabase implements RestoreStep
             $engine->reattachUsers($database->name, $database->users()->pluck('username')->all());
             $engine->restore($database->name, $dump);
         }
+    }
+
+    /**
+     * A database backup holds one dump, and it goes into the database chosen
+     * for this restore — its own, or (archived) the one the user picked, whose
+     * name may differ from the dump's. Checked before anything is dropped, the
+     * same as the site path.
+     *
+     * @param  list<string>  $dumps
+     */
+    private function ownDatabase(RestoreContext $context, array $dumps): Database
+    {
+        $database = $context->database;
+
+        if ($database === null) {
+            throw new RuntimeException('the database to restore into no longer exists');
+        }
+
+        if (count($dumps) !== 1) {
+            throw new RuntimeException('a database backup must hold exactly one dump');
+        }
+
+        if (! is_file($dumps[0]) || filesize($dumps[0]) === 0) {
+            throw new RuntimeException("the dump for {$database->name} is empty");
+        }
+
+        if ($this->databases->driver($database->engine) === 'sql' && ! $this->looksComplete($dumps[0])) {
+            throw new RuntimeException("the dump for {$database->name} is incomplete");
+        }
+
+        return $database;
     }
 
     /**

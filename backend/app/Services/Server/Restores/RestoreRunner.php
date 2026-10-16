@@ -44,6 +44,7 @@ class RestoreRunner
             $restore->backup,
             $restore->application,
             $this->workingDirectory($restore->id),
+            $restore->database,
         );
 
         $ran = [];
@@ -79,7 +80,7 @@ class RestoreRunner
                 'feature' => 'backup',
                 'op' => 'restore',
                 'restore' => $restore->id,
-                'application' => $restore->application_id,
+                ...$context->logSubject(),
                 'step' => $restore->current_step,
                 'reference' => $restore->reference,
                 'detail' => $e->getMessage(),
@@ -133,7 +134,15 @@ class RestoreRunner
         // File::deleteDirectory() there returns false rather than throwing, so
         // the failure was silent and left behind exactly the copy this is
         // meant to remove.
-        if ($context->stagingDirectory !== null) {
+        if ($context->stagingDirectory !== null && $context->application === null) {
+            // A database restore unpacks inside the panel's own working
+            // directory, which has no site root to unlock — but tar ran as
+            // root there, so PHP's own delete above could not finish it.
+            $this->serverOps->run(
+                ['rm', '-rf', $context->stagingDirectory],
+                ['feature' => 'backup', 'op' => 'restore_staging_cleanup'],
+            );
+        } elseif ($context->stagingDirectory !== null) {
             // An entry of the site root, like the staging directory's creation.
             $this->rootLock->unlocked($context->application, fn () => $this->serverOps->run(
                 ['rm', '-rf', $context->stagingDirectory],
@@ -163,7 +172,7 @@ class RestoreRunner
      */
     private function pruneOlderRollbacks(Restore $restore, RestoreContext $context): void
     {
-        if ($context->rollbackPath === null) {
+        if ($context->rollbackPath === null || $context->application === null) {
             return;
         }
 

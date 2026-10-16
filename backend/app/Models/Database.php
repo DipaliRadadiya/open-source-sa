@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * A panel-tracked database on one engine. Owns its users (one-to-many) and
@@ -41,5 +42,19 @@ class Database extends Model
     public function users(): HasMany
     {
         return $this->hasMany(DatabaseUser::class);
+    }
+
+    /**
+     * Its own backup schedule — only for a database with no site. A site's
+     * database is backed up by the site's target (2026-10-16 decision).
+     */
+    public function backupTarget(): HasOne
+    {
+        return $this->hasOne(BackupTarget::class);
+    }
+
+    public function backups(): HasMany
+    {
+        return $this->hasMany(Backup::class);
     }
 }
