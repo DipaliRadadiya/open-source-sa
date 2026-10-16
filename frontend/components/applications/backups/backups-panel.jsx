@@ -281,6 +281,7 @@ export function BackupsPanel({
         databasesKnown={databasesKnown}
         siteTypes={siteTypes}
         siteType={application.site_type}
+        servingProfile={application.serving_profile}
         options={backupOptions}
         // Starts the same queue window as the card's button.
         onStarted={() => {

@@ -52,9 +52,15 @@ export function withMinute(time, minute) {
 }
 
 /** The API's backup types with `full` first, the sensible default. */
-export function orderedTypes(options) {
-  const types = options?.types ?? [];
-  return [...types.filter((t) => t.value === "full"), ...types.filter((t) => t.value !== "full")];
+// Each family's safest choice, offered first and used for a new target.
+export const DEFAULT_TYPE = { hosted: "full", container: "volumes_config" };
+
+// Only the family the site belongs to; an option without `family` is a hosted one.
+export function orderedTypes(options, container = false) {
+  const family = container ? "container" : "hosted";
+  const types = (options?.types ?? []).filter((t) => (t.family ?? "hosted") === family);
+  const first = DEFAULT_TYPE[family];
+  return [...types.filter((t) => t.value === first), ...types.filter((t) => t.value !== first)];
 }
 
 // A paused schedule keeps its frequency, so "Daily" beside a "Manual only" badge

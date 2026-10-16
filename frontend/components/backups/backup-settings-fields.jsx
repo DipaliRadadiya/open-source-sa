@@ -93,6 +93,7 @@ export function BackupSettingsFields({
   // fixed to it. Together they say which sites never have a database at all.
   siteTypes = null,
   siteType = null,
+  servingProfile = null,
 }) {
   const t = useTranslations("backups.form");
   const tv = useTranslations("validation");
@@ -162,20 +163,30 @@ export function BackupSettingsFields({
   const chosenType =
     siteType ?? (applications ?? []).find((application) => String(application.id) === String(applicationId))?.site_type;
   const knownType = Boolean(chosenType) && (siteTypes ?? []).some((entry) => entry.name === chosenType);
-  const filesOnly = noDatabase === true && knownType && !siteNeedsDatabase(siteTypes, chosenType);
+  // A Docker site backs up volumes and its compose file; the hosted types do not apply.
+  const chosenApplication = (applications ?? []).find((application) => String(application.id) === String(applicationId));
+  const container =
+    (servingProfile ?? chosenApplication?.serving_profile) === "docker" ||
+    (siteTypes ?? []).some((entry) => entry.name === chosenType && entry.serving_profile === "docker");
+  const typeOptions = orderedTypes(options, container);
+  const filesOnly = !container && noDatabase === true && knownType && !siteNeedsDatabase(siteTypes, chosenType);
 
   // A database-less site cannot keep "Database only" (empty backup), but a type
   // the user picked is left alone.
   const typePicked = Boolean(form.formState.dirtyFields?.type);
   useEffect(() => {
-    if (filesOnly && type !== "filesystem") {
+    if (typeOptions.length && !typeOptions.some((option) => option.value === type)) {
+      form.setValue("type", typeOptions[0].value, { shouldDirty: Boolean(target) });
+    } else if (container) {
+      return;
+    } else if (filesOnly && type !== "filesystem") {
       form.setValue("type", "filesystem", { shouldDirty: true });
     } else if (noDatabase && type === "database") {
       form.setValue("type", "full", { shouldDirty: true });
     } else if (noDatabase === true && !target && !typePicked && type === "full") {
       form.setValue("type", "filesystem");
     }
-  }, [filesOnly, noDatabase, type, form, target, typePicked]);
+  }, [typeOptions, container, filesOnly, noDatabase, type, form, target, typePicked]);
   // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
   // applies it in the same request), not on the next run.
   // From the backups actually kept: "keep 3 → 1" with only 2 kept deletes one, not two.
@@ -244,7 +255,7 @@ export function BackupSettingsFields({
                   disabled={disabled}
                   variant="card"
                   className="sm:grid sm:grid-cols-3 sm:gap-2"
-                  options={orderedTypes(options).map(({ value: option, label }) => ({
+                  options={typeOptions.map(({ value: option, label }) => ({
                     value: option,
                     label,
                     hint: t.has(`types.${option}.hint`) ? t(`types.${option}.hint`) : undefined,

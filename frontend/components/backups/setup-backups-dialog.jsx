@@ -51,6 +51,7 @@ export function SetupBackupsDialog({
   // Site type catalogue, and the fixed site's type — see BackupSettingsFields.
   siteTypes = null,
   siteType = null,
+  servingProfile = null,
   // Called after the saved step's "Back up now" is accepted.
   onStarted,
 }) {
@@ -333,6 +334,7 @@ export function SetupBackupsDialog({
           databasesKnown={databasesKnown}
           siteTypes={siteTypes}
           siteType={siteType}
+          servingProfile={servingProfile}
           options={options}
           onRetryOptions={retryOptions}
           retryingOptions={loadingOptions}

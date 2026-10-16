@@ -109,7 +109,7 @@ test("the form takes its lists from the options, not from constants", () => {
   assert.doesNotMatch(fields, /\["daily", "weekly", "monthly"\]/);
   assert.doesNotMatch(fields, /BACKUP_TYPES/);
   assert.match(fields, /scheduledFrequencies\(options\)/);
-  assert.match(fields, /orderedTypes\(options\)/);
+  assert.match(fields, /orderedTypes\(options, container\)/);
   assert.match(fields, /options\.default_frequency/);
   assert.match(dialog, /\? t\("blocked\.noOptions"\)/);
   assert.match(dialog, /timeUsage\(options, values\.frequency\) \? \{ schedule_time: values\.schedule_time \}/);

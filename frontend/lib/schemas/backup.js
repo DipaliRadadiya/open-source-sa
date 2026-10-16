@@ -19,7 +19,8 @@ export const backupTargetOptionsSchema = z.object({
     }),
   ),
   default_frequency: z.string(),
-  types: z.array(z.object({ value: z.string(), label: z.string() })),
+  // `family`: container types (volumes, config) belong to Docker sites only; the API refuses a mismatch.
+  types: z.array(z.object({ value: z.string(), label: z.string(), family: z.enum(["hosted", "container"]).nullish() })),
   retention: z.object({ min: z.number(), max: z.number() }),
   // The panel's clock, which `schedule_time` is read in — not the server's.
   timezone: z.string().nullish(),
