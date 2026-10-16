@@ -43,18 +43,51 @@ class ApplicationLogManager
     public function list(Application $application): array
     {
         return array_values(array_map(
-            fn (array $source): array => [
-                'key' => $source['key'],
-                'label' => __('app_log.sources.'.$source['key']),
-                'kind' => $source['kind'],
+            function (array $source) use ($application): array {
                 // A container's log is a command, not a file — there is
                 // nothing on disk to stat, and the compose file being present
                 // is what makes the source real.
-                'exists' => in_array($source['kind'], ['journal', 'container'], true)
-                    || $this->fileExists($application, $source['path']),
-            ],
+                $file = ! in_array($source['kind'], ['journal', 'container'], true);
+                $exists = ! $file || $this->fileExists($application, $source['path']);
+
+                return [
+                    'key' => $source['key'],
+                    'label' => __('app_log.sources.'.$source['key']),
+                    'kind' => $source['kind'],
+                    'exists' => $exists,
+                ] + ($file && $exists
+                    ? $this->stat($application, $source['path'])
+                    // Null, not 0: a journal or a container has no single file
+                    // to measure, and 0 would read as an empty log.
+                    : ['size' => null, 'modified' => null]);
+            },
             $this->catalog($application),
         ));
+    }
+
+    /**
+     * Size and last write, as the server-wide log screen reports them
+     * (LogManager::remoteStat), so both screens can share one way of showing
+     * "access.log · 12.4 MB". A failed stat is unknown, not zero.
+     *
+     * @return array{size: int|null, modified: string|null}
+     */
+    private function stat(Application $application, string $path): array
+    {
+        $result = $this->serverOps->run(
+            ['stat', '-c', '%s %Y', '--', $path],
+            $this->context($application, 'app_log_stat'),
+            timeout: 15,
+        );
+
+        $parts = $result->failed() ? [] : (preg_split('/\s+/', trim($result->output())) ?: []);
+        $size = isset($parts[0]) && ctype_digit($parts[0]) ? (int) $parts[0] : null;
+        $modified = isset($parts[1]) && ctype_digit($parts[1]) ? (int) $parts[1] : null;
+
+        return [
+            'size' => $size,
+            'modified' => $modified === null ? null : date('d-m-Y H:i:s', $modified),
+        ];
     }
 
     /**

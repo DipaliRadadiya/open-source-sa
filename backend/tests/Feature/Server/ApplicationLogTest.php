@@ -56,6 +56,15 @@ function fakeLogs(): void
             return Process::result(exitCode: array_key_exists($args[2] ?? '', $files) ? 0 : 1);
         }
 
+        if ($binary === 'stat') {
+            $path = $args[4] ?? '';
+
+            // Size from the fixture, a fixed mtime (2026-10-16 12:00:00 UTC).
+            return array_key_exists($path, $files)
+                ? Process::result(output: strlen($files[$path])." 1792152000\n")
+                : Process::result(errorOutput: 'No such file', exitCode: 1);
+        }
+
         if ($binary === 'tail') {
             $path = $args[3] ?? '';
 
@@ -82,6 +91,43 @@ it('lists the sources this application has, with localized labels', function () 
     expect($logs->pluck('key')->all())->toBe(['access', 'error'])
         ->and($logs->firstWhere('key', 'error')['label'])->toBe('Error log')
         ->and($logs->firstWhere('key', 'access')['exists'])->toBeTrue();
+});
+
+it('reports each log file\'s size and last write, so the screen can show which one is filling the disk', function () {
+    fakeLogs();
+    unset($this->files['/home/logowner/logged-site/logs/error.log']);
+
+    $logs = collect($this->actingAs($this->admin)->getJson(logUrl())->assertOk()->json('logs'));
+
+    expect($logs->firstWhere('key', 'access'))
+        ->toMatchArray(['exists' => true, 'size' => strlen("GET / 200\nGET /about 200\nGET /missing 404\n"), 'modified' => '16-10-2026 12:00:00'])
+        // Not written yet: unknown, not a 0-byte file from 1970.
+        ->and($logs->firstWhere('key', 'error'))->toMatchArray(['exists' => false, 'size' => null, 'modified' => null]);
+});
+
+it('reports no size for a log that is not a file', function () {
+    fakeLogs();
+    $this->application->update(['serving_profile' => 'docker']);
+
+    $container = collect($this->actingAs($this->admin)->getJson(logUrl())->json('logs'))->firstWhere('key', 'container');
+
+    expect($container)->toMatchArray(['kind' => 'container', 'exists' => true, 'size' => null, 'modified' => null]);
+});
+
+it('says unknown rather than zero when the size cannot be read', function () {
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return match ($args[0]) {
+            'test' => Process::result(exitCode: 0),
+            'stat' => Process::result(errorOutput: 'Permission denied', exitCode: 2),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $access = collect($this->actingAs($this->admin)->getJson(logUrl())->assertOk()->json('logs'))->firstWhere('key', 'access');
+
+    expect($access)->toMatchArray(['exists' => true, 'size' => null, 'modified' => null]);
 });
 
 it('offers the process output only for an application that runs one', function () {

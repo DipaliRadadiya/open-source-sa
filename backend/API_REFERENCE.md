@@ -3210,16 +3210,16 @@ Remove only this application's actual, ownership-checked jail and filter, reload
 ### GET `/applications/{application}/logs`
 **Permission:** `app_log` (view)
 
-Which log sources this application has and whether each exists yet.
+Which log sources this application has, whether each exists yet, and how big it is.
 
 ```json
 {"logs": [
-  {"key": "access", "label": "Access log", "kind": "file", "exists": true},
-  {"key": "error", "label": "Error log", "kind": "file", "exists": true}
+  {"key": "access", "label": "Access log", "kind": "file", "exists": true, "size": 1048576, "modified": "16-10-2026 12:00:00"},
+  {"key": "error", "label": "Error log", "kind": "file", "exists": false, "size": null, "modified": null}
 ]}
 ```
 
-Each source is `{key, label, kind, exists}` — no `size` or `modified` (corrected 2026-09-29). Always `access` and `error`; a **Node** application adds its own process output (stdout and stderr, separately); a site with the WAF on adds `waf_detect`. **Queue workers' logs are not here** — they are on the server Logs screen under each worker's `log_identifier` (see Workers).
+Each source is `{key, label, kind, exists, size, modified}` (size and modified added 2026-10-16, same shape as the server Logs screen). `size` is bytes; `modified` is the last write, `d-m-Y H:i:s` in the app timezone (UTC). Both are **null** when there is no single file to measure (`kind` `journal` or `container`), when the file does not exist yet, or when it could not be read — never a made-up 0. Always `access` and `error`; a **Node** application adds its own process output (stdout and stderr, separately); a site with the WAF on adds `waf_detect`. **Queue workers' logs are not here** — they are on the server Logs screen under each worker's `log_identifier` (see Workers).
 
 ---
 
