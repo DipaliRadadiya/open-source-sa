@@ -5589,7 +5589,7 @@
       },
       "push": {
         "title": "Staging über die Produktion kopieren",
-        "body": "Ersetzt {domain} durch das, was auf der Staging-Anwendung liegt. Es gibt kein Zurück.",
+        "body": "Ersetzt {domain} durch das, was auf der Staging-Anwendung liegt. Dateiänderungen lassen sich nicht rückgängig machen. Eine Datenbank-Übertragung sichert zuerst die Live-Datenbank, daher lässt sie sich zurückspielen.",
         "notReady": "Diese Staging-Kopie ist nicht bereit: Sie wird noch erstellt, oder das Erstellen ist fehlgeschlagen. Bleibt das so, löschen Sie sie und erstellen Sie sie neu.",
         "action": "In die Produktion übertragen"
       },
@@ -5640,6 +5640,7 @@
         "pushing": "Wird übertragen…",
         "done": "Staging nach {domain} übertragen.",
         "failed": "Die Übertragung wurde nicht abgeschlossen.",
+        "stillRunning": "Das dauert länger, als die Seite warten kann. Es läuft auf dem Server weiter, und {domain} bleibt offline, bis es fertig ist. Sehen Sie in ein paar Minuten noch einmal nach.",
         "copyAge": "Kopie erstellt {age}",
         "copyDomain": "Domain kopieren",
         "whileRunning": "Die Anwendung ist währenddessen offline. Schlägt es mittendrin fehl, wird die Produktion wieder in den vorherigen Zustand versetzt.",
@@ -5676,7 +5677,8 @@
         "submit": "Staging aktualisieren",
         "pulling": "Staging wird aktualisiert…",
         "done": "{domain} wurde von live aktualisiert.",
-        "failed": "Staging konnte nicht aktualisiert werden."
+        "failed": "Staging konnte nicht aktualisiert werden.",
+        "stillRunning": "Das dauert länger, als die Seite warten kann. Es läuft auf dem Server weiter. Sehen Sie sich {domain} in ein paar Minuten noch einmal an."
       },
       "isCopy": {
         "title": "Diese Anwendung ist eine Staging-Kopie",

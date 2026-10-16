@@ -5589,7 +5589,7 @@
       },
       "push": {
         "title": "Copiar staging sobre produção",
-        "body": "Substitui {domain} pelo que está na aplicação de staging. Não tem como desfazer.",
+        "body": "Substitui {domain} pelo que está na aplicação de staging. As alterações em arquivos não podem ser desfeitas. Publicar o banco de dados salva antes o banco em produção, então ele pode ser restaurado.",
         "notReady": "Esta cópia de staging não está pronta: ainda está sendo criada, ou a criação falhou. Se continuar assim, exclua-a e crie de novo.",
         "action": "Enviar para produção"
       },
@@ -5640,6 +5640,7 @@
         "pushing": "Enviando…",
         "done": "Staging enviado para {domain}.",
         "failed": "O envio não foi concluído.",
+        "stillRunning": "Isto está demorando mais do que a página consegue esperar. Continua em execução no servidor, e {domain} fica offline até terminar. Verifique novamente em alguns minutos.",
         "copyAge": "Cópia feita {age}",
         "copyDomain": "Copiar domínio",
         "whileRunning": "A aplicação fica offline durante o processo. Se falhar no meio, a produção volta a ficar como estava.",
@@ -5676,7 +5677,8 @@
         "submit": "Atualizar staging",
         "pulling": "Atualizando o staging…",
         "done": "{domain} foi atualizado a partir da produção.",
-        "failed": "Não foi possível atualizar o staging."
+        "failed": "Não foi possível atualizar o staging.",
+        "stillRunning": "Isto está demorando mais do que a página consegue esperar. Continua em execução no servidor. Verifique {domain} novamente em alguns minutos."
       },
       "isCopy": {
         "title": "Esta aplicação é uma cópia de staging",

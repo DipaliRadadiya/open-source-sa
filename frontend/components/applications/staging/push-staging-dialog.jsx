@@ -18,7 +18,7 @@ import { PUSH_MODES } from "@/lib/schemas/application-staging";
 
 const MODE_ICONS = { files: FileText, database: Database, full: Layers };
 import { pushApplicationStaging } from "@/lib/api/applications";
-import { apiMessage } from "@/lib/api/error-message";
+import { apiMessage, mayStillBeRunning } from "@/lib/api/error-message";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +59,13 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
       onOpenChange(false);
       toast.success(t("done", { domain }));
     } catch (error) {
+      // A retry would only be refused as "already running"; close and let the page catch up.
+      if (mayStillBeRunning(error)) {
+        onOpenChange(false);
+        toast.warning(t("stillRunning", { domain }), { duration: 20000 });
+        router.refresh();
+        return;
+      }
       toast.error(apiMessage(error, t("failed")));
       // Usually the copy was deleted elsewhere; refresh so the page shows it.
       router.refresh();

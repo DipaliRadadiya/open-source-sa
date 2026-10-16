@@ -5589,7 +5589,7 @@
       },
       "push": {
         "title": "Copier la préproduction vers la production",
-        "body": "Remplace {domain} par ce qui se trouve sur l'application de préproduction. C'est irréversible.",
+        "body": "Remplace {domain} par ce qui se trouve sur l'application de préproduction. Les modifications de fichiers sont irréversibles. Un envoi de la base de données enregistre d'abord la base en production, il peut donc être annulé.",
         "notReady": "Cette copie de préproduction n'est pas prête : elle est encore en cours de création, ou sa création a échoué. Si cela dure, supprimez-la et recréez-la.",
         "action": "Pousser en production"
       },
@@ -5640,6 +5640,7 @@
         "pushing": "Envoi…",
         "done": "Préproduction envoyée vers {domain}.",
         "failed": "L'envoi ne s'est pas terminé.",
+        "stillRunning": "Cela prend plus de temps que la page ne peut attendre. L'opération continue sur le serveur, et {domain} reste hors ligne jusqu'à la fin. Revenez vérifier dans quelques minutes.",
         "copyAge": "Copie effectuée {age}",
         "copyDomain": "Copier le domaine",
         "whileRunning": "L'application est hors ligne pendant l'opération. Si elle échoue en cours de route, la production est remise dans son état d'avant.",
@@ -5676,7 +5677,8 @@
         "submit": "Mettre à jour la préproduction",
         "pulling": "Mise à jour de la préproduction…",
         "done": "{domain} a été mise à jour depuis la production.",
-        "failed": "La préproduction n'a pas pu être mise à jour."
+        "failed": "La préproduction n'a pas pu être mise à jour.",
+        "stillRunning": "Cela prend plus de temps que la page ne peut attendre. L'opération continue sur le serveur. Revenez vérifier {domain} dans quelques minutes."
       },
       "isCopy": {
         "title": "Cette application est une copie de préproduction",

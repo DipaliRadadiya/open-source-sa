@@ -16,7 +16,7 @@ import {
 // A pull takes the same three modes as a push, pointed the other way.
 import { PUSH_MODES } from "@/lib/schemas/application-staging";
 import { pullApplicationStaging } from "@/lib/api/applications";
-import { apiMessage } from "@/lib/api/error-message";
+import { apiMessage, mayStillBeRunning } from "@/lib/api/error-message";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { Label } from "@/components/ui/label";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -51,6 +51,13 @@ export function PullStagingDialog({ appId, production, staging, open, onOpenChan
       onOpenChange(false);
       toast.success(t("done", { domain: staging?.domain ?? "" }));
     } catch (error) {
+      // A retry would only be refused as "already running"; close and let the page catch up.
+      if (mayStillBeRunning(error)) {
+        onOpenChange(false);
+        toast.warning(t("stillRunning", { domain: staging?.domain ?? "" }), { duration: 20000 });
+        router.refresh();
+        return;
+      }
       toast.error(apiMessage(error, t("failed")));
       router.refresh();
     } finally {

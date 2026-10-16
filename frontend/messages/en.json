@@ -5589,7 +5589,7 @@
       },
       "push": {
         "title": "Copy staging over production",
-        "body": "Replaces {domain} with what is on the staging application. There is no undo.",
+        "body": "Replaces {domain} with what is on the staging application. File changes can't be undone. A database push saves the live database first, so it can be put back.",
         "notReady": "This staging copy isn't ready: it is still being created, or creating it failed. If it stays like this, delete it and create it again.",
         "action": "Push to production"
       },
@@ -5640,6 +5640,7 @@
         "pushing": "Pushing…",
         "done": "Staging pushed to {domain}.",
         "failed": "The push did not finish.",
+        "stillRunning": "This is taking longer than the page can wait. It's still running on the server, and {domain} stays offline until it finishes. Check again in a few minutes.",
         "copyAge": "Copy made {age}",
         "copyDomain": "Copy domain",
         "whileRunning": "The application is offline while this runs. If it fails partway, production is put back as it was.",
@@ -5676,7 +5677,8 @@
         "submit": "Update staging",
         "pulling": "Updating staging…",
         "done": "{domain} was updated from live.",
-        "failed": "Staging couldn't be updated."
+        "failed": "Staging couldn't be updated.",
+        "stillRunning": "This is taking longer than the page can wait. It's still running on the server. Check {domain} again in a few minutes."
       },
       "isCopy": {
         "title": "This application is a staging copy",

@@ -11,6 +11,12 @@ export function isUnansweredWrite(error) {
   return !["get", "head", "options"].includes(method);
 }
 
+// A long synchronous write the web server gave up waiting for (504), or whose answer
+// never arrived: the server-side work usually carries on, so this is not a failure.
+export function mayStillBeRunning(error) {
+  return error?.response?.status === 504 || isUnansweredWrite(error);
+}
+
 // Ignores key-shaped strings (`errors/php.operation_failed`) in favour of `fallback`.
 // Appends ` · ref`; pass `{ reference: false }` where the caller renders it separately.
 export function apiMessage(error, fallback, { reference: withReference = true } = {}) {

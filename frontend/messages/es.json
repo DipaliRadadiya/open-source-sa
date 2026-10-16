@@ -5589,7 +5589,7 @@
       },
       "push": {
         "title": "Copiar pruebas sobre producción",
-        "body": "Sustituye {domain} por lo que hay en la aplicación de pruebas. No se puede deshacer.",
+        "body": "Sustituye {domain} por lo que hay en la aplicación de pruebas. Los cambios en archivos no se pueden deshacer. Publicar la base de datos guarda antes la base de datos en producción, así que se puede restaurar.",
         "notReady": "Esta copia de pruebas no está lista: todavía se está creando o no se pudo crear. Si sigue así, elimínala y vuelve a crearla.",
         "action": "Publicar en producción"
       },
@@ -5640,6 +5640,7 @@
         "pushing": "Publicando…",
         "done": "Pruebas publicadas en {domain}.",
         "failed": "La publicación no terminó.",
+        "stillRunning": "Esto tarda más de lo que la página puede esperar. Sigue ejecutándose en el servidor, y {domain} queda fuera de servicio hasta que termine. Vuelve a comprobarlo en unos minutos.",
         "copyAge": "Copia hecha {age}",
         "copyDomain": "Copiar dominio",
         "whileRunning": "La aplicación queda fuera de servicio mientras se ejecuta. Si falla a mitad, producción vuelve a quedar como estaba.",
@@ -5676,7 +5677,8 @@
         "submit": "Actualizar pruebas",
         "pulling": "Actualizando pruebas…",
         "done": "{domain} se actualizó desde producción.",
-        "failed": "No se pudo actualizar pruebas."
+        "failed": "No se pudo actualizar pruebas.",
+        "stillRunning": "Esto tarda más de lo que la página puede esperar. Sigue ejecutándose en el servidor. Vuelve a comprobar {domain} en unos minutos."
       },
       "isCopy": {
         "title": "Esta aplicación es una copia de pruebas",
