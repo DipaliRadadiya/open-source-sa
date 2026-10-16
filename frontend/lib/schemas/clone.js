@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { isRedeploying } from "../applications/settled.js";
-
-// From `CreateCloneRequest`; keep in step with the backend.
-export const CLONE_DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/;
+import { isValidApplicationDomain } from "./application.js";
 
 export const cloneFormSchema = z.object({
   // Optional: omitted, the backend names the copy "{source} (Clone)". `name`
@@ -14,7 +12,7 @@ export const cloneFormSchema = z.object({
     .toLowerCase()
     .min(1, "cloneDomainRequired")
     .max(255, "max255")
-    .regex(CLONE_DOMAIN_PATTERN, "cloneDomainInvalid"),
+    .refine(isValidApplicationDomain, "cloneDomainInvalid"),
 });
 
 /** One clone job, as `GET /api/clones/{id}` reports it. */

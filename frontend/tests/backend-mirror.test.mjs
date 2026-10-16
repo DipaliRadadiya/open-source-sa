@@ -8,7 +8,7 @@ import {
   SHAPE,
 } from "../lib/schemas/bot-rule.js";
 import { BACKUP_DEFAULT_TIME } from "../lib/schemas/backup.js";
-import { CLONE_DOMAIN_PATTERN } from "../lib/schemas/clone.js";
+import { isValidApplicationDomain } from "../lib/schemas/application.js";
 import { PHP_SIZE_PATTERN, phpSizeToBytes } from "../lib/schemas/php-settings.js";
 
 /**
@@ -58,7 +58,11 @@ const phpPattern = (source, after) => {
 };
 
 const botRules = read("app/Rules/BotUserAgent.php");
-const cloneRequest = read("app/Http/Requests/Server/Application/CreateCloneRequest.php");
+const hostnameRule = read("app/Rules/Hostname.php");
+const domainRequests = ["CreateCloneRequest", "CreateStagingRequest", "StoreApplicationRequest"].map((name) => [
+  name,
+  read(`app/Http/Requests/Server/Application/${name}.php`),
+]);
 const backupTarget = read("app/Models/BackupTarget.php");
 
 describe("frontend copies of backend rules", { skip: botRules === null ? "backend not on this machine" : false }, () => {
@@ -76,22 +80,29 @@ describe("frontend copies of backend rules", { skip: botRules === null ? "backen
     assert.deepEqual(phpStringList(botRules, "SEARCH_ENGINES"), SEARCH_ENGINES);
   });
 
-  test("CreateCloneRequest: the domain rule accepts and refuses the same things", () => {
-    // Compared by behaviour, not by text: ours runs after the value is
-    // lowercased, so the character classes legitimately differ.
-    const php = phpPattern(cloneRequest, "'domain'");
-    assert.ok(php, "could not find the domain regex in CreateCloneRequest.php");
-    const backend = new RegExp(php);
+  test("Hostname: every domain field answers the way the server's rule does", () => {
+    // Clone, staging and the create form all share one check; the server shares one rule.
+    for (const [name, source] of domainRequests) {
+      assert.match(source, /'domain' => \[[\s\S]{0,120}new Hostname/, `${name} no longer uses Hostname`);
+    }
+
+    // Hostname::validate, rebuilt from the patterns in the PHP file itself.
+    const [label, tld] = [...hostnameRule.matchAll(/preg_match\('\/(.+?)\/'/g)].map((m) => new RegExp(m[1]));
+    assert.ok(label && tld, "could not find the label and TLD patterns in Hostname.php");
+    const server = (value) => {
+      if (value.length > 253) return false;
+      const labels = value.split(".");
+      if (labels.length >= 2 && labels.every((l) => /^\d+$/.test(l))) return false;
+      return labels.length >= 2 && labels.every((l) => label.test(l)) && tld.test(labels.at(-1));
+    };
 
     for (const value of [
-      "copy.blog.demo.test", "A-B.Example.COM", "x.co",
+      "copy.blog.demo.test", "A-B.Example.COM", "x.co", "shop.xn--p1ai", "xn--d1acj3b.xn--p1ai",
       "localhost", "example.", "exa mple.com", "under_score.com", "a.b", "",
+      "-shop.com", "shop-.com", "shop..com", "1.2.3.4", "shop.c0m", "shop.123", `${"a".repeat(64)}.com`,
     ]) {
-      assert.equal(
-        CLONE_DOMAIN_PATTERN.test(value.toLowerCase()),
-        backend.test(value),
-        value,
-      );
+      // Our forms lowercase before checking; the server's rule is case-blind.
+      assert.equal(isValidApplicationDomain(value), server(value.toLowerCase()), value);
     }
   });
 

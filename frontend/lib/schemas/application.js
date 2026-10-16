@@ -443,7 +443,11 @@ export const securityFormSchema = z
     }
   });
 
+// The backend's `App\Rules\Hostname`, on a lowercased value: every label 1–63 of
+// a-z 0-9 and inner hyphens, and a last label of letters or an `xn--` punycode one.
+// Applications, domains, clones and staging all use that one rule.
 const applicationDomainLabel = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const applicationDomainTld = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
 
 /** A hostname only — no protocol, path, query, credentials, or port. */
 export function isValidApplicationDomain(value) {
@@ -460,9 +464,12 @@ export function isValidApplicationDomain(value) {
     return false;
 
   const labels = domain.split(".");
-  // An all-digit last label is an IP address, never a name.
-  if (/^\d+$/.test(labels[labels.length - 1])) return false;
-  return labels.length >= 2 && labels.every((label) => applicationDomainLabel.test(label));
+  return (
+    labels.length >= 2 &&
+    labels.every((label) => applicationDomainLabel.test(label)) &&
+    // Also what refuses an IP address: its last label is digits.
+    applicationDomainTld.test(labels[labels.length - 1])
+  );
 }
 
 // Never mutates input silently: the UI renders an explicit "Use …" action.
