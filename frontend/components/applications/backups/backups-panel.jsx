@@ -23,12 +23,15 @@ import {
 import { EmptyState } from "@/components/data-table/empty-state";
 import { EmptyArt } from "@/components/data-table/empty-art";
 import { cn } from "@/lib/utils";
+import { formatBytes } from "@/lib/format/bytes";
 import { BACKUP_IN_FLIGHT, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { nothingKept } from "@/lib/backups/reason";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
 import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
+import { runDatabaseBackupNow } from "@/lib/api/database-backups";
+import { useSubjectTranslations } from "@/hooks/use-subject-translations";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,8 +52,12 @@ import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts"
 // How long "queued" is shown before reporting that the worker has not taken it.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
+// `subject="database"`: the same screen for a database on its own (its own schedule,
+// no site). `database` is `{ id, name }`; the application-only parts are not passed.
 export function BackupsPanel({
-  application,
+  application = null,
+  subject = "application",
+  database = null,
   target,
   destinations,
   backups,
@@ -83,10 +90,18 @@ export function BackupsPanel({
   backupsForbidden = false,
   // `GET /backup-targets/options`; null when it could not be read.
   backupOptions = null,
+  // Database page only: `backup` manage, which download and delete still need.
+  canHandleArchives = false,
+  // Database page only: backups of deleted databases of the same engine, restorable here.
+  archived = [],
 }) {
-  const t = useTranslations("backups.application");
+  const t = useSubjectTranslations("backups.application", "backups.database", subject);
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
+  const isDatabase = subject === "database";
+  const owner = isDatabase ? database : application;
+  // What a restore asks to be typed: the site's domain, or the database's name.
+  const confirmValue = isDatabase ? database.name : application.domain;
   const [running, setRunning] = useState(false);
   const [retryingId, setRetryingId] = useState(null);
   const [clearing, setClearing] = useState(null);
@@ -162,7 +177,7 @@ export function BackupsPanel({
     setRunning(true);
     setStalled(false);
     try {
-      await runBackupNow(application.id);
+      await (isDatabase ? runDatabaseBackupNow(database.id) : runBackupNow(application.id));
   // Remember where the list stood so the queued state ends when the row appears.
       setQueuedAfter(newestId);
       await refreshAndWait();
@@ -184,7 +199,9 @@ export function BackupsPanel({
           key={restore.id}
           restore={restore}
           onStatusChange={setRestoreStatus}
-          applicationDomain={application.domain}
+          applicationDomain={confirmValue}
+          subject={subject}
+          database={database}
           restoredSafetyCopy={Boolean(restore.restored_safety_copy)}
           scrollIntoView={restoreStartedHere}
         />
@@ -220,6 +237,7 @@ export function BackupsPanel({
       />
 
       <ProtectionCard
+        subject={subject}
         target={target}
         options={backupOptions}
         noneKept={nothingKept(target)}
@@ -250,7 +268,9 @@ export function BackupsPanel({
         total={total}
         failed={backupsFailed}
         forbidden={backupsForbidden}
-        applicationId={application.id}
+        historyHref={isDatabase ? `/backups/history?database=${database.id}` : `/backups/history?application=${application.id}`}
+        archiveAccess={isDatabase ? canHandleArchives : null}
+        subject={subject}
         canRestore={canRestore}
         canManage={canManage}
         onRestore={setRestoring}
@@ -268,21 +288,41 @@ export function BackupsPanel({
         hasTarget={Boolean(target)}
       />
 
+      {isDatabase && archived.length ? (
+        <ArchivedBackups
+          backups={archived}
+          database={database}
+          // The restore takes a safety copy through this database's own schedule.
+          blockedReason={
+            !canRestore
+              ? null
+              : !target
+                ? t("archived.needsSchedule")
+                : restoreRunning
+                  ? t("restoreRunning")
+                  : null
+          }
+          canRestore={canRestore}
+          onRestore={setRestoring}
+        />
+      ) : null}
+
       {/* Edit mode when a target exists; `applicationId` is fixed, so the site
           picker never renders. */}
       <SetupBackupsDialog
         open={editing}
         onOpenChange={setEditing}
-        applicationId={application.id}
+        applicationId={owner.id}
+        database={database}
         destinations={destinations}
-        applicationName={application.name}
+        applicationName={owner.name}
         target={target}
         keptCount={keptCount}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
         siteTypes={siteTypes}
-        siteType={application.site_type}
-        servingProfile={application.serving_profile}
+        siteType={application?.site_type}
+        servingProfile={application?.serving_profile}
         options={backupOptions}
         // Starts the same queue window as the card's button.
         onStarted={() => {
@@ -297,7 +337,8 @@ export function BackupsPanel({
         <TurnOffBackupsDialog
           open={turningOff}
           onOpenChange={setTurningOff}
-          application={application}
+          application={owner}
+          subject={subject}
           target={target}
           count={backupsFailed ? null : total}
           // Every destination this site's archives sit in, not just the current one.
@@ -332,17 +373,20 @@ export function BackupsPanel({
           restoring
             ? {
                 ...restoring,
-                application_domain: application.domain,
-                application_name: application.name,
+                application_domain: confirmValue,
+                application_name: owner.name,
                 // A type that never has a database: its archives hold files only,
                 // so "Database only" restores nothing.
                 files_only:
+                  !isDatabase &&
                   Boolean(siteTypes?.length) &&
                   !needsDatabase &&
-                  hasNoDatabase(databaseCounts, databasesKnown, application.id) === true,
+                  hasNoDatabase(databaseCounts, databasesKnown, application?.id) === true,
               }
             : null
         }
+        subject={subject}
+        database={database}
         open={Boolean(restoring)}
         onOpenChange={(next) => (next ? null : setRestoring(null))}
         onStarted={(started) => {
@@ -379,8 +423,8 @@ function stateOf(target, noneKept) {
   return "protected";
 }
 
-function ProtectionCard({ target, options = null, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
-  const t = useTranslations("backups.application");
+function ProtectionCard({ subject = "application", target, options = null, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
+  const t = useSubjectTranslations("backups.application", "backups.database", subject);
   const tHistory = useTranslations("backups.history");
   const state = stateOf(target, noneKept);
   const { icon: Icon, tone } = STATE[state];
@@ -403,7 +447,8 @@ function ProtectionCard({ target, options = null, noneKept = false, canManage, r
 
   const facts = target
     ? [
-        { label: t("summary.what"), value: target.type_title ?? target.type },
+        // A database's schedule always backs up the database: nothing to say.
+        subject === "database" ? null : { label: t("summary.what"), value: target.type_title ?? target.type },
         {
           label: t("summary.howOften"),
           // Reader's clock format, NOT their timezone: the hour is the app clock, as stored.
@@ -437,7 +482,7 @@ function ProtectionCard({ target, options = null, noneKept = false, canManage, r
             ? t("summary.runsShortly")
             : (target.next_run_at_human ?? t("summary.noNextRun")),
         },
-      ]
+      ].filter(Boolean)
     : [];
 
   const excludes = (target?.file_excludes?.length ?? 0) + (target?.database_excludes?.length ?? 0);
@@ -549,7 +594,9 @@ function ProtectionCard({ target, options = null, noneKept = false, canManage, r
 function RecentBackups({
   backups,
   total = 0,
-  applicationId,
+  historyHref,
+  archiveAccess = null,
+  subject = "application",
   canRestore,
   canManage,
   onRestore,
@@ -564,7 +611,7 @@ function RecentBackups({
   restoreInFlight = false,
   hasTarget = false,
 }) {
-  const t = useTranslations("backups.application");
+  const t = useSubjectTranslations("backups.application", "backups.database", subject);
   const router = useRouter();
   // Nothing to list and nothing failed: say what this list will hold and offer the next
   // step, instead of one grey line (Krishna, 7 Oct).
@@ -577,7 +624,9 @@ function RecentBackups({
     backups,
     canRestore,
     // Same permission as restore: deleting removes the archive from the bucket.
-    canDelete: canRestore,
+    // A database page restores under `database` but deletes and downloads under `backup`.
+    canDelete: archiveAccess ?? canRestore,
+    canDownload: archiveAccess ?? canRestore,
     onDeleted: () => router.refresh(),
     canRun: canManage,
     onRestore,
@@ -588,6 +637,7 @@ function RecentBackups({
     retryBlockedFor: retryBlockedReason ? () => retryBlockedReason : null,
     restoreInFlight,
     showSite: false,
+    subject,
   };
 
   return (
@@ -608,7 +658,7 @@ function RecentBackups({
           {/* Full history needs the permission this list was refused for. */}
           {forbidden ? null : (
             <Button asChild variant="outline">
-              <Link href={`/backups/history?application=${applicationId}`}>
+              <Link href={historyHref}>
                 <History className="size-4" />
                 {t("viewAll")}
               </Link>
@@ -637,7 +687,7 @@ function RecentBackups({
       ) : null}
 
       {firstRun ? (
-        <FirstBackupEmpty hasTarget={hasTarget} />
+        <FirstBackupEmpty hasTarget={hasTarget} subject={subject} />
       ) : (
       <CardContent className="p-0">
         {/* Cards below xl: with a site's columns the table needs ~930px. */}
@@ -661,8 +711,8 @@ function RecentBackups({
 // The first-run state of the list: what will appear here, in one sentence. No button: the
 // status card above holds Set up / Back up now. (Three fact tiles were tried and read as
 // buttons nobody understood, 7 Oct.)
-function FirstBackupEmpty({ hasTarget }) {
-  const t = useTranslations("backups.application");
+function FirstBackupEmpty({ hasTarget, subject = "application" }) {
+  const t = useSubjectTranslations("backups.application", "backups.database", subject);
   return (
     <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
       <EmptyArt icon={Archive} />
@@ -673,5 +723,46 @@ function FirstBackupEmpty({ hasTarget }) {
         </p>
       </div>
     </div>
+  );
+}
+
+// Backups of deleted databases of the same engine: the API restores them into this one.
+function ArchivedBackups({ backups, database, canRestore, blockedReason, onRestore }) {
+  const t = useTranslations("backups.database.archived");
+  const tHistory = useTranslations("backups.history");
+  const format = useFormatter();
+  const reason = canRestore ? blockedReason : tHistory("noPermission");
+
+  return (
+    <Card className="gap-0 overflow-hidden py-0">
+      <div className="space-y-0.5 border-b px-5 py-3.5">
+        <h3 className="text-[15px] font-semibold tracking-tight">{t("title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("body", { name: database.name })}</p>
+      </div>
+      <ul className="divide-y">
+        {backups.map((backup) => (
+          <li key={backup.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+            <div className="min-w-48 flex-1">
+              <p className="truncate font-medium">{backup.database_name ?? tHistory("unknownApplication")}</p>
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {[backup.created_at_human, backup.size_bytes ? formatBytes(backup.size_bytes, format) : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRestore(backup)}
+              disabled={!canRestore || Boolean(reason) || backup.status !== "verified"}
+              disabledReason={reason ?? (backup.status !== "verified" ? (backup.status_title ?? backup.status) : null)}
+            >
+              <History className="size-4" />
+              {t("restore")}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

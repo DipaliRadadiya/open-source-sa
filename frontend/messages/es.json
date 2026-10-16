@@ -2967,7 +2967,8 @@
       "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "copyName": "Copiar nombre de la base de datos",
       "usedBy": "{application} usa esta base de datos y dejará de funcionar cuando se elimine.",
-      "usedByUnknown": "Una aplicación usa esta base de datos y dejará de funcionar cuando se elimine."
+      "usedByUnknown": "Una aplicación usa esta base de datos y dejará de funcionar cuando se elimine.",
+      "backupsKept": "Sus copias se conservan. Las encontrarás en Copias de seguridad → Archivada, donde puedes descargarlas o restaurarlas en otra base de datos."
     },
     "adopt": {
       "title": "{count, plural, one {# base de datos de este servidor no se gestiona aquí} other {# bases de datos de este servidor no se gestionan aquí}}",
@@ -3349,7 +3350,8 @@
       "users": "Usuarios",
       "tables": "Tablas",
       "exports": "Importar y exportar",
-      "overview": "Resumen"
+      "overview": "Resumen",
+      "backups": "Copias de seguridad"
     },
     "phpmyadmin": {
       "open": "Abrir en phpMyAdmin",
@@ -3995,7 +3997,7 @@
       "description": "Se elimina la configuración de la aplicación y {domain} deja de servirse. Esto no se puede deshacer.",
       "removeFiles": "Eliminar también los archivos y las copias de seguridad de la aplicación",
       "removeFilesOn": "Se eliminan el directorio de la aplicación y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
-      "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad de la aplicación desaparecen del panel junto con ella, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
+      "removeFilesOff": "Los archivos permanecen en el servidor. Sus copias pasan a Copias de seguridad → Archivada, donde puedes descargarlas o eliminarlas.",
       "filesKept": "Sus archivos no se eliminan: sin el usuario del sistema, el panel no sabe dónde están. Permanecen en el servidor.",
       "systemUserStays": "El usuario del sistema {username} no se elimina. Si ninguna otra aplicación lo usa, puedes borrarlo en Usuarios del sistema.",
       "submit": "Eliminar aplicación",
@@ -6832,7 +6834,8 @@
       "label": "Secciones de copias",
       "overview": "Resumen",
       "history": "Historial",
-      "restores": "Restauraciones"
+      "restores": "Restauraciones",
+      "archived": "Archivada"
     },
     "coverage": {
       "setUp": "Configurar copias de seguridad",
@@ -6927,12 +6930,14 @@
       },
       "editTitle": "Editar ajustes de copia",
       "editSubtitle": "Cambia qué se copia, con qué frecuencia y dónde se guarda.",
+      "editSubtitleDatabase": "Cambia cada cuánto se hace la copia de esta base de datos y adónde va.",
       "saveChanges": "Guardar cambios",
       "refreshFound": "Lista de almacenamiento actualizada.",
       "refreshNoneNew": "Aún no se ha encontrado almacenamiento nuevo.",
       "refreshFailed": "No se pudo actualizar la lista de almacenamiento.",
       "optionsFailed": "No se pudieron cargar las opciones de copia.",
       "subtitleSite": "Elige qué copiar, con qué frecuencia y dónde se guarda.",
+      "subtitleDatabase": "Elige cada cuánto se hace la copia de esta base de datos y dónde se guarda.",
       "savedTitleManual": "Las copias están configuradas para {name}",
       "savedTitleNoName": "Las copias están activas",
       "savedTitleManualNoName": "Las copias están configuradas",
@@ -7015,6 +7020,7 @@
     },
     "history": {
       "allApplications": "Todas las aplicaciones",
+      "allDatabases": "Todas las bases de datos",
       "allStatuses": "Cualquier estado",
       "statuses": {
         "verified": "Completada",
@@ -7033,7 +7039,7 @@
       },
       "restore": "Restaurar esta copia…",
       "noPermission": "Tu rol no incluye Copias de seguridad con acceso de gestión. Pide a un administrador que te lo conceda.",
-      "safetyBadge": "Copia de seguridad previa",
+      "safetyBadge": "Copia previa",
       "sizeUnknown": "Desconocido",
       "unknownApplication": "Aplicación eliminada",
       "unknownReason": "El motivo no se registró. Revisa los registros del servidor para esta ejecución.",
@@ -7113,7 +7119,13 @@
         "cancel": "Cancelar",
         "confirm": "Iniciar una nueva copia",
         "descriptionNoSize": "Esto no reintenta la restauración. Ejecuta una copia de seguridad completamente nueva de {name} y la sube. Con una conexión lenta, una aplicación grande puede tardar."
-      }
+      },
+      "subject": {
+        "database": "Base de datos",
+        "databaseDeleted": "Base de datos eliminada",
+        "applicationDeleted": "Aplicación eliminada"
+      },
+      "archived": "Archivada"
     },
     "restore": {
       "title": "Restaurar {name}",
@@ -7144,7 +7156,10 @@
         "noApplication": "Aplicación eliminada",
         "alreadyRunning": "Restauración en curso",
         "inFlight": "Aún en curso",
-        "failed": "Esta copia falló"
+        "failed": "Esta copia falló",
+        "databaseDeleted": "Esta base de datos se eliminó. Restaura la copia en otra base de datos desde su pestaña de copias, o descárgala.",
+        "onDatabasePage": "Restáurala desde la pestaña de copias de la base de datos.",
+        "siteDeleted": "Esta aplicación se eliminó, así que sus copias no se pueden restaurar. Descarga una en su lugar."
       },
       "descriptionShort": "Esto reemplaza la aplicación por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
       "facts": {
@@ -7222,7 +7237,7 @@
       "viewAll": "Todas las copias",
       "noRuns": "Todavía no se ha hecho ninguna copia de esta aplicación.",
       "historyFailed": "No se pudo cargar el historial de copias de esta aplicación.",
-      "safetyBadge": "Copia de seguridad previa",
+      "safetyBadge": "Copia previa",
       "summary": {
         "what": "Qué se copia",
         "howOften": "Con qué frecuencia",
@@ -7338,7 +7353,7 @@
         "status": "Estado",
         "type": "Qué se restauró",
         "when": "Iniciada",
-        "undo": "Copia de seguridad previa"
+        "undo": "Copia previa"
       },
       "statuses": {
         "pending": "En espera",
@@ -7349,6 +7364,7 @@
       "unknownApplication": "Aplicación eliminada",
       "unknownReason": "No se registró el motivo.",
       "noSafetyCopy": "No disponible",
+      "undoUnavailable": "No disponible",
       "allApplications": "Todas las aplicaciones",
       "allStatuses": "Cualquier estado",
       "allTypes": "Cualquier tipo",
@@ -7371,7 +7387,70 @@
       "undo": "Deshacer",
       "safetyGone": "Esa copia de seguridad previa ya no se conserva. Solo se guardan las dos más recientes."
     },
-    "pausedFrequency": "En pausa: {frequency}"
+    "pausedFrequency": "En pausa: {frequency}",
+    "database": {
+      "loadFailed": "No se pudo cargar la configuración de copias de esta base de datos.",
+      "state": {
+        "protected": {
+          "title": "Esta base de datos tiene copias de seguridad"
+        },
+        "unprotected": {
+          "title": "Esta base de datos no tiene copias de seguridad",
+          "body": "Si se pierde el servidor, se pierde esta base de datos. Configura una programación para protegerla.",
+          "bodyReadOnly": "Si se pierde el servidor, se pierde esta base de datos. Pide a un administrador que configure las copias."
+        }
+      },
+      "noRuns": "Todavía no se ha hecho ninguna copia de esta base de datos.",
+      "historyFailed": "No se pudo cargar el historial de copias de esta base de datos.",
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de esta base de datos. Podrás iniciar otra cuando termine.",
+      "backedUpWith": {
+        "title": "Con copias junto a {application}",
+        "body": "Esta base de datos pertenece a esa aplicación, así que sus copias la incluyen. Configúralas o cámbialas allí.",
+        "action": "Abrir sus copias"
+      },
+      "archived": {
+        "title": "Copias de bases de datos eliminadas",
+        "body": "Restaura una de estas en {name}. Solo se muestran copias del mismo motor.",
+        "restore": "Restaurar aquí",
+        "needsSchedule": "Primero configura copias para esta base de datos: antes de restaurar se toma una copia de ella."
+      },
+      "turnOff": {
+        "description": "Se eliminan la programación y sus ajustes, y no se harán más copias de seguridad de esta base de datos."
+      },
+      "restore": {
+        "descriptionShort": "Esto reemplaza la base de datos por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
+        "safetyPromise": "Primero se toma una copia de la base de datos tal y como está ahora, así que esto se puede deshacer.",
+        "submit": "Restaurar base de datos",
+        "typeToUnlock": "Escribe el nombre de la base de datos para confirmar.",
+        "copyDomain": "Copiar nombre de la base de datos",
+        "facts": {
+          "from": "Copia de"
+        }
+      },
+      "progress": {
+        "running": "Restaurando la base de datos",
+        "succeeded": "La base de datos se ha restaurado",
+        "succeededBody": "Terminó {when}. Revisa la base de datos y luego cierra este aviso.",
+        "succeededBodyPlain": "Revisa la base de datos y luego cierra este aviso.",
+        "undoHint": "Restaura la copia de seguridad tomada justo antes: la base de datos tal y como estaba antes de restaurar.",
+        "failedSafe": "Se tomó una copia de seguridad previa, así que la base de datos se puede dejar como estaba.",
+        "queuedBody": "Esperando a que el servidor la tome. Todavía no se ha cambiado nada en la base de datos.",
+        "stalledQueuedBody": "Lleva un par de minutos esperando a que el servidor la recoja. No se ha cambiado nada en la base de datos. Puede que el proceso no esté en marcha: vuelve a comprobarlo o pide a quien gestione el servidor que lo revise.",
+        "undoneBody": "La base de datos ha vuelto a como estaba antes de restaurar. Revisa la base de datos y luego descarta este aviso."
+      }
+    },
+    "archivedTab": {
+      "intro": "Copias que se conservaron tras eliminar su aplicación o base de datos. Aquí puedes descargarlas o eliminarlas. Para devolver una copia de base de datos, abre la pestaña de copias de la base de datos donde debe ir.",
+      "loadFailed": "No se pudieron cargar las copias archivadas.",
+      "empty": {
+        "title": "No hay copias archivadas",
+        "description": "Cuando se elimina una aplicación o una base de datos, sus copias se conservan y aparecen aquí."
+      },
+      "columnName": "Nombre",
+      "emptyFiltered": {
+        "description": "Prueba con otro tipo de copia u otro periodo."
+      }
+    }
   },
   "sync": {
     "title": "Sincronizar servidor",

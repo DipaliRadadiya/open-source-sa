@@ -2967,7 +2967,8 @@
       "noPermission": "Ihre Rolle enthält nicht „Datenbank“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "copyName": "Datenbanknamen kopieren",
       "usedBy": "{application} verwendet diese Datenbank und funktioniert nach dem Löschen nicht mehr.",
-      "usedByUnknown": "Eine Anwendung verwendet diese Datenbank und funktioniert nach dem Löschen nicht mehr."
+      "usedByUnknown": "Eine Anwendung verwendet diese Datenbank und funktioniert nach dem Löschen nicht mehr.",
+      "backupsKept": "Ihre Backups bleiben erhalten. Sie finden sie unter Backups → Archiviert, wo Sie sie herunterladen oder in eine andere Datenbank zurückspielen können."
     },
     "adopt": {
       "title": "{count, plural, one {# Datenbank auf diesem Server wird hier nicht verwaltet} other {# Datenbanken auf diesem Server werden hier nicht verwaltet}}",
@@ -3349,7 +3350,8 @@
       "users": "Benutzer",
       "tables": "Tabellen",
       "exports": "Import & Export",
-      "overview": "Übersicht"
+      "overview": "Übersicht",
+      "backups": "Backups"
     },
     "phpmyadmin": {
       "open": "In phpMyAdmin öffnen",
@@ -3995,7 +3997,7 @@
       "description": "Die Anwendungskonfiguration wird entfernt und {domain} wird nicht mehr ausgeliefert. Das lässt sich nicht zurücknehmen.",
       "removeFiles": "Auch die Dateien und Backups der Anwendung löschen",
       "removeFilesOn": "Das Verzeichnis der Anwendung und jedes ihrer Backups — samt der Archive in Ihrem Speicher — werden gelöscht.",
-      "removeFilesOff": "Die Dateien bleiben auf dem Server. Die Backups der Anwendung verlassen das Panel mit ihr, ihre Archive bleiben aber in Ihrem Speicher — löschen Sie sie dort, wenn Sie sie nicht mehr wollen.",
+      "removeFilesOff": "Die Dateien bleiben auf dem Server. Ihre Backups wandern nach Backups → Archiviert, wo Sie sie herunterladen oder löschen können.",
       "filesKept": "Ihre Dateien werden nicht entfernt: Ohne den Systembenutzer weiß das Panel nicht, wo sie liegen. Sie bleiben auf dem Server.",
       "systemUserStays": "Der Systembenutzer {username} wird nicht entfernt. Wenn keine andere Anwendung ihn nutzt, können Sie ihn unter Systembenutzer löschen.",
       "submit": "Anwendung löschen",
@@ -6832,7 +6834,8 @@
       "label": "Backup-Bereiche",
       "overview": "Übersicht",
       "history": "Verlauf",
-      "restores": "Wiederherstellungen"
+      "restores": "Wiederherstellungen",
+      "archived": "Archiviert"
     },
     "coverage": {
       "setUp": "Backups einrichten",
@@ -6927,12 +6930,14 @@
       },
       "editTitle": "Backup-Einstellungen bearbeiten",
       "editSubtitle": "Ändern Sie, was kopiert wird, wie oft und wohin.",
+      "editSubtitleDatabase": "Ändern Sie, wie oft diese Datenbank gesichert wird und wohin die Backups gehen.",
       "saveChanges": "Änderungen speichern",
       "refreshFound": "Speicherliste aktualisiert.",
       "refreshNoneNew": "Noch kein neuer Speicher gefunden.",
       "refreshFailed": "Die Speicherliste konnte nicht aktualisiert werden.",
       "optionsFailed": "Die Backup-Optionen konnten nicht geladen werden.",
       "subtitleSite": "Wählen Sie, was gesichert wird, wie oft und wo es gespeichert wird.",
+      "subtitleDatabase": "Legen Sie fest, wie oft diese Datenbank gesichert wird und wo die Backups liegen.",
       "savedTitleManual": "Backups sind für {name} eingerichtet",
       "savedTitleNoName": "Backups sind an",
       "savedTitleManualNoName": "Backups sind eingerichtet",
@@ -7015,6 +7020,7 @@
     },
     "history": {
       "allApplications": "Alle Anwendungen",
+      "allDatabases": "Alle Datenbanken",
       "allStatuses": "Jeder Status",
       "statuses": {
         "verified": "Abgeschlossen",
@@ -7113,7 +7119,13 @@
         "cancel": "Abbrechen",
         "confirm": "Neue Sicherung starten",
         "descriptionNoSize": "Dies wiederholt nicht die Wiederherstellung. Es erstellt eine völlig neue Sicherung von {name} und lädt sie hoch. Bei langsamer Verbindung kann eine große Anwendung dauern."
-      }
+      },
+      "subject": {
+        "database": "Datenbank",
+        "databaseDeleted": "Datenbank gelöscht",
+        "applicationDeleted": "Anwendung gelöscht"
+      },
+      "archived": "Archiviert"
     },
     "restore": {
       "title": "{name} wiederherstellen",
@@ -7144,7 +7156,10 @@
         "noApplication": "Anwendung gelöscht",
         "alreadyRunning": "Wiederherstellung läuft",
         "inFlight": "Läuft noch",
-        "failed": "Dieses Backup ist fehlgeschlagen"
+        "failed": "Dieses Backup ist fehlgeschlagen",
+        "databaseDeleted": "Diese Datenbank wurde gelöscht. Spielen Sie das Backup über den Backups-Tab einer anderen Datenbank dorthin zurück oder laden Sie es herunter.",
+        "onDatabasePage": "Stellen Sie es über den Backups-Tab der Datenbank wieder her.",
+        "siteDeleted": "Diese Anwendung wurde gelöscht, ihre Backups lassen sich nicht wiederherstellen. Laden Sie stattdessen eines herunter."
       },
       "descriptionShort": "Das ersetzt die Anwendung durch die Kopie unten. Alles, was seither geändert wurde, ist verloren.",
       "facts": {
@@ -7349,6 +7364,7 @@
       "unknownApplication": "Gelöschte Anwendung",
       "unknownReason": "Der Grund wurde nicht aufgezeichnet.",
       "noSafetyCopy": "Nicht verfügbar",
+      "undoUnavailable": "Nicht verfügbar",
       "allApplications": "Alle Anwendungen",
       "allStatuses": "Jeder Status",
       "allTypes": "Jede Art der Wiederherstellung",
@@ -7371,7 +7387,70 @@
       "undo": "Rückgängig",
       "safetyGone": "Diese Sicherheitskopie wird nicht mehr aufbewahrt. Nur die zwei neuesten bleiben."
     },
-    "pausedFrequency": "Pausiert: {frequency}"
+    "pausedFrequency": "Pausiert: {frequency}",
+    "database": {
+      "loadFailed": "Die Backup-Einstellungen dieser Datenbank konnten nicht geladen werden.",
+      "state": {
+        "protected": {
+          "title": "Diese Datenbank wird gesichert"
+        },
+        "unprotected": {
+          "title": "Diese Datenbank wird nicht gesichert",
+          "body": "Geht der Server verloren, geht diese Datenbank mit. Legen Sie einen Zeitplan fest, um sie zu schützen.",
+          "bodyReadOnly": "Geht der Server verloren, geht diese Datenbank mit. Bitten Sie eine Administratorin oder einen Administrator, Backups einzurichten."
+        }
+      },
+      "noRuns": "Für diese Datenbank ist noch kein Backup gelaufen.",
+      "historyFailed": "Der Backup-Verlauf dieser Datenbank konnte nicht geladen werden.",
+      "alreadyRunning": "Es läuft schon ein Backup dieser Datenbank. Sobald es fertig ist, können Sie ein weiteres starten.",
+      "backedUpWith": {
+        "title": "Gesichert mit {application}",
+        "body": "Diese Datenbank gehört zu dieser Anwendung, ihre Backups enthalten sie also. Richten Sie sie dort ein oder ändern Sie sie dort.",
+        "action": "Ihre Backups öffnen"
+      },
+      "archived": {
+        "title": "Backups gelöschter Datenbanken",
+        "body": "Spielen Sie eines davon in {name} zurück. Es werden nur Backups derselben Engine angezeigt.",
+        "restore": "Hier wiederherstellen",
+        "needsSchedule": "Richten Sie zuerst Backups für diese Datenbank ein: Vor der Wiederherstellung wird eine Kopie von ihr erstellt."
+      },
+      "turnOff": {
+        "description": "Der Zeitplan und seine Einstellungen werden entfernt, und für diese Datenbank laufen keine Backups mehr."
+      },
+      "restore": {
+        "descriptionShort": "Das ersetzt die Datenbank durch die Kopie unten. Alles, was seither geändert wurde, ist verloren.",
+        "safetyPromise": "Von der Datenbank wird vorher eine Kopie im jetzigen Zustand erstellt, das lässt sich also zurücknehmen.",
+        "submit": "Datenbank wiederherstellen",
+        "typeToUnlock": "Tippen Sie den Namen der Datenbank, um zu bestätigen.",
+        "copyDomain": "Datenbanknamen kopieren",
+        "facts": {
+          "from": "Kopie von"
+        }
+      },
+      "progress": {
+        "running": "Die Datenbank wird wiederhergestellt",
+        "succeeded": "Die Datenbank wurde wiederhergestellt",
+        "succeededBody": "Fertig {when}. Prüfen Sie die Datenbank und blenden Sie das dann aus.",
+        "succeededBodyPlain": "Prüfen Sie die Datenbank und blenden Sie das dann aus.",
+        "undoHint": "Holt die Sicherheitskopie zurück, die direkt davor erstellt wurde — die Datenbank, wie sie vor der Wiederherstellung war.",
+        "failedSafe": "Vorher wurde eine Sicherheitskopie erstellt, die Datenbank lässt sich also wieder in ihren Zustand bringen.",
+        "queuedBody": "Wartet darauf, dass der Server sie aufnimmt. An der Datenbank wurde noch nichts geändert.",
+        "stalledQueuedBody": "Sie wartet seit einigen Minuten darauf, dass der Server sie aufnimmt. An der Datenbank wurde nichts geändert. Der Job läuft möglicherweise nicht — prüfen Sie erneut oder bitten Sie die Person, die diesen Server verwaltet, nachzusehen.",
+        "undoneBody": "Die Datenbank ist wieder wie vor der Wiederherstellung. Prüfen Sie die Datenbank und blenden Sie das dann aus."
+      }
+    },
+    "archivedTab": {
+      "intro": "Backups, die nach dem Löschen ihrer Anwendung oder Datenbank erhalten geblieben sind. Hier können Sie sie herunterladen oder löschen. Um eine Datenbankkopie zurückzuspielen, öffnen Sie den Backups-Tab der Datenbank, in die sie soll.",
+      "loadFailed": "Die archivierten Backups konnten nicht geladen werden.",
+      "empty": {
+        "title": "Keine archivierten Backups",
+        "description": "Wird eine Anwendung oder Datenbank gelöscht, bleiben ihre Backups erhalten und erscheinen hier."
+      },
+      "columnName": "Name",
+      "emptyFiltered": {
+        "description": "Versuchen Sie eine andere Backup-Art oder einen anderen Zeitraum."
+      }
+    }
   },
   "sync": {
     "title": "Server-Sync",

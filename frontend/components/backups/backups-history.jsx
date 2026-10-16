@@ -38,6 +38,7 @@ export function BackupsHistory({
   canRestore,
   canRun,
   hasFilters,
+  database = null,
   pager = null,
 }) {
   const t = useTranslations("backups.history");
@@ -131,6 +132,7 @@ export function BackupsHistory({
 
   const listProps = {
     backups,
+    siteHeader: database ? t("subject.database") : undefined,
     canRestore,
     // Same permission as restore; deleting also removes the archive from the bucket.
     canDelete: canRestore,
@@ -179,6 +181,16 @@ export function BackupsHistory({
         }))}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
+      {/* Only arriving from a database's Backups tab; "All databases" drops it. */}
+      {database ? (
+        <FacetSelect
+          paramKey="database"
+          label={t("subject.database")}
+          allLabel={t("allDatabases")}
+          options={[{ value: database.id, label: database.name }]}
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+        />
+      ) : null}
       <FacetSelect
         paramKey="status"
         label={t("columns.status")}
@@ -261,7 +273,7 @@ export function BackupsHistory({
             description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
             badge={hasFilters ? "search" : null}
             // Only when filters emptied the list.
-            action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
+            action={hasFilters ? <ClearFiltersButton keys={["application", "database", "status", "period", "type", "search"]} /> : null}
           />
         </ListCard>
       ) : (

@@ -2967,7 +2967,8 @@
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "copyName": "Copy database name",
       "usedBy": "{application} uses this database and will stop working once it is deleted.",
-      "usedByUnknown": "An application uses this database and will stop working once it is deleted."
+      "usedByUnknown": "An application uses this database and will stop working once it is deleted.",
+      "backupsKept": "Any backups of it are kept. You'll find them under Backups → Archived, where you can download them or restore them into another database."
     },
     "adopt": {
       "title": "{count, plural, one {# database on this server isn't managed here} other {# databases on this server aren't managed here}}",
@@ -3349,7 +3350,8 @@
       "users": "Users",
       "tables": "Tables",
       "exports": "Import & export",
-      "overview": "Overview"
+      "overview": "Overview",
+      "backups": "Backups"
     },
     "phpmyadmin": {
       "open": "Open in phpMyAdmin",
@@ -3995,7 +3997,7 @@
       "description": "The application configuration is removed and {domain} stops being served. This cannot be undone.",
       "removeFiles": "Also delete the application’s files and backups",
       "removeFilesOn": "The application’s directory, and every backup it has — including the archives in your storage — are deleted.",
-      "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
+      "removeFilesOff": "The files stay on the server. Its backups move to Backups → Archived, where you can download or delete them.",
       "filesKept": "Its files are not removed: without the system user the panel can't tell where they are. They stay on the server.",
       "systemUserStays": "The system user {username} is not removed. If no other application uses it, you can delete it from System Users.",
       "submit": "Delete application",
@@ -6832,7 +6834,8 @@
       "label": "Backup sections",
       "overview": "Overview",
       "history": "History",
-      "restores": "Restores"
+      "restores": "Restores",
+      "archived": "Archived"
     },
     "coverage": {
       "setUp": "Set up backups",
@@ -6927,12 +6930,14 @@
       },
       "editTitle": "Edit backup settings",
       "editSubtitle": "Change what is copied, how often, and where it goes.",
+      "editSubtitleDatabase": "Change how often this database is backed up and where it goes.",
       "saveChanges": "Save changes",
       "refreshFound": "Storage list updated.",
       "refreshNoneNew": "No new storage found yet.",
       "refreshFailed": "The storage list could not be refreshed.",
       "optionsFailed": "The backup choices could not be loaded.",
       "subtitleSite": "Choose what to back up, how often, and where it is stored.",
+      "subtitleDatabase": "Choose how often this database is backed up and where it is stored.",
       "savedTitleManual": "Backups are set up for {name}",
       "savedTitleNoName": "Backups are on",
       "savedTitleManualNoName": "Backups are set up",
@@ -7015,6 +7020,7 @@
     },
     "history": {
       "allApplications": "All applications",
+      "allDatabases": "All databases",
       "allStatuses": "Any status",
       "statuses": {
         "verified": "Complete",
@@ -7113,7 +7119,13 @@
         "cancel": "Cancel",
         "confirm": "Start a new backup",
         "descriptionNoSize": "This does not retry the restore. It runs a completely new backup of {name} and uploads it. On a slow connection a large application can take a while."
-      }
+      },
+      "subject": {
+        "database": "Database",
+        "databaseDeleted": "Database deleted",
+        "applicationDeleted": "Application deleted"
+      },
+      "archived": "Archived"
     },
     "restore": {
       "title": "Restore {name}",
@@ -7144,7 +7156,10 @@
         "noApplication": "Application deleted",
         "alreadyRunning": "Restore in progress",
         "inFlight": "Still running",
-        "failed": "This backup failed"
+        "failed": "This backup failed",
+        "databaseDeleted": "This database was deleted. Restore the backup into another database from that database's Backups tab, or download it.",
+        "onDatabasePage": "Restore it from the database's Backups tab.",
+        "siteDeleted": "This application was deleted, so its backups can't be restored. Download one instead."
       },
       "descriptionShort": "This replaces the application with the copy below. Anything changed since then is lost.",
       "facts": {
@@ -7349,6 +7364,7 @@
       "unknownApplication": "Deleted application",
       "unknownReason": "The reason was not recorded.",
       "noSafetyCopy": "None available",
+      "undoUnavailable": "Not available",
       "allApplications": "All applications",
       "allStatuses": "Any status",
       "allTypes": "Any restore type",
@@ -7371,7 +7387,70 @@
       "undo": "Undo",
       "safetyGone": "That safety copy is no longer kept. Only the newest two are."
     },
-    "pausedFrequency": "Paused: {frequency}"
+    "pausedFrequency": "Paused: {frequency}",
+    "database": {
+      "loadFailed": "This database's backup settings could not be loaded.",
+      "state": {
+        "protected": {
+          "title": "This database is backed up"
+        },
+        "unprotected": {
+          "title": "This database is not backed up",
+          "body": "If the server is lost, so is this database. Set up a schedule to protect it.",
+          "bodyReadOnly": "If the server is lost, so is this database. Ask an administrator to set up backups."
+        }
+      },
+      "noRuns": "No backups have run for this database yet.",
+      "historyFailed": "This database's backup history could not be loaded.",
+      "alreadyRunning": "A backup of this database is already running. You can start another once it finishes.",
+      "backedUpWith": {
+        "title": "Backed up with {application}",
+        "body": "This database belongs to that application, so the application's backups include it. Set them up or change them there.",
+        "action": "Open its backups"
+      },
+      "archived": {
+        "title": "Backups of deleted databases",
+        "body": "Restore one of these into {name}. Only backups of the same engine are listed.",
+        "restore": "Restore here",
+        "needsSchedule": "Set up backups for this database first: a copy of it is taken before the restore."
+      },
+      "turnOff": {
+        "description": "The schedule and its settings are removed, and no more backups will run for this database."
+      },
+      "restore": {
+        "descriptionShort": "This replaces the database with the copy below. Anything changed since then is lost.",
+        "safetyPromise": "A copy of the database as it is right now is taken first, so this can be undone.",
+        "submit": "Restore database",
+        "typeToUnlock": "Type the database name to confirm.",
+        "copyDomain": "Copy database name",
+        "facts": {
+          "from": "Copy of"
+        }
+      },
+      "progress": {
+        "running": "Restoring the database",
+        "succeeded": "The database has been restored",
+        "succeededBody": "Finished {when}. Check the database, then dismiss this.",
+        "succeededBodyPlain": "Check the database, then dismiss this.",
+        "undoHint": "Puts back the safety copy taken just before this ran — the database as it was before you restored.",
+        "failedSafe": "A safety copy was taken first, so the database can be put back as it was.",
+        "queuedBody": "Waiting for the server to pick it up. Nothing in the database has been changed yet.",
+        "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing in the database has been changed. The job may not be running — check again, or ask whoever manages this server to look.",
+        "undoneBody": "The database is back as it was before you restored. Check the database, then dismiss this."
+      }
+    },
+    "archivedTab": {
+      "intro": "Backups kept after their application or database was deleted. Download or delete them here. To put a database copy back, open the Backups tab of the database it should go into.",
+      "loadFailed": "Archived backups could not be loaded.",
+      "empty": {
+        "title": "No archived backups",
+        "description": "When an application or database is deleted, its backups are kept and listed here."
+      },
+      "columnName": "Name",
+      "emptyFiltered": {
+        "description": "Try a different backup type or time."
+      }
+    }
   },
   "sync": {
     "title": "Server Sync",

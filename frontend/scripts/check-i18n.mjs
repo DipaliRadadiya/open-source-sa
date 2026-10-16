@@ -69,6 +69,8 @@ for (const file of SOURCE_DIRS.flatMap(walk)) {
   const src = fs.readFileSync(file, "utf8");
   const namespaces = [
     ...src.matchAll(/(?:useTranslations|getTranslations)\(\s*"([^"]+)"\s*\)/g),
+    // Base and override namespaces; a key may live in either.
+    ...[...src.matchAll(/useSubjectTranslations\(\s*"([^"]+)",\s*"([^"]+)"/g)].flatMap((m) => [m, [null, m[2]]]),
   ].map((m) => m[1]);
   if (!namespaces.length) continue;
 

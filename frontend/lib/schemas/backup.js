@@ -82,6 +82,13 @@ export const backupSchema = z
     // Sent on the server-wide history, where a row has to name its own site.
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
+    // A backup of a database on its own. After the database (or site) is deleted the
+    // row is `archived`: its id is null and the name and engine are kept (16 Oct).
+    database_id: z.number().nullish(),
+    database_name: z.string().nullish(),
+    database_engine: z.string().nullish(),
+    site_name: z.string().nullish(),
+    archived: z.boolean().default(false),
     reference: z.string().nullish(),
     // The run's last heartbeat — what decides whether Clear can work.
     progress_at: z.string().nullish(),
@@ -122,7 +129,9 @@ export const backupsResponseSchema = z.object({
 export const backupTargetSchema = z
   .object({
     id: z.number(),
-    application_id: z.number(),
+    application_id: z.number().nullish(),
+    // Set instead of `application_id` on a database's own schedule.
+    database_id: z.number().nullish(),
     storage_destination_id: z.number(),
     // Only present when the controller eager-loads the relation.
     storage_destination_name: z.string().nullish(),
@@ -192,6 +201,16 @@ export const backupTargetsResponseSchema = z.object({
 /** `backup_target` is null for a site nobody has configured yet. */
 export const backupTargetResponseSchema = z.object({
   backup_target: backupTargetSchema.nullable(),
+});
+
+// `backed_up_with`: the database belongs to a site, whose schedule covers it, and a
+// schedule of its own is refused.
+export const databaseBackupTargetResponseSchema = z.object({
+  backup_target: backupTargetSchema.nullable().default(null),
+  backed_up_with: z
+    .object({ application_id: z.number(), application_name: z.string().nullish() })
+    .nullable()
+    .default(null),
 });
 
 export const restoreSchema = z

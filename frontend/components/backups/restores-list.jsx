@@ -200,6 +200,10 @@ function UndoCell({ row, table }) {
   if (!restore.safety_backup_id) {
     return <span className="text-sm text-muted-foreground">{t("noSafetyCopy")}</span>;
   }
+  // No site: a database's own restore (undone from its Backups tab) or a deleted site's.
+  if (!restore.application_id) {
+    return <span className="text-sm text-muted-foreground">{t("undoUnavailable")}</span>;
+  }
 
   return <UndoRestoreButton restore={restore} canRestore={table.options.meta?.canRestore} />;
 }
@@ -259,7 +263,7 @@ function RestoreCards({ restores, canRestore = false }) {
               ) : null}
 
               {/* Cards had no way back at all; same action as the table's column. */}
-              {restore.safety_backup_id ? (
+              {restore.safety_backup_id && restore.application_id ? (
                 <UndoRestoreButton restore={restore} canRestore={canRestore} className="w-full sm:w-auto" />
               ) : null}
             </CardContent>

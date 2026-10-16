@@ -10,7 +10,9 @@ import { ActionIcon } from "@/components/ui/action-icon";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
-import { restoreBlocker } from "@/components/backups/restore-dialog";
+import { restoreBlocker } from "@/lib/backups/restore-blocker";
+import { backupSubject } from "@/lib/backups/backup-subject";
+import { ArchivedBadge, subjectLine } from "@/components/backups/backups-history-table";
 import { sizeNote } from "@/components/backups/backups-history-table";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 
@@ -30,6 +32,10 @@ export function BackupsCards({
   // A card has no room for row selection, so each card gets its own delete button.
   canDelete = false,
   onDeleted,
+  subject = "application",
+  canDownload,
+  // Off on the Archived tab: those are restored from a database's own tab, or not at all.
+  showRestore = true,
 }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
@@ -41,21 +47,23 @@ export function BackupsCards({
     <CardList>
       {backups.map((backup) => {
         const duration = apiDuration(backup.started_at, backup.finished_at);
-        const blocker = canRestore
-          ? restoreBlocker(backup, tr, restoreInFlight)
+        const blocker = !showRestore
+          ? null
+          : canRestore
+          ? restoreBlocker(backup, tr, restoreInFlight, subject === "database")
           : t("noPermission");
+        const about = backupSubject(backup);
 
         return (
           <CardListItem key={backup.id}>
             <div className="flex items-start justify-between gap-3">
               {showSite ? (
                 <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {backup.application_name ?? t("unknownApplication")}
+                  <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                    <span className="truncate">{about.name ?? t("unknownApplication")}</span>
+                    {about.archived ? <ArchivedBadge /> : null}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {backup.application_domain ?? ""}
-                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{subjectLine(about, t)}</p>
                 </div>
               ) : (
                 // Wraps rather than truncating: the type is the card's title.
@@ -118,7 +126,7 @@ export function BackupsCards({
                   </Button>
                 ) : null}
 
-                <DownloadBackupButton backup={backup} canDownload={canRestore} label />
+                <DownloadBackupButton backup={backup} canDownload={canDownload ?? canRestore} label />
 
                 {["pending", "running"].includes(backup.status) ? (
                   canClear && backup.clearable ? (
@@ -145,7 +153,7 @@ export function BackupsCards({
                       {t("retry")}
                     </Button>
                   ) : null
-                ) : (
+                ) : showRestore ? (
                   <Button
                     size="sm"
                     variant="destructive"
@@ -156,7 +164,7 @@ export function BackupsCards({
                     <History className="size-4" />
                     {t("restoreShort")}
                   </Button>
-                )}
+                ) : null}
               </div>
             </div>
           </CardListItem>

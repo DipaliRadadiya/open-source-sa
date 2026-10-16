@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, PauseCircle, PowerOff } from "lucide-react";
 import { deleteBackupTarget, saveBackupTarget } from "@/lib/api/backups";
+import { deleteDatabaseBackupTarget, saveDatabaseBackupTarget } from "@/lib/api/database-backups";
+import { useSubjectTranslations } from "@/hooks/use-subject-translations";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,8 +13,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // The API refuses while backups exist unless they are deleted too; keeping them means
 // pausing. `count` is null when the history read failed.
-export function TurnOffBackupsDialog({ open, onOpenChange, application, target, count, destinationNames = [] }) {
-  const t = useTranslations("backups.application.turnOff");
+// `subject="database"`: `application` is the database (`{ id, name }`).
+export function TurnOffBackupsDialog({ open, onOpenChange, application, subject = "application", target, count, destinationNames = [] }) {
+  const t = useSubjectTranslations("backups.application.turnOff", "backups.database.turnOff", subject);
+  const isDatabase = subject === "database";
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [savingPause, setSavingPause] = useState(false);
@@ -44,7 +47,8 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
     setAction("delete");
     setPending(true);
     try {
-      await deleteBackupTarget(application.id, { deleteBackups: hasBackups && deleteBackups });
+      const remove = isDatabase ? deleteDatabaseBackupTarget : deleteBackupTarget;
+      await remove(application.id, { deleteBackups: hasBackups && deleteBackups });
       doneMessage.current =
         hasBackups && count
           ? t("doneWithBackups", { name: application.name, count })
@@ -63,16 +67,21 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
     setAction("pause");
     setSavingPause(true);
     try {
-      await saveBackupTarget(application.id, {
+      const kept = {
         storage_destination_id: target.storage_destination_id,
-        type: target.type,
         retention_count: target.retention_count,
         frequency: target.frequency,
         ...(target.schedule_time ? { schedule_time: target.schedule_time } : null),
         enabled: false,
-        file_excludes: target.file_excludes ?? [],
-        database_excludes: target.database_excludes ?? [],
-      });
+      };
+      await (isDatabase
+        ? saveDatabaseBackupTarget(application.id, kept)
+        : saveBackupTarget(application.id, {
+            ...kept,
+            type: target.type,
+            file_excludes: target.file_excludes ?? [],
+            database_excludes: target.database_excludes ?? [],
+          }));
       setDeleteBackups(false);
       doneMessage.current = t("paused");
       startRefresh(() => router.refresh());

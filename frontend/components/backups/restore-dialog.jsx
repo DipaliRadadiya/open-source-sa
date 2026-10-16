@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter } from "next-intl";
 import { History, Loader2, ShieldCheck } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
-import { BACKUP_IN_FLIGHT, restorableTypes } from "@/lib/schemas/backup";
+import { restorableTypes } from "@/lib/schemas/backup";
 import { startRestore } from "@/lib/api/backups";
+import { restoreDatabaseBackup } from "@/lib/api/database-backups";
+import { useSubjectTranslations } from "@/hooks/use-subject-translations";
 import { apiMessage } from "@/lib/api/error-message";
 import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { Label } from "@/components/ui/label";
@@ -22,10 +24,15 @@ import {
 
 // Mirrors every backend guard. Callers MUST pass `key={backup?.id}`: opening from
 // a row skips `onOpenChange`, so the typed domain would carry over.
-export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
-  const t = useTranslations("backups.restore");
+// `subject="database"`: restores into `database` (`{ id, name }`), typed by its name;
+// a database backup holds one thing, so there is no "what to put back".
+export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject = "application", database = null }) {
+  const t = useSubjectTranslations("backups.restore", "backups.database.restore", subject);
   const format = useFormatter();
-  const allowed = backup?.files_only
+  const isDatabase = subject === "database";
+  const allowed = isDatabase
+    ? []
+    : backup?.files_only
     ? restorableTypes(backup?.type).filter((value) => value === "filesystem")
     : restorableTypes(backup?.type);
   const [type, setType] = useState(
@@ -39,13 +46,15 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState(null);
 
-  const domain = backup?.application_domain ?? "";
+  const domain = (isDatabase ? database?.name : backup?.application_domain) ?? "";
 
   async function onConfirm() {
     setPending(true);
     setFailure(null);
     try {
-      const response = await startRestore(backup.id, { type, confirm: confirm.trim() });
+      const response = isDatabase
+        ? await restoreDatabaseBackup(database.id, backup.id, confirm.trim())
+        : await startRestore(backup.id, { type, confirm: confirm.trim() });
       onStarted?.(response.data?.restore ?? null);
       onOpenChange?.(false);
     } catch (error) {
@@ -80,7 +89,13 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
           {/* Which backup, as labelled facts rather than a date inside prose. */}
           <dl className="grid grid-cols-3 gap-x-4 gap-y-3 rounded-lg border bg-muted/40 p-3">
             <Fact label={t("facts.taken")} value={backup?.created_at_human ?? ""} />
-            <Fact label={t("facts.type")} value={backup?.type_title ?? backup?.type ?? ""} />
+            {/* A database's backup always holds a database; which one matters more,
+                since an archived copy of another database can be restored here. */}
+            {subject === "database" ? (
+              <Fact label={t("facts.from")} value={backup?.database_name ?? ""} />
+            ) : (
+              <Fact label={t("facts.type")} value={backup?.type_title ?? backup?.type ?? ""} />
+            )}
             <Fact
               label={t("facts.size")}
               value={
@@ -165,13 +180,3 @@ function Fact({ label, value }) {
   );
 }
 
-// Mirrors `RestoreBackupRequest::withValidator()` in order; null when restorable.
-export function restoreBlocker(backup, t, restoreInFlight = false) {
-  // A backup still being written has simply not finished; don't call it "unverified".
-  if (BACKUP_IN_FLIGHT.includes(backup.status)) return t("blocked.inFlight");
-  if (backup.status === "failed") return t("blocked.failed");
-  if (backup.status !== "verified") return t("blocked.unverified");
-  if (!backup.application_domain) return t("blocked.noApplication");
-  if (restoreInFlight) return t("blocked.alreadyRunning");
-  return null;
-}

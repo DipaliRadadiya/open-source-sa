@@ -5,6 +5,8 @@ import { rememberDismissedRestore } from "@/lib/backups/dismissed-restores";
 
 // Keeps showing the outcome (and the undo) after a terminal state until dismissed.
 export function ActiveRestore({ restore, applicationDomain, scrollIntoView = false,
+  subject = "application",
+  database = null,
   restoredSafetyCopy = false,
   onStatusChange,
 }) {
@@ -31,6 +33,8 @@ export function ActiveRestore({ restore, applicationDomain, scrollIntoView = fal
       // typed-domain check could never be satisfied.
       applicationDomain={applicationDomain ?? restore?.application_domain}
       restoredSafetyCopy={restoredSafetyCopy}
+      subject={subject}
+      database={database}
       onStatusChange={(status, id) => {
         setLatest({ id: id ?? latest.id, status });
         onStatusChange?.(status);

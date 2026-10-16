@@ -13,37 +13,52 @@ import { DataTable } from "@/components/ui/data-table";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ActionIcon } from "@/components/ui/action-icon";
-import { restoreBlocker } from "@/components/backups/restore-dialog";
+import { restoreBlocker } from "@/lib/backups/restore-blocker";
+import { backupSubject } from "@/lib/backups/backup-subject";
 
 /* Every backup that has run, as the same table the overview uses. */
 
 function SiteCell({ row }) {
   const t = useTranslations("backups.history");
   const backup = row.original;
+  const subject = backupSubject(backup);
+  const name = subject.name ?? t("unknownApplication");
 
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        {backup.application_id ? (
-          <Link
-            href={`/applications/${backup.application_id}/backups`}
-            className="truncate font-medium underline-offset-4 hover:underline"
-          >
-            {backup.application_name ?? t("unknownApplication")}
+        {subject.href ? (
+          <Link href={subject.href} className="truncate font-medium underline-offset-4 hover:underline">
+            {name}
           </Link>
         ) : (
-          <span className="truncate font-medium">{t("unknownApplication")}</span>
+          <span className="truncate font-medium">{name}</span>
         )}
         {backup.is_safety ? <SafetyBadge /> : null}
+        {subject.archived ? <ArchivedBadge /> : null}
       </div>
-      <p className="truncate text-xs text-muted-foreground">
-        {backup.application_domain ?? ""}
-      </p>
+      <p className="truncate text-xs text-muted-foreground">{subjectLine(subject, t)}</p>
     </div>
+  );
+}
+
+// The line under the name: the site's domain, or what kind of thing this was.
+export function subjectLine(subject, t) {
+  if (subject.kind === "database") return subject.archived ? t("subject.databaseDeleted") : t("subject.database");
+  return subject.archived ? t("subject.applicationDeleted") : (subject.domain ?? "");
+}
+
+export function ArchivedBadge() {
+  const t = useTranslations("backups.history");
+  return (
+    <Badge variant="muted" className="font-normal">
+      {t("archived")}
+    </Badge>
   );
 }
 
@@ -203,12 +218,14 @@ function ActionsCell({ row, table }) {
     busyId,
     restoreInFlight,
     retryBlockedFor,
+    canDownload = canRestore,
+    showRestore = true,
   } = table.options.meta;
   const backup = row.original;
 
   // Download is offered in every state that has an archive. It needs
   // `backup,manage` like restore: the archive holds every file and a database dump.
-  const download = <DownloadBackupButton backup={backup} canDownload={canRestore} />;
+  const download = <DownloadBackupButton backup={backup} canDownload={canDownload} />;
   const retryBlocked = retryBlockedFor?.(backup) ?? null;
 
   if (["pending", "running"].includes(backup.status)) {
@@ -253,8 +270,10 @@ function ActionsCell({ row, table }) {
     );
   }
 
+  if (!showRestore) return <div className="flex items-center justify-end gap-2">{download}</div>;
+
   const blocker = canRestore
-    ? restoreBlocker(backup, tr, restoreInFlight)
+    ? restoreBlocker(backup, tr, restoreInFlight, table.options.meta?.subject === "database")
     : t("noPermission");
 
   return (
@@ -316,6 +335,14 @@ export function BackupsHistoryTable({
   retryBlockedFor = null,
   // Hides the Site column on a site's own page.
   showSite = true,
+  // Its header; "Database" when the list is filtered to one.
+  siteHeader,
+  // "database" on a database's own Backups tab, which restores into it.
+  subject = "application",
+  // There, restoring is the database's permission but downloading is still `backup`.
+  canDownload,
+  // Off on the Archived tab.
+  showRestore = true,
   emptyMessage,
   emptyIcon,
   // Set when the caller already wraps this in a Card.
@@ -350,7 +377,7 @@ export function BackupsHistoryTable({
     showSite
       ? {
           accessorKey: "application_name",
-          header: t("columns.site"),
+          header: siteHeader ?? t("columns.site"),
           // A share, not a minimum: `min-w-48` let this column take all the slack and
           // squeezed Type and Size onto two lines (Krishna, 9 Oct).
           meta: { className: showDestination ? "w-[24%]" : "w-[30%]" },
@@ -358,7 +385,8 @@ export function BackupsHistoryTable({
         }
       : null,
     // Sized to the badge, not reserved, to leave room for the actions column.
-    { accessorKey: "status", header: t("columns.status"), meta: { className: "w-[17%]" }, cell: StatusCell },
+    // Wider without the Site column: the safety badge sits here then, and is 175px in French.
+    { accessorKey: "status", header: t("columns.status"), meta: { className: showSite ? "w-[17%]" : "w-[22%]" }, cell: StatusCell },
     // One line: "Files and / database" read as two values.
     { id: "type", header: t("columns.type"), meta: { className: "w-[16%] whitespace-nowrap" }, cell: TypeCell },
     // Only when the API sends it: the field is absent (not null) on older
@@ -434,6 +462,9 @@ export function BackupsHistoryTable({
           restoreInFlight,
           retryBlockedFor,
           showSite,
+          subject,
+          canDownload: canDownload ?? canRestore,
+          showRestore,
         }}
         {...(canDelete
           ? {

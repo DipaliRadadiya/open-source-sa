@@ -75,7 +75,11 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
             ? t("delete.usedBy", { application: application.name })
             : t("delete.usedByUnknown")}
         </Caution>
-      ) : null}
+      ) : (
+        // Its own backups are archived, not deleted (16 Oct). A site's database is
+        // backed up with the site, so this is not said there.
+        <p className="text-xs leading-5 text-muted-foreground">{t("delete.backupsKept")}</p>
+      )}
       <TypeToConfirm
         id="delete-db-confirm"
         value={name}

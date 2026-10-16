@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useNow } from "next-intl";
+import { useSubjectTranslations } from "@/hooks/use-subject-translations";
 import { parseApiWallClock } from "@/lib/format/api-date";
 import { toast } from "sonner";
 import { CircleAlert, CircleCheck, EyeOff, Loader2, RefreshCw, TriangleAlert, Undo2, X } from "lucide-react";
@@ -35,8 +36,11 @@ export function RestoreProgress({
   // Told each status, so the page can block actions that must wait for a restore.
   onStatusChange,
   onDismiss,
+  // "database": a database's own restore, worded for it; its undo restores there too.
+  subject = "application",
+  database = null,
 }) {
-  const t = useTranslations("backups.progress");
+  const t = useSubjectTranslations("backups.progress", "backups.database.progress", subject);
   const { refreshAndWait } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
@@ -193,6 +197,8 @@ export function RestoreProgress({
         <RestoreDialog
           key={undoBackup?.id}
           backup={undoBackup}
+          subject={subject}
+          database={database}
           open={Boolean(undoBackup)}
           onOpenChange={(next) => (next ? null : setUndoBackup(null))}
           onStarted={(next) => {

@@ -12,6 +12,7 @@ import {
 } from "@/lib/schemas/backup";
 import { frequencyOption, timeUsage } from "@/lib/backups/frequency";
 import { fetchBackupTargetOptions, runBackupNow, saveBackupTarget } from "@/lib/api/backups";
+import { runDatabaseBackupNow, saveDatabaseBackupTarget } from "@/lib/api/database-backups";
 import { markBackupStarted } from "@/lib/backups/just-started";
 import { listDestinations } from "@/lib/api/storage";
 import { storageDestinationsResponseSchema } from "@/lib/schemas/storage";
@@ -52,6 +53,9 @@ export function SetupBackupsDialog({
   siteTypes = null,
   siteType = null,
   servingProfile = null,
+  // A database on its own: `applicationId` is its id, the type is always `database`
+  // and there is nothing to exclude.
+  database = null,
   // Called after the saved step's "Back up now" is accepted.
   onStarted,
 }) {
@@ -83,7 +87,7 @@ export function SetupBackupsDialog({
       zodResolver(backupTargetFormSchema(optionsRef.current))(values, context, resolverOptions),
     mode: "onSubmit",
     reValidateMode: "onChange",
-    defaultValues: defaults(applicationId, destinations, target, options),
+    defaultValues: defaults(applicationId, destinations, target, options, database),
   });
 
   async function retryOptions() {
@@ -109,7 +113,7 @@ export function SetupBackupsDialog({
 
   // Reopening from a different row must not inherit the previous row's site.
   useEffect(() => {
-    if (open) form.reset(defaults(applicationId, destinations, target, options));
+    if (open) form.reset(defaults(applicationId, destinations, target, options, database));
     // `destinations` and `target` are excluded deliberately: both change
     // identity every parent render, and re-seeding would overwrite a half-filled form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,17 +121,22 @@ export function SetupBackupsDialog({
 
   async function onSubmit(values) {
     try {
-      await saveBackupTarget(values.application_id, {
+      const common = {
         storage_destination_id: values.storage_destination_id,
-        type: values.type,
         retention_count: values.retention_count,
         frequency: values.frequency,
         // Only for a frequency that reads it; `manual` never runs on a schedule.
         ...(timeUsage(options, values.frequency) ? { schedule_time: values.schedule_time } : null),
         enabled: values.enabled,
-        file_excludes: values.file_excludes,
-        database_excludes: values.database_excludes,
-      });
+      };
+      await (database
+        ? saveDatabaseBackupTarget(database.id, common)
+        : saveBackupTarget(values.application_id, {
+            ...common,
+            type: values.type,
+            file_excludes: values.file_excludes,
+            database_excludes: values.database_excludes,
+          }));
 
       // An edit that keeps the same storage has nothing new to prove: close with a
       // toast instead of the first-setup "Back up now" step. Edits come from the
@@ -160,7 +169,7 @@ export function SetupBackupsDialog({
   async function backUpNow() {
     setRunning(true);
     try {
-      await runBackupNow(saved.id);
+      await (database ? runDatabaseBackupNow(saved.id) : runBackupNow(saved.id));
       markBackupStarted();
       onStarted?.();
       await refreshAndWait();
@@ -198,7 +207,7 @@ export function SetupBackupsDialog({
     setSaved(null);
     // Back to the prop: the page's list is fresher once the form is closed.
     setRefreshed(null);
-    form.reset(defaults(applicationId, destinations, target, options));
+    form.reset(defaults(applicationId, destinations, target, options, database));
     onOpenChange?.(false);
   }
 
@@ -298,7 +307,7 @@ export function SetupBackupsDialog({
         className="sm:max-w-xl"
         title={target ? t("editTitle") : t("title")}
         description={
-          target ? t("editSubtitle") : applications.length ? t("subtitle") : t("subtitleSite")
+          target ? t(database ? "editSubtitleDatabase" : "editSubtitle") : database ? t("subtitleDatabase") : applications.length ? t("subtitle") : t("subtitleSite")
         }
         footer={
           <>
@@ -335,6 +344,7 @@ export function SetupBackupsDialog({
           siteTypes={siteTypes}
           siteType={siteType}
           servingProfile={servingProfile}
+          databaseOnly={Boolean(database)}
           options={options}
           onRetryOptions={retryOptions}
           retryingOptions={loadingOptions}
@@ -395,15 +405,16 @@ function SummaryLine({ values, applications, applicationName = null, destination
 }
 
 /** Every field starts with a sane value, so Save works without any decisions. */
-function defaults(applicationId, destinations, target, options) {
+function defaults(applicationId, destinations, target, options, database = null) {
   if (target) {
     // Disabled and manual mean the same to the backend, and the form has one
     // switch for both, so normalise here.
     const automatic = target.enabled && target.frequency !== "manual";
     return {
-      application_id: target.application_id ?? applicationId ?? "",
+      // A database's schedule stands in the site slot so one form validates both.
+      application_id: (database ? database.id : target.application_id) ?? applicationId ?? "",
       storage_destination_id: target.storage_destination_id,
-      type: target.type,
+      type: database ? "database" : target.type,
       retention_count: target.retention_count,
       frequency: automatic ? target.frequency : "manual",
       // Fallback for targets saved before `schedule_time` existed.
@@ -415,9 +426,9 @@ function defaults(applicationId, destinations, target, options) {
   }
 
   return {
-    application_id: applicationId ?? "",
+    application_id: database?.id ?? applicationId ?? "",
     storage_destination_id: destinations.length === 1 ? destinations[0].id : "",
-    type: "full",
+    type: database ? "database" : "full",
     retention_count: 7,
     frequency: options?.default_frequency ?? "",
     schedule_time: BACKUP_DEFAULT_TIME,

@@ -3,7 +3,7 @@
 import Link from "@/components/ui/app-link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { History, RotateCcw, ShieldCheck } from "lucide-react";
+import { Archive, History, RotateCcw, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 
@@ -11,6 +11,7 @@ const SECTIONS = [
   { key: "overview", href: "/backups", icon: ShieldCheck },
   { key: "history", href: "/backups/history", icon: History },
   { key: "restores", href: "/backups/restores", icon: RotateCcw },
+  { key: "archived", href: "/backups/archived", icon: Archive },
 ];
 
 // Same tab bar as Settings, as real links: back works, tabs are shareable, and
@@ -28,7 +29,7 @@ export function BackupsTabs() {
     <ScrollFade className="-mx-1 px-1 pb-1">
       <nav
         aria-label={t("tabs.label")}
-        className="grid w-full grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:w-fit sm:grid-cols-[auto_auto_auto]"
+        className="grid w-full grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:w-fit sm:grid-cols-[auto_auto_auto_auto]"
       >
         {SECTIONS.map(({ key, href, icon: Icon }) => {
           const active = pathname === href;

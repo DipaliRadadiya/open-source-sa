@@ -2967,7 +2967,8 @@
       "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "copyName": "Copier le nom de la base",
       "usedBy": "{application} utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée.",
-      "usedByUnknown": "Une application utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée."
+      "usedByUnknown": "Une application utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée.",
+      "backupsKept": "Ses sauvegardes sont conservées. Vous les trouverez dans Sauvegardes → Archivée, où vous pouvez les télécharger ou les restaurer dans une autre base de données."
     },
     "adopt": {
       "title": "{count, plural, one {# base de ce serveur n'est pas gérée ici} other {# bases de ce serveur ne sont pas gérées ici}}",
@@ -3349,7 +3350,8 @@
       "users": "Utilisateurs",
       "tables": "Tables",
       "exports": "Import et export",
-      "overview": "Vue d'ensemble"
+      "overview": "Vue d'ensemble",
+      "backups": "Sauvegardes"
     },
     "phpmyadmin": {
       "open": "Ouvrir dans phpMyAdmin",
@@ -3995,7 +3997,7 @@
       "description": "La configuration de l'application est supprimée et {domain} cesse d'être servi. Ceci est irréversible.",
       "removeFiles": "Supprimer aussi les fichiers et sauvegardes de l'application",
       "removeFilesOn": "Le répertoire de l'application, ainsi que toutes ses sauvegardes — y compris les archives dans votre stockage — sont supprimés.",
-      "removeFilesOff": "Les fichiers restent sur le serveur. Les sauvegardes de l'application quittent le panneau avec elle, mais leurs archives restent dans votre stockage — supprimez-les là-bas si vous n'en voulez plus.",
+      "removeFilesOff": "Les fichiers restent sur le serveur. Ses sauvegardes passent dans Sauvegardes → Archivée, où vous pouvez les télécharger ou les supprimer.",
       "filesKept": "Ses fichiers ne sont pas supprimés : sans l'utilisateur système, le panneau ne sait pas où ils se trouvent. Ils restent sur le serveur.",
       "systemUserStays": "L'utilisateur système {username} n'est pas supprimé. Si aucune autre application ne l'utilise, vous pouvez le supprimer dans Utilisateurs système.",
       "submit": "Supprimer l'application",
@@ -6832,7 +6834,8 @@
       "label": "Sections de sauvegarde",
       "overview": "Vue d'ensemble",
       "history": "Historique",
-      "restores": "Restaurations"
+      "restores": "Restaurations",
+      "archived": "Archivée"
     },
     "coverage": {
       "setUp": "Configurer les sauvegardes",
@@ -6927,12 +6930,14 @@
       },
       "editTitle": "Modifier les paramètres de sauvegarde",
       "editSubtitle": "Modifiez ce qui est copié, à quelle fréquence et où cela va.",
+      "editSubtitleDatabase": "Modifiez la fréquence de sauvegarde de cette base de données et sa destination.",
       "saveChanges": "Enregistrer les modifications",
       "refreshFound": "Liste de stockage mise à jour.",
       "refreshNoneNew": "Aucun nouveau stockage trouvé pour l'instant.",
       "refreshFailed": "La liste de stockage n'a pas pu être actualisée.",
       "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées.",
       "subtitleSite": "Choisissez quoi sauvegarder, à quelle fréquence et où le stocker.",
+      "subtitleDatabase": "Choisissez la fréquence de sauvegarde de cette base de données et où elle est stockée.",
       "savedTitleManual": "Les sauvegardes sont configurées pour {name}",
       "savedTitleNoName": "Les sauvegardes sont activées",
       "savedTitleManualNoName": "Les sauvegardes sont configurées",
@@ -7015,6 +7020,7 @@
     },
     "history": {
       "allApplications": "Toutes les applications",
+      "allDatabases": "Toutes les bases de données",
       "allStatuses": "Tout statut",
       "statuses": {
         "verified": "Terminé",
@@ -7113,7 +7119,13 @@
         "cancel": "Annuler",
         "confirm": "Lancer une nouvelle sauvegarde",
         "descriptionNoSize": "Ceci ne relance pas la restauration. Une sauvegarde entièrement nouvelle de {name} est créée puis envoyée. Sur une connexion lente, une application volumineuse peut prendre du temps."
-      }
+      },
+      "subject": {
+        "database": "Base de données",
+        "databaseDeleted": "Base de données supprimée",
+        "applicationDeleted": "Application supprimée"
+      },
+      "archived": "Archivée"
     },
     "restore": {
       "title": "Restaurer {name}",
@@ -7144,7 +7156,10 @@
         "noApplication": "Application supprimée",
         "alreadyRunning": "Restauration en cours",
         "inFlight": "Toujours en cours",
-        "failed": "Cette sauvegarde a échoué"
+        "failed": "Cette sauvegarde a échoué",
+        "databaseDeleted": "Cette base de données a été supprimée. Restaurez la sauvegarde dans une autre base depuis l'onglet Sauvegardes de celle-ci, ou téléchargez-la.",
+        "onDatabasePage": "Restaurez-la depuis l'onglet Sauvegardes de la base de données.",
+        "siteDeleted": "Cette application a été supprimée, ses sauvegardes ne peuvent donc pas être restaurées. Téléchargez-en une à la place."
       },
       "descriptionShort": "Cela remplace l'application par la copie ci-dessous. Tout ce qui a changé depuis est perdu.",
       "facts": {
@@ -7349,6 +7364,7 @@
       "unknownApplication": "Application supprimée",
       "unknownReason": "La raison n'a pas été enregistrée.",
       "noSafetyCopy": "Aucune disponible",
+      "undoUnavailable": "Non disponible",
       "allApplications": "Toutes les applications",
       "allStatuses": "Tout statut",
       "allTypes": "Tout type de restauration",
@@ -7371,7 +7387,70 @@
       "undo": "Annuler",
       "safetyGone": "Cette copie de sécurité n’est plus conservée. Seules les deux plus récentes le sont."
     },
-    "pausedFrequency": "En pause : {frequency}"
+    "pausedFrequency": "En pause : {frequency}",
+    "database": {
+      "loadFailed": "Les paramètres de sauvegarde de cette base de données n'ont pas pu être chargés.",
+      "state": {
+        "protected": {
+          "title": "Cette base de données est sauvegardée"
+        },
+        "unprotected": {
+          "title": "Cette base de données n'est pas sauvegardée",
+          "body": "Si le serveur est perdu, cette base de données l'est aussi. Définissez une planification pour la protéger.",
+          "bodyReadOnly": "Si le serveur est perdu, cette base de données l'est aussi. Demandez à un administrateur de configurer les sauvegardes."
+        }
+      },
+      "noRuns": "Aucune sauvegarde n'a encore été exécutée pour cette base de données.",
+      "historyFailed": "L'historique des sauvegardes de cette base de données n'a pas pu être chargé.",
+      "alreadyRunning": "Une sauvegarde de cette base de données est déjà en cours. Vous pourrez en démarrer une autre une fois terminée.",
+      "backedUpWith": {
+        "title": "Sauvegardée avec {application}",
+        "body": "Cette base de données appartient à cette application, ses sauvegardes l'incluent donc. Configurez-les ou modifiez-les là-bas.",
+        "action": "Ouvrir ses sauvegardes"
+      },
+      "archived": {
+        "title": "Sauvegardes de bases de données supprimées",
+        "body": "Restaurez l'une d'elles dans {name}. Seules les sauvegardes du même moteur sont listées.",
+        "restore": "Restaurer ici",
+        "needsSchedule": "Configurez d'abord les sauvegardes de cette base de données : une copie en est prise avant la restauration."
+      },
+      "turnOff": {
+        "description": "La planification et ses paramètres sont supprimés, et plus aucune sauvegarde ne sera faite pour cette base de données."
+      },
+      "restore": {
+        "descriptionShort": "Cela remplace la base de données par la copie ci-dessous. Tout ce qui a changé depuis est perdu.",
+        "safetyPromise": "Une copie de la base de données telle qu'elle est maintenant est prise d'abord, pour que cela soit annulable.",
+        "submit": "Restaurer la base de données",
+        "typeToUnlock": "Tapez le nom de la base de données pour confirmer.",
+        "copyDomain": "Copier le nom de la base",
+        "facts": {
+          "from": "Copie de"
+        }
+      },
+      "progress": {
+        "running": "Restauration de la base de données",
+        "succeeded": "La base de données a été restaurée",
+        "succeededBody": "Terminé {when}. Vérifiez la base de données, puis fermez ceci.",
+        "succeededBodyPlain": "Vérifiez la base de données, puis fermez ceci.",
+        "undoHint": "Remet la copie de sécurité prise juste avant cette exécution — la base de données telle qu'elle était avant votre restauration.",
+        "failedSafe": "Une copie de sécurité a été prise d'abord, la base de données peut être remise dans son état antérieur.",
+        "queuedBody": "En attente que le serveur la prenne en charge. Rien n'a encore été modifié dans la base de données.",
+        "stalledQueuedBody": "Elle attend depuis quelques minutes que le serveur la prenne en charge. Rien n'a été modifié dans la base de données. Le job ne fonctionne peut-être pas — vérifiez à nouveau, ou demandez à la personne qui gère ce serveur de regarder.",
+        "undoneBody": "La base de données est revenue à son état antérieur à votre restauration. Vérifiez la base de données, puis fermez ceci."
+      }
+    },
+    "archivedTab": {
+      "intro": "Sauvegardes conservées après la suppression de leur application ou base de données. Téléchargez-les ou supprimez-les ici. Pour remettre une copie de base de données, ouvrez l'onglet Sauvegardes de la base qui doit la recevoir.",
+      "loadFailed": "Les sauvegardes archivées n'ont pas pu être chargées.",
+      "empty": {
+        "title": "Aucune sauvegarde archivée",
+        "description": "Quand une application ou une base de données est supprimée, ses sauvegardes sont conservées et listées ici."
+      },
+      "columnName": "Nom",
+      "emptyFiltered": {
+        "description": "Essayez un autre type de sauvegarde ou une autre période."
+      }
+    }
   },
   "sync": {
     "title": "Synchronisation du serveur",

@@ -2967,7 +2967,8 @@
       "noPermission": "Seu papel não inclui Banco de dados com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "copyName": "Copiar nome do banco de dados",
       "usedBy": "{application} usa este banco de dados e deixará de funcionar quando ele for excluído.",
-      "usedByUnknown": "Uma aplicação usa este banco de dados e deixará de funcionar quando ele for excluído."
+      "usedByUnknown": "Uma aplicação usa este banco de dados e deixará de funcionar quando ele for excluído.",
+      "backupsKept": "Os backups dele são mantidos. Você os encontra em Backups → Arquivado, onde pode baixá-los ou restaurá-los em outro banco de dados."
     },
     "adopt": {
       "title": "{count, plural, one {# banco de dados neste servidor não é gerenciado aqui} other {# bancos de dados neste servidor não são gerenciados aqui}}",
@@ -3349,7 +3350,8 @@
       "users": "Usuários",
       "tables": "Tabelas",
       "exports": "Importar e exportar",
-      "overview": "Visão geral"
+      "overview": "Visão geral",
+      "backups": "Backups"
     },
     "phpmyadmin": {
       "open": "Abrir no phpMyAdmin",
@@ -3995,7 +3997,7 @@
       "description": "A configuração da aplicação é removida e {domain} deixa de ser servido. Isso não pode ser desfeito.",
       "removeFiles": "Excluir também os arquivos e backups da aplicação",
       "removeFilesOn": "O diretório da aplicação e todos os backups dela — incluindo os arquivos no seu storage — serão excluídos.",
-      "removeFilesOff": "Os arquivos permanecem no servidor. Os backups da aplicação saem do painel junto com ela, mas os arquivos ficam no seu storage — exclua-os lá se não quiser mais mantê-los.",
+      "removeFilesOff": "Os arquivos permanecem no servidor. Os backups dela vão para Backups → Arquivado, onde você pode baixá-los ou excluí-los.",
       "filesKept": "Os arquivos não são removidos: sem o usuário do sistema, o painel não sabe onde eles estão. Eles permanecem no servidor.",
       "systemUserStays": "O usuário do sistema {username} não é removido. Se nenhum outro aplicativo o usa, você pode excluí-lo em Usuários do sistema.",
       "submit": "Excluir aplicação",
@@ -6832,7 +6834,8 @@
       "label": "Seções de backup",
       "overview": "Visão geral",
       "history": "Histórico",
-      "restores": "Restaurações"
+      "restores": "Restaurações",
+      "archived": "Arquivado"
     },
     "coverage": {
       "setUp": "Configurar backups",
@@ -6927,12 +6930,14 @@
       },
       "editTitle": "Editar configurações de backup",
       "editSubtitle": "Altere o que é copiado, com que frequência e para onde vai.",
+      "editSubtitleDatabase": "Altere com que frequência é feito o backup deste banco de dados e para onde ele vai.",
       "saveChanges": "Salvar alterações",
       "refreshFound": "Lista de armazenamento atualizada.",
       "refreshNoneNew": "Nenhum armazenamento novo encontrado ainda.",
       "refreshFailed": "Não foi possível atualizar a lista de armazenamento.",
       "optionsFailed": "Não foi possível carregar as opções de backup.",
       "subtitleSite": "Escolha o que fazer backup, com que frequência e onde guardar.",
+      "subtitleDatabase": "Escolha com que frequência é feito o backup deste banco de dados e onde ele fica armazenado.",
       "savedTitleManual": "Backups configurados para {name}",
       "savedTitleNoName": "Backups ativados",
       "savedTitleManualNoName": "Backups configurados",
@@ -7015,6 +7020,7 @@
     },
     "history": {
       "allApplications": "Todas as aplicações",
+      "allDatabases": "Todos os bancos de dados",
       "allStatuses": "Qualquer status",
       "statuses": {
         "verified": "Concluída",
@@ -7113,7 +7119,13 @@
         "cancel": "Cancelar",
         "confirm": "Iniciar nova cópia",
         "descriptionNoSize": "Isto não repete a restauração. Cria uma cópia de segurança completamente nova de {name} e envia-a. Em uma conexão lenta, uma aplicação grande pode demorar."
-      }
+      },
+      "subject": {
+        "database": "Banco de dados",
+        "databaseDeleted": "Banco de dados excluído",
+        "applicationDeleted": "Aplicação excluída"
+      },
+      "archived": "Arquivado"
     },
     "restore": {
       "title": "Restaurar {name}",
@@ -7144,7 +7156,10 @@
         "noApplication": "Aplicação excluída",
         "alreadyRunning": "Restauração em andamento",
         "inFlight": "Ainda em execução",
-        "failed": "Este backup falhou"
+        "failed": "Este backup falhou",
+        "databaseDeleted": "Este banco de dados foi excluído. Restaure o backup em outro banco de dados pela aba de backups dele, ou baixe-o.",
+        "onDatabasePage": "Restaure-o pela aba de backups do banco de dados.",
+        "siteDeleted": "Esta aplicação foi excluída, então os backups dela não podem ser restaurados. Baixe um em vez disso."
       },
       "descriptionShort": "Isso substitui a aplicação pela cópia abaixo. Tudo que foi alterado desde então será perdido.",
       "facts": {
@@ -7349,6 +7364,7 @@
       "unknownApplication": "Aplicação excluída",
       "unknownReason": "O motivo não foi registrado.",
       "noSafetyCopy": "Nenhuma disponível",
+      "undoUnavailable": "Indisponível",
       "allApplications": "Todas as aplicações",
       "allStatuses": "Qualquer status",
       "allTypes": "Qualquer tipo de restauração",
@@ -7371,7 +7387,70 @@
       "undo": "Desfazer",
       "safetyGone": "Essa cópia de segurança não é mais mantida. Só as duas mais recentes são."
     },
-    "pausedFrequency": "Pausado: {frequency}"
+    "pausedFrequency": "Pausado: {frequency}",
+    "database": {
+      "loadFailed": "Não foi possível carregar as configurações de backup deste banco de dados.",
+      "state": {
+        "protected": {
+          "title": "Este banco de dados está com backup"
+        },
+        "unprotected": {
+          "title": "Este banco de dados não está com backup",
+          "body": "Se o servidor for perdido, este banco de dados também será. Defina um agendamento para protegê-lo.",
+          "bodyReadOnly": "Se o servidor for perdido, este banco de dados também será. Peça a um administrador para configurar os backups."
+        }
+      },
+      "noRuns": "Nenhum backup foi executado para este banco de dados ainda.",
+      "historyFailed": "Não foi possível carregar o histórico de backups deste banco de dados.",
+      "alreadyRunning": "Já existe um backup deste banco de dados em execução. Você pode iniciar outro quando este terminar.",
+      "backedUpWith": {
+        "title": "Com backup junto de {application}",
+        "body": "Este banco de dados pertence a essa aplicação, então os backups dela o incluem. Configure-os ou altere-os lá.",
+        "action": "Abrir os backups dela"
+      },
+      "archived": {
+        "title": "Backups de bancos de dados excluídos",
+        "body": "Restaure um destes em {name}. Só são listados backups do mesmo motor.",
+        "restore": "Restaurar aqui",
+        "needsSchedule": "Configure primeiro os backups deste banco de dados: uma cópia dele é feita antes da restauração."
+      },
+      "turnOff": {
+        "description": "O agendamento e as configurações são removidos, e nenhum outro backup será feito para este banco de dados."
+      },
+      "restore": {
+        "descriptionShort": "Isso substitui o banco de dados pela cópia abaixo. Tudo que foi alterado desde então será perdido.",
+        "safetyPromise": "Uma cópia do banco de dados como está agora é feita antes, para que isso possa ser desfeito.",
+        "submit": "Restaurar banco de dados",
+        "typeToUnlock": "Digite o nome do banco de dados para confirmar.",
+        "copyDomain": "Copiar nome do banco de dados",
+        "facts": {
+          "from": "Cópia de"
+        }
+      },
+      "progress": {
+        "running": "Restaurando o banco de dados",
+        "succeeded": "O banco de dados foi restaurado",
+        "succeededBody": "Concluído {when}. Verifique o banco de dados e depois descarte.",
+        "succeededBodyPlain": "Verifique o banco de dados e depois descarte.",
+        "undoHint": "Restaura a cópia de segurança feita logo antes desta execução — o banco de dados como estava antes da restauração.",
+        "failedSafe": "Uma cópia de segurança foi feita antes, então o banco de dados pode ser devolvido ao estado anterior.",
+        "queuedBody": "Aguardando o servidor pegá-la. Nada no banco de dados foi alterado ainda.",
+        "stalledQueuedBody": "Está aguardando há alguns minutos para o servidor pegá-la. Nada no banco de dados foi alterado. O job pode não estar em execução — verifique novamente ou peça a quem administra este servidor para conferir.",
+        "undoneBody": "O banco de dados voltou ao estado anterior à restauração. Verifique o banco de dados e depois descarte."
+      }
+    },
+    "archivedTab": {
+      "intro": "Backups mantidos após a exclusão da aplicação ou do banco de dados. Baixe-os ou exclua-os aqui. Para devolver uma cópia de banco de dados, abra a aba de backups do banco de dados que deve recebê-la.",
+      "loadFailed": "Não foi possível carregar os backups arquivados.",
+      "empty": {
+        "title": "Nenhum backup arquivado",
+        "description": "Quando uma aplicação ou um banco de dados é excluído, os backups dele são mantidos e aparecem aqui."
+      },
+      "columnName": "Nome",
+      "emptyFiltered": {
+        "description": "Tente outro tipo de backup ou outro período."
+      }
+    }
   },
   "sync": {
     "title": "Sincronização do servidor",

@@ -14,6 +14,7 @@ import {
   backupTargetOptionsSchema,
   backupTargetResponseSchema,
   backupTargetsResponseSchema,
+  databaseBackupTargetResponseSchema,
   backupsResponseSchema,
   restoresResponseSchema,
 } from "@/lib/schemas/backup";
@@ -34,6 +35,17 @@ export async function getBackups(searchParams = {}) {
   return listBackups("/backups", searchParams);
 }
 
+// A database's own backups, under the `database` permission.
+export async function getDatabaseBackups(databaseId, searchParams = {}) {
+  return listBackups(`/databases/${databaseId}/backups`, searchParams);
+}
+
+// Backups whose database was deleted, of one engine: they can be restored into this
+// one. From the server-wide list, so they need `backup` view; a refusal reads as none.
+export async function getArchivedDatabaseBackups(engine) {
+  return listBackups("/backups", { archived: true, engine, type: "database", per_page: 50 });
+}
+
 // One application's history under `app_backup`; the server-wide list needs `backup`.
 export async function getApplicationBackups(applicationId, searchParams = {}) {
   return listBackups(`/applications/${applicationId}/backups`, searchParams);
@@ -45,6 +57,10 @@ async function listBackups(path, searchParams) {
         page: searchParams.page,
         per_page: perPage(searchParams.per_page),
         "filter[application_id]": searchParams.application,
+        "filter[database_id]": searchParams.database,
+        // `false` leaves archived ones out (History); a URL value is ignored.
+        "filter[archived]": searchParams.archived === true ? 1 : searchParams.archived === false ? 0 : undefined,
+        "filter[engine]": searchParams.engine,
         "filter[status]": oneOf(searchParams.status, BACKUP_STATUSES),
         "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
         "filter[from]": since(searchParams.period),
@@ -114,7 +130,10 @@ export async function getRestores(searchParams = {}) {
 // Filtered to the site by the API; the in-flight check is local because
 // `filter[status]` takes one value. The backend 422s a second restore per app.
 export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
-  const { restores } = await getRestores({ application: applicationId, per_page: 5 });
+  const { restores: rows } = await getRestores({ application: applicationId, per_page: 5 });
+  // Server-wide: a database's own restore has no site, and its row does not say
+  // which database it was (16 Oct), so it can be neither worded nor undone here.
+  const restores = applicationId ? rows : rows.filter((restore) => restore.application_id);
   const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 
   // Otherwise the newest one finished within the last day and not dismissed,
@@ -155,6 +174,17 @@ export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
 export const getBackupTarget = cache(async function getBackupTarget(applicationId) {
   const result = await read(`/applications/${applicationId}/backup-target`, backupTargetResponseSchema);
   return { target: result.data?.backup_target ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
+});
+
+export const getDatabaseBackupTarget = cache(async function getDatabaseBackupTarget(databaseId) {
+  const result = await read(`/databases/${databaseId}/backup-target`, databaseBackupTargetResponseSchema);
+  return {
+    target: result.data?.backup_target ?? null,
+    backedUpWith: result.data?.backed_up_with ?? null,
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure, message: result.message, debug: result.debug,
+  };
 });
 
 // Requests the API maximum of 100 rows: the counts need every row. Sites beyond

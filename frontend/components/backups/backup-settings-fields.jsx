@@ -94,6 +94,8 @@ export function BackupSettingsFields({
   siteTypes = null,
   siteType = null,
   servingProfile = null,
+  // A database's own schedule: always a database backup, nothing to exclude.
+  databaseOnly = false,
 }) {
   const t = useTranslations("backups.form");
   const tv = useTranslations("validation");
@@ -242,6 +244,7 @@ export function BackupSettingsFields({
         </div>
       ) : (
       <>
+      {databaseOnly ? null : (
       <Group icon={Database} title={t("groups.content")}>
         <FormField
           control={form.control}
@@ -281,6 +284,7 @@ export function BackupSettingsFields({
         />
         {dropping ? <Caution>{t(`warnings.${dropping}`)}</Caution> : null}
       </Group>
+      )}
 
       <Group icon={CalendarClock} title={t("groups.schedule")}>
         {/* One switch instead of a "manual" frequency: the backend treats
@@ -545,6 +549,7 @@ export function BackupSettingsFields({
         )}
       </Group>
 
+      {databaseOnly ? null : (
       <Collapsible>
         <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
           <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
@@ -646,6 +651,7 @@ export function BackupSettingsFields({
           ) : null}
         </CollapsibleContent>
       </Collapsible>
+      )}
     </div>
   );
 }

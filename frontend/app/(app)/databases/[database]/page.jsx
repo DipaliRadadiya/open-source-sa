@@ -27,6 +27,9 @@ import { DatabaseImport } from "@/components/databases/database-import";
 import { getImports } from "@/lib/databases/get-imports";
 import { applicationById } from "@/lib/backups/database-availability";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
+import { DatabaseBackups } from "@/components/databases/database-backups";
+import { getArchivedDatabaseBackups, getBackupTargetOptions, getDatabaseBackups, getDatabaseBackupTarget } from "@/lib/backups/get-backups";
+import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -62,6 +65,10 @@ export default async function DatabasePage({ params, searchParams }) {
     dbCounts,
     catalogue,
     engines,
+    backupRead,
+    backupList,
+    { destinations },
+    { options: backupOptions },
   ] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
@@ -81,11 +88,18 @@ export default async function DatabasePage({ params, searchParams }) {
     getSiteTypes().catch(() => ({ siteTypes: [] })),
     // A failure only loses the narrowing. Returns `{ engines, failed }`, NOT an array.
     getEngines().catch(() => ({ engines: [] })),
+    // Its own backup schedule (a database on its own) and the newest five runs.
+    getDatabaseBackupTarget(id),
+    getDatabaseBackups(id, { per_page: 5 }),
+    getStorageDestinations(),
+    getBackupTargetOptions(),
   ]);
   const { data, failed, status, failure, message } = live;
 
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
+  // Downloading and deleting an archive stay under the server's Backups permission.
+  const canHandleArchives = can(permissions, "backup", "manage");
 
   // Deleted elsewhere: show the 404 page, not a load error.
   if (status === 404) notFound();
@@ -103,6 +117,12 @@ export default async function DatabasePage({ params, searchParams }) {
   const engineRow = (engines.engines ?? []).find((row) => row.engine === data.engine);
   const engineDown = Boolean(engineRow?.installed) && !engineRow.running;
   const engineName = t(`engines.${data.engine}`);
+  // Backups of deleted databases of this engine can be restored into this one. The
+  // server-wide list needs `backup` view; without it the section is not offered.
+  const archived =
+    canManage && !backupRead.backedUpWith && !backupRead.failed && can(permissions, "backup", "view")
+      ? (await getArchivedDatabaseBackups(data.engine)).backups
+      : [];
 
   // The newest restorable dump: completed and its file still on disk, as on the list.
   const ownExports = exportList.exports.filter((row) => row.database_id === data.id);
@@ -237,6 +257,18 @@ export default async function DatabasePage({ params, searchParams }) {
                 unavailable={engineDown ? engineName : null}
               />
             </div>
+          }
+          backups={
+            <DatabaseBackups
+              database={data}
+              read={backupRead}
+              backups={backupList}
+              destinations={destinations}
+              backupOptions={backupOptions}
+              archived={archived}
+              canManage={canManage}
+              canHandleArchives={canHandleArchives}
+            />
           }
         />
       </div>

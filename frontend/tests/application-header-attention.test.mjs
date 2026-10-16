@@ -120,7 +120,7 @@ test("Database health: Running queries matches the chart's height and scrolls in
 test("Database page follows Krishna's reference: Overview tab, phpMyAdmin in the header (8 Oct)", () => {
   const page = fs.readFileSync(new URL("../app/(app)/databases/[database]/page.jsx", import.meta.url), "utf8");
   const tabs = fs.readFileSync(new URL("../components/databases/database-tabs.jsx", import.meta.url), "utf8");
-  assert.match(tabs, /const VALUES = \["overview", "users", "tables", "exports"\]/);
+  assert.match(tabs, /const VALUES = \["overview", "users", "tables", "exports", "backups"\]/);
   assert.match(tabs, /VALUES\.includes\(wanted\) \? wanted : "overview"/);
   // The header holds both database clients now (Adminer, 15 Oct); phpMyAdmin stays the filled one.
   assert.match(page, /actions=\{\s*<div className="flex flex-wrap items-center gap-2">\s*<PhpmyadminButton[\s\S]{0,200}variant="default"/);
