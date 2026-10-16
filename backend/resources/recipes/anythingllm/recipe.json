@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "mintplexlabs/anythingllm:1.18.0",
-            "tested": []
+            "tested": [
+                "mintplexlabs/anythingllm:1.18.0"
+            ]
         }
     },
     "services": [

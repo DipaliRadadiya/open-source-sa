@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "agent0ai/agent-zero:v2.14",
-            "tested": []
+            "tested": [
+                "agent0ai/agent-zero:v2.14"
+            ]
         }
     },
     "services": [
