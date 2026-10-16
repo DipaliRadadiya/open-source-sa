@@ -33,6 +33,7 @@
 {{-- A placeholder that gets indexed outranks the real site that replaces it. --}}
 <meta name="robots" content="noindex, nofollow">
 <title>{{ $title }}</title>
+@php($brand = \App\Support\BrandColor::value())
 <style>
   /* System fonts only — see the note above about fetching nothing. */
   :root {
@@ -42,7 +43,8 @@
     --line: #e6e6ec;
     --ink: #16161a;
     --muted: #6b6b76;
-    --accent: #3d5afe;
+    /* The panel's brand colour (branding.primary_color), validated hex. */
+    --accent: {{ $brand }};
     --ok-ink: #0f6d43;
     --ok-bg: #e7f6ee;
     --ok-line: #bfe6d2;
@@ -54,7 +56,8 @@
       --line: #26262f;
       --ink: #f2f2f5;
       --muted: #9a9aa6;
-      --accent: #8c9eff;
+      /* Lifted towards white so it reads on the dark background. */
+      --accent: color-mix(in srgb, {{ $brand }} 70%, white);
       --ok-ink: #7fe0ad;
       --ok-bg: #10281e;
       --ok-line: #1d4634;
