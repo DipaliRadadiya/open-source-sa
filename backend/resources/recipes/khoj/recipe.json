@@ -21,15 +21,21 @@
     "images": {
         "proxy": {
             "ref": "caddy:2.11.7-alpine",
-            "tested": []
+            "tested": [
+                "caddy:2.11.7-alpine"
+            ]
         },
         "khoj": {
             "ref": "ghcr.io/khoj-ai/khoj:2.0.0-beta.28",
-            "tested": []
+            "tested": [
+                "ghcr.io/khoj-ai/khoj:2.0.0-beta.28"
+            ]
         },
         "db": {
             "ref": "pgvector/pgvector:0.8.7-pg16-bookworm",
-            "tested": []
+            "tested": [
+                "pgvector/pgvector:0.8.7-pg16-bookworm"
+            ]
         }
     },
     "services": [
@@ -101,11 +107,13 @@
         "Khoj runs in single-user mode (upstream's --anonymous-mode, as in its official compose file) behind a password gate, the same one as the Vane, SearXNG and Paperless-AI recipes: a Caddy proxy with HTTP basic authentication. Without an email service (Resend) or Google sign-in, Khoj has no way to log a user in to its web app, so the gate is the login: user admin and the password on the first-run card. Everything behind the gate is one Khoj user, so share the password only with people who may read your notes.",
         "The admin panel at /server/admin is Khoj's own Django admin. Sign in there with the email you entered and the same password (the gate password and the admin password are one generated secret). It is created once, at the first start.",
         "Khoj needs a chat model before it can answer: in /server/admin add an AI model API (for example OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint such as Ollama) with your own API key, then a chat model that uses it, and choose it under Server Chat Settings. Searching your own documents works without one.",
-        "Documents uploaded in the web app are indexed with Khoj's local embedding model on the CPU, so no key is needed for that. The models are downloaded on the first start into the models volume (/root/.cache, which holds the torch and Hugging Face caches) and survive re-creates. Khoj's configuration lives in the config volume (/root/.khoj), and documents, their search index and chats in the PostgreSQL database with pgvector.",
+        "Documents uploaded in the web app are indexed with Khoj's local embedding model on the CPU, so no key is needed for that. The embedding and reranking models (thenlper/gte-small and mixedbread-ai/mxbai-rerank-xsmall-v1, about 210 MB) are downloaded on the first start into the models volume (/root/.cache, which holds the torch and Hugging Face caches) and survive re-creates. Khoj's configuration lives in the config volume (/root/.khoj), and documents, their search index and chats in the PostgreSQL database with pgvector.",
         "Code execution is not available: upstream's Terrarium sandbox container is left out. Web search is not set up either, since upstream's bundled SearXNG is left out; to add it, set KHOJ_SEARXNG_URL to a SearXNG server (for example the SearXNG recipe, with its gate password in the URL) or set a SERPER_DEV_API_KEY, FIRECRAWL_API_KEY or EXA_API_KEY in the environment. The computer-use operator, which needs docker.sock, is not available.",
         "Khoj's desktop, Obsidian and Emacs clients send their own Authorization header, which the gate does not accept, so use the web app in a browser.",
         "KHOJ_DOMAIN is set to the site's domain, which Khoj uses for its allowed host, CSRF trusted origins and cookie domain; this is what makes the admin login work behind HTTPS. Telemetry to Khoj's servers is turned off (KHOJ_TELEMETRY_DISABLE).",
-        "Like the other recipes with a proxy in front (Vane, SearXNG, Paperless-AI), the panel's memory and CPU limits apply to the proxy, the app service; the Khoj container has a fixed 2g and PostgreSQL the database limit.",
-        "2.0.0-beta.28 is upstream's latest release (March 2026); every release since July 2025 is a 2.0 beta, and the last 1.x release is from July 2025."
+        "Like the other recipes with a proxy in front (Vane, SearXNG, Paperless-AI), the panel's memory and CPU limits apply to the proxy, the app service; the Khoj container has a fixed 2g and PostgreSQL the database limit. Khoj itself uses about 1 to 1.5 GB of its 2g, PostgreSQL about 100 MB and the proxy about 50 MB, so the whole app needs about 1.7 GB free on the server, more than the proxy's limit shown on the recipe card.",
+        "2.0.0-beta.28 is upstream's latest release (March 2026); every release since July 2025 is a 2.0 beta, and the last 1.x release is from July 2025.",
+        "The first start takes about a minute after the panel shows the app as running (migrations, the admin user, the model download), and the site answers 502 until then. Later starts take about 20 seconds and download nothing.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-48, Medium boxes: 2 vCPU, 4 GB): created from the 1-Click Recipes tab with an admin email, Running in 173 s (24.04) and 188 s (26.04), and Khoj ready 56 to 65 s after its container started. The gate answered 401 without the password and with a wrong one; with it the web app opened with no login prompt. /server/admin signed in with the email and the first-run password, refused a wrong password and showed no CSRF or cookie error. A text file uploaded through the gate (PATCH /api/content) was indexed in under a second and listed, and /api/search and the web app's Search page found it. After a restart and a forced re-create the file was still listed and found, the admin login still worked, and no model was downloaded again (ready in 18 to 19 s). Idle memory: Khoj 1.47 to 1.5 GiB of 2g right after the first start (946 MiB after a re-create), PostgreSQL 82 to 124 MiB, the proxy 54 to 56 MiB; never restarted or OOM-killed. Every image ref above is in its tested list."
     ]
 }
