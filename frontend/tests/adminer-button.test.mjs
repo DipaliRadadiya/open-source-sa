@@ -21,9 +21,9 @@ test("PostgreSQL opens in Adminer, and is offered the install when there is none
   assert.equal(adminerState({ engine: "postgresql", installed: true, users: 1 }), "open");
 });
 
-test("MySQL and MariaDB show Adminer only once one is installed (phpMyAdmin covers the rest)", () => {
+test("MySQL and MariaDB offer Install Adminer too, but not after a failed lookup (Krishna, 16 Oct)", () => {
   assert.equal(adminerState({ driver: "sql", installed: true, users: 1 }), "open");
-  assert.equal(adminerState({ driver: "sql", installed: false, users: 1 }), "hidden");
+  assert.equal(adminerState({ driver: "sql", installed: false, users: 1 }), "install");
   assert.equal(adminerState({ driver: "sql", installed: null, users: 1 }), "hidden");
 });
 
