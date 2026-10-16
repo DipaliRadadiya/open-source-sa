@@ -10,6 +10,7 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -419,7 +420,10 @@ class ProcessSupervisor
      * per-worker count and the daemon has no sub-state or start timestamp, and
      * those are null rather than invented.
      *
-     * @return array{state: string, sub_state: ?string, since: ?string, memory: ?int, restarts: ?int, instances: int, online: ?int, supervisor: string}|null
+     * `pid` and `cpu_percent` are v7's process detail. CPU is percent of one
+     * core, as PM2 and top report it, so a busy cluster can pass 100.
+     *
+     * @return array{state: string, sub_state: ?string, since: ?string, memory: ?int, cpu_percent: ?float, pid: ?int, restarts: ?int, instances: int, online: ?int, supervisor: string}|null
      */
     public function status(Application $application): ?array
     {
@@ -440,6 +444,8 @@ class ProcessSupervisor
                 'sub_state' => null,
                 'since' => null,
                 'memory' => $status['memory'],
+                'cpu_percent' => $status['cpu'],
+                'pid' => $status['pid'],
                 'restarts' => $status['restarts'],
                 'instances' => $status['instances'],
                 'online' => $status['online'],
@@ -450,7 +456,7 @@ class ProcessSupervisor
         $result = $this->serverOps->run(
             [
                 'systemctl', 'show', $this->unit($application),
-                '--property=ActiveState,SubState,ExecMainStartTimestamp,MemoryCurrent,NRestarts',
+                '--property=ActiveState,SubState,ExecMainStartTimestamp,MemoryCurrent,NRestarts,MainPID,CPUUsageNSec',
             ],
             ['feature' => 'application', 'op' => 'unit_status', 'application' => $application->id],
         );
@@ -462,6 +468,7 @@ class ProcessSupervisor
         $output = $result->output();
         $memory = $this->property($output, 'MemoryCurrent');
         $restarts = $this->property($output, 'NRestarts');
+        $pid = $this->property($output, 'MainPID');
 
         return [
             'state' => $this->property($output, 'ActiveState') ?? 'unknown',
@@ -470,6 +477,9 @@ class ProcessSupervisor
             // systemd reports [not set] as a very large number when there is
             // no cgroup yet; anything non-numeric is simply unknown.
             'memory' => is_numeric($memory) ? (int) $memory : null,
+            'cpu_percent' => $this->cpuPercent($application, $this->property($output, 'CPUUsageNSec')),
+            // 0 is systemd's "no main process" (stopped), not a process.
+            'pid' => ctype_digit((string) $pid) && (int) $pid > 0 ? (int) $pid : null,
             'restarts' => is_numeric($restarts) ? (int) $restarts : null,
             'instances' => $this->instances($application),
             // The unit is one cgroup; how many workers are alive inside it is
@@ -831,6 +841,46 @@ class ProcessSupervisor
             'feature' => 'application', 'op' => 'unit_rollback', 'application' => $application->id,
         ]);
         $this->daemonReload();
+    }
+
+    /**
+     * CPU use since the last time anyone asked.
+     *
+     * systemd only gives the CPU time the unit has used in total, and a rate
+     * needs two readings. Sleeping between two of them would hold up every
+     * request that shows an application, so each reading is kept and the next
+     * request — the screen polls — works out the rate from the difference.
+     * The first reading has nothing to compare with and says null.
+     *
+     * A total that went down means the process was restarted in between, and
+     * a gap of more than five minutes says little about now: both null, and
+     * the reading starts over.
+     */
+    private function cpuPercent(Application $application, ?string $usage): ?float
+    {
+        if (! ctype_digit((string) $usage)) {
+            return null;
+        }
+
+        $key = "process-cpu:{$application->id}";
+        $now = (int) (microtime(true) * 1e9);
+        $previous = Cache::get($key);
+
+        // Two requests a moment apart (two widgets on one screen) would divide
+        // by almost nothing: the second gets the first's answer instead.
+        if (is_array($previous) && $now - $previous['at'] < 1_000_000_000) {
+            return $previous['percent'];
+        }
+
+        $percent = null;
+
+        if (is_array($previous) && (int) $usage >= $previous['usage'] && $now - $previous['at'] <= 300_000_000_000) {
+            $percent = round(((int) $usage - $previous['usage']) / ($now - $previous['at']) * 100, 1);
+        }
+
+        Cache::put($key, ['usage' => (int) $usage, 'at' => $now, 'percent' => $percent], now()->addMinutes(10));
+
+        return $percent;
     }
 
     private function property(string $output, string $key): ?string

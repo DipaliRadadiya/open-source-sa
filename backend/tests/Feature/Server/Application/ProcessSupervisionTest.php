@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -855,6 +856,57 @@ it('labels a systemd application as one, and admits what it cannot count', funct
         'online' => null,
         'supervisor' => 'systemd',
     ]);
+});
+
+describe('process detail (v7 pm2-detail)', function () {
+    function unitStatus(Application $app, string $usage, string $pid = '4242'): ?array
+    {
+        Process::fake(fn () => Process::result(output: "ActiveState=active\nSubState=running\nMemoryCurrent=1024\nNRestarts=0\nMainPID={$pid}\nCPUUsageNSec={$usage}\n"));
+
+        return app(ProcessSupervisor::class)->status($app);
+    }
+
+    it('reports the main process id, and none for a stopped unit', function () {
+        $app = nodeApp();
+
+        expect(unitStatus($app, '5000')['pid'])->toBe(4242)
+            // systemd says MainPID=0 when nothing runs; 0 is not a process.
+            ->and(unitStatus($app, '5000', '0')['pid'])->toBeNull();
+    });
+
+    it('works out CPU from the previous reading, with nothing to compare against the first time', function () {
+        $app = nodeApp();
+
+        expect(unitStatus($app, '7000000000')['cpu_percent'])->toBeNull();
+
+        // As if that reading had been taken two seconds ago: one CPU-second
+        // in two seconds is half of one core.
+        Cache::put("process-cpu:{$app->id}", ['usage' => 7_000_000_000, 'at' => (int) (microtime(true) * 1e9) - 2_000_000_000, 'percent' => null]);
+
+        expect(unitStatus($app, '8000000000')['cpu_percent'])->toEqualWithDelta(50.0, 0.5);
+    });
+
+    it('says unknown after a restart, not a negative rate', function () {
+        $app = nodeApp();
+        Cache::put("process-cpu:{$app->id}", ['usage' => 9_000_000_000, 'at' => (int) (microtime(true) * 1e9) - 2_000_000_000, 'percent' => 12.0]);
+
+        // The new process started counting from zero.
+        expect(unitStatus($app, '1000')['cpu_percent'])->toBeNull();
+    });
+
+    it('says unknown when systemd has no CPU figure', function () {
+        expect(unitStatus(nodeApp(), '[not set]')['cpu_percent'])->toBeNull();
+    });
+
+    it('shows pid and cpu on the application itself', function () {
+        $app = nodeApp();
+        Process::fake(fn () => Process::result(output: "ActiveState=active\nMainPID=4242\nCPUUsageNSec=1\n"));
+
+        $this->withHeaders(supervisorHeaders())->getJson("/api/applications/{$app->id}")
+            ->assertOk()
+            ->assertJsonPath('application.process.pid', 4242)
+            ->assertJsonPath('application.process.cpu_percent', null);
+    });
 });
 
 it('lets an application go back to the port its unit is still running on (FS-C41)', function () {

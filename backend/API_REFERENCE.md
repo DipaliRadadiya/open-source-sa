@@ -1068,6 +1068,10 @@ It is set by a deploy, by a file change (about a minute later — see
 
 `has_process` is null-safe to read everywhere and tells you whether to render process controls at all: PHP and static sites have nothing to run, so the answer is "render nothing", not "render a disabled button".
 
+**`process`** (when present): `{state, sub_state, since, memory, cpu_percent, pid, restarts, instances, online, supervisor}`. `cpu_percent` and `pid` were added 2026-10-16 (v7's process detail):
+- `pid`: the main process ID (systemd) or the first running worker's (PM2). Null when stopped.
+- `cpu_percent`: percent of **one core**, like PM2 and `top`, so a busy cluster can pass 100. On systemd it is measured between two reads of the application, so the **first read after a while is null** and the next poll fills it in; show `—` for null. Null again after a restart.
+
 **`webhook.secret` is returned in full, deliberately** — the user has to paste it into their repository settings and will come back for it. **It is `null` unless the caller has `app_deployment` (manage)** (2026-09-29): with the URL and the secret anyone can sign a push and start a deploy, so it follows `POST /deploy`, not the right to view the application. Hide the secret field (not the webhook card) when it is `null` and `webhook.enabled` is true. Same for `target_webhook.secret` on `GET /clones/{clone}`. `webhook.url` is assembled server-side so the frontend never builds the path or gets the host wrong. `webhook.verification` is `signature` or `token`; `token` means a plaintext shared value, which only GitLab has — offer the user the stronger signing token when you see it.
 
 `settings` is always an object (`{}` when empty), never `[]`. `steps` is a genuine list and stays `[]`.

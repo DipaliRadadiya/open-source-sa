@@ -229,6 +229,8 @@ class LegacyPm2Driver
             'online' => count($online),
             'memory' => (int) array_sum(array_map(fn (array $p) => (int) ($p['monit']['memory'] ?? 0), $instances)),
             'cpu' => (float) array_sum(array_map(fn (array $p) => (float) ($p['monit']['cpu'] ?? 0), $instances)),
+            // The first worker that is up; a stopped one has no process.
+            'pid' => ($pid = (int) (array_values($online)[0]['pid'] ?? 0)) > 0 ? $pid : null,
             'restarts' => (int) array_sum(array_map(fn (array $p) => (int) ($p['pm2_env']['restart_time'] ?? 0), $instances)),
         ];
     }

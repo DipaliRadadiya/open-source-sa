@@ -138,6 +138,19 @@ it('aggregates every instance rather than stopping at the first', function () {
     expect($status['memory'])->not->toBe(1249);
 });
 
+it('reports CPU and the pid of a running worker, as v7 did', function () {
+    Process::fake(fn () => Process::result(output: json_encode([
+        ['name' => 'legacy-api', 'pid' => 0, 'pm2_env' => ['status' => 'stopped'], 'monit' => ['memory' => 0, 'cpu' => 0]],
+        ['name' => 'legacy-api', 'pid' => 3131, 'pm2_env' => ['status' => 'online'], 'monit' => ['memory' => 10, 'cpu' => 7.5]],
+    ])));
+
+    $status = app(LegacyPm2Driver::class)->status(adoptedApp());
+
+    // The stopped worker's 0 is not a process.
+    expect($status['pid'])->toBe(3131)
+        ->and($status['cpu'])->toBe(7.5);
+});
+
 it('tells "not in the daemon" apart from "stopped"', function () {
     Process::fake(fn () => Process::result(output: '[]'));
 
