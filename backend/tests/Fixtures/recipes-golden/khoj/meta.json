@@ -1,0 +1,138 @@
+{
+    "slug": "khoj",
+    "container_port": 80,
+    "volume_roles": {
+        "config": "/root/.khoj",
+        "models": "/root/.cache",
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "ADMIN_PASSWORD",
+        "KHOJ_DJANGO_SECRET_KEY",
+        "DB_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "256m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "khoj",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "256m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_config",
+            "path": "/root/.khoj"
+        },
+        {
+            "volume": "sv-app-4242_models",
+            "path": "/root/.cache"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "ADMIN_PASSWORD",
+        "KHOJ_DJANGO_SECRET_KEY",
+        "DB_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Khoj",
+            "tagline": "Your personal AI second brain: chat with and search your notes and documents"
+        },
+        "es": {
+            "title": "Khoj",
+            "tagline": "Tu segundo cerebro con IA: conversa con tus notas y documentos y búscalos"
+        },
+        "de": {
+            "title": "Khoj",
+            "tagline": "Dein persönliches KI-Zweitgehirn: chatte mit deinen Notizen und Dokumenten und durchsuche sie"
+        },
+        "fr": {
+            "title": "Khoj",
+            "tagline": "Votre second cerveau IA personnel : discutez avec vos notes et documents et cherchez-y"
+        },
+        "pt": {
+            "title": "Khoj",
+            "tagline": "Seu segundo cérebro pessoal com IA: converse com suas notas e documentos e pesquise neles"
+        },
+        "ja": {
+            "title": "Khoj",
+            "tagline": "あなた専用の AI セカンドブレイン。メモや文書と会話し、検索できます"
+        },
+        "ru": {
+            "title": "Khoj",
+            "tagline": "Ваш личный ИИ-«второй мозг»: общайтесь со своими заметками и документами и ищите по ним"
+        },
+        "hi": {
+            "title": "Khoj",
+            "tagline": "आपका निजी AI सेकंड ब्रेन: अपने नोट्स और दस्तावेज़ों से चैट करें और उनमें खोजें"
+        }
+    },
+    "catalog_en": {
+        "name": "khoj",
+        "icon": "khoj",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

@@ -1,0 +1,111 @@
+{
+    "schema": 1,
+    "slug": "khoj",
+    "version": 1,
+    "title": "Khoj",
+    "tagline": {
+        "en": "Your personal AI second brain: chat with and search your notes and documents",
+        "es": "Tu segundo cerebro con IA: conversa con tus notas y documentos y búscalos",
+        "de": "Dein persönliches KI-Zweitgehirn: chatte mit deinen Notizen und Dokumenten und durchsuche sie",
+        "fr": "Votre second cerveau IA personnel : discutez avec vos notes et documents et cherchez-y",
+        "pt": "Seu segundo cérebro pessoal com IA: converse com suas notas e documentos e pesquise neles",
+        "ja": "あなた専用の AI セカンドブレイン。メモや文書と会話し、検索できます",
+        "ru": "Ваш личный ИИ-«второй мозг»: общайтесь со своими заметками и документами и ищите по ним",
+        "hi": "आपका निजी AI सेकंड ब्रेन: अपने नोट्स और दस्तावेज़ों से चैट करें और उनमें खोजें"
+    },
+    "category": "ai",
+    "icon": "khoj",
+    "popular": false,
+    "catalog_order": 860,
+    "docs_url": "https://docs.khoj.dev/get-started/setup",
+    "images": {
+        "proxy": {
+            "ref": "caddy:2.11.7-alpine",
+            "tested": []
+        },
+        "khoj": {
+            "ref": "ghcr.io/khoj-ai/khoj:2.0.0-beta.28",
+            "tested": []
+        },
+        "db": {
+            "ref": "pgvector/pgvector:0.8.7-pg16-bookworm",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "proxy",
+            "role": "app"
+        },
+        {
+            "name": "khoj",
+            "role": "worker"
+        },
+        {
+            "name": "database",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "256m",
+    "volumes": {
+        "config": "/root/.khoj",
+        "models": "/root/.cache",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "KHOJ_DJANGO_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Khoj runs in single-user mode (upstream's --anonymous-mode, as in its official compose file) behind a password gate, the same one as the Vane, SearXNG and Paperless-AI recipes: a Caddy proxy with HTTP basic authentication. Without an email service (Resend) or Google sign-in, Khoj has no way to log a user in to its web app, so the gate is the login: user admin and the password on the first-run card. Everything behind the gate is one Khoj user, so share the password only with people who may read your notes.",
+        "The admin panel at /server/admin is Khoj's own Django admin. Sign in there with the email you entered and the same password (the gate password and the admin password are one generated secret). It is created once, at the first start.",
+        "Khoj needs a chat model before it can answer: in /server/admin add an AI model API (for example OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint such as Ollama) with your own API key, then a chat model that uses it, and choose it under Server Chat Settings. Searching your own documents works without one.",
+        "Documents uploaded in the web app are indexed with Khoj's local embedding model on the CPU, so no key is needed for that. The models are downloaded on the first start into the models volume (/root/.cache, which holds the torch and Hugging Face caches) and survive re-creates. Khoj's configuration lives in the config volume (/root/.khoj), and documents, their search index and chats in the PostgreSQL database with pgvector.",
+        "Code execution is not available: upstream's Terrarium sandbox container is left out. Web search is not set up either, since upstream's bundled SearXNG is left out; to add it, set KHOJ_SEARXNG_URL to a SearXNG server (for example the SearXNG recipe, with its gate password in the URL) or set a SERPER_DEV_API_KEY, FIRECRAWL_API_KEY or EXA_API_KEY in the environment. The computer-use operator, which needs docker.sock, is not available.",
+        "Khoj's desktop, Obsidian and Emacs clients send their own Authorization header, which the gate does not accept, so use the web app in a browser.",
+        "KHOJ_DOMAIN is set to the site's domain, which Khoj uses for its allowed host, CSRF trusted origins and cookie domain; this is what makes the admin login work behind HTTPS. Telemetry to Khoj's servers is turned off (KHOJ_TELEMETRY_DISABLE).",
+        "Like the other recipes with a proxy in front (Vane, SearXNG, Paperless-AI), the panel's memory and CPU limits apply to the proxy, the app service; the Khoj container has a fixed 2g and PostgreSQL the database limit.",
+        "2.0.0-beta.28 is upstream's latest release (March 2026); every release since July 2025 is a 2.0 beta, and the last 1.x release is from July 2025."
+    ]
+}

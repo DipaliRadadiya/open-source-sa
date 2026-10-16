@@ -1,0 +1,28 @@
+name: sv-app-4242
+
+services:
+  crawl4ai:
+    image: unclecode/crawl4ai:0.9.5
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:11235"
+
+    shm_size: "1gb"
+    cap_drop:
+      - ALL
+
+    environment:
+      CRAWL4AI_API_TOKEN: "bca42d62383b205d126a13bb8638cd3a"
+      SECRET_KEY: "18b1ed5879fe2143847a15f04fc51225"
+      CRAWL4AI_ALLOW_DEEP_CRAWL: "false"
+
+    volumes:
+      - /home/owner/site/public_html/app/config.yml:/app/config.yml:ro
