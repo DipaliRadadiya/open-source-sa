@@ -61,20 +61,10 @@
         "LibreTranslate has no user accounts, so a public instance is protected with its own API keys: key support is on (LT_API_KEYS) and every translation, detection and file request needs a valid key (LT_UNDER_ATTACK, the upstream switch that turns keyless use off completely). A request without a key gets 400 \"Please contact the server operator to get an API key\"; a wrong key gets 403. The language list and the web page itself open without a key.",
         "The token on the first-run card is your API key (32 characters, 600 requests a minute). Send it as api_key in the JSON body or form of /translate, /detect and /translate_file. On every start the container writes it into the key database again, so it always works, even after a re-create.",
         "Using the web page: open https://<domain>/, click the key icon at the top right and paste the token; the browser keeps it, and the page translates as you type. Until a key is set, the page shows upstream's notice that translation is limited to users with a valid API key.",
-        "More keys, for other people or apps: run ltmanage keys --api-keys-db-path /app/db/api_keys.db add 120 in the container (the Command-line access card has it); it prints a new key allowed 120 requests a minute. ltmanage keys --api-keys-db-path /app/db/api_keys.db lists them, and the same command with remove <key> deletes one. Keys live in the keys volume on /app/db.",
+        "More keys, for other people or apps: run ltmanage keys --api-keys-db-path /app/db/api_keys.db add 120 in a shell inside the container (the app page's Command-line access card shows how to open one); it prints a new key allowed 120 requests a minute. ltmanage keys --api-keys-db-path /app/db/api_keys.db lists them, and the same command with remove <key> deletes one. Keys live in the keys volume on /app/db.",
         "Languages: only the panel's 8 languages are loaded (LT_LOAD_ONLY=en,es,de,fr,pt,ja,ru,hi), which keeps the first download and the memory use small. To add one, append its code (for example it, nl, zh, ko) to LT_LOAD_ONLY in the panel's environment editor and restart: LT_UPDATE_MODELS is on, so each start fetches upstream's model index, downloads models for new languages and updates changed ones. Models already on the volume are not downloaded again. Every language adds roughly 100 to 200 MB of models on disk and more memory once it is used; raise the memory limit if you add several.",
         "The models download from the Argos Translate index on the first start, so the server needs outbound internet access, and the first start takes a few minutes before the page answers. They live in the models volume on /home/libretranslate/.local and survive restarts and re-creates.",
         "It runs on the CPU (the -cuda image is not used). LT_THREADS=2 runs two worker processes; each one loads the models it uses, so more workers answer more requests at once but need more memory. The 2g floor fits two workers using a few language pairs.",
         "The image runs as its own unprivileged user (uid 1032)."
-    ],
-    "cli_examples": [
-        {
-            "label": "Create an API key (120 requests a minute)",
-            "command": "ltmanage keys --api-keys-db-path /app/db/api_keys.db add 120"
-        },
-        {
-            "label": "List API keys",
-            "command": "ltmanage keys --api-keys-db-path /app/db/api_keys.db"
-        }
     ]
 }
