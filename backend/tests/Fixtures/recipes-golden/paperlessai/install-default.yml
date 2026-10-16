@@ -1,0 +1,50 @@
+name: sv-app-4242
+
+services:
+  proxy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'HASH=$$(caddy hash-password --plaintext "$$GATE_PASSWORD") && printf "{\n\tadmin off\n}\n:80 {\n\tbasic_auth {\n\t\tadmin %s\n\t}\n\treverse_proxy paperlessai:3000 {\n\t\theader_up -Authorization\n\t}\n}\n" "$$HASH" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      GATE_PASSWORD: "b946df86d90eb4699bae0a1f9d36c6c4"
+
+    depends_on:
+      - paperlessai
+
+  paperlessai:
+    image: clusterzx/paperless-ai:3.0.9
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      PAPERLESS_AI_PORT: "3000"
+      JWT_SECRET: "e71e084c03031550cf2d7eb29c300832"
+      RAG_SERVICE_URL: http://localhost:8000
+      RAG_SERVICE_ENABLED: "true"
+      HF_HOME: /app/data/huggingface
+
+    volumes:
+      - sv-app-4242_data:/app/data
+
+volumes:
+  sv-app-4242_data:
+    external: true

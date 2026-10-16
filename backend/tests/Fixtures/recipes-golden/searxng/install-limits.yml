@@ -1,0 +1,50 @@
+name: sv-app-4242
+
+services:
+  proxy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'HASH=$$(caddy hash-password --plaintext "$$GATE_PASSWORD") && printf "{\n\tadmin off\n}\n:80 {\n\tbasic_auth {\n\t\tadmin %s\n\t}\n\treverse_proxy searxng:8080\n}\n" "$$HASH" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      GATE_PASSWORD: "86bf55eb7b8c500f11a45efea0dc283f"
+
+    depends_on:
+      - searxng
+
+  searxng:
+    image: searxng/searxng:2026.10.15-b00212a83
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      SEARXNG_SECRET: "0f7a0f3aa298555245a9db6177d9fe0f"
+      SEARXNG_BASE_URL: https://searxng.golden.test/
+      FORCE_OWNERSHIP: "false"
+
+    volumes:
+      - /home/owner/site/public_html/etc/searxng:/etc/searxng:ro
+      - sv-app-4242_data:/var/cache/searxng
+
+volumes:
+  sv-app-4242_data:
+    external: true

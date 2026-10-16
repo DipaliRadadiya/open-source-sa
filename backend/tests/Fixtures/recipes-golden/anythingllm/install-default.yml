@@ -1,0 +1,46 @@
+name: sv-app-4242
+
+services:
+  anythingllm:
+    image: mintplexlabs/anythingllm:1.18.0
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3001"
+
+    user: "0:0"
+    environment:
+      HOME: /app
+      STORAGE_DIR: /app/server/storage
+      SERVER_PORT: "3001"
+      AUTH_TOKEN: "10fe25ec72a67e2fbe1f7b0fafc71b27"
+      JWT_SECRET: "31735cbb818dd03a0289b8abbc3aa018"
+      ANYTHINGLLM_CHROMIUM_ARGS: "--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage"
+      DISABLE_TELEMETRY: "true"
+
+    entrypoint:
+      - /bin/bash
+      - -ec
+      - |
+        S=/app/server/storage
+        find "$$S" ! -user anythingllm -exec chown anythingllm:anythingllm {} +
+        if [ ! -f "$$S/.env" ]; then
+          ( umask 077; printf "AUTH_TOKEN='%s'\nJWT_SECRET='%s'\n" "$$AUTH_TOKEN" "$$JWT_SECRET" > "$$S/.env" )
+          chown anythingllm:anythingllm "$$S/.env"
+        fi
+        ln -sfn "$$S/.env" /app/server/.env
+        unset AUTH_TOKEN JWT_SECRET
+        exec setpriv --reuid=anythingllm --regid=anythingllm --init-groups /bin/bash /usr/local/bin/docker-entrypoint.sh
+
+    volumes:
+      - sv-app-4242_data:/app/server/storage
+
+volumes:
+  sv-app-4242_data:
+    external: true

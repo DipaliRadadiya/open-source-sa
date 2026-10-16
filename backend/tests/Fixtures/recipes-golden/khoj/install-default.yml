@@ -1,0 +1,91 @@
+name: sv-app-4242
+
+services:
+  proxy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'HASH=$$(caddy hash-password --plaintext "$$GATE_PASSWORD") && printf "{\n\tadmin off\n\tservers {\n\t\ttrusted_proxies static private_ranges\n\t}\n}\n:80 {\n\tbasic_auth {\n\t\tadmin %s\n\t}\n\treverse_proxy khoj:42110 {\n\t\theader_up -Authorization\n\t}\n}\n" "$$HASH" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      GATE_PASSWORD: "df0de5847b26c9d9cddb5dcdb0d44776"
+
+    depends_on:
+      - khoj
+
+  khoj:
+    image: ghcr.io/khoj-ai/khoj:2.0.0-beta.28
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    working_dir: /app
+    command: ["--host=0.0.0.0", "--port=42110", "--anonymous-mode", "--non-interactive"]
+    environment:
+      POSTGRES_DB: khoj
+      POSTGRES_USER: khoj
+      POSTGRES_PASSWORD: "907065136b1806d32e94f4838f3e263f"
+      POSTGRES_HOST: database
+      POSTGRES_PORT: "5432"
+      KHOJ_DJANGO_SECRET_KEY: "e442144a36d2ccca2562a58600521feb"
+      KHOJ_DEBUG: "False"
+      KHOJ_ADMIN_EMAIL: "owner@golden.test"
+      KHOJ_ADMIN_PASSWORD: "df0de5847b26c9d9cddb5dcdb0d44776"
+      KHOJ_DOMAIN: "khoj.golden.test"
+      KHOJ_TELEMETRY_DISABLE: "True"
+
+    volumes:
+      - sv-app-4242_config:/root/.khoj
+      - sv-app-4242_models:/root/.cache
+
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: pgvector/pgvector:0.8.7-pg16-bookworm
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: khoj
+      POSTGRES_USER: khoj
+      POSTGRES_PASSWORD: "907065136b1806d32e94f4838f3e263f"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khoj -d khoj"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  sv-app-4242_config:
+    external: true
+  sv-app-4242_models:
+    external: true
+  sv-app-4242_db:
+    external: true

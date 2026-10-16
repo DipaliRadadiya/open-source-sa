@@ -1,0 +1,112 @@
+{
+    "slug": "crawl4ai",
+    "container_port": 11235,
+    "volume_roles": [],
+    "generated_secrets": [
+        "CRAWL4AI_API_TOKEN",
+        "SECRET_KEY"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "crawl4ai",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": {
+        "/app/config.yml": "# Crawl4AI 0.9.5 server configuration, written once by the panel (RC-48).\n# This is upstream's deploy/docker/config.yml for v0.9.5 with three values\n# changed so the browser pool fits the app's memory limit:\n#   crawler.pool.max_pages 40 -> 10 (pages open at the same time),\n#   crawler.memory_threshold_percent 95 -> 85 (measured against the\n#   container's own memory limit; above it no new browser is started and the\n#   request fails instead of the container running out of memory),\n#   limits.queue.workers 4 -> 2 (background jobs at the same time).\n# Edit it in the File Manager and restart the app; the panel never overwrites\n# it. The API token is not in this file: it comes from CRAWL4AI_API_TOKEN.\n\n# Application Configuration\napp:\n  title: \"Crawl4AI API\"\n  version: \"1.0.0\"\n  # Loopback by default. Exposing on 0.0.0.0 requires a credential\n  # (CRAWL4AI_API_TOKEN); the startup auth guard refuses an open non-loopback\n  # bind without one. Put a TLS-terminating reverse proxy in front for exposure.\n  host: \"127.0.0.1\"\n  port: 11235\n  reload: False\n  workers: 1\n  timeout_keep_alive: 300\n\n# Default LLM Configuration\nllm:\n  provider: \"openai/gpt-4o-mini\"\n  # api_key: sk-...  # If you pass the API key directly (not recommended)\n\n# Redis Configuration\n# Set task_ttl_seconds to automatically expire task data in Redis.\n# This prevents unbounded memory growth from accumulated task results.\n# Default: 3600 (1 hour). Set to 0 to disable TTL (not recommended).\n# Can be overridden with REDIS_TASK_TTL environment variable.\nredis:\n  host: \"localhost\"\n  port: 6379\n  db: 0\n  password: \"\"\n  task_ttl_seconds: 3600  # TTL for task data (1 hour default)\n  ssl: False\n  ssl_cert_reqs: None\n  ssl_ca_certs: None\n  ssl_certfile: None\n  ssl_keyfile: None\n\n# Resource governance (DoS protection). Any limit set to 0 means \"unbounded\"\n# (the pre-hardening behavior), so you can relax or disable each one.\nlimits:\n  max_body_bytes: 10485760  # 10 MiB request body cap (413 if exceeded); 0 = unbounded\n  max_pages: 100            # deep-crawl page budget clamp (deep crawl needs CRAWL4AI_ALLOW_DEEP_CRAWL=true); 0 = no limit\n  max_depth: 5              # deep-crawl depth clamp\n  wall_clock_s: 300         # per-crawl deadline in seconds (504 on timeout); 0 = no deadline\n  queue:                    # background job queue for /crawl/job and /llm/job\n    maxsize: 1000           # max queued jobs (503 when full); 0 = unbounded\n    workers: 2              # concurrent background workers (upstream 4)\n    per_principal: 0        # max concurrent jobs per caller (429 over cap); 0 = unlimited\n\n# Rate Limiting Configuration\nrate_limiting:\n  enabled: True\n  default_limit: \"1000/minute\"\n  trusted_proxies: []\n  storage_uri: \"memory://\"  # Use \"redis://localhost:6379\" for production\n\n# Security Configuration\n# WARNING: For production deployments, enable security and use proper SECRET_KEY:\n#   - Set jwt_enabled: true for authentication\n#   - Set SECRET_KEY environment variable to a secure random value\n#   - Set CRAWL4AI_HOOKS_ENABLED=true only if you need hooks (RCE risk)\nsecurity:\n  enabled: true\n  jwt_enabled: false\n  api_token: \"\"  # When set, /token endpoint requires this secret to issue JWTs\n  https_redirect: false\n  trusted_hosts: [\"*\"]\n  cors_allow_origins: []  # deny-by-default; list explicit origins to allow CORS\n  headers:\n    x_content_type_options: \"nosniff\"\n    x_frame_options: \"DENY\"\n    content_security_policy: \"default-src 'self'\"\n    strict_transport_security: \"max-age=63072000; includeSubDomains\"\n\n# Crawler Configuration\ncrawler:\n  base_config:\n    simulate_user: true\n  memory_threshold_percent: 85.0  # upstream 95.0\n  rate_limiter:\n    enabled: true\n    base_delay: [1.0, 2.0]\n  timeouts:\n    stream_init: 30.0  # Timeout for stream initialization\n    batch_process: 300.0  # Timeout for batch processing\n  pool:\n    max_pages: 10                          # ← GLOBAL_SEM permits (upstream 40)\n    idle_ttl_sec: 300                     # ← 30 min janitor cutoff\n    # Pooled browsers are long-lived and reuse one browser context per config.\n    # Real sites leave state in that context (cookies, localStorage, service\n    # workers) which is never cleared, and navigation gets measurably slower as\n    # it builds up. Recycling by pages served bounds it: the context is replaced\n    # inside the same Chromium process, old contexts drain on their own, and it\n    # works under sustained load — unlike the janitor, which only closes *idle*\n    # browsers and so never fires on a busy server. 0 disables. See #2231.\n    max_pages_before_recycle: 200\n  browser:\n    kwargs:\n      headless: true\n      text_mode: true\n    extra_args:\n      # - \"--single-process\"\n      # SECURITY: --no-sandbox disables the Chromium renderer sandbox (a renderer\n      # exploit can then reach the container). It is required only because the\n      # container runs as non-root without a usable sandbox. To remove it, run\n      # the container with an unprivileged user namespace\n      # (host: unprivileged_userns_clone=1) OR a verified seccomp profile\n      # (compose: security_opt: seccomp=...), then delete this flag and confirm\n      # Chromium still starts. Tracked as a build-gated hardening item.\n      - \"--no-sandbox\"\n      - \"--disable-dev-shm-usage\"\n      - \"--disable-gpu\"\n      - \"--disable-software-rasterizer\"\n      # --disable-web-security removed for security (enables cross-origin access)\n      # --allow-insecure-localhost / --ignore-certificate-errors removed: they\n      # disabled TLS verification for every crawl (MITM / SSRF-to-internal-TLS).\n      # Set CRAWL4AI_ALLOW_INSECURE_TLS=true only for trusted internal testing.\n\n# Logging Configuration\nlogging:\n  level: \"INFO\"\n  format: \"%(asctime)s - %(name)s - %(levelname)s - %(message)s\"\n\n# Observability Configuration\nobservability:\n  prometheus:\n    enabled: True\n    endpoint: \"/metrics\"\n  health_check:\n    endpoint: \"/health\"\n\n# Webhook Configuration\nwebhooks:\n  enabled: true\n  default_url: null  # Optional: default webhook URL for all jobs\n  data_in_payload: false  # Optional: default behavior for including data\n  retry:\n    max_attempts: 5\n    initial_delay_ms: 1000  # 1s, 2s, 4s, 8s, 16s exponential backoff\n    max_delay_ms: 32000\n    timeout_ms: 30000  # 30s timeout per webhook call\n  headers:  # Optional: default headers to include\n    User-Agent: \"Crawl4AI-Webhook/1.0\""
+    },
+    "first_run_claim": null,
+    "volume_mounts": [],
+    "docker_secret_keys": [
+        "CRAWL4AI_API_TOKEN",
+        "SECRET_KEY"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Crawl4AI",
+            "tagline": "Turns websites into clean, LLM-ready Markdown, with an API and a playground"
+        },
+        "es": {
+            "title": "Crawl4AI",
+            "tagline": "Convierte sitios web en Markdown limpio y listo para LLM, con API y playground"
+        },
+        "de": {
+            "title": "Crawl4AI",
+            "tagline": "Macht aus Websites sauberes, LLM-fertiges Markdown, mit API und Playground"
+        },
+        "fr": {
+            "title": "Crawl4AI",
+            "tagline": "Transforme les sites web en Markdown propre et prêt pour les LLM, avec API et playground"
+        },
+        "pt": {
+            "title": "Crawl4AI",
+            "tagline": "Transforma sites em Markdown limpo e pronto para LLMs, com API e playground"
+        },
+        "ja": {
+            "title": "Crawl4AI",
+            "tagline": "Web サイトを LLM 向けのきれいな Markdown に変換。API とプレイグラウンド付き"
+        },
+        "ru": {
+            "title": "Crawl4AI",
+            "tagline": "Превращает сайты в чистый Markdown, готовый для LLM, с API и песочницей"
+        },
+        "hi": {
+            "title": "Crawl4AI",
+            "tagline": "वेबसाइटों को साफ़, LLM-तैयार Markdown में बदलता है, API और प्लेग्राउंड के साथ"
+        }
+    },
+    "catalog_en": {
+        "name": "crawl4ai",
+        "icon": "crawl4ai",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

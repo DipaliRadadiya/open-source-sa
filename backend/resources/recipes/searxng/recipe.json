@@ -1,0 +1,94 @@
+{
+    "schema": 1,
+    "slug": "searxng",
+    "version": 1,
+    "title": "SearXNG",
+    "tagline": {
+        "en": "Private metasearch engine, and a web-search backend for your AI apps",
+        "es": "Metabuscador privado y motor de búsqueda web para tus apps de IA",
+        "de": "Private Metasuchmaschine und Websuche für deine KI-Apps",
+        "fr": "Métamoteur de recherche privé, et recherche web pour vos applis d'IA",
+        "pt": "Metabuscador privado e backend de busca na web para seus apps de IA",
+        "ja": "プライベートなメタ検索エンジン。AI アプリの Web 検索バックエンドにも",
+        "ru": "Приватный метапоисковик и веб-поиск для ваших ИИ-приложений",
+        "hi": "निजी मेटासर्च इंजन, और आपके AI ऐप्स के लिए वेब-सर्च बैकएंड"
+    },
+    "category": "utility",
+    "icon": "searxng",
+    "popular": false,
+    "catalog_order": 820,
+    "docs_url": "https://docs.searxng.org/admin/installation-docker.html",
+    "images": {
+        "proxy": {
+            "ref": "caddy:2.11.7-alpine",
+            "tested": [
+                "caddy:2.11.7-alpine"
+            ]
+        },
+        "searxng": {
+            "ref": "searxng/searxng:2026.10.15-b00212a83",
+            "tested": [
+                "searxng/searxng:2026.10.15-b00212a83"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "proxy",
+            "role": "app"
+        },
+        {
+            "name": "searxng",
+            "role": "worker"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "256m",
+    "volumes": {
+        "data": "/var/cache/searxng"
+    },
+    "secrets": [
+        {
+            "key": "GATE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SEARXNG_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [
+        {
+            "path": "/etc/searxng/settings.yml",
+            "source": "starter/settings.yml"
+        }
+    ],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "GATE_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "SearXNG has no login of its own, so the whole site sits behind a password gate, the same one as the Vane recipe: a Caddy proxy with HTTP basic authentication, user admin and the generated password shown on the first-run card. The proxy is the only published port; its start command hashes the password with bcrypt (caddy hash-password) and writes its own Caddyfile. SearXNG itself publishes nothing.",
+        "Using it from AI apps: the JSON API is on. Open WebUI (Web Search, engine searxng), LibreChat, Agent Zero and other apps that take a SearXNG query URL can use https://admin:<password>@<domain>/search?q=<query>&format=json. Apps with their own basic-auth fields take the URL https://<domain>/search?q=<query>&format=json plus user admin and the password. Without the password every request gets 401.",
+        "The configuration is the starter file etc/searxng/settings.yml in the app's folder (File Manager), mounted read-only on /etc/searxng. It starts from the image's own template (use_default_settings: true) and changes three things: the JSON output format is on, the rate limiter is off (the instance is private behind the gate, so there is no Valkey service), and images are proxied through SearXNG. Edit it to choose engines, then restart the app. The panel never overwrites it.",
+        "server.secret_key is not in the file: the container gets a generated 32-character key in SEARXNG_SECRET, which SearXNG reads in its place. FORCE_OWNERSHIP is off because the settings folder is read-only, so the log shows a harmless warning that /etc/searxng is not owned by searxng.",
+        "Searches leave the server from the container, so the server needs outbound internet access. Public search engines often throttle or CAPTCHA datacenter IP addresses, so some engines may return nothing from a VPS; the result page lists the engines that failed.",
+        "Like the other recipes with a proxy in front (Vane, Plane, Dify), the panel's memory and CPU limits apply to the proxy, the app service; the SearXNG container has a fixed 1g. Its result cache (favicons) lives in the data volume on /var/cache/searxng.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-46): created from the 1-Click Recipes tab, Running in 48 s on both; without the password, with a wrong one or a wrong user, every path answers 401; with admin and the generated password a search for serveravatar rendered 20 results, and format=json answered 200 with 20 results both with -u and in the https://admin:<password>@<domain> URL form; the settings file in the container is the starter file, mounted read-only, and the generated secret key is in effect; restart and a forced re-create kept the gate and the search working with the same password. Brave, DuckDuckGo and Wikipedia refused the test servers' datacenter IPs; Google answered. Idle: proxy 10 MiB of 256m, SearXNG 112 to 113 MiB of 1g (164 MiB after 11 searches). Every image ref below is in its tested list."
+    ]
+}

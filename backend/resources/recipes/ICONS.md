@@ -142,16 +142,44 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `supabase` | [source](https://raw.githubusercontent.com/supabase/supabase/564eab8ad7840b13324f68b1bfac074ef8d51c21/packages/common/assets/images/supabase-logo-icon.svg) | Apache-2.0 (supabase/supabase repository) | Official mark (the green bolt), from the self-hosted/v0.8.2 release commit; unmodified. |
 | `hermesagent` | [official vector](https://raw.githubusercontent.com/NousResearch/hermes-agent/v0.22.2/assets/icon-master.svg) | MIT | Official light app icon (also the docs favicon); optimized with svgo (whole-number coordinates, which renders identically at icon size) to fit the 32 KiB limit, and the ElementTree `ns0:` prefix on the backing rectangle dropped; shapes and colours unchanged. |
 
+## RC-45 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `anythingllm` | [source](https://raw.githubusercontent.com/Mintplex-Labs/anything-llm/v1.18.0/frontend/src/media/illustrations/login-logo.svg) | MIT | Official application mark (the gradient infinity tile from the login screen); unmodified. |
+| `agentzero` | [source](https://raw.githubusercontent.com/agent0ai/agent-zero/v2.14/webui/public/icon.svg) | MIT | Official application icon (the "A" tile); the XML declaration, the external DOCTYPE, the editor namespace and the 100% width/height removed; paths and colours unchanged. |
+
+## RC-46 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `qdrant` | [source](https://raw.githubusercontent.com/qdrant/qdrant/v1.19.2/docs/logo.svg) | Apache-2.0 | Official mark (the cube "q") cut from the wordmark logo: the nine mark polygons with their colours inlined, the lettering dropped and the viewBox squared; shapes and colours unchanged. |
+| `searxng` | [source](https://raw.githubusercontent.com/searxng/searxng/b00212a8366131936856b726ed4dd9bd281e4d7e/searx/static/themes/simple/img/favicon.svg) | AGPL-3.0 | Official favicon mark (the blue magnifier), from the 2026.10.15-b00212a83 commit; the 92mm width/height removed; paths and colours unchanged. |
+
+## RC-47 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `libretranslate` | [source](https://raw.githubusercontent.com/LibreTranslate/LibreTranslate/v1.9.6/libretranslate/static/icon.svg) | AGPL-3.0 | Official web-UI icon (the "L" and 众 glyph paths) from the v1.9.6 tag. The mark is white, so it sits on a rounded backing in LibreTranslate's own navigation blue (`#1565c0`, its `--accent-color`); editor metadata and unused definitions removed, paths and transforms unchanged. |
+| `paperlessai` | [official raster](https://raw.githubusercontent.com/clusterzx/paperless-ai/v3.0.9/icon.png) | MIT | The official mark is raster-only (no SVG in the repository at v3.0.9). Two-colour vector trace (potrace on an 8× upscale, colours `#3a83fb` and `#6ea4e6` sampled from the 128 × 128 PNG); no raster embedded. |
+
+## RC-48 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `crawl4ai` | [official raster](https://raw.githubusercontent.com/unclecode/crawl4ai/v0.9.5/deploy/docker/static/assets/logo.png) | Apache-2.0 | The official mark is raster-only (no SVG in the repository at v0.9.5). The "X" with two chevrons was cut from the 746 × 130 wordmark logo, without the lettering, and traced to a one-colour vector (potrace on an 8× upscale, colour `#48dddd` sampled from the PNG), centred in a square viewBox; no raster embedded. |
+| `khoj` | [source](https://raw.githubusercontent.com/khoj-ai/khoj/2.0.0-beta.28/src/khoj/interface/web/assets/icons/khoj.svg) | AGPL-3.0 | Official lantern mark from the 2.0.0-beta.28 tag. Its outline uses `currentColor`, which is set here to near-black (`#18181b`, upstream's `fill-zinc-950`), on a rounded white backing so it stays legible in the dark panel theme; the React-only `className`/`clipPath` attributes and comments removed, paths and the three flame colours unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse), Xubin Ren and the nanobot contributors, Luis Novo (Open Notebook), Nick Sweeting (ArchiveBox), the YOURLS contributors and ItzCrazyKns (Vane) and Nous Research (Hermes Agent); see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse), Xubin Ren and the nanobot contributors, Luis Novo (Open Notebook), Nick Sweeting (ArchiveBox), the YOURLS contributors and ItzCrazyKns (Vane), Nous Research (Hermes Agent), Mintplex Labs Inc. (AnythingLLM), the Agent Zero contributors and clusterzx (Paperless-AI); see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
-- [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) — Marimo, Inc. (marimo); see the source repository for notices.
+- [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) — Marimo, Inc. (marimo), Qdrant Solutions GmbH (Qdrant) and UncleCode (Crawl4AI); see the source repositories for notices.
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 - [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).
 - [MSCL-1.0-GPL](https://github.com/directus/directus/blob/v12.5.0/license) — Monospace, Inc. (Directus); the rabbit path is unmodified.
 
-The Memos contour trace and the FreshRSS/Matomo symbol crops remain under their respective upstream licences.
+The Memos contour trace, the Paperless-AI trace and the FreshRSS/Matomo symbol crops remain under their respective upstream licences.

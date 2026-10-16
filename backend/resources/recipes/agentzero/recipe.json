@@ -1,0 +1,73 @@
+{
+    "schema": 1,
+    "slug": "agentzero",
+    "version": 1,
+    "title": "Agent Zero",
+    "tagline": {
+        "en": "An autonomous AI agent with its own workspace, tools and web UI",
+        "es": "Un agente de IA autónomo con su propio espacio de trabajo, herramientas e interfaz web",
+        "de": "Ein autonomer KI-Agent mit eigenem Arbeitsbereich, eigenen Werkzeugen und Weboberfläche",
+        "fr": "Un agent IA autonome avec son propre espace de travail, ses outils et son interface web",
+        "pt": "Um agente de IA autônomo com seu próprio espaço de trabalho, ferramentas e interface web",
+        "ja": "専用のワークスペース、ツール、Web UI を備えた自律型 AI エージェント",
+        "ru": "Автономный ИИ-агент со своим рабочим пространством, инструментами и веб-интерфейсом",
+        "hi": "अपने वर्कस्पेस, टूल और वेब UI वाला एक स्वायत्त AI एजेंट"
+    },
+    "category": "ai",
+    "icon": "agentzero",
+    "popular": false,
+    "catalog_order": 800,
+    "docs_url": "https://www.agent-zero.ai/p/docs/",
+    "images": {
+        "app": {
+            "ref": "agent0ai/agent-zero:v2.14",
+            "tested": [
+                "agent0ai/agent-zero:v2.14"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "agentzero",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/a0/usr"
+    },
+    "secrets": [
+        {
+            "key": "AUTH_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "AUTH_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Login is required from the first start: the username is admin and the password (AUTH_PASSWORD) is generated. Upstream warns never to expose Agent Zero without a login, because the agent runs shell commands and code inside its container on your behalf. Keep the password safe.",
+        "A login or password you change in Settings is saved in /a0/usr/.env on the data volume, which Agent Zero reads over the container's environment, so the change survives restarts; the first-run card then still shows the original password.",
+        "ALLOWED_ORIGINS is set to this site's own HTTPS address, so even if the login is turned off later the UI only answers browsers on this domain (Agent Zero would otherwise trust whichever address visits first).",
+        "No model is bundled. Choose a provider and enter its API key in the onboarding screen or in Settings.",
+        "Everything the agent keeps (settings, chats, memory, knowledge, projects, uploads) lives in one named volume on /a0/usr, the path upstream recommends mapping. The image runs its own SearXNG (for web search), cron and an internal SSH server under supervisord; only the web UI (port 80) is published. No docker.sock and no extra privileges.",
+        "Update Agent Zero by changing the image in the panel, not with the in-app Self Update: an in-app update changes files inside the container, outside the data volume, and is lost when the container is re-created."
+    ]
+}

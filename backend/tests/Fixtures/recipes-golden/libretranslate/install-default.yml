@@ -1,0 +1,39 @@
+name: sv-app-4242
+
+services:
+  libretranslate:
+    image: libretranslate/libretranslate:v1.9.6
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    entrypoint:
+      - /bin/bash
+      - -c
+      - 'touch /app/db/api_keys.db && ltmanage keys --api-keys-db-path /app/db/api_keys.db add 600 --key "$$LIBRETRANSLATE_API_KEY" >/dev/null && exec /app/scripts/entrypoint.sh'
+
+    ports:
+      - "127.0.0.1:20101:5000"
+
+    environment:
+      LIBRETRANSLATE_API_KEY: "876b5a45a7a01ceffe3cd3c23de44a78"
+      LT_API_KEYS: "true"
+      LT_API_KEYS_DB_PATH: /app/db/api_keys.db
+      LT_UNDER_ATTACK: "true"
+      LT_LOAD_ONLY: en,es,de,fr,pt,ja,ru,hi
+      LT_UPDATE_MODELS: "true"
+      LT_THREADS: "2"
+
+    volumes:
+      - sv-app-4242_models:/home/libretranslate/.local
+      - sv-app-4242_keys:/app/db
+
+volumes:
+  sv-app-4242_models:
+    external: true
+  sv-app-4242_keys:
+    external: true

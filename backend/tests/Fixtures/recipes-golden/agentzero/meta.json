@@ -1,0 +1,115 @@
+{
+    "slug": "agentzero",
+    "container_port": 80,
+    "volume_roles": {
+        "data": "/a0/usr"
+    },
+    "generated_secrets": [
+        "AUTH_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "ai",
+    "icon": "agentzero",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/a0/usr"
+        }
+    ],
+    "docker_secret_keys": [
+        "AUTH_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Agent Zero",
+            "tagline": "An autonomous AI agent with its own workspace, tools and web UI"
+        },
+        "es": {
+            "title": "Agent Zero",
+            "tagline": "Un agente de IA autónomo con su propio espacio de trabajo, herramientas e interfaz web"
+        },
+        "de": {
+            "title": "Agent Zero",
+            "tagline": "Ein autonomer KI-Agent mit eigenem Arbeitsbereich, eigenen Werkzeugen und Weboberfläche"
+        },
+        "fr": {
+            "title": "Agent Zero",
+            "tagline": "Un agent IA autonome avec son propre espace de travail, ses outils et son interface web"
+        },
+        "pt": {
+            "title": "Agent Zero",
+            "tagline": "Um agente de IA autônomo com seu próprio espaço de trabalho, ferramentas e interface web"
+        },
+        "ja": {
+            "title": "Agent Zero",
+            "tagline": "専用のワークスペース、ツール、Web UI を備えた自律型 AI エージェント"
+        },
+        "ru": {
+            "title": "Agent Zero",
+            "tagline": "Автономный ИИ-агент со своим рабочим пространством, инструментами и веб-интерфейсом"
+        },
+        "hi": {
+            "title": "Agent Zero",
+            "tagline": "अपने वर्कस्पेस, टूल और वेब UI वाला एक स्वायत्त AI एजेंट"
+        }
+    },
+    "catalog_en": {
+        "name": "agentzero",
+        "icon": "agentzero",
+        "category": "ai",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}
