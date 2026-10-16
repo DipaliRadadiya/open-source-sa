@@ -5593,6 +5593,11 @@
         "notReady": "Diese Staging-Kopie ist nicht bereit: Sie wird noch erstellt, oder das Erstellen ist fehlgeschlagen. Bleibt das so, löschen Sie sie und erstellen Sie sie neu.",
         "action": "In die Produktion übertragen"
       },
+      "pull": {
+        "title": "Live über Staging kopieren",
+        "body": "Ersetzt Staging durch den aktuellen Stand von {domain}. Die Live-Anwendung wird nur gelesen und bleibt online.",
+        "action": "Staging aktualisieren"
+      },
       "createDialog": {
         "title": "Staging-Anwendung erstellen",
         "description": "Eine Kopie von {domain} unter einer eigenen Domain.",
@@ -5643,9 +5648,39 @@
         "backupOff": "Es wird kein Backup erstellt. Nach Abschluss der Übertragung gibt es kein Zurück.",
         "pushingWithBackup": "Backup läuft, dann Übertragung…"
       },
+      "pullDialog": {
+        "title": "Staging von live aktualisieren?",
+        "whatToCopy": "Was kopiert wird",
+        "modes": {
+          "files": {
+            "label": "Nur Dateien",
+            "summary": "Die Dateien der Anwendung. Die Datenbank von Staging bleibt unverändert.",
+            "consequence": "Dateien, die nur auf Staging geändert wurden, werden ersetzt und lassen sich nicht wiederherstellen."
+          },
+          "database": {
+            "label": "Nur Datenbank",
+            "summary": "Inhalte und Einstellungen. Die Dateien von Staging bleiben unverändert.",
+            "consequence": "Alles, was seit dem Anlegen auf Staging geschrieben wurde (Beiträge, Seiten, Einstellungen), wird durch den Live-Stand ersetzt. Staging braucht dieselben Plugins und Themes wie live, sonst kann die Seite leer bleiben."
+          },
+          "full": {
+            "label": "Dateien und Datenbank",
+            "summary": "Staging wird eine frische Kopie von live.",
+            "consequence": "Alle Änderungen, die nur auf Staging gemacht wurden, werden ersetzt. Dateiänderungen lassen sich nicht wiederherstellen."
+          }
+        },
+        "safetyFiles": "Schlägt es mittendrin fehl, wird Staging wieder in den vorherigen Zustand versetzt.",
+        "safetyDatabase": "Die Datenbank von Staging wird zuerst gesichert. Sie können sie auf der Staging-Seite der Staging-Anwendung zurückspielen, und schlägt es mittendrin fehl, wird Staging wieder in den vorherigen Zustand versetzt.",
+        "keeps": "Staging behält seine eigenen Einstellungen (wp-config.php) und bleibt für Suchmaschinen unsichtbar.",
+        "pickMode": "Wählen Sie, was kopiert wird",
+        "cancel": "Abbrechen",
+        "submit": "Staging aktualisieren",
+        "pulling": "Staging wird aktualisiert…",
+        "done": "{domain} wurde von live aktualisiert.",
+        "failed": "Staging konnte nicht aktualisiert werden."
+      },
       "isCopy": {
         "title": "Diese Anwendung ist eine Staging-Kopie",
-        "body": "Sie wurde als Kopie einer anderen Anwendung erstellt und bekommt daher keinen eigenen Staging-Bereich. Übertragen Sie sie von der Anwendung aus, zu der sie gehört.",
+        "body": "Sie wurde als Kopie einer anderen Anwendung erstellt und bekommt daher keinen eigenen Staging-Bereich. Übertragen Sie sie live oder aktualisieren Sie sie von live – in der Anwendung, zu der sie gehört.",
         "action": "Zur ursprünglichen Anwendung"
       },
       "copyAge": "Kopie erstellt {age}",
@@ -5664,6 +5699,18 @@
         "confirmTitle": "Diese Datenbankkopie zurückspielen?",
         "confirmBody": "Die Live-Datenbank wird durch die Kopie von {when} ersetzt. Alles, was seitdem hineingeschrieben wurde, wird ebenfalls ersetzt. Die aktuelle Datenbank wird zuerst gesichert.",
         "restored": "Die Live-Datenbank wurde aus der Kopie von {when} zurückgespielt.",
+        "restoreFailed": "Die Datenbankkopie konnte nicht zurückgespielt werden."
+      },
+      "stagingSafetyCopies": {
+        "title": "Vor einer Aktualisierung gesicherte Datenbankkopien",
+        "subtitle": "Jede Aktualisierung von live sichert zuerst diese Staging-Datenbank. Spielen Sie eine zurück, um eine Aktualisierung rückgängig zu machen.",
+        "restore": "Zurückspielen",
+        "restoring": "Wird zurückgespielt…",
+        "restoringNote": "Die aktuelle Staging-Datenbank wird zuerst gesichert, daher lässt sich auch das rückgängig machen.",
+        "cancel": "Abbrechen",
+        "confirmTitle": "Diese Datenbankkopie zurückspielen?",
+        "confirmBody": "Die Staging-Datenbank wird durch die Kopie von {when} ersetzt. Alles, was seitdem hineingeschrieben wurde, wird ebenfalls ersetzt. Die aktuelle Datenbank wird zuerst gesichert.",
+        "restored": "Die Staging-Datenbank wurde aus der Kopie von {when} zurückgespielt.",
         "restoreFailed": "Die Datenbankkopie konnte nicht zurückgespielt werden."
       }
     },

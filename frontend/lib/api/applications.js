@@ -147,6 +147,11 @@ export function pushApplicationStaging(id, mode, { backup = false } = {}) {
   return api.post(`/applications/${id}/staging/push`, { mode, ...(backup ? { backup: true } : {}) });
 }
 
+// Called on the live application; synchronous, like a push. Live is only read.
+export function pullApplicationStaging(id, mode) {
+  return api.post(`/applications/${id}/staging/pull`, { mode });
+}
+
 // Puts a pre-push database copy back; the current database is saved first.
 export function restoreStagingSafetyCopy(id, name) {
   return api.post(`/applications/${id}/staging/safety-copies/${encodeURIComponent(name)}/restore`);

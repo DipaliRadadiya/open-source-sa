@@ -12,8 +12,9 @@ import { useRefresh } from "@/hooks/use-refresh";
 
 // The undo for a database push: each push saves the live database first. Restoring one
 // saves the current database too, so a restore is itself undoable.
-export function SafetyCopiesCard({ appId, copies }) {
-  const t = useTranslations("applications.staging.safetyCopies");
+// `ns`: the same card on a staging copy, where the copies are of staging's own database.
+export function SafetyCopiesCard({ appId, copies, ns = "safetyCopies" }) {
+  const t = useTranslations(`applications.staging.${ns}`);
   const format = useFormatter();
   const { refreshAndWait } = useRefresh();
   const [target, setTarget] = useState(null);

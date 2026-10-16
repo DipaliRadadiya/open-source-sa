@@ -5593,6 +5593,11 @@
         "notReady": "Cette copie de préproduction n'est pas prête : elle est encore en cours de création, ou sa création a échoué. Si cela dure, supprimez-la et recréez-la.",
         "action": "Pousser en production"
       },
+      "pull": {
+        "title": "Copier la production vers la préproduction",
+        "body": "Remplace la préproduction par le contenu actuel de {domain}. L'application en production est seulement lue et reste en ligne.",
+        "action": "Mettre à jour la préproduction"
+      },
       "createDialog": {
         "title": "Créer une application de préproduction",
         "description": "Une copie de {domain}, sur son propre domaine.",
@@ -5643,9 +5648,39 @@
         "backupOff": "Aucune sauvegarde n'est faite. Impossible d'annuler une fois l'envoi terminé.",
         "pushingWithBackup": "Sauvegarde puis envoi…"
       },
+      "pullDialog": {
+        "title": "Mettre à jour la préproduction depuis la production ?",
+        "whatToCopy": "Ce qu'il faut copier",
+        "modes": {
+          "files": {
+            "label": "Fichiers uniquement",
+            "summary": "Les fichiers de l'application. La base de données de préproduction n'est pas modifiée.",
+            "consequence": "Les fichiers modifiés uniquement en préproduction sont remplacés et ne peuvent pas être récupérés."
+          },
+          "database": {
+            "label": "Base de données uniquement",
+            "summary": "Contenu et réglages. Les fichiers de préproduction ne sont pas modifiés.",
+            "consequence": "Tout ce qui a été écrit en préproduction depuis sa création (articles, pages, réglages) est remplacé par la production. La préproduction a besoin des mêmes extensions et thèmes que la production, sinon elle peut s'afficher vide."
+          },
+          "full": {
+            "label": "Fichiers et base de données",
+            "summary": "La préproduction devient une nouvelle copie de la production.",
+            "consequence": "Toutes les modifications faites uniquement en préproduction sont remplacées. Les modifications de fichiers ne peuvent pas être récupérées."
+          }
+        },
+        "safetyFiles": "Si l'opération échoue en cours de route, la préproduction est remise dans son état d'avant.",
+        "safetyDatabase": "La base de données de préproduction est enregistrée d'abord. Vous pouvez la remettre depuis la page Préproduction de l'application de préproduction, et si l'opération échoue en cours de route, la préproduction est remise dans son état d'avant.",
+        "keeps": "La préproduction garde ses propres réglages (wp-config.php) et reste invisible pour les moteurs de recherche.",
+        "pickMode": "Choisissez ce qu'il faut copier",
+        "cancel": "Annuler",
+        "submit": "Mettre à jour la préproduction",
+        "pulling": "Mise à jour de la préproduction…",
+        "done": "{domain} a été mise à jour depuis la production.",
+        "failed": "La préproduction n'a pas pu être mise à jour."
+      },
       "isCopy": {
         "title": "Cette application est une copie de préproduction",
-        "body": "Elle a été créée comme copie d'une autre application, elle n'a donc pas sa propre zone de préproduction. Renvoyez-la depuis l'application à laquelle elle appartient.",
+        "body": "Elle a été créée comme copie d'une autre application, elle n'a donc pas sa propre zone de préproduction. Envoyez-la en production, ou mettez-la à jour depuis la production, depuis l'application à laquelle elle appartient.",
         "action": "Aller à l'application d'origine"
       },
       "copyAge": "Copie effectuée {age}",
@@ -5664,6 +5699,18 @@
         "confirmTitle": "Remettre cette copie de la base de données ?",
         "confirmBody": "La base en production est remplacée par la copie de {when}. Tout ce qui y a été écrit depuis est remplacé aussi. La base actuelle est enregistrée d'abord.",
         "restored": "La base en production a été remise à partir de la copie de {when}.",
+        "restoreFailed": "Impossible de remettre la copie de la base de données."
+      },
+      "stagingSafetyCopies": {
+        "title": "Copies de la base de données enregistrées avant une mise à jour",
+        "subtitle": "Chaque mise à jour depuis la production enregistre d'abord cette base de préproduction. Remettez-en une pour annuler une mise à jour.",
+        "restore": "Remettre",
+        "restoring": "Remise en place…",
+        "restoringNote": "La base de préproduction actuelle est enregistrée d'abord, cette opération peut donc aussi être annulée.",
+        "cancel": "Annuler",
+        "confirmTitle": "Remettre cette copie de la base de données ?",
+        "confirmBody": "La base de préproduction est remplacée par la copie de {when}. Tout ce qui y a été écrit depuis est aussi remplacé. La base actuelle est enregistrée d'abord.",
+        "restored": "La base de préproduction a été remise depuis la copie de {when}.",
         "restoreFailed": "Impossible de remettre la copie de la base de données."
       }
     },

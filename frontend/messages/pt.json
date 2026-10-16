@@ -5593,6 +5593,11 @@
         "notReady": "Esta cópia de staging não está pronta: ainda está sendo criada, ou a criação falhou. Se continuar assim, exclua-a e crie de novo.",
         "action": "Enviar para produção"
       },
+      "pull": {
+        "title": "Copiar produção sobre staging",
+        "body": "Substitui o staging pelo que está agora em {domain}. A aplicação em produção só é lida e continua online.",
+        "action": "Atualizar staging"
+      },
       "createDialog": {
         "title": "Criar aplicação de staging",
         "description": "Uma cópia de {domain}, em um domínio próprio.",
@@ -5643,9 +5648,39 @@
         "backupOff": "Nenhum backup é feito. Não há como desfazer depois que a publicação terminar.",
         "pushingWithBackup": "Fazendo backup e publicando…"
       },
+      "pullDialog": {
+        "title": "Atualizar o staging a partir da produção?",
+        "whatToCopy": "O que copiar",
+        "modes": {
+          "files": {
+            "label": "Apenas arquivos",
+            "summary": "Os arquivos da aplicação. O banco de dados do staging não é alterado.",
+            "consequence": "Os arquivos alterados só no staging são substituídos e não podem ser recuperados."
+          },
+          "database": {
+            "label": "Apenas banco de dados",
+            "summary": "Conteúdo e configurações. Os arquivos do staging não são alterados.",
+            "consequence": "Tudo o que foi escrito no staging desde que ele foi criado (posts, páginas, configurações) é substituído pelo da produção. O staging precisa dos mesmos plugins e temas da produção, ou pode ficar em branco."
+          },
+          "full": {
+            "label": "Arquivos e banco de dados",
+            "summary": "O staging vira uma cópia nova da produção.",
+            "consequence": "Todas as alterações feitas só no staging são substituídas. As alterações em arquivos não podem ser recuperadas."
+          }
+        },
+        "safetyFiles": "Se falhar no meio, o staging volta a ficar como estava.",
+        "safetyDatabase": "O banco de dados do staging é salvo antes. Você pode restaurá-lo na página Staging da aplicação de staging, e se falhar no meio, o staging volta a ficar como estava.",
+        "keeps": "O staging mantém as próprias configurações (wp-config.php) e continua oculto para os buscadores.",
+        "pickMode": "Escolha o que copiar",
+        "cancel": "Cancelar",
+        "submit": "Atualizar staging",
+        "pulling": "Atualizando o staging…",
+        "done": "{domain} foi atualizado a partir da produção.",
+        "failed": "Não foi possível atualizar o staging."
+      },
       "isCopy": {
         "title": "Esta aplicação é uma cópia de staging",
-        "body": "Foi feita como cópia de outra aplicação, então não tem uma área de staging própria. Envie de volta pela aplicação de origem.",
+        "body": "Foi feita como cópia de outra aplicação, então não tem uma área de staging própria. Envie para produção, ou atualize a partir da produção, pela aplicação de origem.",
         "action": "Ir para a aplicação original"
       },
       "copyAge": "Cópia feita {age}",
@@ -5664,6 +5699,18 @@
         "confirmTitle": "Restaurar esta cópia do banco de dados?",
         "confirmBody": "O banco em produção é substituído pela cópia de {when}. Tudo o que foi gravado nele desde então também é substituído. O banco atual é salvo antes.",
         "restored": "O banco em produção foi restaurado a partir da cópia de {when}.",
+        "restoreFailed": "Não foi possível restaurar a cópia do banco de dados."
+      },
+      "stagingSafetyCopies": {
+        "title": "Cópias do banco de dados salvas antes de uma atualização",
+        "subtitle": "Cada atualização a partir da produção salva antes este banco de dados do staging. Restaure uma para desfazer uma atualização.",
+        "restore": "Restaurar",
+        "restoring": "Restaurando…",
+        "restoringNote": "O banco de dados atual do staging é salvo antes, então isso também pode ser desfeito.",
+        "cancel": "Cancelar",
+        "confirmTitle": "Restaurar esta cópia do banco de dados?",
+        "confirmBody": "O banco de dados do staging é substituído pela cópia de {when}. Tudo o que foi escrito nele desde então também é substituído. O banco de dados atual é salvo antes.",
+        "restored": "O banco de dados do staging foi restaurado a partir da cópia de {when}.",
         "restoreFailed": "Não foi possível restaurar a cópia do banco de dados."
       }
     },

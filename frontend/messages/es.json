@@ -5593,6 +5593,11 @@
         "notReady": "Esta copia de pruebas no está lista: todavía se está creando o no se pudo crear. Si sigue así, elimínala y vuelve a crearla.",
         "action": "Publicar en producción"
       },
+      "pull": {
+        "title": "Copiar producción sobre pruebas",
+        "body": "Reemplaza la copia de pruebas con lo que hay ahora en {domain}. La aplicación en producción solo se lee y sigue en línea.",
+        "action": "Actualizar pruebas"
+      },
       "createDialog": {
         "title": "Crear aplicación de pruebas",
         "description": "Una copia de {domain}, en un dominio propio.",
@@ -5643,9 +5648,39 @@
         "backupOff": "No se hace copia de seguridad. No se puede deshacer una vez terminada la publicación.",
         "pushingWithBackup": "Haciendo copia de seguridad y publicando…"
       },
+      "pullDialog": {
+        "title": "¿Actualizar pruebas desde producción?",
+        "whatToCopy": "Qué copiar",
+        "modes": {
+          "files": {
+            "label": "Solo archivos",
+            "summary": "Los archivos de la aplicación. La base de datos de pruebas no se toca.",
+            "consequence": "Los archivos cambiados solo en pruebas se reemplazan y no se pueden recuperar."
+          },
+          "database": {
+            "label": "Solo base de datos",
+            "summary": "Contenido y ajustes. Los archivos de pruebas no se tocan.",
+            "consequence": "Todo lo escrito en pruebas desde que se creó (entradas, páginas, ajustes) se reemplaza por lo de producción. Pruebas necesita los mismos plugins y temas que producción, o puede quedarse en blanco."
+          },
+          "full": {
+            "label": "Archivos y base de datos",
+            "summary": "Pruebas pasa a ser una copia nueva de producción.",
+            "consequence": "Se reemplazan todos los cambios hechos solo en pruebas. Los cambios en archivos no se pueden recuperar."
+          }
+        },
+        "safetyFiles": "Si falla a mitad, pruebas vuelve a quedar como estaba.",
+        "safetyDatabase": "Antes se guarda la base de datos de pruebas. Puedes restaurarla desde la página Pruebas de la aplicación de pruebas, y si falla a mitad, pruebas vuelve a quedar como estaba.",
+        "keeps": "Pruebas conserva sus propios ajustes (wp-config.php) y sigue oculta para los buscadores.",
+        "pickMode": "Elige qué copiar",
+        "cancel": "Cancelar",
+        "submit": "Actualizar pruebas",
+        "pulling": "Actualizando pruebas…",
+        "done": "{domain} se actualizó desde producción.",
+        "failed": "No se pudo actualizar pruebas."
+      },
       "isCopy": {
         "title": "Esta aplicación es una copia de pruebas",
-        "body": "Se creó como copia de otra aplicación, así que no tiene su propia área de pruebas. Publícala desde la aplicación a la que pertenece.",
+        "body": "Se creó como copia de otra aplicación, así que no tiene su propia área de pruebas. Publícala o actualízala desde producción en la aplicación a la que pertenece.",
         "action": "Ir a la aplicación original"
       },
       "copyAge": "Copia hecha {age}",
@@ -5664,6 +5699,18 @@
         "confirmTitle": "¿Restaurar esta copia de la base de datos?",
         "confirmBody": "La base de datos en producción se sustituye por la copia de {when}. Todo lo escrito desde entonces también se sustituye. Antes se guarda la base de datos actual.",
         "restored": "Se restauró la base de datos en producción con la copia de {when}.",
+        "restoreFailed": "No se pudo restaurar la copia de la base de datos."
+      },
+      "stagingSafetyCopies": {
+        "title": "Copias de la base de datos guardadas antes de actualizar",
+        "subtitle": "Cada actualización desde producción guarda antes esta base de datos de pruebas. Restaura una para deshacer una actualización.",
+        "restore": "Restaurar",
+        "restoring": "Restaurando…",
+        "restoringNote": "Antes se guarda la base de datos actual de pruebas, así que esto también se puede deshacer.",
+        "cancel": "Cancelar",
+        "confirmTitle": "¿Restaurar esta copia de la base de datos?",
+        "confirmBody": "La base de datos de pruebas se reemplaza por la copia de {when}. Todo lo escrito en ella desde entonces también se reemplaza. Antes se guarda la base de datos actual.",
+        "restored": "La base de datos de pruebas se restauró con la copia de {when}.",
         "restoreFailed": "No se pudo restaurar la copia de la base de datos."
       }
     },

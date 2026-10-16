@@ -1,11 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   applicationStagingResponseSchema,
   createStagingFormSchema,
   pushStagingFormSchema,
   PUSH_MODES,
 } from "../lib/schemas/application-staging.js";
+
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const STAGING = {
   id: 10,
@@ -66,4 +71,17 @@ test("every mode the backend accepts is offered, and only those", () => {
   for (const mode of PUSH_MODES) {
     assert.equal(pushStagingFormSchema.safeParse({ mode }).success, true, mode);
   }
+});
+
+test("update-from-live offers exactly the modes PullStagingRequest accepts", () => {
+  // The pull dialog reuses PUSH_MODES; if the backend's list for a pull ever
+  // drifts from the push list, a mode would be offered that answers 422.
+  const request = fs.readFileSync(
+    path.join(root, "../backend/app/Http/Requests/Server/Application/PullStagingRequest.php"),
+    "utf8",
+  );
+  const accepted = JSON.parse(
+    request.match(/'mode' => \['required', Rule::in\((\[[^\]]*\])\)\]/)[1].replaceAll("'", '"'),
+  );
+  assert.deepEqual([...PUSH_MODES].sort(), [...accepted].sort());
 });

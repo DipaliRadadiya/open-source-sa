@@ -5593,6 +5593,11 @@
         "notReady": "This staging copy isn't ready: it is still being created, or creating it failed. If it stays like this, delete it and create it again.",
         "action": "Push to production"
       },
+      "pull": {
+        "title": "Copy live over staging",
+        "body": "Replaces staging with what is on {domain} now. The live application is only read and stays online.",
+        "action": "Update staging"
+      },
       "createDialog": {
         "title": "Create staging application",
         "description": "A copy of {domain}, on a domain of its own.",
@@ -5643,9 +5648,39 @@
         "backupOff": "No backup is taken. There is no undo once the push finishes.",
         "pushingWithBackup": "Backing up, then pushing…"
       },
+      "pullDialog": {
+        "title": "Update staging from live?",
+        "whatToCopy": "What to copy",
+        "modes": {
+          "files": {
+            "label": "Files only",
+            "summary": "The application's files. Staging's database is not touched.",
+            "consequence": "Files changed only on staging are replaced, and can't be brought back."
+          },
+          "database": {
+            "label": "Database only",
+            "summary": "Content and settings. Staging's files are not touched.",
+            "consequence": "Everything written on staging since it was made (posts, pages, settings) is replaced with live's. Staging needs the same plugins and themes as live, or it can go blank."
+          },
+          "full": {
+            "label": "Files and database",
+            "summary": "Staging becomes a fresh copy of live.",
+            "consequence": "All changes made only on staging are replaced. File changes can't be brought back."
+          }
+        },
+        "safetyFiles": "If it fails partway, staging is put back as it was.",
+        "safetyDatabase": "Staging's database is saved first. You can put it back from the staging application's Staging page, and if it fails partway, staging is put back as it was.",
+        "keeps": "Staging keeps its own settings (wp-config.php) and stays hidden from search engines.",
+        "pickMode": "Choose what to copy",
+        "cancel": "Cancel",
+        "submit": "Update staging",
+        "pulling": "Updating staging…",
+        "done": "{domain} was updated from live.",
+        "failed": "Staging couldn't be updated."
+      },
       "isCopy": {
         "title": "This application is a staging copy",
-        "body": "It was made as a copy of another application, so it does not get a staging area of its own. Push it back from the application it belongs to.",
+        "body": "It was made as a copy of another application, so it does not get a staging area of its own. Push it to live, or update it from live, on the application it belongs to.",
         "action": "Go to the original application"
       },
       "copyAge": "Copy made {age}",
@@ -5664,6 +5699,18 @@
         "confirmTitle": "Put this database copy back?",
         "confirmBody": "The live database is replaced with the copy from {when}. Anything written to it since then is replaced too. The current database is saved first.",
         "restored": "The live database was put back from the copy from {when}.",
+        "restoreFailed": "The database copy couldn't be put back."
+      },
+      "stagingSafetyCopies": {
+        "title": "Database copies saved before an update",
+        "subtitle": "Each update from live saves this staging database first. Put one back to undo an update.",
+        "restore": "Put back",
+        "restoring": "Putting back…",
+        "restoringNote": "The current staging database is saved first, so this can be undone too.",
+        "cancel": "Cancel",
+        "confirmTitle": "Put this database copy back?",
+        "confirmBody": "The staging database is replaced with the copy from {when}. Anything written to it since then is replaced too. The current database is saved first.",
+        "restored": "The staging database was put back from the copy from {when}.",
         "restoreFailed": "The database copy couldn't be put back."
       }
     },

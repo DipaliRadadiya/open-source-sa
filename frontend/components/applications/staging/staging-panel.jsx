@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
-import { ArrowUpFromLine, ExternalLink, FlaskConical, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ExternalLink, FlaskConical, Trash2, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreateStagingDialog } from "@/components/applications/staging/create-staging-dialog";
 import { PushStagingDialog } from "@/components/applications/staging/push-staging-dialog";
+import { PullStagingDialog } from "@/components/applications/staging/pull-staging-dialog";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { SafetyCopiesCard } from "@/components/applications/staging/safety-copies-card";
@@ -20,6 +21,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   const tApp = useTranslations("applications");
   const [creating, setCreating] = useState(false);
   const [pushing, setPushing] = useState(false);
+  const [pulling, setPulling] = useState(false);
   const [removing, setRemoving] = useState(false);
   const ready = staging?.status === "active";
 
@@ -32,12 +34,13 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
     setCreating(false);
     setRemoving(false);
     setPushing(false);
+    setPulling(false);
   }
 
   // This site is a staging copy: link back to production instead.
   if (production?.is_staging) {
     return (
-      <div >
+      <div className="space-y-4">
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
             <div className="min-w-60 flex-1 space-y-1">
@@ -53,6 +56,10 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
             ) : null}
           </CardContent>
         </Card>
+        {/* An update from live saves this copy's database first; this is where it is undone. */}
+        {canManage && safetyCopies.length ? (
+          <SafetyCopiesCard appId={appId} copies={safetyCopies} ns="stagingSafetyCopies" />
+        ) : null}
       </div>
     );
   }
@@ -126,8 +133,23 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
           </Button>
         </CardContent>
 
+        {/* The safe direction first: live is only read. Not-ready and permission
+            reasons are given once, on the push row below. */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-5 py-4">
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-60 flex-1 space-y-1">
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("pull.title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("pull.body", { domain: production.domain })}</p>
+          </div>
+          {canManage && ready ? (
+            <Button variant="outline" onClick={() => setPulling(true)}>
+              <ArrowDownToLine className="size-4" />
+              {t("pull.action")}
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-5 py-4">
+          <div className="min-w-60 flex-1 space-y-1">
             <h2 className="text-[15px] font-semibold tracking-tight">{t("push.title")}</h2>
             <p className="text-sm text-muted-foreground">
               {t("push.body", { domain: production.domain })}
@@ -172,6 +194,15 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
       </Card>
 
       <DeleteApplicationDialog application={staging} open={removing} onOpenChange={setRemoving} closeWhenGone />
+
+      <PullStagingDialog
+        key={`pull-${pulling}`}
+        appId={appId}
+        production={production}
+        staging={staging}
+        open={pulling}
+        onOpenChange={setPulling}
+      />
 
       {/* Remounted on open: the typed domain is the safeguard and must never
           be pre-filled. */}
