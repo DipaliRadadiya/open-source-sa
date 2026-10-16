@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { brandingSchema } from "../lib/schemas/branding.js";
@@ -89,14 +90,23 @@ test("the schema degrades one bad field instead of failing the response", () => 
 test("the live payload shape still resolves to real branding", () => {
   const merged = mergeBranding({
     name: "ServerAvatar",
-    logo: "https://app.serveravatar.com/logo/SaLogoDark.png",
-    logo_dark: "https://app.serveravatar.com/logo/dark-logo.png",
-    icon: "https://app.serveravatar.com/logo/logo-sm.png",
-    icon_dark: "https://app.serveravatar.com/logo/dark-logo-sm.png",
-    favicon: "https://app.serveravatar.com/logo/logo-sm.png",
+    logo: "/brand/serveravatar-horizontal-light.svg",
+    logo_dark: "/brand/serveravatar-horizontal-dark.svg",
+    icon: "/brand/serveravatar-mark-light.svg",
+    icon_dark: "/brand/serveravatar-mark-dark.svg",
+    favicon: "/brand/serveravatar-favicon.svg",
     primary_color: "#35B87A",
     central_name: "ServerAvatar Central",
   });
 
   assert.deepEqual(merged, DEFAULT_BRANDING);
+});
+
+test("every default logo is a file the panel ships", () => {
+  for (const field of ["logo", "logo_dark", "icon", "icon_dark", "favicon"]) {
+    const path = DEFAULT_BRANDING[field];
+    assert.ok(path.startsWith("/brand/"), field);
+    assert.ok(fs.existsSync(new URL(`../public${path}`, import.meta.url)), `${field}: public${path}`);
+  }
+  assert.ok(fs.existsSync(new URL("../public/brand/serveravatar-favicon-32.png", import.meta.url)));
 });

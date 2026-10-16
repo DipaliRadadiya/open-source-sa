@@ -6,6 +6,7 @@ import { BrandingProvider } from "@/components/branding-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { NavigationProgress } from "@/components/sections/navigation-progress";
 import { getBranding } from "@/lib/branding/get-branding";
+import { DEFAULT_BRANDING } from "@/lib/branding/merge-branding";
 import { generatePalette } from "@/lib/theme/generate-palette";
 import { buildThemeStyles } from "@/lib/theme/apply-theme";
 import "./globals.css";
@@ -30,7 +31,14 @@ export async function generateMetadata() {
     title: { default: branding.name, template: `%s · ${branding.name}` },
     description: `${branding.name} panel`,
     icons: {
-      icon: branding.favicon,
+      // Our own SVG favicon gets a PNG twin: older Safari shows no SVG tab icon.
+      icon:
+        branding.favicon === DEFAULT_BRANDING.favicon
+          ? [
+              { url: branding.favicon, type: "image/svg+xml" },
+              { url: "/brand/serveravatar-favicon-32.png", sizes: "32x32", type: "image/png" },
+            ]
+          : branding.favicon,
     },
   };
 }

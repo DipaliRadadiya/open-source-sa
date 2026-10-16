@@ -2,11 +2,12 @@ import { converter } from "culori";
 
 export const DEFAULT_BRANDING = {
   name: "ServerAvatar",
-  logo: "https://app.serveravatar.com/logo/SaLogoDark.png",
-  logo_dark: "https://app.serveravatar.com/logo/dark-logo.png",
-  icon: "https://app.serveravatar.com/logo/logo-sm.png",
-  icon_dark: "https://app.serveravatar.com/logo/dark-logo-sm.png",
-  favicon: "https://app.serveravatar.com/logo/logo-sm.png",
+  // Shipped in public/brand (v8 logo kit): "-light" is for a light background.
+  logo: "/brand/serveravatar-horizontal-light.svg",
+  logo_dark: "/brand/serveravatar-horizontal-dark.svg",
+  icon: "/brand/serveravatar-mark-light.svg",
+  icon_dark: "/brand/serveravatar-mark-dark.svg",
+  favicon: "/brand/serveravatar-favicon.svg",
   primary_color: "#35B87A",
 };
 
