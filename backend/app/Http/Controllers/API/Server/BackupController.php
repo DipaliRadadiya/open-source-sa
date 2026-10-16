@@ -456,7 +456,12 @@ class BackupController extends Controller
      */
     private function filename(Backup $backup): string
     {
-        $site = $backup->application?->domain ?? ($backup->isDatabaseBackup() ? 'database-'.$backup->subjectName() : 'backup');
+        $site = $backup->application?->domain ?? match (true) {
+            $backup->isDatabaseBackup() => 'database-'.$backup->subjectName(),
+            // An archived site's backup still carries the domain it was taken of.
+            filled($backup->subject_name) => (string) $backup->subject_name,
+            default => 'backup',
+        };
         $stamp = $backup->created_at?->format('Y-m-d-His') ?? 'unknown';
 
         // Dots become hyphens before slugging — Str::slug strips them, which
@@ -573,7 +578,7 @@ class BackupController extends Controller
     {
         $query
             ->when($filter['database_id'] ?? null, fn ($q, $id) => $q->where('database_id', $id))
-            ->when($archived === true, fn ($q) => $q->whereNull('application_id')->whereNull('database_id')->whereNotNull('subject_engine'))
+            ->when($archived === true, fn ($q) => $q->whereNull('application_id')->whereNull('database_id'))
             ->when($archived === false, fn ($q) => $q->where(fn ($q) => $q->whereNotNull('application_id')->orWhereNotNull('database_id')))
             ->when($filter['engine'] ?? null, fn ($q, $engine) => $q->where('subject_engine', $engine));
     }

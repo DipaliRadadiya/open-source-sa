@@ -54,7 +54,7 @@ class RestoreDatabaseBackupRequest extends FormRequest
 
             $ownBackup = $backup->database_id === $database->id;
 
-            if (! $ownBackup && ! $backup->isArchived()) {
+            if (! $backup->isDatabaseBackup() || (! $ownBackup && ! $backup->isArchived())) {
                 $validator->errors()->add('backup', __('backup.errors.restore_wrong_database'));
 
                 return;

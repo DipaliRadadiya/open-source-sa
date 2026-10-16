@@ -59,6 +59,14 @@ class RestoreBackupRequest extends FormRequest
                 return;
             }
 
+            if ($backup->isArchived()) {
+                // A deleted site's backup: there is no site to put it back
+                // into. Downloading it is the way to its files and dump.
+                $validator->errors()->add('backup', __('backup.errors.restore_archived_site'));
+
+                return;
+            }
+
             if ($backup->application === null) {
                 $validator->errors()->add('backup', __('backup.errors.restore_no_application'));
 

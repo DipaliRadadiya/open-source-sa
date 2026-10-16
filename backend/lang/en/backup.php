@@ -53,6 +53,8 @@ return [
         'restore_unverified' => 'This backup was never verified, so it cannot be restored.',
         'restore_no_application' => 'The application this backup belongs to no longer exists.',
         'restore_confirm' => 'Type the application domain exactly to confirm the restore.',
+        'delete_site_backup_running' => 'A backup or restore of this site is running. Wait for it to finish, then delete the site.',
+        'restore_archived_site' => 'This site was deleted, so there is nothing to restore its backup into. Download the backup to get its files and database.',
         'database_backed_up_with_site' => 'This database belongs to the site :site and is backed up with it. Set up backups on the site instead.',
         'restore_database_backup_here' => 'Restore a database backup from the database\'s own page.',
         'restore_wrong_database' => 'This backup belongs to a different database. Only this database\'s own backups, or archived ones, can be restored here.',

@@ -14,6 +14,7 @@ use App\Actions\Server\Application\RunApplicationProcess;
 use App\Actions\Server\Application\UpdateApplication;
 use App\Actions\Server\SystemUser\DeleteSystemUser;
 use App\Enums\ApplicationStatus;
+use App\Enums\BackupStatus;
 use App\Enums\DeploymentTrigger;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
@@ -26,7 +27,9 @@ use App\Http\Resources\AppSidebarResource;
 use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\Backup;
 use App\Models\Permission;
+use App\Models\Restore;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeployQueue;
@@ -350,6 +353,20 @@ class ApplicationController extends Controller
         // A queued worker can still be writing this site's files and config.
         // Deleting its record now would leave those mutations untracked.
         abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
+
+        // Its backups are archived on delete; one still being written, or a
+        // restore still replacing the site, would finish against nothing.
+        // Refused before anything is removed from the server.
+        $backupBusy = Backup::query()->where('application_id', $application->id)
+            ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
+            ->exists()
+            || Restore::inProgressFor($application->id);
+
+        if ($backupBusy) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.delete_site_backup_running')],
+            ]);
+        }
 
         // Read before the record goes. `databases.application_id` is
         // `nullOnDelete`, so the moment the application row is deleted nothing

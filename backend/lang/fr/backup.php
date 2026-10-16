@@ -53,6 +53,8 @@ return [
         'restore_unverified' => 'Cette sauvegarde n\'a jamais été vérifiée, elle ne peut donc pas être restaurée.',
         'restore_no_application' => 'L\'application de cette sauvegarde n\'existe plus.',
         'restore_confirm' => 'Saisissez exactement le domaine de l\'application pour confirmer la restauration.',
+        'delete_site_backup_running' => 'Une sauvegarde ou une restauration de ce site est en cours. Attendez la fin, puis supprimez le site.',
+        'restore_archived_site' => 'Ce site a été supprimé : il n\'y a plus rien dans quoi restaurer sa sauvegarde. Téléchargez la sauvegarde pour récupérer ses fichiers et sa base de données.',
         'database_backed_up_with_site' => 'Cette base de données appartient au site :site et est sauvegardée avec lui. Configurez plutôt les sauvegardes du site.',
         'restore_database_backup_here' => 'Restaurez une sauvegarde de base de données depuis la page de la base de données.',
         'restore_wrong_database' => 'Cette sauvegarde appartient à une autre base de données. Seules ses propres sauvegardes, ou des sauvegardes archivées, peuvent être restaurées ici.',

@@ -53,6 +53,8 @@ return [
         'restore_unverified' => 'Diese Sicherung wurde nie verifiziert und kann daher nicht wiederhergestellt werden.',
         'restore_no_application' => 'Die Anwendung zu dieser Sicherung existiert nicht mehr.',
         'restore_confirm' => 'Geben Sie die Domain der Anwendung exakt ein, um die Wiederherstellung zu bestätigen.',
+        'delete_site_backup_running' => 'Eine Sicherung oder Wiederherstellung dieser Website läuft. Warten Sie, bis sie fertig ist, und löschen Sie die Website dann.',
+        'restore_archived_site' => 'Diese Website wurde gelöscht, daher gibt es nichts, wohin die Sicherung wiederhergestellt werden kann. Laden Sie die Sicherung herunter, um ihre Dateien und Datenbank zu erhalten.',
         'database_backed_up_with_site' => 'Diese Datenbank gehört zur Website :site und wird mit ihr gesichert. Richten Sie die Sicherung stattdessen bei der Website ein.',
         'restore_database_backup_here' => 'Stellen Sie eine Datenbanksicherung über die Seite der Datenbank wieder her.',
         'restore_wrong_database' => 'Diese Sicherung gehört zu einer anderen Datenbank. Hier können nur eigene oder archivierte Sicherungen wiederhergestellt werden.',

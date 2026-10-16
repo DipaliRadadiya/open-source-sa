@@ -114,13 +114,15 @@ class Backup extends Model
     }
 
     /**
-     * Its database was deleted: the backup stays, listed, downloadable and
-     * restorable into another database of the same engine, until someone
-     * deletes it.
+     * What it was taken from was deleted: the backup stays, listed and
+     * downloadable until someone deletes it. A database's can be restored
+     * into another database of the same engine; a site's is downloaded.
      */
     public function isArchived(): bool
     {
-        return $this->database_id === null && $this->application_id === null && $this->subject_engine !== null;
+        // Both owners gone only ever happens by archiving — a database's on
+        // its delete (2026-10-16), a site's on its delete (the follow-up).
+        return $this->database_id === null && $this->application_id === null;
     }
 
     /** The site's name, or the database's — kept on the row, so an archived backup still says what it was. */

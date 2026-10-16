@@ -53,6 +53,8 @@ return [
         'restore_unverified' => 'Esta cópia nunca foi verificada, por isso não pode ser restaurada.',
         'restore_no_application' => 'A aplicação desta cópia já não existe.',
         'restore_confirm' => 'Escreva exatamente o domínio da aplicação para confirmar a restauração.',
+        'delete_site_backup_running' => 'Está a decorrer uma cópia ou restauro deste site. Aguarde que termine e depois elimine o site.',
+        'restore_archived_site' => 'Este site foi eliminado, por isso não há onde restaurar a cópia. Transfira a cópia para obter os ficheiros e a base de dados.',
         'database_backed_up_with_site' => 'Esta base de dados pertence ao site :site e é copiada com ele. Configure as cópias no site.',
         'restore_database_backup_here' => 'Restaure uma cópia de base de dados a partir da página da própria base de dados.',
         'restore_wrong_database' => 'Esta cópia pertence a outra base de dados. Aqui só podem ser restauradas as cópias desta base de dados ou cópias arquivadas.',
