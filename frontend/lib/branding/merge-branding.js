@@ -7,7 +7,7 @@ export const DEFAULT_BRANDING = {
   icon: "https://app.serveravatar.com/logo/logo-sm.png",
   icon_dark: "https://app.serveravatar.com/logo/dark-logo-sm.png",
   favicon: "https://app.serveravatar.com/logo/logo-sm.png",
-  primary_color: "#076aff",
+  primary_color: "#35B87A",
 };
 
 export const BRANDING_ASSET_FIELDS = [
