@@ -148,6 +148,13 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `anythingllm` | [source](https://raw.githubusercontent.com/Mintplex-Labs/anything-llm/v1.18.0/frontend/src/media/illustrations/login-logo.svg) | MIT | Official application mark (the gradient infinity tile from the login screen); unmodified. |
 | `agentzero` | [source](https://raw.githubusercontent.com/agent0ai/agent-zero/v2.14/webui/public/icon.svg) | MIT | Official application icon (the "A" tile); the XML declaration, the external DOCTYPE, the editor namespace and the 100% width/height removed; paths and colours unchanged. |
 
+## RC-46 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `qdrant` | [source](https://raw.githubusercontent.com/qdrant/qdrant/v1.19.2/docs/logo.svg) | Apache-2.0 | Official mark (the cube "q") cut from the wordmark logo: the nine mark polygons with their colours inlined, the lettering dropped and the viewBox squared; shapes and colours unchanged. |
+| `searxng` | [source](https://raw.githubusercontent.com/searxng/searxng/b00212a8366131936856b726ed4dd9bd281e4d7e/searx/static/themes/simple/img/favicon.svg) | AGPL-3.0 | Official favicon mark (the blue magnifier), from the 2026.10.15-b00212a83 commit; the 92mm width/height removed; paths and colours unchanged. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
@@ -155,7 +162,7 @@ These marks identify the upstream applications; they do not imply endorsement. U
 - [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server), TOEVERYTHING PTE. LTD. (AFFiNE), LibreChat contributors, Activepieces Inc., ClickHouse, Inc. (Langfuse), Xubin Ren and the nanobot contributors, Luis Novo (Open Notebook), Nick Sweeting (ArchiveBox), the YOURLS contributors and ItzCrazyKns (Vane), Mintplex Labs Inc. (AnythingLLM) and the Agent Zero contributors; see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — selfh.st icons (Docmost vector).
-- [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) — Marimo, Inc. (marimo); see the source repository for notices.
+- [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) — Marimo, Inc. (marimo) and Qdrant Solutions GmbH (Qdrant); see the source repositories for notices.
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 - [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).
 - [MSCL-1.0-GPL](https://github.com/directus/directus/blob/v12.5.0/license) — Monospace, Inc. (Directus); the rabbit path is unmodified.

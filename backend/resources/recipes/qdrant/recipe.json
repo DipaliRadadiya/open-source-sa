@@ -1,0 +1,67 @@
+{
+    "schema": 1,
+    "slug": "qdrant",
+    "version": 1,
+    "title": "Qdrant",
+    "tagline": {
+        "en": "Vector database for AI apps, with a web dashboard and an API key",
+        "es": "Base de datos vectorial para apps de IA, con panel web y clave de API",
+        "de": "Vektordatenbank für KI-Apps, mit Web-Dashboard und API-Schlüssel",
+        "fr": "Base de données vectorielle pour les applis d'IA, avec tableau de bord web et clé d'API",
+        "pt": "Banco de dados vetorial para apps de IA, com painel web e chave de API",
+        "ja": "Web ダッシュボードと API キーを備えた、AI アプリ向けベクトルデータベース",
+        "ru": "Векторная база данных для ИИ-приложений, с веб-панелью и API-ключом",
+        "hi": "AI ऐप्स के लिए वेक्टर डेटाबेस, वेब डैशबोर्ड और API कुंजी के साथ"
+    },
+    "category": "database",
+    "icon": "qdrant",
+    "popular": false,
+    "catalog_order": 810,
+    "docs_url": "https://qdrant.tech/documentation/guides/installation/",
+    "images": {
+        "app": {
+            "ref": "qdrant/qdrant:v1.19.2-unprivileged",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "qdrant",
+            "role": "app"
+        }
+    ],
+    "container_port": 6333,
+    "memory_floor": "512m",
+    "volumes": {
+        "data": "/qdrant/storage"
+    },
+    "secrets": [
+        {
+            "key": "QDRANT__SERVICE__API_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "token",
+                "secret": "QDRANT__SERVICE__API_KEY"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Qdrant is a database that other apps talk to, not a website: the site's HTTPS address is its REST endpoint. The token on the first-run card is the API key (QDRANT__SERVICE__API_KEY, 32 characters). Every request needs it in an api-key header (or Authorization: Bearer); without it Qdrant answers 401. Only /, /healthz, /livez and /readyz answer without a key.",
+        "The web dashboard is at https://<domain>/dashboard. It opens without the key and asks for it before it shows anything; paste the token from the first-run card.",
+        "Connecting an AI app: Dify, Langflow, n8n and most Qdrant clients ask for a URL and an API key. Use the URL https://<domain> (port 443, nothing after the domain) and the token from the first-run card. Clients that ask for a port separately need 443 and HTTPS.",
+        "Only the REST port (6333) is published, behind the site's HTTPS. The gRPC port (6334) is not exposed, so clients must use REST: in the Python client that is the default (prefer_grpc stays false).",
+        "This uses the official -unprivileged image, so Qdrant runs as a normal user (uid 1000) instead of root. Collections live in the data volume on /qdrant/storage, and so do snapshots (QDRANT__STORAGE__SNAPSHOTS_PATH points into it), so a snapshot survives a re-create of the container. Anonymous telemetry is off.",
+        "The 512m floor fits small and medium collections. Qdrant keeps vectors and indexes in memory by default; for large collections raise the limit, or switch collections to on-disk storage (on_disk: true) when you create them."
+    ]
+}

@@ -1,0 +1,27 @@
+# SearXNG settings for this app (one-click recipe, RC-46).
+# Based on the image's own settings.template.yml: every setting not listed here
+# comes from SearXNG's defaults (use_default_settings).
+# https://docs.searxng.org/admin/settings/
+#
+# server.secret_key is not in this file: the container gets the generated key
+# in SEARXNG_SECRET, which overrides it. Edit this file in the File Manager,
+# then restart the app.
+
+use_default_settings: true
+
+general:
+  instance_name: "SearXNG"
+
+search:
+  # json lets AI apps (Open WebUI, LibreChat, Agent Zero ...) use
+  # /search?q=<query>&format=json
+  formats:
+    - html
+    - json
+
+server:
+  # Private instance behind the panel's password gate, so no rate limiter
+  # (it would also need a Valkey service).
+  limiter: false
+  public_instance: false
+  image_proxy: true

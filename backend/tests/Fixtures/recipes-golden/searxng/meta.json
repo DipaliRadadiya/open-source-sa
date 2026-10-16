@@ -1,0 +1,119 @@
+{
+    "slug": "searxng",
+    "container_port": 80,
+    "volume_roles": {
+        "data": "/var/cache/searxng"
+    },
+    "generated_secrets": [
+        "GATE_PASSWORD",
+        "SEARXNG_SECRET"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "256m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "utility",
+    "icon": "searxng",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "256m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 256m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": {
+        "/etc/searxng/settings.yml": "# SearXNG settings for this app (one-click recipe, RC-46).\n# Based on the image's own settings.template.yml: every setting not listed here\n# comes from SearXNG's defaults (use_default_settings).\n# https://docs.searxng.org/admin/settings/\n#\n# server.secret_key is not in this file: the container gets the generated key\n# in SEARXNG_SECRET, which overrides it. Edit this file in the File Manager,\n# then restart the app.\n\nuse_default_settings: true\n\ngeneral:\n  instance_name: \"SearXNG\"\n\nsearch:\n  # json lets AI apps (Open WebUI, LibreChat, Agent Zero ...) use\n  # /search?q=<query>&format=json\n  formats:\n    - html\n    - json\n\nserver:\n  # Private instance behind the panel's password gate, so no rate limiter\n  # (it would also need a Valkey service).\n  limiter: false\n  public_instance: false\n  image_proxy: true\n"
+    },
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/var/cache/searxng"
+        }
+    ],
+    "docker_secret_keys": [
+        "GATE_PASSWORD",
+        "SEARXNG_SECRET"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "SearXNG",
+            "tagline": "Private metasearch engine, and a web-search backend for your AI apps"
+        },
+        "es": {
+            "title": "SearXNG",
+            "tagline": "Metabuscador privado y motor de búsqueda web para tus apps de IA"
+        },
+        "de": {
+            "title": "SearXNG",
+            "tagline": "Private Metasuchmaschine und Websuche für deine KI-Apps"
+        },
+        "fr": {
+            "title": "SearXNG",
+            "tagline": "Métamoteur de recherche privé, et recherche web pour vos applis d'IA"
+        },
+        "pt": {
+            "title": "SearXNG",
+            "tagline": "Metabuscador privado e backend de busca na web para seus apps de IA"
+        },
+        "ja": {
+            "title": "SearXNG",
+            "tagline": "プライベートなメタ検索エンジン。AI アプリの Web 検索バックエンドにも"
+        },
+        "ru": {
+            "title": "SearXNG",
+            "tagline": "Приватный метапоисковик и веб-поиск для ваших ИИ-приложений"
+        },
+        "hi": {
+            "title": "SearXNG",
+            "tagline": "निजी मेटासर्च इंजन, और आपके AI ऐप्स के लिए वेब-सर्च बैकएंड"
+        }
+    },
+    "catalog_en": {
+        "name": "searxng",
+        "icon": "searxng",
+        "category": "utility",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}
