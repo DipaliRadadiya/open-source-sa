@@ -478,7 +478,10 @@
       "storage_destination": "Almacenamiento",
       "sync": "Sincronizar servidor",
       "system_user": "Usuario del sistema",
-      "user": "Usuario"
+      "user": "Usuario",
+      "docker_database": "Base de datos Docker",
+      "registry": "Registro",
+      "wp_cli": "WP-CLI"
     }
   },
   "pagination": {

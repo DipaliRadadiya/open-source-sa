@@ -24,7 +24,7 @@ function UserCell({ row }) {
   const t = useTranslations("activity");
   const u = row.original.user;
   return u ? (
-    <span>@{u.username}</span>
+    <span className="block truncate" title={`@${u.username}`}>@{u.username}</span>
   ) : (
     <span className="text-muted-foreground">{t("system")}</span>
   );
@@ -91,10 +91,12 @@ export function ActivityTable({ data, hasFilters }) {
   }
 
   const columns = [
-    { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell, meta: { className: "hidden sm:table-cell" } },
-    { id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden sm:table-cell" } },
-    // Hidden on phones: the description column carries the same information.
-    { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden md:table-cell" } },
+    // Fixed widths: sized to the content, each page would lay the columns out differently.
+    { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
+    { id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden w-44 sm:table-cell" } },
+    // Hidden below xl: the description carries the same information, and the widest
+    // label (es "Herramientas de compilación") needs 224px, which leaves a 1024px screen too little for the description.
+    { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden w-56 xl:table-cell" } },
     {
       accessorKey: "description",
       header: t("columns.description"),
@@ -103,5 +105,5 @@ export function ActivityTable({ data, hasFilters }) {
     },
   ];
 
-  return <DataTable bare columns={columns} data={data} />;
+  return <DataTable bare columns={columns} data={data} fixedLayout />;
 }

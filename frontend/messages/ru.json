@@ -704,7 +704,10 @@
       "storage_destination": "Хранилище",
       "sync": "Синхронизация сервера",
       "system_user": "Системный пользователь",
-      "user": "Пользователь"
+      "user": "Пользователь",
+      "docker_database": "База данных Docker",
+      "registry": "Реестр",
+      "wp_cli": "WP-CLI"
     }
   },
   "pagination": {

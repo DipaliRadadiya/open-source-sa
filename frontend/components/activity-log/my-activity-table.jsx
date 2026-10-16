@@ -61,7 +61,7 @@ function UserCell({ row }) {
   const t = useTranslations("activity");
   const u = row.original.user;
   return u ? (
-    <span className="whitespace-nowrap">@{u.username}</span>
+    <span className="block truncate" title={`@${u.username}`}>@{u.username}</span>
   ) : (
     <span className="text-muted-foreground">{t("system")}</span>
   );
@@ -92,17 +92,18 @@ function DescriptionCell({ row, column }) {
 export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUser = false }) {
   const t = useTranslations("activity");
 
-  // Type is hidden below md: it is shorthand for the description, which is the
-  // column worth keeping on a phone.
+  // Type is hidden below xl: it is shorthand for the description, and its widest
+  // label (es "Herramientas de compilación") needs 224px, which leaves a 1024px screen too little for the description.
   const columns = [
     // Headers may wrap so long locales fit on a phone.
-    { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "hidden sm:table-cell" } },
-    ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden sm:table-cell" } }] : []),
+    // Fixed widths: sized to the content, each page would lay the columns out differently.
+    { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
+    ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden w-44 sm:table-cell" } }] : []),
     {
       accessorKey: "type",
       header: t("table.type"),
       cell: TypeCell,
-      meta: { className: "hidden md:table-cell" },
+      meta: { className: "hidden w-56 xl:table-cell" },
     },
     {
       accessorKey: "description",
@@ -127,5 +128,5 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
     );
   }
 
-  return <DataTable bare columns={columns} data={data} emptyMessage={emptyMessage} />;
+  return <DataTable bare columns={columns} data={data} emptyMessage={emptyMessage} fixedLayout />;
 }

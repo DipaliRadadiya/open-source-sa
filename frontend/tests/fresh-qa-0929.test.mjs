@@ -583,7 +583,7 @@ test("Activity Log full pass: named filters, readable type badges, fits a phone 
   // 390px wrapped "14 hours ago" onto three lines.
   for (const f of ["components/activity-log/my-activity-table.jsx", "components/admin/activity/activity-table.jsx"]) {
     const src = read(f);
-    assert.match(src, /cell: WhenCell, meta: \{ className: "hidden sm:table-cell" \}/, f);
+    assert.match(src, /cell: WhenCell, meta: \{ className: "hidden (w-\d+ )?sm:table-cell" \}/, f);
     assert.match(src, /mt-0\.5 block text-xs text-muted-foreground sm:hidden/, f);
   }
 });

@@ -704,7 +704,10 @@
       "storage_destination": "ストレージ",
       "sync": "サーバー同期",
       "system_user": "システムユーザー",
-      "user": "ユーザー"
+      "user": "ユーザー",
+      "docker_database": "Docker データベース",
+      "registry": "レジストリ",
+      "wp_cli": "WP-CLI"
     }
   },
   "pagination": {

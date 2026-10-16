@@ -704,7 +704,10 @@
       "storage_destination": "Storage",
       "sync": "Server Sync",
       "system_user": "System user",
-      "user": "User"
+      "user": "User",
+      "docker_database": "Docker database",
+      "registry": "Registry",
+      "wp_cli": "WP-CLI"
     }
   },
   "pagination": {

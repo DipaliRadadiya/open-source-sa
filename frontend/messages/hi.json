@@ -478,7 +478,10 @@
       "storage_destination": "स्टोरेज",
       "sync": "सर्वर सिंक",
       "system_user": "सिस्टम उपयोगकर्ता",
-      "user": "उपयोगकर्ता"
+      "user": "उपयोगकर्ता",
+      "docker_database": "Docker डेटाबेस",
+      "registry": "रजिस्ट्री",
+      "wp_cli": "WP-CLI"
     }
   },
   "pagination": {

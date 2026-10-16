@@ -68,8 +68,9 @@ export function AccountActivity({ data }) {
   const t = useTranslations("account");
 
   const columns = [
-    { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell, meta: { className: "hidden sm:table-cell" } },
-    { accessorKey: "type", header: t("activity.type"), cell: TypeCell, meta: { className: "hidden md:table-cell" } },
+    // Fixed widths: sized to the content, each page would lay the columns out differently.
+    { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
+    { accessorKey: "type", header: t("activity.type"), cell: TypeCell, meta: { className: "hidden w-56 xl:table-cell" } },
     {
       accessorKey: "description",
       header: t("activity.descriptionHeader"),
@@ -80,6 +81,6 @@ export function AccountActivity({ data }) {
   ];
 
   return (
-    <DataTable columns={columns} data={data} emptyMessage={t("activity.empty")} />
+    <DataTable columns={columns} data={data} emptyMessage={t("activity.empty")} fixedLayout />
   );
 }
