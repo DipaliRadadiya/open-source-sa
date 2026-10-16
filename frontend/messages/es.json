@@ -3854,6 +3854,7 @@
       "stageConfigure": "Configura lo esencial",
       "stageReview": "Revisa y crea",
       "typeHint": "Elige el punto de partida para tu proyecto. Podrás ajustar la configuración avanzada más adelante.",
+      "moreOnDocker": "Hay más aplicaciones disponibles como 1-Click Recetas en servidores instalados con Docker.",
       "configureHint": "Solo se muestran los campos que esta aplicación necesita.",
       "reviewTitle": "Listo para aprovisionar",
       "reviewHint": "{brand} creará la configuración de la aplicación y mostrará el progreso en la siguiente pantalla.",

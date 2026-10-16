@@ -3854,6 +3854,7 @@
       "stageConfigure": "基本設定",
       "stageReview": "確認して作成",
       "typeHint": "プロジェクトの開始点を選んでください。詳細な設定は後から調整できます。",
+      "moreOnDocker": "Docker でインストールしたサーバーでは、1-Click レシピとしてさらに多くのアプリを利用できます。",
       "configureHint": "このアプリケーションに必要な項目のみが表示されます。",
       "reviewTitle": "プロビジョニングの準備完了",
       "reviewHint": "{brand} がアプリケーションの設定を作成し、次の画面で進捗を表示します。",

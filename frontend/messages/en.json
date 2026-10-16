@@ -3854,6 +3854,7 @@
       "stageConfigure": "Configure essentials",
       "stageReview": "Review and create",
       "typeHint": "Pick the starting point for your project. You can adjust advanced configuration later.",
+      "moreOnDocker": "More apps are available as 1-Click Recipes on servers installed with Docker.",
       "configureHint": "Only the fields required by this application are shown.",
       "reviewTitle": "Ready to provision",
       "reviewHint": "{brand} will create the application configuration and show progress on the next screen.",

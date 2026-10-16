@@ -3854,6 +3854,7 @@
       "stageConfigure": "Configurer l'essentiel",
       "stageReview": "Vérifier et créer",
       "typeHint": "Choisissez le point de départ de votre projet. Vous pourrez ajuster la configuration avancée plus tard.",
+      "moreOnDocker": "D'autres applications sont disponibles en 1-Click Recettes sur les serveurs installés avec Docker.",
       "configureHint": "Seuls les champs requis par cette application sont affichés.",
       "reviewTitle": "Prêt à provisionner",
       "reviewHint": "{brand} créera la configuration de l'application et affichera la progression sur l'écran suivant.",

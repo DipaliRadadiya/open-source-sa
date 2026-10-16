@@ -3854,6 +3854,7 @@
       "stageConfigure": "Grundangaben",
       "stageReview": "Prüfen und erstellen",
       "typeHint": "Wählen Sie den Ausgangspunkt für Ihr Projekt. Die erweiterte Konfiguration können Sie später anpassen.",
+      "moreOnDocker": "Weitere Apps gibt es als 1-Click Rezepte auf Servern, die mit Docker installiert wurden.",
       "configureHint": "Es werden nur die Felder gezeigt, die diese Anwendung braucht.",
       "reviewTitle": "Bereit zur Einrichtung",
       "reviewHint": "{brand} erstellt die Anwendungskonfiguration und zeigt den Fortschritt auf dem nächsten Bildschirm.",

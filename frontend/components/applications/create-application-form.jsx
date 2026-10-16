@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  Container,
   ExternalLink,
   GitBranch,
   Info,
@@ -1623,14 +1624,21 @@ export function CreateApplicationForm({
                           initialSource={initialType === "docker" ? initialDockerSource : undefined}
                         />
                       ) : (
-                        <SiteTypePicker
-                          types={siteTypes}
-                          value={field.value}
-                          onChange={(next) => {
-                            dropTypeFields(next);
-                            field.onChange(next);
-                          }}
-                        />
+                        <>
+                          <SiteTypePicker
+                            types={siteTypes}
+                            value={field.value}
+                            onChange={(next) => {
+                              dropTypeFields(next);
+                              field.onChange(next);
+                            }}
+                          />
+                          {/* Docker recipes exist only on servers installed with the Docker stack. */}
+                          <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                            <Container className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                            <span>{t("guided.moreOnDocker")}</span>
+                          </p>
+                        </>
                       )}
                     </div>
                     {/* Only once an application is chosen. */}
