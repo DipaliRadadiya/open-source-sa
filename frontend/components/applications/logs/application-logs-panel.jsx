@@ -215,8 +215,9 @@ export function ApplicationLogsPanel({
 
   const group = source ? groupFor(source.key) : undefined;
   const modified = parseModified(source?.modified);
+  // Non-breaking: on a phone the line wrapped between "2:27" and "PM".
   const writtenAt = modified
-    ? format.dateTime(modified, { dateStyle: "medium", timeStyle: "short" })
+    ? format.dateTime(modified, { dateStyle: "medium", timeStyle: "short" }).replace(/ /g, "\u00a0")
     : null;
 
   const visible = useMemo(
