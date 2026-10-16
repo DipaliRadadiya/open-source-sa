@@ -16,4 +16,8 @@ return [
     'bantime_too_short' => 'La durée de bannissement doit être d\'au moins 60 secondes, ou -1 pour un bannissement permanent.',
     // FS-C45: the application's own ban list, ban and unban.
     'app_jail_not_enabled' => 'Fail2ban n’exécute aucune prison pour cette application. Activez d’abord sa protection fail2ban.',
+    // One ignore-list entry at a time (2026-10-16).
+    'ignore_ip_exists' => 'Cette adresse figure déjà dans la liste des adresses ignorées.',
+    'ignore_ip_missing' => 'Cette adresse ne figure pas dans la liste des adresses ignorées. Rechargez la page pour voir la liste actuelle.',
+    'ignore_list_full' => 'La liste des adresses ignorées est pleine (100 entrées). Supprimez-en une ou utilisez une plage qui en couvre plusieurs.',
 ];

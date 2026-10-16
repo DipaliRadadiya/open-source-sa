@@ -76,6 +76,8 @@ return [
     'fail2ban.ip_banned' => 'Bloqueou :ip em :jail',
     'fail2ban.ip_unbanned' => 'Desbloqueou :ip de :jail',
     'fail2ban.all_unbanned' => 'Desbloqueou todos os endereços IP (:count)',
+    'fail2ban.ignore_ip_added' => 'Adicionou :ip à lista de ignorados do fail2ban',
+    'fail2ban.ignore_ip_removed' => 'Removeu :ip da lista de ignorados do fail2ban',
     'server.process_killed' => 'Parou o processo :pid (:command) com SIG:signal',
     'database.optimized' => 'Otimizou o banco de dados :name',
     'database.repaired' => 'Reparou o banco de dados :name',

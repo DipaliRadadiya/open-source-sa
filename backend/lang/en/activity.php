@@ -76,6 +76,8 @@ return [
     'fail2ban.ip_banned' => 'Banned :ip in :jail',
     'fail2ban.ip_unbanned' => 'Unbanned :ip from :jail',
     'fail2ban.all_unbanned' => 'Unbanned all IP addresses (:count)',
+    'fail2ban.ignore_ip_added' => 'Added :ip to the fail2ban ignore list',
+    'fail2ban.ignore_ip_removed' => 'Removed :ip from the fail2ban ignore list',
     'server.process_killed' => 'Stopped process :pid (:command) with SIG:signal',
     // Nothing writes these two any more — the optimize and repair endpoints
     // were removed on 2026-09-08. They stay because the activity log is a

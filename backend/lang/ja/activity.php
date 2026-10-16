@@ -76,6 +76,8 @@ return [
     'fail2ban.ip_banned' => ':jail で :ip をブロックしました',
     'fail2ban.ip_unbanned' => ':jail から :ip のブロックを解除しました',
     'fail2ban.all_unbanned' => 'すべての IP アドレスのブロックを解除しました (:count)',
+    'fail2ban.ignore_ip_added' => ':ip を fail2ban の無視リストに追加しました',
+    'fail2ban.ignore_ip_removed' => ':ip を fail2ban の無視リストから削除しました',
     'server.process_killed' => 'プロセス :pid (:command) を SIG:signal で停止しました',
     'database.optimized' => ':name データベースを最適化しました',
     'database.repaired' => ':name データベースを修復しました',

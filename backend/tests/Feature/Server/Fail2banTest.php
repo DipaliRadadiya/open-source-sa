@@ -962,3 +962,94 @@ it('keeps the per-site jails\' bans out of recidive (FB-K)', function () {
         ->and($counted('sshd'))->toBeTrue()
         ->and($counted('panel-app-generic'))->toBeTrue();
 });
+
+describe('one ignore-list entry at a time (v7 ignore-ip add/remove)', function () {
+    beforeEach(function () {
+        fakeFail2ban(bans: ['sshd' => []]);
+        File::put("{$this->jailD}/jail.local", Fail2banManager::MANAGED_HEADER."\n[DEFAULT]\nbantime = 7200\nfindtime = 300\nmaxretry = 4\nignoreip = 127.0.0.1/8 ::1 203.0.113.5\n\n[sshd]\nenabled = true\n");
+    });
+
+    it('adds one address and keeps everything else in the file as it was', function () {
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.0/24'])
+            ->assertOk()
+            ->assertJsonPath('fail2ban.settings.ignore_ips', ['203.0.113.5', '198.51.100.0/24']);
+
+        // Not the defaults: the settings someone else saved stay theirs.
+        expect(dropIn())->toContain('ignoreip = 127.0.0.1/8 ::1 203.0.113.5 198.51.100.0/24')
+            ->toContain('bantime = 7200')->toContain('maxretry = 4');
+        expect(ActivityLog::where('type', 'fail2ban')->where('action', 'ignore_ip_added')->exists())->toBeTrue();
+    });
+
+    it('stores the form fail2ban uses, so a mapped address is not a second entry', function () {
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '::ffff:203.0.113.5'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/fail2ban.ignore_ip_exists'));
+    });
+
+    it('refuses a malformed address or an open-to-everyone range', function (string $ip) {
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => $ip])->assertUnprocessable()->assertJsonValidationErrors('ip');
+    })->with(['not-an-ip', '0.0.0.0/0', '203.0.113.5/33', '1.2.3.4 5.6.7.8']);
+
+    it('refuses the 101st entry', function () {
+        $ips = implode(' ', array_map(fn ($i) => "10.0.{$i}.1", range(1, 100)));
+        File::put("{$this->jailD}/jail.local", Fail2banManager::MANAGED_HEADER."\n[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 {$ips}\n");
+
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.7'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/fail2ban.ignore_list_full'));
+    });
+
+    it('removes one entry, a range given in the query', function () {
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.0/24'])->assertOk();
+
+        f2b('DELETE', '/api/fail2ban/ignore-ips?ip=198.51.100.0/24')
+            ->assertOk()
+            ->assertJsonPath('fail2ban.settings.ignore_ips', ['203.0.113.5']);
+
+        expect(dropIn())->toContain('ignoreip = 127.0.0.1/8 ::1 203.0.113.5')->toContain('bantime = 7200');
+        expect(ActivityLog::where('type', 'fail2ban')->where('action', 'ignore_ip_removed')->exists())->toBeTrue();
+    });
+
+    it('says so when the entry is not on the list, instead of agreeing', function () {
+        f2b('DELETE', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.9'])
+            ->assertNotFound()
+            ->assertJsonPath('message', __('errors/fail2ban.ignore_ip_missing'));
+    });
+
+    it('will not take your own address off while the SSH jail runs, unless you confirm', function () {
+        $as = fn () => test()->withServerVariables(['REMOTE_ADDR' => '203.0.113.5'])->withHeader('Authorization', 'Bearer '.test()->token);
+
+        $as()->deleteJson('/api/fail2ban/ignore-ips', ['ip' => '203.0.113.5'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/fail2ban.lockout_risk'));
+        expect(dropIn())->toContain('203.0.113.5');
+
+        $as()->deleteJson('/api/fail2ban/ignore-ips', ['ip' => '203.0.113.5', 'acknowledged' => true])->assertOk();
+        expect(dropIn())->not->toContain('203.0.113.5');
+    });
+
+    it('lets you remove your own address when another entry still covers you', function () {
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '203.0.113.0/24'])->assertOk();
+
+        test()->withServerVariables(['REMOTE_ADDR' => '203.0.113.5'])->withHeader('Authorization', 'Bearer '.test()->token)
+            ->deleteJson('/api/fail2ban/ignore-ips', ['ip' => '203.0.113.5'])->assertOk();
+    });
+
+    it('is refused to a view-only user', function () {
+        $user = User::factory()->create();
+        grantPermission($user, 'fail2ban', view: true, manage: false);
+        $token = $user->createToken('t')->plainTextToken;
+
+        $this->withHeader('Authorization', "Bearer {$token}")->postJson('/api/fail2ban/ignore-ips', ['ip' => '198.51.100.7'])->assertForbidden();
+        $this->withHeader('Authorization', "Bearer {$token}")->deleteJson('/api/fail2ban/ignore-ips', ['ip' => '203.0.113.5'])->assertForbidden();
+        expect(dropIn())->not->toContain('198.51.100.7')->toContain('203.0.113.5');
+    });
+
+    it('needs fail2ban to be installed', function () {
+        fakeFail2ban(installed: false);
+
+        f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.7'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/fail2ban.not_installed'));
+    });
+});

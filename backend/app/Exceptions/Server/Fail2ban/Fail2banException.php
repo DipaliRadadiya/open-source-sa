@@ -70,6 +70,26 @@ class Fail2banException extends Exception
         return new self('errors/fail2ban.lockout_risk', 422);
     }
 
+    /** Adding an entry the ignore list already has. */
+    public static function ignoreIpExists(): self
+    {
+        return new self('errors/fail2ban.ignore_ip_exists', 422);
+    }
+
+    /**
+     * Removing an entry the list does not have — 404 like an unban of an
+     * address that is not banned: the screen showing it is out of date.
+     */
+    public static function ignoreIpMissing(): self
+    {
+        return new self('errors/fail2ban.ignore_ip_missing', 404);
+    }
+
+    public static function ignoreListFull(): self
+    {
+        return new self('errors/fail2ban.ignore_list_full', 422);
+    }
+
     public static function operationFailed(string $reference): self
     {
         return new self('errors/fail2ban.operation_failed', 500, $reference);

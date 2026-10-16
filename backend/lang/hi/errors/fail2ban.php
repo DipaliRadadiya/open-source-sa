@@ -16,4 +16,8 @@ return [
     'bantime_too_short' => 'अवरोध समय कम से कम 60 सेकंड होना चाहिए, या स्थायी अवरोध के लिए -1।',
     // FS-C45: the application's own ban list, ban and unban.
     'app_jail_not_enabled' => 'Fail2ban इस एप्लिकेशन के लिए कोई jail नहीं चला रहा है। पहले इसकी fail2ban सुरक्षा चालू करें।',
+    // One ignore-list entry at a time (2026-10-16).
+    'ignore_ip_exists' => 'यह पता पहले से अनदेखी सूची में है।',
+    'ignore_ip_missing' => 'यह पता अनदेखी सूची में नहीं है। मौजूदा सूची देखने के लिए पेज फिर से लोड करें।',
+    'ignore_list_full' => 'अनदेखी सूची भर गई है (100 प्रविष्टियाँ)। एक हटाएँ, या ऐसी रेंज इस्तेमाल करें जो कई को कवर करे।',
 ];

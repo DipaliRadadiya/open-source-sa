@@ -56,6 +56,8 @@ return [
         'firewall.rule_updated',
         'firewall.rule_removed',
         'fail2ban.settings_updated',
+        'fail2ban.ignore_ip_added',
+        'fail2ban.ignore_ip_removed',
         'system_user.ssh_key_added',
         'system_user.ssh_key_removed',
         'system_user.password_set',

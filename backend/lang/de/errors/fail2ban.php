@@ -16,4 +16,8 @@ return [
     'bantime_too_short' => 'Die Sperrdauer muss mindestens 60 Sekunden betragen, oder -1 für eine dauerhafte Sperre.',
     // FS-C45: the application's own ban list, ban and unban.
     'app_jail_not_enabled' => 'Fail2ban führt für diese Anwendung kein Jail aus. Aktivieren Sie zuerst ihren Fail2ban-Schutz.',
+    // One ignore-list entry at a time (2026-10-16).
+    'ignore_ip_exists' => 'Diese Adresse steht bereits auf der Ignorierliste.',
+    'ignore_ip_missing' => 'Diese Adresse steht nicht auf der Ignorierliste. Laden Sie die Seite neu, um die aktuelle Liste zu sehen.',
+    'ignore_list_full' => 'Die Ignorierliste ist voll (100 Einträge). Entfernen Sie einen Eintrag oder verwenden Sie einen Bereich, der mehrere abdeckt.',
 ];

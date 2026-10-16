@@ -16,4 +16,8 @@ return [
     'bantime_too_short' => 'Ban time must be at least 60 seconds, or -1 for a permanent ban.',
     // FS-C45: the application's own ban list, ban and unban.
     'app_jail_not_enabled' => 'Fail2ban is not running a jail for this application. Turn its fail2ban protection on first.',
+    // One ignore-list entry at a time (2026-10-16).
+    'ignore_ip_exists' => 'That address is already on the ignore list.',
+    'ignore_ip_missing' => 'That address is not on the ignore list. Reload the page to see the current list.',
+    'ignore_list_full' => 'The ignore list is full (100 entries). Remove one, or use a range that covers several.',
 ];

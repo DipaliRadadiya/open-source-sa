@@ -76,6 +76,8 @@ return [
     'fail2ban.ip_banned' => ':ip in :jail gesperrt',
     'fail2ban.ip_unbanned' => ':ip in :jail entsperrt',
     'fail2ban.all_unbanned' => 'Alle IP-Adressen entsperrt (:count)',
+    'fail2ban.ignore_ip_added' => ':ip zur fail2ban-Ignorierliste hinzugefügt',
+    'fail2ban.ignore_ip_removed' => ':ip von der fail2ban-Ignorierliste entfernt',
     'server.process_killed' => 'Prozess :pid (:command) mit SIG:signal beendet',
     'database.optimized' => 'Datenbank :name optimiert',
     'database.repaired' => 'Datenbank :name repariert',

@@ -16,4 +16,8 @@ return [
     'bantime_too_short' => 'ブロック時間は 60 秒以上、または無期限の場合は -1 を指定してください。',
     // FS-C45: the application's own ban list, ban and unban.
     'app_jail_not_enabled' => 'このアプリの fail2ban jail は動作していません。先に fail2ban の保護をオンにしてください。',
+    // One ignore-list entry at a time (2026-10-16).
+    'ignore_ip_exists' => 'このアドレスはすでに無視リストにあります。',
+    'ignore_ip_missing' => 'このアドレスは無視リストにありません。ページを再読み込みして現在のリストを確認してください。',
+    'ignore_list_full' => '無視リストがいっぱいです（100 件）。1 件削除するか、複数をまとめた範囲を使ってください。',
 ];

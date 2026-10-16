@@ -16,4 +16,8 @@ return [
     'bantime_too_short' => 'O tempo de bloqueio deve ser de pelo menos 60 segundos, ou -1 para um bloqueio permanente.',
     // FS-C45: the application's own ban list, ban and unban.
     'app_jail_not_enabled' => 'O fail2ban não está a executar uma jail para esta aplicação. Ative primeiro a proteção fail2ban dela.',
+    // One ignore-list entry at a time (2026-10-16).
+    'ignore_ip_exists' => 'Esse endereço já está na lista de ignorados.',
+    'ignore_ip_missing' => 'Esse endereço não está na lista de ignorados. Recarregue a página para ver a lista atual.',
+    'ignore_list_full' => 'A lista de ignorados está cheia (100 entradas). Remova uma ou use um intervalo que cubra várias.',
 ];

@@ -5483,6 +5483,27 @@ Updates are rollback-safe: the panel validates the new `/etc/fail2ban/jail.local
 
 ---
 
+### POST `/fail2ban/ignore-ips` · DELETE `/fail2ban/ignore-ips`
+**Permission:** `fail2ban` (manage) · added 2026-10-16 (v7's ignore-ip add/remove)
+
+Add or remove **one** ignore-list entry, against the list as it is on disk now. `PUT /fail2ban` replaces the whole list, so two people editing at once lose the first save; these do not, and every write of `jail.local` (including `PUT`) now goes one at a time. Ban settings and jails are left exactly as they are.
+
+**Request:** `{"ip": "203.0.113.5"}` or a range `{"ip": "198.51.100.0/24"}`. For `DELETE`, `ip` may also go in the query (`?ip=198.51.100.0/24`); a range's slash cannot go in a path. The address is stored in the form fail2ban uses (`::ffff:1.2.3.4` → `1.2.3.4`). `/0` ranges are refused.
+
+**Response `200`:** `{"fail2ban": {"settings": {...}, "jails": [...]}}` (same as `PUT`).
+
+| Status | When |
+|---|---|
+| `422` `ignore_ip_exists` | POST: already on the list |
+| `422` `ignore_list_full` | POST: 100 entries already |
+| `404` `ignore_ip_missing` | DELETE: not on the list (the screen is out of date; refetch) |
+| `422` `lockout_risk` | DELETE: removing **your own address** while the SSH jail runs, with no other entry still covering you. Re-send with `"acknowledged": true` to confirm |
+| `422` `not_installed` | fail2ban is not installed |
+
+The two loopback entries (`127.0.0.1/8`, `::1`) are always there and never part of `ignore_ips`, so they cannot be removed.
+
+---
+
 ### POST `/fail2ban/bans`
 **Permission:** `fail2ban` (manage)
 

@@ -76,6 +76,8 @@ return [
     'fail2ban.ip_banned' => 'Заблокировал :ip в :jail',
     'fail2ban.ip_unbanned' => 'Разблокировал :ip в :jail',
     'fail2ban.all_unbanned' => 'Разблокировал все IP-адреса (:count)',
+    'fail2ban.ignore_ip_added' => 'Добавил :ip в список исключений fail2ban',
+    'fail2ban.ignore_ip_removed' => 'Удалил :ip из списка исключений fail2ban',
     'server.process_killed' => 'Остановлен процесс :pid (:command) сигналом SIG:signal',
     'database.optimized' => 'Оптимизировал базу данных :name',
     'database.repaired' => 'Восстановил базу данных :name',

@@ -6,6 +6,7 @@ use App\Enums\InstallStatus;
 use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Fail2ban\BanIpRequest;
+use App\Http\Requests\Server\Fail2ban\IgnoreIpRequest;
 use App\Http\Requests\Server\Fail2ban\UpdateFail2banRequest;
 use App\Jobs\InstallFail2ban;
 use App\Services\ActivityLogger;
@@ -15,6 +16,7 @@ use App\Support\IpAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 class Fail2banController extends Controller
@@ -118,7 +120,7 @@ class Fail2banController extends Controller
 
         $this->guardLockout($jails, $ignoreIps, $request->ip(), (bool) ($data['acknowledged'] ?? false), $fail2ban);
 
-        $fail2ban->write($data, $ignoreIps, $jails);
+        $this->locked(fn () => $fail2ban->write($data, $ignoreIps, $jails));
 
         $log->log('fail2ban.settings_updated', null, [
             'jails' => implode(', ', array_keys(array_filter($jails))) ?: '—',
@@ -128,6 +130,78 @@ class Fail2banController extends Controller
             'settings' => $fail2ban->settings(),
             'jails' => $fail2ban->jails(),
         ]]);
+    }
+
+    /**
+     * Add one address or range to the ignore list (manage).
+     *
+     * `PUT /fail2ban` replaces the whole list, so two people editing it at
+     * once lose whichever change was saved first. This changes one entry
+     * against the list as it is on disk now, under the same lock as every
+     * other write of the file, so nothing in between is lost.
+     */
+    public function addIgnoreIp(IgnoreIpRequest $request, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
+    {
+        $ip = (string) $request->validated('ip');
+
+        $this->locked(function () use ($ip, $fail2ban): void {
+            $this->guardInstalled($fail2ban);
+            $current = $fail2ban->ignoreIps();
+
+            if (in_array($ip, $current, true)) {
+                throw Fail2banException::ignoreIpExists();
+            }
+
+            // The same ceiling as the whole-list form.
+            if (count($current) >= 100) {
+                throw Fail2banException::ignoreListFull();
+            }
+
+            $fail2ban->write($fail2ban->settings(), [...$current, $ip], $this->jailStates([], $fail2ban));
+        });
+
+        $log->log('fail2ban.ignore_ip_added', null, ['ip' => $ip]);
+
+        return $this->settingsResponse($fail2ban);
+    }
+
+    /**
+     * Remove one entry from the ignore list (manage).
+     *
+     * Taking your own address off while a jail that watches SSH is running is
+     * the reverse of the lockout `guardLockout` exists for: from then on a few
+     * mistyped passwords ban you. Allowed, but only once acknowledged — unless
+     * another entry still covers you.
+     */
+    public function removeIgnoreIp(IgnoreIpRequest $request, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
+    {
+        $ip = (string) $request->validated('ip');
+        $acknowledged = (bool) $request->validated('acknowledged', false);
+        $caller = IpAddress::canonical((string) $request->ip());
+
+        $this->locked(function () use ($ip, $acknowledged, $caller, $fail2ban): void {
+            $this->guardInstalled($fail2ban);
+            $current = $fail2ban->ignoreIps();
+
+            if (! in_array($ip, $current, true)) {
+                throw Fail2banException::ignoreIpMissing();
+            }
+
+            $remaining = array_values(array_diff($current, [$ip]));
+
+            if (! $acknowledged
+                && IpUtils::checkIp($caller, [$ip])
+                && ! IpUtils::checkIp($caller, [...Fail2banManager::ALWAYS_IGNORED, ...$remaining])
+                && $this->sshJailActive($fail2ban)) {
+                throw Fail2banException::lockoutRisk();
+            }
+
+            $fail2ban->write($fail2ban->settings(), $remaining, $this->jailStates([], $fail2ban));
+        });
+
+        $log->log('fail2ban.ignore_ip_removed', null, ['ip' => $ip]);
+
+        return $this->settingsResponse($fail2ban);
     }
 
     /**
@@ -218,6 +292,45 @@ class Fail2banController extends Controller
         $log->log('fail2ban.all_unbanned', null, ['count' => count($released)]);
 
         return response()->json(['unbanned' => ['ips' => $released]]);
+    }
+
+    /**
+     * Every write of jail.local, one at a time. The file is read, changed and
+     * written back whole, so two writes overlapping would lose one of them.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $write
+     * @return T
+     */
+    private function locked(callable $write): mixed
+    {
+        return Cache::lock('fail2ban:jail-local', 60)->block(15, $write);
+    }
+
+    private function guardInstalled(Fail2banManager $fail2ban): void
+    {
+        if (! $fail2ban->installed()) {
+            throw Fail2banException::notInstalled();
+        }
+    }
+
+    private function sshJailActive(Fail2banManager $fail2ban): bool
+    {
+        $risky = array_column(array_filter(
+            (array) config('server.fail2ban.jails', []),
+            fn (array $jail) => $jail['lockout_risk'] ?? false,
+        ), 'name');
+
+        return array_intersect($risky, $fail2ban->activeJails()) !== [];
+    }
+
+    private function settingsResponse(Fail2banManager $fail2ban): JsonResponse
+    {
+        return response()->json(['fail2ban' => [
+            'settings' => $fail2ban->settings(),
+            'jails' => $fail2ban->jails(),
+        ]]);
     }
 
     /**
