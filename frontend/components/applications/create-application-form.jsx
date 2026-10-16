@@ -1544,8 +1544,8 @@ export function CreateApplicationForm({
     }
   }
 
-  // Cancel / Create: in the review column from 1280 (it stays in view while scrolling),
-  // in a card at the end of the form below that.
+  // Cancel / Create: in a card at the end of the form at every width, not in the review
+  // column (Krishna, 16 Oct).
   const actionButtons = (
     <>
       {/* Neutral, not the in-card blue tint: Cancel is not an action. */}
@@ -1583,7 +1583,6 @@ export function CreateApplicationForm({
           form.handleSubmit(onSubmit, onInvalidSubmit)(event)
         }
         noValidate
-        className="mx-auto max-w-6xl"
       >
         {/* The review column is there from the start (its first item is "Choose an application
             type"): showing it only after a choice made the form jump from full width to
@@ -2370,9 +2369,9 @@ export function CreateApplicationForm({
               </div>
             ) : null}
 
-            {/* Below 1280 (no review column): a plain card at the end of the form. It floated
-                over the fields as a sticky bar and looked stuck on (Krishna, 7 Oct). */}
-            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1 sm:px-5 xl:hidden">
+            {/* A plain card at the end of the form. It floated over the fields as a sticky bar
+                and looked stuck on (Krishna, 7 Oct). */}
+            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1 sm:px-5">
               {selected ? (
                 <p className="hidden min-w-0 flex-1 text-sm text-muted-foreground md:block">
                   {t("guided.reviewHint", { brand })}
@@ -2388,7 +2387,6 @@ export function CreateApplicationForm({
             <CreateReadinessPanel
               items={readinessItems}
               onSelectItem={focusReadinessItem}
-              footer={actionButtons}
               className="max-h-[calc(100svh-var(--app-chrome,7rem)-7rem)]"
             />
           </aside>

@@ -22,32 +22,49 @@ export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">
       <SkHeader />
-      <div className="mx-auto max-w-6xl space-y-6">
-        <StepCard>
-          <SkInput />
-          <div className="mt-3 flex gap-2">
-            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-6 w-20 rounded-full" />)}
+      {/* Same grid as the form: steps, then the review column from 1280. */}
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-6">
+          <StepCard>
+            <SkInput />
+            <div className="mt-3 flex gap-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-20 rounded-full" />
+              ))}
+            </div>
+            <div className="mt-4">
+              <SkOptions count={6} columns={3} />
+            </div>
+          </StepCard>
+          <StepCard>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3.5 w-24" />
+                  <SkInput />
+                </div>
+              ))}
+            </div>
+            <div className="mt-5">
+              <SkOptions count={2} columns={2} />
+            </div>
+          </StepCard>
+          <StepCard>
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </StepCard>
+          {/* The Cancel / Create bar at the end of the form. */}
+          <div className={cn(SK_CARD, "flex justify-end gap-2 px-5 py-3")}>
+            <Skeleton className="h-9 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-40 rounded-lg" />
           </div>
-          <div className="mt-4">
-            <SkOptions count={6} columns={3} />
-          </div>
-        </StepCard>
-        <StepCard>
-          <div className="grid gap-5 sm:grid-cols-2">
-            {[0, 1].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-3.5 w-24" />
-                <SkInput />
-              </div>
-            ))}
-          </div>
-          <div className="mt-5">
-            <SkOptions count={2} columns={2} />
-          </div>
-        </StepCard>
-        <StepCard>
-          <Skeleton className="h-10 w-full rounded-lg" />
-        </StepCard>
+        </div>
+        <div className={cn(SK_CARD, "hidden space-y-3 p-5 xl:block")}>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-2 w-full rounded-full" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-3.5 w-48 max-w-full" />
+          ))}
+        </div>
       </div>
     </div>
   );
