@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "qdrant/qdrant:v1.19.2-unprivileged",
-            "tested": []
+            "tested": [
+                "qdrant/qdrant:v1.19.2-unprivileged"
+            ]
         }
     },
     "services": [
@@ -62,6 +64,7 @@
         "Connecting an AI app: Dify, Langflow, n8n and most Qdrant clients ask for a URL and an API key. Use the URL https://<domain> (port 443, nothing after the domain) and the token from the first-run card. Clients that ask for a port separately need 443 and HTTPS.",
         "Only the REST port (6333) is published, behind the site's HTTPS. The gRPC port (6334) is not exposed, so clients must use REST: in the Python client that is the default (prefer_grpc stays false).",
         "This uses the official -unprivileged image, so Qdrant runs as a normal user (uid 1000) instead of root. Collections live in the data volume on /qdrant/storage, and so do snapshots (QDRANT__STORAGE__SNAPSHOTS_PATH points into it), so a snapshot survives a re-create of the container. Anonymous telemetry is off.",
-        "The 512m floor fits small and medium collections. Qdrant keeps vectors and indexes in memory by default; for large collections raise the limit, or switch collections to on-disk storage (on_disk: true) when you create them."
+        "The 512m floor fits small and medium collections. Qdrant keeps vectors and indexes in memory by default; for large collections raise the limit, or switch collections to on-disk storage (on_disk: true) when you create them.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-46): created from the 1-Click Recipes tab, Running in 32 s (24.04) and 33 s (26.04); / answers 200 with the version, while /collections without the key, or with a wrong one, answers 401; with the key a 4-dimension collection was created, 2 points upserted and the nearest one came back first; a snapshot was written to the volume; the dashboard asked for the key and then listed the collection; the container runs as uid 1000 and nothing listens on 6334; the collection, its points and the snapshot survived a restart and a forced re-create, and the key was still required. Idle 16 MiB of 512m (51 MiB after loading 5000 128-dimension points). Every image ref below is in its tested list."
     ]
 }

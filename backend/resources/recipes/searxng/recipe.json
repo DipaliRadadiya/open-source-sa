@@ -21,11 +21,15 @@
     "images": {
         "proxy": {
             "ref": "caddy:2.11.7-alpine",
-            "tested": []
+            "tested": [
+                "caddy:2.11.7-alpine"
+            ]
         },
         "searxng": {
             "ref": "searxng/searxng:2026.10.15-b00212a83",
-            "tested": []
+            "tested": [
+                "searxng/searxng:2026.10.15-b00212a83"
+            ]
         }
     },
     "services": [
@@ -84,6 +88,7 @@
         "The configuration is the starter file etc/searxng/settings.yml in the app's folder (File Manager), mounted read-only on /etc/searxng. It starts from the image's own template (use_default_settings: true) and changes three things: the JSON output format is on, the rate limiter is off (the instance is private behind the gate, so there is no Valkey service), and images are proxied through SearXNG. Edit it to choose engines, then restart the app. The panel never overwrites it.",
         "server.secret_key is not in the file: the container gets a generated 32-character key in SEARXNG_SECRET, which SearXNG reads in its place. FORCE_OWNERSHIP is off because the settings folder is read-only, so the log shows a harmless warning that /etc/searxng is not owned by searxng.",
         "Searches leave the server from the container, so the server needs outbound internet access. Public search engines often throttle or CAPTCHA datacenter IP addresses, so some engines may return nothing from a VPS; the result page lists the engines that failed.",
-        "Like the other recipes with a proxy in front (Vane, Plane, Dify), the panel's memory and CPU limits apply to the proxy, the app service; the SearXNG container has a fixed 1g. Its result cache (favicons) lives in the data volume on /var/cache/searxng."
+        "Like the other recipes with a proxy in front (Vane, Plane, Dify), the panel's memory and CPU limits apply to the proxy, the app service; the SearXNG container has a fixed 1g. Its result cache (favicons) lives in the data volume on /var/cache/searxng.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-46): created from the 1-Click Recipes tab, Running in 48 s on both; without the password, with a wrong one or a wrong user, every path answers 401; with admin and the generated password a search for serveravatar rendered 20 results, and format=json answered 200 with 20 results both with -u and in the https://admin:<password>@<domain> URL form; the settings file in the container is the starter file, mounted read-only, and the generated secret key is in effect; restart and a forced re-create kept the gate and the search working with the same password. Brave, DuckDuckGo and Wikipedia refused the test servers' datacenter IPs; Google answered. Idle: proxy 10 MiB of 256m, SearXNG 112 to 113 MiB of 1g (164 MiB after 11 searches). Every image ref below is in its tested list."
     ]
 }
