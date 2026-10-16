@@ -23,6 +23,7 @@ services:
       CRAWL4AI_API_TOKEN: "bca42d62383b205d126a13bb8638cd3a"
       SECRET_KEY: "18b1ed5879fe2143847a15f04fc51225"
       CRAWL4AI_ALLOW_DEEP_CRAWL: "false"
+      FORWARDED_ALLOW_IPS: "*"
 
     volumes:
       - /home/owner/site/public_html/app/config.yml:/app/config.yml:ro

@@ -28,6 +28,7 @@ services:
       CRAWL4AI_API_TOKEN: "{{ secret.CRAWL4AI_API_TOKEN }}"
       SECRET_KEY: "{{ secret.SECRET_KEY }}"
       CRAWL4AI_ALLOW_DEEP_CRAWL: "false"
+      FORWARDED_ALLOW_IPS: "*"
 
     volumes:
       - {{ site_root }}/app/config.yml:/app/config.yml:ro
