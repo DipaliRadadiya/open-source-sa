@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UserRound, ShieldCheck, History, TriangleAlert, SearchX } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useRefresh } from "@/hooks/use-refresh";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -44,13 +45,16 @@ export function AccountTabs({
   const [tab, setTab] = useState(initial);
   const [profileDirty, setProfileDirty] = useState(false);
   const [pendingTab, setPendingTab] = useState(null);
+  const { refresh } = useRefresh();
 
   const applyTab = useCallback((next) => {
     setTab(next);
     const params = new URLSearchParams(window.location.search);
     params.set("tab", next);
     window.history.replaceState(null, "", `?${params.toString()}`);
-  }, []);
+    // The log was read with the page; a password or profile change made since is in it only after a re-read.
+    if (next === "activity") refresh();
+  }, [refresh]);
 
   const onChange = useCallback(
     (next) => {
