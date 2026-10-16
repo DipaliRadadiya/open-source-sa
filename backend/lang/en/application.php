@@ -264,6 +264,7 @@ return [
         'container_port_mismatch' => 'Nothing answers on the container port this site proxies to, and the image listens on a different one. Change the container port to the one the image declares and deploy again.',
         'container_not_answering' => 'The container is running but nothing answered on its port. Check its log, and that the container port is the one the application listens on.',
         'container_unhealthy' => 'The container is running, but the image\'s own health check says it is not working. Its log, and the health check output shown here, say why.',
+        'compose_port_taken' => 'This compose file publishes a host port that another application on this server already uses, so it cannot start here. Publish a different host port in the compose file and deploy again.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.

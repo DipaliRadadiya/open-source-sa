@@ -2,6 +2,7 @@
 
 return [
     'compose_port_ambiguous' => 'Este archivo compose publica más de un puerto, así que el panel no puede saber cuál sirve la aplicación. Indica en «Puerto del contenedor» el puerto interno que debe usarse como proxy.',
+    'compose_port_taken' => 'El puerto :port ya lo usa :application en este servidor. Publica otro puerto del host en tu archivo compose.',
     'compose_unparsable' => 'Docker no pudo leer este archivo compose. Revisa la indentación y las comillas; el error de Docker está en el registro de operaciones del servidor.',
     'compose_no_services' => 'Este archivo compose no define ningún servicio, así que no habría nada que ejecutar.',
     'compose_bind_outside' => 'El servicio :service monta :path, que está fuera del directorio propio de esta aplicación. Un contenedor solo puede montar sus propios archivos.',

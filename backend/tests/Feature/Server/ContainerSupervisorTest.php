@@ -14,6 +14,7 @@ use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\NginxDriver;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
 
@@ -1144,6 +1145,169 @@ it('still writes an override for a genuinely hand-written file', function () {
 
     expect(overrideWritten())->toContain('mem_limit: 256m');
 });
+
+/*
+ * A pasted file that sets its OWN resource limits (RC-42).
+ *
+ * Compose refuses two spellings of one limit with different values — "can't set
+ * distinct values on 'mem_limit' and 'deploy.resources.limits.memory'" — so an
+ * override that always wrote `mem_limit` made every pasted file using `deploy:`
+ * a site that never started. The override now writes the key the user's service
+ * already uses, and keeps the lower of the two numbers: the panel's value is a
+ * ceiling, not a replacement.
+ */
+
+/**
+ * Apply a pasted file whose RESOLVED services are `$services`, and answer the
+ * override parsed back into an array.
+ *
+ * @param  array<string, array<string, mixed>>  $services
+ * @param  array<string, mixed>  $fill
+ * @return array<string, mixed>
+ */
+function pastedOverride(array $services, array $fill = []): array
+{
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode(['services' => $services])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    overrideWritten('');
+
+    $application = containerApp();
+    $application->forceFill(['compose' => "services:\n  web:\n    image: nginx:1.27-alpine\n", ...$fill])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    return Yaml::parse((string) overrideWritten());
+}
+
+/** A resolved service publishing the site's port, plus whatever else it sets. */
+function pastedWeb(array $extra = []): array
+{
+    return ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']], ...$extra];
+}
+
+it('writes the memory ceiling under deploy when the pasted service sets it there', function () {
+    // The live repro: `deploy.resources.limits.memory: 128m`, which
+    // `docker compose config` resolves to bytes.
+    $override = pastedOverride([
+        'web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => '134217728']]]]),
+    ]);
+
+    $web = $override['services']['web'];
+
+    // The user's 128 MiB is below the default 512m ceiling, so it stays.
+    expect($web['deploy']['resources']['limits']['memory'])->toBe('134217728')
+        ->and($web)->not->toHaveKey('mem_limit')
+        ->and($web['logging']['options']['max-size'])->toBe('10m');
+});
+
+it('lowers a pasted service\'s own deploy memory to the site ceiling', function () {
+    $override = pastedOverride(
+        ['web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => '134217728']]]])],
+        ['memory_limit' => '64m'],
+    );
+
+    expect($override['services']['web']['deploy']['resources']['limits']['memory'])->toBe('64m')
+        ->and($override['services']['web'])->not->toHaveKey('mem_limit');
+});
+
+it('writes the cpu quota under deploy when the pasted service sets it there', function () {
+    $override = pastedOverride(
+        ['web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['cpus' => '2']]]])],
+        ['cpu_limit' => '0.5'],
+    );
+
+    $web = $override['services']['web'];
+
+    expect($web['deploy']['resources']['limits']['cpus'])->toBe(0.5)
+        ->and($web)->not->toHaveKey('cpus')
+        // No memory under deploy in the user's file, so memory keeps its usual key.
+        ->and($web['mem_limit'])->toBe('512m')
+        ->and($web['deploy']['resources']['limits'])->not->toHaveKey('memory');
+});
+
+it('keeps a pasted service\'s own lower cpu quota under deploy', function () {
+    $override = pastedOverride(
+        ['web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['cpus' => 0.25]]]])],
+        ['cpu_limit' => '1.5'],
+    );
+
+    expect($override['services']['web']['deploy']['resources']['limits']['cpus'])->toBe(0.25);
+});
+
+it('adds no cpu key under deploy for a site with no cpu quota', function () {
+    // Unchanged from before: no site quota, no CPU key in the override at all, so
+    // the user's own `deploy` quota is the one that applies.
+    $override = pastedOverride([
+        'web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['cpus' => '2', 'memory' => '134217728']]]]),
+    ]);
+
+    expect($override['services']['web']['deploy']['resources']['limits'])->toBe(['memory' => '134217728']);
+});
+
+it('keeps a pasted service\'s own mem_limit when it is below the ceiling', function () {
+    $override = pastedOverride(['web' => pastedWeb(['mem_limit' => '134217728'])], ['memory_limit' => '1g']);
+
+    expect($override['services']['web']['mem_limit'])->toBe(134217728)
+        ->and($override['services']['web'])->not->toHaveKey('deploy');
+});
+
+it('lowers a pasted service\'s own mem_limit to the ceiling', function () {
+    $override = pastedOverride(['web' => pastedWeb(['mem_limit' => '2147483648'])], ['memory_limit' => '1g']);
+
+    expect($override['services']['web']['mem_limit'])->toBe('1g');
+});
+
+it('leaves a pasted service with no limits of its own exactly as before', function () {
+    $override = pastedOverride(['web' => pastedWeb()], ['cpu_limit' => '0.5']);
+
+    expect($override['services']['web'])->toBe([
+        'mem_limit' => '512m',
+        'cpus' => 0.5,
+        'logging' => ['driver' => 'json-file', 'options' => ['max-size' => '10m', 'max-file' => '3']],
+    ]);
+});
+
+it('gives each pasted service the limit form it uses itself', function () {
+    $override = pastedOverride([
+        'web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => '134217728', 'cpus' => '2']]]]),
+        'worker' => ['image' => 'nginx:1.27-alpine'],
+    ], ['cpu_limit' => '0.5']);
+
+    $web = $override['services']['web'];
+    $worker = $override['services']['worker'];
+
+    expect($web['deploy']['resources']['limits'])->toBe(['memory' => '134217728', 'cpus' => 0.5])
+        ->and($web)->not->toHaveKey('mem_limit')
+        ->and($web)->not->toHaveKey('cpus')
+        ->and($worker['mem_limit'])->toBe('512m')
+        ->and($worker['cpus'])->toBe(0.5)
+        ->and($worker)->not->toHaveKey('deploy');
+});
+
+it('quotes the deploy memory limit, which Compose only accepts as a string', function (string $own, ?string $siteLimit, string $expected) {
+    // RC-42-FIX, found live: `deploy.resources.limits.memory: 134217728` fails
+    // `docker compose config` with "must be a string", so the site never starts.
+    // `mem_limit` takes a number; this key does not. Both the service's own
+    // value and the ceiling must reach Compose as a string.
+    $override = pastedOverride(
+        ['web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => $own]]]])],
+        $siteLimit === null ? [] : ['memory_limit' => $siteLimit],
+    );
+
+    expect($override['services']['web']['deploy']['resources']['limits']['memory'])->toBe($expected)
+        ->and((string) overrideWritten())->toContain("          memory: \"{$expected}\"\n");
+})->with([
+    'own 128m, below the default ceiling' => ['134217728', null, '134217728'],
+    'own 2g, above the ceiling' => ['2147483648', '1g', '1g'],
+]);
 
 /*
  * Where the site's own directory is mounted (DS-01).

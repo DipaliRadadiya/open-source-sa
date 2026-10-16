@@ -257,6 +257,7 @@ return [
         'container_port_mismatch' => 'Rien ne répond sur le port du conteneur vers lequel ce site redirige, et l\'image écoute sur un autre. Réglez le port du conteneur sur celui que déclare l\'image et redéployez.',
         'container_not_answering' => 'Le conteneur tourne mais rien n\'a répondu sur son port. Vérifiez son journal, et que le port du conteneur est bien celui sur lequel l\'application écoute.',
         'container_unhealthy' => 'Le conteneur tourne, mais le contrôle de santé de l\'image elle-même indique qu\'il ne fonctionne pas. Son journal et la sortie du contrôle affichée ici expliquent pourquoi.',
+        'compose_port_taken' => 'Ce fichier compose publie un port hôte qu\'une autre application de ce serveur utilise déjà : il ne peut donc pas démarrer ici. Publiez un autre port hôte dans le fichier compose, puis redéployez.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.

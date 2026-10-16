@@ -679,3 +679,38 @@ it('does not pass --volumes to a plain delete', function () {
 
     expect($down)->not->toBeNull()->and($down)->not->toContain('--volumes');
 });
+
+/*
+ * A port another application holds (RC-43).
+ *
+ * The create form now refuses it; the editor has to as well, and has to leave the
+ * site being edited out — its own port is not a clash with itself.
+ */
+
+it('accepts the file again with the site\'s own port', function () {
+    fakeComposeBox(resolvedCompose(20001));
+
+    $this->withHeaders(composeHeaders())
+        ->putJson(composeUrl(), ['compose' => validCompose(20001)])
+        ->assertOk();
+});
+
+it('refuses a port another application already uses', function () {
+    Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.test',
+        'site_type' => 'docker', 'serving_profile' => 'docker', 'web_root' => 'public_html',
+        'image' => 'nginx:1.27-alpine', 'container_port' => 80, 'app_port' => 20002,
+        'status' => 'active',
+    ]);
+    fakeComposeBox(resolvedCompose(20002));
+
+    $this->withHeaders(composeHeaders())
+        ->putJson(composeUrl(), ['compose' => validCompose(20002)])
+        ->assertStatus(422)
+        ->assertJsonPath('errors.compose.0', __('errors/application.compose_port_taken', ['port' => 20002, 'application' => 'Blog']));
+
+    // Refused before anything was written or run.
+    expect($this->application->fresh()->compose)->toBeNull()
+        ->and($this->application->fresh()->app_port)->toBe(20001);
+});

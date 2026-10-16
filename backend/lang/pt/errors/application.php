@@ -2,6 +2,7 @@
 
 return [
     'compose_port_ambiguous' => 'Este ficheiro compose publica mais do que uma porta, pelo que o painel não consegue saber qual serve a aplicação. Defina «Porta do contentor» com a porta interna que deve ser encaminhada.',
+    'compose_port_taken' => 'A porta :port já é usada por :application neste servidor. Publique outra porta do anfitrião no seu ficheiro compose.',
     'compose_unparsable' => 'O Docker não conseguiu ler este ficheiro compose. Verifique a indentação e as aspas — o erro do próprio Docker está no registo de operações do servidor.',
     'compose_no_services' => 'Este ficheiro compose não define serviços, pelo que não haveria nada para executar.',
     'compose_bind_outside' => 'O serviço :service monta :path, que está fora do diretório próprio desta aplicação. Um contentor só pode montar os seus próprios ficheiros.',

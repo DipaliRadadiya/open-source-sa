@@ -257,6 +257,7 @@ return [
         'container_port_mismatch' => 'Auf dem Container-Port, an den diese Website weiterleitet, antwortet nichts, und das Image lauscht auf einem anderen. Stelle den Container-Port auf den vom Image angegebenen und deploye erneut.',
         'container_not_answering' => 'Der Container läuft, aber auf seinem Port hat nichts geantwortet. Prüfe sein Log und ob der Container-Port der ist, auf dem die Anwendung lauscht.',
         'container_unhealthy' => 'Der Container läuft, aber die eigene Integritätsprüfung des Images meldet, dass er nicht funktioniert. Sein Log und die hier gezeigte Ausgabe der Prüfung nennen den Grund.',
+        'compose_port_taken' => 'Diese Compose-Datei veröffentlicht einen Host-Port, den bereits eine andere Anwendung auf diesem Server verwendet, daher kann sie hier nicht starten. Veröffentlichen Sie in der Compose-Datei einen anderen Host-Port und deployen Sie erneut.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
