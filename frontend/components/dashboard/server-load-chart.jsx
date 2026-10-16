@@ -1,7 +1,7 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { Activity } from "lucide-react";
 import { clockFormatter } from "@/lib/format/time";
-import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { ChartPill, LiveChartCard, SWATCH } from "@/components/dashboard/live-chart-card";
 import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
   axisMax,
@@ -40,6 +40,8 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
   ];
 
   const option = timeSeriesOption({
+    // The header chips name each line (Steel UI).
+    legend: false,
     data: history,
     series,
     tokens,
@@ -74,6 +76,14 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
       title={t("charts.load.title")}
       description={t("charts.load.description")}
       ready={history.length >= 2}
+      badges={
+        <>
+          {series.map((s) => (
+            <ChartPill key={s.key} dotClassName={SWATCH[s.token]} label={s.label} />
+          ))}
+          {cores ? <ChartPill dotClassName={SWATCH["chart-3"]} label={t("charts.load.cores", { count: cores })} /> : null}
+        </>
+      }
       compactEmpty
       emptyTitle={t("charts.noHistoryTitle")}
       emptyMessage={t("charts.noHistory")}

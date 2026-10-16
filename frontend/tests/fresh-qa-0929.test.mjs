@@ -617,8 +617,9 @@ test("Secondary buttons are tinted only inside cards and notices; elsewhere neut
   const src = read("components/ui/button.jsx");
   // A tinted border, not transparent: the fill is clipped to the padding box, so a
   // transparent border looked 2px shorter than the neutral Refresh beside it (8 Oct).
-  assert.match(src, /const TINT_IN_CARDS =\s*"in-\[\.bg-card\]:border-\[color-mix\(in_oklch,var\(--primary\)_16%,var\(--background\)\)\]/);
-  assert.match(src, /in-\[\.bg-card\]:bg-\[color-mix/);
+  // Steel UI (Krishna, 14 Oct): secondary buttons are brushed steel everywhere (globals.css),
+  // so the in-card brand tint is empty on this branch; the slot stays for the compound variant.
+  assert.match(src, /const TINT_IN_CARDS = "";/);
   // On a coloured note (Caution, notice): white with a border since 7 Oct; the blue tint
   // on amber "not looks like button".
   assert.match(src, /in-data-\[slot=caution\]:bg-card!/);

@@ -9,7 +9,16 @@ function withAlpha(colour, alpha) {
   return m ? `rgba(${m[1]}, ${alpha})` : colour;
 }
 
+// The page's mono face for axis labels (Steel UI). ECharts draws on a canvas, so it
+// needs the resolved family name, not the CSS variable.
+function monoFamily() {
+  if (typeof document === "undefined") return undefined;
+  const family = getComputedStyle(document.documentElement).getPropertyValue("--font-geist-mono").trim();
+  return family || undefined;
+}
+
 // `data` points carry `t` plus one field per series; `markLine` is a capacity reference.
+// `legend: false` when the card header already names each series (the dashboard).
 export function timeSeriesOption({
   data = [],
   series = [],
@@ -19,8 +28,10 @@ export function timeSeriesOption({
   value = (v) => String(v),
   zoom = false,
   markLine = null,
+  legend = true,
 }) {
   const muted = tokens["muted-foreground"] ?? "currentColor";
+  const mono = monoFamily();
   const border = tokens.border ?? "currentColor";
 
   const built = series.map((s) => {
@@ -68,7 +79,10 @@ export function timeSeriesOption({
         type: "dashed",
         color: tokens[markLine.token] ?? muted,
       },
-      label: { formatter: markLine.label, color: muted, position: "insideEndTop" },
+      // Without a legend the header chip names the line, so no label on the plot.
+      label: legend
+        ? { formatter: markLine.label, color: muted, position: "insideEndTop" }
+        : { show: false },
       data: [{ yAxis: markLine.value }],
     };
   }
@@ -85,10 +99,11 @@ export function timeSeriesOption({
       left: 56,
       right: 20,
       top: 16,
-      bottom: zoom ? 88 : 40,
+      bottom: zoom ? 88 : legend ? 40 : 24,
       containLabel: false,
     },
     legend: {
+      show: legend,
       // Declaration order.
       data: series.map((s) => s.label),
       bottom: zoom ? 42 : 4,
@@ -127,7 +142,7 @@ export function timeSeriesOption({
       axisTick: { show: false },
       splitLine: { show: false },
       // 11px to match the legend and stay below body text.
-      axisLabel: { color: muted, fontSize: 11, hideOverlap: true, formatter: xLabel },
+      axisLabel: { color: muted, fontSize: 11, fontFamily: mono, hideOverlap: true, formatter: xLabel },
     },
     yAxis: axes.map((axis, index) => ({
       type: "value",
@@ -146,6 +161,7 @@ export function timeSeriesOption({
       axisLabel: {
         color: muted,
         fontSize: 11,
+        fontFamily: mono,
         // A forced `max` gets its own label, which can collide with a tick.
         hideOverlap: true,
         ...(axis.formatter ? { formatter: axis.formatter } : {}),

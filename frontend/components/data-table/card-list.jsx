@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 // Narrow-screen card view for a table; two per row from `sm` up.
 export function CardList({ className, children }) {
@@ -27,7 +28,7 @@ export function CardFact({ label, value, children, className }) {
   return (
     <div className={cn("flex items-start justify-between gap-3", className)}>
       {/* pt-px aligns the smaller label with its value. */}
-      <dt className="shrink-0 pt-px text-xs text-muted-foreground">{label}</dt>
+      <dt className={cn("shrink-0 pt-px", FACT_LABEL)}>{label}</dt>
       {/* A plain value truncates; passed children handle their own overflow. */}
       <dd className={cn("min-w-0 flex-1 text-right", !children && "truncate")}>
         {children ?? value}

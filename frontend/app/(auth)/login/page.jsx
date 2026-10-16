@@ -49,7 +49,8 @@ export default async function LoginPage() {
         <CardTitle className="text-xl">{t("loginTitle")}</CardTitle>
         <CardDescription>{t("loginSubtitle")}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6">
+      {/* pt: the card has no gap, and the header band ends in a line the first label sat on. */}
+      <CardContent className="grid gap-6 pt-6">
         <SessionExpiredNote />
         <LoginForm />
         {basicInfo.registration_open && (

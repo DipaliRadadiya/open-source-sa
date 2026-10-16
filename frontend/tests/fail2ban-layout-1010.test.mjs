@@ -330,7 +330,7 @@ test("new compact statuses, draft preview and entry count are translated in all 
 });
 
 
-test("desktop list takes remaining natural-left height; all static controls stay outside native scroll", () => {
+test("desktop list scrolls within the remaining height but never grows to fill it; static controls stay outside native scroll", () => {
   const source = card("ignore-list-card");
   assert.match(source, /xl:@4xl\/fail2ban-rules:h-0 xl:@4xl\/fail2ban-rules:min-h-full/);
   assert.match(source, /CardHeader className="flex-none border-b/);
@@ -343,7 +343,9 @@ test("desktop list takes remaining natural-left height; all static controls stay
   assert.match(list, /aria-label=\{t\("settings.ignore"\)\}/);
   assert.match(list, /min-h-0 max-h-72 overflow-y-auto overscroll-contain/);
   assert.match(list, /focus-visible:outline-2/);
-  assert.match(list, /xl:@4xl\/fail2ban-rules:max-h-none xl:@4xl\/fail2ban-rules:flex-1/);
+  assert.match(list, /xl:@4xl\/fail2ban-rules:max-h-none"/);
+  // Grown to the card's height, its last row looked tall (Krishna, 15 Oct).
+  assert.doesNotMatch(list, /flex-1/);
   assert.doesNotMatch(list, /CardSaveFooter|caution|f2b-ignore-(address|hint|examples|error)|slice\(/);
   assert.doesNotMatch(source, /max-h-\[(?:\d+px|\d+rem)\]|ResizeObserver|useEffect/);
   const provider = section(read("components/ui/reason-tooltip.jsx"), "export function DisabledReasonProvider", "// The span");

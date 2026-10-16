@@ -27,8 +27,8 @@ const sidebarCode = sidebar.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*
 const badge = read("components/applications/application-status-badge.jsx");
 
 test("the card is a surface of its own, not another shade of the rail", () => {
-  // 7 Oct, as in the redesign prototype (Krishna): a white card washed with the brand colour.
-  assert.match(sidebar, /rounded-xl bg-card bg-linear-135 from-primary\/10 to-transparent/);
+  // Steel UI (Krishna, 14 Oct): the same green-edged plate as the server card.
+  assert.match(sidebar, /rounded-\[2px\] border border-primary\/70 bg-card/);
   assert.doesNotMatch(sidebarCode, /bg-sidebar-accent\/40/, "back to a grey card on a grey rail");
 });
 
@@ -61,17 +61,17 @@ test("the collapsed rail hides everything but the mark", () => {
    * button's LAST span, here the domain — the name and status overflowed the
    * 32px square by 14px. Both halves need saying explicitly.
    */
-  assert.match(sidebar, /group-data-\[collapsible=icon\]:hidden">\s*\n\s*<span className="block truncate text-sm font-semibold"/);
+  assert.match(sidebar, /group-data-\[collapsible=icon\]:hidden">\s*\n\s*<span className="block truncate font-mono text-sm font-semibold text-foreground"/);
   // The domain line, matched by what this test is ABOUT — that it collapses.
   // It used to pin the whole class string including `text-[11px]`, so raising
   // the panel's 12px type floor failed a test that has nothing to say about
   // type size. A test should break when its own subject breaks.
-  assert.match(sidebar, /font-mono text-\w+ text-muted-foreground ring-1 ring-border\/60 group-data-\[collapsible=icon\]:hidden/);
+  assert.match(sidebar, /font-mono text-\w+ text-muted-foreground group-data-\[collapsible=icon\]:hidden/);
   assert.match(sidebar, /group-data-\[collapsible=icon\]:size-5!/);
 });
 
 test("the domain gets its own line rather than sharing the name's column", () => {
   // At 240px the domain is the longest string on the card; in the name's
   // column it truncated mid-host, which is the one thing read off this card.
-  assert.match(sidebar, /mt-2\.5 block w-full truncate rounded-lg bg-background\/80/);
+  assert.match(sidebar, /mt-2\.5 block w-full truncate rounded-\[2px\] border bg-background/);
 });

@@ -14,6 +14,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatBytes } from "@/lib/format/bytes";
 import { ConvertSupervisorDialog } from "@/components/applications/convert-supervisor-dialog";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
@@ -170,7 +171,7 @@ export function ProcessCard({ application, canManage = false, className }) {
         <dl className="grid grid-cols-2 gap-2 [&>*:first-child]:col-span-2 @xl/process:grid-cols-3 @xl/process:[&>*:first-child]:col-span-1">
           {facts.map((fact) => (
             <div key={fact.label} className="min-w-0 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-border/60">
-              <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+              <dt className={FACT_LABEL}>{fact.label}</dt>
               <dd className="truncate text-sm font-medium tabular-nums">{fact.value}</dd>
             </div>
           ))}

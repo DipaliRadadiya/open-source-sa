@@ -23,10 +23,11 @@ export function StatusTile({ icon: Icon, title, value, hint, tone = "idle", href
       className="group flex min-w-0 flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-e1 transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-e2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <div className="flex items-center gap-3">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", chip)}>
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-current/30", chip)}>
           <Icon className="size-[18px]" aria-hidden />
         </span>
-        <p className="min-w-0 flex-1 text-xs font-medium break-words text-muted-foreground">{title}</p>
+        {/* Steel UI: mono caps label, as in the dashboard's stat cells. */}
+        <p className="min-w-0 flex-1 font-mono text-xs font-medium tracking-[0.1em] break-words text-muted-foreground uppercase">{title}</p>
         <ChevronRight
           className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5"
           aria-hidden

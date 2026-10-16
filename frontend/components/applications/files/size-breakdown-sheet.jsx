@@ -95,11 +95,11 @@ export function SizeBreakdownSheet({ breakdown }) {
             <table className="w-full text-sm">
               <thead className="border-b text-xs text-muted-foreground">
                 <tr>
-                  <th className="py-1.5 text-start font-normal" colSpan={2}>
+                  <th data-slot="table-head" className="py-1.5 text-start font-normal" colSpan={2}>
                     {t("columnType")}
                   </th>
-                  <th className="py-1.5 text-end font-normal">{t("columnSize")}</th>
-                  <th className="py-1.5 text-end font-normal">{t("columnFiles")}</th>
+                  <th data-slot="table-head" className="py-1.5 text-end font-normal">{t("columnSize")}</th>
+                  <th data-slot="table-head" className="py-1.5 text-end font-normal">{t("columnFiles")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

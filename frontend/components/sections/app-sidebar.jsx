@@ -176,8 +176,8 @@ export function AppSidebar({ items }) {
                 item={{ href: `/applications/${application.id}`, title: application.name }}
                 built
                 active={false}
-                /* As in the redesign: a white card washed with the brand colour from one corner. */
-                className="relative h-auto min-h-20 items-start overflow-hidden rounded-xl bg-card bg-linear-135 from-primary/10 to-transparent to-70% p-3 shadow-e1 ring-1 ring-border/70 hover:bg-card hover:from-primary/15 active:bg-card data-[active=true]:bg-card group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
+                /* Steel UI (Krishna, 14 Oct): the same green-edged plate as the server card. */
+                className="relative h-auto min-h-20 items-start overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 shadow-none transition-colors hover:border-primary hover:bg-card active:bg-card data-[active=true]:bg-card group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
               >
                 <Link
                   href={`/applications/${application.id}`}
@@ -186,18 +186,18 @@ export function AppSidebar({ items }) {
                 >
                   <span className="relative flex w-full min-w-0 items-center gap-2.5">
                     {/* On its own tile so the brand mark has a surface against the tint. */}
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1 ring-1 ring-border group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:ring-0! group-data-[collapsible=icon]:border-0! group-data-[collapsible=icon]:shadow-none!">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0!">
                       <SiteTypeLogo name={application.site_type} provider={gitProvider} size="h-5 w-5" />
                     </span>
                     {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
                         button's LAST span (the domain line), and the rest would overflow. */}
                     <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="block truncate text-sm font-semibold" title={application.name}>
+                      <span className="block truncate font-mono text-sm font-semibold text-foreground" title={application.name}>
                         {application.name}
                       </span>
                       {/* Status, then what it is: "Running · WordPress". */}
-                      <span className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                        <ApplicationStatusDot application={application} className="shrink-0" />
+                      <span className="mt-1 flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+                        <ApplicationStatusDot application={application} className="shrink-0 [&>span:first-child]:rounded-none" labelClassName="text-xs" />
                         {application.site_type_title ? (
                           <span className="truncate">· {application.site_type_title}</span>
                         ) : null}
@@ -207,7 +207,7 @@ export function AppSidebar({ items }) {
                   {/* Its own full-width line, in a box: the domain is often the longest string and
                       would truncate mid-host beside the name. */}
                   {/* Right padding keeps the domain clear of the open-site icon drawn over this row. */}
-                  <span className="mt-2.5 block w-full truncate rounded-lg bg-background/80 py-1.5 pr-8 pl-2.5 font-mono text-xs text-muted-foreground ring-1 ring-border/60 group-data-[collapsible=icon]:hidden">
+                  <span className="mt-2.5 block w-full truncate rounded-[2px] border bg-background py-1.5 pr-8 pl-2.5 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                     {application.domain}
                   </span>
                 </Link>
@@ -226,7 +226,8 @@ export function AppSidebar({ items }) {
           </SidebarMenu>
         </SidebarGroup>
       ) : null}
-      <SidebarContent className="gap-0 py-2">
+      {/* pt-4: room between the server/application card above and the first link (Krishna, 14 Oct). */}
+      <SidebarContent className="gap-0 pt-4 pb-2">
         {/* Keyed on level AND application id: switching sites is also a level change,
             though `currentPanel` stays "application". */}
         <SidebarLevelTransition level={insideApplication ? `application:${applicationId}` : "server"}>

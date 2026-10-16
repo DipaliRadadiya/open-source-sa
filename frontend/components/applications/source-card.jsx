@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Caution } from "@/components/ui/caution";
 import { CopyButton } from "@/components/ui/copy-button";
+import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 
 // A failed redeploy leaves the old code serving, so the card reports the last successful deploy.
 export function SourceCard({ application, gitAccounts = [], canDeploy = false, canSeeDeployment = true, deployInFlight = false, className }) {
@@ -159,9 +160,10 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
         ) : null}
 
         {/* Label over value, like the details row in the page header. By the card's width. */}
-        <dl className="grid gap-x-6 gap-y-3 @xs:grid-cols-2 @2xl:grid-cols-4">
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">{t("repository")}</dt>
+        <div className={FACT_FRAME}>
+        <dl className={cn(FACT_GRID, "@xs:grid-cols-2 @2xl:grid-cols-4")}>
+          <div className={FACT_CELL}>
+            <dt className={FACT_LABEL}>{t("repository")}</dt>
             <dd className="truncate font-mono text-[13px] font-medium" title={repository ?? undefined}>
               {repoUrl ? (
                 <a href={repoUrl} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
@@ -172,13 +174,13 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
               )}
             </dd>
           </div>
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">{t("branch")}</dt>
+          <div className={FACT_CELL}>
+            <dt className={FACT_LABEL}>{t("branch")}</dt>
             <dd className="truncate font-mono text-[13px] font-medium">{application.branch ?? "—"}</dd>
           </div>
           {commit ? (
-            <div className="min-w-0">
-              <dt className="text-xs text-muted-foreground">{t("commit")}</dt>
+            <div className={FACT_CELL}>
+              <dt className={FACT_LABEL}>{t("commit")}</dt>
               <dd className="flex flex-wrap items-center gap-1.5">
                 <span className="font-mono text-[13px] font-medium" title={commit}>{commit.slice(0, 7)}</span>
                 {incomplete ? (
@@ -189,13 +191,14 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
               </dd>
             </div>
           ) : null}
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">{t("lastDeploy")}</dt>
+          <div className={FACT_CELL}>
+            <dt className={FACT_LABEL}>{t("lastDeploy")}</dt>
             <dd className="text-sm font-medium">
               {application.last_deployed_at_human ?? application.last_deployed_at ?? t("never")}
             </dd>
           </div>
         </dl>
+        </div>
 
         <RelinkGitAccountDialog
           application={application}

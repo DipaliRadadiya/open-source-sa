@@ -13,8 +13,9 @@ import { cn } from "@/lib/utils"
 // otherwise won and turned the label black on hover (Krishna, 7 Oct).
 // A tinted border, not a transparent one: the base clips the fill to the padding box, so
 // a transparent border made it look 2px shorter than a neutral button beside it (8 Oct).
-const TINT_IN_CARDS =
-  "in-[.bg-card]:border-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:hover:border-[color-mix(in_oklch,var(--primary)_24%,var(--background))] in-[.bg-card]:dark:border-primary/25 in-[.bg-card]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-[.bg-card]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:dark:bg-primary/15 in-[.bg-card]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:hover:bg-primary/25 in-[.bg-card]:dark:aria-expanded:bg-primary/25 in-[.bg-card]:hover:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:aria-expanded:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:dark:hover:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:aria-expanded:text-[color-mix(in_oklch,var(--primary)_70%,white)]";
+// Steel UI: secondary buttons stay neutral steel inside cards too; only the main
+// action carries colour. (Was a brand-tinted fill.)
+const TINT_IN_CARDS = "";
 
 // On a coloured note (Caution, notice) a white button with a border, not the blue tint:
 // light blue on amber read as neither (Krishna, 7 Oct). `!` because a note inside a card
@@ -34,7 +35,9 @@ const buttonVariants = cva(
         // Hover moves a shade away from the text colour; `/90` let white show through and
         // dropped white text below 4.5:1. Shades exist once branding applies; the mix is the fallback.
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-[var(--primary-700,color-mix(in_oklch,var(--primary),black_12%))] hover:shadow-sm dark:hover:bg-[var(--primary-300,color-mix(in_oklch,var(--primary),white_12%))]",
+        // Steel: the green carries dark text, so hover darkens only a little (the 700
+        // shade under dark text was 3.5:1).
+          "bg-primary text-primary-foreground shadow-xs hover:bg-[color-mix(in_oklch,var(--primary),black_8%)] hover:shadow-sm dark:hover:bg-[color-mix(in_oklch,var(--primary),white_10%)]",
         // Filled plus border so it reads on white and `bg-muted`; colour comes from
         // compoundVariants below.
         outline: "",

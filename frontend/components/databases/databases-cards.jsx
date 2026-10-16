@@ -41,7 +41,7 @@ export function DatabasesCards({
             <div className="min-w-0">
               <Link
                 href={`/databases/${database.id}`}
-                className="group flex items-center gap-1.5 font-mono text-sm font-medium text-primary underline-offset-4 hover:underline"
+                className="group flex items-center gap-1.5 font-mono text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
               >
                 {/* Truncates: generated names are long, and the full name is
                     on the page this opens. */}

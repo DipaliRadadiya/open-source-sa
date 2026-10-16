@@ -153,8 +153,11 @@ function SectionHeading({ step, title, description, headingId, done = false }) {
     <div className="flex items-start gap-3">
       <span
         className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors",
-          done ? "bg-success text-white" : "bg-primary/10 text-primary ring-1 ring-primary/25",
+          // Steel UI: square markers like the rest of the panel.
+          "flex size-7 shrink-0 items-center justify-center rounded-[2px] border font-mono text-sm font-semibold tabular-nums transition-colors",
+          done
+            ? "border-success/50 bg-success/15 text-success"
+            : "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary",
         )}
         aria-hidden
       >

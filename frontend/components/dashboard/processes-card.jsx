@@ -28,14 +28,12 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
 
   return (
     // Same chrome as every other card on this page.
-    <Card className={cn("[--card-spacing:--spacing(5)]", PANEL_CARD)}>
-      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle as="h2" className="flex items-center gap-2">
-            {t("processes.title")}
-          </CardTitle>
-          <CardDescription>{t("processes.topDescription")}</CardDescription>
-        </div>
+    // Steel UI: title and actions over a hairline, the description opens the body (prototype).
+    <Card className={cn("gap-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
+      <CardHeader className="flex flex-col gap-3 space-y-0 border-b sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle as="h2" className="flex items-center gap-2">
+          {t("processes.title")}
+        </CardTitle>
         <div className="flex items-center gap-2">
           {/* Search only in the expanded view; three rows need no filter. */}
           {open ? (
@@ -66,6 +64,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
         </div>
       </CardHeader>
 
+      <CardDescription className="px-(--card-spacing) pt-4 pb-3">{t("processes.topDescription")}</CardDescription>
       <CardContent>
         {/* ProcessTable handles the failed state itself. */}
         <ProcessTable

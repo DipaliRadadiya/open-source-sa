@@ -84,13 +84,16 @@ test("every engine's packaging is trimmed to the number people asked for", () =>
   assert.equal(shortVersion(undefined), null);
 });
 
-test("the database tile uses a mark, so its printed name is said once", () => {
+test("the database tile uses a code mark, so its printed name is said once", () => {
   /*
    * A wordmark is unreadable at tile size (redesign, 6 Oct), so the tile shows
    * the engine's mark-only icon (aria-hidden) and prints the name beside it —
    * one name, read once.
    */
-  assert.match(strip(card), /src=\{`\/runtimes\/\$\{mainEngine\.engine\}\.svg`\} alt=""/);
+  // Steel UI (Krishna, 14 Oct): a short mono code instead of the logo (the white tile
+  // looked odd in dark); the code is aria-hidden and the name is printed once beside it.
+  assert.match(strip(card), /mark=\{ENGINE_MARKS\[mainEngine\.engine\]\}/);
+  assert.match(strip(card), /<span\s+aria-hidden\s+className="flex h-9 min-w-9/);
   assert.doesNotMatch(strip(card), /EngineLogo/);
 });
 

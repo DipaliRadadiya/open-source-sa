@@ -75,7 +75,9 @@ export default async function AdminDoctorPage() {
                 <ShieldAlert className="size-6 text-destructive" aria-hidden />
               )}
             </span>
-            <div className="min-w-0 flex-1">
+            {/* min-w-48, not min-w-0: with min-w-0 the buttons never wrapped and squeezed
+                the summary to one word per line on a phone in Hindi (steel audit, 15 Oct). */}
+            <div className="min-w-48 flex-1">
               <p className="font-medium">
                 {!doctor.healthy
                   ? t("unhealthy", { count: doctor.failed })

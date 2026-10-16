@@ -38,6 +38,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 const POLL_MS = 5000;
 // The backend releases a pending run after 60 minutes; stop asking a little later.
@@ -362,7 +363,7 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
 function Fact({ label, mono = false, children }) {
   return (
     <div className="space-y-0.5 px-(--card-spacing) py-3">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className={FACT_LABEL}>{label}</dt>
       <dd className={mono ? "font-mono text-sm font-medium" : "text-sm"}>{children}</dd>
     </div>
   );

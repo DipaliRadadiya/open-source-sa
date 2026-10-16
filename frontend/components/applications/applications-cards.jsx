@@ -42,7 +42,8 @@ export function ApplicationsCards({
                 <Link
                   href={`/applications/${application.id}`}
                   prefetch={false}
-                  className="inline-flex min-w-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+                  // White like the desktop list: green means "OK" in the steel UI (Krishna, 14 Oct).
+                  className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
                 >
                   <span className="truncate" title={application.name}>{application.name}</span>
                   <ChevronRight className="size-3.5 shrink-0" />

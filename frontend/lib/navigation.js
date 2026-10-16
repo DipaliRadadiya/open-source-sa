@@ -1,7 +1,9 @@
 // Shared sidebar nav-item styling, used by both the server and admin panel
 // sidebars so they cannot drift.
 export const NAV_ITEM_CLASS =
-  "relative h-9 gap-3 rounded-lg px-2.5 font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground [&_svg]:size-[18px] [&_svg]:text-muted-foreground hover:[&_svg]:text-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground data-[active=true]:[&_svg]:text-primary";
+  "relative h-9 gap-3 rounded-[2px] px-2.5 font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground [&_svg]:size-[18px] [&_svg]:text-muted-foreground hover:[&_svg]:text-foreground " +
+  // Steel UI (Krishna's prototype, 14 Oct): grey fill, a green bar on the left edge, light label.
+  "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground data-[active=true]:[&_svg]:text-[var(--primary-700,var(--primary))] dark:data-[active=true]:[&_svg]:text-primary data-[active=true]:before:absolute data-[active=true]:before:inset-y-0 data-[active=true]:before:left-0 data-[active=true]:before:w-[3px] data-[active=true]:before:bg-primary";
 
 // A nav item stays active on its sub-pages (e.g. `/settings/server`). Longest
 // match wins when two items share a prefix.

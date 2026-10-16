@@ -40,8 +40,11 @@ export function SetupBanner({ remaining }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.04] px-4 py-3">
-      <Sparkles className="size-4 shrink-0 text-primary" />
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3">
+      {/* Steel UI: the icon in a bordered square, the card a plain hairline (prototype). */}
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-[2px] border">
+        <Sparkles className="size-4 text-primary" />
+      </span>
       {/* min-w-48, not min-w-0: flex-1 would shrink it to one word per line instead of wrapping. */}
       <p className="min-w-48 flex-1 text-sm">
         <span className="font-medium">{t("bannerTitle")}</span>{" "}
@@ -59,7 +62,7 @@ export function SetupBanner({ remaining }) {
           type="button"
           onClick={dismiss}
           aria-label={t("bannerDismiss")}
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-[2px] border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="size-4" />
         </button>

@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
-import { ArrowRight, CircleAlert, CircleX, GitBranch, LockOpen, Power, Rocket, ServerCrash } from "lucide-react";
+import { ArrowRight, CircleX, GitBranch, LockOpen, Power, Rocket, ServerCrash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 
@@ -37,7 +37,7 @@ function Row({ icon: Icon, tone, title, detail, names, href, action }) {
       <div className="min-w-0 flex-1 basis-64">
         <p className="text-sm leading-snug font-medium break-words">{title}</p>
         {names ? (
-          <p className="mt-0.5 truncate text-xs text-muted-foreground" title={names}>
+          <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={names}>
             {names}
           </p>
         ) : null}
@@ -85,8 +85,9 @@ export async function AttentionPanel({ findings = [], health, applicationsKnown 
     // read as being about the logs button beside it).
     <section aria-labelledby={count ? "attention-heading" : undefined} aria-label={count ? undefined : t("attention.title")} className="space-y-2.5">
       {count ? (
-        <h2 id="attention-heading" className="flex items-center gap-2 text-sm font-semibold">
-          <CircleAlert className="size-4 text-warning" aria-hidden />
+        // Steel UI: a mono caps section label with an amber square (prototype).
+        <h2 id="attention-heading" className="flex items-center gap-2 font-mono text-xs font-medium tracking-[0.12em] text-warning uppercase">
+          <span aria-hidden className="size-1.5 shrink-0 bg-warning" />
           {t("hero.attention", { count })}
         </h2>
       ) : null}

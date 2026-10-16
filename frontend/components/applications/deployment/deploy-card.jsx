@@ -34,6 +34,7 @@ import { StepList } from "@/components/applications/step-list";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
+import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 
 // Best-effort commit link from a public repo URL, only for hosts whose commit
 // paths are known; otherwise the copyable SHA. Never a guessed link.
@@ -53,15 +54,13 @@ function commitUrl(repositoryUrl, sha) {
   }
 }
 
-function Fact({ icon: Icon, label, children }) {
+// Steel UI (Krishna, 14 Oct): a hairline cell with a mono caps label, like Source and
+// deployment on the application dashboard. Callers still pass an icon; it is not drawn.
+function Fact({ label, children }) {
   return (
-    <div className="min-w-0 space-y-1">
-      {/* 1.5 stroke, not Lucide's default 2, which reads heavy at 14px in a dense row. */}
-      <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
-        {label}
-      </dt>
-      <dd className="min-w-0">{children}</dd>
+    <div className={FACT_CELL}>
+      <dt className={FACT_LABEL}>{label}</dt>
+      <dd className="mt-1 min-w-0">{children}</dd>
     </div>
   );
 }
@@ -213,7 +212,8 @@ export function DeployCard({
           </div>
         ) : null}
 
-        <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className={FACT_FRAME}>
+        <dl className={cn(FACT_GRID, "grid-cols-1 sm:grid-cols-2 md:grid-cols-4")}>
           <Fact icon={FolderGit2} label={t("deploy.repository")}>
             {repository ? (
               <Tooltip>
@@ -286,6 +286,7 @@ export function DeployCard({
             )}
           </Fact>
         </dl>
+        </div>
 
         {/* Same shape as the "setting up your site" screen. No percentage: which steps run
             depends on the site, so there is no real denominator. */}

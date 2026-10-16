@@ -3,9 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { CircleAlert, FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import { IsoServer } from "@/components/illustrations/iso-server";
+import { PanelServer } from "@/components/illustrations/steel/panel-server";
 
-const CHIP = "rounded-full bg-white/15 px-2.5 py-1 ring-1 ring-white/25 backdrop-blur";
+// Square mono chips, as in the prototype.
+// One height for both chips, the IP one included (its copy button made it taller).
+const CHIP = "inline-flex h-6 items-center rounded-[2px] px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase ring-1 ring-[var(--hero-line)]";
 
 // The page's h1. Says in one line whether anything is wrong, so the rest of
 // the page is detail rather than the place you find out.
@@ -48,33 +50,46 @@ export async function DashboardHero({
   const ip = facts?.public_ip ?? facts?.ip;
 
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-hero text-white shadow-e3">
+    <section className="relative overflow-hidden rounded-2xl bg-hero">
       <div className="bg-hero-grid pointer-events-none absolute inset-0" />
+      {/* Drafting-sheet corner brackets (prototype). */}
+      <span aria-hidden className="pointer-events-none absolute top-1.5 left-1.5 size-4 border-t-2 border-l-2 border-primary" />
+      <span aria-hidden className="pointer-events-none absolute right-1.5 bottom-1.5 size-4 border-r-2 border-b-2 border-primary" />
       {/* One compact row (Krishna, 6 Oct): the drawing leads the words on the left,
           the buttons stand alone on the right. Chips share the summary line. */}
-      <div className="relative flex items-center gap-6 px-5 py-5 md:px-7">
+      <div className="relative flex items-center gap-6 px-5 py-6 md:px-8">
         {/* -my so the drawing never sets the banner's height. */}
-        <IsoServer className="pointer-events-none -my-4 -ml-2 hidden h-32 w-auto shrink-0 sm:block" />
+        <PanelServer
+          total={applications ? applications.length : null}
+          online={online}
+          alert={down > 0}
+          className="pointer-events-none hidden h-28 w-auto shrink-0 sm:block"
+        />
         {/* Words and buttons wrap inside their own box, so on a narrow screen the
             buttons drop under the words rather than under the drawing. */}
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-4">
         <div className="min-w-0 flex-1 basis-72">
-          {userName ? <p className="truncate text-sm text-white/85">{t("hero.greeting", { name: userName })}</p> : null}
+          {userName ? (
+            <p className="flex items-center gap-2 truncate font-mono text-xs font-medium tracking-[0.12em] text-[var(--hero-muted)] uppercase">
+              <span aria-hidden className="size-1.5 shrink-0 bg-primary" />
+              {t("hero.greeting", { name: userName })}
+            </p>
+          ) : null}
           <h1 className="mt-0.5 flex items-center gap-2 text-xl font-semibold tracking-tight text-balance md:text-2xl">
             {down ? <CircleAlert className="size-6 shrink-0" aria-hidden /> : null}
             {title}
           </h1>
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
-            {summary ? <p className="text-sm text-white/90">{summary}</p> : null}
+            {summary ? <p className="text-sm text-[var(--hero-muted)]">{summary}</p> : null}
             {/* No OS chip: it is on the sidebar card and in Server information. */}
             {facts?.uptime?.human ? <span className={CHIP}>{t("hero.up", { time: facts.uptime.human })}</span> : null}
             {ip ? (
-              <span className={`${CHIP} flex items-center gap-1 py-0.5 pr-0.5 font-mono`}>
+              <span className={`${CHIP} gap-1 pr-0.5`}>
                 {ip}
                 <CopyButton
                   value={ip}
                   label={t("info.copyIp")}
-                  className="size-6 text-white/85 hover:bg-white/20 hover:text-white"
+                  className="size-5 rounded-[2px] text-[var(--hero-muted)] hover:bg-[var(--hero-wash)] hover:text-[var(--hero-fg)] [&_svg]:size-3"
                 />
               </span>
             ) : null}
@@ -82,16 +97,18 @@ export async function DashboardHero({
         </div>
 
         {canCreate || canViewLogs ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          // max-w-full: on a phone the pair is wider than the banner in German and Russian,
+          // and shrink-0 alone kept it on one line and cut "Create application" off.
+          <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
             {canViewLogs ? (
-              <Button asChild variant="ghost" className="text-white hover:bg-white/15 hover:text-white dark:hover:bg-white/15">
+              <Button asChild variant="ghost" className="border border-[var(--hero-line)] text-[var(--hero-fg)] hover:bg-[var(--hero-wash)] hover:text-[var(--hero-fg)] dark:hover:bg-[var(--hero-wash)]">
                 <Link href="/logs" prefetch={false}>
                   <FileText /> {t("hero.viewLogs")}
                 </Link>
               </Button>
             ) : null}
             {canCreate ? (
-              <Button asChild className="bg-white text-[var(--primary-700,var(--primary))] shadow-none hover:bg-white/90 dark:hover:bg-white/90">
+              <Button asChild className="shadow-none">
                 <Link href="/applications/create" prefetch={false}>
                   <Plus /> {tApplications("create")}
                 </Link>

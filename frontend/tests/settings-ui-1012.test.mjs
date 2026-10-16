@@ -11,7 +11,8 @@ const LOCALES = ["en", "es", "de", "fr", "pt", "ja", "ru", "hi"];
 test("every settings card shows its icon, and colour lives in the chip, not the title", () => {
   const row = read("components/settings/setting-row.jsx");
   assert.match(row, /export function Section\(\{\s*icon: Icon,/);
-  assert.match(row, /destructive \? "bg-destructive-soft text-destructive" : "bg-primary\/10 text-primary"/);
+  // Steel UI (14 Oct): the chip is a toned square; the colour still lives in the chip.
+  assert.match(row, /destructive \? "border-destructive\/45 bg-destructive\/10 text-destructive" : "border-primary\/45 bg-primary\/10/);
   assert.doesNotMatch(row, /destructive && "text-destructive"/, "a red title reads as an error");
 });
 

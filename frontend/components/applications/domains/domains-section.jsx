@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 // Site types whose installer rewrites the stored address on a primary change (backend `syncUrl`).
 const ADDRESS_SYNCED_TYPES = new Set([
@@ -105,6 +106,9 @@ function sslRowState(certificate, coverage, domain) {
 // Domain | DNS | HTTPS | actions, shared by the heading row and every domain row.
 // The actions column is fixed, not `auto`: header and rows are separate grids, and `auto`
 // sized each to its own content, so the headings drifted off their columns.
+// Top-aligned, with every column's first line on the 32px icon's centre line: the
+// status cells pad down 8px, the name centres on its icon (Krishna, 14 Oct: the name
+// sat 5px above the statuses and the row read "unaligned and messy").
 const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_10rem_10rem_13rem] md:items-start";
 
 export function DomainsSection({
@@ -232,9 +236,11 @@ export function DomainsSection({
           /* Edge to edge in the card, as a list: one row per name, the same columns on
              every row so several domains scan like a table. */
           <div className="-mx-(--card-spacing) -mb-(--card-spacing) border-t">
+            {/* data-slot: typed like every table header (globals.css), so they cannot drift. */}
             <div
               aria-hidden
-              className={cn(ROW_GRID, "hidden gap-x-4 border-b bg-muted/40 px-5 py-3 text-sm font-medium text-muted-foreground md:grid")}
+              data-slot="table-head"
+              className={cn(ROW_GRID, "hidden h-11 gap-x-4 border-b bg-muted/40 px-5 text-muted-foreground md:grid md:items-center")}
             >
               <span>{t("columns.domain")}</span>
               <span>{t("columns.dns")}</span>
@@ -255,9 +261,9 @@ export function DomainsSection({
                   key={domain.id}
                   className={cn("grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2.5 px-4 py-3.5 md:gap-x-4 md:px-5", ROW_GRID)}
                 >
-                  <div className="col-span-2 flex min-w-0 items-start gap-3 md:col-span-1">
+                  <div className="col-span-2 flex min-w-0 items-center gap-3 md:col-span-1">
                     <span
-                      className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground md:flex"
+                      className="hidden size-8 shrink-0 items-center justify-center rounded-[2px] border bg-muted/40 text-muted-foreground md:flex"
                       aria-hidden
                     >
                       <Globe2 className="size-4" />
@@ -483,13 +489,13 @@ export function DomainsSection({
         {/* Shows the swap; the title cannot show the name being replaced. */}
         {promoteTarget?.from ? (
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1.5 rounded-lg border p-3">
-            <dt className="text-xs text-muted-foreground">
+            <dt className={FACT_LABEL}>
               {t("promote.nowLabel")}
             </dt>
             <dd className="font-mono text-sm break-all text-muted-foreground">
               {promoteTarget.from}
             </dd>
-            <dt className="text-xs text-muted-foreground">
+            <dt className={FACT_LABEL}>
               {t("promote.afterLabel")}
             </dt>
             <dd className="font-mono text-sm break-all">

@@ -76,9 +76,10 @@
      * other screen look worse, and a shadow that only works against a grey page
      * is not a shadow, it is a cutout.
      */
-    --shadow-e1: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 2px 8px -2px rgb(15 23 42 / 0.06);
-    --shadow-e2: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 4px 10px -2px rgb(16 24 40 / 0.045);
-    --shadow-e3: 0 2px 4px -1px rgb(16 24 40 / 0.04), 0 12px 24px -6px rgb(16 24 40 / 0.07);
+    /* Steel UI: edges come from hairline borders, not shadows. e3 stays for floating layers. */
+    --shadow-e1: none;
+    --shadow-e2: none;
+    --shadow-e3: 0 8px 24px -8px rgb(0 0 0 / 0.35);
 }
 
 :root {
@@ -90,18 +91,19 @@
      * only separates the surfaces.
      */
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.24 0.02 265);
+    --card-head: oklch(0.975 0.003 135);
+    --card-foreground: oklch(0.2 0.006 135);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.24 0.02 265);
+    --popover-foreground: oklch(0.22 0.008 135);
     --primary: oklch(0.205 0 0);
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.962 0.008 260);
-    --secondary-foreground: oklch(0.28 0.02 265);
-    --muted: oklch(0.962 0.008 260);
+    --secondary: oklch(0.955 0.004 135);
+    --secondary-foreground: oklch(0.25 0.008 135);
+    --muted: oklch(0.955 0.004 135);
     /* 0.53: at 0.552 hints and table headers read 4.38:1 on bg-muted. */
-    --muted-foreground: oklch(0.52 0.02 262);
-    --accent: oklch(0.955 0.02 258);
-    --accent-foreground: oklch(0.38 0.15 260);
+    --muted-foreground: oklch(0.5 0.01 135);
+    --accent: oklch(0.945 0.004 135);
+    --accent-foreground: oklch(0.2 0.008 135);
     /* 0.54: at 0.577 red text read 3.7–4.0:1 on its own tint. */
     --destructive: oklch(0.54 0.22 27.3);
     /* 0.52, like --warning: 0.62 read 3.0:1 on its own badge tint (WCAG AA needs 4.5). */
@@ -128,80 +130,83 @@
        its terminal identity in BOTH themes. Deliberately not pure black
        (crushes elevation) and hue-matched to the app's 264 neutral. Severity
        colors are lifted for contrast on this dark surface. */
-    --console: oklch(0.19 0.012 264);
-    --console-foreground: oklch(0.92 0.008 264);
-    --console-muted: oklch(0.62 0.012 264);
+    --console: oklch(0.19 0.012 135);
+    --console-foreground: oklch(0.92 0.008 135);
+    --console-muted: oklch(0.62 0.012 135);
     --console-border: oklch(0.28 0.014 264);
     --console-error: oklch(0.72 0.17 25);
     --console-warning: oklch(0.82 0.13 75);
     --console-success: oklch(0.78 0.15 155);
-    --border: oklch(0.925 0.008 260);
-    --input: oklch(0.9 0.01 260);
+    --border: oklch(0.9 0.006 135);
+    --input: oklch(0.87 0.008 135);
     /* Focus ring follows the brand primary (set at runtime by the theme). */
     --ring: var(--primary);
     /* Categorical series colors — distinct hues so overlaid lines/areas stay
        tellable apart (the shadcn defaults are greyscale). */
-    --chart-1: oklch(0.62 0.19 260);
-    --chart-2: oklch(0.68 0.15 165);
+    /* Steel UI (prototype): steel blue-grey, the brand green, amber; red and slate spare. */
+    --chart-1: oklch(0.6 0.06 235);
+    --chart-2: oklch(0.62 0.145 158);
     --chart-3: oklch(0.72 0.16 70);
     --chart-4: oklch(0.62 0.2 15);
-    --chart-5: oklch(0.62 0.2 305);
-    --radius: 0.75rem;
-    --sidebar: oklch(1 0 0);
-    --sidebar-foreground: oklch(0.3 0.02 265);
+    --chart-5: oklch(0.62 0.05 250);
+    /* Steel UI (14 Oct): firm, near-square corners. Every rounded-* scales from this. */
+    --radius: 0.1875rem;
+    --sidebar: oklch(0.985 0.002 135);
+    --sidebar-foreground: oklch(0.3 0.008 135);
     --sidebar-primary: oklch(0.205 0 0);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.96 0.02 258);
-    --sidebar-accent-foreground: oklch(0.4 0.18 260);
-    --sidebar-border: oklch(0.93 0.008 260);
+    --sidebar-accent: oklch(0.935 0.004 135);
+    --sidebar-accent-foreground: oklch(0.18 0.008 135);
+    --sidebar-border: oklch(0.9 0.006 135);
     --sidebar-ring: var(--primary);
-    --background: oklch(0.982 0.004 260);
+    --background: oklch(0.975 0.003 135);
     /* Soft dark grey rather than near-black — pure black on white reads harsh
        and causes halation. Still ~11:1 on the background, well past WCAG AA. */
-    --foreground: oklch(0.24 0.02 265);
+    --foreground: oklch(0.2 0.006 135);
 }
 
 .dark {
-    --background: oklch(0.16 0.015 265);
-    --foreground: oklch(0.95 0.005 260);
-    --card: oklch(0.205 0.018 265);
-    --card-foreground: oklch(0.95 0.005 260);
-    --popover: oklch(0.22 0.018 265);
-    --popover-foreground: oklch(0.95 0.005 260);
+    --background: oklch(0.155 0.007 135);
+    --card-head: oklch(0.209 0.0064 179);
+    --foreground: oklch(0.935 0.0045 135);
+    --card: oklch(0.188 0.0067 135);
+    --card-foreground: oklch(0.935 0.0045 135);
+    --popover: oklch(0.2 0.005 135);
+    --popover-foreground: oklch(0.95 0.005 135);
     --primary: oklch(0.922 0 0);
     --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.26 0.02 265);
-    --secondary-foreground: oklch(0.95 0.005 260);
-    --muted: oklch(0.26 0.02 265);
-    --muted-foreground: oklch(0.72 0.015 260);
-    --accent: oklch(0.28 0.04 262);
-    --accent-foreground: oklch(0.9 0.05 258);
+    --secondary: oklch(0.235 0.005 135);
+    --secondary-foreground: oklch(0.95 0.004 135);
+    --muted: oklch(0.235 0.005 135);
+    --muted-foreground: oklch(0.66 0.0065 165);
+    --accent: oklch(0.26 0.005 135);
+    --accent-foreground: oklch(0.97 0.002 135);
     --destructive: oklch(0.704 0.191 22.216);
-    --success: oklch(0.7 0.15 150);
+    --success: oklch(0.72 0.145 158);
     --warning: oklch(0.78 0.13 70);
     --success-soft: oklch(0.3 0.06 155);
     --warning-soft: oklch(0.32 0.06 75);
     --destructive-soft: oklch(0.3 0.07 22);
     /* Same console surface in dark mode: it is already terminal-dark, only the
        border needs to sit against a dark card rather than a white one. */
-    --console: oklch(0.17 0.012 264);
-    --console-border: oklch(0.26 0.012 264);
-    --border: oklch(1 0 0 / 8%);
-    --input: oklch(1 0 0 / 14%);
+    --console: oklch(0.17 0.012 135);
+    --console-border: oklch(0.26 0.012 135);
+    --border: oklch(0.29 0.006 135);
+    --input: oklch(0.33 0.006 135);
     --ring: var(--primary);
     /* Lifted lightness so the same hues stay readable on dark surfaces. */
-    --chart-1: oklch(0.7 0.17 260);
-    --chart-2: oklch(0.75 0.15 165);
+    --chart-1: oklch(0.74 0.06 225);
+    --chart-2: oklch(0.72 0.145 158);
     --chart-3: oklch(0.78 0.15 70);
     --chart-4: oklch(0.7 0.19 15);
-    --chart-5: oklch(0.7 0.19 305);
-    --sidebar: oklch(0.185 0.017 265);
-    --sidebar-foreground: oklch(0.9 0.01 260);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.7 0.045 250);
+    --sidebar: oklch(0.17 0.007 135);
+    --sidebar-foreground: oklch(0.9 0.01 135);
+    --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.28 0.05 262);
-    --sidebar-accent-foreground: oklch(0.92 0.05 258);
-    --sidebar-border: oklch(1 0 0 / 7%);
+    --sidebar-accent: oklch(0.235 0.005 135);
+    --sidebar-accent-foreground: oklch(0.97 0.002 135);
+    --sidebar-border: oklch(0.29 0.006 135);
     --sidebar-ring: var(--primary);
 }
 
@@ -311,23 +316,53 @@
      colour carries through; the fallbacks cover a palette that failed to parse.
      Fixed shades rather than --primary, which turns pale in dark mode and would
      wash out the white text. Darkest at the left, where the text sits. */
+  /* Steel UI: the banner is a graphite plate in both themes (white text stays
+     readable), with a faint glow of the brand colour instead of a full gradient. */
+  /* Banner surface (dashboard hero, sidebar server card). Light: brushed steel with
+     dark text; dark: graphite with white text. Children read the --hero-* colours. */
   .bg-hero {
-    background:
-      radial-gradient(70% 130% at 100% 0%, rgb(255 255 255 / 0.28) 0%, transparent 60%),
-      radial-gradient(55% 110% at 88% 100%, rgb(255 255 255 / 0.16) 0%, transparent 70%),
-      linear-gradient(
-        115deg,
-        var(--primary-700, color-mix(in oklch, var(--primary), black 12%)) 0%,
-        var(--primary-600, var(--primary)) 50%,
-        var(--primary-500, color-mix(in oklch, var(--primary), white 25%)) 100%
-      );
+    --hero-fg: oklch(0.2 0.008 135);
+    --hero-muted: oklch(0.42 0.01 135);
+    --hero-line: oklch(0.2 0.01 135 / 0.14);
+    --hero-wash: oklch(0.2 0.01 135 / 0.05);
+    --hero-grid: rgb(15 23 42 / 0.035);
+    --iso-top: rgba(30, 41, 59, 0.1);
+    --iso-right: rgba(30, 41, 59, 0.2);
+    --iso-front: rgba(30, 41, 59, 0.05);
+    --iso-vent: rgba(30, 41, 59, 0.3);
+    --iso-stroke: rgba(30, 41, 59, 0.38);
+    --iso-chip-stroke: rgba(30, 41, 59, 0.18);
+    --iso-line: rgba(30, 41, 59, 0.22);
+    --iso-face: oklch(1 0 0);
+    --iso-side: oklch(0.955 0.004 135);
+    color: var(--hero-fg);
+    /* Flat with an even grid, as in the prototype; no glow. */
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .dark .bg-hero {
+    --hero-fg: oklch(1 0 0);
+    --hero-muted: var(--muted-foreground);
+    --hero-line: rgb(255 255 255 / 0.14);
+    --hero-wash: rgb(255 255 255 / 0.1);
+    --hero-grid: rgb(255 255 255 / 0.03);
+    --iso-top: rgba(255, 255, 255, 0.55);
+    --iso-right: rgba(10, 30, 90, 0.3);
+    --iso-front: rgba(255, 255, 255, 0.28);
+    --iso-vent: rgba(255, 255, 255, 0.75);
+    --iso-stroke: rgba(255, 255, 255, 0.6);
+    --iso-chip-stroke: transparent;
+    --iso-line: rgba(255, 255, 255, 0.16);
+    --iso-face: oklch(0.17 0.006 135);
+    --iso-side: oklch(0.145 0.006 135);
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--border);
   }
   .bg-hero-grid {
     background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+      linear-gradient(to right, var(--hero-grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--hero-grid) 1px, transparent 1px);
     background-size: 28px 28px;
-    mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
   }
 
   .animate-nav-progress {
@@ -403,4 +438,342 @@
 [data-attention="true"] {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+/*
+ * Steel UI (feat/steel-ui, Krishna 14 Oct): the type and chip treatment from the
+ * reference (sv-docs / sv-oss-site) and his prototype. Unlayered on purpose: these
+ * beat the utility classes on shared slots, so the whole look lives in this one
+ * block and the branch can be judged, or dropped, without touching components.
+ */
+/* Small uppercase mono labels: table headings, sidebar groups, the breadcrumb. */
+[data-slot="table-head"],
+[data-sidebar="group-label"],
+[data-slot="breadcrumb-list"] {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-slot="breadcrumb-page"] { color: var(--foreground); }
+/* Chips, not pills: square-ish, mono, uppercase, with a hairline in the state colour. */
+[data-slot="badge"] {
+  border-radius: 2px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* A floor, not a fixed height: a badge allowed to wrap ("Long-term support (Krypton)" on
+     Node.js) was cut to one line's height and its text clipped (Krishna, 15 Oct). */
+  height: auto;
+  min-height: 1.375rem;
+  /* One padding for all, so a `py-1` badge stays the 22px every badge was when fixed. */
+  padding-block: 0.125rem;
+}
+[data-slot="badge"][data-variant="success"] { border-color: color-mix(in oklch, var(--success) 45%, transparent); background: color-mix(in oklch, var(--success) 10%, transparent); }
+[data-slot="badge"][data-variant="warning"] { border-color: color-mix(in oklch, var(--warning) 45%, transparent); background: color-mix(in oklch, var(--warning) 10%, transparent); }
+[data-slot="badge"][data-variant="destructive"] { border-color: color-mix(in oklch, var(--destructive) 45%, transparent); background: color-mix(in oklch, var(--destructive) 10%, transparent); }
+[data-slot="badge"][data-variant="muted"],
+[data-slot="badge"][data-variant="outline"],
+[data-slot="badge"][data-variant="default"] { border-color: var(--border); }
+/* Cards: hairline edge, no float. */
+[data-slot="card"] { box-shadow: none; }
+
+/*
+ * Steel buttons, every screen (Krishna 14 Oct: "buttons look a little flat"; tried on the
+ * application dashboard first, then approved for all pages). Grey covers outline,
+ * neutral and secondary (all three read as "the other button"); the page header keeps
+ * its flat controls. `-trigger`: a button wrapped in a tooltip/menu/popover trigger
+ * carries that slot name instead of "button". Taken from the
+ * reference's `.btn-steel`: a top-lit gradient, a 1px highlight along the top edge,
+ * a dark outline drawn as a ring, a soft shadow underneath, and a green bar on hover.
+ * The ring is a box-shadow, so the border goes transparent and the fill runs under it.
+ * Focus keeps its ring: these shadows would otherwise replace Tailwind's.
+ */
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"],
+:is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *) {
+  border-color: transparent;
+  background-clip: border-box;
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s, translate 0.12s;
+  --steel-ring: 0 0 0 0 transparent;
+}
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"] {
+  background-image: linear-gradient(
+    color-mix(in oklch, var(--primary), white 16%) 0%,
+    var(--primary) 55%,
+    color-mix(in oklch, var(--primary), black 14%) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 -1px 0 rgb(0 0 0 / 0.22),
+    0 0 0 1px color-mix(in oklch, var(--primary), black 38%),
+    0 6px 14px -7px color-mix(in oklch, var(--primary) 70%, transparent),
+    var(--steel-ring);
+}
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"]:hover {
+  background-image: linear-gradient(
+    color-mix(in oklch, var(--primary), white 24%) 0%,
+    color-mix(in oklch, var(--primary), white 6%) 55%,
+    color-mix(in oklch, var(--primary), black 8%) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(0 0 0 / 0.22),
+    0 0 0 1px color-mix(in oklch, var(--primary), black 38%),
+    0 8px 20px -8px color-mix(in oklch, var(--primary) 85%, transparent),
+    var(--steel-ring);
+}
+/* Light theme: a quieter edge and a tighter shadow (Krishna: "a little much" on white). */
+:root:not(.dark) :is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 0 0 1px color-mix(in oklch, var(--primary), black 18%),
+    0 1px 2px rgb(15 23 42 / 0.1),
+    var(--steel-ring);
+}
+:root:not(.dark) :is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"]:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 0 0 1px color-mix(in oklch, var(--primary), black 18%),
+    0 2px 6px -2px color-mix(in oklch, var(--primary) 40%, transparent),
+    var(--steel-ring);
+}
+/* Secondary: brushed steel. Light: white to cool grey; dark: graphite. */
+:is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *) {
+  background-image: linear-gradient(oklch(1 0 0) 0%, oklch(0.975 0.003 135) 55%, oklch(0.945 0.005 135) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 0 0 1px oklch(0.88 0.006 135),
+    0 1px 2px rgb(15 23 42 / 0.06),
+    var(--steel-ring);
+}
+.dark :is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *) {
+  background-image: linear-gradient(oklch(0.34 0.008 135) 0%, oklch(0.27 0.006 135) 55%, oklch(0.235 0.006 135) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 -1px 0 rgb(0 0 0 / 0.5),
+    0 0 0 1px oklch(0.11 0.003 135),
+    0 6px 14px -6px rgb(0 0 0 / 0.75),
+    var(--steel-ring);
+}
+/* Hover: the reference's green bar on the left edge (labelled buttons only). A fill
+   layer, not an inset shadow: an inset shadow stops at the 1px transparent border, so
+   the fill showed above and below the bar (Krishna, light theme). */
+:is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *)[data-size]:not([data-size^="icon"]):hover {
+  background-image:
+    linear-gradient(var(--primary), var(--primary)),
+    linear-gradient(oklch(1 0 0) 0%, oklch(0.965 0.004 135) 100%);
+  background-size: 3px 100%, auto;
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  /* No top highlight here: an inset shadow paints over the bar's top pixel. */
+  box-shadow:
+    0 0 0 1px oklch(0.84 0.008 135),
+    0 2px 4px -1px rgb(15 23 42 / 0.08),
+    var(--steel-ring);
+}
+.dark :is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *)[data-size]:not([data-size^="icon"]):hover {
+  background-image:
+    linear-gradient(var(--primary), var(--primary)),
+    linear-gradient(oklch(0.37 0.008 135) 0%, oklch(0.29 0.006 135) 55%, oklch(0.25 0.006 135) 100%);
+  background-size: 3px 100%, auto;
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  /* No top highlight here: an inset shadow paints over the bar's top pixel. */
+  box-shadow:
+    0 0 0 1px oklch(0.11 0.003 135),
+    0 6px 20px -6px color-mix(in oklch, var(--primary) 45%, transparent),
+    var(--steel-ring);
+}
+:is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *)[data-size^="icon"]:hover {
+  filter: brightness(0.97);
+}
+.dark :is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *)[data-size^="icon"]:hover {
+  filter: brightness(1.15);
+}
+/* Pressed: the light flips to the bottom edge. */
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"]:active,
+:is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *):active {
+  background-image: none;
+}
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="default"]:active { background-color: color-mix(in oklch, var(--primary), black 10%); }
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant]:focus-visible {
+  --steel-ring: 0 0 0 4px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+/* Light theme: the brand green (#35B87A) is a fill colour; as text on white it is
+   2.6:1, so green text and links take the 700 shade (Krishna's prototype is dark). */
+:root:not(.dark) .text-primary { color: var(--primary-700, var(--primary)); }
+
+/* Card headers over a hairline get their own lighter band, as in the prototype
+   (#151918 in dark). The band runs to the card's top edge, so the card drops its
+   top padding and the header takes it. */
+/* Every card that opens with a header and has a body below it gets the same head (Krishna,
+   14 Oct: "make all card headers the same"), not only those that asked for border-b. */
+[data-slot="card"]:has(> [data-slot="card-header"]:first-child:not(:only-child)) { padding-top: 0; }
+[data-slot="card"] > [data-slot="card-header"]:first-child:not(:only-child),
+[data-slot="card-header"].border-b {
+  padding-top: var(--card-spacing);
+  padding-bottom: var(--card-spacing);
+  border-bottom: 1px solid var(--border);
+  background: var(--card-head);
+}
+
+/* Space between a name-and-badge row and the line under it ("qa-wp ■ RUNNING" over
+   its domain), which looked joined (Krishna, 14 Oct, "on other pages too"). Badge size
+   unchanged. Padding rather than margin so it adds to the next line's own gap instead
+   of collapsing into it. */
+:is(div, p):has(> [data-slot="badge"], > span > [data-slot="badge"]):not(:last-child):not([data-slot]) {
+  padding-bottom: 0.5rem;
+}
+
+/* One status marker (Krishna's prototype): inside a badge, the round check/alert/x
+   icons and round dots become the small square ■. Icons that carry meaning of their
+   own (shield, lock, clock…) are left alone. */
+[data-slot="badge"] > :is(.lucide-circle-check, .lucide-circle-check-big, .lucide-circle-alert, .lucide-circle-x, .lucide-circle-dot) {
+  display: none;
+}
+[data-slot="badge"]:has(> :is(.lucide-circle-check, .lucide-circle-check-big, .lucide-circle-alert, .lucide-circle-x, .lucide-circle-dot))::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background: currentColor;
+}
+[data-slot="badge"] span.rounded-full,
+[data-slot="badge"] span.rounded-full * { border-radius: 0; }
+/* Dialogs: the header gets the same lighter band as card headers. */
+[data-slot="dialog-header"].border-b { background: var(--card-head); }
+
+/* Steel red (Krishna, 14 Oct: "every button type matches"): the destructive button gets
+   the same raised build as the others — top-lit fill, top highlight, a ring in its own
+   colour, a soft shadow — and the red bar on hover. Text colour is unchanged. */
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="destructive"] {
+  border-color: transparent;
+  background-clip: border-box;
+  background-image: linear-gradient(
+    color-mix(in oklch, var(--destructive) 12%, var(--card)) 0%,
+    color-mix(in oklch, var(--destructive) 7%, var(--card)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    0 0 0 1px color-mix(in oklch, var(--destructive) 40%, transparent),
+    0 2px 6px -3px color-mix(in oklch, var(--destructive) 35%, transparent),
+    var(--steel-ring, 0 0 0 0 transparent);
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s, translate 0.12s;
+}
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="destructive"][data-size]:not([data-size^="icon"]):hover {
+  background-image:
+    linear-gradient(var(--destructive), var(--destructive)),
+    linear-gradient(color-mix(in oklch, var(--destructive) 18%, var(--card)) 0%, color-mix(in oklch, var(--destructive) 11%, var(--card)) 100%);
+  background-size: 3px 100%, auto;
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--destructive) 55%, transparent),
+    0 4px 12px -5px color-mix(in oklch, var(--destructive) 45%, transparent),
+    var(--steel-ring, 0 0 0 0 transparent);
+}
+:is([data-slot="button"], [data-slot$="-trigger"])[data-variant="destructive"]:active { background-image: none; }
+
+/* Small status dots outside badges (● MariaDB, ● Running…) become the square ■ too.
+   Matched by size and STATUS colour only, so a radio's dot, avatars and bars stay round. */
+:is(.size-1\.5, .size-2, .size-2\.5).rounded-full:is([class*="bg-success"], [class*="bg-warning"], [class*="bg-destructive"], [class*="bg-muted-foreground"], [class*="bg-emerald"], [class*="bg-amber"], [class*="bg-red"]) {
+  border-radius: 1px;
+}
+
+/* Notifications (Sonner): a bar in the type's colour on the left edge and the icon in a
+   square edged in that colour, like the badges and tiles. Sonner injects its own unlayered
+   rules with more specific selectors, hence the toaster prefix and the few !important. */
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] { border-radius: 2px !important; }
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-icon] {
+  margin: 0 !important;
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 2px !important;
+}
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] { box-shadow: inset 3px 0 0 var(--success), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] { box-shadow: inset 3px 0 0 var(--destructive), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] { box-shadow: inset 3px 0 0 var(--warning), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] { box-shadow: inset 3px 0 0 var(--primary), 0 8px 24px -8px rgb(0 0 0 / 0.35) !important; }
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] { border-color: color-mix(in oklch, var(--success) 45%, transparent); background: color-mix(in oklch, var(--success) 10%, transparent); }
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-icon] { border-color: color-mix(in oklch, var(--destructive) 45%, transparent); background: color-mix(in oklch, var(--destructive) 10%, transparent); }
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] [data-icon] { border-color: color-mix(in oklch, var(--warning) 45%, transparent); background: color-mix(in oklch, var(--warning) 10%, transparent); }
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] [data-icon] { border-color: color-mix(in oklch, var(--primary) 45%, transparent); background: color-mix(in oklch, var(--primary) 10%, transparent); }
+/* Sonner sets its own system font stack; notifications use the panel's. */
+[data-sonner-toaster] { font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif !important; }
+
+/* An edge-to-edge list that opens a card's body sits right under the header band:
+   the band already draws the line, so the list drops its own and the gap between
+   (Krishna, 14 Oct: Domains looked "unaligned and messy" with two lines). */
+[data-slot="card"] > [data-slot="card-header"]:first-child + [data-slot="card-content"] > [class*="-mx-(--card-spacing)"].border-t:first-child,
+[data-slot="card"] > [data-slot="card-header"]:first-child + [data-slot="card-content"] > :first-child:not([class*="-mx-"]) > [class*="-mx-(--card-spacing)"].border-t:first-child {
+  margin-top: calc(-1 * var(--card-spacing));
+  border-top-width: 0;
+}
+
+/* A narrow card header (a phone) puts a text button under the title instead of beside it:
+   beside, it squeezed "Configurer les sauvegardes" onto two lines and "Mettre à jour vers
+   5.2.3" onto three (steel audit, 15 Oct). Icon-only actions still fit and stay put. */
+@container card-header (width < 24rem) {
+  [data-slot="card-action"]:has([data-slot="button"]:not([data-size^="icon"])) {
+    grid-column: 1;
+    grid-row: auto / span 1;
+    justify-self: start;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+  }
+}
+
+/* The panel's server drawing (components/illustrations/steel): the landing sites' machined
+   material, our own subject. Green comes from the brand colour; only amber lights move. */
+.sv-contact { fill: rgb(0 0 0 / 0.62); }
+:root:not(.dark) .sv-contact { fill: rgb(15 23 42 / 0.35); }
+.sv-glass { stroke: rgb(255 255 255 / 0.07); stroke-width: 1; }
+.sv-glow { fill: var(--primary); filter: drop-shadow(0 0 4px var(--primary)); }
+.sv-glow.is-warn { fill: var(--warning); filter: drop-shadow(0 0 4px var(--warning)); }
+/* Status lights: steady green; amber pulses slowly (something wants a look); grey is unlit. */
+.sv-led { fill: var(--primary); filter: drop-shadow(0 0 3px var(--primary)); }
+.sv-led.is-warn {
+  fill: var(--warning);
+  filter: drop-shadow(0 0 3px var(--warning));
+  animation: sv-led-blink 2.2s var(--d, 0s) ease-in-out infinite both;
+}
+.sv-led.is-off { fill: rgb(214 222 230 / 0.35); filter: none; }
+/* An empty application bay on the server's top. */
+.sv-bay { fill: rgb(0 0 0 / 0.25); stroke: rgb(214 222 230 / 0.45); stroke-width: 1; stroke-dasharray: 3 3; }
+.sv-etched { fill: rgb(214 222 230 / 0.8); font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 20px; font-weight: 700; }
+/* Light theme: the same machine in brushed aluminium, so it sits in a white banner instead of
+   standing on it as a dark block (Krishna, 15 Oct). The display window stays dark glass. */
+:root:not(.dark) .sv-m-side0 { stop-color: #8f98a2; }
+:root:not(.dark) .sv-m-side1 { stop-color: #a9b1ba; }
+:root:not(.dark) .sv-m-side2 { stop-color: #c6ccd3; }
+:root:not(.dark) .sv-m-side3 { stop-color: #f4f6f8; }
+:root:not(.dark) .sv-m-side4 { stop-color: #bcc3ca; }
+:root:not(.dark) .sv-m-side5 { stop-color: #a2aab3; }
+:root:not(.dark) .sv-m-side6 { stop-color: #8c949e; }
+:root:not(.dark) .sv-m-fall1 { stop-opacity: 0.16; }
+:root:not(.dark) .sv-m-top0 { stop-color: #f1f3f5; }
+:root:not(.dark) .sv-m-top1 { stop-color: #d7dce1; }
+:root:not(.dark) .sv-m-glass0 { stop-color: #1a2420; }
+:root:not(.dark) .sv-m-glass1 { stop-color: #123322; }
+:root:not(.dark) .sv-m-perf { fill: #5d6670; }
+:root:not(.dark) .sv-glass { stroke: rgb(15 23 42 / 0.25); }
+:root:not(.dark) .sv-led.is-off { fill: rgb(71 85 105 / 0.45); }
+:root:not(.dark) .sv-bay { fill: rgb(15 23 42 / 0.05); stroke: rgb(71 85 105 / 0.6); }
+:root:not(.dark) .sv-etched { fill: rgb(30 41 59 / 0.85); }
+/* Once, on first paint: each module drops into its bay back to front, then its light comes on. */
+.sv-drop { animation: sv-drop 420ms calc(150ms + var(--i, 0) * 90ms) cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.sv-power { animation: sv-power 240ms calc(450ms + var(--i, 0) * 90ms) ease-out both; }
+@keyframes sv-drop { from { opacity: 0; transform: translateY(-26px); } }
+@keyframes sv-power { from { opacity: 0; } }
+@keyframes sv-led-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .sv-led.is-warn, .sv-drop, .sv-power { animation: none; }
 }

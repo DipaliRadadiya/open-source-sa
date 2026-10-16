@@ -49,6 +49,7 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
     const Icon = !active ? ArrowUpDown : sort.desc ? ArrowDown : ArrowUp;
     return (
       <th
+        data-slot="table-head"
         scope="col"
         aria-sort={active ? (sort.desc ? "descending" : "ascending") : "none"}
         className={cn("h-11 px-3 font-medium sm:px-5", className)}
@@ -126,7 +127,8 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
         /* Bounded: apps like Nextcloud ship ~150 tables. */
         <div className="max-h-[28rem] overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-muted/60 text-left text-sm text-muted-foreground backdrop-blur">
+            {/* Sticky, so opaque: the shade every table header has (bg-muted/40 over the card). */}
+            <thead className="sticky top-0 z-10 bg-[color-mix(in_srgb,var(--muted)_40%,var(--card))] text-left text-sm text-muted-foreground">
               <tr className="border-b">
                 {/* Shares of the width, not "the name takes what is left": that pushed Rows
                     and Size together at the right edge with the middle empty (Krishna, 8 Oct). */}

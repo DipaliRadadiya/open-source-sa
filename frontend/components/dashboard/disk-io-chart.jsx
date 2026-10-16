@@ -39,6 +39,8 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
   ];
 
   const option = timeSeriesOption({
+    // The header chips name each line (Steel UI).
+    legend: false,
     data: chartSeries,
     series,
     tokens,

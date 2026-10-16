@@ -51,18 +51,18 @@ export function SidebarServerCard() {
     <Link
       href="/dashboard"
       prefetch={false}
-      className="relative flex items-center gap-3 overflow-hidden rounded-xl bg-hero p-3 text-white shadow-e2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-data-[collapsible=icon]:hidden"
+      // Steel UI (prototype): a green-edged plate rather than a banner.
+      className="relative flex items-center gap-3 overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-data-[collapsible=icon]:hidden"
     >
-      <span aria-hidden className="bg-hero-grid pointer-events-none absolute inset-0" />
-      <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/25">
+      <span className="relative flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 text-[var(--primary-700,var(--primary))] dark:text-primary">
         <Server className="size-4" aria-hidden />
       </span>
       <span className="relative min-w-0 flex-1">
         <span className="block truncate font-mono text-sm font-semibold" title={identity.hostname}>
           {identity.hostname}
         </span>
-        <span className="flex min-w-0 items-center gap-1.5 text-xs text-white/85">
-          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-emerald-300" />
+        <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+          <span aria-hidden className="size-1.5 shrink-0 bg-primary" />
           <span className="truncate">
             {t("serverOnline")}
             {identity.ip ? ` · ${identity.ip}` : ""}

@@ -49,7 +49,8 @@ export default async function RegisterPage() {
         <CardTitle className="text-xl">{t("registerTitle")}</CardTitle>
         <CardDescription>{t("registerSubtitle")}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6">
+      {/* pt: as on sign-in, the first label would sit on the header band's line. */}
+      <CardContent className="grid gap-6 pt-6">
         <RegisterForm policy={basicInfo.password_policy} />
         <p className="text-center text-sm text-muted-foreground">
           {t("haveAccount")}{" "}

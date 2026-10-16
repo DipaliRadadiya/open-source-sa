@@ -29,10 +29,12 @@ export function VersionsCard({ namespace, columns, gridClass, action, footnote, 
       <div className={cn("@3xl/versions:grid @3xl/versions:gap-x-4", gridClass)}>
         {/* Column names for the wide layout only; each cell also names itself for
             narrow screens and screen readers. */}
+        {/* data-slot: typed like every table header (globals.css), so they cannot drift. */}
         <div
           aria-hidden
+          data-slot="table-head"
           className={cn(
-            "hidden border-y bg-muted/40 px-4 py-3 text-sm font-medium text-muted-foreground",
+            "hidden h-11 items-center border-y bg-muted/40 px-4 text-muted-foreground",
             SUBGRID,
           )}
         >
