@@ -94,12 +94,12 @@ final class DbBackupHost
     }
 }
 
-function dbHeaders(?User $user = null): array
+function dbBackupHeaders(?User $user = null): array
 {
     return ['Authorization' => 'Bearer '.($user ?? test()->admin)->createToken('t')->plainTextToken];
 }
 
-function dbTarget(?Database $database = null): BackupTarget
+function dbBackupTarget(?Database $database = null): BackupTarget
 {
     return BackupTarget::create([
         'database_id' => ($database ?? test()->db)->id,
@@ -108,9 +108,9 @@ function dbTarget(?Database $database = null): BackupTarget
     ]);
 }
 
-function dbBackup(?BackupTarget $target = null, string $engine = 'mysql'): Backup
+function dbBackupRow(?BackupTarget $target = null, string $engine = 'mysql'): Backup
 {
-    $target ??= dbTarget();
+    $target ??= dbBackupTarget();
     $key = 'databases/ledger-'.$target->database_id.'/x-'.Str::uuid().'.tar.gz';
     test()->fakeDisk->put($key, str_repeat('x', 2048));
 
@@ -124,7 +124,7 @@ function dbBackup(?BackupTarget $target = null, string $engine = 'mysql'): Backu
 
 describe('the schedule', function () {
     it('saves one for a database on its own, always of type database', function () {
-        $this->withHeaders(dbHeaders())->putJson("/api/databases/{$this->db->id}/backup-target", [
+        $this->withHeaders(dbBackupHeaders())->putJson("/api/databases/{$this->db->id}/backup-target", [
             'storage_destination_id' => $this->destination->id, 'retention_count' => 5, 'frequency' => 'daily', 'enabled' => true,
         ])->assertOk()
             ->assertJsonPath('backup_target.database_id', $this->db->id)
@@ -141,11 +141,11 @@ describe('the schedule', function () {
         ]);
         $this->db->update(['application_id' => $site->id]);
 
-        $this->withHeaders(dbHeaders())->putJson("/api/databases/{$this->db->id}/backup-target", [
+        $this->withHeaders(dbBackupHeaders())->putJson("/api/databases/{$this->db->id}/backup-target", [
             'storage_destination_id' => $this->destination->id, 'retention_count' => 5, 'frequency' => 'daily', 'enabled' => true,
         ])->assertStatus(422)->assertJsonFragment(['database' => [__('backup.errors.database_backed_up_with_site', ['site' => 'Shop'])]]);
 
-        $this->withHeaders(dbHeaders())->getJson("/api/databases/{$this->db->id}/backup-target")
+        $this->withHeaders(dbBackupHeaders())->getJson("/api/databases/{$this->db->id}/backup-target")
             ->assertJsonPath('backed_up_with.application_name', 'Shop');
     });
 
@@ -154,15 +154,15 @@ describe('the schedule', function () {
         $viewer = User::factory()->create();
         grantPermission($viewer, 'database', view: true, manage: false);
 
-        $this->withHeaders(dbHeaders($viewer))->getJson("/api/databases/{$this->db->id}/backup-target")->assertOk();
-        $this->withHeaders(dbHeaders($viewer))->putJson("/api/databases/{$this->db->id}/backup-target", [
+        $this->withHeaders(dbBackupHeaders($viewer))->getJson("/api/databases/{$this->db->id}/backup-target")->assertOk();
+        $this->withHeaders(dbBackupHeaders($viewer))->putJson("/api/databases/{$this->db->id}/backup-target", [
             'storage_destination_id' => $this->destination->id, 'retention_count' => 5, 'frequency' => 'daily', 'enabled' => true,
         ])->assertForbidden();
     });
 
     it('is picked up by the scheduler like a site\'s', function () {
         Queue::fake();
-        $target = dbTarget();
+        $target = dbBackupTarget();
 
         $this->artisan('backups:run-due')->assertSuccessful();
 
@@ -172,7 +172,7 @@ describe('the schedule', function () {
 
 describe('a run', function () {
     it('dumps that database alone, packs only the dump, and files it under databases/', function () {
-        $backup = app(BackupRunner::class)->run(dbTarget());
+        $backup = app(BackupRunner::class)->run(dbBackupTarget());
 
         $tar = collect(DbBackupHost::$runs)->first(fn ($r) => ($r['args'][0] ?? '') === 'tar');
 
@@ -192,29 +192,29 @@ describe('a run', function () {
 
     it('fails, not "verifies an empty archive", when its database is gone', function () {
         // Deleted between queueing and running: the relation is gone.
-        $target = dbTarget();
+        $target = dbBackupTarget();
         $target->setRelation('database', null);
 
         expect(app(BackupRunner::class)->run($target)->status)->toBe(BackupStatus::Failed);
     });
 
     it('lists only its own backups on the database\'s page, and filters the shared list', function () {
-        $mine = dbBackup();
+        $mine = dbBackupRow();
         $other = Database::create(['name' => 'other', 'engine' => 'mysql']);
-        dbBackup(dbTarget($other));
+        dbBackupRow(dbBackupTarget($other));
 
-        $this->withHeaders(dbHeaders())->getJson("/api/databases/{$this->db->id}/backups")
+        $this->withHeaders(dbBackupHeaders())->getJson("/api/databases/{$this->db->id}/backups")
             ->assertOk()->assertJsonCount(1, 'backups')->assertJsonPath('backups.0.id', $mine->id)
             ->assertJsonPath('backups.0.database_name', 'ledger')->assertJsonPath('backups.0.archived', false);
 
-        $this->withHeaders(dbHeaders())->getJson("/api/backups?filter[database_id]={$this->db->id}")
+        $this->withHeaders(dbBackupHeaders())->getJson("/api/backups?filter[database_id]={$this->db->id}")
             ->assertJsonCount(1, 'backups');
     });
 });
 
 describe('deleting the database', function () {
     it('archives its backups — kept, named, listed — and removes only the schedule', function () {
-        $backup = dbBackup();
+        $backup = dbBackupRow();
         $target = $backup->target;
 
         app(DeleteDatabase::class)->execute($this->db);
@@ -228,13 +228,13 @@ describe('deleting the database', function () {
             ->and($backup->isArchived())->toBeTrue()
             ->and($backup->subjectName())->toBe('ledger');
 
-        $this->withHeaders(dbHeaders())->getJson('/api/backups?filter[archived]=1&filter[engine]=mysql')
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/backups?filter[archived]=1&filter[engine]=mysql')
             ->assertJsonCount(1, 'backups')->assertJsonPath('backups.0.archived', true)->assertJsonPath('backups.0.database_name', 'ledger');
         $this->fakeDisk->assertExists($backup->manifest['key']);
     });
 
     it('is refused while a backup of it is running', function () {
-        Backup::create(['backup_target_id' => dbTarget()->id, 'database_id' => $this->db->id, 'subject_engine' => 'mysql', 'type' => 'database', 'status' => BackupStatus::Running]);
+        Backup::create(['backup_target_id' => dbBackupTarget()->id, 'database_id' => $this->db->id, 'subject_engine' => 'mysql', 'type' => 'database', 'status' => BackupStatus::Running]);
 
         expect(fn () => app(DeleteDatabase::class)->execute($this->db))
             ->toThrow(ValidationException::class);
@@ -246,12 +246,12 @@ describe('deleting the database', function () {
 describe('restoring', function () {
     it('queues a restore of its own backup into it, named by typing the database', function () {
         Queue::fake();
-        $backup = dbBackup();
+        $backup = dbBackupRow();
 
-        $this->withHeaders(dbHeaders())->postJson("/api/databases/{$this->db->id}/backups/{$backup->id}/restore", ['confirm' => 'nope'])
+        $this->withHeaders(dbBackupHeaders())->postJson("/api/databases/{$this->db->id}/backups/{$backup->id}/restore", ['confirm' => 'nope'])
             ->assertStatus(422)->assertJsonValidationErrors('confirm');
 
-        $this->withHeaders(dbHeaders())->postJson("/api/databases/{$this->db->id}/backups/{$backup->id}/restore", ['confirm' => 'ledger'])
+        $this->withHeaders(dbBackupHeaders())->postJson("/api/databases/{$this->db->id}/backups/{$backup->id}/restore", ['confirm' => 'ledger'])
             ->assertStatus(202);
 
         $restore = Restore::latest('id')->first();
@@ -260,7 +260,7 @@ describe('restoring', function () {
     });
 
     it('saves the database first, then replaces only that database — no site file, no process', function () {
-        $backup = dbBackup();
+        $backup = dbBackupRow();
         $restore = Restore::create(['backup_id' => $backup->id, 'database_id' => $this->db->id, 'type' => 'database', 'status' => RestoreStatus::Pending, 'reference' => (string) Str::uuid()]);
 
         $done = app(RestoreRunner::class)->run($restore->fresh(['backup', 'database.backupTarget']));
@@ -281,10 +281,10 @@ describe('restoring', function () {
     });
 
     it('puts an archived backup into another database of the same engine, and only that', function () {
-        $backup = dbBackup();
+        $backup = dbBackupRow();
         app(DeleteDatabase::class)->execute($this->db);
         $fresh = Database::create(['name' => 'ledger2', 'engine' => 'mysql']);
-        dbTarget($fresh);
+        dbBackupTarget($fresh);
         DbBackupHost::$runs = [];
         $restore = Restore::create(['backup_id' => $backup->id, 'database_id' => $fresh->id, 'type' => 'database', 'status' => RestoreStatus::Pending, 'reference' => (string) Str::uuid()]);
 
@@ -297,17 +297,17 @@ describe('restoring', function () {
 
     it('refuses what it cannot do safely', function (string $case) {
         Queue::fake();
-        $backup = dbBackup();
+        $backup = dbBackupRow();
         $into = $this->db;
         $confirm = 'ledger';
 
         match ($case) {
             // Another database's own backup is not archived: never cross-restored.
-            'other database' => ($into = tap(Database::create(['name' => 'b', 'engine' => 'mysql']), fn ($d) => dbTarget($d))) && ($confirm = 'b'),
+            'other database' => ($into = tap(Database::create(['name' => 'b', 'engine' => 'mysql']), fn ($d) => dbBackupTarget($d))) && ($confirm = 'b'),
             'engine mismatch' => (function () use (&$into, &$confirm) {
                 app(DeleteDatabase::class)->execute($this->db);
                 $into = Database::create(['name' => 'pg', 'engine' => 'postgresql']);
-                dbTarget($into);
+                dbBackupTarget($into);
                 $confirm = 'pg';
             })(),
             // No schedule means no safety backup, so no restore.
@@ -320,30 +320,30 @@ describe('restoring', function () {
             'import running' => DatabaseImport::create(['database_id' => $this->db->id, 'database_name' => 'ledger', 'engine' => 'mysql', 'original_name' => 'x.sql', 'size_bytes' => 1, 'status' => 'queued', 'user_id' => $this->admin->id]),
         };
 
-        $this->withHeaders(dbHeaders())->postJson("/api/databases/{$into->id}/backups/{$backup->id}/restore", ['confirm' => $confirm])
+        $this->withHeaders(dbBackupHeaders())->postJson("/api/databases/{$into->id}/backups/{$backup->id}/restore", ['confirm' => $confirm])
             ->assertStatus(422);
         Queue::assertNotPushed(RunRestore::class);
     })->with(['other database', 'engine mismatch', 'no schedule', 'unverified', 'import running']);
 
     it('is not done through the shared backups screen', function () {
-        $backup = dbBackup();
+        $backup = dbBackupRow();
 
-        $this->withHeaders(dbHeaders())->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'ledger'])
+        $this->withHeaders(dbBackupHeaders())->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'ledger'])
             ->assertStatus(422)->assertJsonFragment(['backup' => [__('backup.errors.restore_database_backup_here')]]);
     });
 
     it('blocks an export of the same database while it runs', function () {
-        $backup = dbBackup();
+        $backup = dbBackupRow();
         Restore::create(['backup_id' => $backup->id, 'database_id' => $this->db->id, 'type' => 'database', 'status' => RestoreStatus::Running, 'reference' => (string) Str::uuid()]);
 
-        $this->withHeaders(dbHeaders())->postJson("/api/databases/{$this->db->id}/export")->assertStatus(422);
+        $this->withHeaders(dbBackupHeaders())->postJson("/api/databases/{$this->db->id}/export")->assertStatus(422);
     });
 });
 
 it('serves a database\'s backup only under that database', function () {
     $other = Database::create(['name' => 'other', 'engine' => 'mysql']);
-    $backup = dbBackup(dbTarget($other));
+    $backup = dbBackupRow(dbBackupTarget($other));
 
-    $this->withHeaders(dbHeaders())->deleteJson("/api/databases/{$this->db->id}/backups/{$backup->id}")->assertNotFound();
-    $this->withHeaders(dbHeaders())->getJson("/api/databases/{$this->db->id}/backups/{$backup->id}/download")->assertNotFound();
+    $this->withHeaders(dbBackupHeaders())->deleteJson("/api/databases/{$this->db->id}/backups/{$backup->id}")->assertNotFound();
+    $this->withHeaders(dbBackupHeaders())->getJson("/api/databases/{$this->db->id}/backups/{$backup->id}/download")->assertNotFound();
 });
