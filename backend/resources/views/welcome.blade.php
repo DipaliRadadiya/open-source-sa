@@ -29,7 +29,7 @@
   h1 { margin: 0 0 8px; font-size: 22px; }
   p { margin: 0 0 24px; color: var(--muted); }
   a { display: inline-block; margin-right: 12px; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-  /* Dark text, not white: white on a light brand colour such as #62C690 is unreadable. */
+  /* Dark text, not white: white on a light brand colour such as #35B87A is unreadable. */
   a.primary { background: var(--brand); color: #16161a; }
   a.secondary { color: var(--brand); border: 1px solid var(--line); }
 </style>

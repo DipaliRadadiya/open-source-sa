@@ -13,7 +13,7 @@ namespace App\Support;
 final class BrandColor
 {
     /** The default when the configured value is missing or not a hex colour. */
-    public const DEFAULT = '#62C690';
+    public const DEFAULT = '#35B87A';
 
     public static function value(): string
     {

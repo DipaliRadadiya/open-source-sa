@@ -17,16 +17,16 @@ return [
      */
     'name' => trim((string) env('BRANDING_NAME')) ?: 'ServerAvatar',
 
-    'logo' => env('BRANDING_LOGO', 'https://app.serveravatar.com/logo/SaLogoDark.png'),
+    'logo' => env('BRANDING_LOGO', '/brand/serveravatar-horizontal-light.svg'),
 
-    'logo_dark' => env('BRANDING_LOGO_DARK', 'https://app.serveravatar.com/logo/dark-logo.png'),
+    'logo_dark' => env('BRANDING_LOGO_DARK', '/brand/serveravatar-horizontal-dark.svg'),
 
-    'icon' => env('BRANDING_ICON', 'https://app.serveravatar.com/logo/logo-sm.png'),
+    'icon' => env('BRANDING_ICON', '/brand/serveravatar-mark-light.svg'),
 
-    'icon_dark' => env('BRANDING_ICON_DARK', 'https://app.serveravatar.com/logo/dark-logo-sm.png'),
+    'icon_dark' => env('BRANDING_ICON_DARK', '/brand/serveravatar-mark-dark.svg'),
 
-    'favicon' => env('BRANDING_FAVICON', 'https://app.serveravatar.com/logo/logo-sm.png'),
+    'favicon' => env('BRANDING_FAVICON', '/brand/serveravatar-favicon.svg'),
 
-    'primary_color' => env('BRANDING_PRIMARY_COLOR', '#62C690'),
+    'primary_color' => env('BRANDING_PRIMARY_COLOR', '#35B87A'),
 
 ];
