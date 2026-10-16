@@ -70,7 +70,7 @@ export function AccountActivity({ data }) {
   const columns = [
     // Fixed widths: sized to the content, each page would lay the columns out differently.
     { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
-    { accessorKey: "type", header: t("activity.type"), cell: TypeCell, meta: { className: "hidden w-56 xl:table-cell" } },
+    { accessorKey: "type", header: t("activity.type"), cell: TypeCell, meta: { className: "hidden w-68 xl:table-cell" } },
     {
       accessorKey: "description",
       header: t("activity.descriptionHeader"),

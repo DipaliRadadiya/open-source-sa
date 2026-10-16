@@ -95,8 +95,8 @@ export function ActivityTable({ data, hasFilters }) {
     { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
     { id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden w-44 sm:table-cell" } },
     // Hidden below xl: the description carries the same information, and the widest
-    // label (es "Herramientas de compilación") needs 224px, which leaves a 1024px screen too little for the description.
-    { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden w-56 xl:table-cell" } },
+    // label (es "Herramientas de compilación") needs 261px in mono caps, which leaves a 1024px screen too little for the description.
+    { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden w-68 xl:table-cell" } },
     {
       accessorKey: "description",
       header: t("columns.description"),

@@ -93,7 +93,7 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
   const t = useTranslations("activity");
 
   // Type is hidden below xl: it is shorthand for the description, and its widest
-  // label (es "Herramientas de compilación") needs 224px, which leaves a 1024px screen too little for the description.
+  // label (es "Herramientas de compilación") needs 261px in mono caps, which leaves a 1024px screen too little for the description.
   const columns = [
     // Headers may wrap so long locales fit on a phone.
     // Fixed widths: sized to the content, each page would lay the columns out differently.
@@ -103,7 +103,7 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
       accessorKey: "type",
       header: t("table.type"),
       cell: TypeCell,
-      meta: { className: "hidden w-56 xl:table-cell" },
+      meta: { className: "hidden w-68 xl:table-cell" },
     },
     {
       accessorKey: "description",
