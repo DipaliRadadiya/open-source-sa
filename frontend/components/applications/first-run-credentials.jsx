@@ -14,6 +14,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 /**
  * The credentials a one-click app generated, shown once, where the user lands.
@@ -139,7 +140,7 @@ export function FirstRunCredentials({ application, className }) {
                 key={row.key}
                 className="flex flex-col items-start gap-1 py-2.5 @md/creds:flex-row @md/creds:items-center @md/creds:justify-between @md/creds:gap-3"
               >
-                <span className={row.curated ? "min-w-0 text-xs text-muted-foreground" : "min-w-0 truncate font-mono text-xs text-muted-foreground"}>
+                <span className={row.curated ? `min-w-0 ${FACT_LABEL}` : `min-w-0 truncate ${FACT_LABEL}`}>
                   {row.label}
                 </span>
                 {secrets ? (

@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FACT_LABEL } from "@/lib/theme/facts";
 
 // Explicit keys keep every first-run promise visible to check-i18n.
 function firstRunText(kind, t) {
@@ -35,9 +36,9 @@ export function RecipeSummary({ type }) {
       <div className="space-y-3 p-4">
         {/* Label and value on one line from sm, as in the panel's other two-column lists. */}
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:items-baseline sm:gap-x-4 sm:gap-y-2">
-          <dt className="text-xs text-muted-foreground">{t("recipes.servicesLabel")}</dt>
+          <dt className={FACT_LABEL}>{t("recipes.servicesLabel")}</dt>
           <dd className="min-w-0 break-words">{recipe.services.map((service) => service.name).join(", ")}</dd>
-          <dt className="text-xs text-muted-foreground">{t("recipes.storageLabel")}</dt>
+          <dt className={FACT_LABEL}>{t("recipes.storageLabel")}</dt>
           <dd className="min-w-0">
             {recipe.volumes.length ? (
               <ul className="space-y-1 font-mono text-xs">
@@ -47,7 +48,7 @@ export function RecipeSummary({ type }) {
           </dd>
           {afterInstall ? (
             <>
-              <dt className="text-xs text-muted-foreground">{t("recipes.firstRunLabel")}</dt>
+              <dt className={FACT_LABEL}>{t("recipes.firstRunLabel")}</dt>
               <dd className="min-w-0 leading-relaxed">{afterInstall}</dd>
             </>
           ) : null}
