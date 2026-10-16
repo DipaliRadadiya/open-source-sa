@@ -10,7 +10,7 @@ it('returns the default branding info without authentication', function () {
         ->assertJsonPath('branding.icon', 'https://app.serveravatar.com/logo/logo-sm.png')
         ->assertJsonPath('branding.icon_dark', 'https://app.serveravatar.com/logo/dark-logo-sm.png')
         ->assertJsonPath('branding.favicon', 'https://app.serveravatar.com/logo/logo-sm.png')
-        ->assertJsonPath('branding.primary_color', '#076aff');
+        ->assertJsonPath('branding.primary_color', '#62C690');
 });
 
 it('reflects branding overrides from config', function () {

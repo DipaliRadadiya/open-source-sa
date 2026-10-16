@@ -27,6 +27,6 @@ return [
 
     'favicon' => env('BRANDING_FAVICON', 'https://app.serveravatar.com/logo/logo-sm.png'),
 
-    'primary_color' => env('BRANDING_PRIMARY_COLOR', '#076aff'),
+    'primary_color' => env('BRANDING_PRIMARY_COLOR', '#62C690'),
 
 ];
