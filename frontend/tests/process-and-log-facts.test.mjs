@@ -22,3 +22,10 @@ test("an application log source keeps size and modified; unknown is null, never 
   // An older backend without the fields still parses.
   assert.equal(applicationLogSourceSchema.parse({ key: "error", label: "Error log" }).size, undefined);
 });
+
+test("while Live is on, the log tabs' sizes are re-read every 30 s, and only then", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("../components/applications/logs/application-logs-panel.jsx", import.meta.url), "utf8");
+  assert.match(src, /const SOURCES_POLL_MS = 30000;/);
+  assert.match(src, /if \(!follow \|\| disabled\) return undefined;\s*const id = setInterval\(\(\) => \{\s*if \(!document\.hidden\) refreshSources\(\);\s*\}, SOURCES_POLL_MS\);/);
+});

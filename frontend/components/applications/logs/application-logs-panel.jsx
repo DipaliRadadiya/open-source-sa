@@ -31,6 +31,8 @@ import { formatBytes } from "@/lib/format/bytes";
 import { parseModified } from "@/lib/logs/recent";
 
 const POLL_MS = 3000;
+// The tab sizes and last write, while the log is followed: each read stats every file.
+const SOURCES_POLL_MS = 30000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
 // Sources whose lines carry an HTTP status; `waf_detect` uses `combined` format.
@@ -212,6 +214,15 @@ export function ApplicationLogsPanel({
       document.removeEventListener("visibilitychange", tick);
     };
   }, [follow, disabled, load]);
+
+  // Live grows the file the tabs measured at load, so their sizes are read again too.
+  useEffect(() => {
+    if (!follow || disabled) return undefined;
+    const id = setInterval(() => {
+      if (!document.hidden) refreshSources();
+    }, SOURCES_POLL_MS);
+    return () => clearInterval(id);
+  }, [follow, disabled, refreshSources]);
 
   const group = source ? groupFor(source.key) : undefined;
   const modified = parseModified(source?.modified);
