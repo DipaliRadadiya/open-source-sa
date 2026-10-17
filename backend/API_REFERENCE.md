@@ -4824,6 +4824,22 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 
 ---
 
+### DELETE `/system-users`
+**Permission:** `system_user` (manage) · **Throttle:** 6/min — added 2026-10-17 (v7's bulk delete)
+
+Delete several system users. Each goes through the single delete above, with the same refusals; one refused account does not stop the others.
+
+**Request:** `{"ids": [3, 5, 8], "end_sessions": false}` — 1 to 50 existing ids, no duplicates (`422` otherwise, and nothing is deleted). `end_sessions` as `?end_sessions=1` above, for every account in the batch.
+
+**Response `200`:**
+```json
+{"deleted": false, "succeeded": [3, 8],
+ "failed": [{"id": 5, "username": "deploy", "reason": "has_processes"}]}
+```
+`deleted` is `true` only when every one went. `reason` is a key for the client to word: `has_applications` (still owns a site — delete or move it first), `has_processes` (signed in or running something — retry with `end_sessions`), `failed` (the server refused; carries `reference`).
+
+---
+
 ### PUT `/system-users/{systemUser}/password`
 **Permission:** `system_user` (manage)
 

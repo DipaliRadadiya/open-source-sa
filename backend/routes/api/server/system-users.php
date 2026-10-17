@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Route;
 // System Users (server panel). View gated by `system_user` (view),
 // mutations by `system_user` (manage).
 Route::get('/system-users', [SystemUserController::class, 'index'])->middleware('permission:system_user');
+// Several at once (v7's bulk delete, 2026-10-17). Each one through the single delete's guards.
+Route::delete('/system-users', [SystemUserController::class, 'destroyMany'])->middleware(['permission:system_user,manage', 'throttle:6,1']);
 Route::post('/system-users', [SystemUserController::class, 'store'])->middleware('permission:system_user,manage');
 // Before the {systemUser} route below, not after: a wildcard registered
 // first would match "shells" and try to resolve it as an id.

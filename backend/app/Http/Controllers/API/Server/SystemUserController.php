@@ -4,7 +4,9 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\SystemUser\CreateSystemUser;
 use App\Actions\Server\SystemUser\DeleteSystemUser;
+use App\Actions\Server\SystemUser\DeleteSystemUsers;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\SystemUser\BulkDeleteSystemUsersRequest;
 use App\Http\Requests\Server\SystemUser\DeleteSystemUserRequest;
 use App\Http\Requests\Server\SystemUser\IndexSystemUsersRequest;
 use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
@@ -67,5 +69,18 @@ class SystemUserController extends Controller
         $action->execute($systemUser, $request->boolean('end_sessions'));
 
         return response()->json(null, 204);
+    }
+
+    /** Several at once; 200 with what happened to each (v7's bulk delete). */
+    public function destroyMany(BulkDeleteSystemUsersRequest $request, DeleteSystemUsers $action): JsonResponse
+    {
+        $systemUsers = SystemUser::query()->whereIn('id', $request->validated('ids'))->orderBy('id')->get();
+
+        $result = $action->execute($systemUsers, $request->boolean('end_sessions'));
+
+        return response()->json([
+            'deleted' => $result['failed'] === [],
+            ...$result,
+        ]);
     }
 }
