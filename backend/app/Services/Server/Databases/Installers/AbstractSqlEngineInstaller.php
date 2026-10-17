@@ -6,6 +6,7 @@ use App\Contracts\EngineInstaller;
 use App\Exceptions\Server\Database\EngineInstallException;
 use App\Models\DatabaseConnection;
 use App\Services\Server\Databases\DatabasePassword;
+use App\Services\Server\Databases\SqlRootAccess;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
 
@@ -28,7 +29,9 @@ use Illuminate\Support\Str;
  *  4. Create the panel's own account and store the credential.
  *
  * Nothing here touches root. See memory/database-engine-install-design.md for
- * why that is deliberate rather than lazy.
+ * why that is deliberate rather than lazy. (Root's password is the user's to
+ * set, since 2026-10-17 — see ChangeDatabaseRootPassword — never the
+ * installer's.)
  */
 abstract class AbstractSqlEngineInstaller implements EngineInstaller
 {
@@ -234,23 +237,15 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * Runs SQL as the engine's root over the unix socket.
      *
-     * No password anywhere: on MariaDB 10.4+ and MySQL 8 on Ubuntu, root@localhost
+     * No password first: on MariaDB 10.4+ and MySQL 8 on Ubuntu, root@localhost
      * authenticates by *being OS root*, which ServerOps already is. That is what
-     * makes one code path serve both engines.
+     * makes one code path serve both engines. Then the root password the user
+     * set or saved, if any — MySQL loses socket login once root has a password,
+     * and a server moved from v7 never had it (see SqlRootAccess).
      */
     private function socketQuery(string $sql)
     {
-        return $this->serverOps->run(
-            [$this->client(), '--protocol=socket', '--user=root'],
-            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'provision_account'],
-            timeout: 60,
-            input: $sql,
-        );
-    }
-
-    private function client(): string
-    {
-        return (string) config("server.databases.engines.{$this->engine()}.client", 'mysql');
+        return (new SqlRootAccess($this->serverOps))->run($this->engine(), $sql, 'provision_account');
     }
 
     /**

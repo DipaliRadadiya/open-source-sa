@@ -59,6 +59,7 @@ return [
     'database.attached' => ':name データベースを :application に紐付けました',
     'database.detached' => ':name データベースの :application との紐付けを解除しました',
     'database.connection_updated' => ':engine の接続設定を更新しました',
+    'database.root_password_changed' => ':engine の root パスワードを変更しました',
     'database.user_updated' => ':database の データベースユーザー :username を更新しました',
     'database.phpmyadmin_signed_in' => ':name を :username として phpMyAdmin で開きました',
     'database.adminer_signed_in' => ':name を Adminer で :username として開きました',

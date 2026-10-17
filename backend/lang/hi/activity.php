@@ -59,6 +59,7 @@ return [
     'database.attached' => ':name डेटाबेस को :application से जोड़ा',
     'database.detached' => ':name डेटाबेस को :application से अलग किया',
     'database.connection_updated' => ':engine कनेक्शन सेटिंग्स अपडेट कीं',
+    'database.root_password_changed' => ':engine का root पासवर्ड बदला',
     'database.user_updated' => ':database पर डेटाबेस उपयोगकर्ता :username अपडेट किया',
     'database.phpmyadmin_signed_in' => ':name को :username के रूप में phpMyAdmin में खोला',
     'database.adminer_signed_in' => ':name को Adminer में :username के रूप में खोला',

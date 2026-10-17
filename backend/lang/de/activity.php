@@ -59,6 +59,7 @@ return [
     'database.attached' => 'Datenbank :name mit :application verknüpft',
     'database.detached' => 'Verknüpfung von Datenbank :name mit :application aufgehoben',
     'database.connection_updated' => 'Verbindungseinstellungen für :engine aktualisiert',
+    'database.root_password_changed' => 'Root-Passwort von :engine geändert',
     'database.user_updated' => 'Datenbankbenutzer :username in :database aktualisiert',
     'database.phpmyadmin_signed_in' => ':name in phpMyAdmin als :username geöffnet',
     'database.adminer_signed_in' => ':name in Adminer als :username geöffnet',

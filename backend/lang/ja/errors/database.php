@@ -50,4 +50,13 @@ return [
     'export_in_progress' => 'このエクスポートはまだ実行中です。完了してから削除してください。',
     'engine_install_in_progress' => ':engine はすでにインストール中です。そのインストールが終わるまでお待ちください。',
     'panel_process_protected' => 'これはパネル自身の接続です。停止すると、パネルが実行中の処理が失敗します。',
+    // MySQL/MariaDB root password (2026-10-17).
+    'root_engine_not_installed' => ':engine はこのサーバーにインストールされていません。',
+    'root_password_busy' => 'root パスワードはすでに変更中です。しばらく待ってから再試行してください。',
+    'root_unreachable' => 'パネルは :engine に root としてサインインできませんでした（サーバーの root アカウントとしても、保存済みの root パスワードでも）。データベース接続で root の現在のパスワードを保存してから、再試行してください。',
+    'root_password_policy' => 'データベースサーバーがパスワードポリシーによりこのパスワードを拒否しました。大文字・小文字・数字・記号を含む、より長いパスワードを使用してください。',
+    'root_password_not_applied' => '新しい root パスワードを確認できなかったため、root の以前のログイン設定に戻しました。何も変更されていません。',
+    'root_password_characters' => 'パスワードに改行やその他の制御文字を含めることはできません。',
+    'root_password_wrong' => 'このパスワードで root としてサインインできませんでした。root の現在のパスワードを入力してください。',
+    'root_password_unsupported' => 'パネルが保存できる root パスワードがあるのは MySQL と MariaDB だけです。',
 ];

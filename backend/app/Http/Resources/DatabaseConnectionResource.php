@@ -22,6 +22,11 @@ class DatabaseConnectionResource extends JsonResource
             'username' => $this->username,
             // Never return the admin password — only whether one is set.
             'has_password' => ($this->password ?? '') !== '',
+            // MySQL/MariaDB root: whether the panel knows a root password (set
+            // or saved by the user). Null on engines that have no such account.
+            'has_root_password' => in_array($this->engine, ['mysql', 'mariadb'], true)
+                ? ($this->root_password ?? '') !== ''
+                : null,
             'options' => $this->options ?? [],
             // The controller merges `reachable` in after a live probe.
         ];

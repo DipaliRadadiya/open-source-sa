@@ -59,6 +59,7 @@ return [
     'database.attached' => 'Привязал базу данных :name к :application',
     'database.detached' => 'Отвязал базу данных :name от :application',
     'database.connection_updated' => 'Обновил настройки подключения :engine',
+    'database.root_password_changed' => 'Изменил пароль root для :engine',
     'database.user_updated' => 'Обновил пользователя базы данных :username в :database',
     'database.phpmyadmin_signed_in' => 'Открыл :name в phpMyAdmin от имени :username',
     'database.adminer_signed_in' => 'Открыл(а) :name в Adminer как :username',

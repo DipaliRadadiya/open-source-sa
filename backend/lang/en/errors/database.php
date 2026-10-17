@@ -50,4 +50,13 @@ return [
     'export_in_progress' => 'This export is still running. Wait for it to finish, then delete it.',
     'engine_install_in_progress' => ':engine is already being installed. Wait for that install to finish.',
     'panel_process_protected' => 'This is the panel’s own connection. Stopping it would fail whatever the panel is doing.',
+    // MySQL/MariaDB root password (2026-10-17).
+    'root_engine_not_installed' => ':engine is not installed on this server.',
+    'root_password_busy' => 'The root password is already being changed. Wait a moment and try again.',
+    'root_unreachable' => 'The panel could not sign in to :engine as root — neither as the server\'s root account nor with a saved root password. Save root\'s current password under Database connections, then try again.',
+    'root_password_policy' => 'The database server refused this password because of its password policy. Use a longer password with upper- and lower-case letters, digits and a symbol.',
+    'root_password_not_applied' => 'The new root password could not be confirmed, so root\'s previous login was put back. Nothing was changed.',
+    'root_password_characters' => 'The password cannot contain line breaks or other control characters.',
+    'root_password_wrong' => 'Signing in as root with this password failed. Enter root\'s current password.',
+    'root_password_unsupported' => 'Only MySQL and MariaDB have a root password the panel can store.',
 ];

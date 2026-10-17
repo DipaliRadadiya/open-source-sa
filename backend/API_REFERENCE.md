@@ -4131,11 +4131,11 @@ Already installed → `200` with the engine list.
   "engine": "mariadb", "driver": "mysql",
   "connection_type": "socket", "socket": "/var/run/mysqld/mysqld.sock",
   "username": "panel_abc123xyz",
-  "has_password": true, "options": {}
+  "has_password": true, "has_root_password": false, "options": {}
 }]}
 ```
 
-Passwords are never returned.
+Passwords are never returned. `has_root_password` (MySQL/MariaDB only, `null` on other engines): whether the panel knows a root password — set with `PUT …/root-password` below, or saved as `root_password` on a server that already had one. `false` is normal on a fresh install: root then signs in only as the server's own root account.
 
 ---
 
@@ -4149,6 +4149,27 @@ Update the admin connection config.
 **Request (Socket):** `{"connection_type": "socket", "socket": "/var/run/mysqld/mysqld.sock", "username": "panel_abc123xyz", "password": "…"}`
 
 **Response `200`:** `{"connections": [...], "mariadb": {"reachable": true}}`
+
+Optional `root_password` (MySQL/MariaDB): root's **current** password, for a server that already has one (moved from v7). The panel signs in with it first and stores it only if that works — `422 errors.root_password` otherwise, and on other engines. Stored encrypted; the panel uses it to reach root where socket login is gone. To *change* root's password use the endpoint below.
+
+---
+
+### PUT `/databases/connections/{engine}/root-password`
+**Permission:** `database` (manage) · **Throttle:** 5/min · **Engines:** `mysql`, `mariadb` (others `404`)
+
+Set, change or reset the MySQL/MariaDB root password. The old password is not asked for: the panel reaches root as the server's own root account, or with the stored root password.
+
+**Request:** `{"password": "…", "password_confirmation": "…"}` — 12–128 characters, no line breaks or control characters. Quotes and spaces are fine (v7 refused them).
+
+**Response `200`:** `{"mariadb": { …connection…, "has_root_password": true }}`
+
+What happens on the server:
+- **MariaDB** keeps socket login: root becomes "this password **or** the server's root account" (`IDENTIFIED VIA mysql_native_password … OR unix_socket`), so OS root, Debian maintenance and the panel's engine installer still get in.
+- **MySQL** cannot keep both: root moves to `caching_sha2_password`, and from then on the panel reaches root with the stored password.
+- The new password is proved by signing in with it; only then is it stored (encrypted). If it does not work, root's previous login is put back and nothing is stored.
+- The panel's own admin account (`panel_…`) is not changed. Activity: `database.root_password_changed` (a security event), never the password.
+
+**Errors:** `422 errors.engine` — engine not installed, root unreachable (no socket login and no working stored password: save root's current password first), or a change already running · `422 errors.password` — validation, the server's password policy (MySQL `validate_password`), or the new password could not be confirmed (previous login restored) · `500 {message, reference}` — the server refused the change, or restoring the previous login failed.
 
 ---
 

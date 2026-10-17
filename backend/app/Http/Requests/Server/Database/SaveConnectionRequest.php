@@ -25,8 +25,21 @@ class SaveConnectionRequest extends FormRequest
             'username' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'max:255'],
             'options' => ['nullable', 'array'],
+            // Root's CURRENT password on a server that already has one (moved
+            // from v7). Checked against the server before it is stored.
+            'root_password' => ['sometimes', 'nullable', 'string', 'max:128', 'regex:/^[^\x00-\x1F\x7F]+$/'],
             // Optionally probe the connection after saving.
             'test' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'root_password.regex' => __('errors/database.root_password_characters'),
         ];
     }
 }

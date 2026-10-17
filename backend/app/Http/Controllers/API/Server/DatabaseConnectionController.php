@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Actions\Server\Database\ChangeDatabaseRootPassword;
 use App\Actions\Server\Database\SaveConnection;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Database\ChangeRootPasswordRequest;
 use App\Http\Requests\Server\Database\SaveConnectionRequest;
 use App\Http\Resources\DatabaseConnectionResource;
 use App\Services\Server\Databases\DatabaseManager;
@@ -40,6 +42,19 @@ class DatabaseConnectionController extends Controller
         }
 
         return response()->json([$engine => $resolved]);
+    }
+
+    /**
+     * Set, change or reset the MySQL/MariaDB root password. Only those two:
+     * PostgreSQL and MongoDB have no root account of this kind.
+     */
+    public function rootPassword(string $engine, ChangeRootPasswordRequest $request, ChangeDatabaseRootPassword $action): JsonResponse
+    {
+        abort_unless(in_array($engine, ['mysql', 'mariadb'], true), 404);
+
+        $connection = $action->execute($engine, $request->password());
+
+        return response()->json([$engine => DatabaseConnectionResource::make($connection)->resolve()]);
     }
 
     public function test(string $engine, DatabaseManager $manager): JsonResponse

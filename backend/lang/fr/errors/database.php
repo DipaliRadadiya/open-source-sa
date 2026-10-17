@@ -50,4 +50,13 @@ return [
     'export_in_progress' => 'Cet export est toujours en cours. Attendez qu\'il se termine, puis supprimez-le.',
     'engine_install_in_progress' => ':engine est déjà en cours d\'installation. Attendez la fin de cette installation.',
     'panel_process_protected' => 'Il s\'agit de la connexion du panneau lui-même. L\'arrêter ferait échouer ce que le panneau est en train de faire.',
+    // MySQL/MariaDB root password (2026-10-17).
+    'root_engine_not_installed' => ':engine n\'est pas installé sur ce serveur.',
+    'root_password_busy' => 'Le mot de passe root est déjà en cours de modification. Patientez un instant et réessayez.',
+    'root_unreachable' => 'Le panneau n\'a pas pu se connecter à :engine en tant que root, ni en tant que compte root du serveur ni avec un mot de passe root enregistré. Enregistrez le mot de passe root actuel dans Connexions aux bases de données, puis réessayez.',
+    'root_password_policy' => 'Le serveur de bases de données a refusé ce mot de passe en raison de sa politique de mots de passe. Utilisez un mot de passe plus long avec majuscules, minuscules, chiffres et un symbole.',
+    'root_password_not_applied' => 'Le nouveau mot de passe root n\'a pas pu être confirmé ; l\'accès précédent de root a donc été rétabli. Rien n\'a été modifié.',
+    'root_password_characters' => 'Le mot de passe ne peut pas contenir de sauts de ligne ni d\'autres caractères de contrôle.',
+    'root_password_wrong' => 'La connexion en tant que root avec ce mot de passe a échoué. Saisissez le mot de passe root actuel.',
+    'root_password_unsupported' => 'Seuls MySQL et MariaDB ont un mot de passe root que le panneau peut enregistrer.',
 ];

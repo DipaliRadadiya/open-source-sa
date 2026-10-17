@@ -20,12 +20,22 @@ class DatabaseConnection extends Model
     }
 
     /**
+     * The resource says only whether a root password is set.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['root_password'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
             'password' => 'encrypted',
+            // MySQL/MariaDB root, set or saved by the user. Not fillable: it is
+            // written only after the server has accepted it.
+            'root_password' => 'encrypted',
             'options' => 'array',
         ];
     }

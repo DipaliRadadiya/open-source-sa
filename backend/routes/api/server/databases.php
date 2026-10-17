@@ -27,6 +27,9 @@ Route::middleware('manages-databases')->group(function (): void {
     Route::get('/databases/connections', [DatabaseConnectionController::class, 'index'])->middleware('permission:database');
     Route::put('/databases/connections/{engine}', [DatabaseConnectionController::class, 'update'])->middleware('permission:database,manage');
     Route::post('/databases/connections/{engine}/test', [DatabaseConnectionController::class, 'test'])->middleware('permission:database,manage');
+    // MySQL/MariaDB root password: set, change or reset (2026-10-17).
+    Route::put('/databases/connections/{engine}/root-password', [DatabaseConnectionController::class, 'rootPassword'])
+        ->middleware(['permission:database,manage', 'throttle:5,1']);
 
     // Brownfield reconcile.
     Route::get('/databases/untracked', [DatabaseController::class, 'untracked'])->middleware('permission:database');

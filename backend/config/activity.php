@@ -67,6 +67,7 @@ return [
         'system_user.ssh_disabled',
         'database.phpmyadmin_signed_in',
         'database.adminer_signed_in',
+        'database.root_password_changed',
         'application.magic_login',
         'application.container_secrets_viewed',
         'docker_database.credentials_viewed',

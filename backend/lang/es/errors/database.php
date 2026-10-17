@@ -50,4 +50,13 @@ return [
     'export_in_progress' => 'Esta exportación sigue en curso. Espere a que termine y después elimínela.',
     'engine_install_in_progress' => ':engine ya se está instalando. Espere a que termine esa instalación.',
     'panel_process_protected' => 'Esta es la conexión del propio panel. Detenerla haría fallar lo que el panel esté haciendo.',
+    // MySQL/MariaDB root password (2026-10-17).
+    'root_engine_not_installed' => ':engine no está instalado en este servidor.',
+    'root_password_busy' => 'La contraseña de root ya se está cambiando. Espere un momento e inténtelo de nuevo.',
+    'root_unreachable' => 'El panel no pudo iniciar sesión en :engine como root, ni como la cuenta root del servidor ni con una contraseña de root guardada. Guarde la contraseña actual de root en Conexiones de bases de datos e inténtelo de nuevo.',
+    'root_password_policy' => 'El servidor de bases de datos rechazó esta contraseña por su política de contraseñas. Use una contraseña más larga con mayúsculas, minúsculas, dígitos y un símbolo.',
+    'root_password_not_applied' => 'No se pudo confirmar la nueva contraseña de root, así que se restauró el acceso anterior de root. No se cambió nada.',
+    'root_password_characters' => 'La contraseña no puede contener saltos de línea ni otros caracteres de control.',
+    'root_password_wrong' => 'Falló el inicio de sesión como root con esta contraseña. Introduzca la contraseña actual de root.',
+    'root_password_unsupported' => 'Solo MySQL y MariaDB tienen una contraseña de root que el panel pueda guardar.',
 ];
