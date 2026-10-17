@@ -270,36 +270,7 @@
       "errorLogs": "Log de erros",
       "central": "Central"
     },
-    "dashboardTitle": "Painel administrativo",
-    "dashboardSubtitle": "Monitore a saúde do painel, atualizações, acessos e atividades recentes do admin.",
     "unknown": "Desconhecido",
-    "tiles": {
-      "health": "Saúde do sistema",
-      "healthOk": "Todas as verificações passaram",
-      "healthWarnings": "{count, plural, one {# aviso} other {# avisos}}",
-      "healthUnknown": "A verificação não pôde ser executada",
-      "version": "Versão do painel",
-      "versionValue": "v{version}",
-      "versionAvailable": "v{version} disponível",
-      "versionCurrent": "v{version} atual",
-      "versionUnchecked": "O servidor de versões estava indisponível",
-      "versionUnknown": "A versão não pôde ser lida",
-      "errors": "Falhas",
-      "errorsNone": "Nada falhou",
-      "errorsFound": "{count, plural, one {# erro recente} other {# erros recentes}}",
-      "errorsWindow": "Nos últimos {count} registros",
-      "errorsUnknown": "O log não pôde ser lido",
-      "central": "Central",
-      "centralOn": "Conectado",
-      "centralOnHint": "Este painel é gerenciado remotamente",
-      "centralOff": "Não conectado",
-      "centralOffHint": "Gerenciado apenas por este painel",
-      "centralUnknown": "A conexão não pôde ser lida",
-      "versionBlocked": "v{version} atual · {count, plural, one {bloqueado por # verificação com falha} other {bloqueado por # verificações com falha}}",
-      "healthSummary": "{failed} com falha · {warnings} avisos",
-      "healthPassed": "{count, plural, one {# verificação passou} other {# verificações passaram}}",
-      "versionUpToDate": "Atualizado"
-    },
     "attention": {
       "title": "Precisa de atenção",
       "count": "{count, plural, one {# problema} other {# problemas}}",
@@ -310,7 +281,11 @@
       "rowWarnings": "{count, plural, one {# aviso precisa de análise} other {# avisos precisam de análise}}",
       "namesMore": "{names} e mais {count}",
       "failuresReason": "A maioria relata: {reason}",
-      "failuresOccurrences": "{count, plural, one {# ocorrência} other {# ocorrências}} registradas"
+      "failuresOccurrences": "{count, plural, one {# ocorrência} other {# ocorrências}} registradas",
+      "heading": "{count, plural, one {# item precisa da sua atenção} other {# itens precisam da sua atenção}}",
+      "rowUpdateFailed": "A última atualização do painel falhou",
+      "rowUpdateBlocked": "A atualização v{version} ainda não pode ser instalada",
+      "openUpdate": "Abrir atualização do painel"
     },
     "feed": {
       "title": "Atividade recente",
@@ -328,18 +303,35 @@
     "people": {
       "title": "Acesso",
       "admins": "Administradores",
-      "roles": "Papéis de permissão",
+      "roles": "Papéis",
       "manage": "Gerenciar usuários",
       "impersonation": "Representação",
       "impersonationNever": "Nunca usado",
-      "adminsOf": "{admins} de {total} usuários",
-      "rolesConfigured": "{count, plural, one {# papel configurado} other {# papéis configurados}}",
-      "impersonationUsed": "{count, plural, one {Usado uma vez} other {Usado # vezes}}, último {when}"
+      "impersonationUsed": "{count, plural, one {Usado uma vez} other {Usado # vezes}}, último {when}",
+      "users": "Usuários",
+      "rolesInUse": "Papéis em uso",
+      "roleMembers": "{count, plural, one {# usuário} other {# usuários}}",
+      "rolesFailed": "Não foi possível carregar a contagem de papéis.",
+      "rolesNone": "Nenhum usuário tem um papel ainda."
     },
     "navigationLabel": "Menu de administração",
     "navGroups": {
       "access": "Acesso",
       "system": "Sistema"
+    },
+    "hero": {
+      "greeting": "Bem-vindo de volta, {name}",
+      "healthy": "O painel está funcionando",
+      "failing": "{count, plural, one {# verificação do sistema está falhando} other {# verificações do sistema estão falhando}}",
+      "unknown": "Status do painel desconhecido",
+      "version": "v{version}",
+      "upToDate": "Atualizado",
+      "updateAvailable": "Atualização v{version} disponível",
+      "centralOn": "Central conectado",
+      "centralOff": "Não conectado ao Central",
+      "health": "Saúde do sistema",
+      "update": "Atualizar painel",
+      "centralWaiting": "Aguardando o Central"
     }
   },
   "users": {
@@ -586,13 +578,13 @@
     "title": "Conta",
     "subtitle": "Gerencie seu perfil, senha e atividades.",
     "profile": {
-      "title": "Perfil",
-      "description": "Os detalhes da sua conta.",
+      "title": "Seus dados",
+      "description": "Como você aparece no painel e o nome com que você faz login.",
       "name": "Nome",
       "username": "Nome de usuário",
       "accountType": "Tipo de conta",
       "roles": "Papéis",
-      "submit": "Salvar alterações",
+      "submit": "Salvar dados",
       "saving": "Salvando…",
       "success": "Perfil atualizado.",
       "namePlaceholder": "Seu nome completo",
@@ -602,10 +594,11 @@
       "unsavedDesc": "Você tem alterações de perfil não salvas. Se mudar de aba agora, elas serão perdidas.",
       "unsavedDiscard": "Descartar alterações",
       "unsavedKeep": "Continuar editando",
-      "failed": "Não foi possível salvar seu perfil."
+      "failed": "Não foi possível salvar seu perfil.",
+      "nameHint": "Aparece no menu e ao lado de tudo o que você faz."
     },
     "password": {
-      "title": "Alterar senha",
+      "title": "Senha",
       "description": "Use uma senha forte que você não use em nenhum outro lugar.",
       "current": "Senha atual",
       "new": "Nova senha",
@@ -617,7 +610,8 @@
       "currentPlaceholder": "Digite sua senha atual",
       "confirmPlaceholder": "Digite a nova senha novamente",
       "requirements": "Pelo menos 10 caracteres, com letras maiúsculas e minúsculas e um número.",
-      "failed": "Não foi possível alterar sua senha."
+      "failed": "Não foi possível alterar sua senha.",
+      "lastChanged": "Alterada pela última vez {when}"
     },
     "activity": {
       "title": "Sua atividade",
@@ -637,6 +631,19 @@
       "profile": "Perfil",
       "security": "Segurança",
       "activity": "Atividade"
+    },
+    "identity": {
+      "lastSignIn": "Último acesso",
+      "memberSince": "Membro desde",
+      "never": "Ainda não registrado"
+    },
+    "signIns": {
+      "title": "Logins recentes",
+      "description": "As últimas vezes que esta conta fez login.",
+      "showAll": "Ver todos os logins",
+      "failed": "Não foi possível carregar seus logins.",
+      "empty": "Nenhum login registrado ainda.",
+      "notYou": "Não reconhece algum? Altere sua senha acima agora mesmo."
     }
   },
   "activity": {
@@ -708,7 +715,8 @@
       "docker_database": "Banco de dados Docker",
       "registry": "Registo",
       "wp_cli": "WP-CLI"
-    }
+    },
+    "searchOwn": "Buscar na sua atividade…"
   },
   "pagination": {
     "perPage": "Por página",
@@ -6465,7 +6473,13 @@
     "outputTitle": "Saída da atualização",
     "outputTruncated": "Exibindo a saída mais recente. As linhas anteriores foram omitidas.",
     "checkFailed": "Não foi possível verificar atualizações.",
-    "startFailed": "Não foi possível iniciar a atualização."
+    "startFailed": "Não foi possível iniciar a atualização.",
+    "preflightNext": "Pronto para a próxima atualização",
+    "installed": {
+      "committed": "código de {date}",
+      "lastSucceeded": "última atualização v{from} → v{to}, {when}",
+      "lastFailed": "a última atualização falhou {when}"
+    }
   },
   "doctor": {
     "title": "Saúde do sistema",
@@ -7619,8 +7633,8 @@
     },
     "confirmGenerate": {
       "title": "Permitir gerenciamento pelo Central?",
-      "description": "Isso concede ao ServerAvatar Central Panel acesso total de gerenciamento a este servidor.",
-      "acknowledgement": "Entendo que esta chave concede ao ServerAvatar Central Panel acesso de gerenciamento a este servidor e desejo prosseguir.",
+      "description": "Isso concede ao {brand} Central acesso total de gerenciamento a este servidor.",
+      "acknowledgement": "Entendo que esta chave concede ao {brand} Central acesso de gerenciamento a este servidor e desejo prosseguir.",
       "submit": "Gerar chave de conexão"
     },
     "confirmRegenerate": {
@@ -7642,7 +7656,19 @@
       "connected": "Conectado",
       "waiting": "Aguardando o Central",
       "lastUsed": "Último uso pelo Central: {ago}.",
-      "waitingHint": "Isto muda para Conectado na primeira vez que o Central usar a chave."
+      "off": "Não conectado"
+    },
+    "steps": {
+      "generate": "Gerar uma chave",
+      "generateText": "Mostrada uma única vez, então copie-a na hora.",
+      "paste": "Cole-a no {brand} Central",
+      "pasteText": "Onde você adiciona este servidor no seu painel central.",
+      "pasteWaiting": "Aguardando o Central usar a chave…",
+      "managed": "O Central gerencia este servidor",
+      "managedText": "Começa na primeira vez que o Central usa a chave.",
+      "srDone": "concluído",
+      "srCurrent": "etapa atual",
+      "srNext": "ainda não"
     }
   },
   "docker": {

@@ -1,8 +1,9 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations, getFormatter } from "next-intl/server";
-import { ArrowRight, CircleX, Terminal, TriangleAlert } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, CircleX, Terminal, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MAX_NAMES, summarizeAttention } from "@/lib/admin/attention-summary";
+import { updateAttention } from "@/lib/admin/dashboard-facts";
 
 // One slim line per kind of problem (at most three), linking to its detail page: the
 // same rows as the server dashboard's attention panel.
@@ -44,14 +45,14 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
   );
 }
 
-export async function AttentionList({ checks = [], errorGroups = [] }) {
-  const [t, format] = await Promise.all([
+export async function AttentionList({ checks = [], errorGroups = [], update = null }) {
+  const [t, tUpdate, format] = await Promise.all([
     getTranslations("admin.attention"),
+    getTranslations("admin.panelUpdate"),
     getFormatter(),
   ]);
 
-  const { failed, warnings, failures, total } = summarizeAttention({ checks, errorGroups });
-  if (!total) return null;
+  const { failed, warnings, failures } = summarizeAttention({ checks, errorGroups });
 
   // The API's localised titles, with the remainder counted.
   const nameList = (names) => {
@@ -63,6 +64,21 @@ export async function AttentionList({ checks = [], errorGroups = [] }) {
   };
 
   const rows = [];
+
+  const updateRows = updateAttention(update);
+
+  // A failed update leads: the panel may be half on the new version.
+  if (updateRows.failed) {
+    rows.push({
+      key: "update-failed",
+      tone: "fail",
+      icon: ArrowUpCircle,
+      title: t("rowUpdateFailed"),
+      summary: updateRows.failed.reason,
+      action: t("openUpdate"),
+      href: "/admin/panel-update",
+    });
+  }
 
   if (failed.count) {
     rows.push({
@@ -104,6 +120,24 @@ export async function AttentionList({ checks = [], errorGroups = [] }) {
     });
   }
 
+  // An update exists but cannot be installed: the four tiles said so, the banner does not.
+  if (updateRows.blocked) {
+    const { version, keys } = updateRows.blocked;
+    rows.push({
+      key: "update-blocked",
+      tone: "warn",
+      icon: ArrowUpCircle,
+      title: t("rowUpdateBlocked", { version }),
+      summary: keys.length
+        ? nameList(keys.map((key) => (tUpdate.has(`preflight.${key}`) ? tUpdate(`preflight.${key}`) : key)))
+        : null,
+      action: t("openUpdate"),
+      href: "/admin/panel-update",
+    });
+  }
+
+  if (!rows.length) return null;
+
   return (
     // No card or heading of its own, as on the server dashboard: the tiles above already
     // say something is wrong; these lines say what, and where to fix it.
@@ -111,6 +145,11 @@ export async function AttentionList({ checks = [], errorGroups = [] }) {
       {/* One per line: at most three rows, and the reason after each title needs the width. */}
       {/* grid-cols-1 (minmax(0, 1fr)), not a bare grid: an auto track grew to the long error
           summary, so on a tablet each row ran 230-340px off screen with its link (steel audit). */}
+      {/* The count heads the list it counts, as on the server dashboard. */}
+      <h2 className="mb-2 font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">
+        {/* Kinds of problem (the rows), not every failure behind them. */}
+        {t("heading", { count: rows.length })}
+      </h2>
       <ul className="grid grid-cols-1 gap-2">
         {rows.map((row) => (
           <Row key={row.key} {...row} />

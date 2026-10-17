@@ -15,7 +15,7 @@ function StatusIcon({ passed, advisory = false }) {
   );
 }
 
-export function PreflightList({ checks }) {
+export function PreflightList({ checks, title = null }) {
   const t = useTranslations("panelUpdate");
   const format = useFormatter();
   if (!checks.length) return null;
@@ -43,7 +43,7 @@ export function PreflightList({ checks }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-sm font-medium">{t("preflightTitle")}</p>
+        <p className="text-sm font-medium">{title ?? t("preflightTitle")}</p>
         <p className="text-sm tabular-nums text-muted-foreground">
           {t("readyCount", { passed: passedCount, total: gating.length })}
         </p>
@@ -65,7 +65,8 @@ export function PreflightList({ checks }) {
               ) : isUnknownDetail(c.detail) ? (
                 <p className="shrink-0 text-xs text-muted-foreground">{t("detailUnknown")}</p>
               ) : c.text ? (
-                <p className="shrink-0 text-xs break-words text-muted-foreground">
+                // Its own line under the name: a long list of changed files ran past the box.
+                <p className="min-w-0 basis-full pl-7 text-xs [overflow-wrap:anywhere] text-muted-foreground">
                   {c.text}
                 </p>
               ) : null}

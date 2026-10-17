@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Link2Off, PlugZap, RefreshCw, ShieldAlert } from "lucide-react";
+import { Check, Loader2, Link2Off, PlugZap, RefreshCw, ShieldAlert } from "lucide-react";
 import { disableCentral, enableCentral } from "@/lib/api/central";
 import { centralEnableResponseSchema } from "@/lib/schemas/central";
 import { apiMessage } from "@/lib/api/error-message";
 import { KeyReveal } from "@/components/admin/central/key-reveal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section, InfoRow } from "@/components/settings/setting-row";
+import { Note } from "@/components/ui/note";
+import { useBranding } from "@/hooks/use-branding";
+import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -21,6 +24,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 // rotates the token and breaks the old one, so only that press is confirmed.
 export function CentralPanel({ status }) {
   const t = useTranslations("central");
+  const { name: brand } = useBranding();
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
 
@@ -78,101 +82,109 @@ export function CentralPanel({ status }) {
     }
   }
 
+  // Where the connection has got to: key made, Central has used it.
+  const steps = [
+    { key: "generate", done: connected, current: !connected, text: t("steps.generateText") },
+    {
+      key: "paste",
+      done: linked,
+      current: connected && !linked,
+      text: connected && !linked ? t("steps.pasteWaiting") : t("steps.pasteText"),
+    },
+    {
+      key: "managed",
+      done: linked,
+      current: false,
+      text: linked && lastUsedAgo ? t("state.lastUsed", { ago: lastUsedAgo }) : t("steps.managedText"),
+    },
+  ];
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-48 space-y-1">
-            {/* Not `title`: that duplicates the page heading directly above. */}
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              {t("cardTitle")}
-              {linked ? (
-                <Badge variant="success" className="font-normal">
-                  {t("state.connected")}
-                </Badge>
-              ) : connected ? (
-                <Badge variant="warning" className="font-normal">
-                  {t("state.waiting")}
-                </Badge>
-              ) : null}
-            </CardTitle>
-            <CardDescription>{t("subtitle")}</CardDescription>
-            {linked && lastUsedAgo ? (
-              // Server and browser read the clock a moment apart; same as the cron "next run".
-              <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-                {t("state.lastUsed", { ago: lastUsedAgo })}
-              </p>
-            ) : connected && !linked ? (
-              <p className="text-xs text-muted-foreground">{t("state.waitingHint")}</p>
-            ) : null}
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Picks up Central's first use without a reload. */}
-        {connected && !linked ? <AutoRefresh intervalMs={15000} stopAfterMs={900000} /> : null}
-        {/* The token is not scoped: CentralUser is created with is_admin and
-            the Administrator role, so it grants admin on every endpoint. */}
-        <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />
-          <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium text-destructive">{t("power.title")}</p>
-            <p className="text-sm text-muted-foreground">{t("power.body")}</p>
-            {/* Actions arrive under a separate machine account, so the log can
-                tell them apart from the user's. */}
-            <p className="text-sm text-muted-foreground">{t("power.attribution")}</p>
-          </div>
-        </div>
-
-        {token ? (
-          <KeyReveal token={token} onDone={() => setToken(null)} />
-        ) : connected ? (
-          <>
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">{t("current.label")}</p>
-              <div className="rounded-lg border bg-muted/40 px-3 py-2">
-                <code className="font-mono text-xs break-all">{status.token}</code>
-              </div>
-              <p className="text-xs text-muted-foreground">{t("current.lost")}</p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pending !== null}
-                onClick={() => setConfirming("regenerate")}
-              >
-                {pending === "generate" ? (
-                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                ) : (
-                  <RefreshCw className="size-3.5" aria-hidden />
-                )}
+    <>
+      {/* Picks up Central's first use without a reload. */}
+      {connected && !linked ? <AutoRefresh intervalMs={15000} stopAfterMs={900000} /> : null}
+      <Section
+        icon={PlugZap}
+        title={t("cardTitle")}
+        description={t("subtitle")}
+        badge={
+          linked ? (
+            <Badge variant="success" className="font-normal">{t("state.connected")}</Badge>
+          ) : connected ? (
+            <Badge variant="warning" className="font-normal">{t("state.waiting")}</Badge>
+          ) : (
+            <Badge variant="muted" className="font-normal">{t("state.off")}</Badge>
+          )
+        }
+        // The shown-once rule sits beside the button that creates the key.
+        changedBy={!connected && !token ? t("actions.generateHint") : null}
+        actions={
+          token ? null : connected ? (
+            <>
+              <Button variant="outline" disabled={pending !== null} onClick={() => setConfirming("regenerate")}>
+                {pending === "generate" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <RefreshCw className="size-4" aria-hidden />}
                 {t("actions.regenerate")}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={pending !== null}
-                onClick={() => setConfirming("disconnect")}
-              >
-                <Link2Off className="size-3.5" aria-hidden />
+              <Button variant="destructive" disabled={pending !== null} onClick={() => setConfirming("disconnect")}>
+                <Link2Off className="size-4" aria-hidden />
                 {t("actions.disconnect")}
               </Button>
-            </div>
-          </>
-        ) : (
-          <div className="space-y-2">
+            </>
+          ) : (
             <Button disabled={pending !== null} onClick={() => setConfirming("generate")}>
               <PlugZap className="size-4" aria-hidden />
               {t("actions.generate")}
             </Button>
-            {/* States the shown-once rule before the key is generated. */}
-            <p className="text-xs text-muted-foreground">{t("actions.generateHint")}</p>
-          </div>
-        )}
-      </CardContent>
+          )
+        }
+      >
+        <ol className="grid gap-3 sm:grid-cols-3">
+          {steps.map((step, index) => (
+            <li
+              key={step.key}
+              className={cn(
+                "flex items-start gap-3 rounded-lg border p-3",
+                step.current && "border-primary/40 bg-primary/5",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
+                  step.done ? "border-success bg-success text-white" : step.current ? "border-primary text-primary" : "text-muted-foreground",
+                )}
+                aria-hidden
+              >
+                {step.done ? <Check className="size-4" /> : index + 1}
+              </span>
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-sm font-medium">
+                  {t(`steps.${step.key}`, { brand })}
+                  <span className="sr-only"> — {step.done ? t("steps.srDone") : step.current ? t("steps.srCurrent") : t("steps.srNext")}</span>
+                </p>
+                {/* Server and browser read the clock a moment apart. */}
+                <p className="text-xs text-muted-foreground" suppressHydrationWarning>{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        {token ? (
+          <KeyReveal token={token} onDone={() => setToken(null)} />
+        ) : connected ? (
+          <InfoRow label={t("current.label")} hint={t("current.lost")} className="col-span-full">
+            <div className="rounded-lg border bg-muted/40 px-3 py-2">
+              <code className="font-mono text-xs break-all">{status.token}</code>
+            </div>
+          </InfoRow>
+        ) : null}
+
+        {/* The token is not scoped: CentralUser is created with is_admin and the
+            Administrator role. Stated calmly, not as an error: it is a fact to know. */}
+        <Note icon={ShieldAlert} title={t("power.title")}>
+          <p>{t("power.body")}</p>
+          <p className="mt-1">{t("power.attribution")}</p>
+        </Note>
+      </Section>
 
       <ConfirmDialog
         open={confirming === "generate"}
@@ -185,7 +197,7 @@ export function CentralPanel({ status }) {
         icon={ShieldAlert}
         tone="warning"
         title={t("confirmGenerate.title")}
-        description={t("confirmGenerate.description")}
+        description={t("confirmGenerate.description", { brand })}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmGenerate.submit")}
         confirmDisabled={!acknowledged}
@@ -202,7 +214,7 @@ export function CentralPanel({ status }) {
             htmlFor="central-key-acknowledgement"
             className="cursor-pointer text-sm leading-5 text-foreground"
           >
-            {t("confirmGenerate.acknowledgement")}
+            {t("confirmGenerate.acknowledgement", { brand })}
           </label>
         </div>
       </ConfirmDialog>
@@ -235,6 +247,6 @@ export function CentralPanel({ status }) {
         pending={pending === "disconnect"}
         onConfirm={disconnect}
       />
-    </Card>
+    </>
   );
 }

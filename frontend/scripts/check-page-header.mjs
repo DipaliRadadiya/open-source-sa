@@ -36,6 +36,10 @@ const ALLOWED = new Map([
     "components/dashboard/dashboard-hero.jsx",
     "the dashboard leads with the server banner; its heading is the health verdict",
   ],
+  [
+    "components/admin/dashboard/admin-hero.jsx",
+    "the admin dashboard leads with the same banner; its heading is the panel's health verdict",
+  ],
   ["components/ui/page-header.jsx", "the component itself"],
 ]);
 

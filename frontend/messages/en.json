@@ -270,36 +270,7 @@
       "errorLogs": "Error Log",
       "central": "Central"
     },
-    "dashboardTitle": "Admin Dashboard",
-    "dashboardSubtitle": "Monitor panel health, updates, access, and recent admin activity.",
     "unknown": "Unknown",
-    "tiles": {
-      "health": "System health",
-      "healthOk": "All checks passed",
-      "healthWarnings": "{count, plural, one {# warning} other {# warnings}}",
-      "healthUnknown": "The check could not be run",
-      "version": "Panel version",
-      "versionValue": "v{version}",
-      "versionAvailable": "v{version} available",
-      "versionCurrent": "Current v{version}",
-      "versionUnchecked": "The release server was unreachable",
-      "versionUnknown": "The version could not be read",
-      "errors": "Failures",
-      "errorsNone": "Nothing failed",
-      "errorsFound": "{count, plural, one {# recent error} other {# recent errors}}",
-      "errorsWindow": "In the last {count} records",
-      "errorsUnknown": "The log could not be read",
-      "central": "Central",
-      "centralOn": "Connected",
-      "centralOnHint": "This panel is managed remotely",
-      "centralOff": "Not connected",
-      "centralOffHint": "Managed from this panel only",
-      "centralUnknown": "The connection could not be read",
-      "versionBlocked": "Current v{version} · {count, plural, one {blocked by # failing check} other {blocked by # failing checks}}",
-      "healthSummary": "{failed} failed · {warnings} warnings",
-      "healthPassed": "{count, plural, one {# check passed} other {# checks passed}}",
-      "versionUpToDate": "Up to date"
-    },
     "attention": {
       "title": "Needs attention",
       "count": "{count, plural, one {# issue} other {# issues}}",
@@ -310,7 +281,11 @@
       "rowWarnings": "{count, plural, one {# warning needs review} other {# warnings need review}}",
       "namesMore": "{names} and {count} more",
       "failuresReason": "Most report: {reason}",
-      "failuresOccurrences": "{count, plural, one {# occurrence} other {# occurrences}} recorded"
+      "failuresOccurrences": "{count, plural, one {# occurrence} other {# occurrences}} recorded",
+      "heading": "{count, plural, one {# thing needs your attention} other {# things need your attention}}",
+      "rowUpdateFailed": "The last panel update failed",
+      "rowUpdateBlocked": "Update v{version} can't be installed yet",
+      "openUpdate": "Open panel update"
     },
     "feed": {
       "title": "Recent activity",
@@ -327,19 +302,36 @@
     },
     "people": {
       "title": "Access",
-      "admins": "Administrators",
-      "roles": "Permission roles",
+      "admins": "Admins",
+      "roles": "Roles",
       "manage": "Manage users",
       "impersonation": "Impersonation",
       "impersonationNever": "Never used",
-      "adminsOf": "{admins} of {total} users",
-      "rolesConfigured": "{count, plural, one {# role configured} other {# roles configured}}",
-      "impersonationUsed": "{count, plural, one {Used once} other {Used # times}}, last {when}"
+      "impersonationUsed": "{count, plural, one {Used once} other {Used # times}}, last {when}",
+      "users": "Users",
+      "rolesInUse": "Roles in use",
+      "roleMembers": "{count, plural, one {# user} other {# users}}",
+      "rolesFailed": "Role counts could not be loaded.",
+      "rolesNone": "No user holds a role yet."
     },
     "navigationLabel": "Admin menu",
     "navGroups": {
       "access": "Access",
       "system": "System"
+    },
+    "hero": {
+      "greeting": "Welcome back, {name}",
+      "healthy": "The panel is running",
+      "failing": "{count, plural, one {# health check is failing} other {# health checks are failing}}",
+      "unknown": "Panel status unknown",
+      "version": "v{version}",
+      "upToDate": "Up to date",
+      "updateAvailable": "Update v{version} available",
+      "centralOn": "Central connected",
+      "centralOff": "Not connected to Central",
+      "health": "System health",
+      "update": "Update panel",
+      "centralWaiting": "Waiting for Central"
     }
   },
   "users": {
@@ -586,13 +578,13 @@
     "title": "Account",
     "subtitle": "Manage your profile, password, and activity.",
     "profile": {
-      "title": "Profile",
-      "description": "Your account details.",
+      "title": "Your details",
+      "description": "How you appear in the panel, and the name you sign in with.",
       "name": "Name",
       "username": "Username",
       "accountType": "Account type",
       "roles": "Roles",
-      "submit": "Save changes",
+      "submit": "Save details",
       "saving": "Saving…",
       "success": "Profile updated.",
       "namePlaceholder": "Your full name",
@@ -602,10 +594,11 @@
       "unsavedDesc": "You have unsaved profile changes. If you switch tabs now, they will be lost.",
       "unsavedDiscard": "Discard changes",
       "unsavedKeep": "Keep editing",
-      "failed": "Your profile could not be saved."
+      "failed": "Your profile could not be saved.",
+      "nameHint": "Shown in the menu and next to everything you do."
     },
     "password": {
-      "title": "Change password",
+      "title": "Password",
       "description": "Use a strong password you don't use anywhere else.",
       "current": "Current password",
       "new": "New password",
@@ -617,7 +610,8 @@
       "currentPlaceholder": "Enter your current password",
       "confirmPlaceholder": "Re-enter the new password",
       "requirements": "At least 10 characters, with upper- and lower-case and a number.",
-      "failed": "Your password could not be changed."
+      "failed": "Your password could not be changed.",
+      "lastChanged": "Last changed {when}"
     },
     "activity": {
       "title": "Your activity",
@@ -637,6 +631,19 @@
       "profile": "Profile",
       "security": "Security",
       "activity": "Activity"
+    },
+    "identity": {
+      "lastSignIn": "Last sign-in",
+      "memberSince": "Member since",
+      "never": "Not recorded yet"
+    },
+    "signIns": {
+      "title": "Recent sign-ins",
+      "description": "The last times this account signed in.",
+      "showAll": "See all sign-ins",
+      "failed": "Your sign-ins could not be loaded.",
+      "empty": "No sign-ins recorded yet.",
+      "notYou": "Don't recognise one? Change your password above straight away."
     }
   },
   "activity": {
@@ -708,7 +715,8 @@
       "docker_database": "Docker database",
       "registry": "Registry",
       "wp_cli": "WP-CLI"
-    }
+    },
+    "searchOwn": "Search your activity…"
   },
   "pagination": {
     "perPage": "Per page",
@@ -6465,7 +6473,13 @@
     "outputTitle": "Update output",
     "outputTruncated": "Showing the latest output. Earlier lines were omitted.",
     "checkFailed": "Couldn't check for updates.",
-    "startFailed": "Couldn't start the update."
+    "startFailed": "Couldn't start the update.",
+    "preflightNext": "Ready for the next update",
+    "installed": {
+      "committed": "code from {date}",
+      "lastSucceeded": "last update v{from} → v{to}, {when}",
+      "lastFailed": "last update failed {when}"
+    }
   },
   "doctor": {
     "title": "System health",
@@ -7619,8 +7633,8 @@
     },
     "confirmGenerate": {
       "title": "Allow Central management?",
-      "description": "This grants ServerAvatar Central Panel full management access to this server.",
-      "acknowledgement": "I understand this key grants ServerAvatar Central Panel management access to this server, and I want to proceed.",
+      "description": "This grants {brand} Central full management access to this server.",
+      "acknowledgement": "I understand this key grants {brand} Central management access to this server, and I want to proceed.",
       "submit": "Generate connection key"
     },
     "confirmRegenerate": {
@@ -7642,7 +7656,19 @@
       "connected": "Connected",
       "waiting": "Waiting for Central",
       "lastUsed": "Last used by Central: {ago}.",
-      "waitingHint": "This changes to Connected the first time Central uses the key."
+      "off": "Not connected"
+    },
+    "steps": {
+      "generate": "Generate a key",
+      "generateText": "Shown once, so copy it straight away.",
+      "paste": "Paste it into {brand} Central",
+      "pasteText": "Where you add this server in your central panel.",
+      "pasteWaiting": "Waiting for Central to use the key…",
+      "managed": "Central manages this server",
+      "managedText": "Starts the first time Central uses the key.",
+      "srDone": "done",
+      "srCurrent": "current step",
+      "srNext": "not yet"
     }
   },
   "docker": {

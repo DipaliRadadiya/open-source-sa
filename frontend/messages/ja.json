@@ -270,36 +270,7 @@
       "errorLogs": "エラーログ",
       "central": "セントラル"
     },
-    "dashboardTitle": "管理ダッシュボード",
-    "dashboardSubtitle": "パネルの状態、更新、アクセス、最近の管理者アクティビティを監視します。",
     "unknown": "不明",
-    "tiles": {
-      "health": "システム状態",
-      "healthOk": "すべてのチェックに合格しました",
-      "healthWarnings": "{count, plural, other {# 件の警告}}",
-      "healthUnknown": "チェックを実行できませんでした",
-      "version": "パネルバージョン",
-      "versionValue": "v{version}",
-      "versionAvailable": "v{version} が利用可能です",
-      "versionCurrent": "現在の v{version}",
-      "versionUnchecked": "リリースサーバーに接続できませんでした",
-      "versionUnknown": "バージョンを読み取れませんでした",
-      "errors": "失敗",
-      "errorsNone": "失敗はありません",
-      "errorsFound": "{count, plural, other {# 件のエラー}}",
-      "errorsWindow": "直近 {count} 件の記録のうち",
-      "errorsUnknown": "ログを読み取れませんでした",
-      "central": "セントラル",
-      "centralOn": "接続済み",
-      "centralOnHint": "このパネルはリモートから管理されています",
-      "centralOff": "未接続",
-      "centralOffHint": "このパネルのみで管理されています",
-      "centralUnknown": "接続情報を読み取れませんでした",
-      "versionBlocked": "現在の v{version} · {count, plural, other {# 件の不合格チェックによりブロックされています}}",
-      "healthSummary": "失敗 {failed} 件 · 警告 {warnings} 件",
-      "healthPassed": "{count, plural, other {# 件のチェックに合格しました}}",
-      "versionUpToDate": "最新です"
-    },
     "attention": {
       "title": "対応が必要",
       "count": "{count, plural, other {# 件の問題}}",
@@ -310,7 +281,11 @@
       "rowWarnings": "確認が必要な警告: {count, plural, other {# 件}}",
       "namesMore": "{names} ほか {count} 件",
       "failuresReason": "主な報告内容: {reason}",
-      "failuresOccurrences": "{count, plural, other {# 件}}の記録"
+      "failuresOccurrences": "{count, plural, other {# 件}}の記録",
+      "heading": "{count, plural, other {確認が必要な項目が#件あります}}",
+      "rowUpdateFailed": "前回のパネル更新に失敗しました",
+      "rowUpdateBlocked": "更新 v{version} はまだインストールできません",
+      "openUpdate": "パネルの更新を開く"
     },
     "feed": {
       "title": "最近のアクティビティ",
@@ -328,18 +303,35 @@
     "people": {
       "title": "アクセス",
       "admins": "管理者",
-      "roles": "権限ロール",
+      "roles": "ロール",
       "manage": "ユーザーを管理",
       "impersonation": "なりすまし",
       "impersonationNever": "未使用",
-      "adminsOf": "ユーザー {total} 名中 {admins} 名が管理者",
-      "rolesConfigured": "{count, plural, other {# 件のロールが設定済み}}",
-      "impersonationUsed": "{count, plural, other {使用回数: # 回}}、最終 {when}"
+      "impersonationUsed": "{count, plural, other {使用回数: # 回}}、最終 {when}",
+      "users": "ユーザー",
+      "rolesInUse": "使用中のロール",
+      "roleMembers": "{count, plural, other {# 人}}",
+      "rolesFailed": "ロールの人数を読み込めませんでした。",
+      "rolesNone": "ロールを持つユーザーはまだいません。"
     },
     "navigationLabel": "管理メニュー",
     "navGroups": {
       "access": "アクセス",
       "system": "システム"
+    },
+    "hero": {
+      "greeting": "おかえりなさい、{name}さん",
+      "healthy": "パネルは稼働中です",
+      "failing": "{count, plural, other {システムチェック # 件が失敗しています}}",
+      "unknown": "パネルの状態は不明です",
+      "version": "v{version}",
+      "upToDate": "最新です",
+      "updateAvailable": "更新 v{version} があります",
+      "centralOn": "Central に接続済み",
+      "centralOff": "Central に未接続",
+      "health": "システム状態",
+      "update": "パネルを更新",
+      "centralWaiting": "Central を待機中"
     }
   },
   "users": {
@@ -586,13 +578,13 @@
     "title": "アカウント",
     "subtitle": "プロフィール、パスワード、アクティビティを管理します。",
     "profile": {
-      "title": "プロフィール",
-      "description": "アカウントの詳細です。",
+      "title": "あなたの情報",
+      "description": "パネルでの表示名と、サインインに使う名前です。",
       "name": "名前",
       "username": "ユーザー名",
       "accountType": "アカウント種別",
       "roles": "ロール",
-      "submit": "変更を保存",
+      "submit": "情報を保存",
       "saving": "保存中…",
       "success": "プロフィールを更新しました。",
       "namePlaceholder": "フルネーム",
@@ -602,10 +594,11 @@
       "unsavedDesc": "未保存のプロフィール変更があります。このままタブを切り替えると、変更は失われます。",
       "unsavedDiscard": "変更を破棄",
       "unsavedKeep": "編集を続ける",
-      "failed": "プロフィールを保存できませんでした。"
+      "failed": "プロフィールを保存できませんでした。",
+      "nameHint": "メニューと、あなたが行った操作の横に表示されます。"
     },
     "password": {
-      "title": "パスワードを変更",
+      "title": "パスワード",
       "description": "他のサービスで使っていない強力なパスワードを使用してください。",
       "current": "現在のパスワード",
       "new": "新しいパスワード",
@@ -617,7 +610,8 @@
       "currentPlaceholder": "現在のパスワードを入力",
       "confirmPlaceholder": "新しいパスワードを再入力",
       "requirements": "10 文字以上で、大文字と小文字、数字を含めてください。",
-      "failed": "パスワードを変更できませんでした。"
+      "failed": "パスワードを変更できませんでした。",
+      "lastChanged": "最終変更: {when}"
     },
     "activity": {
       "title": "あなたのアクティビティ",
@@ -637,6 +631,19 @@
       "profile": "プロフィール",
       "security": "セキュリティ",
       "activity": "アクティビティ"
+    },
+    "identity": {
+      "lastSignIn": "最終サインイン",
+      "memberSince": "登録日",
+      "never": "まだ記録がありません"
+    },
+    "signIns": {
+      "title": "最近のサインイン",
+      "description": "このアカウントの直近のサインインです。",
+      "showAll": "すべてのサインインを表示",
+      "failed": "サインイン履歴を読み込めませんでした。",
+      "empty": "サインインの記録はまだありません。",
+      "notYou": "心当たりのないものがあれば、すぐに上でパスワードを変更してください。"
     }
   },
   "activity": {
@@ -708,7 +715,8 @@
       "docker_database": "Docker データベース",
       "registry": "レジストリ",
       "wp_cli": "WP-CLI"
-    }
+    },
+    "searchOwn": "自分のアクティビティを検索…"
   },
   "pagination": {
     "perPage": "表示件数",
@@ -6465,7 +6473,13 @@
     "outputTitle": "更新の出力",
     "outputTruncated": "最新の出力を表示しています。前の行は省略されました。",
     "checkFailed": "更新を確認できませんでした。",
-    "startFailed": "更新を開始できませんでした。"
+    "startFailed": "更新を開始できませんでした。",
+    "preflightNext": "次の更新の準備状況",
+    "installed": {
+      "committed": "{date} のコード",
+      "lastSucceeded": "前回の更新 v{from} → v{to}、{when}",
+      "lastFailed": "前回の更新は失敗 {when}"
+    }
   },
   "doctor": {
     "title": "システム状態",
@@ -7619,8 +7633,8 @@
     },
     "confirmGenerate": {
       "title": "Central管理を許可しますか？",
-      "description": "これによりServerAvatarセントラルパネルにこのサーバーの完全な管理権限が付与されます。",
-      "acknowledgement": "この鍵がServerAvatarセントラルパネルにこのサーバーの管理権限を付与することを理解し、続行します。",
+      "description": "これにより {brand} Central にこのサーバーの完全な管理権限が付与されます。",
+      "acknowledgement": "この鍵が {brand} Central にこのサーバーの管理権限を付与することを理解し、続行します。",
       "submit": "接続キーを生成"
     },
     "confirmRegenerate": {
@@ -7642,7 +7656,19 @@
       "connected": "接続済み",
       "waiting": "Central を待機中",
       "lastUsed": "Central の最終使用: {ago}",
-      "waitingHint": "Central が初めて鍵を使用すると「接続済み」に変わります。"
+      "off": "未接続"
+    },
+    "steps": {
+      "generate": "鍵を生成",
+      "generateText": "表示は一度だけなので、すぐにコピーしてください。",
+      "paste": "{brand} Central に貼り付け",
+      "pasteText": "セントラルパネルでこのサーバーを追加する場所です。",
+      "pasteWaiting": "Central が鍵を使うのを待っています…",
+      "managed": "Central がこのサーバーを管理",
+      "managedText": "Central が初めて鍵を使った時点で始まります。",
+      "srDone": "完了",
+      "srCurrent": "現在のステップ",
+      "srNext": "未完了"
     }
   },
   "docker": {

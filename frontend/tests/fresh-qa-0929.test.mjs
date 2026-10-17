@@ -24,7 +24,9 @@ test("A4: the login throttle is said on the form, in every locale", () => {
 });
 
 test("A5: unsaved profile edits are guarded beyond the tab switcher", () => {
-  assert.match(read("components/account/profile-form.jsx"), /useWatchUnsaved\("account-profile", isDirty\)/);
+  // SectionActions registers the guard (sidebar, header links, reload) under its Save label.
+  assert.match(read("components/account/profile-form.jsx"), /<SectionActions\s+label=\{t\("profile\.submit"\)\}\s+isDirty=\{isDirty\}/);
+  assert.match(read("components/settings/setting-row.jsx"), /useWatchUnsaved\(label, isDirty\);/);
 });
 
 test("A3: setup Install buttons respect each feature's manage permission", () => {

@@ -4,35 +4,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
 import { updateProfileSchema } from "@/lib/schemas/account";
 import { updateProfile } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
-import { Button } from "@/components/ui/button";
-import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { UserRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
+import { Section, Row, SectionActions } from "@/components/settings/setting-row";
+import { Form, FormField, FormControl } from "@/components/ui/form";
 
 export function ProfileForm({ user, onDirtyChange }) {
   const t = useTranslations("account");
-  const tc = useTranslations("common");
   const { refreshAndWait } = useRefresh();
 
   const form = useForm({
@@ -54,9 +36,6 @@ export function ProfileForm({ user, onDirtyChange }) {
 
   const isSubmitting = form.formState.isSubmitting;
   const isDirty = form.formState.isDirty;
-  // The tab switcher's own confirm only covers tabs; this covers the sidebar,
-  // the header links and reload, like every settings card.
-  useWatchUnsaved("account-profile", isDirty);
 
   // Report dirty state up so the tab switcher can confirm before discarding.
   useEffect(() => {
@@ -66,63 +45,46 @@ export function ProfileForm({ user, onDirtyChange }) {
 
   return (
     <Form {...form}>
-      <form noValidate
-        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        className="space-y-6"
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("profile.title")}</CardTitle>
-            <CardDescription>{t("profile.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid items-start gap-5 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>{t("profile.name")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      autoComplete="name"
-                      placeholder={t("profile.namePlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+      <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+        {/* The Settings card: icon head, two columns, a named Save in its own band.
+            SectionActions also guards the sidebar, header links and reload. */}
+        <Section
+          icon={UserRound}
+          title={t("profile.title")}
+          description={t("profile.description")}
+          actions={
+            <SectionActions
+              label={t("profile.submit")}
+              isDirty={isDirty}
+              pending={isSubmitting}
+              onDiscard={() => form.reset()}
+              canManage
             />
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required hint={t("profile.usernameHint")}>{t("profile.username")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      autoComplete="username"
-                      placeholder={t("profile.usernamePlaceholder")}
-                      className="font-mono"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-          {/* Save sits inside the card it saves, as on every settings card. */}
-          <CardFooter className="justify-end">
-            {/* Explains why Save is disabled ("no changes yet"). */}
-            <ReasonTooltip reason={!isDirty && !isSubmitting ? tc("nothingToSave") : null}>
-              <Button type="submit" disabled={isSubmitting || !isDirty}>
-                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-                {isSubmitting ? t("profile.saving") : t("profile.submit")}
-              </Button>
-            </ReasonTooltip>
-          </CardFooter>
-        </Card>
+          }
+        >
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <Row label={t("profile.name")} hint={t("profile.nameHint")} required>
+                <FormControl>
+                  <Input autoComplete="name" placeholder={t("profile.namePlaceholder")} {...field} />
+                </FormControl>
+              </Row>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <Row label={t("profile.username")} hint={t("profile.usernameHint")} required>
+                <FormControl>
+                  <Input autoComplete="username" placeholder={t("profile.usernamePlaceholder")} className="font-mono" {...field} />
+                </FormControl>
+              </Row>
+            )}
+          />
+        </Section>
       </form>
     </Form>
   );

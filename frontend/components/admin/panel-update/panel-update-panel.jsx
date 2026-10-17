@@ -229,7 +229,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
           <Card className="gap-0 overflow-hidden py-0">
             <UpdateHeader
               state={state}
-              divided={state.update_available}
+              divided
               actions={state.update_available ? updateActions : <div className="sm:ml-auto">{checkButton}</div>}
             />
 
@@ -240,7 +240,14 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
                 </CardContent>
                 <ReleaseNotes notes={state.available.notes} url={state.available.url} />
               </>
-            ) : null}
+            ) : (
+              // Up to date: whether the next update could start. The checks run anyway;
+              // hiding them until a release appears let a blocked update (uncommitted
+              // changes) surprise people on the day.
+              <CardContent className="px-6 py-5">
+                <PreflightList checks={state.preflight.checks} title={t("preflightNext")} />
+              </CardContent>
+            )}
           </Card>
         </>
       )}

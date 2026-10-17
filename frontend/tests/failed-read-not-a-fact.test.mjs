@@ -223,9 +223,14 @@ test("the access card shows a dash, not a zero, when stats did not load", () => 
    * an answer; two of its three rows did not.
    */
   const card = strip(read("components/admin/dashboard/people-card.jsx"));
-  assert.match(card, /users\s*\?\s*t\("adminsOf"/);
-  assert.match(card, /roles \? t\("rolesConfigured".*: "—"/s);
-  assert.doesNotMatch(card, /roles\?\.total \?\? 0/);
+  // Every count goes through one helper that answers "—" for a missing figure.
+  assert.match(card, /const num = \(n\) => \(n === undefined \|\| n === null \? "—" : format\.number\(n\)\);/);
+  for (const field of ["users\\?\\.total", "users\\?\\.admins", "roles\\?\\.total"]) {
+    assert.match(card, new RegExp(`value: num\\(${field}\\)`), field);
+  }
+  assert.doesNotMatch(card, /\?\? 0/);
+  // The role counts come from the users list; a failed list says so instead of "no roles".
+  assert.match(card, /userList === null \? \(\s*<p[^>]*>\{t\("rolesFailed"\)\}/);
 });
 
 test("the dashboard says so when it could not read the database engines", () => {

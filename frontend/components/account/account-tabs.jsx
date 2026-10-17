@@ -18,6 +18,7 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { ProfileForm } from "@/components/account/profile-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { AccountActivity } from "@/components/account/account-activity";
+import { RecentSignIns } from "@/components/account/recent-sign-ins";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 
 const TABS = ["profile", "security", "activity"];
@@ -31,6 +32,9 @@ export function AccountTabs({
   meta,
   filters,
   isFiltered,
+  signIns = [],
+  signInsFailed = false,
+  passwordChanged = null,
   activityFailed,
   activityStatus = null,
   activityFailure = null,
@@ -93,8 +97,17 @@ export function AccountTabs({
         <ProfileForm user={user} onDirtyChange={setProfileDirty} />
       </TabsContent>
 
-      <TabsContent value="security">
-        <ChangePasswordForm />
+      <TabsContent value="security" className="space-y-6">
+        <ChangePasswordForm lastChanged={passwordChanged} />
+        <RecentSignIns
+          entries={signIns}
+          failed={signInsFailed}
+          lastIp={user?.last_login_ip ?? null}
+          onShowAll={() => {
+            applyTab("activity");
+            setQuery({ action: "logged_in", type: "user", search: undefined, tab: "activity" }, { resetPage: true });
+          }}
+        />
       </TabsContent>
 
       <TabsContent value="activity">
@@ -105,6 +118,7 @@ export function AccountTabs({
               types={typesForScope(filters.types, "account")}
               actions={actionsForScope(filters.actions, filters.types, "account")}
               extraQuery={{ tab: "activity" }}
+              searchKey="searchOwn"
             />
             {/* Checked before "no entries", so a failure never reads as "no matches". */}
             {activityFailed ? (

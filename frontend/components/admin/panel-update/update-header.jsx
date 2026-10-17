@@ -46,7 +46,21 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
 
   // `branch` is null on a tag checkout (detached HEAD), so it drops out.
   const source = [installed.commit_short, installed.branch].filter(Boolean).join(" · ");
-  const meta = [publishedLabel, source].filter(Boolean);
+  // When the installed code was written, and how the last real update went: the
+  // up-to-date state had nothing else to say.
+  const committed = installed.committed_at ? new Date(installed.committed_at) : null;
+  const committedLabel =
+    !updateAvailable && committed && !Number.isNaN(committed.getTime())
+      ? t("installed.committed", { date: format.dateTime(committed, { dateStyle: "medium" }) })
+      : null;
+  const run = state.latest_run;
+  const lastRun = run && !run.dry_run && (run.status === "succeeded" || run.status === "failed") ? run : null;
+  const lastRunLabel = lastRun
+    ? lastRun.status === "failed"
+      ? t("installed.lastFailed", { when: lastRun.finished_at_human ?? "" })
+      : t("installed.lastSucceeded", { from: lastRun.from_version ?? "?", to: lastRun.to_version ?? "?", when: lastRun.finished_at_human ?? "" })
+    : null;
+  const meta = [publishedLabel, source, committedLabel, lastRunLabel].filter(Boolean);
 
   return (
     // Bottom border only when something follows the band.

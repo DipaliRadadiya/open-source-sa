@@ -270,36 +270,7 @@
       "errorLogs": "Fehlerprotokoll",
       "central": "Central"
     },
-    "dashboardTitle": "Admin-Dashboard",
-    "dashboardSubtitle": "Behalten Sie Systemzustand, Updates, Zugriff und aktuelle Admin-Aktivität im Blick.",
     "unknown": "Unbekannt",
-    "tiles": {
-      "health": "Systemzustand",
-      "healthOk": "Alle Prüfungen bestanden",
-      "healthWarnings": "{count, plural, one {# Warnung} other {# Warnungen}}",
-      "healthUnknown": "Die Prüfung konnte nicht ausgeführt werden",
-      "version": "Panel-Version",
-      "versionValue": "v{version}",
-      "versionAvailable": "v{version} verfügbar",
-      "versionCurrent": "Aktuell v{version}",
-      "versionUnchecked": "Der Release-Server war nicht erreichbar",
-      "versionUnknown": "Die Version konnte nicht gelesen werden",
-      "errors": "Fehler",
-      "errorsNone": "Nichts fehlgeschlagen",
-      "errorsFound": "{count, plural, one {# aktueller Fehler} other {# aktuelle Fehler}}",
-      "errorsWindow": "In den letzten {count} Einträgen",
-      "errorsUnknown": "Das Protokoll konnte nicht gelesen werden",
-      "central": "Central",
-      "centralOn": "Verbunden",
-      "centralOnHint": "Dieses Panel wird remote verwaltet",
-      "centralOff": "Nicht verbunden",
-      "centralOffHint": "Wird nur von diesem Panel verwaltet",
-      "centralUnknown": "Die Verbindung konnte nicht gelesen werden",
-      "versionBlocked": "Aktuell v{version} · {count, plural, one {blockiert durch # fehlgeschlagene Prüfung} other {blockiert durch # fehlgeschlagene Prüfungen}}",
-      "healthSummary": "{failed} fehlgeschlagen · {warnings} Warnungen",
-      "healthPassed": "{count, plural, one {# Prüfung bestanden} other {# Prüfungen bestanden}}",
-      "versionUpToDate": "Aktuell"
-    },
     "attention": {
       "title": "Handlungsbedarf",
       "count": "{count, plural, one {# Problem} other {# Probleme}}",
@@ -310,7 +281,11 @@
       "rowWarnings": "{count, plural, one {# Warnung muss geprüft werden} other {# Warnungen müssen geprüft werden}}",
       "namesMore": "{names} und {count} weitere",
       "failuresReason": "Meist gemeldet: {reason}",
-      "failuresOccurrences": "{count, plural, one {# Vorkommen} other {# Vorkommen}} erfasst"
+      "failuresOccurrences": "{count, plural, one {# Vorkommen} other {# Vorkommen}} erfasst",
+      "heading": "{count, plural, one {# Punkt braucht Ihre Aufmerksamkeit} other {# Punkte brauchen Ihre Aufmerksamkeit}}",
+      "rowUpdateFailed": "Das letzte Panel-Update ist fehlgeschlagen",
+      "rowUpdateBlocked": "Update v{version} kann noch nicht installiert werden",
+      "openUpdate": "Panel-Update öffnen"
     },
     "feed": {
       "title": "Letzte Aktivität",
@@ -327,19 +302,36 @@
     },
     "people": {
       "title": "Zugriff",
-      "admins": "Administratoren",
-      "roles": "Berechtigungsrollen",
+      "admins": "Admins",
+      "roles": "Rollen",
       "manage": "Benutzer verwalten",
       "impersonation": "Identitätswechsel",
       "impersonationNever": "Nie verwendet",
-      "adminsOf": "{admins} von {total} Benutzern",
-      "rolesConfigured": "{count, plural, one {# Rolle konfiguriert} other {# Rollen konfiguriert}}",
-      "impersonationUsed": "{count, plural, one {Einmal verwendet} other {# Mal verwendet}}, zuletzt {when}"
+      "impersonationUsed": "{count, plural, one {Einmal verwendet} other {# Mal verwendet}}, zuletzt {when}",
+      "users": "Benutzer",
+      "rolesInUse": "Rollen in Verwendung",
+      "roleMembers": "{count, plural, one {# Benutzer} other {# Benutzer}}",
+      "rolesFailed": "Die Rollenzahlen konnten nicht geladen werden.",
+      "rolesNone": "Noch kein Benutzer hat eine Rolle."
     },
     "navigationLabel": "Admin-Menü",
     "navGroups": {
       "access": "Zugriff",
       "system": "System"
+    },
+    "hero": {
+      "greeting": "Willkommen zurück, {name}",
+      "healthy": "Das Panel läuft",
+      "failing": "{count, plural, one {# Systemprüfung schlägt fehl} other {# Systemprüfungen schlagen fehl}}",
+      "unknown": "Panel-Status unbekannt",
+      "version": "v{version}",
+      "upToDate": "Aktuell",
+      "updateAvailable": "Update v{version} verfügbar",
+      "centralOn": "Central verbunden",
+      "centralOff": "Nicht mit Central verbunden",
+      "health": "Systemzustand",
+      "update": "Panel aktualisieren",
+      "centralWaiting": "Warten auf Central"
     }
   },
   "users": {
@@ -586,13 +578,13 @@
     "title": "Konto",
     "subtitle": "Profil, Passwort und Aktivität verwalten.",
     "profile": {
-      "title": "Profil",
-      "description": "Ihre Kontodaten.",
+      "title": "Ihre Angaben",
+      "description": "Wie Sie im Panel erscheinen und mit welchem Namen Sie sich anmelden.",
       "name": "Name",
       "username": "Benutzername",
       "accountType": "Kontotyp",
       "roles": "Rollen",
-      "submit": "Änderungen speichern",
+      "submit": "Angaben speichern",
       "saving": "Wird gespeichert…",
       "success": "Profil aktualisiert.",
       "namePlaceholder": "Ihr vollständiger Name",
@@ -602,10 +594,11 @@
       "unsavedDesc": "Sie haben nicht gespeicherte Profiländerungen. Wenn Sie jetzt den Tab wechseln, gehen sie verloren.",
       "unsavedDiscard": "Änderungen verwerfen",
       "unsavedKeep": "Weiter bearbeiten",
-      "failed": "Ihr Profil konnte nicht gespeichert werden."
+      "failed": "Ihr Profil konnte nicht gespeichert werden.",
+      "nameHint": "Steht im Menü und neben allem, was Sie tun."
     },
     "password": {
-      "title": "Passwort ändern",
+      "title": "Passwort",
       "description": "Verwenden Sie ein starkes Passwort, das Sie sonst nirgends nutzen.",
       "current": "Aktuelles Passwort",
       "new": "Neues Passwort",
@@ -617,7 +610,8 @@
       "currentPlaceholder": "Aktuelles Passwort eingeben",
       "confirmPlaceholder": "Neues Passwort erneut eingeben",
       "requirements": "Mindestens 10 Zeichen, mit Groß- und Kleinbuchstaben sowie einer Zahl.",
-      "failed": "Ihr Passwort konnte nicht geändert werden."
+      "failed": "Ihr Passwort konnte nicht geändert werden.",
+      "lastChanged": "Zuletzt geändert {when}"
     },
     "activity": {
       "title": "Ihre Aktivität",
@@ -637,6 +631,19 @@
       "profile": "Profil",
       "security": "Sicherheit",
       "activity": "Aktivität"
+    },
+    "identity": {
+      "lastSignIn": "Letzte Anmeldung",
+      "memberSince": "Mitglied seit",
+      "never": "Noch nicht erfasst"
+    },
+    "signIns": {
+      "title": "Letzte Anmeldungen",
+      "description": "Wann sich dieses Konto zuletzt angemeldet hat.",
+      "showAll": "Alle Anmeldungen anzeigen",
+      "failed": "Ihre Anmeldungen konnten nicht geladen werden.",
+      "empty": "Noch keine Anmeldungen erfasst.",
+      "notYou": "Eine kommt Ihnen fremd vor? Ändern Sie oben sofort Ihr Passwort."
     }
   },
   "activity": {
@@ -708,7 +715,8 @@
       "docker_database": "Docker-Datenbank",
       "registry": "Registry",
       "wp_cli": "WP-CLI"
-    }
+    },
+    "searchOwn": "Ihre Aktivität durchsuchen…"
   },
   "pagination": {
     "perPage": "Pro Seite",
@@ -6465,7 +6473,13 @@
     "outputTitle": "Update-Ausgabe",
     "outputTruncated": "Es wird die neueste Ausgabe gezeigt. Frühere Zeilen wurden weggelassen.",
     "checkFailed": "Nach Updates konnte nicht gesucht werden.",
-    "startFailed": "Das Update konnte nicht gestartet werden."
+    "startFailed": "Das Update konnte nicht gestartet werden.",
+    "preflightNext": "Bereit für das nächste Update",
+    "installed": {
+      "committed": "Code vom {date}",
+      "lastSucceeded": "letztes Update v{from} → v{to}, {when}",
+      "lastFailed": "letztes Update fehlgeschlagen {when}"
+    }
   },
   "doctor": {
     "title": "Systemzustand",
@@ -7619,8 +7633,8 @@
     },
     "confirmGenerate": {
       "title": "Zentrale Verwaltung erlauben?",
-      "description": "Das gewährt dem ServerAvatar Central Panel vollen Verwaltungszugriff auf diesen Server.",
-      "acknowledgement": "Mir ist klar, dass dieser Schlüssel dem ServerAvatar Central Panel Verwaltungszugriff auf diesen Server gewährt, und ich möchte fortfahren.",
+      "description": "Das gewährt {brand} Central vollen Verwaltungszugriff auf diesen Server.",
+      "acknowledgement": "Mir ist klar, dass dieser Schlüssel {brand} Central Verwaltungszugriff auf diesen Server gewährt, und ich möchte fortfahren.",
       "submit": "Verbindungsschlüssel erzeugen"
     },
     "confirmRegenerate": {
@@ -7642,7 +7656,19 @@
       "connected": "Verbunden",
       "waiting": "Warten auf Central",
       "lastUsed": "Zuletzt von Central verwendet: {ago}.",
-      "waitingHint": "Sobald Central den Schlüssel zum ersten Mal verwendet, wechselt dies zu Verbunden."
+      "off": "Nicht verbunden"
+    },
+    "steps": {
+      "generate": "Schlüssel erzeugen",
+      "generateText": "Wird nur einmal angezeigt, also gleich kopieren.",
+      "paste": "In {brand} Central einfügen",
+      "pasteText": "Dort, wo Sie diesen Server in Ihrem Central-Panel hinzufügen.",
+      "pasteWaiting": "Warten, bis Central den Schlüssel verwendet…",
+      "managed": "Central verwaltet diesen Server",
+      "managedText": "Beginnt, sobald Central den Schlüssel zum ersten Mal verwendet.",
+      "srDone": "erledigt",
+      "srCurrent": "aktueller Schritt",
+      "srNext": "noch nicht"
     }
   },
   "docker": {

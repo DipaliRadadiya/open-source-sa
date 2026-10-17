@@ -2,32 +2,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
 import { changePasswordSchema } from "@/lib/schemas/account";
 import { changePassword } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
-import { Button } from "@/components/ui/button";
+import { KeyRound } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordRules } from "@/components/ui/password-rules";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
+import { Section, Row, SectionActions } from "@/components/settings/setting-row";
+import { Form, FormField, FormControl } from "@/components/ui/form";
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ lastChanged = null }) {
   const t = useTranslations("account");
   const form = useForm({
     resolver: zodResolver(changePasswordSchema),
@@ -52,80 +37,59 @@ export function ChangePasswordForm() {
 
   return (
     <Form {...form}>
-      <form noValidate
-        method="post"
-        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        className="space-y-6"
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("password.title")}</CardTitle>
-            <CardDescription>{t("password.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <FormField
-              control={form.control}
-              name="current_password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>{t("password.current")}</FormLabel>
-                  <FormControl>
-                    <PasswordInput
-                      autoComplete="current-password"
-                      placeholder={t("password.currentPlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage field={t('password.current')} />
-                </FormItem>
-              )}
+      <form noValidate method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+        <Section
+          icon={KeyRound}
+          title={t("password.title")}
+          description={t("password.description")}
+          // Opposite the button, where Settings says who changed a card last.
+          changedBy={lastChanged ? t("password.lastChanged", { when: lastChanged }) : null}
+          actions={
+            <SectionActions
+              label={t("password.submit")}
+              isDirty={form.formState.isDirty}
+              pending={isSubmitting}
+              onDiscard={() => form.reset()}
+              canManage
             />
-            <div className="grid items-start gap-5 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>{t("password.new")}</FormLabel>
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder={t("password.newPlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <PasswordRules value={field.value} />
-                    <FormMessage field={t('password.new')} />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password_confirmation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>{t("password.confirm")}</FormLabel>
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder={t("password.confirmPlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage field={t('password.confirm')} />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-          {/* Save sits inside the card it saves, as on every settings card. */}
-          <CardFooter className="justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isSubmitting ? t("password.saving") : t("password.submit")}
-            </Button>
-          </CardFooter>
-        </Card>
+          }
+        >
+          <FormField
+            control={form.control}
+            name="current_password"
+            render={({ field }) => (
+              <Row label={t("password.current")} required>
+                <FormControl>
+                  <PasswordInput autoComplete="current-password" placeholder={t("password.currentPlaceholder")} {...field} />
+                </FormControl>
+              </Row>
+            )}
+          />
+          {/* Current alone on its row, the new pair side by side below it. */}
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <Row label={t("password.new")} required className="@3xl/section:col-start-1">
+                <FormControl>
+                  <PasswordInput autoComplete="new-password" placeholder={t("password.newPlaceholder")} {...field} />
+                </FormControl>
+                <PasswordRules value={field.value} />
+              </Row>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password_confirmation"
+            render={({ field }) => (
+              <Row label={t("password.confirm")} required>
+                <FormControl>
+                  <PasswordInput autoComplete="new-password" placeholder={t("password.confirmPlaceholder")} {...field} />
+                </FormControl>
+              </Row>
+            )}
+          />
+        </Section>
       </form>
     </Form>
   );
