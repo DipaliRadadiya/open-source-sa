@@ -7,12 +7,12 @@ import { updateFail2ban } from "@/lib/api/fail2ban";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
-import { settingsPayload } from "@/lib/fail2ban/settings-payload";
+import { ensureIgnored, settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { apiMessage } from "@/lib/api/error-message";
 import { useBrowserIpSettled } from "@/components/network/browser-ip";
 
-// Ignores the user's IP and enables every jail in one request, so it can never
-// leave jails on with the user bannable.
+// Ignores the user's IP first, then enables every jail, so it can never leave
+// jails on with the user bannable.
 export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canManage }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
@@ -27,13 +27,13 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
   async function apply() {
     setPending(true);
     try {
+      // One entry, not the whole list, so nobody else's addition is undone.
+      if (willIgnoreMe) await ensureIgnored(yourIp);
       await updateFail2ban({
         // Required on every call: the endpoint rewrites the config as a unit.
-        ...settingsPayload(settings, ignoreIps),
+        ...settingsPayload(settings),
         // Only the jails the server reports.
         jails: Object.fromEntries(jails.map((jail) => [jail.name, true])),
-        // Same call as the jails, so there is no window where the user is bannable.
-        ...(willIgnoreMe ? { ignore_ips: [...ignoreIps, yourIp] } : null),
         // Only when the user's IP is known and covered above; otherwise the
         // API's lockout check runs against this request's address.
         acknowledged: Boolean(yourIp),

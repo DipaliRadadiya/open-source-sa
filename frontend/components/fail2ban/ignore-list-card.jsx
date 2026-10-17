@@ -6,8 +6,8 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import { X, UserCheck, ShieldCheck, TriangleAlert } from "lucide-react";
-import { updateFail2ban } from "@/lib/api/fail2ban";
+import { X, UserCheck, ShieldCheck, TriangleAlert, Loader2 } from "lucide-react";
+import { addIgnoreIp, removeIgnoreIp } from "@/lib/api/fail2ban";
 import { isIpOrCidr } from "@/lib/validation/ip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { ActionIcon } from "@/components/ui/action-icon";
 import {
   Card,
@@ -26,35 +25,28 @@ import {
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Matches `ignore_ips => array|max:100` in UpdateFail2banRequest.
+// The server refuses the 101st entry (`ignore_list_full`); checked here first.
 const MAX_IGNORE_IPS = 100;
 
-// Saves the whole settings object: the backend rewrites the file as a unit, so
-// sending only the list would drop the ban rules.
+// Each Add and each remove is its own request against the list on disk, so two
+// people editing it no longer overwrite each other (Krishna, 17 Oct). No draft, no Save.
 export function IgnoreListCard({ settings, canManage }) {
   const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
 
-  const saved = settings.ignore_ips ?? [];
-  // Follows the server until edited; an edit holds only while the server still
-  // has the list it was based on, so a stale copy never overwrites a newer one.
-  const [edited, setEdited] = useState(null);
-  const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const live = edited && sameList(edited.base, saved) ? edited.ips : null;
-  const ips = live ?? saved;
-  const setIps = (update) => setEdited({ ips: update(ips), base: saved });
+  const ips = settings.ignore_ips ?? [];
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const pending = saving;
-  // Removing your own address needs confirmation (lockout risk).
-  const [confirmRemoveSelf, setConfirmRemoveSelf] = useState(false);
+  const [adding, setAdding] = useState(false);
+  // Per row: removing one entry must not freeze the others.
+  const [removing, setRemoving] = useState(() => new Set());
+  // The entry the server says still keeps the SSH jail off you.
+  const [confirmRemove, setConfirmRemove] = useState(null);
 
-  const dirty = JSON.stringify(saved) !== JSON.stringify(ips);
   const ipIgnored = Boolean(yourIp) && ips.includes(yourIp);
 
-  function add(value) {
+  async function add(value) {
     const ip = value.trim();
     if (!ip) return;
     // Written to the config verbatim; a typo would silently protect nobody.
@@ -64,52 +56,56 @@ export function IgnoreListCard({ settings, canManage }) {
     }
     if (ips.includes(ip)) {
       setDraftError(null);
-      setDraft("");
+      if (value === draft) setDraft("");
       return;
     }
-    // Mirrors the API cap so the 101st entry fails here, not on Save.
+    // Mirrors the API cap so the 101st entry fails here, not on the server.
     if (ips.length >= MAX_IGNORE_IPS) {
       setDraftError(t("settings.ignoreLimit", { max: MAX_IGNORE_IPS }));
       return;
     }
     setDraftError(null);
-    setIps((prev) => [...prev, ip]);
-    setDraft("");
-  }
-
-  function remove(ip) {
-    if (ip === yourIp) {
-      setConfirmRemoveSelf(true);
-      return;
-    }
-    setIps((prev) => prev.filter((v) => v !== ip));
-  }
-
-  async function save() {
-    setSaving(true);
+    setAdding(true);
     try {
-      await updateFail2ban({
-        bantime: settings.bantime,
-        findtime: settings.findtime,
-        maxretry: settings.maxretry,
-        ignore_ips: ips,
-      });
+      await addIgnoreIp(ip);
+      if (value === draft) setDraft("");
       await refreshAndWait();
-      toast.success(t("settings.ignoreSaved"));
+      toast.success(t("settings.ignoreAdded", { ip }));
     } catch (error) {
-      toast.error(
-        apiMessage(error, t("settings.failed")),
-      );
+      setDraftError(apiMessage(error, t("settings.failed")));
+      // Already there or full: the list changed elsewhere, so show it as it is now.
+      if (error?.response?.status === 422) await refreshAndWait();
     } finally {
-      setSaving(false);
+      setAdding(false);
     }
   }
 
-  const saveReason = !canManage
-    ? t("disabled.noPermission")
-    : !dirty
-      ? t("disabled.noChanges")
-      : null;
+  async function remove(ip, { acknowledged = false } = {}) {
+    setRemoving((current) => new Set(current).add(ip));
+    try {
+      await removeIgnoreIp(ip, { acknowledged });
+      setConfirmRemove(null);
+      await refreshAndWait();
+      toast.success(t("settings.ignoreRemoved", { ip }));
+    } catch (error) {
+      const status = error?.response?.status;
+      // The only 422 without field errors on a remove: this entry is what keeps the
+      // running SSH jail off your own address. The server decides, ranges included.
+      if (status === 422 && !error.response.data?.errors && !acknowledged) {
+        setConfirmRemove(ip);
+      } else {
+        toast.error(apiMessage(error, t("settings.failed")));
+        // 404: someone already removed it; show the list as it is now.
+        if (status === 404) await refreshAndWait();
+      }
+    } finally {
+      setRemoving((current) => {
+        const next = new Set(current);
+        next.delete(ip);
+        return next;
+      });
+    }
+  }
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
@@ -137,10 +133,10 @@ export function IgnoreListCard({ settings, canManage }) {
                   variant="outline"
                   className="h-auto max-w-full py-1.5 text-xs whitespace-normal"
                   aria-label={t("settings.addMine")}
-                  disabled={!canManage || pending}
+                  disabled={!canManage || adding}
                   onClick={() => add(yourIp)}
                 >
-                  <ActionIcon icon={UserCheck} pending={pending} />
+                  <ActionIcon icon={UserCheck} pending={adding} />
                   {t("settings.addIp")}
                 </Button>
               </div>
@@ -164,7 +160,7 @@ export function IgnoreListCard({ settings, canManage }) {
                   }
                 }}
                 placeholder={t("lockout.ipPlaceholder")}
-                disabled={!canManage || pending}
+                disabled={!canManage || adding}
                 className="min-w-0 font-mono"
                 autoComplete="off"
                 spellCheck={false}
@@ -185,9 +181,11 @@ export function IgnoreListCard({ settings, canManage }) {
                   type="button"
                   variant="outline"
                   className="shrink-0"
-                  disabled={!canManage || !draft.trim() || pending}
+                  disabled={!canManage || !draft.trim() || adding}
                   onClick={() => add(draft)}
                 >
+                  {/* Text-only at rest, like before; the spinner says the reload is under way. */}
+                  {adding ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("settings.addIp")}
                 </Button>
               </ReasonTooltip>
@@ -231,12 +229,15 @@ export function IgnoreListCard({ settings, canManage }) {
                           <button
                             type="button"
                             onClick={() => remove(ip)}
-                            // A removal mid-save would be undone by the following refresh.
-                            disabled={pending}
+                            disabled={removing.has(ip)}
                             aria-label={t("settings.removeIp", { ip })}
                             className="rounded p-1 text-muted-foreground hover:text-destructive disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           >
-                            <X className="size-3.5" />
+                            {removing.has(ip) ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <X className="size-3.5" />
+                            )}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>{t("settings.removeIp", { ip })}</TooltipContent>
@@ -250,32 +251,18 @@ export function IgnoreListCard({ settings, canManage }) {
 
         </CardContent>
 
-        <div className="flex-none">
-          <CardSaveFooter
-            saving={pending}
-            dirty={dirty}
-            saveReason={saveReason}
-            onSave={save}
-            onDiscard={() => setEdited(null)}
-            saveLabel={t("settings.saveAddresses")}
-            savingNote={t("settings.savingNote")}
-          />
-        </div>
-
         <ConfirmDialog
-          open={confirmRemoveSelf}
-          onOpenChange={setConfirmRemoveSelf}
+          open={Boolean(confirmRemove)}
+          onOpenChange={(open) => !open && setConfirmRemove(null)}
           icon={TriangleAlert}
           tone="warning"
           confirmVariant="destructive"
           title={t("settings.removeYouTitle")}
-          description={t("settings.removeYouDescription", { ip: yourIp })}
+          description={t("settings.removeYouDescription", { ip: confirmRemove ?? "" })}
           cancelLabel={t("settings.cancel")}
           confirmLabel={t("settings.removeYouConfirm")}
-          onConfirm={() => {
-            setIps((prev) => prev.filter((v) => v !== yourIp));
-            setConfirmRemoveSelf(false);
-          }}
+          pending={Boolean(confirmRemove) && removing.has(confirmRemove)}
+          onConfirm={() => remove(confirmRemove, { acknowledged: true })}
         />
       </Card>
     </DisabledReasonProvider>

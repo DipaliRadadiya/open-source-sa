@@ -287,7 +287,8 @@ test("Code review C–G: an admin cannot untick their own admin access", () => {
 test("Code review C–G: fail2ban lockout guards keep working with the browser-sourced IP", () => {
   assert.match(read("components/fail2ban/recommended-setup.jsx"), /acknowledged: Boolean\(yourIp\)/);
   assert.match(read("components/fail2ban/jails-card.jsx"), /const ignoreIp = typedIp \?\? yourIp \?\? "";/);
-  assert.match(read("components/fail2ban/ignore-list-card.jsx"), /const live = edited && sameList\(edited\.base, saved\) \? edited\.ips : null;/);
+  // No local copy to go stale: the card shows the server's list and changes one entry at a time.
+  assert.match(read("components/fail2ban/ignore-list-card.jsx"), /const ips = settings\.ignore_ips \?\? \[\];/);
   const ban = read("components/fail2ban/ban-ip-dialog.jsx");
   assert.match(ban, /const activeJails = jails\.filter\(\(j\) => j\.enabled\);/);
   assert.match(ban, /disabled=\{pending \|\| !ip\.trim\(\) \|\| !jail \|\| isSelf\}/);

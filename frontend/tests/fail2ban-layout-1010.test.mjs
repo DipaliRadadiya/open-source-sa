@@ -87,7 +87,12 @@ test("risky jail enable still asks first, while off and non-risky changes apply"
   toggle({ name: "sshd", lockout_risk: true }, false);
   toggle({ name: "web", lockout_risk: false }, true);
   assert.deepEqual(calls, [["guard", "sshd", true], ["apply", "sshd", false], ["apply", "web", true]]);
-  assert.match(card("jails-card"), /\.\.\.settingsPayload\(settings, ignoreIps\)/);
+  // The ban rules only: the ignore list is never resent from a page's copy.
+  assert.match(card("jails-card"), /\.\.\.settingsPayload\(settings\)/);
+  // Your address goes on the list before the jail starts, one entry, not the whole list.
+  assert.match(card("jails-card"), /await ensureIgnored\(addIp\);\s*await updateFail2ban\(/);
+  assert.match(card("recommended-setup"), /await ensureIgnored\(yourIp\);\s*await updateFail2ban\(/);
+  for (const name of ["jails-card", "recommended-setup", "ban-rules-card"]) assert.doesNotMatch(card(name), /ignore_ips:/, name);
   assert.match(card("jails-card"), /acknowledged: true/);
 });
 
@@ -151,61 +156,89 @@ test("ban fields pair with a draft preview and retain bounds, custom presets and
   assert.equal(inRange("86401", 30, 86400), false);
 });
 
-function ignoreFixture(initial = [], yourIp = "203.0.113.9") {
+function ignoreFixture(initial = [], { fail = {} } = {}) {
   const source = card("ignore-list-card");
+  const calls = [];
   const context = {
-    ips: [...initial], yourIp, isIpOrCidr, MAX_IGNORE_IPS: 100,
+    ips: [...initial], draft: "", isIpOrCidr, MAX_IGNORE_IPS: 100,
     t: (key) => key,
+    apiMessage: (error, fallback) => error?.response?.data?.message ?? fallback,
     setDraftError: (error) => { context.error = error; },
     setDraft: (draft) => { context.draft = draft; },
-    setIps: (update) => { context.ips = update(context.ips); },
-    setConfirmRemoveSelf: (confirm) => { context.confirm = confirm; },
+    setAdding: (value) => calls.push(["adding", value]),
+    setRemoving: () => {},
+    setConfirmRemove: (ip) => { context.confirm = ip; },
+    addIgnoreIp: async (ip) => { calls.push(["post", ip]); if (fail.post) throw fail.post; },
+    removeIgnoreIp: async (ip, options) => {
+      calls.push(["delete", ip, Boolean(options?.acknowledged)]);
+      const error = fail.delete?.shift?.();
+      if (error) throw error;
+    },
+    refreshAndWait: async () => calls.push(["refresh"]),
+    toast: { success: (m) => calls.push(["success", m]), error: (m) => calls.push(["error", m]) },
+    calls,
   };
-  const code = section(source, "  function add(", "  async function save(");
+  const code = section(source, "  async function add(", "  return (\n    <DisabledReasonProvider");
   vm.runInNewContext(`${code}; this.add = add; this.remove = remove;`, context);
   return context;
 }
 
-test("Add is only a validated local edit: trims, deduplicates, accepts ranges, caps at 100", () => {
+test("Add checks the address here, then sends that one entry and re-reads the list", async () => {
   const fixture = ignoreFixture();
-  fixture.add(" 203.0.113.5 ");
-  fixture.add("203.0.113.5");
-  fixture.add("203.0.113.0/24");
-  fixture.add("2001:db8::/64");
-  assert.deepEqual(Array.from(fixture.ips), ["203.0.113.5", "203.0.113.0/24", "2001:db8::/64"]);
-  fixture.add("not an IP");
+  fixture.draft = " 203.0.113.5 ";
+  await fixture.add(" 203.0.113.5 ");
+  assert.deepEqual(fixture.calls, [["adding", true], ["post", "203.0.113.5"], ["refresh"], ["success", "settings.ignoreAdded"], ["adding", false]]);
+  assert.equal(fixture.draft, "");
+  await fixture.add("not an IP");
   assert.equal(fixture.error, "settings.invalidIp");
-  assert.equal(fixture.ips.length, 3);
+  assert.equal(fixture.calls.filter(([c]) => c === "post").length, 1, "an invalid address never leaves the page");
   const full = ignoreFixture(Array.from({ length: 100 }, (_, i) => `203.0.113.${i}`));
-  full.add("198.51.100.1");
+  await full.add("198.51.100.1");
   assert.equal(full.error, "settings.ignoreLimit");
-  assert.equal(full.ips.length, 100);
-  full.add("203.0.113.2");
+  await full.add("203.0.113.2");
   assert.equal(full.error, null, "an existing address remains a no-op even at capacity");
+  assert.deepEqual(full.calls, []);
 });
 
-test("own-address removal still asks; other addresses are only removed from the draft", () => {
-  const fixture = ignoreFixture(["203.0.113.9", "198.51.100.1"]);
-  fixture.remove("203.0.113.9");
-  assert.equal(fixture.confirm, true);
-  assert.equal(fixture.ips.length, 2);
-  fixture.remove("198.51.100.1");
-  assert.deepEqual(Array.from(fixture.ips), ["203.0.113.9"]);
+test("an Add the server refuses shows its reason and re-reads the list that changed elsewhere", async () => {
+  const refused = { response: { status: 422, data: { message: "That address is already on the ignore list." } } };
+  const fixture = ignoreFixture([], { fail: { post: refused } });
+  await fixture.add("203.0.113.5");
+  assert.equal(fixture.error, "That address is already on the ignore list.");
+  assert.deepEqual(fixture.calls, [["adding", true], ["post", "203.0.113.5"], ["refresh"], ["adding", false]]);
+});
+
+test("remove sends one entry; the server's lockout answer asks, and only then is it acknowledged", async () => {
+  const lockout = { response: { status: 422, data: { message: "risk" } } };
+  const fixture = ignoreFixture(["203.0.113.0/24"], { fail: { delete: [lockout] } });
+  await fixture.remove("203.0.113.0/24");
+  assert.equal(fixture.confirm, "203.0.113.0/24", "a range covering you asks too: the server decides");
+  assert.deepEqual(fixture.calls, [["delete", "203.0.113.0/24", false]]);
+  await fixture.remove("203.0.113.0/24", { acknowledged: true });
+  assert.equal(fixture.confirm, null);
+  assert.deepEqual(fixture.calls.slice(1), [["delete", "203.0.113.0/24", true], ["refresh"], ["success", "settings.ignoreRemoved"]]);
+
+  const gone = ignoreFixture(["198.51.100.1"], { fail: { delete: [{ response: { status: 404, data: { message: "missing" } } }] } });
+  await gone.remove("198.51.100.1");
+  assert.deepEqual(gone.calls, [["delete", "198.51.100.1", false], ["error", "missing"], ["refresh"]]);
+  assert.equal(gone.confirm, undefined, "a 404 is not a lockout");
+});
+
+test("the ignore list has no draft and no Save: every change is its own request", () => {
   const source = card("ignore-list-card");
   assert.match(source, /<Label htmlFor="f2b-ignore-address">\{t\("settings.inputLabel"\)\}/);
   assert.match(source, /id="f2b-ignore-address"/);
   assert.match(source, /t\("settings.ignoreDraftHint"\)/);
-  assert.match(source, /saveLabel=\{t\("settings.saveAddresses"\)\}/);
+  assert.doesNotMatch(source, /CardSaveFooter|saveAddresses|updateFail2ban|setEdited/);
   assert.match(source, /data-slot="caution"/);
   assert.match(source, /variant="outline"[\s\S]*onClick=\{\(\) => add\(yourIp\)\}/);
   assert.doesNotMatch(source, /IconTooltip|icon=\{Plus\}|size="icon"/);
-  assert.match(source, /onDiscard=\{\(\) => setEdited\(null\)\}/);
 });
 
 test("both settings saves send the complete object and wait for re-read before success", async () => {
   for (const [name, end, expected] of [
-    ["ban-rules-card", "  function discard(", { bantime: -1, findtime: 600, maxretry: 5, ignore_ips: ["127.0.0.1"] }],
-    ["ignore-list-card", "  const saveReason =", { bantime: 3600, findtime: 300, maxretry: 6, ignore_ips: ["127.0.0.1", "203.0.113.5"] }],
+    // No ignore list: omitted, the server keeps its own (17 Oct).
+    ["ban-rules-card", "  function discard(", { bantime: -1, findtime: 600, maxretry: 5 }],
   ]) {
     const calls = [];
     const save = vm.runInNewContext(`${section(card(name), "  async function save(", end)}; save`, {
@@ -223,7 +256,7 @@ test("both settings saves send the complete object and wait for re-read before s
 });
 
 test("rejected settings writes report errors without success, refresh or clearing the draft", async () => {
-  for (const [name, end] of [["ban-rules-card", "  function discard("], ["ignore-list-card", "  const saveReason ="]]) {
+  for (const [name, end] of [["ban-rules-card", "  function discard("]]) {
     for (const status of [403, 500, null]) {
       const calls = [];
       const context = {
@@ -262,11 +295,11 @@ test("loading mirrors status, comfortable two-up jails, desktop shares and mobil
 test("all eight locales have specific save labels, list guidance and the own-IP placeholder", () => {
   const dictionaries = locales.map((locale) => [locale, JSON.parse(read(`messages/${locale}.json`)).fail2ban.settings]);
   for (const [locale, settings] of dictionaries) {
-    for (const key of ["saveRules", "saveAddresses", "ignoreHint", "ignoreDraftHint", "inputLabel"]) assert.ok(settings[key], `${locale}: ${key}`);
-    assert.notEqual(settings.saveRules, settings.saveAddresses, locale);
+    for (const key of ["saveRules", "ignoreHint", "ignoreDraftHint", "inputLabel", "ignoreAdded", "ignoreRemoved"]) assert.ok(settings[key], `${locale}: ${key}`);
+    for (const key of ["ignoreAdded", "ignoreRemoved", "removeYouDescription"]) assert.match(settings[key], /\{ip\}/, `${locale}: ${key}`);
     assert.match(settings.yourIpMissing, /\{ip\}/, locale);
     assert.doesNotMatch(settings.ignoreHint, /can never lock you out/i);
-    if (locale !== "en") for (const key of ["saveRules", "saveAddresses", "ignoreDraftHint", "inputLabel"]) assert.notEqual(settings[key], dictionaries[0][1][key], `${locale}: translated ${key}`);
+    if (locale !== "en") for (const key of ["saveRules", "ignoreDraftHint", "inputLabel", "ignoreAdded", "ignoreRemoved"]) assert.notEqual(settings[key], dictionaries[0][1][key], `${locale}: translated ${key}`);
   }
 });
 
@@ -337,7 +370,7 @@ test("desktop list scrolls within the remaining height but never grows to fill i
   assert.match(source, /CardContent className="flex min-h-0 flex-1 flex-col gap-3/);
   assert.match(source, /data-slot="caution" className="flex flex-none/);
   assert.match(source, /<div className="flex-none space-y-2">/);
-  assert.match(source, /<div className="flex-none">\s*<CardSaveFooter/);
+  assert.doesNotMatch(source, /CardSaveFooter/);
   const list = section(source, "          <ul\n", "          </ul>");
   assert.match(list, /tabIndex=\{0\}/);
   assert.match(list, /aria-label=\{t\("settings.ignore"\)\}/);
@@ -363,7 +396,7 @@ test("inline input uses accessible full examples, errors and short non-parsed pl
   const caution = section(source, '            <div data-slot="caution"', '          <div className="flex-none space-y-2">');
   assert.match(caution, /aria-label=\{t\("settings.addMine"\)\}/);
   assert.match(caution, /\{t\("settings.addIp"\)\}/);
-  assert.match(caution, /disabled=\{!canManage \|\| pending\}/);
+  assert.match(caution, /disabled=\{!canManage \|\| adding\}/);
   assert.match(caution, /onClick=\{\(\) => add\(yourIp\)\}/);
   for (const locale of locales) {
     const f = JSON.parse(read('messages/' + locale + '.json')).fail2ban;

@@ -61,7 +61,8 @@ export function BanRulesCard({ settings, presets, canManage }) {
         bantime: Number(bantime),
         findtime: Number(findtime),
         maxretry: Number(maxretry),
-        ignore_ips: settings.ignore_ips ?? [],
+        // No `ignore_ips`: omitted, the server keeps its list, so this page's copy
+        // cannot undo an address someone added since it loaded.
       });
       await refreshAndWait();
       toast.success(t("settings.saved"));

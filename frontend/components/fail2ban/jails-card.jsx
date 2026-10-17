@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ShieldAlert, TriangleAlert, Info, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateFail2ban } from "@/lib/api/fail2ban";
-import { settingsPayload } from "@/lib/fail2ban/settings-payload";
+import { ensureIgnored, settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,12 +67,13 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
     const server = (jails.find((entry) => entry.name === jail.name) ?? jail).enabled;
     setAsked((current) => ({ ...current, [jail.name]: { value: enabled, from: server } }));
     try {
+      // Before the jail: the address is safe the moment the jail starts.
+      if (addIp && !ignoreIps.includes(addIp)) await ensureIgnored(addIp);
       await updateFail2ban({
         // Required on every call: the endpoint rewrites the config as a unit.
-        ...settingsPayload(settings, ignoreIps),
+        ...settingsPayload(settings),
         // The API leaves omitted jails unchanged.
         jails: { [jail.name]: enabled },
-        ...(addIp && !ignoreIps.includes(addIp) ? { ignore_ips: [...ignoreIps, addIp] } : null),
         ...(acknowledged ? { acknowledged: true } : null),
       });
       await refreshAndWait();
