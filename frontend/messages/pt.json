@@ -462,7 +462,6 @@
       "filteredDesc": "Tente um termo de busca diferente.",
       "clear": "Limpar busca"
     },
-    "permissionCount": "{count, plural, one {# permissão} other {# permissões}}",
     "columns": {
       "name": "Nome",
       "description": "Descrição",
@@ -488,7 +487,6 @@
       "permissions": "Permissões",
       "permissionsHint": "Escolha o que este papel pode acessar no painel.",
       "permission": "Permissão",
-      "enabledCount": "{count} de {total} ativadas",
       "view": "Visualizar",
       "manage": "Gerenciar",
       "selectAll": "Todas as permissões",
@@ -548,7 +546,8 @@
       "submitCreate": "Criar papel",
       "submitEdit": "Salvar alterações",
       "saving": "Salvando…",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "groupCount": "{view} de {total} visualizar · {manage} gerenciar"
     },
     "delete": {
       "title": "Excluir papel?",
@@ -572,7 +571,8 @@
         "name": "Administrador",
         "description": "Acesso total a todas as permissões. Gerenciado pelo sistema."
       }
-    }
+    },
+    "accessCount": "{view} visualizar · {manage} gerenciar"
   },
   "account": {
     "title": "Conta",
@@ -6539,7 +6539,13 @@
     "referenceInvalid": "Isso não parece uma referência. Copie o texto completo da mensagem de erro.",
     "referenceNotFoundTitle": "Nenhuma falha com essa referência",
     "referenceNotFoundDescription": "Nada no log corresponde. Verifique se a referência foi copiada inteira ou se veio deste servidor.",
-    "referenceEmpty": "Cole primeiro uma referência da mensagem de erro."
+    "referenceEmpty": "Cole primeiro uma referência da mensagem de erro.",
+    "kind": {
+      "label": "Erros exibidos",
+      "all": "Todos ({count})",
+      "api": "Erros de API ({count})",
+      "operation": "Comandos do servidor ({count})"
+    }
   },
   "setup": {
     "title": "Configure seu servidor",

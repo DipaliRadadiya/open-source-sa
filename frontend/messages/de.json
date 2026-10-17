@@ -462,7 +462,6 @@
       "filteredDesc": "Versuchen Sie einen anderen Suchbegriff.",
       "clear": "Suche zurücksetzen"
     },
-    "permissionCount": "{count, plural, one {# Berechtigung} other {# Berechtigungen}}",
     "columns": {
       "name": "Name",
       "description": "Beschreibung",
@@ -488,7 +487,6 @@
       "permissions": "Berechtigungen",
       "permissionsHint": "Legen Sie fest, worauf diese Rolle im Panel zugreifen kann.",
       "permission": "Berechtigung",
-      "enabledCount": "{count} von {total} aktiviert",
       "view": "Ansehen",
       "manage": "Verwalten",
       "selectAll": "Alle Berechtigungen",
@@ -548,7 +546,8 @@
       "submitCreate": "Rolle erstellen",
       "submitEdit": "Änderungen speichern",
       "saving": "Wird gespeichert…",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "groupCount": "{view} von {total} Ansehen · {manage} Verwalten"
     },
     "delete": {
       "title": "Rolle löschen?",
@@ -572,7 +571,8 @@
         "name": "Administrator",
         "description": "Voller Zugriff auf alle Berechtigungen. Vom System verwaltet."
       }
-    }
+    },
+    "accessCount": "{view} Ansehen · {manage} Verwalten"
   },
   "account": {
     "title": "Konto",
@@ -6539,7 +6539,13 @@
     "referenceInvalid": "Das sieht nicht wie eine Referenz aus. Kopieren Sie sie vollständig aus der Fehlermeldung.",
     "referenceNotFoundTitle": "Kein Fehler mit dieser Referenz",
     "referenceNotFoundDescription": "Nichts im Protokoll passt dazu. Prüfen Sie, ob die Referenz vollständig kopiert wurde und von diesem Server stammt.",
-    "referenceEmpty": "Fügen Sie zuerst eine Referenz aus der Fehlermeldung ein."
+    "referenceEmpty": "Fügen Sie zuerst eine Referenz aus der Fehlermeldung ein.",
+    "kind": {
+      "label": "Angezeigte Fehler",
+      "all": "Alle ({count})",
+      "api": "API-Fehler ({count})",
+      "operation": "Serverbefehle ({count})"
+    }
   },
   "setup": {
     "title": "Richten Sie Ihren Server ein",

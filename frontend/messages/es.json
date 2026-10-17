@@ -462,7 +462,6 @@
       "filteredDesc": "Prueba con otro término de búsqueda.",
       "clear": "Borrar búsqueda"
     },
-    "permissionCount": "{count, plural, one {# permiso} other {# permisos}}",
     "columns": {
       "name": "Nombre",
       "description": "Descripción",
@@ -488,7 +487,6 @@
       "permissions": "Permisos",
       "permissionsHint": "Elige a qué puede acceder este rol en el panel.",
       "permission": "Permiso",
-      "enabledCount": "{count} de {total} habilitados",
       "view": "Ver",
       "manage": "Gestionar",
       "selectAll": "Todos los permisos",
@@ -548,7 +546,8 @@
       "submitCreate": "Crear rol",
       "submitEdit": "Guardar cambios",
       "saving": "Guardando…",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "groupCount": "{view} de {total} ver · {manage} gestionar"
     },
     "delete": {
       "title": "¿Eliminar rol?",
@@ -572,7 +571,8 @@
         "name": "Administrador",
         "description": "Acceso completo a todos los permisos. Lo gestiona el sistema."
       }
-    }
+    },
+    "accessCount": "{view} ver · {manage} gestionar"
   },
   "account": {
     "title": "Cuenta",
@@ -6539,7 +6539,13 @@
     "referenceInvalid": "Eso no parece una referencia. Copia el texto completo del mensaje de error.",
     "referenceNotFoundTitle": "No hay ningún fallo con esa referencia",
     "referenceNotFoundDescription": "Nada en el registro coincide. Comprueba que copiaste la referencia entera y que viene de este servidor.",
-    "referenceEmpty": "Pega primero una referencia del mensaje de error."
+    "referenceEmpty": "Pega primero una referencia del mensaje de error.",
+    "kind": {
+      "label": "Errores mostrados",
+      "all": "Todos ({count})",
+      "api": "Errores de API ({count})",
+      "operation": "Comandos del servidor ({count})"
+    }
   },
   "setup": {
     "title": "Configura tu servidor",

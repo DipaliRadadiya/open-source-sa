@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
-import { grantedCount } from "@/lib/roles/granted-count";
+import { accessCounts } from "@/lib/roles/granted-count";
 
 /** Roles on a narrow screen, where the table's count, date and menu would be cut off. */
 export function RolesCards({ roles }) {
@@ -35,7 +35,7 @@ export function RolesCards({ roles }) {
           <CardFacts>
             <CardFact label={t("columns.permissions")}>
               <Badge variant="secondary">
-                {t("permissionCount", { count: grantedCount(role) })}
+                {t("accessCount", accessCounts(role))}
               </Badge>
             </CardFact>
             <CardFact label={t("columns.created")} value={role.created_at_human} />

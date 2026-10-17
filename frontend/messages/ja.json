@@ -462,7 +462,6 @@
       "filteredDesc": "別の検索語を試してください。",
       "clear": "検索をクリア"
     },
-    "permissionCount": "{count, plural, one {# 件の権限} other {# 件の権限}}",
     "columns": {
       "name": "名前",
       "description": "説明",
@@ -488,7 +487,6 @@
       "permissions": "権限",
       "permissionsHint": "このロールがパネル内でアクセスできる項目を選択してください。",
       "permission": "権限",
-      "enabledCount": "{count} / {total} 件を有効化",
       "view": "閲覧",
       "manage": "管理",
       "selectAll": "すべての権限",
@@ -548,7 +546,8 @@
       "submitCreate": "ロールを作成",
       "submitEdit": "変更を保存",
       "saving": "保存中…",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "groupCount": "閲覧 {view}/{total} · 管理 {manage}"
     },
     "delete": {
       "title": "ロールを削除しますか？",
@@ -572,7 +571,8 @@
         "name": "管理者",
         "description": "すべての権限にフルアクセスできます。システムが管理します。"
       }
-    }
+    },
+    "accessCount": "閲覧 {view} · 管理 {manage}"
   },
   "account": {
     "title": "アカウント",
@@ -6539,7 +6539,13 @@
     "referenceInvalid": "リファレンスの形式ではありません。エラー表示から全体をコピーしてください。",
     "referenceNotFoundTitle": "そのリファレンスの障害は見つかりません",
     "referenceNotFoundDescription": "ログに一致するものがありません。リファレンスがすべてコピーされているか、このサーバーのものであるかを確認してください。",
-    "referenceEmpty": "先にエラー表示からリファレンスを貼り付けてください。"
+    "referenceEmpty": "先にエラー表示からリファレンスを貼り付けてください。",
+    "kind": {
+      "label": "表示するエラー",
+      "all": "すべて ({count})",
+      "api": "API エラー ({count})",
+      "operation": "サーバーコマンド ({count})"
+    }
   },
   "setup": {
     "title": "サーバーをセットアップ",

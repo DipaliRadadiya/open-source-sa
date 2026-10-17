@@ -1,11 +1,13 @@
 import { useTranslations } from "next-intl";
-import { Server, AppWindow, Folder } from "lucide-react";
+import { Server, AppWindow, Folder, ChevronRight } from "lucide-react";
 import {
   ACCESS_MANAGE,
   ACCESS_NONE,
   ACCESS_VIEW,
 } from "@/lib/schemas/role";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { countAccess } from "@/lib/roles/granted-count";
 
 const LEVEL_ICONS = { server: Server, application: AppWindow };
 
@@ -125,12 +127,18 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
         const sectionKey = `${group.level}|${group.sub_level}`;
 
         return (
-          <div key={sectionKey} className="overflow-hidden rounded-lg border">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-3 py-2">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <LevelIcon className="size-4 text-muted-foreground" />
-                {group.sub_level_title || t("generalGroup")}
-              </span>
+          // Folded, each with its own count: open, the 38 rows made the page three screens
+          // long (Krishna, 17 Oct). Set all works without opening.
+          <Collapsible key={sectionKey} className="group/section overflow-hidden rounded-lg border">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 px-3 py-2 group-data-[state=open]/section:border-b">
+              <CollapsibleTrigger className="flex min-w-0 items-center gap-2 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/section:rotate-90" aria-hidden />
+                <LevelIcon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="text-sm font-semibold">{group.sub_level_title || t("generalGroup")}</span>
+                <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                  {t("groupCount", { ...countAccess(items.map(accessFor)), total: items.length })}
+                </span>
+              </CollapsibleTrigger>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   {t("setAll")}
@@ -146,7 +154,7 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
               </div>
             </div>
 
-            <div className="divide-y">
+            <CollapsibleContent className="divide-y">
               {items.map((item) => {
                 const access = accessFor(item);
                 const description = permDesc(item.name);
@@ -176,8 +184,8 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
                   </div>
                 );
               })}
-            </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
     </div>

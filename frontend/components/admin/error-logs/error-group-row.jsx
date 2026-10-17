@@ -59,20 +59,22 @@ export function ErrorGroupRow({ group, now }) {
     date ? format.dateTime(date, { dateStyle: "medium", timeStyle: "medium" }) : null;
 
   return (
-    <Collapsible className="rounded-2xl border bg-card shadow-sm">
-      <CollapsibleTrigger className="group flex w-full items-start gap-4 p-4 text-left">
+    // One line per kind of error in a shared list (Krishna, 17 Oct): as separate tall
+    // cards, 19 errors filled three screens. The detail is one click away.
+    <Collapsible>
+      <CollapsibleTrigger className="group flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
         <span
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg",
             meta.chip,
           )}
         >
-          <Icon className={cn("size-5", meta.tint)} aria-hidden />
+          <Icon className={cn("size-4", meta.tint)} aria-hidden />
         </span>
 
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium leading-tight">
+            <p className="text-sm font-medium leading-tight">
               {isOperation
                 ? t("operationTitle", { operation: group.operation ?? t("unknownOperation") })
                 : group.exceptionShort ?? t("unknownException")}
@@ -96,9 +98,9 @@ export function ErrorGroupRow({ group, now }) {
             ) : null}
           </div>
 
-          {/* Where it happened: a route pattern for API failures, the feature
-              for operations. Backend identifiers, so mono and untranslated. */}
-          <p className="flex min-w-0 flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
+          {/* Where it happened (a route pattern for API failures, the feature for
+              operations; backend identifiers, so mono) and when, on one line. */}
+          <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-muted-foreground">
             {isOperation ? (
               <span className="break-all">
                 {group.feature ?? t("unknownFeature")}
@@ -112,30 +114,29 @@ export function ErrorGroupRow({ group, now }) {
                 <span className="break-all">{group.route ?? t("unknownRoute")}</span>
               </>
             )}
-          </p>
-
-          {/* Full class name, demoted: the namespace repeats on nearly every row. */}
-          {group.exception && group.exception !== group.exceptionShort ? (
-            <p className="break-all font-mono text-xs leading-4 text-muted-foreground/70">
-              {group.exception}
-            </p>
-          ) : null}
-
-          <p className="text-xs text-muted-foreground">
-            {group.count > 1
-              ? t("firstAndLast", { first: when(group.first), last: when(group.last) })
-              : when(group.last)}
+            <span className="font-sans">
+              ·{" "}
+              {group.count > 1
+                ? t("firstAndLast", { first: when(group.first), last: when(group.last) })
+                : when(group.last)}
+            </span>
           </p>
         </div>
 
         <ChevronDown
-          className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+          className="mt-1.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
           aria-hidden
         />
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="border-t px-4 py-3">
+        <div className="border-t bg-muted/20 px-4 py-3">
+          {/* Full class name, here rather than on the line: the namespace repeats on nearly every row. */}
+          {group.exception && group.exception !== group.exceptionShort ? (
+            <p className="mb-2 break-all font-mono text-xs leading-4 text-muted-foreground/70">
+              {group.exception}
+            </p>
+          ) : null}
           <p className="mb-2 text-xs font-medium text-muted-foreground">
             {t("everyOccurrence")}
           </p>

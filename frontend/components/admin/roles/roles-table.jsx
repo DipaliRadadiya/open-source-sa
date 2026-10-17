@@ -17,7 +17,7 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 import { SyncPermissionsButton } from "@/components/admin/roles/sync-permissions-button";
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
 import { RolesCards } from "@/components/admin/roles/roles-cards";
-import { grantedCount } from "@/lib/roles/granted-count";
+import { accessCounts } from "@/lib/roles/granted-count";
 import { roleName, roleDescription } from "@/lib/roles/role-label";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
@@ -50,7 +50,7 @@ function PermissionsCell({ row }) {
   const t = useTranslations("roles");
   return (
     <Badge variant="secondary">
-      {t("permissionCount", { count: grantedCount(row.original) })}
+      {t("accessCount", accessCounts(row.original))}
     </Badge>
   );
 }

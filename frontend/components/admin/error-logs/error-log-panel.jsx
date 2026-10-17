@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { SELECT_WELL } from "@/components/data-table/toolbar-well";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { FILTER_TOGGLE_ITEM } from "@/lib/theme/filter-toggle";
 
 // Two searches on purpose: the text box filters what is loaded; the reference
 // lookup queries the server, since the entry may be older than the loaded lines.
@@ -29,13 +31,24 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
   const [search, setSearch] = useState("");
+  // API failures and failed server commands are different problems for different people.
+  const [kind, setKind] = useState("all");
+  const kindOf = (group) => (group.kind === "operation" ? "operation" : "api");
+  const counts = useMemo(
+    () => ({
+      all: groups.length,
+      api: groups.filter((group) => kindOf(group) === "api").length,
+      operation: groups.filter((group) => kindOf(group) === "operation").length,
+    }),
+    [groups],
+  );
 
   /* With no entries, search and size have nothing to act on; Refresh stays. */
   const hasEntries = groups.length > 0;
 
   const visible = useMemo(
-    () => groups.filter((group) => groupMatches(group, search)),
-    [groups, search],
+    () => groups.filter((group) => (kind === "all" || kindOf(group) === kind) && groupMatches(group, search)),
+    [groups, search, kind],
   );
 
   return (
@@ -81,6 +94,23 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
         </div>
       </div>
 
+      {/* Only when both kinds are present; one kind would make a filter of one option. */}
+      {counts.api && counts.operation ? (
+        <ToggleGroup
+          type="single"
+          value={kind}
+          onValueChange={(next) => next && setKind(next)}
+          className="flex-wrap gap-1"
+          aria-label={t("kind.label")}
+        >
+          {["all", "api", "operation"].map((value) => (
+            <ToggleGroupItem key={value} value={value} className={FILTER_TOGGLE_ITEM}>
+              {t(`kind.${value}`, { count: counts[value] })}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      ) : null}
+
       {/* Say the list is cut short, or the oldest entry reads as the first. */}
       {truncated ? (
         <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
@@ -101,15 +131,15 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
           title={t("noMatchesTitle")}
           description={t("noMatchesDescription")}
           action={
-            search ? (
-              <Button variant="outline" onClick={() => setSearch("")}>
+            search || kind !== "all" ? (
+              <Button variant="outline" onClick={() => { setSearch(""); setKind("all"); }}>
                 {tc("clearFilters")}
               </Button>
             ) : null
           }
         />
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
           {visible.map((group) => (
             <ErrorGroupRow key={group.key} group={group} now={now} />
           ))}

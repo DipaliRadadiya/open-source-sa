@@ -462,7 +462,6 @@
       "filteredDesc": "कोई अलग खोज शब्द आज़माएं।",
       "clear": "खोज साफ़ करें"
     },
-    "permissionCount": "{count, plural, one {# अनुमति} other {# अनुमतियां}}",
     "columns": {
       "name": "नाम",
       "description": "विवरण",
@@ -488,7 +487,6 @@
       "permissions": "अनुमतियाँ",
       "permissionsHint": "चुनें कि यह भूमिका पैनल में किस तक पहुँच सकती है।",
       "permission": "अनुमति",
-      "enabledCount": "{total} में से {count} सक्षम",
       "view": "देखें",
       "manage": "प्रबंधित करें",
       "selectAll": "सभी अनुमतियाँ",
@@ -548,7 +546,8 @@
       "submitCreate": "भूमिका बनाएं",
       "submitEdit": "बदलाव सहेजें",
       "saving": "सहेजा जा रहा है…",
-      "cancel": "रद्द करें"
+      "cancel": "रद्द करें",
+      "groupCount": "{total} में से {view} देखें · {manage} प्रबंधित करें"
     },
     "delete": {
       "title": "भूमिका हटाएं?",
@@ -572,7 +571,8 @@
         "name": "प्रशासक",
         "description": "हर अनुमति तक पूरी पहुँच। सिस्टम द्वारा प्रबंधित।"
       }
-    }
+    },
+    "accessCount": "{view} देखें · {manage} प्रबंधित करें"
   },
   "account": {
     "title": "खाता",
@@ -6539,7 +6539,13 @@
     "referenceInvalid": "यह संदर्भ जैसा नहीं लगता। त्रुटि संदेश से पूरा टेक्स्ट कॉपी करें।",
     "referenceNotFoundTitle": "उस संदर्भ वाली कोई विफलता नहीं मिली",
     "referenceNotFoundDescription": "लॉग में कुछ भी मेल नहीं खाता। जाँचें कि संदर्भ पूरा कॉपी हुआ है और वह इसी सर्वर से आया है।",
-    "referenceEmpty": "पहले एरर संदेश से रेफ़रेंस पेस्ट करें।"
+    "referenceEmpty": "पहले एरर संदेश से रेफ़रेंस पेस्ट करें।",
+    "kind": {
+      "label": "दिखाई जाने वाली त्रुटियाँ",
+      "all": "सभी ({count})",
+      "api": "API त्रुटियाँ ({count})",
+      "operation": "सर्वर कमांड ({count})"
+    }
   },
   "setup": {
     "title": "अपना सर्वर सेट करें",

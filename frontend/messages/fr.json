@@ -462,7 +462,6 @@
       "filteredDesc": "Essayez un autre terme de recherche.",
       "clear": "Effacer la recherche"
     },
-    "permissionCount": "{count, plural, one {# autorisation} other {# autorisations}}",
     "columns": {
       "name": "Nom",
       "description": "Description",
@@ -488,7 +487,6 @@
       "permissions": "Autorisations",
       "permissionsHint": "Choisissez ce que ce rôle peut accéder dans le panneau.",
       "permission": "Autorisation",
-      "enabledCount": "{count} sur {total} activées",
       "view": "Voir",
       "manage": "Gérer",
       "selectAll": "Toutes les autorisations",
@@ -548,7 +546,8 @@
       "submitCreate": "Créer le rôle",
       "submitEdit": "Enregistrer les modifications",
       "saving": "Enregistrement…",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "groupCount": "{view} sur {total} voir · {manage} gérer"
     },
     "delete": {
       "title": "Supprimer le rôle ?",
@@ -572,7 +571,8 @@
         "name": "Administrateur",
         "description": "Accès complet à toutes les autorisations. Géré par le système."
       }
-    }
+    },
+    "accessCount": "{view} voir · {manage} gérer"
   },
   "account": {
     "title": "Compte",
@@ -6539,7 +6539,13 @@
     "referenceInvalid": "Cela ne ressemble pas à une référence. Copiez-la entièrement depuis le message d'erreur.",
     "referenceNotFoundTitle": "Aucun échec avec cette référence",
     "referenceNotFoundDescription": "Rien dans le journal ne correspond. Vérifiez que la référence a été copiée en entier et qu'elle provient bien de ce serveur.",
-    "referenceEmpty": "Collez d'abord une référence depuis le message d'erreur."
+    "referenceEmpty": "Collez d'abord une référence depuis le message d'erreur.",
+    "kind": {
+      "label": "Erreurs affichées",
+      "all": "Toutes ({count})",
+      "api": "Erreurs d'API ({count})",
+      "operation": "Commandes serveur ({count})"
+    }
   },
   "setup": {
     "title": "Configurer votre serveur",

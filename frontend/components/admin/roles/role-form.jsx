@@ -13,6 +13,7 @@ import { createRole, updateRole } from "@/lib/api/roles";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { PermissionMatrix, permKey } from "@/components/admin/roles/permission-matrix";
+import { countAccess } from "@/lib/roles/granted-count";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ function seedMatrix(role) {
 
 export function RoleForm({ mode = "create", role, catalog }) {
   const t = useTranslations("roles");
+  const tSettings = useTranslations("settings.common");
   const router = useRouter();
   const { pushAndWait } = useRefresh();
   const isEdit = mode === "edit";
@@ -64,9 +66,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
   });
 
   const permissions = catalog.permissions ?? [];
-  const enabledCount = permissions.filter(
-    (item) => (matrix[permKey(item.level, item.name)] ?? ACCESS_NONE) !== ACCESS_NONE,
-  ).length;
+  const counts = countAccess(permissions.map((item) => matrix[permKey(item.level, item.name)]));
 
   // Fingerprint of the granted permissions, to detect changes from what was loaded.
   const canonMatrix = (m) =>
@@ -156,16 +156,14 @@ export function RoleForm({ mode = "create", role, catalog }) {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-            <div className="space-y-1">
+          {/* Wraps: beside the longer view · manage badge, the hint went one word per line on a phone. */}
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2 space-y-0">
+            <div className="min-w-48 flex-1 space-y-1">
               <CardTitle>{t("form.permissions")}</CardTitle>
               <CardDescription>{t("form.permissionsHint")}</CardDescription>
             </div>
-            <Badge
-              variant={enabledCount > 0 ? "success" : "muted"}
-              className="shrink-0"
-            >
-              {t("form.enabledCount", { count: enabledCount, total: permissions.length })}
+            <Badge variant={counts.view > 0 ? "success" : "muted"} className="shrink-0">
+              {t("accessCount", counts)}
             </Badge>
           </CardHeader>
           <CardContent>
@@ -177,7 +175,10 @@ export function RoleForm({ mode = "create", role, catalog }) {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-end gap-2">
+        {/* Pinned to the bottom of the screen: below 38 permission rows, Save was three
+            screens away (Krishna, 17 Oct). */}
+        <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-2 border-t bg-background/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          {isDirty ? <p className="mr-auto text-sm text-muted-foreground">{tSettings("unsaved")}</p> : null}
           <Button
             type="button"
             variant="outline"
