@@ -93,6 +93,21 @@ DRY_RUN=0          # --dry-run
 # that path keeps working, and never printed anywhere.
 CENTRAL_TOKEN="${CENTRAL_TOKEN:-}"
 
+# Set by Central when it creates the server (2026-10-17). All optional; without
+# them the install is exactly what it was.
+#
+#   PANEL_ADMIN_USERNAME / PANEL_ADMIN_PASSWORD — the first administrator,
+#     created before the panel is reachable. Otherwise a fresh panel is open for
+#     registration and the first visitor becomes its administrator, and a
+#     server Central built has a public address before its owner opens it.
+#     The password is environment-only, never a flag: an argument is readable in
+#     `ps` by every account here for the length of the install.
+#   PROGRESS_URL — where each step is reported, signed with CENTRAL_TOKEN.
+PANEL_ADMIN_USERNAME="${PANEL_ADMIN_USERNAME:-}"
+PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
+PROGRESS_URL="${PROGRESS_URL:-}"
+PROGRESS_READY=0   # set once PROGRESS_URL has been checked
+
 # Which stack to build. Asked rather than assumed, because it decides the web
 # server — and the web server serves the panel itself, so it cannot be changed
 # from inside the panel later without the panel going down with it.
@@ -264,6 +279,8 @@ for arg in "$@"; do
         --no-ssl)   WANT_SSL=0 ;;
         --dry-run)  DRY_RUN=1 ;;
         --central-token=*) CENTRAL_TOKEN="${arg#*=}" ;;
+        --admin-username=*) PANEL_ADMIN_USERNAME="${arg#*=}" ;;
+        --progress-url=*) PROGRESS_URL="${arg#*=}" ;;
         -h|--help)
             cat <<'USAGE'
 Control panel installer
@@ -295,6 +312,12 @@ Control panel installer
                                by every account on this machine for as long as
                                the install runs, and an environment variable is
                                not.
+  --admin-username=NAME        Create the first administrator during the install,
+                               so the panel is never open for registration. The
+                               password comes from PANEL_ADMIN_PASSWORD in the
+                               environment only (12-128 characters).
+  --progress-url=URL           Report each step to this https URL, signed with
+                               CENTRAL_TOKEN (Bearer). Also PROGRESS_URL.
 USAGE
             exit 0 ;;
         # A usage mistake, not a failed install: no log to read, nothing to
@@ -312,7 +335,34 @@ done
 # port 80 is taken — leaves the user with a server that is neither what it was
 # nor what they wanted.
 
+# Central's inputs, checked before the first step reports anywhere and before
+# anything on the server changes. A bad one is a mistake in the caller, not a
+# half-built server.
+validate_central_inputs() {
+    if [[ -n "$PANEL_ADMIN_USERNAME" || -n "$PANEL_ADMIN_PASSWORD" ]]; then
+        [[ -n "$PANEL_ADMIN_USERNAME" && -n "$PANEL_ADMIN_PASSWORD" ]] \
+            || die "set both PANEL_ADMIN_USERNAME and PANEL_ADMIN_PASSWORD, or neither."
+        [[ "$PANEL_ADMIN_USERNAME" =~ ^[A-Za-z0-9_-]{3,32}$ ]] \
+            || die "the administrator username must be 3-32 letters, digits, '-' or '_'."
+        (( ${#PANEL_ADMIN_PASSWORD} >= 12 && ${#PANEL_ADMIN_PASSWORD} <= 128 )) \
+            || die "the administrator password must be 12-128 characters."
+        [[ ! "$PANEL_ADMIN_PASSWORD" =~ [[:cntrl:]] ]] \
+            || die "the administrator password cannot contain line breaks or control characters."
+    fi
+
+    if [[ -n "$PROGRESS_URL" ]]; then
+        # https only — the request carries the central token. Plain http to this
+        # machine itself is allowed, for testing.
+        [[ "$PROGRESS_URL" =~ ^https://[^[:space:]]+$ || "$PROGRESS_URL" =~ ^http://127\.0\.0\.1(:[0-9]+)?/[^[:space:]]*$ ]] \
+            || die "PROGRESS_URL must be an https:// address."
+        [[ -n "$CENTRAL_TOKEN" ]] \
+            || die "PROGRESS_URL needs CENTRAL_TOKEN, which signs every report."
+        PROGRESS_READY=1
+    fi
+}
+
 preflight() {
+    validate_central_inputs
     step "Checking this server"
 
     [[ $EUID -eq 0 ]] || die "run this as root:  sudo bash install.sh"
@@ -1723,6 +1773,18 @@ setup_backend() {
     ok "application key set"
 
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "${PANEL_PHP_BIN}"
+
+    # The first administrator, the moment there is a table to put it in — and
+    # before the frontend is built and the services start, so registration is
+    # closed before anyone can open the panel. The password goes on STDIN, as
+    # the central token does below, and is dropped as soon as it is used.
+    if [[ -n "$PANEL_ADMIN_USERNAME" ]]; then
+        run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:create-admin --username="$3"' \
+            -- "$dir" "${PANEL_PHP_BIN}" "$PANEL_ADMIN_USERNAME" <<<"$PANEL_ADMIN_PASSWORD"
+        PANEL_ADMIN_PASSWORD=""
+        unset PANEL_ADMIN_PASSWORD
+        ok "administrator ${PANEL_ADMIN_USERNAME} ready — registration is closed"
+    fi
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "${PANEL_PHP_BIN}"
     ok "database migrated and permissions seeded"
 
@@ -3890,7 +3952,111 @@ installed_version() {
 # report, so a full disk or a missing tool must neither stop the install nor
 # re-enter the ERR trap. The file is replaced whole (a temp file, then a
 # rename), so a login never reads half of one.
+# A JSON string literal. Only what can appear in a step title, a reason or a
+# URL needs escaping: backslash and quote, and any control character, which
+# becomes a space (one_line has already flattened newlines).
+json_str() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="$(printf '%s' "$s" | tr '[:cntrl:]' ' ')"
+    printf '"%s"' "$s"
+}
+
+# Report this step to Central (PROGRESS_URL), signed with the central token.
+#
+# The same facts save_install_state writes for the SSH login screen, so the two
+# can never disagree. Never the administrator password.
+#
+# Best effort and never fatal: Central being down must not fail or stall an
+# install. A step is sent in the background — a slow Central cannot slow the
+# install — while "installed" and "failed" are sent before returning, because
+# they are the last thing this script does and a background request would die
+# with it (the install's unit stops its whole process group). `seq` lets Central
+# drop a report that arrives after a later one.
+#
+# The token goes in a 0600 header file read with `curl -H @file`, never on the
+# command line, for the reason the token itself is read from the environment.
+send_progress() {
+    (( PROGRESS_READY )) || return 0
+    (( DRY_RUN )) && return 0
+
+    local state="$1" reason="${2:-}"
+    local dir
+    dir="$(mktemp -d "${TMPDIR:-/tmp}/panel-progress.XXXXXX" 2>/dev/null)" || return 0  # 0700
+
+    (
+        trap - ERR
+        set +eu
+        umask 077
+        printf 'Authorization: Bearer %s\n' "$CENTRAL_TOKEN" >"${dir}/header"
+        {
+            printf '{"state":%s' "$(json_str "$state")"
+            printf ',"seq":%s' "$(date +%s%3N)"
+            printf ',"step":%s,"total":%s' "${STEP_NO:-0}" "${STEP_TOTAL:-0}"
+            printf ',"title":%s' "$(json_str "$(one_line "$CURRENT_STEP")")"
+            printf ',"started_at":%s,"updated_at":%s' "${INSTALL_STARTED:-0}" "$(date +%s)"
+            if [[ "$state" == "failed" ]]; then
+                printf ',"reason":%s,"log_file":%s' "$(json_str "$(one_line "$reason")")" "$(json_str "$LOG_FILE")"
+            fi
+            if [[ "$state" == "installed" ]]; then
+                printf ',"name":%s' "$(json_str "$(one_line "$(branding_name)")")"
+                printf ',"panel_url":%s' "$(json_str "${SCHEME}://${PANEL_HOST}")"
+                printf ',"api_url":%s' "$(json_str "${SCHEME}://${API_HOST}")"
+                printf ',"stack":%s,"web_server":%s' "$(json_str "$STACK")" "$(json_str "$WEB_SERVER")"
+                printf ',"version":%s' "$(json_str "$(one_line "$(installed_version)")")"
+                printf ',"admin_username":%s' "$(json_str "$PANEL_ADMIN_USERNAME")"
+            fi
+            printf '}\n'
+        } >"${dir}/body"
+
+        curl -fsS -m 5 --retry 2 --retry-delay 1 -X POST \
+            -H @"${dir}/header" -H 'Content-Type: application/json' -H 'Accept: application/json' \
+            --data-binary @"${dir}/body" "$PROGRESS_URL" >/dev/null 2>&1
+        rm -rf "$dir"
+    ) >/dev/null 2>&1 &
+
+    local pid=$!
+    if [[ "$state" == "installed" || "$state" == "failed" ]]; then
+        wait "$pid" 2>/dev/null || true
+    fi
+    return 0
+}
+
+# The server's own note of what was installed, for whoever looks after it:
+# /root/panel-details.txt, root only. Addresses, stack, version and the
+# administrator's username — not the password, which is the caller's to keep.
+write_details_file() {
+    (( DRY_RUN )) && return 0
+
+    local file=/root/panel-details.txt tmp
+    tmp="$(mktemp /root/.panel-details.XXXXXX 2>/dev/null)" || { warn "could not write ${file}"; return 0; }
+
+    if {
+        printf '# %s — written by install.sh on %s\n' "$(one_line "$(branding_name)")" "$(date -u '+%Y-%m-%d %H:%M UTC')"
+        printf 'Panel URL:      %s://%s\n' "$SCHEME" "$PANEL_HOST"
+        printf 'API URL:        %s://%s\n' "$SCHEME" "$API_HOST"
+        printf 'Stack:          %s\n' "$STACK"
+        printf 'Web server:     %s\n' "$WEB_SERVER"
+        printf 'Panel version:  %s\n' "$(one_line "$(installed_version)")"
+        printf 'PHP (panel):    %s\n' "$PANEL_PHP_BIN"
+        printf 'Files:          %s\n' "$APP_DIR"
+        printf 'Install log:    %s\n' "$LOG_FILE"
+        if [[ -n "$PANEL_ADMIN_USERNAME" ]]; then
+            printf 'Administrator:  %s (created at install; the password is not stored here)\n' "$PANEL_ADMIN_USERNAME"
+        else
+            printf 'Administrator:  none created at install — the first account registered in the panel becomes it\n'
+        fi
+    } >"$tmp" && chmod 0600 "$tmp" && mv -f "$tmp" "$file"; then
+        ok "details saved to ${file} (readable by root only)"
+    else
+        rm -f "$tmp"
+        warn "could not write ${file}"
+    fi
+}
+
 save_install_state() {
+    send_progress "$@"
     (( LOGIN_STATUS )) || return 0
 
     (
@@ -4199,6 +4365,7 @@ finish() {
     fi
 
     save_install_state installed
+    write_details_file
 
     local scheme="$SCHEME"
 
