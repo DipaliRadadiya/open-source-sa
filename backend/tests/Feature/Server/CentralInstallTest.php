@@ -169,6 +169,33 @@ describe('install.sh', function () {
             ->and($fn)->toContain('umask 077')
             ->and(preg_match('/curl[^\n]*Authorization/', $fn))->toBe(0);
     });
+
+    it('keeps needrestart from restarting the install halfway through', function () {
+        // On a fresh 24.04 server needrestart restarted the install's own unit
+        // three times after apt upgraded libraries; each restart began again
+        // at step one (2026-10-17). Exported at the top level, so every apt
+        // the script runs inherits it.
+        $top = substr(installerCode(), 0, (int) strpos(installerCode(), 'main() {'));
+
+        expect($top)->toMatch('/^export NEEDRESTART_SUSPEND=1$/m');
+    });
+
+    it('gives every report from one run the same started_at, from the first one on', function () {
+        $code = installerCode();
+
+        expect($code)->toMatch('/^INSTALL_STARTED="\$\(date \+%s\)"$/m')
+            ->and(substr_count($code, 'INSTALL_STARTED='))->toBe(1);
+    });
+
+    it('sends seq in milliseconds on every Ubuntu, not with %3N', function () {
+        // Ubuntu 26.04's date (uutils) ignores the width in %3N and prints all
+        // nine digits — seen on a fresh 26.04 install, 2026-10-17. A number that
+        // size cannot be held exactly by a JavaScript client.
+        $code = implode("\n", array_filter(explode("\n", installerFn('send_progress')), fn ($l) => ! str_starts_with(ltrim($l), '#')));
+
+        expect($code)->not->toContain('%3N')
+            ->and($code)->toContain('$(( $(date +%s%N) / 1000000 ))');
+    });
 });
 
 /*

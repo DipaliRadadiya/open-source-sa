@@ -165,7 +165,19 @@ CURRENT_STEP="starting up"
 # made: a refusal in preflight changed nothing, so there is nothing to report.
 LOGIN_STATUS=0
 STEP_TOTAL=0
-INSTALL_STARTED=0
+# When this run began — one value for every report it makes, so a reader can
+# tell this run's reports from an earlier run's (Central's progress, the SSH
+# login status). Set here, not when the login status is prepared a few steps
+# in: the first reports went out with 0.
+INSTALL_STARTED="$(date +%s)"
+
+# needrestart (Ubuntu 24.04 and later) runs after every apt transaction and
+# restarts each service whose libraries changed — including the systemd unit
+# an automated install runs in, which starts the whole install again from step
+# one. Seen three times in one install on a fresh 24.04 server (2026-10-17).
+# Its apt hook stands aside while this is set; this script's own apt runs
+# inherit it, and nothing else on the server is affected.
+export NEEDRESTART_SUSPEND=1
 say()  { printf '%s\n' "$*"; }
 step() {
     STEP_NO=$((STEP_NO + 1)); CURRENT_STEP="$*"
@@ -3884,7 +3896,6 @@ start_login_status() {
     fi
 
     STEP_TOTAL="$(install_step_total)"
-    INSTALL_STARTED="$(date +%s)"
 
     if ! { mkdir -p "$INSTALL_STATE_DIR" && chmod 0755 "$INSTALL_STATE_DIR" && write_login_script; } >>"$LOG_FILE" 2>&1; then
         warn "could not set up the SSH login status, so logins will not show this install's progress"
@@ -3992,7 +4003,10 @@ send_progress() {
         printf 'Authorization: Bearer %s\n' "$CENTRAL_TOKEN" >"${dir}/header"
         {
             printf '{"state":%s' "$(json_str "$state")"
-            printf ',"seq":%s' "$(date +%s%3N)"
+            # Milliseconds by arithmetic, not `%3N`: Ubuntu 26.04's date
+            # (uutils) ignores the width and prints all nine digits, a number
+            # too large for a JavaScript client to hold exactly.
+            printf ',"seq":%s' "$(( $(date +%s%N) / 1000000 ))"
             printf ',"step":%s,"total":%s' "${STEP_NO:-0}" "${STEP_TOTAL:-0}"
             printf ',"title":%s' "$(json_str "$(one_line "$CURRENT_STEP")")"
             printf ',"started_at":%s,"updated_at":%s' "${INSTALL_STARTED:-0}" "$(date +%s)"
