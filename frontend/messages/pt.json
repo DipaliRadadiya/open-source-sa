@@ -6770,7 +6770,7 @@
     "delete": {
       "titleNamed": "Excluir {name}?",
       "description": "Ele é removido do painel. Nada é apagado do armazenamento em si.",
-      "warning": "Um destino só pode ser excluído quando nenhuma aplicação faz backup nele e ele não guarda mais nenhum backup.",
+      "warning": "Um destino só pode ser excluído quando nenhuma aplicação ou banco de dados faz backup nele e ele não guarda mais nenhum backup.",
       "cancel": "Cancelar",
       "confirm": "Excluir destino",
       "removed": "Destino excluído.",

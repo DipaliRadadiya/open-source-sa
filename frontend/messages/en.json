@@ -6770,7 +6770,7 @@
     "delete": {
       "titleNamed": "Delete {name}?",
       "description": "It is removed from the panel. Nothing is deleted from the storage itself.",
-      "warning": "A destination can only be deleted when no application backs up to it and no backups are stored in it any more.",
+      "warning": "A destination can only be deleted when no application or database backs up to it and no backups are stored in it any more.",
       "cancel": "Cancel",
       "confirm": "Delete destination",
       "removed": "Destination deleted.",

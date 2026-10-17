@@ -6770,7 +6770,7 @@
     "delete": {
       "titleNamed": "Supprimer {name} ?",
       "description": "Elle est retirée du panneau. Rien n’est supprimé du stockage lui-même.",
-      "warning": "Une destination ne peut être supprimée que si aucune application n'y sauvegarde et qu'elle ne contient plus aucune sauvegarde.",
+      "warning": "Une destination ne peut être supprimée que si aucune application ni base de données n'y sauvegarde et qu'elle ne contient plus aucune sauvegarde.",
       "cancel": "Annuler",
       "confirm": "Supprimer la destination",
       "removed": "Destination supprimée.",

@@ -6770,7 +6770,7 @@
     "delete": {
       "titleNamed": "¿Eliminar {name}?",
       "description": "Se quita del panel. No se borra nada del almacenamiento en sí.",
-      "warning": "Un destino solo se puede eliminar cuando ninguna aplicación hace copias en él y ya no guarda ninguna copia.",
+      "warning": "Un destino solo se puede eliminar cuando ninguna aplicación ni base de datos hace copias en él y ya no guarda ninguna copia.",
       "cancel": "Cancelar",
       "confirm": "Eliminar destino",
       "removed": "Destino eliminado.",

@@ -6770,7 +6770,7 @@
     "delete": {
       "titleNamed": "{name} löschen?",
       "description": "Es wird aus dem Panel entfernt. Im Speicher selbst wird nichts gelöscht.",
-      "warning": "Ein Ziel lässt sich nur löschen, wenn keine Anwendung mehr dorthin sichert und keine Backups mehr darin liegen.",
+      "warning": "Ein Ziel lässt sich nur löschen, wenn keine Anwendung und keine Datenbank mehr dorthin sichert und keine Backups mehr darin liegen.",
       "cancel": "Abbrechen",
       "confirm": "Ziel löschen",
       "removed": "Ziel gelöscht.",
