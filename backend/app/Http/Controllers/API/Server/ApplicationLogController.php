@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationLogManager;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -41,11 +42,26 @@ class ApplicationLogController extends Controller
             abort(404, __('app_log.errors.unknown_source'));
         }
 
+        $from = $request->validated('from');
+
+        // A line number means a line in a file. The journal and Docker are
+        // streams with no stable numbering to start from.
+        if ($from !== null && $source['kind'] !== 'file') {
+            throw ValidationException::withMessages(['from' => [__('app_log.errors.range_unsupported')]]);
+        }
+
+        // IP, status, method and URL exist only on an access-log line.
+        if ($request->hasFields() && ! $logs->supportsFieldFilters($application, $key)) {
+            throw ValidationException::withMessages(['log' => [__('app_log.errors.fields_unsupported')]]);
+        }
+
         $content = $logs->read(
             $application,
             $key,
             (int) ($request->validated('lines') ?? ApplicationLogManager::DEFAULT_LINES),
             $request->validated('grep'),
+            $from === null ? null : (int) $from,
+            $request->fields(),
         );
 
         if ($content === null) {
@@ -59,6 +75,7 @@ class ApplicationLogController extends Controller
                     'kind' => $source['kind'],
                     'exists' => false,
                     'lines' => [],
+                    'first_line' => null,
                     'truncated' => false,
                     // Same shape whether or not there was anything to read, so
                     // the client never has to check for the field's absence.

@@ -3230,22 +3230,29 @@ Each source is `{key, label, kind, exists, size, modified}` (size and modified a
 ### GET `/applications/{application}/logs/{key}`
 **Permission:** `app_log` (view) | **Throttle:** 120/min
 
-Read a log source — the **last** N lines of it.
+Read a log source — the **last** N lines of it, or N lines **from a given line** on.
 
 **Query:** `?lines=200&grep=error` (lines: default 200, max 5000; grep: case-insensitive literal filter)
+
+v7's advanced logs (2026-10-17), all optional and combinable with `grep`:
+- `from` — start at this line (1 = the first line of the file) and read forwards: `?from=1000&lines=500` is lines 1000–1499. Log files only; `422 errors.from` for a container's output. Next page: `from + lines`.
+- `ip` (exact client address), `status` (`404`, or a class: `4xx`/`5xx`), `method` (`GET`, `POST`, …, any case), `url` (case-insensitive contains). **Access log only** (and OpenLiteSpeed's firewall log, which is its access log) — `422 errors.log` on any other source. Matched on the parsed fields, unlike v7's substring search: `status=404` does not match a 404-byte response or `/404` in a URL, and `ip=1.2.3.4` does not match `1.2.3.45`. A line not in the combined log format never matches.
+- With any filter, the search covers 5,000 lines: the last 5,000, or 5,000 from `from` — `search_window_capped` says there is more beyond them, and `from` is how to look there.
 
 **Response `200`:**
 ```json
 {"log": {
   "key": "access", "label": "Access Log", "kind": "file", "exists": true,
   "lines": ["192.168.1.1 - - [29/Jul/2026:11:00:00 +0000] \"GET / HTTP/1.1\" 200 1234"],
+  "first_line": null,
   "truncated": true,
   "search_window_capped": false
 }}
 ```
 
+- **`first_line`** — the line number of the read's start for a `from` read (the lines themselves are the filtered ones, so they are not numbered individually); `null` for a read of the last lines.
 - **`exists: false`** — the file has not been written yet (a never-visited site has no access log). Not an error, and not the same as a failed read.
-- **`truncated: true`** — there is more log than you are being shown, either because it continues above the window or because more lines matched than `lines` asked for.
+- **`truncated: true`** — there is more log than you are being shown, either because it continues above the window (below it, for a `from` read) or because more lines matched than `lines` asked for.
 - **`search_window_capped: true`** — only meaningful with `grep`. A search only ever covers the last **5,000** lines, so this says the match may exist earlier in the file and was not looked at. **Surface it.** Without it, an empty result reads as *"this is not in your log"* when the truthful answer is *"I only looked at the end of it"*.
 
 There is **no cursor and no `?after=`**. This reference described cursor-based tailing that was never implemented — poll the endpoint and diff client-side if you need a live tail.

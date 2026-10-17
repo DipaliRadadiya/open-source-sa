@@ -91,11 +91,14 @@ class ApplicationLogManager
     }
 
     /**
-     * Read one source: the last N lines, optionally filtered.
+     * Read one source: the last N lines, or N lines from line `from` on,
+     * optionally filtered — by text, and on an access log by IP, status,
+     * method and URL (v7's advanced logs).
      *
-     * @return array{lines: array<int, string>, truncated: bool, search_window_capped: bool}|null
+     * @param  array<string, string|null>  $fields  ip, status, method, url
+     * @return array{lines: array<int, string>, first_line: int|null, truncated: bool, search_window_capped: bool}|null
      */
-    public function read(Application $application, string $key, int $lines, ?string $filter = null): ?array
+    public function read(Application $application, string $key, int $lines, ?string $filter = null, ?int $from = null, array $fields = []): ?array
     {
         $source = $this->find($application, $key);
 
@@ -105,12 +108,17 @@ class ApplicationLogManager
 
         $lines = max(1, min($lines, self::MAX_LINES));
         $marker = $source['marker'] ?? null;
-        $filtering = ($filter !== null && $filter !== '') || $marker !== null;
+        $fields = array_filter($fields, fn ($value) => $value !== null && $value !== '');
+        $filtering = ($filter !== null && $filter !== '') || $marker !== null || $fields !== [];
 
         // Read more than asked for when filtering, or a filter over the last
         // 200 lines finds nothing on a busy site and the screen looks broken
         // rather than merely empty.
         $window = $filtering ? self::MAX_LINES : $lines;
+
+        if ($from !== null) {
+            return $this->readFrom($application, $source, $from, $lines, $window, $filter, $marker, $fields);
+        }
 
         // One line beyond the window, purely to find out whether there is
         // anything above it. `tail -n 200` can never return more than 200
@@ -142,21 +150,15 @@ class ApplicationLogManager
             array_shift($all);
         }
 
-        if ($marker !== null) {
-            $all = array_values(array_filter($all, fn (string $line): bool => str_contains($line, $marker)));
-        }
-
-        if ($filter !== null && $filter !== '') {
-            // Literal, case-insensitive. Not a regex: a user-supplied pattern
-            // over a large file is a denial of service waiting to happen, and
-            // nobody searching a log wants regex semantics by surprise.
-            $all = array_values(array_filter($all, fn (string $line): bool => stripos($line, $filter) !== false));
-        }
+        $all = $this->applyFilters($all, $filter, $marker, $fields);
 
         $trimmed = count($all) > $lines;
 
         return [
             'lines' => $trimmed ? array_slice($all, -$lines) : $all,
+
+            // Line numbers are known only for a read that started at one.
+            'first_line' => null,
 
             // "There is more log than you are seeing" — either because the
             // source runs on above the window, or because more lines matched
@@ -171,6 +173,155 @@ class ApplicationLogManager
             // boolean cannot say which of them happened.
             'search_window_capped' => $filtering && $hasMore,
         ];
+    }
+
+    /**
+     * From line N onwards (v7's "specific lines"), the same window as a tail
+     * read: `lines` lines, or the first MAX_LINES when filtering.
+     *
+     * Streamed with `tail -n +N` and abandoned as soon as the window is full:
+     * a range near the top of a gigabyte access log must not read — or hold —
+     * the rest of it. `tail` because it is already on the panel's privilege
+     * list; a range has no reason to need `sed` there too.
+     *
+     * Files only. The journal and Docker have no stable line numbers to start
+     * from — the caller refuses those before this is reached.
+     *
+     * @param  array<string, string>  $fields
+     * @param  array{key: string, kind: string, path: string}  $source
+     * @return array{lines: array<int, string>, first_line: int, truncated: bool, search_window_capped: bool}|null
+     */
+    private function readFrom(Application $application, array $source, int $from, int $lines, int $window, ?string $filter, ?string $marker, array $fields): ?array
+    {
+        $from = max(1, $from);
+        $read = [];
+        $buffer = '';
+        $chunks = $this->serverOps->stream(['tail', '-n', '+'.$from, $source['path']], $this->context($application, 'app_log_range'), idleSeconds: 30);
+
+        foreach ($chunks as $chunk) {
+            $buffer .= $chunk;
+
+            while (($newline = strpos($buffer, "\n")) !== false) {
+                $read[] = substr($buffer, 0, $newline);
+                $buffer = substr($buffer, $newline + 1);
+            }
+
+            // One beyond the window, to know whether the file runs on.
+            if (count($read) > $window) {
+                break;
+            }
+        }
+
+        // Dropping the generator closes its pipe, and `tail` stops on its next
+        // write (StreamDownloadTest proves it).
+        unset($chunks);
+
+        if ($buffer !== '' && count($read) <= $window) {
+            $read[] = $buffer;
+        }
+
+        if ($read === [] && ! $this->fileExists($application, $source['path'])) {
+            return null;
+        }
+
+        $hasMore = count($read) > $window;
+        $all = $this->split(implode("\n", array_slice($read, 0, $window)));
+        $filtering = ($filter !== null && $filter !== '') || $marker !== null || $fields !== [];
+        $all = $this->applyFilters($all, $filter, $marker, $fields);
+        $trimmed = count($all) > $lines;
+
+        return [
+            // The first lines from `from` on — reading forwards, the start of
+            // the range is what was asked for.
+            'lines' => $trimmed ? array_slice($all, 0, $lines) : $all,
+            'first_line' => $from,
+            'truncated' => $hasMore || $trimmed,
+            'search_window_capped' => $filtering && $hasMore,
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $lines
+     * @param  array<string, string>  $fields
+     * @return array<int, string>
+     */
+    private function applyFilters(array $lines, ?string $filter, ?string $marker, array $fields): array
+    {
+        if ($marker !== null) {
+            $lines = array_values(array_filter($lines, fn (string $line): bool => str_contains($line, $marker)));
+        }
+
+        if ($filter !== null && $filter !== '') {
+            // Literal, case-insensitive. Not a regex: a user-supplied pattern
+            // over a large file is a denial of service waiting to happen, and
+            // nobody searching a log wants regex semantics by surprise.
+            $lines = array_values(array_filter($lines, fn (string $line): bool => stripos($line, $filter) !== false));
+        }
+
+        if ($fields !== []) {
+            $lines = array_values(array_filter($lines, fn (string $line): bool => $this->matchesFields($line, $fields)));
+        }
+
+        return $lines;
+    }
+
+    /**
+     * One access-log line against v7's field filters: client IP, status,
+     * method, URL.
+     *
+     * Parsed, not substring-matched as v7 did: "404" as a substring also
+     * matches a URL with 404 in it or a 404-byte response, and an IP matches
+     * any longer IP it is the start of. A line that is not in the combined
+     * format nginx, Apache and OpenLiteSpeed all write does not match at all.
+     *
+     * @param  array<string, string>  $fields
+     */
+    private function matchesFields(string $line, array $fields): bool
+    {
+        if (preg_match('/^(\S+) \S+ \S+ \[[^\]]*\] "(\S+) (\S+)[^"]*" (\d{3}) /', $line, $m) !== 1) {
+            return false;
+        }
+
+        [, $ip, $method, $url, $status] = $m;
+
+        if (isset($fields['ip']) && $ip !== $fields['ip']) {
+            return false;
+        }
+
+        if (isset($fields['method']) && strcasecmp($method, $fields['method']) !== 0) {
+            return false;
+        }
+
+        if (isset($fields['url']) && stripos($url, $fields['url']) === false) {
+            return false;
+        }
+
+        if (isset($fields['status'])) {
+            $wanted = strtolower($fields['status']);
+
+            // `404` exactly, or a class such as `5xx`.
+            $matches = str_ends_with($wanted, 'xx') ? $status[0] === $wanted[0] : $status === $wanted;
+
+            if (! $matches) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether a source is an access log in the combined format, which the
+     * field filters need. OpenLiteSpeed's firewall log is its access log with
+     * a marker, so it qualifies; nginx and Apache's are ModSecurity's own
+     * format, and an error log has no status or method at all.
+     */
+    public function supportsFieldFilters(Application $application, string $key): bool
+    {
+        $source = $this->find($application, $key);
+
+        return $source !== null && $source['kind'] === 'file'
+            && ($key === 'access' || ($source['marker'] ?? null) !== null);
     }
 
     /**

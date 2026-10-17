@@ -176,3 +176,28 @@ it('does not throw when a command cannot be started at all', function () {
         ->and($result->answered)->toBeFalse()
         ->and($result->reference)->not->toBe('');
 });
+
+it('stops the command when the reader stops reading early', function () {
+    silenceServerOps();
+
+    // A log range read drops the stream once it has its lines (2026-10-17).
+    // `yes` never ends on its own: what stops it is the generator's pipes
+    // closing when it is dropped, so `yes` dies on its next write. Nothing in
+    // stream() does this explicitly — this test is what says it happens.
+    $token = 'stream-abandon-'.bin2hex(random_bytes(4));
+    $stream = app(ServerOps::class)->stream(['yes', $token], idleSeconds: 5);
+
+    foreach ($stream as $chunk) {
+        expect($chunk)->toContain($token);
+
+        break;
+    }
+
+    $started = microtime(true);
+    unset($stream);
+    usleep(300_000);
+
+    expect(microtime(true) - $started)->toBeLessThan(3.0)
+        // `[y]es` so pgrep does not find the shell running pgrep itself.
+        ->and(trim((string) shell_exec('pgrep -f '.escapeshellarg('[y]es '.$token))))->toBe('');
+});

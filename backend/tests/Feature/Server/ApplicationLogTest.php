@@ -521,3 +521,140 @@ describe('downloading a whole log (LOG-dl)', function () {
         $this->actingAs(User::factory()->create())->getJson(logUrl('/access/download'))->assertForbidden();
     });
 });
+
+describe('v7\'s advanced logs: a line range and field filters', function () {
+    beforeEach(function () {
+        $access = [
+            '203.0.113.5 - - [17/Oct/2026:10:00:01 +0000] "GET / HTTP/1.1" 200 512 "-" "curl"',
+            '198.51.100.7 - - [17/Oct/2026:10:00:02 +0000] "POST /wp-login.php HTTP/1.1" 403 404 "-" "bot"',
+            '203.0.113.5 - - [17/Oct/2026:10:00:03 +0000] "GET /missing-404 HTTP/1.1" 404 128 "-" "curl"',
+            '203.0.113.55 - - [17/Oct/2026:10:00:04 +0000] "GET /api/orders HTTP/2.0" 502 0 "-" "app"',
+            'a line that is not in the combined format',
+            '203.0.113.5 - - [17/Oct/2026:10:00:05 +0000] "DELETE /api/orders/9 HTTP/1.1" 500 64 "-" "app"',
+        ];
+        $this->files['/home/logowner/logged-site/logs/access.log'] = implode("\n", $access)."\n";
+
+        FakeCommandPipe::reset();
+        // `tail -n +N file`: from line N to the end.
+        FakeCommandPipe::$resolver = function (array $command): array {
+            $path = (string) end($command);
+            if (! array_key_exists($path, test()->files)) {
+                return ['', 1];
+            }
+            $from = (int) ltrim($command[2], '+');
+            $lines = explode("\n", rtrim(test()->files[$path], "\n"));
+
+            return [implode("\n", array_slice($lines, $from - 1))."\n", 0];
+        };
+        app()->instance(CommandPipe::class, new FakeCommandPipe);
+    });
+
+    it('reads from a given line, numbered from the top of the file', function () {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?from=2&lines=2'))
+            ->assertOk()
+            ->assertJsonPath('log.first_line', 2)
+            ->assertJsonPath('log.truncated', true)
+            ->assertJsonCount(2, 'log.lines')
+            ->assertJsonPath('log.lines.0', fn ($line) => str_contains($line, 'POST /wp-login.php'))
+            ->assertJsonPath('log.lines.1', fn ($line) => str_contains($line, 'GET /missing-404'));
+
+        expect(implode(' ', FakeCommandPipe::$opened))->toContain('tail -n +2 /home/logowner/logged-site/logs/access.log');
+    });
+
+    it('says when a range reaches the end of the file', function () {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?from=5&lines=10'))
+            ->assertOk()
+            ->assertJsonPath('log.truncated', false)
+            ->assertJsonCount(2, 'log.lines');
+    });
+
+    it('filters by IP exactly — not every address that starts with it', function () {
+        fakeLogs();
+
+        $lines = $this->actingAs($this->admin)->getJson(logUrl('/access?ip=203.0.113.5'))->assertOk()->json('log.lines');
+
+        expect($lines)->toHaveCount(3)
+            ->and(implode("\n", $lines))->not->toContain('203.0.113.55');
+    });
+
+    it('filters by status — the status, not a 404 anywhere in the line', function () {
+        fakeLogs();
+
+        $lines = $this->actingAs($this->admin)->getJson(logUrl('/access?status=404'))->assertOk()->json('log.lines');
+
+        // The 403 line has "404" as its byte count; the 404 line also has it in the URL.
+        expect($lines)->toHaveCount(1)->and($lines[0])->toContain('GET /missing-404');
+    });
+
+    it('filters by a status class', function () {
+        fakeLogs();
+
+        $lines = $this->actingAs($this->admin)->getJson(logUrl('/access?status=5xx'))->assertOk()->json('log.lines');
+
+        expect($lines)->toHaveCount(2);
+    });
+
+    it('combines method, URL and IP, and with the text search', function () {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?method=delete&url=/api/orders&ip=203.0.113.5'))
+            ->assertOk()->assertJsonCount(1, 'log.lines')
+            ->assertJsonPath('log.lines.0', fn ($line) => str_contains($line, 'DELETE /api/orders/9'));
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?url=/api/orders&grep=app'))
+            ->assertOk()->assertJsonCount(2, 'log.lines');
+    });
+
+    it('applies the filters inside a range too', function () {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?from=3&status=404'))
+            ->assertOk()
+            ->assertJsonPath('log.first_line', 3)
+            ->assertJsonCount(1, 'log.lines');
+    });
+
+    it('refuses field filters on a log that has no such fields', function () {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/error?status=500'))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.log.0', __('app_log.errors.fields_unsupported'));
+    });
+
+    it('validates the filters', function (string $query, string $field) {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?'.$query))
+            ->assertStatus(422)->assertJsonValidationErrors($field);
+    })->with([
+        ['from=0', 'from'],
+        ['ip=not-an-ip', 'ip'],
+        ['status=600', 'status'],
+        ['status=4x', 'status'],
+        ['method=TRACE', 'method'],
+    ]);
+
+    it('answers calmly for a range of a log that does not exist yet', function () {
+        fakeLogs();
+        unset($this->files['/home/logowner/logged-site/logs/access.log']);
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access?from=1'))
+            ->assertOk()
+            ->assertJsonPath('log.exists', false)
+            ->assertJsonPath('log.first_line', null);
+    });
+
+    it('keeps the tail read unchanged, with no line number', function () {
+        fakeLogs();
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access'))
+            ->assertOk()
+            ->assertJsonPath('log.first_line', null)
+            ->assertJsonCount(6, 'log.lines');
+    });
+});
