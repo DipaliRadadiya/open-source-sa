@@ -110,6 +110,23 @@ going rather than failing. Pass `--domain=` for a certificate that works reliabl
 The installer is **re-runnable**: if it fails partway, fix the cause and run it
 again rather than rebuilding the server.
 
+**Installing on someone's behalf** (a central panel, a provisioning script):
+pass the first administrator so the panel is never open for registration, and an
+address to report progress to. Environment variables, so nothing secret is on a
+command line (`sudo --preserve-env=…` if you go through sudo):
+
+```bash
+PANEL_ADMIN_USERNAME=owner PANEL_ADMIN_PASSWORD='…12+ characters…' \
+CENTRAL_TOKEN='…' PROGRESS_URL=https://central.example.com/servers/42/install-progress \
+  bash install.sh --stack=lemp
+```
+
+Each step is POSTed to `PROGRESS_URL` as JSON (`state` installing/failed/installed,
+`step`, `total`, `title`, and at the end the panel and API URLs), with
+`Authorization: Bearer $CENTRAL_TOKEN`. A report that fails never stops the
+install. The addresses, stack and administrator username are also left in
+`/root/panel-details.txt` (root only; no password).
+
 ## What runs where
 
 Every application type works on every stack. The web server is not what decides
