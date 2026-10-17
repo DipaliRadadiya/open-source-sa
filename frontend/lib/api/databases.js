@@ -59,6 +59,11 @@ export function getConnections({ signal } = {}) {
   return api.get("/databases/connections", { signal });
 }
 
+/** Sets, changes or resets root's password (MySQL/MariaDB). The old one is not needed. */
+export function setRootPassword(engine, values) {
+  return api.put(`/databases/connections/${encodeURIComponent(engine)}/root-password`, values);
+}
+
 /** Saves the connection; `test: true` makes the API also return `reachable`. */
 export function updateConnection(engine, payload) {
   return api.put(`/databases/connections/${encodeURIComponent(engine)}`, {

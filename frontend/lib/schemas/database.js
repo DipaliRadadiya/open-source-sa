@@ -224,8 +224,26 @@ export const connectionSchema = z.object({
   socket: z.string().nullable().optional(),
   username: z.string().nullable().optional(),
   has_password: z.boolean().nullable().optional().default(false),
+  // MySQL/MariaDB: whether the panel knows root's password (null on other engines).
+  has_root_password: z.boolean().nullish(),
   options: z.union([z.array(z.unknown()), z.record(z.string(), z.unknown())]).nullable().optional(),
 });
+
+// `ChangeRootPasswordRequest`: 12–128 characters, no line breaks or control characters.
+export const rootPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(12, "min12")
+      .max(128, "max128")
+      // eslint-disable-next-line no-control-regex
+      .refine((value) => !/[\x00-\x1f\x7f]/.test(value), "noControlChars"),
+    password_confirmation: z.string(),
+  })
+  .refine((values) => values.password === values.password_confirmation, {
+    path: ["password_confirmation"],
+    message: "passwordsMismatch",
+  });
 
 export const connectionsResponseSchema = z.object({
   connections: z.array(connectionSchema).default([]),

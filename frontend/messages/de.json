@@ -914,7 +914,10 @@
     "confirmContainerOnly": "Setzen Sie das Häkchen zur Bestätigung.",
     "rangeIdleTimeout": "Geben Sie 1 bis 86400 Sekunden ein oder lassen Sie das Feld leer.",
     "rangeSpawnRate": "Geben Sie 1 bis 1024 ein oder lassen Sie das Feld leer.",
-    "pmSpareOrder": "Füllen Sie alle drei Worker-Zahlen aus oder keine, sodass mindestens frei ≤ beim Start ≤ höchstens frei ≤ PHP-Worker-Prozesse."
+    "pmSpareOrder": "Füllen Sie alle drei Worker-Zahlen aus oder keine, sodass mindestens frei ≤ beim Start ≤ höchstens frei ≤ PHP-Worker-Prozesse.",
+    "min12": "Mindestens 12 Zeichen",
+    "max128": "Darf höchstens 128 Zeichen lang sein",
+    "noControlChars": "Keine Zeilenumbrüche oder Steuerzeichen"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3427,7 +3430,28 @@
       "title": "Datenbanken werden auf diesem Server nicht verwaltet",
       "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt sie als eigenen Container mit, daher verwaltet das Panel hier keine Engine — und seine eigenen Daten liegen ohnehin in SQLite."
     },
-    "detailsTitle": "Details"
+    "detailsTitle": "Details",
+    "rootPassword": {
+      "action": "Root-Passwort",
+      "title": "{engine}-Root-Passwort",
+      "descriptionUnknown": "Das Panel kennt noch kein Root-Passwort. Root meldet sich nur als eigener Root-Benutzer dieses Servers an.",
+      "descriptionKnown": "Das Panel hat das Root-Passwort gespeichert. Legen Sie ein neues fest, um es zu ändern.",
+      "noteMariadb": "Root kann sich weiterhin auch als Root-Benutzer dieses Servers anmelden, damit Panel und Systemwerkzeuge weiter funktionieren.",
+      "noteMysql": "Danach meldet sich Root nur noch mit diesem Passwort an. Das Panel speichert es verschlüsselt, damit es Root weiterhin erreicht.",
+      "new": "Neues Passwort",
+      "newPlaceholder": "Mindestens 12 Zeichen",
+      "confirm": "Passwort bestätigen",
+      "confirmPlaceholder": "Neues Passwort erneut eingeben",
+      "copy": "Passwort kopieren",
+      "generate": "Erzeugen",
+      "rules": "12 bis 128 Zeichen; Leerzeichen und Anführungszeichen sind erlaubt. Kopieren Sie es vor dem Speichern: Das Panel zeigt es nicht noch einmal an.",
+      "cancel": "Abbrechen",
+      "saving": "Wird gespeichert…",
+      "submitSet": "Root-Passwort festlegen",
+      "submitChange": "Root-Passwort ändern",
+      "saved": "{engine}-Root-Passwort gespeichert.",
+      "failed": "Das Root-Passwort konnte nicht geändert werden."
+    }
   },
   "git": {
     "title": "Git",

@@ -914,7 +914,10 @@
     "confirmContainerOnly": "Tick the box to confirm.",
     "rangeIdleTimeout": "Enter 1 to 86400 seconds, or leave it empty.",
     "rangeSpawnRate": "Enter 1 to 1024, or leave it empty.",
-    "pmSpareOrder": "Fill in all three worker numbers or none, so that fewest idle ≤ started ≤ most idle ≤ PHP workers."
+    "pmSpareOrder": "Fill in all three worker numbers or none, so that fewest idle ≤ started ≤ most idle ≤ PHP workers.",
+    "min12": "At least 12 characters",
+    "max128": "Must be 128 characters or fewer",
+    "noControlChars": "No line breaks or control characters"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3427,7 +3430,28 @@
       "title": "Databases are not managed on this server",
       "body": "This server hosts containers. An application that needs a database brings one as a container of its own, so the panel manages no engine here — and its own data is SQLite regardless."
     },
-    "detailsTitle": "Details"
+    "detailsTitle": "Details",
+    "rootPassword": {
+      "action": "Root password",
+      "title": "{engine} root password",
+      "descriptionUnknown": "The panel doesn't know a root password yet. Root signs in only as this server's own root account.",
+      "descriptionKnown": "The panel has root's password saved. Set a new one to change it.",
+      "noteMariadb": "Root can still sign in as this server's root account too, so the panel and system tools keep working.",
+      "noteMysql": "After this, root signs in only with this password. The panel saves it, encrypted, so it can still reach root.",
+      "new": "New password",
+      "newPlaceholder": "At least 12 characters",
+      "confirm": "Confirm password",
+      "confirmPlaceholder": "Re-enter the new password",
+      "copy": "Copy password",
+      "generate": "Generate",
+      "rules": "12 to 128 characters; spaces and quotes are fine. Copy it before you save: the panel won't show it again.",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "submitSet": "Set root password",
+      "submitChange": "Change root password",
+      "saved": "{engine} root password saved.",
+      "failed": "The root password could not be changed."
+    }
   },
   "git": {
     "title": "Git",

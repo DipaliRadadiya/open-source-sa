@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Activity, Loader2, Plus, TriangleAlert } from "lucide-react";
+import { Activity, Loader2, Plus, TriangleAlert, KeyRound } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import { Badge } from "@/components/ui/badge";
 import { EngineLogo } from "@/components/databases/engine-logo";
 import { engineLogo } from "@/lib/databases/engine-logo";
 import { shortVersion } from "@/lib/databases/short-version";
 import { Button } from "@/components/ui/button";
+import { RootPasswordDialog } from "@/components/databases/root-password-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
 import { DatabaseInstallProgress } from "@/components/databases/database-install-progress";
@@ -43,10 +44,12 @@ function EngineMark({ engine, status, t }) {
   );
 }
 
-export function EngineBar({ engines = [], canManage, summary }) {
+export function EngineBar({ engines = [], connections = [], canManage, summary }) {
   const t = useTranslations("databases");
   const router = useRouter();
   const [pending, setPending] = useState(null);
+  // Root password: MySQL/MariaDB only, and only while the engine runs.
+  const [rootFor, setRootFor] = useState(null);
   const {
     engines: list,
     installingEngine,
@@ -72,6 +75,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
   );
 
   // Recovery wins over a fresh choice, so failed engines keep their Retry.
+  const rootEngines = running.filter((engine) => engine.engine === "mysql" || engine.engine === "mariadb");
+
   const addable = findInstallCandidates(list);
   const only = addable.length === 1 ? addable[0] : null;
   // Only one apt install can run. Prefer its live lifecycle; otherwise keep the
@@ -165,6 +170,34 @@ export function EngineBar({ engines = [], canManage, summary }) {
           </Link>
         </Button>
 
+        {/* The root password lives with the engine it belongs to; one engine, one button. */}
+        {rootEngines.length === 1 ? (
+          <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+            <Button variant="outline" size="sm" disabled={!canManage} onClick={() => setRootFor(rootEngines[0].engine)}>
+              <KeyRound className="size-4" />
+              {t("rootPassword.action")}
+            </Button>
+          </ReasonTooltip>
+        ) : rootEngines.length > 1 ? (
+          <DropdownMenu>
+            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={!canManage}>
+                  <KeyRound className="size-4" />
+                  {t("rootPassword.action")}
+                </Button>
+              </DropdownMenuTrigger>
+            </ReasonTooltip>
+            <DropdownMenuContent align="end">
+              {rootEngines.map((engine) => (
+                <DropdownMenuItem key={engine.engine} onSelect={() => setRootFor(engine.engine)}>
+                  {t(`engines.${engine.engine}`)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+
         {/* Always named: one candidate gets its own button, several get a menu.
             The click is the choice, no follow-up dialog asks which. */}
         {only ? (
@@ -235,6 +268,13 @@ export function EngineBar({ engines = [], canManage, summary }) {
           {t("install.takingLonger")}
         </p>
       ) : null}
+
+      <RootPasswordDialog
+        engine={rootFor}
+        connection={connections.find((c) => c.engine === rootFor)}
+        open={rootFor !== null}
+        onOpenChange={(next) => !next && setRootFor(null)}
+      />
 
       <InstallConfirm
         engine={pending}

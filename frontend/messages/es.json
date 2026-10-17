@@ -914,7 +914,10 @@
     "confirmContainerOnly": "Marque la casilla para confirmar.",
     "rangeIdleTimeout": "Introduce de 1 a 86400 segundos, o déjalo vacío.",
     "rangeSpawnRate": "Introduce de 1 a 1024, o déjalo vacío.",
-    "pmSpareOrder": "Rellena los tres números de procesos o ninguno, de modo que mínimo inactivo ≤ al iniciar ≤ máximo inactivo ≤ procesos de PHP."
+    "pmSpareOrder": "Rellena los tres números de procesos o ninguno, de modo que mínimo inactivo ≤ al iniciar ≤ máximo inactivo ≤ procesos de PHP.",
+    "min12": "Al menos 12 caracteres",
+    "max128": "Debe tener 128 caracteres o menos",
+    "noControlChars": "Sin saltos de línea ni caracteres de control"
   },
   "serverDashboard": {
     "title": "Panel",
@@ -3427,7 +3430,28 @@
       "title": "Las bases de datos no se gestionan en este servidor",
       "body": "Este servidor aloja contenedores. Una aplicación que necesita una base de datos trae la suya como contenedor, así que el panel no gestiona ningún motor aquí, y sus propios datos están en SQLite de todos modos."
     },
-    "detailsTitle": "Detalles"
+    "detailsTitle": "Detalles",
+    "rootPassword": {
+      "action": "Contraseña de root",
+      "title": "Contraseña de root de {engine}",
+      "descriptionUnknown": "El panel aún no conoce ninguna contraseña de root. Root solo inicia sesión como la cuenta root propia de este servidor.",
+      "descriptionKnown": "El panel tiene guardada la contraseña de root. Establece una nueva para cambiarla.",
+      "noteMariadb": "Root también podrá seguir iniciando sesión como la cuenta root de este servidor, así que el panel y las herramientas del sistema siguen funcionando.",
+      "noteMysql": "Después de esto, root solo inicia sesión con esta contraseña. El panel la guarda cifrada para poder seguir accediendo a root.",
+      "new": "Nueva contraseña",
+      "newPlaceholder": "Al menos 12 caracteres",
+      "confirm": "Confirmar contraseña",
+      "confirmPlaceholder": "Vuelve a introducir la nueva contraseña",
+      "copy": "Copiar contraseña",
+      "generate": "Generar",
+      "rules": "De 12 a 128 caracteres; se admiten espacios y comillas. Cópiala antes de guardar: el panel no volverá a mostrarla.",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "submitSet": "Establecer contraseña de root",
+      "submitChange": "Cambiar contraseña de root",
+      "saved": "Contraseña de root de {engine} guardada.",
+      "failed": "No se pudo cambiar la contraseña de root."
+    }
   },
   "git": {
     "title": "Git",

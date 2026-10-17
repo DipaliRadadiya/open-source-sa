@@ -914,7 +914,10 @@
     "confirmContainerOnly": "Cochez la case pour confirmer.",
     "rangeIdleTimeout": "Saisissez de 1 à 86400 secondes, ou laissez vide.",
     "rangeSpawnRate": "Saisissez de 1 à 1024, ou laissez vide.",
-    "pmSpareOrder": "Renseignez les trois nombres de workers ou aucun, de sorte que minimum inactif ≤ au démarrage ≤ maximum inactif ≤ workers PHP."
+    "pmSpareOrder": "Renseignez les trois nombres de workers ou aucun, de sorte que minimum inactif ≤ au démarrage ≤ maximum inactif ≤ workers PHP.",
+    "min12": "Au moins 12 caractères",
+    "max128": "128 caractères maximum",
+    "noControlChars": "Pas de retours à la ligne ni de caractères de contrôle"
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -3427,7 +3430,28 @@
       "title": "Les bases de données ne sont pas gérées sur ce serveur",
       "body": "Ce serveur héberge des conteneurs. Une application qui a besoin d’une base de données en apporte une sous forme de conteneur, le panneau ne gère donc aucun moteur ici — et ses propres données sont en SQLite de toute façon."
     },
-    "detailsTitle": "Détails"
+    "detailsTitle": "Détails",
+    "rootPassword": {
+      "action": "Mot de passe root",
+      "title": "Mot de passe root de {engine}",
+      "descriptionUnknown": "Le panneau ne connaît pas encore de mot de passe root. Root se connecte uniquement en tant que compte root de ce serveur.",
+      "descriptionKnown": "Le panneau a enregistré le mot de passe root. Définissez-en un nouveau pour le changer.",
+      "noteMariadb": "Root pourra toujours se connecter aussi en tant que compte root de ce serveur, donc le panneau et les outils système continuent de fonctionner.",
+      "noteMysql": "Ensuite, root ne se connecte plus qu'avec ce mot de passe. Le panneau l'enregistre chiffré pour pouvoir toujours atteindre root.",
+      "new": "Nouveau mot de passe",
+      "newPlaceholder": "Au moins 12 caractères",
+      "confirm": "Confirmer le mot de passe",
+      "confirmPlaceholder": "Saisissez à nouveau le nouveau mot de passe",
+      "copy": "Copier le mot de passe",
+      "generate": "Générer",
+      "rules": "De 12 à 128 caractères ; les espaces et guillemets sont acceptés. Copiez-le avant d'enregistrer : le panneau ne l'affichera plus.",
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "submitSet": "Définir le mot de passe root",
+      "submitChange": "Changer le mot de passe root",
+      "saved": "Mot de passe root de {engine} enregistré.",
+      "failed": "Le mot de passe root n'a pas pu être changé."
+    }
   },
   "git": {
     "title": "Git",

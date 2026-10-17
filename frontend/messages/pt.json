@@ -914,7 +914,10 @@
     "confirmContainerOnly": "Marque a caixa para confirmar.",
     "rangeIdleTimeout": "Informe de 1 a 86400 segundos, ou deixe vazio.",
     "rangeSpawnRate": "Informe de 1 a 1024, ou deixe vazio.",
-    "pmSpareOrder": "Preencha os três números de workers ou nenhum, de modo que mínimo ocioso ≤ ao iniciar ≤ máximo ocioso ≤ processos worker do PHP."
+    "pmSpareOrder": "Preencha os três números de workers ou nenhum, de modo que mínimo ocioso ≤ ao iniciar ≤ máximo ocioso ≤ processos worker do PHP.",
+    "min12": "Pelo menos 12 caracteres",
+    "max128": "Deve ter 128 caracteres ou menos",
+    "noControlChars": "Sem quebras de linha nem caracteres de controle"
   },
   "serverDashboard": {
     "title": "Painel",
@@ -3427,7 +3430,28 @@
       "title": "As bases de dados não são geridas neste servidor",
       "body": "Este servidor aloja contentores. Uma aplicação que precisa de uma base de dados traz a sua como contentor, por isso o painel não gere nenhum motor aqui — e os seus próprios dados estão em SQLite de qualquer forma."
     },
-    "detailsTitle": "Detalhes"
+    "detailsTitle": "Detalhes",
+    "rootPassword": {
+      "action": "Senha do root",
+      "title": "Senha do root do {engine}",
+      "descriptionUnknown": "O painel ainda não conhece uma senha de root. O root só entra como a conta root deste servidor.",
+      "descriptionKnown": "O painel tem a senha do root salva. Defina uma nova para alterá-la.",
+      "noteMariadb": "O root também continua podendo entrar como a conta root deste servidor, então o painel e as ferramentas do sistema continuam funcionando.",
+      "noteMysql": "Depois disso, o root só entra com esta senha. O painel a salva criptografada para continuar acessando o root.",
+      "new": "Nova senha",
+      "newPlaceholder": "Pelo menos 12 caracteres",
+      "confirm": "Confirmar senha",
+      "confirmPlaceholder": "Digite a nova senha novamente",
+      "copy": "Copiar senha",
+      "generate": "Gerar",
+      "rules": "De 12 a 128 caracteres; espaços e aspas são permitidos. Copie antes de salvar: o painel não vai mostrá-la de novo.",
+      "cancel": "Cancelar",
+      "saving": "Salvando…",
+      "submitSet": "Definir senha do root",
+      "submitChange": "Alterar senha do root",
+      "saved": "Senha do root do {engine} salva.",
+      "failed": "Não foi possível alterar a senha do root."
+    }
   },
   "git": {
     "title": "Git",
