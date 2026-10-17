@@ -3887,6 +3887,40 @@ install_step_total() {
     fi
 }
 
+# needrestart (Ubuntu 24.04 and later) restarts every service whose libraries
+# an apt run replaced. When this script runs as a systemd service — how an
+# automated install (Central, systemd-run) keeps going without a terminal —
+# that includes this script, which then starts again from step one. On a fresh
+# server the apt run is often not ours at all: Ubuntu's own unattended-upgrades
+# starts within minutes of first boot and calls needrestart itself, without
+# NEEDRESTART_SUSPEND. Seen three times in one install (2026-10-17).
+#
+# So the unit this script runs in is excluded by name for as long as it runs,
+# and the exclusion is removed when the install finishes. Nothing to do from a
+# terminal: needrestart restarts services, not login sessions.
+NEEDRESTART_GUARD=""
+# Arguments only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
+protect_from_needrestart() {
+    local cgroup="${1:-/proc/self/cgroup}" confd="${2:-/etc/needrestart/conf.d}" unit
+    unit="$(sed -n 's#^0::.*/\([^/]*\.service\)$#\1#p' "$cgroup" 2>/dev/null | head -1)"
+    [[ -n "$unit" && -d "$confd" ]] || return 0
+    [[ "$unit" =~ ^[A-Za-z0-9@._-]+\.service$ ]] || return 0
+
+    NEEDRESTART_GUARD="${confd}/zz-${PANEL_SLUG}-install.conf"
+    if printf '# install.sh is running as %s; removed when it finishes.\n$nrconf{override_rc}{qr(^\\Q%s\\E$)} = 0;\n' \
+        "$unit" "$unit" >"$NEEDRESTART_GUARD" 2>/dev/null; then
+        ok "needrestart will leave ${unit} alone until the install is done"
+    else
+        NEEDRESTART_GUARD=""
+    fi
+}
+
+release_needrestart() {
+    [[ -n "$NEEDRESTART_GUARD" ]] && rm -f "$NEEDRESTART_GUARD"
+    NEEDRESTART_GUARD=""
+}
+
 start_login_status() {
     # Both end up inside a script every login shell sources, so plain names
     # and paths only, or no login status at all.
@@ -4380,6 +4414,7 @@ finish() {
 
     save_install_state installed
     write_details_file
+    release_needrestart
 
     local scheme="$SCHEME"
 
@@ -4432,6 +4467,7 @@ main() {
     # First, because everything after this changes the server: from here on an
     # administrator who logs in can see how far it got.
     start_login_status
+    protect_from_needrestart
     configure_swap
     install_packages
     # fnm's shared runtime tree is owned by the panel account, so that

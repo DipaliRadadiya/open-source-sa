@@ -266,3 +266,50 @@ it('checks Central\'s inputs before anything happens', function (array $env, ?st
     'plain http elsewhere' => [['PROGRESS_URL' => 'http://central.test/p', 'CENTRAL_TOKEN' => 't'], 'https'],
     'progress without a token' => [['PROGRESS_URL' => 'https://central.test/p'], 'CENTRAL_TOKEN'],
 ]);
+
+it('keeps needrestart away from the install\'s own service, and only from it', function () {
+    // Ubuntu's unattended-upgrades, running on its own minutes after first
+    // boot, called needrestart and restarted the install's systemd unit
+    // (2026-10-17) — NEEDRESTART_SUSPEND cannot reach another process's apt.
+    $dir = sys_get_temp_dir().'/nr-'.bin2hex(random_bytes(4));
+    mkdir($dir.'/confd', 0777, true);
+    file_put_contents($dir.'/cgroup', "0::/system.slice/run-u42.service\n");
+
+    $script = installerFunctions('protect_from_needrestart', 'release_needrestart').'
+        ok() { :; }; PANEL_SLUG=panel; NEEDRESTART_GUARD=""
+        protect_from_needrestart '.escapeshellarg($dir.'/cgroup').' '.escapeshellarg($dir.'/confd').'
+        perl -e \'our %nrconf; do $ARGV[0]; die $@ if $@; my ($re) = keys %{$nrconf{override_rc}}; print join(",", map { $_ =~ $re ? 1 : 0 } qw(run-u42.service nginx.service run-u42.service-old)), "\n"\' "$NEEDRESTART_GUARD"
+        release_needrestart; ls '.escapeshellarg($dir.'/confd').' | wc -l';
+    exec('bash -c '.escapeshellarg($script).' 2>&1', $out, $code);
+    exec('rm -rf '.escapeshellarg($dir));
+
+    // Its own unit only; then gone.
+    expect($code)->toBe(0)->and($out)->toBe(['1,0,0', '0']);
+});
+
+it('asks nothing of needrestart from a terminal, where there is no service to protect', function () {
+    $dir = sys_get_temp_dir().'/nr-'.bin2hex(random_bytes(4));
+    mkdir($dir.'/confd', 0777, true);
+    file_put_contents($dir.'/cgroup', "0::/user.slice/user-1000.slice/session-7.scope\n");
+
+    $script = installerFunctions('protect_from_needrestart').'
+        ok() { :; }; PANEL_SLUG=panel; NEEDRESTART_GUARD=""
+        protect_from_needrestart '.escapeshellarg($dir.'/cgroup').' '.escapeshellarg($dir.'/confd').'
+        echo "guard=[$NEEDRESTART_GUARD]"; ls '.escapeshellarg($dir.'/confd').' | wc -l';
+    exec('bash -c '.escapeshellarg($script).' 2>&1', $out);
+    exec('rm -rf '.escapeshellarg($dir));
+
+    expect($out)->toBe(['guard=[]', '0']);
+});
+
+it('sets the guard before the first apt run and lifts it once installed', function () {
+    $main = installerFn('main');
+    $finish = installerFn('finish');
+
+    // Found first: a missing call is `false`, and false < any position.
+    expect(strpos($main, 'protect_from_needrestart'))->toBeInt()
+        ->and(strpos($finish, 'release_needrestart'))->toBeInt();
+
+    expect(strpos($main, 'protect_from_needrestart'))->toBeLessThan(strpos($main, 'install_packages'))
+        ->and(strpos($finish, 'release_needrestart'))->toBeGreaterThan(strpos($finish, 'save_install_state installed'));
+});
