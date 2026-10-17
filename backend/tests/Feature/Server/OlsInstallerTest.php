@@ -29,9 +29,12 @@
  * Both document roots are the repository's own directories, present since
  * fetch_source(). The fcgi socket is not a path OpenLiteSpeed stats — it is an
  * address for an external app, and configure_fpm() has already made it.
+ * Laravel's front controller is a file in the repository, so it is there from
+ * fetch_source() on as well.
  */
 const OLS_PREEXISTING_PATHS = [
     '${APP_DIR}/backend/public',
+    '${APP_DIR}/backend/public/index.php',
     '${APP_DIR}/frontend',
 ];
 
@@ -281,6 +284,20 @@ it('keeps the front controller out of the vhost that proxies to Next', function 
     expect(implode("\n", installerFunction('write_ols_api_vhost')))
         ->toContain('$(ols_front_controller "")')
         ->not->toContain('panel-next');
+});
+
+it('runs the rewritten /index.php as PHP on a single-host install, not through the proxy', function () {
+    // OpenLiteSpeed picks the context again for the path a rewrite produces.
+    // /index.php is under neither /api nor /sanctum, so with no context of its
+    // own it fell to the catch-all `/` proxy: Next answered every API request
+    // by fetching /api through the same host, and looped until the proxy timed
+    // out. An install with --domain on OpenLiteSpeed never loaded (2026-10-17).
+    $body = implode("\n", installerFunction('write_ols_vhost'));
+    $fenced = substr($body, strpos($body, 'if (( SINGLE_HOST )); then'));
+
+    expect($fenced)->toMatch(
+        '/context \/index\.php \{\n\s*location\s+\$\{APP_DIR\}\/backend\/public\/index\.php\n\s*allowBrowse\s+1\n\s*enableScript\s+1\n\}/'
+    );
 });
 
 it('converges when the installer is re-run', function () {

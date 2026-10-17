@@ -2520,6 +2520,17 @@ context /sanctum {
   allowBrowse             1
   enableScript            1
 }
+
+# The rewrite below sends /api and /sanctum to /index.php, and OLS matches
+# contexts again on the REWRITTEN path. /index.php is under neither context
+# above, so without this one it landed in the catch-all proxy: Next got every
+# API request, rendered its page by fetching /api through this same host, and
+# looped until the proxy timed out -- the panel never loaded (2026-10-17).
+context /index.php {
+  location                ${APP_DIR}/backend/public/index.php
+  allowBrowse             1
+  enableScript            1
+}
 CONF
 
         # The front controller, fenced to the paths the backend owns.
