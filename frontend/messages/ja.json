@@ -6540,7 +6540,7 @@
     "firstAndLast": "初回 {first} · 最終 {last}",
     "everyOccurrence": "すべての発生",
     "searchPlaceholder": "エラーまたはルートで検索…",
-    "linesLabel": "表示件数",
+    "linesLabel": "読み込む最新エントリの件数",
     "truncated": "直近の {lines} 件を表示しています。さらに古いエントリはこのページにありません。",
     "noMatchesTitle": "一致するエラーはありません",
     "noMatchesDescription": "検索に一致するものがありません。より短い語にするか、すべて表示するにはクリアしてください。",
@@ -6569,7 +6569,11 @@
       "all": "すべて ({count})",
       "api": "API エラー ({count})",
       "operation": "サーバーコマンド ({count})"
-    }
+    },
+    "referenceFind": "リファレンスで検索",
+    "referenceActive": "リファレンス {reference}…",
+    "referenceHint": "エラーメッセージのリファレンスを貼り付けると、この一覧より古いものでもその失敗を開けます。",
+    "linesOption": "最新 {count} 件"
   },
   "setup": {
     "title": "サーバーをセットアップ",

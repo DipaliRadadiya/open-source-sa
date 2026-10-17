@@ -6540,7 +6540,7 @@
     "firstAndLast": "Premier {first} · dernier {last}",
     "everyOccurrence": "Toutes les occurrences",
     "searchPlaceholder": "Rechercher par erreur ou route…",
-    "linesLabel": "Afficher",
+    "linesLabel": "Nombre d'entrées récentes à charger",
     "truncated": "Affichage des {lines} entrées les plus récentes. D'autres plus anciennes ne sont pas sur cette page.",
     "noMatchesTitle": "Aucune erreur correspondante",
     "noMatchesDescription": "Rien ne correspond à votre recherche. Essayez un terme plus court, ou effacez-le pour tout voir.",
@@ -6569,7 +6569,11 @@
       "all": "Toutes ({count})",
       "api": "Erreurs d'API ({count})",
       "operation": "Commandes serveur ({count})"
-    }
+    },
+    "referenceFind": "Trouver par référence",
+    "referenceActive": "Référence {reference}…",
+    "referenceHint": "Collez la référence d'un message d'erreur pour ouvrir cet échec précis, même s'il est plus ancien que cette liste.",
+    "linesOption": "{count} derniers"
   },
   "setup": {
     "title": "Configurer votre serveur",

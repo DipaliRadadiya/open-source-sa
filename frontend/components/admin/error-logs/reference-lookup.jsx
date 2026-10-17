@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 
 // Looked up via the URL on the server, since the entry may predate the loaded
 // lines. The backend 422s anything that is not a uuid, so validate here.
-export function ReferenceLookup({ value, onSubmit, onClear }) {
+export function ReferenceLookup({ value, onSubmit, onClear, autoFocus = false }) {
   const t = useTranslations("errorLogs");
   const [draft, setDraft] = useState(value ?? "");
 
@@ -17,13 +17,13 @@ export function ReferenceLookup({ value, onSubmit, onClear }) {
 
   return (
     <form noValidate
-      className="flex w-full items-start gap-2 sm:w-auto"
+      className="flex w-full items-start gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (valid) onSubmit(trimmed);
       }}
     >
-      <div className="w-full sm:w-72">
+      <div className="min-w-0 flex-1">
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -35,6 +35,7 @@ export function ReferenceLookup({ value, onSubmit, onClear }) {
             placeholder={t("referencePlaceholder")}
             aria-label={t("referenceLabel")}
             aria-invalid={dirty && !valid ? true : undefined}
+            autoFocus={autoFocus}
             className="px-8 font-mono text-xs"
           />
           {dirty ? (

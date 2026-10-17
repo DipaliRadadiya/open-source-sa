@@ -6540,7 +6540,7 @@
     "firstAndLast": "Erstmals {first} · zuletzt {last}",
     "everyOccurrence": "Jedes Vorkommen",
     "searchPlaceholder": "Nach Fehler oder Route suchen…",
-    "linesLabel": "Zeigen",
+    "linesLabel": "Wie viele der neuesten Einträge geladen werden",
     "truncated": "Es werden die {lines} neuesten Einträge gezeigt. Es gibt ältere, die nicht auf dieser Seite stehen.",
     "noMatchesTitle": "Keine passenden Fehler",
     "noMatchesDescription": "Hier passt nichts zu Ihrer Suche. Versuchen Sie einen kürzeren Begriff oder setzen Sie sie zurück, um alles zu sehen.",
@@ -6569,7 +6569,11 @@
       "all": "Alle ({count})",
       "api": "API-Fehler ({count})",
       "operation": "Serverbefehle ({count})"
-    }
+    },
+    "referenceFind": "Nach Referenz suchen",
+    "referenceActive": "Referenz {reference}…",
+    "referenceHint": "Fügen Sie die Referenz aus einer Fehlermeldung ein, um genau diesen Fehler zu öffnen, auch wenn er älter ist als diese Liste.",
+    "linesOption": "Letzte {count}"
   },
   "setup": {
     "title": "Richten Sie Ihren Server ein",

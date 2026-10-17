@@ -6540,7 +6540,7 @@
     "firstAndLast": "First {first} · last {last}",
     "everyOccurrence": "Every occurrence",
     "searchPlaceholder": "Search by error or route…",
-    "linesLabel": "Show",
+    "linesLabel": "How many recent entries to load",
     "truncated": "Showing the {lines} most recent entries. There are older ones that are not on this page.",
     "noMatchesTitle": "No matching errors",
     "noMatchesDescription": "Nothing here matches your search. Try a shorter term, or clear it to see everything.",
@@ -6569,7 +6569,11 @@
       "all": "All ({count})",
       "api": "API errors ({count})",
       "operation": "Server commands ({count})"
-    }
+    },
+    "referenceFind": "Find by reference",
+    "referenceActive": "Reference {reference}…",
+    "referenceHint": "Paste the reference from an error message to open that exact failure, even if it is older than this list.",
+    "linesOption": "Last {count}"
   },
   "setup": {
     "title": "Set up your server",

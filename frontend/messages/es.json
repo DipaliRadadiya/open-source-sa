@@ -6540,7 +6540,7 @@
     "firstAndLast": "Primero {first} · último {last}",
     "everyOccurrence": "Todas las apariciones",
     "searchPlaceholder": "Buscar por error o ruta…",
-    "linesLabel": "Mostrar",
+    "linesLabel": "Cuántas entradas recientes cargar",
     "truncated": "Se muestran las {lines} entradas más recientes. Hay otras más antiguas que no aparecen en esta página.",
     "noMatchesTitle": "Ningún error coincide",
     "noMatchesDescription": "Nada de aquí coincide con tu búsqueda. Prueba con un término más corto o bórralo para verlo todo.",
@@ -6569,7 +6569,11 @@
       "all": "Todos ({count})",
       "api": "Errores de API ({count})",
       "operation": "Comandos del servidor ({count})"
-    }
+    },
+    "referenceFind": "Buscar por referencia",
+    "referenceActive": "Referencia {reference}…",
+    "referenceHint": "Pega la referencia de un mensaje de error para abrir ese fallo exacto, aunque sea más antiguo que esta lista.",
+    "linesOption": "Últimos {count}"
   },
   "setup": {
     "title": "Configura tu servidor",
