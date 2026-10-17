@@ -6576,7 +6576,7 @@ Update `name`, `prefix` and any `config` key. **Secrets omitted = unchanged**, s
 ### DELETE `/integrations/storage/destinations/{storageDestination}`
 **Permission:** `storage` (manage)
 
-`422` if any backup target uses this destination, **or if any backup's archive is still stored in it** (`errors.storage_destination`, *"still holds N backup(s)"*), which happens after a target is repointed elsewhere. The second case used to be refused by the database as a `500`. Delete those backups first, which removes their archives too; the panel never deletes them as a side effect.
+`422` if any backup target uses this destination — a site's (the message names the sites) or a database's own schedule (names the database, *"still used by the backup schedule of database …"*) — **or if any backup's archive is still stored in it** (`errors.storage_destination`, *"still holds N backup(s)"*), which happens after a target is repointed elsewhere. The second case used to be refused by the database as a `500`. Delete those backups first, which removes their archives too; the panel never deletes them as a side effect.
 
 **Response `204`:**
 

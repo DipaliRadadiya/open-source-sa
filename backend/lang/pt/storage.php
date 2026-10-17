@@ -103,6 +103,7 @@ return [
 
     'delete' => [
         'in_use' => 'Não é possível excluir :name — ainda é usado por :applications. Remova ou redirecione esses destinos de backup primeiro.',
+        'in_use_by_databases' => 'Não é possível excluir :name — ele ainda é usado pelo agendamento de backup do banco de dados :databases. Remova esse agendamento ou mova-o primeiro para outro armazenamento.',
         'holds_backups' => 'Não é possível eliminar :name — ainda contém cópias de segurança (:count). Elimine primeiro essas cópias, para que os arquivos também sejam removidos do armazenamento.',
         'and_more' => 'mais :count',
     ],

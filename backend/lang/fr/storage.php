@@ -103,6 +103,7 @@ return [
 
     'delete' => [
         'in_use' => 'Impossible de supprimer :name — cette destination est encore utilisée par :applications. Supprimez ou redirigez ces cibles de sauvegarde d’abord.',
+        'in_use_by_databases' => "Impossible de supprimer :name — la planification de sauvegarde de la base de données :databases l'utilise encore. Supprimez cette planification ou déplacez-la d'abord vers un autre stockage.",
         'holds_backups' => 'Impossible de supprimer :name — cette destination contient encore des sauvegardes (:count). Supprimez d’abord ces sauvegardes, afin que leurs archives soient aussi retirées du stockage.',
         'and_more' => ':count de plus',
     ],

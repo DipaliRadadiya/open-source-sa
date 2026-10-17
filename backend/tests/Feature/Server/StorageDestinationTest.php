@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Database;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -844,6 +845,29 @@ describe('the in-use guard', function () {
             ->and($message)->toContain('Blog')
             ->and($message)->toContain('Shop');
 
+        expect(StorageDestination::find($dest->id))->not->toBeNull();
+    });
+
+    it('refuses to delete a destination a database\'s own backup schedule points at, naming the database', function () {
+        $dest = makeDestination();
+        $db = Database::create(['name' => 'ledger', 'engine' => 'mysql']);
+
+        // No backup taken yet: only the schedule holds the destination.
+        BackupTarget::create([
+            'database_id' => $db->id,
+            'storage_destination_id' => $dest->id,
+            'type' => 'database',
+            'retention_count' => 3,
+            'frequency' => 'daily',
+            'enabled' => true,
+        ]);
+
+        $message = $this->withHeaders(storageAdminAuthHeader())
+            ->deleteJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertStatus(422)
+            ->json('errors.storage_destination.0');
+
+        expect($message)->toBe(__('storage.delete.in_use_by_databases', ['name' => 'Work S3', 'databases' => 'ledger']));
         expect(StorageDestination::find($dest->id))->not->toBeNull();
     });
 

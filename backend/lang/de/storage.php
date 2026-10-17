@@ -103,6 +103,7 @@ return [
 
     'delete' => [
         'in_use' => ':name kann nicht gelöscht werden — es wird noch von :applications verwendet. Entfernen oder ändern Sie diese Backup-Ziele zuerst.',
+        'in_use_by_databases' => '„:name“ kann nicht gelöscht werden — der Sicherungsplan der Datenbank :databases verwendet es noch. Entfernen Sie diesen Plan oder verschieben Sie ihn zuerst auf einen anderen Speicher.',
         'holds_backups' => ':name kann nicht gelöscht werden — es enthält noch Backups (:count). Löschen Sie zuerst diese Backups, damit ihre Archive auch aus dem Speicher entfernt werden.',
         'and_more' => ':count weitere',
     ],
