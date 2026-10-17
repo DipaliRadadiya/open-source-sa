@@ -325,7 +325,8 @@
     --hero-muted: oklch(0.42 0.01 135);
     --hero-line: oklch(0.2 0.01 135 / 0.14);
     --hero-wash: oklch(0.2 0.01 135 / 0.05);
-    --hero-grid: rgb(15 23 42 / 0.035);
+    /* Half its first strength (Krishna, 17 Oct): the grid read louder than the text. */
+    --hero-grid: rgb(15 23 42 / 0.018);
     --iso-top: rgba(30, 41, 59, 0.1);
     --iso-right: rgba(30, 41, 59, 0.2);
     --iso-front: rgba(30, 41, 59, 0.05);
@@ -345,7 +346,7 @@
     --hero-muted: var(--muted-foreground);
     --hero-line: rgb(255 255 255 / 0.14);
     --hero-wash: rgb(255 255 255 / 0.1);
-    --hero-grid: rgb(255 255 255 / 0.03);
+    --hero-grid: rgb(255 255 255 / 0.016);
     --iso-top: rgba(255, 255, 255, 0.55);
     --iso-right: rgba(10, 30, 90, 0.3);
     --iso-front: rgba(255, 255, 255, 0.28);
