@@ -4017,11 +4017,6 @@
       "visit": "Visit application",
       "visitHint": "The application is served once provisioning finishes.",
       "delete": "Delete application",
-      "go": {
-        "files": "Open files",
-        "domains": "Manage domains",
-        "backups": "Backups"
-      },
       "visitNamed": "Open {domain} in a new tab"
     },
     "delete": {

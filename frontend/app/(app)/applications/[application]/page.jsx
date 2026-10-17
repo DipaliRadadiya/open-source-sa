@@ -84,12 +84,6 @@ export default async function ApplicationDetailPage({ params }) {
   const canSeeChecks = can(appPermissions, "app_dashboard", "view", "application");
   // The API already gates this by site type; a new type must not need a frontend change.
   const canMagicLogin = can(appPermissions, "app_magic_login", "manage", "application");
-  // Filtered here rather than in the menu so permission checks stay on the server.
-  const headerShortcuts = [
-    can(appPermissions, "app_file", "view", "application") && "files",
-    canSeeDomains && "domains",
-    can(appPermissions, "app_backup", "view", "application") && "backups",
-  ].filter(Boolean);
   const canSeeBackups = can(appPermissions, "app_backup", "view", "application");
   const canRunBackup = can(appPermissions, "app_backup", "manage", "application");
   const isGit = Boolean(application.repository || application.repository_url);
@@ -383,7 +377,6 @@ export default async function ApplicationDetailPage({ params }) {
                 canManage={canManage}
                 canRemoveSystemUser={can(permissions, "system_user", "manage")}
                 showNavigation={false}
-                shortcuts={headerShortcuts}
                 redirectTo="/applications"
                 triggerVariant="outline"
                 triggerClassName="size-9"

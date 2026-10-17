@@ -71,7 +71,8 @@ test("Magic Login does not draw its own separator", () => {
   // cannot both be right.
   const block = actions.slice(
     actions.indexOf("{showMagicLogin ? ("),
-    actions.indexOf("{shortcuts.length > 0 ? ("),
+    // The next block: the dashboard's page shortcuts, which used to follow, are gone (17 Oct).
+    actions.indexOf("{showRetry ? (", actions.indexOf("{showMagicLogin ? (")),
   );
 
   assert.ok(block.length > 0, "the Magic Login block must be findable");
@@ -93,4 +94,14 @@ test("the menu item reuses the existing string", () => {
   assert.match(actions, /t\("magicLogin\.action"\)/);
   const en = JSON.parse(read("messages/en.json"));
   assert.equal(typeof en.applications.magicLogin.action, "string");
+});
+
+test("the dashboard's ⋯ menu repeats nothing the sidebar or the page already offers", () => {
+  // Open files, Manage domains and Backups are sidebar items; the web root has its
+  // own pencil on the facts card (Krishna, 17 Oct).
+  assert.doesNotMatch(actions, /SHORTCUT_ICONS|shortcuts\.map|setWebRootOpen/);
+  const page = fs.readFileSync(new URL("../app/(app)/applications/[application]/page.jsx", import.meta.url), "utf8");
+  assert.doesNotMatch(page, /shortcuts=\{|headerShortcuts/);
+  const facts = fs.readFileSync(new URL("../components/applications/site-facts-card.jsx", import.meta.url), "utf8");
+  assert.match(facts, /<WebRootDialog/);
 });

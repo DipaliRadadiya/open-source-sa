@@ -4017,11 +4017,6 @@
       "visit": "Visitar aplicação",
       "visitHint": "A aplicação fica disponível assim que o provisionamento terminar.",
       "delete": "Excluir aplicação",
-      "go": {
-        "files": "Abrir arquivos",
-        "domains": "Gerenciar domínios",
-        "backups": "Backups"
-      },
       "visitNamed": "Abrir {domain} em uma nova aba"
     },
     "delete": {

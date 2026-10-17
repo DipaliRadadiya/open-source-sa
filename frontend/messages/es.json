@@ -4017,11 +4017,6 @@
       "visit": "Visitar aplicación",
       "visitHint": "La aplicación se sirve cuando termina el aprovisionamiento.",
       "delete": "Eliminar aplicación",
-      "go": {
-        "files": "Abrir archivos",
-        "domains": "Gestionar dominios",
-        "backups": "Copias de seguridad"
-      },
       "visitNamed": "Abrir {domain} en una pestaña nueva"
     },
     "delete": {

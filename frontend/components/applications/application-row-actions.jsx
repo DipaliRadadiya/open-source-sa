@@ -7,16 +7,12 @@ import { useTranslations } from "next-intl";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
 import {
-  Archive,
   ExternalLink,
-  FolderTree,
-  Globe2,
   LayoutDashboard,
   Loader2,
   KeyRound,
   MoreHorizontal,
   PauseCircle,
-  Pencil,
   PlayCircle,
   RotateCw,
   Trash2,
@@ -35,16 +31,8 @@ import {
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { PauseApplicationDialog } from "@/components/applications/pause-application-dialog";
-import { WebRootDialog } from "@/components/applications/web-root-dialog";
 import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
 import { useMagicLogin } from "@/components/applications/use-magic-login";
-
-// Keyed because icons cannot cross the server-component boundary.
-const SHORTCUT_ICONS = {
-  files: FolderTree,
-  domains: Globe2,
-  backups: Archive,
-};
 
 // Open and Visit are reads; Retry and Delete need `manage`. Visit only while served.
 export function ApplicationRowActions({
@@ -57,7 +45,6 @@ export function ApplicationRowActions({
   showNavigation = true,
   // Permission-filtered keys of app screens. Only the detail header passes these,
   // to keep the list's row menu short.
-  shortcuts = [],
   // Called after a successful delete, before redirecting (if redirectTo is set).
   afterDelete,
   // Where to navigate after deleting. Passed through to DeleteApplicationDialog.
@@ -91,7 +78,6 @@ export function ApplicationRowActions({
     if (menuOpen) setMenuOpen(false);
   }
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [webRootOpen, setWebRootOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [resuming, setResuming] = useState(false);
 
@@ -101,7 +87,7 @@ export function ApplicationRowActions({
   const showRetry = canManage && canRetry;
   const pauseAction = pauseControl(application, { canManage });
 
-  if (!showNavigation && !showRetry && !canManage && shortcuts.length === 0) return null;
+  if (!showNavigation && !showRetry && !canManage) return null;
 
   // No confirmation: restoring service needs no warning.
   async function resume() {
@@ -212,30 +198,6 @@ export function ApplicationRowActions({
             </DropdownMenuItem>
           ) : null}
 
-          {shortcuts.length > 0 ? (
-            <>
-              {shortcuts.map((key) => {
-                const Icon = SHORTCUT_ICONS[key];
-                return (
-                  <DropdownMenuItem key={key} asChild>
-                    <Link href={`${href}/${key}`} prefetch={false}>
-                      <Icon className="size-4" />
-                      {t(`actions.go.${key}`)}
-                    </Link>
-                  </DropdownMenuItem>
-                );
-              })}
-              {/* The only application property the API can update. */}
-              {canManage ? (
-                <DropdownMenuItem onSelect={() => { openingDialog.current = true; setWebRootOpen(true); }}>
-                  <Pencil className="size-4" />
-                  {t("webRoot.title")}
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-
           {showRetry ? (
             <DropdownMenuItem
               disabled={retrying}
@@ -290,11 +252,6 @@ export function ApplicationRowActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <WebRootDialog
-        application={application}
-        open={webRootOpen}
-        onOpenChange={setWebRootOpen}
-      />
       {/* Mounted only when needed, so each row does not carry an unopened dialog. */}
       {magicLogin.choice ? (
         <MagicLoginDialog

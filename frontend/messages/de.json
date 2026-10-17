@@ -4017,11 +4017,6 @@
       "visit": "Anwendung aufrufen",
       "visitHint": "Die Anwendung wird ausgeliefert, sobald die Einrichtung fertig ist.",
       "delete": "Anwendung löschen",
-      "go": {
-        "files": "Dateien öffnen",
-        "domains": "Domains verwalten",
-        "backups": "Backups"
-      },
       "visitNamed": "{domain} in neuem Tab öffnen"
     },
     "delete": {
