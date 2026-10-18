@@ -83,6 +83,9 @@ export function LogToolbar({
   searchRef,
   tailState = "idle",
   onResume,
+  // A control inside the search box's right edge, e.g. the app logs' Filters:
+  // as its own button it pushed Clear log onto a second row in five locales.
+  searchAddon = null,
 }) {
   const t = useTranslations("logs");
   // Swaps the preset selector for a number field, and back once applied.
@@ -187,7 +190,7 @@ export function LogToolbar({
             maxLength={200}
             placeholder={t("searchPlaceholder")}
             disabled={disabled}
-            className={cn(SEARCH_WELL, "w-full pl-9", term && "pr-8")}
+            className={cn(SEARCH_WELL, "w-full pl-9", term && "pr-8", searchAddon && (term ? "pr-16" : "pr-10"))}
             aria-label={t("searchPlaceholder")}
           />
           {term ? (
@@ -198,10 +201,13 @@ export function LogToolbar({
                 searchRef.current?.focus();
               }}
               aria-label={t("clearSearch")}
-              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+              className={cn("absolute inset-y-0 flex items-center pr-2.5", searchAddon ? "right-8" : "right-0", "text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring")}
             >
               <X className="size-4" />
             </button>
+          ) : null}
+          {searchAddon ? (
+            <div className="absolute inset-y-0 right-1 flex items-center">{searchAddon}</div>
           ) : null}
         </div>
 

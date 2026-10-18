@@ -125,7 +125,7 @@ test("login picks the role's landing page itself, and app/page.js still does for
   const form = read("components/forms/login-form.jsx");
   assert.match(form, /return landingPath\(await getMyPermissions\(\)\);/);
   // Without a catalog, "/" still lets the server decide rather than guessing.
-  assert.match(form, /catch \{\n    return "\/";/);
+  assert.match(form, /catch \{\n {4}return "\/";/);
   assert.doesNotMatch(form, /router\.push\("\/dashboard"\)/);
   // Queued behind the push, a refresh fetched the new page a second time.
   assert.doesNotMatch(form, /^\s*router\.refresh\(\);/m);

@@ -917,7 +917,10 @@
     "pmSpareOrder": "Füllen Sie alle drei Worker-Zahlen aus oder keine, sodass mindestens frei ≤ beim Start ≤ höchstens frei ≤ PHP-Worker-Prozesse.",
     "min12": "Mindestens 12 Zeichen",
     "max128": "Darf höchstens 128 Zeichen lang sein",
-    "noControlChars": "Keine Zeilenumbrüche oder Steuerzeichen"
+    "noControlChars": "Keine Zeilenumbrüche oder Steuerzeichen",
+    "logFromInvalid": "Gib eine Zeilennummer ab 1 ein.",
+    "logIpInvalid": "Gib eine einzelne IP-Adresse ein, z. B. 203.0.113.5.",
+    "logStatusInvalid": "Gib einen Code wie 404 oder eine Gruppe wie 5xx ein."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3625,6 +3628,28 @@
         "submit": "Log leeren",
         "done": "{label} geleert.",
         "failed": "Das Log konnte nicht geleert werden."
+      },
+      "filters": {
+        "button": "Filter",
+        "buttonActive": "Filter ({count})",
+        "from": "Ab Zeile",
+        "fromPlaceholder": "z. B. 1000",
+        "fromHint": "Liest ab dieser Zeile vorwärts. 1 ist die erste Zeile der Datei.",
+        "status": "Status",
+        "statusPlaceholder": "404 oder 5xx",
+        "method": "HTTP-Methode",
+        "methodAny": "Alle",
+        "ip": "IP-Adresse",
+        "ipPlaceholder": "203.0.113.5",
+        "url": "URL enthält",
+        "urlPlaceholder": "/wp-login.php",
+        "reset": "Zurücksetzen",
+        "apply": "Anwenden",
+        "remove": "{filter} entfernen",
+        "range": "Zeilen {first}–{last}",
+        "rangeFrom": "Ab Zeile {first}",
+        "previous": "Vorherige {count, number} Zeilen",
+        "next": "Nächste {count, number} Zeilen"
       }
     },
     "environment": {

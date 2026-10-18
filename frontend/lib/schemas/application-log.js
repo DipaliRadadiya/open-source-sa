@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isIpAddress } from "../validation/ip.js";
 
 // No byte cursor (the client re-reads the last N lines) and no group or readable flag.
 // `kind` is file | journal | container.
@@ -26,6 +27,8 @@ export const applicationLogSchema = z
     kind: z.string().nullish(),
     exists: z.boolean().default(false),
     lines: z.array(z.string()).default([]),
+    // Where a `from` read started; null for a read of the last lines.
+    first_line: z.number().nullish(),
     truncated: z.boolean().default(false),
     // Whether a FILTERED read hit the line cap: distinguishes "not in your log"
     // from "only the end was searched". Distinct from `truncated`.
@@ -36,3 +39,25 @@ export const applicationLogSchema = z
 export const applicationLogResponseSchema = z.object({
   log: applicationLogSchema,
 });
+
+export const LOG_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+
+// The API's own rules (ShowApplicationLogRequest), so a filter never round-trips to a 422.
+export const logFiltersSchema = z.object({
+  from: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^[1-9]\d{0,9}$/.test(v), "logFromInvalid"),
+  ip: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || isIpAddress(v), "logIpInvalid"),
+  status: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^[1-5](\d{2}|xx)$/i.test(v), "logStatusInvalid"),
+  method: z.string(),
+  url: z.string().trim().max(500, "max500"),
+});
+
+export const EMPTY_LOG_FILTERS = { from: "", ip: "", status: "", method: "", url: "" };

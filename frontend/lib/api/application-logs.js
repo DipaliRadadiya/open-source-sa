@@ -9,11 +9,14 @@ export async function listApplicationLogs(appId) {
 
 // No `after` cursor, so live-tail re-reads the last N lines (throttle 120/min).
 // `grep` is a literal, case-insensitive substring applied server-side.
-export function readApplicationLog(appId, key, { lines, grep, signal } = {}) {
+// `filters` holds `from` and the access log's ip/status/method/url; empty ones are not sent.
+export function readApplicationLog(appId, key, { lines, grep, filters, signal } = {}) {
+  const set = Object.fromEntries(Object.entries(filters ?? {}).filter(([, value]) => value !== ""));
   return api.get(`/applications/${appId}/logs/${encodeURIComponent(key)}`, {
     params: {
       ...(lines ? { lines } : null),
       ...(grep ? { grep } : null),
+      ...set,
     },
     signal,
   });

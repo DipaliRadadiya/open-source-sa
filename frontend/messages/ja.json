@@ -917,7 +917,10 @@
     "pmSpareOrder": "ワーカー数は 3 つすべて入力するか、すべて空欄にしてください。待機の最小数 ≤ 起動時 ≤ 待機の最大数 ≤ PHP ワーカープロセス数 となるようにします。",
     "min12": "12文字以上",
     "max128": "128文字以下",
-    "noControlChars": "改行や制御文字は使えません"
+    "noControlChars": "改行や制御文字は使えません",
+    "logFromInvalid": "1 以上の行番号を入力してください。",
+    "logIpInvalid": "IP アドレスを 1 つ入力してください（例: 203.0.113.5）。",
+    "logStatusInvalid": "404 のようなコード、または 5xx のようなグループを入力してください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -3625,6 +3628,28 @@
         "submit": "ログをクリア",
         "done": "{label} をクリアしました。",
         "failed": "ログをクリアできませんでした。"
+      },
+      "filters": {
+        "button": "フィルター",
+        "buttonActive": "フィルター ({count})",
+        "from": "開始行",
+        "fromPlaceholder": "例: 1000",
+        "fromHint": "この行から先を読み込みます。1 はファイルの先頭行です。",
+        "status": "状態",
+        "statusPlaceholder": "404 または 5xx",
+        "method": "HTTP メソッド",
+        "methodAny": "すべて",
+        "ip": "IP アドレス",
+        "ipPlaceholder": "203.0.113.5",
+        "url": "URL に含む",
+        "urlPlaceholder": "/wp-login.php",
+        "reset": "リセット",
+        "apply": "適用",
+        "remove": "{filter} を解除",
+        "range": "{first}–{last} 行目",
+        "rangeFrom": "{first} 行目から",
+        "previous": "前の {count, number} 行",
+        "next": "次の {count, number} 行"
       }
     },
     "environment": {

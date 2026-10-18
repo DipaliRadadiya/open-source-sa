@@ -917,7 +917,10 @@
     "pmSpareOrder": "Fill in all three worker numbers or none, so that fewest idle ≤ started ≤ most idle ≤ PHP workers.",
     "min12": "At least 12 characters",
     "max128": "Must be 128 characters or fewer",
-    "noControlChars": "No line breaks or control characters"
+    "noControlChars": "No line breaks or control characters",
+    "logFromInvalid": "Enter a line number, 1 or more.",
+    "logIpInvalid": "Enter one IP address, e.g. 203.0.113.5.",
+    "logStatusInvalid": "Enter a code like 404, or a group like 5xx."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3625,6 +3628,28 @@
         "submit": "Clear log",
         "done": "{label} cleared.",
         "failed": "The log could not be cleared."
+      },
+      "filters": {
+        "button": "Filters",
+        "buttonActive": "Filters ({count})",
+        "from": "From line",
+        "fromPlaceholder": "e.g. 1000",
+        "fromHint": "Reads forwards from this line. 1 is the first line of the file.",
+        "status": "Status",
+        "statusPlaceholder": "404 or 5xx",
+        "method": "HTTP method",
+        "methodAny": "Any",
+        "ip": "IP address",
+        "ipPlaceholder": "203.0.113.5",
+        "url": "URL contains",
+        "urlPlaceholder": "/wp-login.php",
+        "reset": "Reset",
+        "apply": "Apply",
+        "remove": "Remove {filter}",
+        "range": "Lines {first}–{last}",
+        "rangeFrom": "From line {first}",
+        "previous": "Previous {count, number} lines",
+        "next": "Next {count, number} lines"
       }
     },
     "environment": {

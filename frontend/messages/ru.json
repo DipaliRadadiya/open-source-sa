@@ -917,7 +917,10 @@
     "pmSpareOrder": "Заполните все три числа воркеров или ни одного, так чтобы минимум свободных ≤ при запуске ≤ максимум свободных ≤ процессы PHP-воркеров.",
     "min12": "Не менее 12 символов",
     "max128": "Не более 128 символов",
-    "noControlChars": "Без переносов строк и управляющих символов"
+    "noControlChars": "Без переносов строк и управляющих символов",
+    "logFromInvalid": "Введите номер строки от 1.",
+    "logIpInvalid": "Введите один IP-адрес, напр. 203.0.113.5.",
+    "logStatusInvalid": "Введите код, напр. 404, или группу, напр. 5xx."
   },
   "serverDashboard": {
     "title": "Панель",
@@ -3625,6 +3628,28 @@
         "submit": "Очистить журнал",
         "done": "{label} очищен.",
         "failed": "Не удалось очистить журнал."
+      },
+      "filters": {
+        "button": "Фильтры",
+        "buttonActive": "Фильтры ({count})",
+        "from": "Со строки",
+        "fromPlaceholder": "напр. 1000",
+        "fromHint": "Читает вперёд начиная с этой строки. 1 — первая строка файла.",
+        "status": "Статус",
+        "statusPlaceholder": "404 или 5xx",
+        "method": "HTTP-метод",
+        "methodAny": "Любой",
+        "ip": "IP-адрес",
+        "ipPlaceholder": "203.0.113.5",
+        "url": "URL содержит",
+        "urlPlaceholder": "/wp-login.php",
+        "reset": "Сбросить",
+        "apply": "Применить",
+        "remove": "Убрать {filter}",
+        "range": "Строки {first}–{last}",
+        "rangeFrom": "Со строки {first}",
+        "previous": "Предыдущие {count, number} строк",
+        "next": "Следующие {count, number} строк"
       }
     },
     "environment": {

@@ -10,7 +10,9 @@ import {
   readApplicationLog,
   applicationLogDownloadUrl,
 } from "@/lib/api/application-logs";
-import { LINE_OPTIONS } from "@/lib/schemas/log";
+import { LINE_OPTIONS, MAX_LINES } from "@/lib/schemas/log";
+import { EMPTY_LOG_FILTERS } from "@/lib/schemas/application-log";
+import { ActiveLogFilters, LogFiltersButton, hasFieldFilters } from "@/components/applications/logs/log-filters";
 import { matchesSeverity } from "@/lib/logs/severity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
@@ -34,6 +36,8 @@ const POLL_MS = 3000;
 // The tab sizes and last write, while the log is followed: each read stats every file.
 const SOURCES_POLL_MS = 30000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
+const RANGE_LINK =
+  "rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 // Sources whose lines carry an HTTP status; `waf_detect` uses `combined` format.
 const WEB_FORMAT_KEYS = new Set(["access", "waf_detect"]);
@@ -73,9 +77,12 @@ export function ApplicationLogsPanel({
   const [current, setCurrent] = useState(selected);
   // A real navigation to a different `?source=` (Back, a link) still wins.
   const [selectedProp, setSelectedProp] = useState(selected);
+  // Line numbers and access-log fields belong to one file, so a tab starts unfiltered.
+  const [filters, setFilters] = useState(EMPTY_LOG_FILTERS);
   if (selectedProp !== selected) {
     setSelectedProp(selected);
     setCurrent(selected);
+    setFilters(EMPTY_LOG_FILTERS);
   }
   const source = sources.find((s) => s.key === current) ?? null;
   // With an app process, access/error describe the reverse proxy. Keyed on the
@@ -97,6 +104,7 @@ export function ApplicationLogsPanel({
   const [searchCapped, setSearchCapped] = useState(
     Boolean(initial?.log?.search_window_capped),
   );
+  const [firstLine, setFirstLine] = useState(initial?.log?.first_line ?? null);
   const [lineCount, setLineCount] = useState(initialLines);
   const [term, setTerm] = useState("");
   const [debouncedTerm, setDebouncedTerm] = useState("");
@@ -140,9 +148,11 @@ export function ApplicationLogsPanel({
         const { data } = await readApplicationLog(appId, source.key, {
           lines: lineCount,
           grep: debouncedTerm || undefined,
+          filters,
           signal: ctrl.signal,
         });
         setLines(cleanLines(data?.log?.lines));
+        setFirstLine(data?.log?.first_line ?? null);
         setTruncated(Boolean(data?.log?.truncated));
         setSearchCapped(Boolean(data?.log?.search_window_capped));
         setStatus("ok");
@@ -168,7 +178,7 @@ export function ApplicationLogsPanel({
         if (!silent) setBusy(false);
       }
     },
-    [appId, source, lineCount, debouncedTerm, t],
+    [appId, source, lineCount, debouncedTerm, filters, t],
   );
 
   // Re-read on source / window / filter change. The first paint is server-fed.
@@ -183,8 +193,10 @@ export function ApplicationLogsPanel({
 
   // Live tail: no cursor, so re-read the last N (with the same grep) and replace
   // the buffer. Every poll re-filters the whole file, so a filter needs no pause.
+  // A read from a line is a fixed window; re-reading it shows nothing new.
+  const fromRead = filters.from !== "";
   useEffect(() => {
-    if (!follow || disabled) return undefined;
+    if (!follow || disabled || fromRead) return undefined;
     let active = true;
     let failures = 0;
 
@@ -213,7 +225,7 @@ export function ApplicationLogsPanel({
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [follow, disabled, load]);
+  }, [follow, disabled, fromRead, load]);
 
   // Live grows the file the tabs measured at load, so their sizes are read again too.
   useEffect(() => {
@@ -242,7 +254,9 @@ export function ApplicationLogsPanel({
   const effectiveTail =
     tailState === "paused"
       ? "paused"
-      : follow && !disabled
+      : follow && fromRead
+        ? "filtering"
+        : follow && !disabled
         ? tailState === "reconnecting"
           ? "reconnecting"
           : "live"
@@ -318,6 +332,8 @@ export function ApplicationLogsPanel({
       setLines([]);
       setTruncated(false);
       setSearchCapped(false);
+      setFirstLine(null);
+      setFilters(EMPTY_LOG_FILTERS);
       setStatus("loading");
       setFailedMessage(null);
       const url = new URL(window.location.href);
@@ -330,6 +346,13 @@ export function ApplicationLogsPanel({
   // Reverse proxy hint: only on the proxy logs (access/error) of a process site.
   const showProxyHint =
     hasAppOutput && (current === "access" || current === "error");
+
+  // IP, status, method and URL are parsed from the access log's format only.
+  const fieldFilters = current === "access";
+  const serverFiltered = Boolean(debouncedTerm) || hasFieldFilters(filters);
+  // Pages only an unfiltered read: a filtered one searches 5,000 lines, not `lines`.
+  const pageable = firstLine != null && !serverFiltered;
+  const goToLine = (line) => setFilters({ ...filters, from: String(Math.max(1, line)) });
 
   return (
     <Tabs
@@ -368,7 +391,7 @@ export function ApplicationLogsPanel({
           }
           shown={visible.length}
           loaded={lines.length}
-          wholeFile={!truncated && lines.length > 0}
+          wholeFile={!truncated && lines.length > 0 && !hasFieldFilters(filters) && !fromRead}
           term={term}
           onTermChange={setTerm}
           severity={severity}
@@ -400,6 +423,16 @@ export function ApplicationLogsPanel({
           reloadReason={status === "locked" ? t("locked.title") : status === "missing" ? t("missing.title") : null}
           details={writtenAt ? [t("lastWritten", { time: writtenAt })] : []}
           searchRef={searchRef}
+          searchAddon={
+            <LogFiltersButton
+              key={current}
+              filters={filters}
+              onApply={setFilters}
+              fieldFilters={fieldFilters}
+              fromAllowed={source?.kind === "file"}
+              disabled={disabled}
+            />
+          }
           tailState={effectiveTail}
           onResume={() => {
             setTailState("idle");
@@ -414,7 +447,32 @@ export function ApplicationLogsPanel({
           </p>
         ) : null}
 
-        {truncated && status === "ok" && lines.length > 0 ? (
+        <ActiveLogFilters filters={filters} onChange={setFilters} />
+
+        {firstLine != null && status === "ok" ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+            <span>
+              {pageable && lines.length
+                ? tApp("filters.range", {
+                    first: format.number(firstLine),
+                    last: format.number(firstLine + lines.length - 1),
+                  })
+                : tApp("filters.rangeFrom", { first: format.number(firstLine) })}
+            </span>
+            {pageable && firstLine > 1 ? (
+              <button type="button" onClick={() => goToLine(firstLine - lineCount)} className={RANGE_LINK}>
+                {tApp("filters.previous", { count: lineCount })}
+              </button>
+            ) : null}
+            {pageable && truncated ? (
+              <button type="button" onClick={() => goToLine(firstLine + lineCount)} className={RANGE_LINK}>
+                {tApp("filters.next", { count: lineCount })}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {truncated && firstLine == null && status === "ok" && lines.length > 0 ? (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
             <span>{t("olderNotLoaded")}</span>
             {nextLineStep ? (
@@ -434,9 +492,10 @@ export function ApplicationLogsPanel({
           group={group}
           term={debouncedTerm}
           severity={severity}
-          filtered={Boolean(debouncedTerm) || severity !== "all"}
+          filtered={serverFiltered || fromRead || severity !== "all"}
           searchCapped={searchCapped}
-          searchedLines={lineCount}
+          // A filtered read searches the API's whole window, whatever `lines` says.
+          searchedLines={MAX_LINES}
           wrap={wrap}
           newestFirst={newestFirst}
           status={status}

@@ -917,7 +917,10 @@
     "pmSpareOrder": "Renseignez les trois nombres de workers ou aucun, de sorte que minimum inactif ≤ au démarrage ≤ maximum inactif ≤ workers PHP.",
     "min12": "Au moins 12 caractères",
     "max128": "128 caractères maximum",
-    "noControlChars": "Pas de retours à la ligne ni de caractères de contrôle"
+    "noControlChars": "Pas de retours à la ligne ni de caractères de contrôle",
+    "logFromInvalid": "Saisissez un numéro de ligne, 1 ou plus.",
+    "logIpInvalid": "Saisissez une seule adresse IP, ex. 203.0.113.5.",
+    "logStatusInvalid": "Saisissez un code comme 404 ou un groupe comme 5xx."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -3625,6 +3628,28 @@
         "submit": "Vider le journal",
         "done": "{label} vidé.",
         "failed": "Le journal n'a pas pu être vidé."
+      },
+      "filters": {
+        "button": "Filtres",
+        "buttonActive": "Filtres ({count})",
+        "from": "À partir de la ligne",
+        "fromPlaceholder": "ex. 1000",
+        "fromHint": "Lit vers l’avant à partir de cette ligne. 1 est la première ligne du fichier.",
+        "status": "Statut",
+        "statusPlaceholder": "404 ou 5xx",
+        "method": "Méthode HTTP",
+        "methodAny": "Toutes",
+        "ip": "Adresse IP",
+        "ipPlaceholder": "203.0.113.5",
+        "url": "L’URL contient",
+        "urlPlaceholder": "/wp-login.php",
+        "reset": "Réinitialiser",
+        "apply": "Appliquer",
+        "remove": "Retirer {filter}",
+        "range": "Lignes {first}–{last}",
+        "rangeFrom": "À partir de la ligne {first}",
+        "previous": "{count, number} lignes précédentes",
+        "next": "{count, number} lignes suivantes"
       }
     },
     "environment": {

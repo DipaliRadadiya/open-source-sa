@@ -917,7 +917,10 @@
     "pmSpareOrder": "तीनों वर्कर संख्याएँ भरें या कोई नहीं, ताकि कम से कम खाली ≤ शुरू होने पर ≤ ज़्यादा से ज़्यादा खाली ≤ PHP वर्कर प्रोसेस।",
     "min12": "कम से कम 12 अक्षर",
     "max128": "128 वर्ण या उससे कम होना चाहिए",
-    "noControlChars": "लाइन ब्रेक या कंट्रोल कैरेक्टर नहीं"
+    "noControlChars": "लाइन ब्रेक या कंट्रोल कैरेक्टर नहीं",
+    "logFromInvalid": "पंक्ति संख्या दर्ज करें, 1 या उससे अधिक।",
+    "logIpInvalid": "एक IP पता दर्ज करें, जैसे 203.0.113.5।",
+    "logStatusInvalid": "404 जैसा कोड या 5xx जैसा समूह दर्ज करें।"
   },
   "serverDashboard": {
     "title": "डैशबोर्ड",
@@ -3625,6 +3628,28 @@
         "submit": "लॉग खाली करें",
         "done": "{label} खाली कर दिया।",
         "failed": "लॉग खाली नहीं किया जा सका।"
+      },
+      "filters": {
+        "button": "फ़िल्टर",
+        "buttonActive": "फ़िल्टर ({count})",
+        "from": "इस पंक्ति से",
+        "fromPlaceholder": "जैसे 1000",
+        "fromHint": "इस पंक्ति से आगे पढ़ता है। 1 फ़ाइल की पहली पंक्ति है।",
+        "status": "स्थिति",
+        "statusPlaceholder": "404 या 5xx",
+        "method": "HTTP मेथड",
+        "methodAny": "कोई भी",
+        "ip": "IP पता",
+        "ipPlaceholder": "203.0.113.5",
+        "url": "URL में शामिल",
+        "urlPlaceholder": "/wp-login.php",
+        "reset": "रीसेट करें",
+        "apply": "लागू करें",
+        "remove": "{filter} हटाएँ",
+        "range": "पंक्तियाँ {first}–{last}",
+        "rangeFrom": "पंक्ति {first} से",
+        "previous": "पिछली {count, number} पंक्तियाँ",
+        "next": "अगली {count, number} पंक्तियाँ"
       }
     },
     "environment": {
