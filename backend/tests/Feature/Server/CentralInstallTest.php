@@ -41,25 +41,6 @@ function runCreateAdmin(string $username, string $stdin): array
     return [$status, $output->fetch()];
 }
 
-/** One function out of install.sh, as source. */
-function installerFn(string $name): string
-{
-    preg_match('/^'.preg_quote($name, '/').'\(\) \{\n.*?^\}\n/ms', installerSource(), $m);
-
-    expect($m)->not->toBeEmpty("install.sh has no {$name}()");
-
-    return $m[0];
-}
-
-/** install.sh without its whole-line comments — what it runs, not what it says. */
-function installerCode(): string
-{
-    return implode("\n", array_filter(
-        preg_split('/\R/', installerSource()) ?: [],
-        fn (string $line): bool => ! str_starts_with(ltrim($line), '#'),
-    ));
-}
-
 describe('artisan panel:create-admin', function () {
     it('creates the administrator with every permission, and closes registration', function () {
         [$status, $out] = runCreateAdmin('central-admin', "Random-Strong-Pass-42\n");
@@ -202,10 +183,6 @@ describe('install.sh', function () {
  * The shell itself, run for real: the reporting function against a receiver on
  * this machine, and the input checks against the cases a caller can get wrong.
  */
-function installerFunctions(string ...$names): string
-{
-    return implode("\n", array_map(fn (string $name) => installerFn($name), $names));
-}
 
 it('reports each step to Central as JSON, signed, with the escaping a title needs', function () {
     $dir = sys_get_temp_dir().'/central-progress-'.bin2hex(random_bytes(4));

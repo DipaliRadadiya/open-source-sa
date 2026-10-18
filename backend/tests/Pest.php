@@ -243,6 +243,36 @@ function installerSource(): string
     return (string) file_get_contents($path);
 }
 
+/** One function out of install.sh, as source. */
+function installerFn(string $name): string
+{
+    preg_match('/^'.preg_quote($name, '/').'\(\) \{\n.*?^\}\n/ms', installerSource(), $m);
+
+    expect($m)->not->toBeEmpty("install.sh has no {$name}()");
+
+    return $m[0];
+}
+
+/**
+ * Functions out of install.sh, to run for real under `bash -c`.
+ *
+ * Shared with installerFn for the reason installerSource is: the Central
+ * install tests and the Redis tests both run the installer's own functions.
+ */
+function installerFunctions(string ...$names): string
+{
+    return implode("\n", array_map(fn (string $name) => installerFn($name), $names));
+}
+
+/** install.sh without its whole-line comments — what it runs, not what it says. */
+function installerCode(): string
+{
+    return implode("\n", array_filter(
+        preg_split('/\R/', installerSource()) ?: [],
+        fn (string $line): bool => ! str_starts_with(ltrim($line), '#'),
+    ));
+}
+
 /**
  * What `systemctl show` replies for the units named in $command.
  *

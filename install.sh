@@ -1591,11 +1591,77 @@ configure_mail() {
     ok "Postfix sends mail for this server (listening on loopback only)"
 }
 
+# What the default user's ACL line in redis.conf leaves it with, read the way
+# Redis applies the line, left to right: "nopass" (no password at all),
+# "password", "none" (neither — nobody can log in as it), or nothing when the
+# file has no such line. A password token clears nopass and resetpass clears
+# both, so `nopass` appearing on the line is not enough on its own.
+redis_default_acl() {
+    awk '$1 == "user" && $2 == "default" { line = $0 }
+        END {
+            if (line == "") exit
+            n = split(line, t); np = 0; pw = 0
+            for (i = 3; i <= n; i++) {
+                if (t[i] == "nopass") { np = 1; pw = 0 }
+                else if (t[i] == "resetpass" || t[i] == "reset") { np = 0; pw = 0 }
+                else if (t[i] ~ /^[>#]/) { np = 0; pw++ }
+                else if (t[i] ~ /^[<!]/ && pw > 0) { pw-- }
+            }
+            print (np ? "nopass" : (pw > 0 ? "password" : "none"))
+        }' "$1" 2>/dev/null || true
+}
+
+# Gives the default user this password (as its SHA-256, the form CONFIG REWRITE
+# writes) in place of the password rules its ACL line had. The rest of the line
+# — the keys, channels and commands it may use — and every other user's line
+# stay as they are, and the old line is kept above it as a comment. Written
+# back into the same file, so its owner and mode do not change.
+redis_set_default_password() {
+    local conf="$1" hash new
+    hash="$(printf '%s' "$2" | sha256sum | cut -d' ' -f1)"
+
+    new="$(awk -v hash="$hash" '
+        NR == FNR { if ($1 == "user" && $2 == "default") last = FNR; next }
+        FNR == last {
+            print "# Before the Control panel installer gave the default user a password:"
+            print "# " $0
+            out = "user default"
+            for (i = 3; i <= NF; i++) {
+                if ($i != "nopass" && $i != "resetpass" && $i !~ /^[<>#!]/) out = out " " $i
+            }
+            print out " resetpass #" hash
+            next
+        }
+        { print }' "$conf" "$conf")"
+    printf '%s\n' "$new" >"$conf"
+}
+
+# A Redis password counts only when Redis itself proves it. redis-cli is no
+# proof on its own: when AUTH fails it prints "AUTH failed: ..." and carries on,
+# and a PING then works anyway if the default user needs no password. So the
+# authenticated PING must answer PONG with no AUTH failure, and a PING with no
+# password must be refused — otherwise .env gets a password Redis rejects and
+# every connection the panel makes fails (2026-10-18, step 14).
+#
+# The password goes in REDISCLI_AUTH, not -a, so it is not in the process list.
+redis_password_works() {
+    local out
+    [[ -n "$1" ]] || return 1
+
+    out="$(REDISCLI_AUTH="$1" redis-cli ping 2>&1)" || true
+    [[ "$out" == *PONG* && "$out" != *"AUTH failed"* && "$out" != *WRONGPASS* && "$out" != *NOAUTH* ]] || return 1
+
+    out="$(env -u REDISCLI_AUTH redis-cli ping 2>&1)" || true
+    [[ "$out" == *NOAUTH* ]]
+}
+
+# The argument is only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
 configure_redis() {
     step "Securing Redis"
 
     REDIS_PASSWORD=""
-    local conf=/etc/redis/redis.conf
+    local conf="${1:-/etc/redis/redis.conf}"
 
     if [[ ! -f "$conf" ]]; then
         warn "redis.conf not found — the panel will fall back to database cache"
@@ -1620,16 +1686,38 @@ configure_redis() {
     [[ -n "$from_panel" ]] && candidates+=("$from_panel")
     [[ -n "$existing" && "$existing" != "$from_panel" ]] && candidates+=("$existing")
 
-    if [[ -n "$existing" ]] || grep -qE '^user default .*[#>]' "$conf"; then
-        REDIS_PASSWORD="${candidates[0]:-}"
+    # `user default on nopass ...` — what CONFIG REWRITE writes for a Redis
+    # that never had a password — beats `requirepass`: Redis applies the ACL
+    # line after it, so the default user stays open while CONFIG GET
+    # requirepass shows the new value. Appending `requirepass` there changed
+    # nothing (2026-10-18). The password goes on the ACL line itself; the
+    # `requirepass` line stays as well, or is added, because a re-run finds the
+    # password there when the panel's .env does not have it yet.
+    local acl new
+    acl="$(redis_default_acl "$conf")"
+
+    if [[ "$acl" != "nopass" ]] && [[ -n "$existing" || "$acl" == "password" ]]; then
         skip "Redis already has a password"
     else
-        # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
-        # pipefail turns into a fatal exit 141. Over-read, then slice in bash.
-        REDIS_PASSWORD=$(head -c 48 /dev/urandom | base64 | tr -d '/+=')
-        REDIS_PASSWORD=${REDIS_PASSWORD:0:32}
-        printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$REDIS_PASSWORD" >>"$conf"
-        ok "generated a Redis password"
+        # An open default user with a `requirepass` line (a re-run after the
+        # line was appended to no effect) gets that password.
+        new="$existing"
+        if [[ -z "$new" ]]; then
+            # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
+            # pipefail turns into a fatal exit 141. Over-read, then slice in bash.
+            new=$(head -c 48 /dev/urandom | base64 | tr -d '/+=')
+            new=${new:0:32}
+            printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$new" >>"$conf"
+        fi
+
+        if [[ "$acl" == "nopass" ]]; then
+            redis_set_default_password "$conf" "$new"
+            ok "Redis's default user had no password — it has one now"
+        else
+            ok "generated a Redis password"
+        fi
+        # The only one that can work now.
+        candidates=("$new")
     fi
 
     # Bounded like v7 (operator, 2026-10-07): 256 MB, least-recently-used
@@ -1649,17 +1737,17 @@ configure_redis() {
     # with NOAUTH and the screen you would fix it from is behind that failure.
     local candidate
     for candidate in "${candidates[@]}"; do
-        if redis-cli -a "$candidate" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+        if redis_password_works "$candidate"; then
             REDIS_PASSWORD="$candidate"
             break
         fi
     done
 
-    if [[ -n "$REDIS_PASSWORD" ]] && redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+    if [[ -n "$REDIS_PASSWORD" ]]; then
         ok "Redis reachable"
         CACHE_STORE="redis"
     else
-        warn "Redis did not answer — using the database cache instead"
+        warn "Redis did not accept a password the panel can use — using the database cache instead"
         REDIS_PASSWORD=""
         CACHE_STORE="database"
     fi
