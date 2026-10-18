@@ -25,6 +25,7 @@ import {
   withMinute,
 } from "@/lib/backups/frequency";
 import { hasNoDatabase, siteNeedsDatabase } from "@/lib/backups/database-availability";
+import { blocksVolumesOnly, withoutVolumesOnly } from "@/lib/backups/volume-availability";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,6 +95,9 @@ export function BackupSettingsFields({
   siteTypes = null,
   siteType = null,
   servingProfile = null,
+  // A container site's `has_volumes`: "Volumes" alone is blocked when false, and
+  // null (unknown, or not fixed to one site) says nothing — the save refuses it.
+  hasVolumes = null,
   // A database's own schedule: always a database backup, nothing to exclude.
   databaseOnly = false,
 }) {
@@ -171,6 +175,7 @@ export function BackupSettingsFields({
     (servingProfile ?? chosenApplication?.serving_profile) === "docker" ||
     (siteTypes ?? []).some((entry) => entry.name === chosenType && entry.serving_profile === "docker");
   const typeOptions = orderedTypes(options, container);
+  const noVolumes = container && blocksVolumesOnly(hasVolumes);
   const filesOnly = !container && noDatabase === true && knownType && !siteNeedsDatabase(siteTypes, chosenType);
 
   // A database-less site cannot keep "Database only" (empty backup), but a type
@@ -180,6 +185,9 @@ export function BackupSettingsFields({
     if (typeOptions.length && !typeOptions.some((option) => option.value === type)) {
       form.setValue("type", typeOptions[0].value, { shouldDirty: Boolean(target) });
     } else if (container) {
+      // A saved "Volumes" target of a site with none fails every run (S-02).
+      const working = withoutVolumesOnly(type, hasVolumes);
+      if (working !== type) form.setValue("type", working, { shouldDirty: true });
       return;
     } else if (filesOnly && type !== "filesystem") {
       form.setValue("type", "filesystem", { shouldDirty: true });
@@ -188,7 +196,7 @@ export function BackupSettingsFields({
     } else if (noDatabase === true && !target && !typePicked && type === "full") {
       form.setValue("type", "filesystem");
     }
-  }, [typeOptions, container, filesOnly, noDatabase, type, form, target, typePicked]);
+  }, [typeOptions, container, hasVolumes, filesOnly, noDatabase, type, form, target, typePicked]);
   // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
   // applies it in the same request), not on the next run.
   // From the backups actually kept: "keep 3 → 1" with only 2 kept deletes one, not two.
@@ -269,7 +277,9 @@ export function BackupSettingsFields({
                         ? t("noDatabase.typeHasNone")
                         : option === "database" && noDatabase
                           ? t("noDatabase.blocked")
-                          : undefined,
+                          : option === "volumes" && noVolumes
+                            ? t("noVolumes.blocked")
+                            : undefined,
                   }))}
                 />
               </FormControl>

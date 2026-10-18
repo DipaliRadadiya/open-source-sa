@@ -7050,6 +7050,9 @@
         "filesOnly": "This application has no database, so only its files will be backed up.",
         "typeHasNone": "This type of application has no database, so only its files are backed up."
       },
+      "noVolumes": {
+        "blocked": "This application has no volumes"
+      },
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
       "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild.",

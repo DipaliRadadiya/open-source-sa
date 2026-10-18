@@ -7050,6 +7050,9 @@
         "filesOnly": "Diese Anwendung hat keine Datenbank, es werden also nur ihre Dateien gesichert.",
         "typeHasNone": "Dieser Anwendungstyp hat keine Datenbank, daher werden nur seine Dateien gesichert."
       },
+      "noVolumes": {
+        "blocked": "Diese Anwendung hat keine Volumes"
+      },
       "automaticHint": "Führt die Sicherung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
       "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
       "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt.",

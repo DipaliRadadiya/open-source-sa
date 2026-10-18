@@ -198,9 +198,14 @@ export const backupTargetsResponseSchema = z.object({
     }),
 });
 
-/** `backup_target` is null for a site nobody has configured yet. */
+/**
+ * `backup_target` is null for a site nobody has configured yet. `has_volumes`:
+ * whether a container site has any volumes, null when unknown or not a container
+ * site (S-02). Declared, or Zod strips it.
+ */
 export const backupTargetResponseSchema = z.object({
   backup_target: backupTargetSchema.nullable(),
+  has_volumes: z.boolean().nullable().default(null),
 });
 
 // `backed_up_with`: the database belongs to a site, whose schedule covers it, and a

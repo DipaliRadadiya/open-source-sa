@@ -7050,6 +7050,9 @@
         "filesOnly": "Esta aplicación no tiene base de datos, por lo que solo se respaldarán sus archivos.",
         "typeHasNone": "Este tipo de aplicación no tiene base de datos, así que solo se copian sus archivos."
       },
+      "noVolumes": {
+        "blocked": "Esta aplicación no tiene volúmenes"
+      },
       "automaticHint": "Ejecuta la copia de seguridad de forma programada en lugar de solo cuando presiona el botón.",
       "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
       "databaseExcludesHint": "Bases de datos que se excluirán de la copia de seguridad, una por línea. Útil para cachés y cualquier cosa que pueda reconstruir.",

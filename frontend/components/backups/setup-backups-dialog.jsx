@@ -53,6 +53,8 @@ export function SetupBackupsDialog({
   siteTypes = null,
   siteType = null,
   servingProfile = null,
+  // The fixed site's `has_volumes` — see BackupSettingsFields.
+  hasVolumes = null,
   // A database on its own: `applicationId` is its id, the type is always `database`
   // and there is nothing to exclude.
   database = null,
@@ -344,6 +346,7 @@ export function SetupBackupsDialog({
           siteTypes={siteTypes}
           siteType={siteType}
           servingProfile={servingProfile}
+          hasVolumes={hasVolumes}
           databaseOnly={Boolean(database)}
           options={options}
           onRetryOptions={retryOptions}
