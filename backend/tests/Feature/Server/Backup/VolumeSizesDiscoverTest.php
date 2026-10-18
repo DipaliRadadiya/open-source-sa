@@ -118,3 +118,16 @@ it('answers with nothing when docker could not be asked', function () {
 
     expect(discoverFor(volumeListOps('', answered: false), $application))->toBe([]);
 });
+
+it('tells "has none" apart from "could not ask" for the refusals that act on it (S-02)', function () {
+    // A `volumes` backup is refused only on `[]`. Refusing on a daemon that did
+    // not answer would turn a site that has volumes away, with a false reason.
+    $application = volumeApplication();
+    $sizes = fn (ServerOps $ops): VolumeSizes => new VolumeSizes($ops);
+
+    expect($sizes(volumeListOps('', answered: false))->find($application))->toBeNull()
+        ->and($sizes(volumeListOps('', answered: false))->hasNone($application))->toBeFalse()
+        ->and($sizes(volumeListOps('someone-elses'."\t".'/var/lib/docker/volumes/someone-elses/_data'))->find($application))->toBe([])
+        ->and($sizes(volumeListOps(''))->hasNone($application))->toBeTrue()
+        ->and($sizes(volumeListOps('sv-app-'.$application->id.'_data'."\t".'/var/lib/docker/volumes/x/_data'))->hasNone($application))->toBeFalse();
+});

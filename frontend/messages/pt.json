@@ -7075,6 +7075,9 @@
         "filesOnly": "Esta aplicação não tem banco de dados, então apenas seus arquivos serão copiados.",
         "typeHasNone": "Este tipo de aplicação não tem banco de dados, então apenas os arquivos são copiados."
       },
+      "noVolumes": {
+        "blocked": "Esta aplicação não tem volumes"
+      },
       "automaticHint": "Executa a cópia de segurança de forma agendada em vez de apenas quando você aperta o botão.",
       "fileExcludesHint": "Caminhos a serem deixados fora da cópia de segurança, um por linha. Caches e logs valem a pena excluir; uploads, não.",
       "databaseExcludesHint": "Bancos de dados a serem excluídos da cópia de segurança, um por linha. Útil para caches e qualquer coisa que você possa reconstruir.",

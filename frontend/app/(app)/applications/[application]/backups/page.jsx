@@ -56,8 +56,8 @@ export default async function ApplicationBackupsPage({ params }) {
 
   // A provisioning site has nothing to back up. `meta.total` is the whole history; the list is capped at five.
   // `backupsFailed` keeps "could not ask" distinct from "nothing has run".
-  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
-    settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
+  const [{ target, hasVolumes }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
+    settled ? getBackupTarget(id) : Promise.resolve({ target: null, hasVolumes: null }),
     getStorageDestinations(),
     settled
       ? getApplicationBackups(id, { per_page: 5 })
@@ -137,6 +137,7 @@ export default async function ApplicationBackupsPage({ params }) {
           needsDatabase={needsDatabase}
           canManageDatabases={canManageDatabases}
           backupOptions={backupOptions}
+          hasVolumes={hasVolumes}
         />
       )}
     </div>

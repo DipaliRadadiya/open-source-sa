@@ -93,6 +93,32 @@ class VolumeSizes
      */
     public function discover(Application $application): array
     {
+        return $this->find($application) ?? [];
+    }
+
+    /**
+     * Docker answered, and none of the volumes it listed belong to this site.
+     *
+     * False when Docker could not be asked — see {@see self::find()}.
+     */
+    public function hasNone(Application $application): bool
+    {
+        return $this->find($application) === [];
+    }
+
+    /**
+     * {@see self::discover()}, but null when Docker did not answer.
+     *
+     * The two empties mean different things to anyone acting on them. A
+     * `volumes` backup of a site with no volumes is refused with "this site has
+     * no volumes" (S-02), and saying that because the daemon was briefly
+     * unreachable would refuse a site that has them, for a reason that is
+     * false. So the refusals ask this and act only on `[]`.
+     *
+     * @return array<string, string>|null
+     */
+    public function find(Application $application): ?array
+    {
         $result = $this->serverOps->run(
             ['docker', 'volume', 'ls', '--format', '{{.Name}}\t{{.Mountpoint}}'],
             ['feature' => 'application', 'op' => 'docker_volume_list', 'application' => $application->id],
@@ -100,7 +126,7 @@ class VolumeSizes
         );
 
         if (! $result->answered) {
-            return [];
+            return null;
         }
 
         $attached = collect((array) ($application->volume_mounts ?? []))

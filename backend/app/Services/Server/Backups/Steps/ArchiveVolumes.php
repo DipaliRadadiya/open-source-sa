@@ -3,6 +3,7 @@
 namespace App\Services\Server\Backups\Steps;
 
 use App\Contracts\BackupStep;
+use App\Exceptions\NoVolumesToBackUp;
 use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Docker\VolumeSizes;
 use App\Services\Server\ServerOps;
@@ -60,7 +61,18 @@ class ArchiveVolumes implements BackupStep
 
     public function run(BackupContext $context): void
     {
-        $discovered = $this->volumes->discover($context->application());
+        $found = $this->volumes->find($context->application());
+
+        // Volumes and nothing else, of a site with none: the archive would hold
+        // nothing, and tar refuses to write it. Said here, as what it is, rather
+        // than as the archive step failing next. `volumes_config` still has the
+        // compose file to keep, so it carries on. Null — Docker did not answer —
+        // is not "none" and is left to fail as it did.
+        if ($found === [] && ! $context->wantsConfig()) {
+            throw new NoVolumesToBackUp('the application has no volumes to back up');
+        }
+
+        $discovered = $found ?? [];
         $selected = $this->selected($context, $discovered);
 
         // Recorded even when empty, and recorded as what it is. A container

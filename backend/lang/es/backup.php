@@ -70,6 +70,7 @@ return [
         'target_type_needs_container' => 'Este servidor ejecuta contenedores, por lo que una copia aquí captura volúmenes y configuración. Elija una de esas opciones.',
 
         'target_type_needs_hosted' => 'Esta aplicación se sirve desde una carpeta, así que no hay volúmenes que copiar. Elija archivos o base de datos.',
+        'target_no_volumes' => 'Esta aplicación no tiene volúmenes que respaldar. Elija una copia que incluya Compose y configuración.',
         'restore_no_files' => 'Esta copia no contiene archivos.',
         'download_no_artifact' => 'Esta copia de seguridad nunca terminó de subirse, así que no hay ningún archivo para descargar.',
         'download_no_destination' => 'El destino de almacenamiento al que se subió esta copia de seguridad ya no existe.',

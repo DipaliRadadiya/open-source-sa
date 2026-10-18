@@ -173,7 +173,7 @@ export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
 // Null when not configured. Cached per request: the form and status strip both read it.
 export const getBackupTarget = cache(async function getBackupTarget(applicationId) {
   const result = await read(`/applications/${applicationId}/backup-target`, backupTargetResponseSchema);
-  return { target: result.data?.backup_target ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
+  return { target: result.data?.backup_target ?? null, hasVolumes: result.data?.has_volumes ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 export const getDatabaseBackupTarget = cache(async function getDatabaseBackupTarget(databaseId) {

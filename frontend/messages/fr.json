@@ -7075,6 +7075,9 @@
         "filesOnly": "Cette application n'a pas de base de données, donc seuls ses fichiers seront sauvegardés.",
         "typeHasNone": "Ce type d'application n'a pas de base de données : seuls ses fichiers sont sauvegardés."
       },
+      "noVolumes": {
+        "blocked": "Cette application n'a aucun volume"
+      },
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
       "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire.",

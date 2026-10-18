@@ -26,6 +26,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use App\Services\Server\Docker\VolumeSizes;
 use App\Support\ListSearch;
 use App\Support\ListSort;
 use Carbon\Carbon;
@@ -221,15 +222,25 @@ class BackupController extends Controller
         ]);
     }
 
-    /** The backup settings for one application, or null when unconfigured. */
-    public function showTarget(Application $application): JsonResponse
+    /**
+     * The backup settings for one application, or null when unconfigured.
+     *
+     * `has_volumes` lets the form disable `volumes` for a container site with
+     * none, which the save refuses (S-02). Null when it does not apply — a
+     * hosted site — or Docker could not be asked; the form then offers every
+     * container type and the save still has the last word.
+     */
+    public function showTarget(Application $application, VolumeSizes $volumes): JsonResponse
     {
         $target = BackupTarget::with('storageDestination')
             ->where('application_id', $application->id)
             ->first();
 
+        $found = $application->serving_profile === 'docker' ? $volumes->find($application) : null;
+
         return response()->json([
             'backup_target' => $target === null ? null : BackupTargetResource::make($target)->resolve(),
+            'has_volumes' => $found === null ? null : $found !== [],
         ]);
     }
 
@@ -334,11 +345,36 @@ class BackupController extends Controller
             ]);
         }
 
+        $this->refuseVolumesWithoutVolumes($target);
+
         RunBackup::dispatch($target->id, request()->user()?->id);
 
         return response()->json([
             'backup_target' => BackupTargetResource::make($target->fresh(['storageDestination']))->resolve(),
         ], 202);
+    }
+
+    /**
+     * A `volumes` target of a site with no volumes, refused before it is queued
+     * (S-02).
+     *
+     * The save refuses this now, but a target saved before it did is still in
+     * the table, and "Back up now" answering 202 for a run that can only fail
+     * is the silent half. The same message as the save, so both say one thing.
+     * A scheduled run cannot be answered like this; `ArchiveVolumes` fails it
+     * with this reason instead.
+     */
+    private function refuseVolumesWithoutVolumes(BackupTarget $target): void
+    {
+        if ($target->type !== BackupType::Volumes || $target->application === null) {
+            return;
+        }
+
+        if (app(VolumeSizes::class)->hasNone($target->application)) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.target_no_volumes')],
+            ]);
+        }
     }
 
     /**
@@ -518,6 +554,8 @@ class BackupController extends Controller
                 'application' => [__('backup.errors.already_running')],
             ]);
         }
+
+        $this->refuseVolumesWithoutVolumes($target);
 
         RunBackup::dispatch($target->id, request()->user()?->id);
 

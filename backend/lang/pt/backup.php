@@ -68,6 +68,7 @@ return [
         'target_no_database' => 'Esta aplicação não tem banco de dados para fazer backup. Escolha :files.',
         'target_type_needs_container' => 'Este servidor executa contentores, pelo que uma cópia aqui captura volumes e configuração. Escolha uma dessas opções.',
         'target_type_needs_hosted' => 'Esta aplicação é servida a partir de uma pasta, pelo que não há volumes para copiar. Escolha ficheiros ou base de dados.',
+        'target_no_volumes' => 'Esta aplicação não tem volumes para copiar. Escolha uma cópia que inclua Compose e configuração.',
         'restore_no_files' => 'Esta cópia não contém ficheiros.',
         'download_no_artifact' => 'Esta cópia de segurança nunca terminou de ser enviada, por isso não há nenhum arquivo para transferir.',
         'download_no_destination' => 'O destino de armazenamento para onde esta cópia foi enviada já não existe.',

@@ -70,6 +70,7 @@ return [
         'target_type_needs_container' => 'This server runs containers, so a backup here captures volumes and configuration. Choose one of those instead.',
 
         'target_type_needs_hosted' => 'This application is served from a folder, so there are no volumes to back up. Choose files or database instead.',
+        'target_no_volumes' => 'This application has no volumes to back up. Choose a backup that includes its compose and config instead.',
         'restore_no_files' => 'This backup does not contain any files.',
         'download_no_artifact' => 'This backup never finished uploading, so there is no archive to download.',
         'download_no_destination' => 'The storage destination this backup was uploaded to no longer exists.',

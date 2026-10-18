@@ -90,6 +90,8 @@ export function BackupsPanel({
   backupsForbidden = false,
   // `GET /backup-targets/options`; null when it could not be read.
   backupOptions = null,
+  // Container site: whether it has any volumes; null when unknown (S-02).
+  hasVolumes = null,
   // Database page only: `backup` manage, which download and delete still need.
   canHandleArchives = false,
   // Database page only: backups of deleted databases of the same engine, restorable here.
@@ -323,6 +325,7 @@ export function BackupsPanel({
         siteTypes={siteTypes}
         siteType={application?.site_type}
         servingProfile={application?.serving_profile}
+        hasVolumes={hasVolumes}
         options={backupOptions}
         // Starts the same queue window as the card's button.
         onStarted={() => {

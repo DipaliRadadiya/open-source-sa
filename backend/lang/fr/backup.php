@@ -68,6 +68,7 @@ return [
         'target_no_database' => 'Cette application n\'a aucune base de données à sauvegarder. Choisissez plutôt :files.',
         'target_type_needs_container' => 'Ce serveur exécute des conteneurs ; une sauvegarde ici capture les volumes et la configuration. Choisissez l\'une de ces options.',
         'target_type_needs_hosted' => 'Cette application est servie depuis un dossier, il n\'y a donc aucun volume à sauvegarder. Choisissez fichiers ou base de données.',
+        'target_no_volumes' => 'Cette application n\'a aucun volume à sauvegarder. Choisissez plutôt une sauvegarde qui inclut Compose et la configuration.',
         'restore_no_files' => 'Cette sauvegarde ne contient aucun fichier.',
         'download_no_artifact' => 'Cette sauvegarde n’a jamais fini d’être téléversée, il n’y a donc aucune archive à télécharger.',
         'download_no_destination' => 'La destination de stockage vers laquelle cette sauvegarde a été téléversée n’existe plus.',

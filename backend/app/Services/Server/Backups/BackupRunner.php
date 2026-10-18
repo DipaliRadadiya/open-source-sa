@@ -4,6 +4,7 @@ namespace App\Services\Server\Backups;
 
 use App\Contracts\BackupStep;
 use App\Enums\BackupStatus;
+use App\Exceptions\NoVolumesToBackUp;
 use App\Exceptions\UploadStalled;
 use App\Models\Backup;
 use App\Models\BackupTarget;
@@ -138,7 +139,12 @@ class BackupRunner
                 // not implied by the step, and it is the part that tells an
                 // operator whether to go and fix something or to wait for the
                 // next run.
-                'reason' => $e instanceof UploadStalled ? UploadStalled::REASON : $backup->reason,
+                // Likewise a volumes backup of a site with none (S-02).
+                'reason' => match (true) {
+                    $e instanceof UploadStalled => UploadStalled::REASON,
+                    $e instanceof NoVolumesToBackUp => NoVolumesToBackUp::REASON,
+                    default => $backup->reason,
+                },
                 'error_class' => $this->storageErrorClass($backup, $e),
                 'finished_at' => now(),
             ]);
