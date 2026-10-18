@@ -108,6 +108,10 @@ PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
 PROGRESS_URL="${PROGRESS_URL:-}"
 PROGRESS_READY=0   # set once PROGRESS_URL has been checked
 
+# Secrets this script comes to know beyond the ones above (every Redis password
+# it tried), so the log lines a failed report carries can leave them out.
+REDACT=()
+
 # Which stack to build. Asked rather than assumed, because it decides the web
 # server — and the web server serves the panel itself, so it cannot be changed
 # from inside the panel later without the panel going down with it.
@@ -1719,6 +1723,7 @@ configure_redis() {
         # The only one that can work now.
         candidates=("$new")
     fi
+    REDACT+=("${candidates[@]}")
 
     # Bounded like v7 (operator, 2026-10-07): 256 MB, least-recently-used
     # keys go first. Without it Redis grows until the kernel kills something,
@@ -4096,6 +4101,36 @@ json_str() {
     printf '"%s"' "$s"
 }
 
+# json_str for text that keeps its lines: newlines and tabs are escaped rather
+# than flattened, any other control character still becomes a space.
+json_text() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\t'/\\t}"
+    s="$(printf '%s' "$s" | tr '[:cntrl:]' ' ')"
+    printf '"%s"' "$s"
+}
+
+# The end of the install log, for a failed report: Central shows it, so the
+# person who started the install sees what went wrong without logging in.
+#
+# The last 40 lines, colour codes stripped, and every secret this script knows
+# replaced with [redacted] before anything else is done with the text. Then at
+# most 8 KB, keeping the end — that is where the error is — and only whole
+# UTF-8 characters, because one cut in half makes the whole report invalid JSON.
+report_log_tail() {
+    [[ -r "${LOG_FILE:-}" ]] || return 0
+
+    local text secret
+    text="$(tail -n 40 "$LOG_FILE" 2>/dev/null | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')"
+    for secret in "$PANEL_ADMIN_PASSWORD" "$CENTRAL_TOKEN" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
+        [[ -n "$secret" ]] && text="${text//"$secret"/[redacted]}"
+    done
+    printf '%s' "$text" | tail -c 8192 | iconv -f UTF-8 -t UTF-8 -c 2>/dev/null
+}
+
 # Report this step to Central (PROGRESS_URL), signed with the central token.
 #
 # The same facts save_install_state writes for the SSH login screen, so the two
@@ -4134,6 +4169,7 @@ send_progress() {
             printf ',"started_at":%s,"updated_at":%s' "${INSTALL_STARTED:-0}" "$(date +%s)"
             if [[ "$state" == "failed" ]]; then
                 printf ',"reason":%s,"log_file":%s' "$(json_str "$(one_line "$reason")")" "$(json_str "$LOG_FILE")"
+                printf ',"log_tail":%s' "$(json_text "$(report_log_tail)")"
             fi
             if [[ "$state" == "installed" ]]; then
                 printf ',"name":%s' "$(json_str "$(one_line "$(branding_name)")")"

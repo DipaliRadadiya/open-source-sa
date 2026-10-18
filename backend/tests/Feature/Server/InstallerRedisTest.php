@@ -225,6 +225,12 @@ describe('configure_redis', function () {
             ->and($r['argv'])->not->toContain($r['password'])
             ->and($r['argv'])->not->toContain('-a');
     });
+
+    it('remembers every password it tried, so a failed report can leave them out', function () {
+        $r = runConfigureRedis("port 6379\nrequirepass Stale-Requirepass-000\n", "REDIS_PASSWORD=Stale-Panel-Password-1\n");
+
+        expect($r['out'])->toContain('REDACTED=2');
+    });
 });
 
 describe('the proof a password works', function () {

@@ -124,7 +124,12 @@ CENTRAL_TOKEN='…' PROGRESS_URL=https://central.example.com/servers/42/install-
 Each step is POSTed to `PROGRESS_URL` as JSON (`state` installing/failed/installed,
 `step`, `total`, `title`, and at the end the panel and API URLs), with
 `Authorization: Bearer $CENTRAL_TOKEN`. A report that fails never stops the
-install. The addresses, stack and administrator username are also left in
+install. A `failed` report also has `reason` (one line), `log_file` (the log's
+path on the server) and `log_tail`: the last 40 lines of that log as one JSON
+string, newlines kept, colour codes stripped, at most 8 KB (the end is kept),
+with `PANEL_ADMIN_PASSWORD`, `CENTRAL_TOKEN` and every Redis password the
+installer tried replaced by `[redacted]`. Empty when the install stopped before
+the log existed. The addresses, stack and administrator username are also left in
 `/root/panel-details.txt` (root only; no password).
 
 ## What runs where

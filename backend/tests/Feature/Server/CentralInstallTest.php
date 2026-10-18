@@ -116,17 +116,20 @@ describe('install.sh', function () {
             fn (string $line): bool => str_contains($line, '$PANEL_ADMIN_PASSWORD') || str_contains($line, '${PANEL_ADMIN_PASSWORD'),
         ));
 
-        // The default, the validation, and the one herestring. Anything else —
+        // The default, the validation, the one herestring, and the list of
+        // secrets a failed report's log lines are cleaned of. Anything else —
         // an argument, a log line, a progress field — is a leak.
         foreach ($uses as $line) {
             expect(
                 str_contains($line, 'PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"')
                 || str_contains($line, '<<<"$PANEL_ADMIN_PASSWORD"')
+                || str_contains($line, 'for secret in "$PANEL_ADMIN_PASSWORD"')
                 || preg_match('/^\s*(if|\[\[|\(\()/', $line) === 1
             )->toBeTrue("unexpected use of the password: {$line}");
         }
 
         expect(implode("\n", $uses))->toContain('<<<"$PANEL_ADMIN_PASSWORD"');
+        expect(installerFn('report_log_tail'))->toContain('text="${text//"$secret"/[redacted]}"');
         expect(installerFn('send_progress'))->not->toContain('PANEL_ADMIN_PASSWORD')
             ->and(installerFn('write_details_file'))->not->toContain('PANEL_ADMIN_PASSWORD');
     });
@@ -213,6 +216,80 @@ it('reports each step to Central as JSON, signed, with the escaping a title need
         ->and($got[0]['body'])->toMatchArray(['state' => 'installing', 'step' => 4, 'total' => 18, 'title' => 'Installing "nginx" \\ redis'])
         ->and($got[1]['body'])->toMatchArray(['state' => 'installed', 'panel_url' => 'https://p.test', 'api_url' => 'https://a.test', 'stack' => 'lemp', 'admin_username' => 'boss'])
         ->and($raw)->not->toContain('never-sent-anywhere');
+});
+
+/**
+ * The `failed` report send_progress POSTs when the install log holds $log
+ * (null: no log yet), as Central receives it.
+ *
+ * @return array{body: array<string, mixed>|null, raw: string}
+ */
+function failedProgressReport(?string $log): array
+{
+    $dir = sys_get_temp_dir().'/central-progress-'.bin2hex(random_bytes(4));
+    mkdir($dir);
+    file_put_contents($dir.'/router.php', '<?php file_put_contents(__DIR__."/got.raw", file_get_contents("php://input")); http_response_code(204);');
+    if ($log !== null) {
+        file_put_contents($dir.'/install.log', $log);
+    }
+    $port = random_int(20000, 40000);
+    $server = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", $dir.'/router.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
+    usleep(400_000);
+
+    $script = installerFunctions('json_str', 'json_text', 'one_line', 'report_log_tail', 'send_progress').'
+        PROGRESS_READY=1; DRY_RUN=0; PROGRESS_URL="http://127.0.0.1:'.$port.'/p"; LOG_FILE='.escapeshellarg($dir.'/install.log').'
+        STEP_NO=14; STEP_TOTAL=20; CURRENT_STEP="Setting up the API"; INSTALL_STARTED=1700000000
+        CENTRAL_TOKEN="central-tok-SECRET"; PANEL_ADMIN_PASSWORD="admin-pw-SECRET"; REDIS_PASSWORD="redis-pw-SECRET"
+        REDACT=("stale-redis-SECRET" "redis-pw-SECRET")
+        send_progress failed "Could not create the administrator"';
+    exec('bash -c '.escapeshellarg($script).' 2>&1', $out, $code);
+    proc_terminate($server);
+
+    $raw = (string) @file_get_contents($dir.'/got.raw');
+    exec('rm -rf '.escapeshellarg($dir));
+
+    expect($code)->toBe(0);
+
+    return ['body' => json_decode($raw, true), 'raw' => $raw];
+}
+
+it('sends the end of the log with a failed report: 40 lines, colourless, secrets redacted', function () {
+    $lines = [];
+    for ($i = 1; $i <= 100; $i++) {
+        $lines[] = "\e[32m✓\e[0m line {$i}: \"quoted\" back\\slash\ttab";
+    }
+    $lines[] = 'Could not create the administrator: ERR AUTH redis-pw-SECRET failed (admin-pw-SECRET, central-tok-SECRET, stale-redis-SECRET)';
+    $report = failedProgressReport(implode("\n", $lines)."\n");
+
+    $tail = $report['body']['log_tail'] ?? null;
+    $got = explode("\n", (string) $tail);
+
+    expect($report['body'])->toMatchArray(['state' => 'failed', 'reason' => 'Could not create the administrator'])
+        ->and($tail)->toBeString()
+        ->and($got)->toHaveCount(40)
+        ->and($got[0])->toBe("✓ line 62: \"quoted\" back\\slash\ttab")
+        ->and($got[39])->toBe('Could not create the administrator: ERR AUTH [redacted] failed ([redacted], [redacted], [redacted])')
+        ->and($tail)->not->toContain("\e")
+        ->and($report['raw'])->not->toContain('SECRET');
+});
+
+it('caps the log in a failed report at 8 KB, keeping the end, in whole characters', function () {
+    // Two-byte characters, so the 8 KB cut lands inside one.
+    $lines = array_map(fn (int $i) => str_repeat('é', 500).$i, range(1, 40));
+    $report = failedProgressReport(implode("\n", $lines)."\n");
+
+    $tail = (string) ($report['body']['log_tail'] ?? '');
+
+    expect($report['body'])->not->toBeNull()
+        ->and(strlen($tail))->toBeLessThanOrEqual(8192)->toBeGreaterThan(8000)
+        ->and(mb_check_encoding($tail, 'UTF-8'))->toBeTrue()
+        ->and($tail)->toEndWith('é40');
+});
+
+it('sends an empty log_tail when the install stopped before the log existed', function () {
+    $report = failedProgressReport(null);
+
+    expect($report['body'])->toMatchArray(['state' => 'failed', 'log_tail' => '']);
 });
 
 it('checks Central\'s inputs before anything happens', function (array $env, ?string $error) {
