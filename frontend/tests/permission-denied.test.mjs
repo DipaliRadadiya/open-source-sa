@@ -118,15 +118,17 @@ test("the front door picks a page the caller can actually open", () => {
   assert.equal(landingPath(null), "/dashboard");
 });
 
-test("login hands the choice to the server, which is the only side that knows", () => {
-  // "/" is still the default; `?next=` only overrides it when something sets
-  // one, and `safeNext` drops anything that is not an in-panel path.
-  assert.match(
-    read("components/forms/login-form.jsx"),
-    /\?\? takeRememberedPath\(\) \?\? "\/"\)/,
-    'the last fallback stays "/" — app/page.js picks a landing page this role can open',
-  );
-  assert.doesNotMatch(read("components/forms/login-form.jsx"), /router\.push\("\/dashboard"\)/);
+test("login picks the role's landing page itself, and app/page.js still does for a typed /", () => {
+  // Not via "/": a server redirect during a client navigation renders an empty
+  // page first, which left the screen blank for the dashboard's whole render
+  // (Dipali, 17 Oct). Same `landingPath`, fed by the caller's own catalog.
+  const form = read("components/forms/login-form.jsx");
+  assert.match(form, /return landingPath\(await getMyPermissions\(\)\);/);
+  // Without a catalog, "/" still lets the server decide rather than guessing.
+  assert.match(form, /catch \{\n    return "\/";/);
+  assert.doesNotMatch(form, /router\.push\("\/dashboard"\)/);
+  // Queued behind the push, a refresh fetched the new page a second time.
+  assert.doesNotMatch(form, /^\s*router\.refresh\(\);/m);
   assert.match(read("app/page.js"), /redirect\(landingPath\(await getPermissions\(\)\)\)/);
   for (const p of ["app/(auth)/login/page.jsx", "app/(auth)/register/page.jsx"]) {
     assert.match(read(p), /if \(user\) redirect\("\/"\);/, p);

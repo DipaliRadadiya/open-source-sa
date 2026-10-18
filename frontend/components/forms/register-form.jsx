@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,8 @@ import {
 export function RegisterForm({ policy }) {
   const router = useRouter();
   const t = useTranslations("auth");
+  // As on sign-in: keeps the button busy until /setup has rendered.
+  const [navigating, startNavigation] = useTransition();
   const form = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -39,14 +42,13 @@ export function RegisterForm({ policy }) {
     try {
       await registerUser(values);
       // First admin lands on the setup checklist, not straight on the dashboard.
-      router.push("/setup");
-      router.refresh();
+      startNavigation(() => router.push("/setup"));
     } catch (error) {
       handleValidationError(error, form, { fallback: t("registerFailed") });
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  const isSubmitting = form.formState.isSubmitting || navigating;
 
   return (
     <Form {...form}>

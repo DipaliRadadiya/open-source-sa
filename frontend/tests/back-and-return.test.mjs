@@ -49,9 +49,11 @@ test("signing in returns you to the screen the session died on", () => {
   const form = read("components/forms/login-form.jsx");
   assert.match(
     form,
-    /router\.push\(safeNext\(searchParams\.get\("next"\)\) \?\? takeRememberedPath\(\) \?\? "\/"\)/,
-    "explicit ?next= wins, then the recorded path, then let the server decide",
+    /const wanted = safeNext\(searchParams\.get\("next"\)\) \?\? takeRememberedPath\(\);/,
+    "explicit ?next= wins, then the recorded path",
   );
+  assert.match(form, /wanted && wanted !== "\/" \? wanted : await landingFor\(\)/,
+    "with neither, the role's own landing page");
 
   // Deliberate sign-out is not being thrown out: the next person to use this
   // browser must not land on the last one's screen.
