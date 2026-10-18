@@ -3747,6 +3747,7 @@ Every backup across every application — paginated, filterable.
   "application_name": "shop", "application_domain": "shop.example.com",
   "storage_destination_name": "S3 Backup",
   "type": "full", "type_title": "Files and database",
+  "has_database": true,
   "is_safety": false,
   "status": "verified", "status_title": "Complete",
   "size_bytes": 52428800,
@@ -3973,6 +3974,8 @@ Restore an application from this backup. **Destructive** — overwrites live dat
 `confirm` is **required** and must match the application's domain exactly (trimmed, case-sensitive). Everything else in this feature guards against the system going wrong; this guards against the person going wrong, which is the more common failure — so it is typed, not clicked.
 
 `type` is **optional** and is one of **`filesystem` · `database` · `full`** — the same vocabulary as everywhere else in this feature. There is no `files`; sending it is a `422`. Omit it and the restore uses whatever the backup itself holds, which is the right default.
+
+**What it holds, not what its type says (2026-10-18).** A site with no database still gets `full` backups when its target says `full`, and they contain no dump. Each backup carries **`has_database`**: when `false`, the default restore is `filesystem`, and `database`/`full` are refused with `422 errors.type` (*"This backup does not contain a database"*) before anything is touched. Offer "Files and database" / "Database" only when `has_database` is `true`. (Until this fix such a restore took a safety backup, put the files back and then failed at "Restoring the database".)
 
 **Five separate `422`s, all worth distinguishing in the UI:**
 

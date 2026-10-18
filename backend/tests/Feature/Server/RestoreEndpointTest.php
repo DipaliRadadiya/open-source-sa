@@ -153,6 +153,57 @@ it('refuses to restore a database from a files-only backup', function () {
         ->assertJsonValidationErrors('type');
 });
 
+describe('a full backup of a site with no database (2026-10-18)', function () {
+    // The dump step records `databases: []` for a site with nothing to dump.
+    // A full restore of that used to pass these checks, take a safety backup,
+    // put the files back and then fail at "Restoring the database".
+    function noDatabaseBackup(): Backup
+    {
+        return endpointBackup(['manifest' => ['key' => 'backups/endpoint.test/x.tar.gz', 'databases' => []]]);
+    }
+
+    it('restores its files when no type is given', function () {
+        $backup = noDatabaseBackup();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
+            ->assertStatus(202)
+            ->assertJsonPath('restore.type', 'filesystem');
+    });
+
+    it('refuses a database or full restore up front, before anything is touched', function (string $type) {
+        $backup = noDatabaseBackup();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test', 'type' => $type])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.type.0', __('backup.errors.restore_no_database'));
+
+        expect(Restore::count())->toBe(0);
+        Queue::assertNothingPushed();
+    })->with(['full', 'database']);
+
+    it('says in the list that it holds no database', function () {
+        noDatabaseBackup();
+        endpointBackup(['manifest' => ['key' => 'k', 'databases' => [['name' => 'shop']]]]);
+
+        $rows = $this->actingAs($this->admin)->getJson('/api/backups')->assertOk()->json('backups');
+
+        expect(collect($rows)->pluck('has_database')->sort()->values()->all())->toBe([false, true]);
+    });
+
+    it('treats a backup from before the manifest recorded databases as having one', function () {
+        // Older rows have no `databases` key: keep the old behaviour rather
+        // than refuse restores that used to work.
+        $backup = endpointBackup();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
+            ->assertStatus(202)
+            ->assertJsonPath('restore.type', 'full');
+    });
+});
+
 it('always aims the restore at the backup\'s own application', function () {
     $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,

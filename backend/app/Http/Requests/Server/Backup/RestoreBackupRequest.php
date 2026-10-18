@@ -93,7 +93,9 @@ class RestoreBackupRequest extends FormRequest
             $wantsFiles = in_array($requested, ['filesystem', 'full'], true);
             $wantsDatabase = in_array($requested, ['database', 'full'], true);
             $hasFiles = in_array($backup->type->value, ['filesystem', 'full'], true);
-            $hasDatabase = in_array($backup->type->value, ['database', 'full'], true);
+            // What the archive holds, not what the type says: a site with no
+            // database has a `full` backup with no dump in it.
+            $hasDatabase = $backup->holdsDatabase();
 
             if ($wantsDatabase && ! $hasDatabase) {
                 $validator->errors()->add('type', __('backup.errors.restore_no_database'));
@@ -115,6 +117,16 @@ class RestoreBackupRequest extends FormRequest
         /** @var Backup $backup */
         $backup = $this->route('backup');
 
-        return $this->string('type')->trim()->value() ?: $backup->type->value;
+        $asked = $this->string('type')->trim()->value();
+
+        if ($asked !== '') {
+            return $asked;
+        }
+
+        // Not asked: what it holds. A `full` backup of a site with no database
+        // is its files, so restoring it means restoring the files.
+        return $backup->type->value === 'full' && ! $backup->holdsDatabase()
+            ? 'filesystem'
+            : $backup->type->value;
     }
 }
