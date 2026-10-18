@@ -1,12 +1,15 @@
 <?php
 
 use App\Enums\BackupStatus;
+use App\Exceptions\NoVolumesToBackUp;
+use App\Http\Resources\BackupResource;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Services\Server\Backups\BackupContext;
+use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\Steps\ArchiveVolumes;
 use App\Services\Server\Docker\VolumeSizes;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,11 +73,17 @@ afterEach(function () {
     File::deleteDirectory($this->tmp);
 });
 
-/** Stands in for the one call that needs a Docker daemon. */
-function stubDiscovery(array $volumes): void
+/**
+ * Stands in for the one call that needs a Docker daemon.
+ *
+ * `find()` is what the step asks (S-02: null, Docker did not answer, is not
+ * "no volumes"); `discover()` is the same answer with null folded to `[]`.
+ */
+function stubDiscovery(?array $volumes): void
 {
     $stub = Mockery::mock(VolumeSizes::class);
-    $stub->shouldReceive('discover')->andReturn($volumes);
+    $stub->shouldReceive('find')->andReturn($volumes);
+    $stub->shouldReceive('discover')->andReturn($volumes ?? []);
     app()->instance(VolumeSizes::class, $stub);
 }
 
@@ -212,6 +221,39 @@ it('records an empty volume list rather than nothing at all', function () {
     expect($context->manifest)->toHaveKey('volumes')
         ->and($context->manifest['volumes'])->toBe([])
         ->and(is_dir($this->working.'/volumes'))->toBeFalse();
+});
+
+it('fails a volumes-only run of a site with no volumes, saying so (S-02)', function () {
+    // IT-Tools declares no volumes. Before, the step found nothing, the archive
+    // step after it refused an empty tar, and the row blamed the disk.
+    $this->target->update(['type' => 'volumes']);
+    stubDiscovery([]);
+
+    expect(fn () => runArchiveVolumes($this->target, $this->working))
+        ->toThrow(NoVolumesToBackUp::class);
+});
+
+it('does not call it "no volumes" when Docker did not answer (S-02)', function () {
+    $this->target->update(['type' => 'volumes']);
+    stubDiscovery(null);
+
+    $context = runArchiveVolumes($this->target, $this->working);
+
+    expect($context->manifest['volumes'])->toBe([]);
+});
+
+it('records the reason on the backup row when the runner hits it (S-02)', function () {
+    // The scheduled half: a target saved before the save refused it.
+    $this->target->update(['type' => 'volumes']);
+    stubDiscovery([]);
+    config(['server.backups.steps' => [ArchiveVolumes::class]]);
+
+    $backup = app(BackupRunner::class)->run($this->target->fresh());
+
+    expect($backup->status)->toBe(BackupStatus::Failed)
+        ->and($backup->reason)->toBe(NoVolumesToBackUp::REASON)
+        ->and(BackupResource::make($backup)->resolve()['reason_title'])
+        ->toBe(__('backup.errors.target_no_volumes'));
 });
 
 it('does not apply to a target that only wants the config', function () {

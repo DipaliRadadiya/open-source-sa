@@ -6,6 +6,7 @@ use App\Enums\BackupType;
 use App\Models\Application;
 use App\Models\BackupTarget;
 use App\Rules\BackupTypeForSite;
+use App\Services\Server\Docker\VolumeSizes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -79,6 +80,17 @@ class SaveBackupTargetRequest extends FormRequest
                 $validator->errors()->add('type', __('backup.errors.target_no_database', ['files' => __('backup.type.filesystem')]));
             }
 
+            // S-02, the container twin of bug #33: `volumes` was accepted for a
+            // site with no volumes (IT-Tools declares none), and every run then
+            // failed at `archive_files`. Only once the type is otherwise valid
+            // — `BackupTypeForSite` already refused it on a hosted site, and
+            // asking Docker there would add a second message to the first.
+            if ($this->input('type') === BackupType::Volumes->value
+                && $application instanceof Application
+                && ! $validator->errors()->has('type')
+                && app(VolumeSizes::class)->hasNone($application)) {
+                $validator->errors()->add('type', __('backup.errors.target_no_volumes'));
+            }
         }];
     }
 }

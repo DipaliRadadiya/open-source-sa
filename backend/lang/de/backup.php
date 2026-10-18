@@ -70,6 +70,7 @@ return [
         'target_type_needs_container' => 'Dieser Server betreibt Container, daher erfasst ein Backup hier Volumes und Konfiguration. Wählen Sie eine davon.',
 
         'target_type_needs_hosted' => 'Diese Website wird aus einem Ordner bereitgestellt, es gibt also keine Volumes zum Sichern. Wählen Sie Dateien oder Datenbank.',
+        'target_no_volumes' => 'Diese Anwendung hat keine Volumes, die gesichert werden können. Wählen Sie stattdessen ein Backup, das Compose und Konfiguration einschließt.',
         'restore_no_files' => 'Diese Sicherung enthält keine Dateien.',
         'download_no_artifact' => 'Diese Sicherung wurde nie vollständig hochgeladen, daher gibt es kein Archiv zum Herunterladen.',
         'download_no_destination' => 'Das Speicherziel, in das diese Sicherung hochgeladen wurde, existiert nicht mehr.',
