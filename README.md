@@ -128,9 +128,13 @@ install. A `failed` report also has `reason` (one line), `log_file` (the log's
 path on the server) and `log_tail`: the last 40 lines of that log as one JSON
 string, newlines kept, colour codes stripped, at most 8 KB (the end is kept),
 with `PANEL_ADMIN_PASSWORD`, `CENTRAL_TOKEN` and every Redis password the
-installer tried replaced by `[redacted]`. Empty when the install stopped before
-the log existed. The addresses, stack and administrator username are also left in
-`/root/panel-details.txt` (root only; no password).
+installer tried replaced by `[redacted]`. When the install stopped before the
+log existed (any stop in the preflight checks, the fresh-server stop included),
+`log_tail` is empty and `log_file` is left out of the report — never `null`,
+never a path to a file that isn't there. The log lines the installer prints in
+the terminal on a failure are redacted the same way. The addresses, stack and
+administrator username are also left in `/root/panel-details.txt` (root only; no
+password).
 
 The installer is for a fresh server. It stops at step 1, changing nothing, on a
 server that already hosts something: another control panel (or the v7 agent on

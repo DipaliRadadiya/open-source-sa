@@ -211,7 +211,7 @@ function freshPreflight(array $box, array $vars = [], string $after = ''): array
     $script = 'set -Eeuo pipefail
         trap '.escapeshellarg('echo "ERR-TRAP line $LINENO: $BASH_COMMAND"').' ERR
         '.installerFunctions(
-        'log_tail', 'report_failure', 'save_install_state', 'send_progress', 'json_str', 'json_text', 'one_line',
+        'redact_log', 'log_tail', 'report_failure', 'save_install_state', 'send_progress', 'json_str', 'json_text', 'one_line',
         'report_log_tail', 'validate_central_inputs', 'dry_run_plan',
         'fresh_note', 'fresh_ok', 'fresh_warn', 'fresh_found', 'fresh_count', 'fresh_join', 'fresh_names', 'fresh_lines',
         'fresh_entries', 'fresh_has_package', 'fresh_server_rerun', 'fresh_check_panels', 'fresh_check_legacy_agent',
@@ -364,7 +364,9 @@ describe('what an image never has', function () {
         expect($report)->not->toBeNull()
             ->and($report['code'])->toBe('not_fresh')
             ->and($report['findings'])->toBe([$finding])
-            ->and($report['step'])->toBe(1);
+            ->and($report['step'])->toBe(1)
+            // The log does not exist yet: no path to point Central at.
+            ->and($report)->not->toHaveKey('log_file');
     })->with([
         'cPanel' => [fn ($b, $r) => freshDir($r, '/usr/local/cpanel'), 'another control panel: cPanel/WHM (/usr/local/cpanel)'],
         'Plesk' => [fn ($b, $r) => freshDir($r, '/usr/local/psa'), 'another control panel: Plesk (/usr/local/psa)'],
@@ -450,7 +452,8 @@ describe('what an image never has', function () {
 
         $report = freshFailedReport($run);
         expect($report)->toMatchArray(['state' => 'failed', 'code' => 'not_fresh', 'findings' => $findings, 'reason' => $reason])
-            ->and($report['log_tail'])->toBe('');
+            ->and($report['log_tail'])->toBe('')
+            ->and($report)->not->toHaveKey('log_file');
     });
 
     it('treats what it cannot read for certain as a warning, never a stop', function () {
@@ -505,6 +508,35 @@ describe('a re-run', function () {
         'the panel\'s files' => [fn ($r) => freshDir($r, '/var/www/panel/backend'), 'the panel in '],
         'the panel account' => [fn ($r) => file_put_contents($r.'/etc/passwd', "panel:x:999:999::/home/panel:/bin/bash\n", FILE_APPEND), 'the panel account'],
     ]);
+});
+
+describe('a failure after preflight', function () {
+    it('names the log in its report, and shows and sends the log\'s end with every secret redacted', function () {
+        $box = freshImage();
+        $run = freshPreflight($box, [], '
+            PANEL_ADMIN_PASSWORD="adm*n/pw[1]-SECRET"; CENTRAL_TOKEN="central-tok-SECRET"; REDIS_PASSWORD="redis-pw-SECRET"
+            REDACT=("stale-redis-SECRET")
+            printf "\033[32mok\033[0m fetching\n" >>"$LOG_FILE"
+            printf "fatal: auth adm*n/pw[1]-SECRET central-tok-SECRET redis-pw-SECRET stale-redis-SECRET\n" >>"$LOG_FILE"
+            STEP_NO=8; STEP_TOTAL=20; CURRENT_STEP="Fetching the panel"
+            die "Could not fetch the panel"');
+
+        $report = freshFailedReport($run);
+        $shown = substr($run['out'], (int) strpos($run['out'], 'Last lines of the log:'));
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('PREFLIGHT-PASSED FRESH_CHECK=passed')
+            ->and($run['log'])->toContain('stale-redis-SECRET')
+            ->and($shown)->toContain("       ok fetching\n")
+            ->and($shown)->toContain('       fatal: auth [redacted] [redacted] [redacted] [redacted]')
+            ->and($run['out'])->not->toContain('SECRET')
+            ->and($run['out'])->not->toContain("\e")
+            ->and($report)->toMatchArray(['state' => 'failed', 'reason' => 'Could not fetch the panel', 'step' => 8])
+            ->and($report['log_file'])->toBe($box['root'].'/var/log/panel-install.log')
+            ->and($report['log_tail'])->toContain('fatal: auth [redacted] [redacted] [redacted] [redacted]')
+            ->and(json_encode($report))->not->toContain('SECRET')
+            ->and($report)->not->toHaveKey('code');
+    });
 });
 
 describe('--force', function () {

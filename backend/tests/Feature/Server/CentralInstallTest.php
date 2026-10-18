@@ -117,7 +117,7 @@ describe('install.sh', function () {
         ));
 
         // The default, the validation, the one herestring, and the list of
-        // secrets a failed report's log lines are cleaned of. Anything else —
+        // secrets the log lines a failure shows are cleaned of. Anything else —
         // an argument, a log line, a progress field — is a leak.
         foreach ($uses as $line) {
             expect(
@@ -129,7 +129,9 @@ describe('install.sh', function () {
         }
 
         expect(implode("\n", $uses))->toContain('<<<"$PANEL_ADMIN_PASSWORD"');
-        expect(installerFn('report_log_tail'))->toContain('text="${text//"$secret"/[redacted]}"');
+        expect(installerFn('redact_log'))->toContain('text="${text//"$secret"/[redacted]}"')
+            ->and(installerFn('report_log_tail'))->toContain('| redact_log)')
+            ->and(installerFn('log_tail'))->toContain('| redact_log |');
         expect(installerFn('send_progress'))->not->toContain('PANEL_ADMIN_PASSWORD')
             ->and(installerFn('write_details_file'))->not->toContain('PANEL_ADMIN_PASSWORD');
     });
@@ -236,7 +238,7 @@ function failedProgressReport(?string $log): array
     $server = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", $dir.'/router.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
     usleep(400_000);
 
-    $script = installerFunctions('json_str', 'json_text', 'one_line', 'report_log_tail', 'send_progress').'
+    $script = installerFunctions('json_str', 'json_text', 'one_line', 'redact_log', 'report_log_tail', 'send_progress').'
         PROGRESS_READY=1; DRY_RUN=0; PROGRESS_URL="http://127.0.0.1:'.$port.'/p"; LOG_FILE='.escapeshellarg($dir.'/install.log').'
         STEP_NO=14; STEP_TOTAL=20; CURRENT_STEP="Setting up the API"; INSTALL_STARTED=1700000000
         CENTRAL_TOKEN="central-tok-SECRET"; PANEL_ADMIN_PASSWORD="admin-pw-SECRET"; REDIS_PASSWORD="redis-pw-SECRET"
@@ -265,6 +267,7 @@ it('sends the end of the log with a failed report: 40 lines, colourless, secrets
     $got = explode("\n", (string) $tail);
 
     expect($report['body'])->toMatchArray(['state' => 'failed', 'reason' => 'Could not create the administrator'])
+        ->and($report['body']['log_file'] ?? null)->toEndWith('/install.log')
         ->and($tail)->toBeString()
         ->and($got)->toHaveCount(40)
         ->and($got[0])->toBe("✓ line 62: \"quoted\" back\\slash\ttab")
@@ -289,7 +292,9 @@ it('caps the log in a failed report at 8 KB, keeping the end, in whole character
 it('sends an empty log_tail when the install stopped before the log existed', function () {
     $report = failedProgressReport(null);
 
-    expect($report['body'])->toMatchArray(['state' => 'failed', 'log_tail' => '']);
+    expect($report['body'])->toMatchArray(['state' => 'failed', 'log_tail' => ''])
+        // No log to point at: the key is left out, not a path to nothing.
+        ->and($report['body'])->not->toHaveKey('log_file');
 });
 
 it('checks Central\'s inputs before anything happens', function (array $env, ?string $error) {

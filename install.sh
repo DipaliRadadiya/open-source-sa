@@ -208,6 +208,21 @@ ok()   { printf '     %s✓%s %s\n' "$GREEN" "$RESET" "$*"; }
 skip() { printf '     %s·%s %s %s(already done)%s\n' "$DIM" "$RESET" "$*" "$DIM" "$RESET"; }
 warn() { printf '     %s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
 
+# Log lines on stdin, made safe to show anyone: colour codes stripped, then
+# every secret this script knows replaced with [redacted]. The terminal and
+# Central's failed report both go through here — the terminal's copy ends up
+# in the journal when Central runs the install under systemd-run.
+redact_log() {
+    local text secret
+    text="$(sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')"
+    for secret in "$PANEL_ADMIN_PASSWORD" "$CENTRAL_TOKEN" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
+        [[ -n "$secret" ]] && text="${text//"$secret"/[redacted]}"
+    done
+    if [[ -n "$text" ]]; then
+        printf '%s\n' "$text"
+    fi
+}
+
 # Tail of the install log, indented, or a note saying why there isn't one.
 # Every failure path prints this: "apt failed" with no output is not a
 # diagnosis, and the log is the only place the actual output went.
@@ -215,7 +230,7 @@ log_tail() {
     local lines="${1:-15}"
 
     if [[ -r "${LOG_FILE:-}" ]]; then
-        tail -n "$lines" "$LOG_FILE" 2>/dev/null | sed 's/^/       /'
+        tail -n "$lines" "$LOG_FILE" 2>/dev/null | redact_log | sed 's/^/       /'
     else
         printf '       (no log yet — the install stopped before creating %s)\n' "${LOG_FILE:-the log file}"
     fi
@@ -4691,11 +4706,8 @@ json_text() {
 report_log_tail() {
     [[ -r "${LOG_FILE:-}" ]] || return 0
 
-    local text secret
-    text="$(tail -n 40 "$LOG_FILE" 2>/dev/null | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')"
-    for secret in "$PANEL_ADMIN_PASSWORD" "$CENTRAL_TOKEN" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
-        [[ -n "$secret" ]] && text="${text//"$secret"/[redacted]}"
-    done
+    local text
+    text="$(tail -n 40 "$LOG_FILE" 2>/dev/null | redact_log)"
     printf '%s' "$text" | tail -c 8192 | iconv -f UTF-8 -t UTF-8 -c 2>/dev/null
 }
 
@@ -4738,7 +4750,10 @@ send_progress() {
             if [[ "$state" == "failed" ]]; then
                 # Longer than the login screen's line: the fresh-server stop
                 # names everything it found.
-                printf ',"reason":%s,"log_file":%s' "$(json_str "$(one_line "$reason" 2000)")" "$(json_str "$LOG_FILE")"
+                printf ',"reason":%s' "$(json_str "$(one_line "$reason" 2000)")"
+                # Only a log that exists: a stop in preflight comes before
+                # the log does, and Central would show a path to nothing.
+                [[ -r "${LOG_FILE:-}" ]] && printf ',"log_file":%s' "$(json_str "$LOG_FILE")"
                 printf ',"log_tail":%s' "$(json_text "$(report_log_tail)")"
                 # Why, for a machine, when this failure has a known cause.
                 if [[ -n "${FAIL_CODE:-}" ]]; then
