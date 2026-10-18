@@ -124,8 +124,34 @@ CENTRAL_TOKEN='…' PROGRESS_URL=https://central.example.com/servers/42/install-
 Each step is POSTed to `PROGRESS_URL` as JSON (`state` installing/failed/installed,
 `step`, `total`, `title`, and at the end the panel and API URLs), with
 `Authorization: Bearer $CENTRAL_TOKEN`. A report that fails never stops the
-install. The addresses, stack and administrator username are also left in
-`/root/panel-details.txt` (root only; no password).
+install. A `failed` report also has `reason` (one line), `log_file` (the log's
+path on the server) and `log_tail`: the last 40 lines of that log as one JSON
+string, newlines kept, colour codes stripped, at most 8 KB (the end is kept),
+with `PANEL_ADMIN_PASSWORD`, `CENTRAL_TOKEN` and every Redis password the
+installer tried replaced by `[redacted]`. When the install stopped before the
+log existed (any stop in the preflight checks, the fresh-server stop included),
+`log_tail` is empty and `log_file` is left out of the report — never `null`,
+never a path to a file that isn't there. The log lines the installer prints in
+the terminal on a failure are redacted the same way. The addresses, stack and
+administrator username are also left in `/root/panel-details.txt` (root only; no
+password).
+
+The installer is for a fresh server. It stops at step 1, changing nothing, on a
+server that already hosts something: another control panel (or the v7 agent on
+port 43210), a web server with sites besides its default page, a database server
+with databases or users of its own, Redis with keys, PHP-FPM pools besides `www`,
+Docker containers or images, files in `/var/www`, a `public_html` in a home, or a
+Let's Encrypt certificate. What stock cloud images ship (snapd, cloud-init, guest
+agents, swap, firewall rules, an MTA, an empty database server or Docker) never
+stops it. A re-run on a server this installer already ran on (its state file in
+`/var/lib/panel-install/`, the panel's own site, `/var/www/panel` or the `panel`
+account) skips the check, so a Retry always works. `--force` installs anyway,
+with each finding printed as a warning and `FRESH_CHECK=forced` in the state file
+and the log; taking a server over from another panel needs it. That stop's
+`failed` report also has `code: "not_fresh"` and `findings`, a list of short
+strings, one per thing found (`"nginx with 12 sites (a.com, b.com, c.com and 9
+more)"`), while `reason` stays one plain sentence that names them all. Other
+failures have neither field.
 
 ## What runs where
 

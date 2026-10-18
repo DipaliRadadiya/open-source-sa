@@ -86,6 +86,22 @@ ADMIN_EMAIL=""     # --email= for Let's Encrypt expiry notices
 WANT_SSL=1         # --no-ssl
 SCHEME="https"     # settled by configure_tls before any URL is written
 DRY_RUN=0          # --dry-run
+FORCE=0            # --force: install on a server that isn't fresh
+
+# The fresh-server check's outcome (fresh_server_check): passed, forced,
+# rerun or, on a dry run, not_fresh. Written to the state file and the log.
+FRESH_CHECK=""
+# What it found that a fresh server would not have, one short string each.
+FRESH_FINDINGS=()
+# Every line it printed, so the log holds them once it exists.
+FRESH_NOTES=()
+# Prefixed to every path the check reads. For the tests only; always empty here.
+FRESH_ROOT=""
+
+# A failed report's machine-readable cause, for the one failure that has one
+# (code "not_fresh", with FAIL_FINDINGS). Empty for every other failure.
+FAIL_CODE=""
+FAIL_FINDINGS=()
 
 # --central-token=, or the environment variable, which is the better of the two:
 # an argument is readable in `ps` by every account on the box for the length of
@@ -107,6 +123,10 @@ PANEL_ADMIN_USERNAME="${PANEL_ADMIN_USERNAME:-}"
 PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
 PROGRESS_URL="${PROGRESS_URL:-}"
 PROGRESS_READY=0   # set once PROGRESS_URL has been checked
+
+# Secrets this script comes to know beyond the ones above (every Redis password
+# it tried), so the log lines a failed report carries can leave them out.
+REDACT=()
 
 # Which stack to build. Asked rather than assumed, because it decides the web
 # server — and the web server serves the panel itself, so it cannot be changed
@@ -188,6 +208,21 @@ ok()   { printf '     %s✓%s %s\n' "$GREEN" "$RESET" "$*"; }
 skip() { printf '     %s·%s %s %s(already done)%s\n' "$DIM" "$RESET" "$*" "$DIM" "$RESET"; }
 warn() { printf '     %s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
 
+# Log lines on stdin, made safe to show anyone: colour codes stripped, then
+# every secret this script knows replaced with [redacted]. The terminal and
+# Central's failed report both go through here — the terminal's copy ends up
+# in the journal when Central runs the install under systemd-run.
+redact_log() {
+    local text secret
+    text="$(sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')"
+    for secret in "$PANEL_ADMIN_PASSWORD" "$CENTRAL_TOKEN" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
+        [[ -n "$secret" ]] && text="${text//"$secret"/[redacted]}"
+    done
+    if [[ -n "$text" ]]; then
+        printf '%s\n' "$text"
+    fi
+}
+
 # Tail of the install log, indented, or a note saying why there isn't one.
 # Every failure path prints this: "apt failed" with no output is not a
 # diagnosis, and the log is the only place the actual output went.
@@ -195,7 +230,7 @@ log_tail() {
     local lines="${1:-15}"
 
     if [[ -r "${LOG_FILE:-}" ]]; then
-        tail -n "$lines" "$LOG_FILE" 2>/dev/null | sed 's/^/       /'
+        tail -n "$lines" "$LOG_FILE" 2>/dev/null | redact_log | sed 's/^/       /'
     else
         printf '       (no log yet — the install stopped before creating %s)\n' "${LOG_FILE:-the log file}"
     fi
@@ -217,7 +252,10 @@ report_failure() {
     # not point the user at a file that does not exist, and do not pad the
     # message with recovery steps for a machine that was never changed.
     if [[ ! -r "${LOG_FILE:-}" ]]; then
-        printf '\n  %sNothing on this server was changed.%s\n\n' "$DIM" "$RESET" >&2
+        # The fresh-server stop already says it, in the sentence Central shows.
+        [[ "$headline" == *"Nothing on this server was changed."* ]] \
+            || printf '\n  %sNothing on this server was changed.%s\n' "$DIM" "$RESET" >&2
+        printf '\n' >&2
 
         return
     fi
@@ -290,6 +328,7 @@ for arg in "$@"; do
         --repo=*)   REPO_URL="${arg#*=}" ;;
         --no-ssl)   WANT_SSL=0 ;;
         --dry-run)  DRY_RUN=1 ;;
+        --force)    FORCE=1 ;;
         --central-token=*) CENTRAL_TOKEN="${arg#*=}" ;;
         --admin-username=*) PANEL_ADMIN_USERNAME="${arg#*=}" ;;
         --progress-url=*) PROGRESS_URL="${arg#*=}" ;;
@@ -316,6 +355,13 @@ Control panel installer
   --no-ssl                     Serve plain HTTP. Fine behind another proxy.
   --dry-run                    Run the checks and print the plan, then stop.
                                Nothing on the server is changed.
+  --force                      Install on a server that isn't fresh. Without it
+                               the install stops, changing nothing, when the
+                               server already hosts something: another control
+                               panel, sites, databases, Redis keys, PHP-FPM
+                               pools, Docker containers or certificates. With
+                               it, each of those is printed as a warning and
+                               the install goes ahead beside them.
   --central-token=TOKEN        Register this server with a central panel that
                                already holds the same token. Optional; nothing
                                else needs it.
@@ -406,6 +452,8 @@ preflight() {
         *) die "unsupported architecture: $(uname -m) (need x86_64 or aarch64)" ;;
     esac
 
+    fresh_server_check
+
     # Ports, before any web server is installed. `ss` ships with iproute2 on
     # both supported releases. A web server that is already ours is not a
     # conflict — this is the re-run case.
@@ -420,6 +468,13 @@ preflight() {
     #                   server for the whole install, taking every hosted site
     #                   offline to install a panel that was going to share that
     #                   web server anyway.
+    #                   Since 2026-10-18 such a server only gets this far with
+    #                   --force: a web server serving sites is one of the things
+    #                   fresh_server_check stops on. So taking a server over from
+    #                   another panel — the planned v7 → v8 in-place migration
+    #                   included — needs --force, which Central's migration flow
+    #                   passes. The sharing below is what those installs use;
+    #                   keep it.
     #   anything else — a real conflict, and still fatal.
     local port
     for port in 80 443; do
@@ -465,6 +520,15 @@ preflight() {
     : >"$LOG_FILE"
     chmod 600 "$LOG_FILE"
     ok "logging to $LOG_FILE"
+
+    # The check ran before the log existed; this is its record.
+    {
+        printf 'FRESH_CHECK=%s\n' "$FRESH_CHECK"
+        local note
+        for note in "${FRESH_NOTES[@]}"; do
+            printf 'fresh-server check: %s\n' "$note"
+        done
+    } >>"$LOG_FILE"
 }
 
 # The plan a dry run prints, then stops (FS-A1). It used to carry on through
@@ -472,8 +536,19 @@ preflight() {
 # `run` (vhosts, systemd units, the pool, cron, sudoers, both .env files) were
 # made anyway, on a run that promised to change nothing.
 dry_run_plan() {
-    step "Dry run — the checks passed; nothing was changed"
-    printf '     A real run would, in order:\n'
+    if [[ "$FRESH_CHECK" == "not_fresh" ]]; then
+        step "Dry run — this server isn't fresh; nothing was changed"
+        printf '     A real run would stop at step 1, because this server already hosts:\n'
+        local finding
+        for finding in "${FRESH_FINDINGS[@]}"; do
+            printf '       - %s\n' "$finding"
+        done
+        printf '     Use a fresh Ubuntu server, or add --force to install here anyway.\n'
+        printf '     With --force, a real run would, in order:\n'
+    else
+        step "Dry run — the checks passed; nothing was changed"
+        printf '     A real run would, in order:\n'
+    fi
     printf '       - make sure there is swap for the build\n'
     printf '       - install the packages for the %s stack (%s)\n' "$STACK" "$WEB_SERVER"
     printf '       - create the %s account and install Node\n' "$APP_USER"
@@ -483,6 +558,517 @@ dry_run_plan() {
     printf '       - set up the backend, build the frontend, start the services\n'
     printf '       - write the sudo grant and open ports 22, 80 and 443\n\n'
     printf '     Run again without --dry-run to install.\n\n'
+}
+
+# ─── Fresh-server check ──────────────────────────────────────────────────────
+#
+# The installer is for a server with nothing on it yet. On 2026-10-18 it was
+# run by mistake on a busy server — 26 sites, MariaDB, Redis, PHP-FPM pools —
+# and accepted it, because preflight looked at the OS, the ports and the disk
+# only. It then upgraded packages, installed Docker and Postfix, appended to
+# that server's redis.conf and restarted Redis, and added a global conf to its
+# PHP-FPM before failing at step 14.
+#
+# So preflight stops on strong evidence that a server already hosts something,
+# and only on that: every provider's stock Ubuntu image must pass. Each check
+# below looks for one thing a fresh image never has. What images do ship —
+# snapd, cloud-init, guest agents, swap, firewall rules, an MTA, an empty
+# database server — is printed as harmless, and anything the check cannot read
+# for certain is a warning, never a stop. Nothing here writes anything, so a
+# stop still truthfully says "Nothing on this server was changed".
+#
+# A re-run is never checked (the sites may be the panel's own), and --force
+# turns every finding into a warning.
+
+fresh_note() {
+    FRESH_NOTES+=("$1")
+}
+
+fresh_ok() {
+    ok "$1"
+    fresh_note "ok: $1"
+}
+
+fresh_warn() {
+    warn "$1"
+    fresh_note "warning: $1"
+}
+
+fresh_found() {
+    FRESH_FINDINGS+=("$1")
+    fresh_note "found: $1"
+}
+
+# "1 site" / "3 sites".
+fresh_count() {
+    if (( $1 == 1 )); then
+        printf '1 %s' "$2"
+    else
+        printf '%s %s' "$1" "$3"
+    fi
+}
+
+# The items joined with $1.
+fresh_join() {
+    local sep="$1" out="" item
+    shift
+    for item in "$@"; do
+        out+="${out:+$sep}${item}"
+    done
+    printf '%s' "$out"
+}
+
+# At most three names, then how many more: "a, b, c and 9 more".
+fresh_names() {
+    if (( $# <= 3 )); then
+        fresh_join ', ' "$@"
+    else
+        printf '%s and %s more' "$(fresh_join ', ' "${@:1:3}")" "$(( $# - 3 ))"
+    fi
+}
+
+# Lines in $1 that are not blank, as a number. awk rather than `grep -c`, which
+# fails on no match and would stop the script through the ERR trap.
+fresh_lines() {
+    printf '%s\n' "$1" | awk 'NF { n++ } END { print n + 0 }'
+}
+
+# The entries of a directory, one per line, except those matching any of the
+# given patterns. Nothing when the directory does not exist. Dotfiles are left
+# out, as nginx's and Apache's `*` includes leave them out.
+fresh_entries() {
+    local dir="$1" entry name pattern
+    shift
+    [[ -d "$dir" ]] || return 0
+    for entry in "$dir"/*; do
+        [[ -e "$entry" || -L "$entry" ]] || continue
+        name="${entry##*/}"
+        for pattern in "$@"; do
+            # shellcheck disable=SC2053 # a pattern, deliberately unquoted
+            [[ "$name" == $pattern ]] && continue 2
+        done
+        printf '%s\n' "$name"
+    done
+}
+
+# Is this package installed? From dpkg's own file list, so nothing is run.
+fresh_has_package() {
+    local f
+    for f in "${FRESH_ROOT}/var/lib/dpkg/info/$1.list" "${FRESH_ROOT}/var/lib/dpkg/info/$1:"*.list; do
+        [[ -e "$f" ]] && return 0
+    done
+    return 1
+}
+
+# This installer has been here before: what says so, or nothing. A re-run, a
+# Retry from Central and a re-install on our own panel are never blocked —
+# whatever that server hosts, the panel put it there.
+fresh_server_rerun() {
+    local R="$FRESH_ROOT"
+
+    if [[ -e "${INSTALL_STATE_DIR}/state" ]]; then
+        printf 'this installer'\''s state file %s' "${INSTALL_STATE_DIR}/state"
+    elif [[ -f "${R}/etc/nginx/sites-enabled/${PANEL_SLUG}.conf" ]]; then
+        printf 'the panel'\''s own nginx site'
+    elif [[ -f "${R}/etc/apache2/sites-enabled/${PANEL_SLUG}.conf" ]]; then
+        printf 'the panel'\''s own Apache site'
+    elif grep -q "^virtualHost ${PANEL_SLUG} " "${R}/usr/local/lsws/conf/httpd_config.conf" 2>/dev/null; then
+        printf 'the panel'\''s own OpenLiteSpeed site'
+    elif [[ -d "$APP_DIR" ]]; then
+        printf 'the panel in %s' "$APP_DIR"
+    elif grep -q "^${APP_USER}:" "${R}/etc/passwd" 2>/dev/null; then
+        printf 'the %s account' "$APP_USER"
+    else
+        return 1
+    fi
+}
+
+# Another control panel. Each is known by a directory or binary of its own,
+# which no stock image has.
+fresh_check_panels() {
+    local entry label paths path
+    local -a found=()
+    local -a panels=(
+        "cPanel/WHM|/usr/local/cpanel"
+        "Plesk|/usr/local/psa /opt/psa"
+        "DirectAdmin|/usr/local/directadmin"
+        "CyberPanel|/usr/local/CyberCP"
+        "CloudPanel|/home/clp /usr/bin/clpctl"
+        "HestiaCP|/usr/local/hestia"
+        "VestaCP|/usr/local/vesta"
+        "aaPanel|/www/server/panel"
+        "Webmin/Virtualmin|/etc/webmin /usr/share/webmin"
+        "ISPConfig|/usr/local/ispconfig"
+        "RunCloud|/RunCloud /opt/RunCloud"
+        "Ploi|/home/ploi"
+        "Forge|/home/forge"
+        "GridPane|/opt/gridpane /root/gridenv"
+        "ServerPilot|/opt/sp /usr/local/bin/sp-agent"
+        "SpinupWP|/etc/spinupwp /usr/local/bin/spinupwp"
+    )
+
+    for entry in "${panels[@]}"; do
+        label="${entry%%|*}"
+        paths="${entry#*|}"
+        for path in $paths; do
+            if [[ -e "${FRESH_ROOT}${path}" ]]; then
+                found+=("$label")
+                fresh_found "another control panel: ${label} (${path})"
+                break
+            fi
+        done
+    done
+
+    (( ${#found[@]} )) || fresh_ok "no other control panel"
+}
+
+# The v7 agent, by the signals the panel's own LegacyAgentDetector uses: a
+# listener on port 43210, hardcoded in the agent, and the unit that owns it
+# (its name is a build-time choice, so it cannot be looked for by name).
+fresh_check_legacy_agent() {
+    local port=43210 listeners pid unit=""
+
+    listeners="$(ss -ltnH 2>/dev/null)" || listeners=""
+    awk '{ print $4 }' <<<"$listeners" | grep -qE "[:.]${port}\$" || return 0
+
+    pid="$(ss -ltnpH "sport = :${port}" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1)" || pid=""
+    if [[ -n "$pid" ]]; then
+        unit="$(sed -n 's#^0::.*/\([^/]*\.service\)$#\1#p' "${FRESH_ROOT}/proc/${pid}/cgroup" 2>/dev/null | head -1)" || unit=""
+    fi
+
+    fresh_found "the v7 agent (port ${port}${unit:+, ${unit}})"
+}
+
+# A web server with a site besides the distro's default one. Only installed
+# web servers are looked at; a web server serving only its welcome page is
+# what an image with nginx or Apache preinstalled looks like.
+fresh_check_web_servers() {
+    local R="$FRESH_ROOT" f
+    local -a sites=()
+
+    if [[ -d "${R}/etc/nginx" ]]; then
+        mapfile -t sites < <(fresh_entries "${R}/etc/nginx/sites-enabled" default || true)
+        # conf.d holds settings as well as sites: only a file with a server
+        # block is a site. default.conf is nginx.org's own welcome page.
+        for f in "${R}/etc/nginx/conf.d/"*.conf; do
+            [[ -f "$f" && "${f##*/}" != "default.conf" ]] || continue
+            grep -qE '^[[:space:]]*server[[:space:]]*\{' "$f" 2>/dev/null && sites+=("${f##*/}")
+        done
+        if (( ${#sites[@]} )); then
+            fresh_found "nginx with $(fresh_count "${#sites[@]}" site sites) ($(fresh_names "${sites[@]}"))"
+        else
+            fresh_ok "nginx serves only its default page"
+        fi
+    fi
+
+    if [[ -d "${R}/etc/apache2" ]]; then
+        mapfile -t sites < <(fresh_entries "${R}/etc/apache2/sites-enabled" 000-default.conf default-ssl.conf || true)
+        if (( ${#sites[@]} )); then
+            fresh_found "Apache with $(fresh_count "${#sites[@]}" site sites) ($(fresh_names "${sites[@]}"))"
+        else
+            fresh_ok "Apache serves only its default page"
+        fi
+    fi
+
+    if [[ -d "${R}/usr/local/lsws/conf" ]]; then
+        # Example is the vhost every OpenLiteSpeed and LiteSpeed install ships.
+        mapfile -t sites < <(
+            {
+                fresh_entries "${R}/usr/local/lsws/conf/vhosts" Example
+                sed -n 's/^[[:space:]]*virtual[Hh]ost[[:space:]]\{1,\}\([^[:space:]{]\{1,\}\).*/\1/p' \
+                    "${R}/usr/local/lsws/conf/httpd_config.conf" 2>/dev/null
+            } | grep -vx 'Example' | sort -u || true
+        )
+        if (( ${#sites[@]} )); then
+            fresh_found "LiteSpeed with $(fresh_count "${#sites[@]}" site sites) ($(fresh_names "${sites[@]}"))"
+        else
+            fresh_ok "LiteSpeed serves only its Example site"
+        fi
+    fi
+
+    if [[ -f "${R}/etc/caddy/Caddyfile" ]]; then
+        # The top-level blocks, except the global options `{`, snippets
+        # `(name) {` and the package's own `:80 {`.
+        mapfile -t sites < <(
+            sed -n 's/^\([^[:space:]#{(][^{]*\)[[:space:]]*{[[:space:]]*$/\1/p' "${R}/etc/caddy/Caddyfile" 2>/dev/null \
+                | sed 's/[[:space:]]*$//' | grep -vxE ':80|http://' || true
+        )
+        if (( ${#sites[@]} )); then
+            fresh_found "Caddy with $(fresh_count "${#sites[@]}" site sites) ($(fresh_names "${sites[@]}"))"
+        else
+            fresh_ok "Caddy serves only its default page"
+        fi
+    fi
+}
+
+# A database server with a database or user of anyone's. Databases are read
+# from the data directory, which needs neither a password nor a running server;
+# users need the server, so not being able to list them is a warning.
+fresh_check_databases() {
+    local R="$FRESH_ROOT" label out
+    local -a dbs=() users=() parts=()
+
+    if [[ -e "${R}/usr/sbin/mysqld" || -e "${R}/usr/sbin/mariadbd" ]]; then
+        label="MySQL"
+        [[ -e "${R}/usr/sbin/mariadbd" ]] && label="MariaDB"
+
+        # One directory per database. '#'-names are InnoDB's own (redo log,
+        # temp tablespaces).
+        local d
+        for d in "${R}/var/lib/mysql/"*/; do
+            [[ -d "$d" ]] || continue
+            d="${d%/}"; d="${d##*/}"
+            case "$d" in
+                mysql|performance_schema|sys|'#'*|lost+found) ;;
+                *) dbs+=("$d") ;;
+            esac
+        done
+
+        # The accounts the packages create: root, MariaDB's mysql and
+        # mariadb.sys, MySQL's mysql.* and Ubuntu's debian-sys-maint.
+        if out="$(timeout 10 mysql --protocol=socket -NBe 'SELECT user FROM mysql.user' 2>/dev/null)"; then
+            mapfile -t users < <(
+                awk 'NF' <<<"$out" | sort -u \
+                    | grep -vxE 'root|mysql|mariadb\.sys|mysql\.sys|mysql\.session|mysql\.infoschema|debian-sys-maint|PUBLIC' || true
+            )
+        else
+            fresh_warn "${label}'s users could not be listed without a password (its databases were checked)"
+        fi
+
+        parts=()
+        (( ${#dbs[@]} )) && parts+=("$(fresh_count "${#dbs[@]}" database databases) ($(fresh_names "${dbs[@]}"))")
+        (( ${#users[@]} )) && parts+=("$(fresh_count "${#users[@]}" user users) ($(fresh_names "${users[@]}"))")
+        if (( ${#parts[@]} )); then
+            fresh_found "${label} with $(fresh_join ' and ' "${parts[@]}")"
+        else
+            fresh_ok "${label} has only its own system databases"
+        fi
+    fi
+
+    if [[ -d "${R}/usr/lib/postgresql" ]]; then
+        # A new cluster has exactly three databases (template0, template1,
+        # postgres), each a numbered directory under base/.
+        local base n extra=0
+        for base in "${R}/var/lib/postgresql/"*/*/base; do
+            [[ -d "$base" ]] || continue
+            n="$(fresh_entries "$base" | grep -cxE '[0-9]+' || true)"
+            (( n > 3 )) && extra=$(( extra + n - 3 ))
+        done
+
+        users=()
+        if out="$(cd / && timeout 10 runuser -u postgres -- psql -XAtqc "SELECT rolname FROM pg_roles WHERE rolname <> 'postgres' AND rolname !~ '^pg_'" 2>/dev/null)"; then
+            mapfile -t users < <(awk 'NF' <<<"$out" || true)
+        else
+            fresh_warn "PostgreSQL's users could not be listed (its databases were checked)"
+        fi
+
+        parts=()
+        (( extra )) && parts+=("$(fresh_count "$extra" database databases)")
+        (( ${#users[@]} )) && parts+=("$(fresh_count "${#users[@]}" user users) ($(fresh_names "${users[@]}"))")
+        if (( ${#parts[@]} )); then
+            fresh_found "PostgreSQL with $(fresh_join ' and ' "${parts[@]}")"
+        else
+            fresh_ok "PostgreSQL has only its own system databases"
+        fi
+    fi
+
+    if [[ -e "${R}/usr/bin/mongod" ]]; then
+        # admin, config and local are MongoDB's own. mongosh writes a log of
+        # every session under $HOME, so it gets one that does not exist: this
+        # check writes nothing, and a mongosh that refuses is only a warning.
+        local count_users=0
+        if out="$(HOME=/nonexistent timeout 15 mongosh --quiet --norc --eval 'db.adminCommand({listDatabases: 1, nameOnly: true}).databases.forEach(d => print("db " + d.name)); print("users " + db.getSiblingDB("admin").getCollection("system.users").countDocuments({}))' 2>/dev/null)"; then
+            mapfile -t dbs < <(sed -n 's/^db //p' <<<"$out" | grep -vxE 'admin|config|local' || true)
+            count_users="$(sed -n 's/^users \([0-9]\{1,\}\)$/\1/p' <<<"$out" | head -1)"
+            count_users="${count_users:-0}"
+
+            parts=()
+            (( ${#dbs[@]} )) && parts+=("$(fresh_count "${#dbs[@]}" database databases) ($(fresh_names "${dbs[@]}"))")
+            (( count_users )) && parts+=("$(fresh_count "$count_users" user users)")
+            if (( ${#parts[@]} )); then
+                fresh_found "MongoDB with $(fresh_join ' and ' "${parts[@]}")"
+            else
+                fresh_ok "MongoDB has only its own system databases"
+            fi
+        else
+            fresh_warn "MongoDB is installed, but its databases could not be listed"
+        fi
+    fi
+}
+
+# Redis with any key. A Redis that wants a password, or is not running, cannot
+# be counted, so that is a warning.
+fresh_check_redis() {
+    local out keys
+
+    [[ -e "${FRESH_ROOT}/usr/bin/redis-server" ]] || return 0
+
+    if out="$(timeout 5 redis-cli --no-auth-warning INFO keyspace 2>/dev/null)" && [[ "$out" != *NOAUTH* ]]; then
+        keys="$(sed -n 's/^db[0-9]\{1,\}:keys=\([0-9]\{1,\}\).*/\1/p' <<<"$out" | awk '{ n += $1 } END { print n + 0 }')"
+        if (( keys )); then
+            fresh_found "Redis with $(fresh_count "$keys" key keys)"
+        else
+            fresh_ok "Redis is empty"
+        fi
+    else
+        fresh_warn "Redis is installed, but its keys could not be counted (not running, or it needs a password)"
+    fi
+}
+
+# PHP-FPM with a pool besides the package's `www`. Read as the section names
+# in pool.d, since one file can hold several pools and [global] is not one.
+fresh_check_fpm() {
+    local f
+    local -a pools=()
+
+    for f in "${FRESH_ROOT}/etc/php/"*/fpm/pool.d/*.conf; do
+        [[ -f "$f" ]] || continue
+        mapfile -t -O "${#pools[@]}" pools < <(sed -n 's/^[[:space:]]*\[\([^]]*\)\][[:space:]]*$/\1/p' "$f" || true)
+    done
+    (( ${#pools[@]} )) || return 0
+
+    mapfile -t pools < <(printf '%s\n' "${pools[@]}" | grep -vxE 'www|global' | sort -u || true)
+    if (( ${#pools[@]} )); then
+        fresh_found "PHP-FPM with $(fresh_count "${#pools[@]}" pool pools) ($(fresh_names "${pools[@]}"))"
+    else
+        fresh_ok "PHP-FPM has only its default www pool"
+    fi
+}
+
+# Docker with any container, running or stopped, or any image. Asked of the
+# daemon only when it is already running: `docker ps` would start a stopped
+# daemon through its socket, and this check changes nothing.
+fresh_check_docker() {
+    local R="$FRESH_ROOT" containers images out
+    local -a parts=()
+
+    [[ -e "${R}/usr/bin/dockerd" ]] || return 0
+
+    if systemctl is-active --quiet docker 2>/dev/null; then
+        if out="$(timeout 20 docker ps -aq 2>/dev/null)"; then
+            containers="$(fresh_lines "$out")"
+        else
+            fresh_warn "Docker is running, but its containers could not be listed"
+            return 0
+        fi
+        out="$(timeout 20 docker images -aq 2>/dev/null)" || out=""
+        images="$(fresh_lines "$out")"
+    else
+        containers="$(fresh_entries "${R}/var/lib/docker/containers" | awk 'NF { n++ } END { print n + 0 }')"
+        images=0
+    fi
+
+    (( containers )) && parts+=("$(fresh_count "$containers" container containers)")
+    (( images )) && parts+=("$(fresh_count "$images" image images)")
+    if (( ${#parts[@]} )); then
+        fresh_found "Docker with $(fresh_join ' and ' "${parts[@]}")"
+    else
+        fresh_ok "Docker Engine has no containers or images"
+    fi
+}
+
+# Site files and certificates: anything in /var/www besides the web server's
+# own index page, a public_html in any home, any Let's Encrypt certificate.
+fresh_check_site_data() {
+    local R="$FRESH_ROOT"
+    local -a www=() homes=() certs=()
+
+    mapfile -t www < <(
+        {
+            fresh_entries "${R}/var/www" html
+            fresh_entries "${R}/var/www/html" 'index*.html' | sed 's#^#html/#'
+        } || true
+    )
+    if (( ${#www[@]} )); then
+        fresh_found "site files in /var/www ($(fresh_names "${www[@]}"))"
+    else
+        fresh_ok "no site files in /var/www"
+    fi
+
+    local d
+    for d in "${R}/home/"*/public_html; do
+        [[ -e "$d" ]] || continue
+        d="${d%/public_html}"
+        homes+=("${d##*/}")
+    done
+    (( ${#homes[@]} )) && fresh_found "public_html in $(fresh_count "${#homes[@]}" home homes) ($(fresh_names "${homes[@]}"))"
+
+    for d in "${R}/etc/letsencrypt/live/"*/; do
+        [[ -d "$d" ]] || continue
+        d="${d%/}"
+        certs+=("${d##*/}")
+    done
+    (( ${#certs[@]} )) && fresh_found "$(fresh_count "${#certs[@]}" "Let's Encrypt certificate" "Let's Encrypt certificates") ($(fresh_names "${certs[@]}"))"
+
+    (( ${#homes[@]} + ${#certs[@]} )) || fresh_ok "no public_html and no certificates"
+}
+
+# What stock images ship, listed so the log shows it was seen and let through.
+fresh_list_harmless() {
+    local R="$FRESH_ROOT" pkg sudoers
+    local -a pkgs=(snapd cloud-init unattended-upgrades qemu-guest-agent open-vm-tools droplet-agent do-agent
+        hc-utils amazon-ssm-agent google-guest-agent walinuxagent ufw fail2ban postfix exim4-daemon-light)
+
+    for pkg in "${pkgs[@]}"; do
+        fresh_has_package "$pkg" && fresh_ok "${pkg} is installed (harmless)"
+    done
+    [[ -d "${R}/snap/amazon-ssm-agent" ]] && fresh_ok "amazon-ssm-agent is installed (harmless)"
+    if [[ -r "${R}/proc/swaps" ]] && (( $(awk 'NR > 1' "${R}/proc/swaps" | awk 'NF { n++ } END { print n + 0 }') )); then
+        fresh_ok "swap is on (harmless)"
+    fi
+    sudoers="$(sed -n 's/^sudo:[^:]*:[^:]*://p' "${R}/etc/group" 2>/dev/null | head -1)" || sudoers=""
+    [[ -n "$sudoers" ]] && fresh_ok "sudo users: ${sudoers//,/, } (harmless)"
+    for pkg in python3 node php; do
+        [[ -e "${R}/usr/bin/${pkg}" ]] && fresh_ok "${pkg} is installed (harmless without sites)"
+    done
+    return 0
+}
+
+# Is this server fresh? Stops the install, through die, when it is not — after
+# the OS checks and before anything on the server changes. See the note above.
+fresh_server_check() {
+    local rerun finding
+
+    if rerun="$(fresh_server_rerun)"; then
+        FRESH_CHECK="rerun"
+        ok "re-run: fresh-server check skipped (${rerun})"
+        fresh_note "re-run: fresh-server check skipped (${rerun})"
+        return 0
+    fi
+
+    fresh_check_panels
+    fresh_check_legacy_agent
+    fresh_check_web_servers
+    fresh_check_databases
+    fresh_check_redis
+    fresh_check_fpm
+    fresh_check_docker
+    fresh_check_site_data
+    fresh_list_harmless
+
+    if (( ${#FRESH_FINDINGS[@]} == 0 )); then
+        FRESH_CHECK="passed"
+        fresh_ok "this server is fresh"
+        return 0
+    fi
+
+    if (( FORCE || DRY_RUN )); then
+        for finding in "${FRESH_FINDINGS[@]}"; do
+            fresh_warn "not fresh: ${finding}"
+        done
+        if (( FORCE )); then
+            FRESH_CHECK="forced"
+            fresh_warn "--force: installing anyway, beside what is already here (FRESH_CHECK=forced)"
+        else
+            FRESH_CHECK="not_fresh"
+            fresh_warn "a real run stops here; add --force to install anyway"
+        fi
+        return 0
+    fi
+
+    FAIL_CODE="not_fresh"
+    FAIL_FINDINGS=("${FRESH_FINDINGS[@]}")
+    die "This server isn't fresh, so the install stopped. Found: $(fresh_join '; ' "${FRESH_FINDINGS[@]}"). Nothing on this server was changed. Use a fresh Ubuntu server, or run again with --force to install here anyway."
 }
 
 # ─── Stack ───────────────────────────────────────────────────────────────────
@@ -1591,11 +2177,77 @@ configure_mail() {
     ok "Postfix sends mail for this server (listening on loopback only)"
 }
 
+# What the default user's ACL line in redis.conf leaves it with, read the way
+# Redis applies the line, left to right: "nopass" (no password at all),
+# "password", "none" (neither — nobody can log in as it), or nothing when the
+# file has no such line. A password token clears nopass and resetpass clears
+# both, so `nopass` appearing on the line is not enough on its own.
+redis_default_acl() {
+    awk '$1 == "user" && $2 == "default" { line = $0 }
+        END {
+            if (line == "") exit
+            n = split(line, t); np = 0; pw = 0
+            for (i = 3; i <= n; i++) {
+                if (t[i] == "nopass") { np = 1; pw = 0 }
+                else if (t[i] == "resetpass" || t[i] == "reset") { np = 0; pw = 0 }
+                else if (t[i] ~ /^[>#]/) { np = 0; pw++ }
+                else if (t[i] ~ /^[<!]/ && pw > 0) { pw-- }
+            }
+            print (np ? "nopass" : (pw > 0 ? "password" : "none"))
+        }' "$1" 2>/dev/null || true
+}
+
+# Gives the default user this password (as its SHA-256, the form CONFIG REWRITE
+# writes) in place of the password rules its ACL line had. The rest of the line
+# — the keys, channels and commands it may use — and every other user's line
+# stay as they are, and the old line is kept above it as a comment. Written
+# back into the same file, so its owner and mode do not change.
+redis_set_default_password() {
+    local conf="$1" hash new
+    hash="$(printf '%s' "$2" | sha256sum | cut -d' ' -f1)"
+
+    new="$(awk -v hash="$hash" '
+        NR == FNR { if ($1 == "user" && $2 == "default") last = FNR; next }
+        FNR == last {
+            print "# Before the Control panel installer gave the default user a password:"
+            print "# " $0
+            out = "user default"
+            for (i = 3; i <= NF; i++) {
+                if ($i != "nopass" && $i != "resetpass" && $i !~ /^[<>#!]/) out = out " " $i
+            }
+            print out " resetpass #" hash
+            next
+        }
+        { print }' "$conf" "$conf")"
+    printf '%s\n' "$new" >"$conf"
+}
+
+# A Redis password counts only when Redis itself proves it. redis-cli is no
+# proof on its own: when AUTH fails it prints "AUTH failed: ..." and carries on,
+# and a PING then works anyway if the default user needs no password. So the
+# authenticated PING must answer PONG with no AUTH failure, and a PING with no
+# password must be refused — otherwise .env gets a password Redis rejects and
+# every connection the panel makes fails (2026-10-18, step 14).
+#
+# The password goes in REDISCLI_AUTH, not -a, so it is not in the process list.
+redis_password_works() {
+    local out
+    [[ -n "$1" ]] || return 1
+
+    out="$(REDISCLI_AUTH="$1" redis-cli ping 2>&1)" || true
+    [[ "$out" == *PONG* && "$out" != *"AUTH failed"* && "$out" != *WRONGPASS* && "$out" != *NOAUTH* ]] || return 1
+
+    out="$(env -u REDISCLI_AUTH redis-cli ping 2>&1)" || true
+    [[ "$out" == *NOAUTH* ]]
+}
+
+# The argument is only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
 configure_redis() {
     step "Securing Redis"
 
     REDIS_PASSWORD=""
-    local conf=/etc/redis/redis.conf
+    local conf="${1:-/etc/redis/redis.conf}"
 
     if [[ ! -f "$conf" ]]; then
         warn "redis.conf not found — the panel will fall back to database cache"
@@ -1620,17 +2272,40 @@ configure_redis() {
     [[ -n "$from_panel" ]] && candidates+=("$from_panel")
     [[ -n "$existing" && "$existing" != "$from_panel" ]] && candidates+=("$existing")
 
-    if [[ -n "$existing" ]] || grep -qE '^user default .*[#>]' "$conf"; then
-        REDIS_PASSWORD="${candidates[0]:-}"
+    # `user default on nopass ...` — what CONFIG REWRITE writes for a Redis
+    # that never had a password — beats `requirepass`: Redis applies the ACL
+    # line after it, so the default user stays open while CONFIG GET
+    # requirepass shows the new value. Appending `requirepass` there changed
+    # nothing (2026-10-18). The password goes on the ACL line itself; the
+    # `requirepass` line stays as well, or is added, because a re-run finds the
+    # password there when the panel's .env does not have it yet.
+    local acl new
+    acl="$(redis_default_acl "$conf")"
+
+    if [[ "$acl" != "nopass" ]] && [[ -n "$existing" || "$acl" == "password" ]]; then
         skip "Redis already has a password"
     else
-        # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
-        # pipefail turns into a fatal exit 141. Over-read, then slice in bash.
-        REDIS_PASSWORD=$(head -c 48 /dev/urandom | base64 | tr -d '/+=')
-        REDIS_PASSWORD=${REDIS_PASSWORD:0:32}
-        printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$REDIS_PASSWORD" >>"$conf"
-        ok "generated a Redis password"
+        # An open default user with a `requirepass` line (a re-run after the
+        # line was appended to no effect) gets that password.
+        new="$existing"
+        if [[ -z "$new" ]]; then
+            # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
+            # pipefail turns into a fatal exit 141. Over-read, then slice in bash.
+            new=$(head -c 48 /dev/urandom | base64 | tr -d '/+=')
+            new=${new:0:32}
+            printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$new" >>"$conf"
+        fi
+
+        if [[ "$acl" == "nopass" ]]; then
+            redis_set_default_password "$conf" "$new"
+            ok "Redis's default user had no password — it has one now"
+        else
+            ok "generated a Redis password"
+        fi
+        # The only one that can work now.
+        candidates=("$new")
     fi
+    REDACT+=("${candidates[@]}")
 
     # Bounded like v7 (operator, 2026-10-07): 256 MB, least-recently-used
     # keys go first. Without it Redis grows until the kernel kills something,
@@ -1649,17 +2324,17 @@ configure_redis() {
     # with NOAUTH and the screen you would fix it from is behind that failure.
     local candidate
     for candidate in "${candidates[@]}"; do
-        if redis-cli -a "$candidate" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+        if redis_password_works "$candidate"; then
             REDIS_PASSWORD="$candidate"
             break
         fi
     done
 
-    if [[ -n "$REDIS_PASSWORD" ]] && redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+    if [[ -n "$REDIS_PASSWORD" ]]; then
         ok "Redis reachable"
         CACHE_STORE="redis"
     else
-        warn "Redis did not answer — using the database cache instead"
+        warn "Redis did not accept a password the panel can use — using the database cache instead"
         REDIS_PASSWORD=""
         CACHE_STORE="database"
     fi
@@ -3941,12 +4616,13 @@ start_login_status() {
     ok "SSH logins by administrators show this install's progress"
 }
 
-# One line, at most 200 characters: the login script reads the file line by line.
+# One line, at most 200 characters (or $2): the login script reads the file
+# line by line.
 one_line() {
     local s="${1//$'\r'/ }"
 
     s="${s//$'\n'/ }"
-    printf '%s' "${s:0:200}"
+    printf '%s' "${s:0:${2:-200}}"
 }
 
 # BRANDING_NAME, when the operator set one: the same value the interface shows.
@@ -4008,6 +4684,33 @@ json_str() {
     printf '"%s"' "$s"
 }
 
+# json_str for text that keeps its lines: newlines and tabs are escaped rather
+# than flattened, any other control character still becomes a space.
+json_text() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\t'/\\t}"
+    s="$(printf '%s' "$s" | tr '[:cntrl:]' ' ')"
+    printf '"%s"' "$s"
+}
+
+# The end of the install log, for a failed report: Central shows it, so the
+# person who started the install sees what went wrong without logging in.
+#
+# The last 40 lines, colour codes stripped, and every secret this script knows
+# replaced with [redacted] before anything else is done with the text. Then at
+# most 8 KB, keeping the end — that is where the error is — and only whole
+# UTF-8 characters, because one cut in half makes the whole report invalid JSON.
+report_log_tail() {
+    [[ -r "${LOG_FILE:-}" ]] || return 0
+
+    local text
+    text="$(tail -n 40 "$LOG_FILE" 2>/dev/null | redact_log)"
+    printf '%s' "$text" | tail -c 8192 | iconv -f UTF-8 -t UTF-8 -c 2>/dev/null
+}
+
 # Report this step to Central (PROGRESS_URL), signed with the central token.
 #
 # The same facts save_install_state writes for the SSH login screen, so the two
@@ -4045,7 +4748,23 @@ send_progress() {
             printf ',"title":%s' "$(json_str "$(one_line "$CURRENT_STEP")")"
             printf ',"started_at":%s,"updated_at":%s' "${INSTALL_STARTED:-0}" "$(date +%s)"
             if [[ "$state" == "failed" ]]; then
-                printf ',"reason":%s,"log_file":%s' "$(json_str "$(one_line "$reason")")" "$(json_str "$LOG_FILE")"
+                # Longer than the login screen's line: the fresh-server stop
+                # names everything it found.
+                printf ',"reason":%s' "$(json_str "$(one_line "$reason" 2000)")"
+                # Only a log that exists: a stop in preflight comes before
+                # the log does, and Central would show a path to nothing.
+                [[ -r "${LOG_FILE:-}" ]] && printf ',"log_file":%s' "$(json_str "$LOG_FILE")"
+                printf ',"log_tail":%s' "$(json_text "$(report_log_tail)")"
+                # Why, for a machine, when this failure has a known cause.
+                if [[ -n "${FAIL_CODE:-}" ]]; then
+                    printf ',"code":%s,"findings":[' "$(json_str "$FAIL_CODE")"
+                    sep=""
+                    for finding in "${FAIL_FINDINGS[@]}"; do
+                        printf '%s%s' "$sep" "$(json_str "$(one_line "$finding" 500)")"
+                        sep=","
+                    done
+                    printf ']'
+                fi
             fi
             if [[ "$state" == "installed" ]]; then
                 printf ',"name":%s' "$(json_str "$(one_line "$(branding_name)")")"
@@ -4127,6 +4846,7 @@ save_install_state() {
             printf 'BOOT_ID=%s\n' "$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)"
             printf 'LOG_FILE=%s\n' "$LOG_FILE"
             printf 'REASON=%s\n' "$(one_line "$reason")"
+            printf 'FRESH_CHECK=%s\n' "${FRESH_CHECK:-}"
 
             if [[ "$state" == "installed" ]]; then
                 printf 'NAME=%s\n' "$(one_line "$(branding_name)")"
