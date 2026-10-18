@@ -8,6 +8,7 @@ use App\Models\BackupTarget;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Process;
@@ -22,6 +23,9 @@ use Illuminate\Support\Facades\Queue;
  * refusal and the backup cannot disagree about whether a site has volumes.
  */
 beforeEach(function () {
+    // The real recipe, so the fixture is the site the bug was found on.
+    expect(app(SiteTypeManager::class)->find('ittools')?->volumeRoles())->toBe([]);
+
     $this->seed(PermissionSeeder::class);
     $this->token = User::factory()->admin()->create()->createToken('t')->plainTextToken;
 
@@ -29,7 +33,7 @@ beforeEach(function () {
 
     $this->application = Application::forceCreate([
         'system_user_id' => $user->id, 'name' => 'IT-Tools', 'slug' => 'it-tools',
-        'domain' => 'tools.example.test', 'site_type' => 'docker', 'serving_profile' => 'docker',
+        'domain' => 'tools.example.test', 'site_type' => 'ittools', 'serving_profile' => 'docker',
         'status' => 'active', 'web_root' => '/',
     ]);
 
