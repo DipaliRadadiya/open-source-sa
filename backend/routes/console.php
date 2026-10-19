@@ -111,3 +111,9 @@ Schedule::command('files:prune-trash')->daily()->withoutOverlapping(120);
 // called. The per-chunk free-space guard refuses new writes once the disk is
 // nearly full; this is what stops it filling.
 Schedule::command('uploads:reap')->daily()->withoutOverlapping(120);
+
+// A site whose install job died without a word — worker killed, disk full —
+// stays `provisioning` for good, and Delete refuses a provisioning site. Past
+// its own time budget nothing can still be installing it
+// (StrandedProvisioning), so it is marked failed: Retry setup or Delete.
+Schedule::command('applications:close-stranded')->everyFiveMinutes()->withoutOverlapping(10);
