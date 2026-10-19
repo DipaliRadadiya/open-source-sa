@@ -11,6 +11,12 @@ export function deleteSystemUser(id, { endSessions = false } = {}) {
   return api.delete(`/system-users/${id}`, { params: endSessions ? { end_sessions: 1 } : undefined });
 }
 
+// Several at once (37c8e56e): each goes through the single delete, one refusal does
+// not stop the others. Answers `{deleted, succeeded: [ids], failed: [{id, username, reason}]}`.
+export function deleteSystemUsers(ids, { endSessions = false } = {}) {
+  return api.delete("/system-users", { data: { ids, end_sessions: endSessions } });
+}
+
 export function setSystemUserPassword(id, values) {
   return api.put(`/system-users/${id}/password`, values);
 }

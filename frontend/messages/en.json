@@ -245,7 +245,34 @@
       "body": "SSH switches aren't active yet — every user can sign in over SSH until Access & security is saved.",
       "action": "Open Access & security"
     },
-    "sshViaSudo": "Sudo users can always sign in over SSH. Turn off sudo to control SSH here."
+    "sshViaSudo": "Sudo users can always sign in over SSH. Turn off sudo to control SSH here.",
+    "bulk": {
+      "selectAll": "Select all system users on this page",
+      "selectRow": "Select {username}",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "clear": "Clear",
+      "action": "Delete selected",
+      "title": "{count, plural, one {Delete # system user?} other {Delete # system users?}}",
+      "description": "This permanently removes each account, its home directory and its cron jobs. This cannot be undone. An account that still owns an application, or is signed in, is kept, and you are told why.",
+      "more": "and {count} more",
+      "endSessions": "End sessions",
+      "endSessionsHint": "Signs them out and stops anything they are running, then deletes them. Leave it off to be told instead.",
+      "cancel": "Cancel",
+      "confirm": "{count, plural, one {Delete # user} other {Delete # users}}",
+      "deleting": "Deleting…",
+      "allDeleted": "{count, plural, one {# system user deleted.} other {# system users deleted.}}",
+      "failed": "The system users could not be deleted.",
+      "partial": "{deleted, plural, =0 {None deleted.} one {# deleted.} other {# deleted.}} {kept, plural, one {# was kept; the reason is next to it.} other {# were kept; each reason is next to its user.}}",
+      "reason": {
+        "has_applications": "Not deleted: owns an application",
+        "has_processes": "Not deleted: signed in or running something",
+        "failed": "Not deleted: the server refused"
+      },
+      "fix": {
+        "has_applications": "To delete the rest, move or delete their applications first.",
+        "has_processes": "For accounts that are signed in, delete again with End sessions on."
+      }
+    }
   },
   "dashboard": {
     "title": "Dashboard",

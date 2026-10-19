@@ -245,7 +245,34 @@
       "body": "As chaves SSH ainda não estão ativas — qualquer usuário consegue entrar via SSH até que Acesso e segurança seja salvo.",
       "action": "Abrir Acesso e segurança"
     },
-    "sshViaSudo": "Usuários com sudo sempre conseguem fazer login via SSH. Desligue o sudo para controlar o SSH aqui."
+    "sshViaSudo": "Usuários com sudo sempre conseguem fazer login via SSH. Desligue o sudo para controlar o SSH aqui.",
+    "bulk": {
+      "selectAll": "Selecionar todos os usuários do sistema nesta página",
+      "selectRow": "Selecionar {username}",
+      "selected": "{count, plural, one {# selecionado} other {# selecionados}}",
+      "clear": "Limpar",
+      "action": "Excluir selecionados",
+      "title": "{count, plural, one {Excluir # usuário do sistema?} other {Excluir # usuários do sistema?}}",
+      "description": "Isso remove permanentemente cada conta, seu diretório pessoal e seus trabalhos cron. Não é possível desfazer. Uma conta que ainda é dona de uma aplicação, ou que está conectada, é mantida, e você é informado do motivo.",
+      "more": "e mais {count}",
+      "endSessions": "Encerrar sessões",
+      "endSessionsHint": "Desconecta-os e interrompe tudo o que estão executando; depois os exclui. Deixe desativado para ser avisado em vez disso.",
+      "cancel": "Cancelar",
+      "confirm": "{count, plural, one {Excluir # usuário} other {Excluir # usuários}}",
+      "deleting": "Excluindo…",
+      "allDeleted": "{count, plural, one {# usuário do sistema excluído.} other {# usuários do sistema excluídos.}}",
+      "failed": "Não foi possível excluir os usuários do sistema.",
+      "partial": "{deleted, plural, =0 {Nenhum excluído.} one {# excluído.} other {# excluídos.}} {kept, plural, one {# foi mantido; o motivo aparece ao lado.} other {# foram mantidos; cada motivo aparece ao lado do seu usuário.}}",
+      "reason": {
+        "has_applications": "Não excluído: é dono de uma aplicação",
+        "has_processes": "Não excluído: conectado ou executando algo",
+        "failed": "Não excluído: o servidor recusou"
+      },
+      "fix": {
+        "has_applications": "Para excluir o restante, mova ou exclua primeiro as aplicações delas.",
+        "has_processes": "Para contas conectadas, exclua novamente com Encerrar sessões ativado."
+      }
+    }
   },
   "dashboard": {
     "title": "Painel",

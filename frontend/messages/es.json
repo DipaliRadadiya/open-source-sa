@@ -245,7 +245,34 @@
       "body": "Los interruptores SSH aún no están activos: todos los usuarios pueden entrar por SSH hasta que se guarde Acceso y seguridad.",
       "action": "Abrir Acceso y seguridad"
     },
-    "sshViaSudo": "Los usuarios con sudo siempre pueden entrar por SSH. Desactiva sudo para controlar el SSH aquí."
+    "sshViaSudo": "Los usuarios con sudo siempre pueden entrar por SSH. Desactiva sudo para controlar el SSH aquí.",
+    "bulk": {
+      "selectAll": "Seleccionar todos los usuarios del sistema de esta página",
+      "selectRow": "Seleccionar {username}",
+      "selected": "{count, plural, one {# seleccionado} other {# seleccionados}}",
+      "clear": "Borrar",
+      "action": "Eliminar seleccionados",
+      "title": "{count, plural, one {¿Eliminar # usuario del sistema?} other {¿Eliminar # usuarios del sistema?}}",
+      "description": "Esto elimina de forma permanente cada cuenta, su directorio personal y sus tareas cron. No se puede deshacer. Una cuenta que aún es propietaria de una aplicación, o que tiene la sesión iniciada, se conserva y se le indica el motivo.",
+      "more": "y {count} más",
+      "endSessions": "Cerrar sesiones",
+      "endSessionsHint": "Cierra sus sesiones y detiene todo lo que estén ejecutando; después los elimina. Déjelo desactivado para recibir un aviso en su lugar.",
+      "cancel": "Cancelar",
+      "confirm": "{count, plural, one {Eliminar # usuario} other {Eliminar # usuarios}}",
+      "deleting": "Eliminando…",
+      "allDeleted": "{count, plural, one {# usuario del sistema eliminado.} other {# usuarios del sistema eliminados.}}",
+      "failed": "No se pudieron eliminar los usuarios del sistema.",
+      "partial": "{deleted, plural, =0 {Ninguno eliminado.} one {# eliminado.} other {# eliminados.}} {kept, plural, one {# se conservó; el motivo aparece junto a él.} other {# se conservaron; cada motivo aparece junto a su usuario.}}",
+      "reason": {
+        "has_applications": "No eliminado: es propietario de una aplicación",
+        "has_processes": "No eliminado: sesión iniciada o ejecutando algo",
+        "failed": "No eliminado: el servidor lo rechazó"
+      },
+      "fix": {
+        "has_applications": "Para eliminar el resto, mueva o elimine primero sus aplicaciones.",
+        "has_processes": "Para las cuentas con la sesión iniciada, vuelva a eliminarlas con Cerrar sesiones activado."
+      }
+    }
   },
   "dashboard": {
     "title": "Panel",

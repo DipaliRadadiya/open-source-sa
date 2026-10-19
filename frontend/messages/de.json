@@ -245,7 +245,34 @@
       "body": "Die SSH-Schalter sind noch nicht aktiv – jeder Benutzer kann sich über SSH anmelden, bis Zugang & Sicherheit gespeichert ist.",
       "action": "Zugang & Sicherheit öffnen"
     },
-    "sshViaSudo": "Sudo-Benutzer können sich immer über SSH anmelden. Schalten Sie sudo aus, um SSH hier zu steuern."
+    "sshViaSudo": "Sudo-Benutzer können sich immer über SSH anmelden. Schalten Sie sudo aus, um SSH hier zu steuern.",
+    "bulk": {
+      "selectAll": "Alle Systembenutzer auf dieser Seite auswählen",
+      "selectRow": "{username} auswählen",
+      "selected": "{count, plural, one {# ausgewählt} other {# ausgewählt}}",
+      "clear": "Zurücksetzen",
+      "action": "Ausgewählte löschen",
+      "title": "{count, plural, one {# Systembenutzer löschen?} other {# Systembenutzer löschen?}}",
+      "description": "Dies entfernt jedes Konto, sein Home-Verzeichnis und seine Cronjobs endgültig. Dies kann nicht rückgängig gemacht werden. Ein Konto, das noch eine Anwendung besitzt oder angemeldet ist, bleibt erhalten, und Sie erfahren den Grund.",
+      "more": "und {count} weitere",
+      "endSessions": "Sitzungen beenden",
+      "endSessionsHint": "Meldet sie ab und beendet alles, was sie ausführen, dann werden sie gelöscht. Lassen Sie es aus, um stattdessen einen Hinweis zu erhalten.",
+      "cancel": "Abbrechen",
+      "confirm": "{count, plural, one {# Benutzer löschen} other {# Benutzer löschen}}",
+      "deleting": "Wird gelöscht…",
+      "allDeleted": "{count, plural, one {# Systembenutzer gelöscht.} other {# Systembenutzer gelöscht.}}",
+      "failed": "Die Systembenutzer konnten nicht gelöscht werden.",
+      "partial": "{deleted, plural, =0 {Keiner gelöscht.} one {# gelöscht.} other {# gelöscht.}} {kept, plural, one {# wurde behalten; der Grund steht daneben.} other {# wurden behalten; jeder Grund steht neben seinem Benutzer.}}",
+      "reason": {
+        "has_applications": "Nicht gelöscht: besitzt eine Anwendung",
+        "has_processes": "Nicht gelöscht: angemeldet oder führt etwas aus",
+        "failed": "Nicht gelöscht: vom Server abgelehnt"
+      },
+      "fix": {
+        "has_applications": "Um die übrigen zu löschen, verschieben oder löschen Sie zuerst ihre Anwendungen.",
+        "has_processes": "Für angemeldete Konten löschen Sie erneut mit aktiviertem „Sitzungen beenden“."
+      }
+    }
   },
   "dashboard": {
     "title": "Dashboard",

@@ -245,7 +245,34 @@
       "body": "Les interrupteurs SSH ne sont pas encore actifs : tous les utilisateurs peuvent se connecter en SSH tant qu'Accès et sécurité n'est pas enregistré.",
       "action": "Ouvrir Accès et sécurité"
     },
-    "sshViaSudo": "Les utilisateurs sudo peuvent toujours se connecter en SSH. Désactivez sudo pour contrôler le SSH ici."
+    "sshViaSudo": "Les utilisateurs sudo peuvent toujours se connecter en SSH. Désactivez sudo pour contrôler le SSH ici.",
+    "bulk": {
+      "selectAll": "Sélectionner tous les utilisateurs système de cette page",
+      "selectRow": "Sélectionner {username}",
+      "selected": "{count, plural, one {# sélectionné} other {# sélectionnés}}",
+      "clear": "Effacer",
+      "action": "Supprimer la sélection",
+      "title": "{count, plural, one {Supprimer # utilisateur système ?} other {Supprimer # utilisateurs système ?}}",
+      "description": "Cette action supprime définitivement chaque compte, son répertoire personnel et ses tâches cron. Elle est irréversible. Un compte qui possède encore une application, ou qui est connecté, est conservé, et la raison vous est indiquée.",
+      "more": "et {count} de plus",
+      "endSessions": "Fermer les sessions",
+      "endSessionsHint": "Les déconnecte et arrête tout ce qu'ils exécutent, puis les supprime. Laissez désactivé pour être prévenu à la place.",
+      "cancel": "Annuler",
+      "confirm": "{count, plural, one {Supprimer # utilisateur} other {Supprimer # utilisateurs}}",
+      "deleting": "Suppression…",
+      "allDeleted": "{count, plural, one {# utilisateur système supprimé.} other {# utilisateurs système supprimés.}}",
+      "failed": "Impossible de supprimer les utilisateurs système.",
+      "partial": "{deleted, plural, =0 {Aucun supprimé.} one {# supprimé.} other {# supprimés.}} {kept, plural, one {# a été conservé ; la raison est indiquée à côté.} other {# ont été conservés ; chaque raison est indiquée à côté de son utilisateur.}}",
+      "reason": {
+        "has_applications": "Non supprimé : possède une application",
+        "has_processes": "Non supprimé : connecté ou exécute quelque chose",
+        "failed": "Non supprimé : refusé par le serveur"
+      },
+      "fix": {
+        "has_applications": "Pour supprimer les autres, déplacez ou supprimez d'abord leurs applications.",
+        "has_processes": "Pour les comptes connectés, supprimez à nouveau avec Fermer les sessions activé."
+      }
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",

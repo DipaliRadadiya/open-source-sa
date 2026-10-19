@@ -245,7 +245,34 @@
       "body": "SSH スイッチはまだ有効ではありません。アクセスとセキュリティを保存するまで、すべてのユーザーが SSH でサインインできます。",
       "action": "アクセスとセキュリティを開く"
     },
-    "sshViaSudo": "sudo ユーザーは常に SSH でサインインできます。ここで SSH を制御するには sudo をオフにしてください。"
+    "sshViaSudo": "sudo ユーザーは常に SSH でサインインできます。ここで SSH を制御するには sudo をオフにしてください。",
+    "bulk": {
+      "selectAll": "このページのすべてのシステムユーザーを選択",
+      "selectRow": "{username} を選択",
+      "selected": "{count, plural, other {# 件選択中}}",
+      "clear": "クリア",
+      "action": "選択したものを削除",
+      "title": "{count, plural, other {# 件のシステムユーザーを削除しますか？}}",
+      "description": "各アカウントとそのホームディレクトリ、cron ジョブを完全に削除します。この操作は元に戻せません。まだアプリケーションを所有しているアカウントやサインイン中のアカウントは削除されず、その理由が表示されます。",
+      "more": "ほか {count} 件",
+      "endSessions": "セッションを終了",
+      "endSessionsHint": "サインアウトさせ、実行中のものをすべて停止してから削除します。オフのままにすると、代わりに通知されます。",
+      "cancel": "キャンセル",
+      "confirm": "{count, plural, other {# 件のユーザーを削除}}",
+      "deleting": "削除中…",
+      "allDeleted": "{count, plural, other {# 件のシステムユーザーを削除しました。}}",
+      "failed": "システムユーザーを削除できませんでした。",
+      "partial": "{deleted, plural, =0 {削除されたものはありません。} other {# 件を削除しました。}} {kept, plural, other {# 件は削除されませんでした。理由は各ユーザーの横に表示されています。}}",
+      "reason": {
+        "has_applications": "削除されませんでした：アプリケーションを所有",
+        "has_processes": "削除されませんでした：サインイン中または実行中",
+        "failed": "削除されませんでした：サーバーが拒否"
+      },
+      "fix": {
+        "has_applications": "残りを削除するには、先にそのアプリケーションを削除または移動してください。",
+        "has_processes": "サインイン中のアカウントは、「セッションを終了」をオンにしてもう一度削除してください。"
+      }
+    }
   },
   "dashboard": {
     "title": "ダッシュボード",

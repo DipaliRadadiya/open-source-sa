@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "@/components/ui/app-link";
-import { SearchX, Server, Plus, Users } from "lucide-react";
+import { SearchX, Server, Plus, Users, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,10 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 import { SystemUsersCards } from "@/components/system-users/system-users-cards";
+import { BulkDeleteDialog } from "@/components/system-users/bulk-delete-dialog";
+import { BulkFailure } from "@/components/system-users/bulk-failure";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BULK_FIXES } from "@/lib/system-users/bulk-delete";
 
 // Cells are module-level on purpose: an inline cell gets a new identity each
 // render, so every keystroke would remount every cell.
@@ -56,7 +60,31 @@ function UsernameCell({ row, table }) {
         <span className="min-w-0 pt-1 [overflow-wrap:anywhere]">{row.original.home_path}</span>
         <CopyButton value={row.original.home_path} label={t("detail.copyPath")} className="size-6" />
       </p>
+      <BulkFailure failure={table.options.meta.failures?.[row.original.id]} />
     </div>
+  );
+}
+
+function SelectHeaderCell({ table }) {
+  const t = useTranslations("systemUsers.bulk");
+  const all = table.getIsAllRowsSelected();
+  return (
+    <Checkbox
+      checked={all || (table.getIsSomeRowsSelected() ? "indeterminate" : false)}
+      onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+      aria-label={t("selectAll")}
+    />
+  );
+}
+
+function SelectCell({ row }) {
+  const t = useTranslations("systemUsers.bulk");
+  return (
+    <Checkbox
+      checked={row.getIsSelected()}
+      onCheckedChange={(value) => row.toggleSelected(!!value)}
+      aria-label={t("selectRow", { username: row.original.username })}
+    />
   );
 }
 
@@ -146,11 +174,25 @@ function SystemUsersList({
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
+  // Keyed by id, so a re-read that reorders the list cannot change who is deleted.
+  const [selection, setSelection] = useState({});
+  const [bulkOpen, setBulkOpen] = useState(false);
+  // Why each kept account was kept, shown next to it (Krishna, 19 Oct).
+  const [bulkResult, setBulkResult] = useState(null);
 
   // Filtered and paged by the API; filtering here would only search this page.
   const filtered = data;
+  const selected = filtered.filter((user) => selection[String(user.id)]);
+  const failures = bulkResult?.failures ?? {};
+  const keptCount = Object.keys(failures).length;
+
+  function clearSelection() {
+    setSelection({});
+    setBulkResult(null);
+  }
 
   const columns = [
+    ...(canManage ? [{ id: "select", header: SelectHeaderCell, meta: { className: "w-10" }, cell: SelectCell }] : []),
     { accessorKey: "username", header: () => <Head>{t("columns.username")}</Head>, cell: UsernameCell },
     ...(canManage
       ? [{ id: "password", header: () => <Head>{t("columns.password")}</Head>, cell: PasswordCell }]
@@ -188,6 +230,19 @@ function SystemUsersList({
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <SearchInput placeholder={t("searchPlaceholder")} />
       <div className="flex flex-wrap items-center gap-2">
+        {/* Beside Add while something is selected: the list keeps its toolbar. */}
+        {canManage && selected.length > 0 ? (
+          <>
+            <span className="text-sm text-muted-foreground">{t("bulk.selected", { count: selected.length })}</span>
+            <Button variant="ghost" onClick={clearSelection}>
+              {t("bulk.clear")}
+            </Button>
+            <Button variant="destructive" onClick={() => setBulkOpen(true)}>
+              <Trash2 className="size-4" />
+              {t("bulk.action")}
+            </Button>
+          </>
+        ) : null}
         <RefreshButton />
         <ReasonTooltip reason={canManage ? null : t("noPermission")}>
           <Button disabled={!canManage} onClick={() => setCreateOpen(true)} data-su-add>
@@ -219,6 +274,17 @@ function SystemUsersList({
           }
         >
           <p>{t("sshNotEnforced.body")}</p>
+        </Caution>
+      ) : null}
+
+      {/* What the last bulk delete did, until the next one or Clear; the reasons sit on the rows. */}
+      {bulkResult && keptCount > 0 ? (
+        <Caution size="md" tone="destructive">
+          <p>{t("bulk.partial", { deleted: bulkResult.succeeded.length, kept: keptCount })}</p>
+          {/* The rows say why in a few words; what to do about it is said once, here. */}
+          {BULK_FIXES.filter((reason) => Object.values(failures).some((failure) => failure.reason === reason)).map((reason) => (
+            <p key={reason}>{t(`bulk.fix.${reason}`)}</p>
+          ))}
         </Caution>
       ) : null}
 
@@ -273,6 +339,9 @@ function SystemUsersList({
               sshEnforced={sshEnforced}
               sshPasswordOff={sshPasswordOff}
               canOpenSecurity={canOpenSecurity}
+              selection={canManage ? selection : null}
+              onSelectionChange={setSelection}
+              failures={failures}
             />
           </div>
           <div className="hidden xl:block">
@@ -281,11 +350,27 @@ function SystemUsersList({
               roomy
               columns={columns}
               data={filtered}
-              meta={{ canManage, shells, prevPage, sshEnforced, sshPasswordOff, canOpenSecurity }}
+              meta={{ canManage, shells, prevPage, sshEnforced, sshPasswordOff, canOpenSecurity, failures }}
+              {...(canManage
+                ? { rowSelection: selection, onRowSelectionChange: setSelection, rowId: (user) => String(user.id) }
+                : null)}
             />
           </div>
         </ListCard>
       )}
+
+      {canManage ? (
+        <BulkDeleteDialog
+          users={selected}
+          open={bulkOpen}
+          onOpenChange={setBulkOpen}
+          onDone={(outcome) => {
+            // The refused stay selected, so fixing the cause and pressing Delete again works.
+            setSelection(Object.fromEntries(Object.keys(outcome.failures).map((id) => [String(id), true])));
+            setBulkResult(outcome);
+          }}
+        />
+      ) : null}
 
       {canManage ? (
         <CreateSystemUserDialog open={createOpen} onOpenChange={setCreateOpen} initialShells={shells} />

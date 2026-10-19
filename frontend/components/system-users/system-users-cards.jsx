@@ -7,6 +7,8 @@ import { PasswordReveal } from "@/components/system-users/password-reveal";
 import { CopyButton } from "@/components/ui/copy-button";
 import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
+import { BulkFailure } from "@/components/system-users/bulk-failure";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // The shell picker takes the full width underneath so shell names fit.
 export function SystemUsersCards({
@@ -17,6 +19,10 @@ export function SystemUsersCards({
   sshEnforced = null,
   sshPasswordOff = false,
   canOpenSecurity = false,
+  // Null for viewers: no checkboxes.
+  selection = null,
+  onSelectionChange,
+  failures = {},
 }) {
   const t = useTranslations("systemUsers");
 
@@ -25,7 +31,15 @@ export function SystemUsersCards({
       {users.map((user) => (
         <CardListItem key={user.id}>
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+            {selection ? (
+              <Checkbox
+                className="mt-0.5"
+                checked={Boolean(selection[String(user.id)])}
+                onCheckedChange={(value) => onSelectionChange?.({ ...selection, [String(user.id)]: value === true })}
+                aria-label={t("bulk.selectRow", { username: user.username })}
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 {/* break-all, not truncate: the username is the identifier being read, and a long
                     one would push the row menu off the card. */}
@@ -42,6 +56,7 @@ export function SystemUsersCards({
                 <span className="min-w-0 truncate">{user.home_path}</span>
                 <CopyButton value={user.home_path} label={t("detail.copyPath")} className="size-6" />
               </p>
+              <BulkFailure failure={failures[user.id]} />
             </div>
             {/* For viewers too: the menu is how SSH keys are reached. */}
             <div className="-me-2 -mt-1 shrink-0">
