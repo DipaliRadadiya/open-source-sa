@@ -3922,7 +3922,8 @@
         "schedule_cron": "Hintergrundaufgaben werden geplant",
         "start_app": "Anwendung wird gestartet",
         "verify_install": "Installation wird geprüft",
-        "verify_serving": "Es wird geprüft, ob die Anwendung ausgeliefert wird"
+        "verify_serving": "Es wird geprüft, ob die Anwendung ausgeliefert wird",
+        "worker": "Installationsjob im Hintergrund"
       },
       "stalledTitle": "Das dauert länger als erwartet",
       "stalledBody": "Die Einrichtung hat seit einer Weile keinen Fortschritt gemeldet. Möglicherweise läuft sie noch — prüfen Sie erneut oder wenden Sie sich an den Support, wenn es so bleibt.",

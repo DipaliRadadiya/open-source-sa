@@ -3922,7 +3922,8 @@
         "schedule_cron": "Programando tareas en segundo plano",
         "start_app": "Iniciando la aplicación",
         "verify_install": "Comprobando la instalación",
-        "verify_serving": "Comprobando que la aplicación se sirve"
+        "verify_serving": "Comprobando que la aplicación se sirve",
+        "worker": "Tarea de instalación en segundo plano"
       },
       "stalledTitle": "Esto está tardando más de lo esperado",
       "stalledBody": "La configuración no ha informado avances desde hace un rato. Puede que siga en marcha: vuelve a comprobarlo o contacta con soporte si sigue así.",

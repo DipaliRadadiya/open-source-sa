@@ -34,7 +34,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
     ? []
     : backup?.files_only
     ? restorableTypes(backup?.type).filter((value) => value === "filesystem")
-    : restorableTypes(backup?.type);
+    : restorableTypes(backup?.type, backup?.has_database);
   const [type, setType] = useState(
     allowed.includes(backup?.preferred_type)
       ? backup.preferred_type
@@ -94,7 +94,15 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
             {subject === "database" ? (
               <Fact label={t("facts.from")} value={backup?.database_name ?? ""} />
             ) : (
-              <Fact label={t("facts.type")} value={backup?.type_title ?? backup?.type ?? ""} />
+              <Fact
+                label={t("facts.type")}
+                value={
+                  // A `full` backup of a site with no database holds its files and nothing else.
+                  backup?.type === "full" && allowed.length === 1 && allowed[0] === "filesystem"
+                    ? t("types.filesystem.label")
+                    : (backup?.type_title ?? backup?.type ?? "")
+                }
+              />
             )}
             <Fact
               label={t("facts.size")}

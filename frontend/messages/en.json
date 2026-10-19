@@ -3922,7 +3922,8 @@
         "schedule_cron": "Scheduling background tasks",
         "start_app": "Starting the application",
         "verify_install": "Checking the installation",
-        "verify_serving": "Checking the application is served"
+        "verify_serving": "Checking the application is served",
+        "worker": "Background install job"
       },
       "stalledTitle": "This is taking longer than expected",
       "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",

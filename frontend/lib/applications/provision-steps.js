@@ -37,6 +37,8 @@ export const PROVISION_STEPS = new Set([
   "start_app",
   "verify_install",
   "verify_serving",
+  // Only in failed_step: the install job died without a word (disk full, OOM, reboot).
+  "worker",
 ]);
 
 // Unknown steps still go through `t()`, whose fallback humanises the key; `unknownStep` is only for no step.

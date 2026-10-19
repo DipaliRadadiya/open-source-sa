@@ -3922,7 +3922,8 @@
         "schedule_cron": "Planification des tâches en arrière-plan",
         "start_app": "Démarrage de l'application",
         "verify_install": "Vérification de l'installation",
-        "verify_serving": "Vérification que l'application est servie"
+        "verify_serving": "Vérification que l'application est servie",
+        "worker": "Tâche d'installation en arrière-plan"
       },
       "stalledTitle": "Cela prend plus de temps que prévu",
       "stalledBody": "La configuration n'a pas signalé de progrès depuis un moment. Elle tourne peut-être encore — réessayez, ou contactez le support si cela persiste.",

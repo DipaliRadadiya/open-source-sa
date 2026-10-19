@@ -27,8 +27,10 @@ export const backupTargetOptionsSchema = z.object({
 });
 
 // Mirrors `RestoreBackupRequest::withValidator()`.
-export function restorableTypes(backupType) {
-  if (backupType === "full") return ["full", "filesystem", "database"];
+// `hasDatabase` is the backup's own `has_database`: a site with no database still
+// gets `full` backups, with no dump in them. Unknown (older API) keeps the type's list.
+export function restorableTypes(backupType, hasDatabase = null) {
+  if (backupType === "full") return hasDatabase === false ? ["filesystem"] : ["full", "filesystem", "database"];
   if (backupType === "filesystem") return ["filesystem"];
   if (backupType === "database") return ["database"];
   return [];
@@ -63,6 +65,8 @@ export const backupSchema = z
     application_id: z.number().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),
+    // Whether the archive holds a database dump; false on a `full` backup of a site without one.
+    has_database: z.boolean().nullish(),
     // Taken just before a restore, exempt from retention.
     is_safety: z.boolean().default(false),
     status: z.string(),

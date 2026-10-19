@@ -15,6 +15,7 @@ import { backupSubject } from "@/lib/backups/backup-subject";
 import { ArchivedBadge, subjectLine } from "@/components/backups/backups-history-table";
 import { sizeNote } from "@/components/backups/backups-history-table";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
+import { backupTypeLabel } from "@/lib/backups/type-label";
 
 // `showSite` is off on a site's own page.
 export function BackupsCards({
@@ -68,7 +69,7 @@ export function BackupsCards({
               ) : (
                 // Wraps rather than truncating: the type is the card's title.
                 <p className="min-w-0 break-words font-medium">
-                  {backup.type_title ?? backup.type}
+                  {backupTypeLabel(backup, t)}
                 </p>
               )}
               <div className="flex shrink-0 flex-col items-end gap-1">
@@ -79,7 +80,7 @@ export function BackupsCards({
 
             <CardFacts>
               {showSite ? (
-                <CardFact label={t("columns.type")} value={backup.type_title ?? backup.type} />
+                <CardFact label={t("columns.type")} value={backupTypeLabel(backup, t)} />
               ) : null}
               <CardFact label={t("columns.when")}>
                 <span className="tabular-nums">{backup.created_at_human ?? backup.created_at}</span>

@@ -19,6 +19,7 @@ import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog"
 import { Checkbox } from "@/components/ui/checkbox";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { restoreBlocker } from "@/lib/backups/restore-blocker";
+import { backupTypeLabel } from "@/lib/backups/type-label";
 import { backupSubject } from "@/lib/backups/backup-subject";
 
 /* Every backup that has run, as the same table the overview uses. */
@@ -102,8 +103,9 @@ function StatusCell({ row, table }) {
 }
 
 function TypeCell({ row }) {
+  const t = useTranslations("backups.history");
   return (
-    <span className="text-sm">{row.original.type_title ?? row.original.type}</span>
+    <span className="text-sm">{backupTypeLabel(row.original, t)}</span>
   );
 }
 
