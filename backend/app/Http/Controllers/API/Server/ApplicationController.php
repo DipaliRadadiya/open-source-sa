@@ -36,6 +36,7 @@ use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\Applications\StrandedProvisioning;
 use App\Services\VisiblePermissions;
 use App\Support\ListSearch;
 use App\Support\ListSort;
@@ -349,9 +350,16 @@ class ApplicationController extends Controller
         DeleteApplication $action,
         DeleteApplicationDatabases $databases,
         DeleteApplicationDockerResources $dockerResources,
+        StrandedProvisioning $stranded,
     ): JsonResponse {
         // A queued worker can still be writing this site's files and config.
-        // Deleting its record now would leave those mutations untracked.
+        // Deleting its record now would leave those mutations untracked — unless
+        // its install job is provably gone, which would otherwise leave the site
+        // undeletable for good (StrandedProvisioning).
+        if ($stranded->close($application)) {
+            $application->refresh();
+        }
+
         abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
 
         // Its backups are archived on delete; one still being written, or a

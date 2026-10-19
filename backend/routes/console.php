@@ -118,3 +118,8 @@ Schedule::command('uploads:reap')->daily()->withoutOverlapping(120);
 // then removed only where the site is in place and the restore's safety backup
 // is still there (RollbackCopies::pruneFailed).
 Schedule::command('restores:prune-rollbacks')->daily()->withoutOverlapping(120);
+// A site whose install job died without a word — worker killed, disk full —
+// stays `provisioning` for good, and Delete refuses a provisioning site. Past
+// its own time budget nothing can still be installing it
+// (StrandedProvisioning), so it is marked failed: Retry setup or Delete.
+Schedule::command('applications:close-stranded')->everyFiveMinutes()->withoutOverlapping(10);
