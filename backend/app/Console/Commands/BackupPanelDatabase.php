@@ -42,12 +42,56 @@ class BackupPanelDatabase extends Command
 
         $stamp = now()->format('Ymd-His');
 
-        return match ($driver) {
+        $code = match ($driver) {
             'sqlite' => $this->dumpSqlite($dir, $stamp),
             'mysql', 'mariadb' => $this->dumpMysql($connection, $dir, $stamp),
             'pgsql' => $this->dumpPostgres($connection, $dir, $stamp),
             default => $this->unsupported($driver),
         };
+
+        if ($code === self::SUCCESS) {
+            $this->pruneOld($dir);
+        }
+
+        return $code;
+    }
+
+    /** Days an older dump is kept. Operator's call, 2026-10-18. */
+    public const KEEP_DAYS = 7;
+
+    /**
+     * Remove dumps older than {@see KEEP_DAYS}, always keeping the newest.
+     *
+     * One is written before every update and nothing removed any, so each
+     * update cost a full copy of the panel's database, for good. The newest is
+     * the one an update's rollback reads, and is kept however old it is.
+     *
+     * Only names this command writes, aged by the stamp in the name — a file
+     * someone put here by hand is not this command's to remove. Prints
+     * nothing: the update script takes the last line of output as the path of
+     * the dump it just made.
+     */
+    private function pruneOld(string $dir): void
+    {
+        $dumps = [];
+
+        foreach (scandir($dir) ?: [] as $name) {
+            if (preg_match('/\Apanel-(\d{8}-\d{6})\.(?:sqlite|sql)\z/', $name, $m) === 1 && is_file($dir.'/'.$name)) {
+                $dumps[$name] = $m[1];
+            }
+        }
+
+        // The stamp is the name's sort order, so this is newest first.
+        krsort($dumps, SORT_STRING);
+        array_shift($dumps);
+
+        $cutoff = now()->subDays(self::KEEP_DAYS)->format('Ymd-His');
+
+        foreach ($dumps as $name => $stamp) {
+            if (strcmp($stamp, $cutoff) < 0) {
+                @unlink($dir.'/'.$name);
+            }
+        }
     }
 
     /**
