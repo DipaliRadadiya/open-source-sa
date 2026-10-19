@@ -111,3 +111,10 @@ Schedule::command('files:prune-trash')->daily()->withoutOverlapping(120);
 // called. The per-chunk free-space guard refuses new writes once the disk is
 // nearly full; this is what stops it filling.
 Schedule::command('uploads:reap')->daily()->withoutOverlapping(120);
+
+// The site copy a failed restore left beside the site (`.rollback-{id}`). The
+// restore runner removes old copies only after a restore that worked, so a
+// failed one's stayed for good — a whole second copy of the site. Kept a week,
+// then removed only where the site is in place and the restore's safety backup
+// is still there (RollbackCopies::pruneFailed).
+Schedule::command('restores:prune-rollbacks')->daily()->withoutOverlapping(120);

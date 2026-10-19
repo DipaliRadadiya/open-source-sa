@@ -137,3 +137,99 @@ it('has an arm for every driver the panel offers', function () {
         expect($source)->toContain("'{$driver}'");
     }
 });
+
+/*
+ * One dump before every update, and nothing removed any (2026-10-18). Older
+ * than a week goes; the newest stays however old it is, because it is the one
+ * an update's rollback reads.
+ */
+describe('removing old dumps', function () {
+    /** pg_dump that really writes its file, so the dump just made is on disk. */
+    function fakeWritingPgDump(): void
+    {
+        describedAsPostgres();
+
+        Process::fake(function ($process) {
+            foreach ((array) $process->command as $arg) {
+                if (str_starts_with($arg, '--file=')) {
+                    file_put_contents(substr($arg, 7), '-- dump');
+                }
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    function dumpAged(string $dir, int $days, string $ext = 'sql'): string
+    {
+        $name = 'panel-'.now()->subDays($days)->format('Ymd-His').'.'.$ext;
+        file_put_contents($dir.'/'.$name, 'old');
+
+        return $name;
+    }
+
+    it('removes dumps older than a week and keeps the recent ones', function () {
+        mkdir($this->dir, 0750, true);
+        $old = dumpAged($this->dir, 10);
+        $older = dumpAged($this->dir, 30, 'sqlite');
+        $recent = dumpAged($this->dir, 2);
+        fakeWritingPgDump();
+
+        $this->artisan('panel:backup-database', ['--path' => $this->dir])->assertSuccessful();
+
+        $left = array_values(array_diff(scandir($this->dir), ['.', '..']));
+
+        expect($left)->toContain($recent)
+            ->not->toContain($old)
+            ->not->toContain($older)
+            ->and(count($left))->toBe(2);
+    });
+
+    it('keeps the newest dump however old it is', function () {
+        mkdir($this->dir, 0750, true);
+        $only = dumpAged($this->dir, 40);
+        $older = dumpAged($this->dir, 50);
+        describedAsPostgres();
+        // A failed dump removes nothing at all — the old ones are all there is.
+        Process::fake(fn () => Process::result(exitCode: 1));
+
+        $this->artisan('panel:backup-database', ['--path' => $this->dir])->assertFailed();
+
+        expect(file_exists($this->dir.'/'.$only))->toBeTrue()
+            ->and(file_exists($this->dir.'/'.$older))->toBeTrue();
+
+        // And on success with no new file written, the newest present survives.
+        Process::fake(fn () => Process::result(exitCode: 0));
+        $this->artisan('panel:backup-database', ['--path' => $this->dir])->assertSuccessful();
+
+        expect(file_exists($this->dir.'/'.$only))->toBeTrue()
+            ->and(file_exists($this->dir.'/'.$older))->toBeFalse();
+    });
+
+    it('leaves files it did not write alone', function () {
+        mkdir($this->dir, 0750, true);
+        $mine = dumpAged($this->dir, 20);
+        foreach (['notes.sql', 'panel-before-migration.sql', 'panel-20200101-000000.sql.gz'] as $name) {
+            file_put_contents($this->dir.'/'.$name, 'x');
+            touch($this->dir.'/'.$name, now()->subDays(90)->getTimestamp());
+        }
+        fakeWritingPgDump();
+
+        $this->artisan('panel:backup-database', ['--path' => $this->dir])->assertSuccessful();
+
+        expect(file_exists($this->dir.'/'.$mine))->toBeFalse()
+            ->and(file_exists($this->dir.'/notes.sql'))->toBeTrue()
+            ->and(file_exists($this->dir.'/panel-before-migration.sql'))->toBeTrue()
+            ->and(file_exists($this->dir.'/panel-20200101-000000.sql.gz'))->toBeTrue();
+    });
+
+    it('still prints the path of the dump it made', function () {
+        mkdir($this->dir, 0750, true);
+        dumpAged($this->dir, 20);
+        fakeWritingPgDump();
+
+        $this->artisan('panel:backup-database', ['--path' => $this->dir])
+            ->expectsOutputToContain($this->dir.'/panel-')
+            ->assertSuccessful();
+    });
+});
