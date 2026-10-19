@@ -321,7 +321,7 @@
       "failed": "Le journal d'activité n'a pas pu être chargé.",
       "viewAll": "Voir le journal complet",
       "system": "Système",
-      "sentenceRepeated": "{who} {what} {count} fois",
+      "sentenceRepeated": "{who} {what} {count, plural, one {# fois} other {# fois}}",
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Le plus récent {when}",
       "someone": "Quelqu'un",

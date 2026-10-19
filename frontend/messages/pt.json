@@ -321,7 +321,7 @@
       "failed": "Não foi possível carregar o registo de atividade.",
       "viewAll": "Ver o log completo",
       "system": "Sistema",
-      "sentenceRepeated": "{who} {what} {count} vezes",
+      "sentenceRepeated": "{who} {what} {count, plural, one {# vez} other {# vezes}}",
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Mais recente {when}",
       "someone": "Alguém",

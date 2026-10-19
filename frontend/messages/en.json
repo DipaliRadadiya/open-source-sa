@@ -321,7 +321,7 @@
       "failed": "The activity log could not be loaded.",
       "viewAll": "View the full log",
       "system": "System",
-      "sentenceRepeated": "{who} {what} {count} times",
+      "sentenceRepeated": "{who} {what} {count, plural, one {# time} other {# times}}",
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Most recent {when}",
       "someone": "Someone",

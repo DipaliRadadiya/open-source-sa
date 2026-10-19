@@ -321,7 +321,7 @@
       "failed": "Das Aktivitätsprotokoll konnte nicht geladen werden.",
       "viewAll": "Vollständiges Protokoll ansehen",
       "system": "System",
-      "sentenceRepeated": "{who} {what} {count}-mal",
+      "sentenceRepeated": "{who} {what} {count, plural, one {#-mal} other {#-mal}}",
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Zuletzt {when}",
       "someone": "Jemand",

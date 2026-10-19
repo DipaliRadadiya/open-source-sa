@@ -321,7 +321,7 @@
       "failed": "No se pudo cargar el registro de actividad.",
       "viewAll": "Ver el registro completo",
       "system": "Sistema",
-      "sentenceRepeated": "{who} {what} {count} veces",
+      "sentenceRepeated": "{who} {what} {count, plural, one {# vez} other {# veces}}",
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Más reciente {when}",
       "someone": "Alguien",

@@ -321,7 +321,7 @@
       "failed": "Не удалось загрузить журнал действий.",
       "viewAll": "Открыть весь журнал",
       "system": "Система",
-      "sentenceRepeated": "{who} {what} {count} раз",
+      "sentenceRepeated": "{who} {what} {count, plural, one {# раз} few {# раза} many {# раз} other {# раза}}",
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Последнее {when}",
       "someone": "Кто-то",

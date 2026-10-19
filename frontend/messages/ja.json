@@ -321,7 +321,7 @@
       "failed": "アクティビティログを読み込めませんでした。",
       "viewAll": "完全なログを表示",
       "system": "システム",
-      "sentenceRepeated": "{who} が {what} を {count} 回実行",
+      "sentenceRepeated": "{who} が {what} を {count, plural, other {# 回}}実行",
       "sentenceOnce": "{who} が {what}",
       "mostRecent": "直近 {when}",
       "someone": "誰か",

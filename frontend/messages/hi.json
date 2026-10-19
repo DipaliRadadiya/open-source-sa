@@ -321,7 +321,7 @@
       "failed": "गतिविधि लॉग लोड नहीं हो सका।",
       "viewAll": "पूरा लॉग देखें",
       "system": "सिस्टम",
-      "sentenceRepeated": "{who} ने {count} बार {what}",
+      "sentenceRepeated": "{who} ने {count, plural, one {# बार} other {# बार}} {what}",
       "sentenceOnce": "{who} ने {what}",
       "mostRecent": "सबसे हाल में {when}",
       "someone": "किसी ने",
