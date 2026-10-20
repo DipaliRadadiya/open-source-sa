@@ -3,6 +3,7 @@
 namespace App\Actions\Server\Application;
 
 use App\Models\Application;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\StagingManager;
 
@@ -16,12 +17,13 @@ class PullStaging
         private ActivityLogger $activityLogger,
     ) {}
 
-    public function execute(Application $production, string $mode): void
+    public function execute(Application $production, string $mode, ?User $actor = null): void
     {
         $this->staging->pull($production, $mode);
 
+        // The actor passed on: this runs on the queue, where no one is signed in.
         $this->activityLogger->log('application.staging_pulled_'.$mode, $production, [
             'name' => $production->name,
-        ]);
+        ], $actor);
     }
 }

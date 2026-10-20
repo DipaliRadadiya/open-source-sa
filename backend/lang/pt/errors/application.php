@@ -80,6 +80,7 @@ return [
     'staging_missing' => 'Esta aplicação não tem uma cópia de staging para publicar.',
     'staging_rollback_failed' => 'O envio do staging falhou e não foi possível restaurar a produção. A aplicação permanece desativada. Informe a referência ao suporte.',
     'staging_push_running' => 'Já existe um envio em curso para esta aplicação. Aguarde que termine.',
+    'staging_run_lost' => 'Este envio ou atualização parou sem terminar — o processo em segundo plano que o executava foi parado. Neste momento nada está a correr; verifique o site e volte a iniciá-lo.',
     'clone_failed' => 'A operação de clonagem falhou no servidor.',
     'fail2ban_failed' => 'A operação do fail2ban falhou no servidor.',
 

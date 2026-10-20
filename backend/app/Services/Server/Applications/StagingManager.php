@@ -376,6 +376,25 @@ class StagingManager
         return Cache::has(self::markerKey($applicationId));
     }
 
+    /**
+     * Whether something holds this site's push lock right now — asked by
+     * taking it and letting go at once (RC-16): a push or pull now runs on
+     * the queue, and the request has to refuse a second one up front rather
+     * than queue a run that can only fail.
+     */
+    public static function locked(int $applicationId): bool
+    {
+        $lock = Cache::lock(self::lockKey($applicationId), 5);
+
+        if (! $lock->get()) {
+            return true;
+        }
+
+        $lock->release();
+
+        return false;
+    }
+
     private static function lockKey(int $applicationId): string
     {
         return "staging-push:{$applicationId}";

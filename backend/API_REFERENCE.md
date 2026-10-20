@@ -2895,6 +2895,18 @@ Create a staging clone.
 
 Push staging changes back to production.
 
+> **Runs on the queue since 2026-10-20 (RC-16).** Both `push` and `pull` answer **`202`** with a run, not the result:
+> ```json
+> {"run": {"id": 7, "kind": "push", "mode": "files", "backup": false, "status": "queued",
+>          "error": null, "error_status": null, "backup_id": null,
+>          "created_at": "20-10-2026 14:02:11", "started_at": null, "finished_at": null}}
+> ```
+> Poll **`GET /applications/{application}/staging/runs/{run}`** (`{"run": {…}}`) until `status` is `succeeded` or `failed`; **`GET /applications/{application}/staging`** also carries **`latest_run`**, so a reload still shows a run in progress and how the last one ended. `status`: `queued` → `running` → `succeeded` | `failed`.
+>
+> **A failed run keeps the answer the endpoint used to give**: `error` is that body and `error_status` its status — everything below that says "Response `409`/`500`" now arrives as `run.error` with `run.error_status` `409`/`500` (`code: staging_failed | staging_rollback_failed`, `reason: backup_failed` + `backup_id` / `backup_reason`, a busy lock as `errors.mode`). A run whose worker died is reported `failed` with `code: staging_run_lost` once its time limit has passed, and does not block the next one. On success `backup_id` is the backup taken first (or null); fetch the application again for its new state.
+>
+> **Still answered straight away (`422`)**, before anything is queued: no staging copy, a bad `mode`, the backup checks below, a push or pull of the pair already queued or running (`errors.mode`, *"A push to this application is already running…"*), a restore of either site running.
+
 **Request:** `{"mode": "files|full"}`
 
 - `files` — replace production files only; production uploads, caches, VCS metadata, build artefacts, logs and panel bookkeeping are excluded.
@@ -2902,17 +2914,17 @@ Push staging changes back to production.
 
 Before either mode changes production, the panel creates a temporary private file snapshot. If the push fails, it restores the files (and the database for `full`) before bringing production back online. A successful push or successful recovery removes the temporary file snapshot; the pre-push SQL dump is retained.
 
-**Response `200`:** `{"application": {...updated production record...}, "backup": null}`
+**Result** (in the run, see above): `backup_id` — the backup taken first, or `null`. Was `200 {"application", "backup"}` before RC-16.
 
-**`"backup": true`** (added 2026-10-08, FS-B10) — take a backup of the live site through its own backup setup (Backups → target) **before** the push, and push only if it verified. Needs `app_backup` (manage) too, and a backup target on the application; otherwise `422` on `errors.backup` (not permitted / *"Backups are not set up for this application yet."* / a backup already running). The push request waits for the backup — on a large site that is the long part. On success `backup` is the backup row (same shape as `GET /backups`). If the backup did not verify, **nothing is pushed** and the answer is:
+**`"backup": true`** (added 2026-10-08, FS-B10) — take a backup of the live site through its own backup setup (Backups → target) **before** the push, and push only if it verified. Needs `app_backup` (manage) too, and a backup target on the application; otherwise `422` on `errors.backup` (not permitted / *"Backups are not set up for this application yet."* / a backup already running). The run takes the backup first — on a large site that is the long part. On success `run.backup_id` is that backup. If it did not verify, **nothing is pushed** and the run fails with `run.error`:
 ```json
 {"message":"The backup before the push did not finish, so nothing was pushed. Open the backup to see why.","reason":"backup_failed","backup_id":42,"backup_reason":"upload_failed"}
 ```
-with status `409`.
+and `run.error_status` `409`.
 
 **Response `422`** (added 2026-10-03, bug #88; was a generic `500`) — no staging copy exists: `errors.application` = *"This site has no staging copy to push."*
 
-**Recovery failure `500`:**
+**Recovery failure** (`run.error`, `run.error_status` `500`):
 ```json
 {"message":"The staging push failed and production could not be restored. The site remains disabled. Quote the reference to support.","code":"staging_rollback_failed","reference":"…"}
 ```
@@ -2934,7 +2946,7 @@ Safety, as for a push but on staging: staging's files are snapshotted and (for `
 
 Refused (`422`, `errors.mode`) while a push or pull of the pair, or a safety-copy restore on staging, is running (`errors/application.staging_push_running`), or a backup restore of either site is running. `422` on `errors.application` when there is no staging copy.
 
-**Response `200`:** `{"staging": {...the staging application...}}`. Activity: `application.staging_pulled_files|database|full`.
+**`202`** with a run, exactly as a push (see the box above). Activity: `application.staging_pulled_files|database|full`, naming who started it.
 
 **Frontend:** warn before running — *"This replaces the staging site's files/database with the live site's. Changes made only on staging will be lost (a copy of staging is saved first)."*
 

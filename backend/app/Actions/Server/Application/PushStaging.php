@@ -37,9 +37,10 @@ class PushStaging
         // One sentence per mode (ST-B4): the mode was a raw code inside the
         // sentence — "Pushed staging to my-blog (full)" — in every language.
         // `staging_pushed` stays for rows written before.
+        // The actor passed on: this runs on the queue, where no one is signed in.
         $this->activityLogger->log('application.staging_pushed_'.$mode, $production, [
             'name' => $production->name,
-        ]);
+        ], $actor);
 
         return $taken;
     }

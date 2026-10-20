@@ -1,8 +1,11 @@
 <?php
 
+use App\Actions\Server\Application\PullStaging;
+use App\Actions\Server\Application\PushStaging;
 use App\Enums\BackupStatus;
 use App\Enums\DomainType;
 use App\Enums\RestoreStatus;
+use App\Jobs\RunStagingSync;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Backup;
@@ -11,6 +14,7 @@ use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\Restore;
 use App\Models\ServerCapability;
+use App\Models\StagingRun;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -18,8 +22,10 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\StagingManager;
 use App\Services\Server\Backups\BackupRunner;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 
 /**
  * Staging: a staging site is just another `Application` row
@@ -228,7 +234,7 @@ it('pushes files-only without dumping the production database', function () {
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
-        ->assertOk();
+        ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     expect($dumps)->toBeEmpty()
         ->and(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeTrue();
@@ -259,7 +265,7 @@ it('dumps a local safety copy before a full push', function () {
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'full'])
-        ->assertOk();
+        ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     // One dump for the safety copy, one for the staging->production push.
     expect(count($dumps))->toBeGreaterThanOrEqual(2)
@@ -302,7 +308,7 @@ it('restores production files before re-enabling when a push fails partway', fun
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
-        ->assertStatus(500);
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 
     expect($rsyncCalls)->toHaveCount(3)
         ->and(implode(' ', $rsyncCalls[0]))->toContain('/staging-rollbacks/')
@@ -345,7 +351,7 @@ it('restores the production database as well as files after a full push fails', 
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'full'])
-        ->assertStatus(500);
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 
     // Four: production -> snapshot, staging -> production, the additive media
     // pass, and snapshot -> production on the way back out. This push gets
@@ -390,9 +396,9 @@ it('leaves production disabled and preserves recovery files when rollback fails'
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
-        ->assertStatus(500)
-        ->assertJsonPath('code', 'staging_rollback_failed')
-        ->assertJsonPath('message', __('errors/application.staging_rollback_failed'));
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500)
+        ->assertJsonPath('run.error.code', 'staging_rollback_failed')
+        ->assertJsonPath('run.error.message', __('errors/application.staging_rollback_failed'));
 
     expect($rsyncCount)->toBe(3)
         ->and($snapshotRemoved)->toBeFalse()
@@ -692,7 +698,7 @@ it('never copies wp-config.php onto production', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $rsync = pushRsyncArgs($commands);
 
@@ -712,7 +718,7 @@ it('never copies the staging mail trap onto production', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     expect(pushRsyncArgs($commands))->toContain('wp-content/mu-plugins/panel-staging-mail-trap.php');
 });
@@ -728,7 +734,7 @@ it('rewrites every spelling of the staging URL, not just one', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $searches = searchReplaceTerms($commands);
 
@@ -750,7 +756,7 @@ it('flushes caches and rewrite rules after a full push', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $wpSubcommands = wpCommands($commands);
 
@@ -768,7 +774,7 @@ it('flushes caches on a files-only push too', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     expect(collect($commands)->contains(fn (array $args) => in_array('cache', $args, true) && in_array('flush', $args, true)))->toBeTrue();
 });
@@ -802,7 +808,7 @@ it('refuses to finish a push that left production wearing staging identity', fun
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'full'])
-        ->assertStatus(500);
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 });
 
 /*
@@ -824,7 +830,7 @@ it('pushes the database without touching production files', function () {
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'database'])
-        ->assertOk();
+        ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     // No sync at all — not the push copy, and not the file snapshot either.
     expect(collect($commands)->contains(fn (array $args) => ($args[0] ?? '') === 'rsync'))->toBeFalse();
@@ -862,7 +868,7 @@ it('dumps a safety copy before replacing the database', function () {
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'database'])
-        ->assertOk();
+        ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     // The safety dump lands under the site's own .panel directory; the push
     // dump goes to /tmp. Both run, and the safety one is what rollback needs.
@@ -878,7 +884,7 @@ it('rewrites the URLs and flushes on a database push', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $searches = searchReplaceTerms($commands);
     $wp = wpCommands($commands);
@@ -920,7 +926,7 @@ it('restores the database but not the files when a database push fails', functio
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'database'])
-        ->assertStatus(500);
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 
     // No rsync ran at all: not to snapshot, and not to restore.
     expect($restores)->toBeEmpty()
@@ -938,7 +944,7 @@ it('accepts all three modes and refuses anything else', function () {
     foreach (['files', 'database', 'full'] as $mode) {
         $this->withHeaders(stagingHeaders())
             ->postJson(stagingUrl().'/push', ['mode' => $mode])
-            ->assertOk();
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
     }
 
     $this->withHeaders(stagingHeaders())
@@ -1014,7 +1020,7 @@ it('never copies the noindex plugin onto production', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     expect(pushRsyncArgs($commands))->toContain('wp-content/mu-plugins/panel-staging-noindex.php');
 });
@@ -1026,7 +1032,7 @@ it('puts production back the way it was: indexable stays indexable', function ()
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     // The database that landed says 0 because staging is always hidden; the
     // push must write production's own 1 back over it.
@@ -1060,7 +1066,7 @@ it('puts production back the way it was: hidden stays hidden', function () {
         return Process::result(exitCode: 0);
     });
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $sets = collect($commands)
         ->filter(fn (array $a) => in_array('option', $a, true) && in_array('update', $a, true))
@@ -1094,7 +1100,7 @@ it('refuses the push when production visibility cannot be read', function () {
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'full'])
-        ->assertStatus(500);
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 
     // It stops before the staging dump is restored over production: the only
     // dump that ran is the safety copy.
@@ -1170,7 +1176,7 @@ it('carries uploaded media to production, without deleting production media', fu
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $merge = mergeRsyncArgs($commands);
 
@@ -1228,7 +1234,7 @@ it('copies media before the destination is chowned, not after', function () {
     $commands = [];
     recordStagingPush($commands);
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     $mergeAt = null;
     $chownAt = null;
@@ -1280,7 +1286,7 @@ it('pushes a site that has never had an upload', function () {
         return Process::result(exitCode: 0);
     });
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     expect(mergeRsyncArgs($commands))->toBeEmpty();
 });
@@ -1313,7 +1319,7 @@ it('refuses the push when it cannot tell whether media exists', function () {
 
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
-        ->assertStatus(500);
+        ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 });
 
 describe('one push at a time', function () {
@@ -1334,7 +1340,7 @@ describe('one push at a time', function () {
 
         $held->release();
 
-        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
     });
 
     it('refuses a push while a restore of production is running', function () {
@@ -1363,7 +1369,7 @@ describe('one push at a time', function () {
                 : Process::result(exitCode: 0);
         });
 
-        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
         expect($seen)->toBeTrue()
             ->and(StagingManager::pushInProgress($id))->toBeFalse();
@@ -1401,7 +1407,7 @@ it('keeps only the newest pre-push database dumps', function () {
         return Process::result(exitCode: 0);
     });
 
-    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
     sort($removed);
     expect($removed)->toBe(['pre-push-20260901-100000-aaaaaa.sql', 'pre-push-20260910-100000-bbbbbb.sql']);
@@ -1455,9 +1461,9 @@ describe('a backup before the push (FS-B10)', function () {
 
         $response = $this->withHeaders(stagingHeaders())
             ->postJson(stagingUrl().'/push', ['mode' => 'files', 'backup' => true])
-            ->assertOk();
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
-        expect($response->json('backup.id'))->toBe(Backup::sole()->id)
+        expect($response->json('run.backup_id'))->toBe(Backup::sole()->id)
             ->and(ActivityLog::where('action', 'completed')->where('type', 'backup')->exists())->toBeTrue()
             ->and(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeTrue();
     });
@@ -1467,10 +1473,10 @@ describe('a backup before the push (FS-B10)', function () {
 
         $this->withHeaders(stagingHeaders())
             ->postJson(stagingUrl().'/push', ['mode' => 'files', 'backup' => true])
-            ->assertStatus(409)
-            ->assertJsonPath('reason', 'backup_failed')
-            ->assertJsonPath('backup_id', Backup::sole()->id)
-            ->assertJsonPath('backup_reason', 'upload_failed');
+            ->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 409)
+            ->assertJsonPath('run.error.reason', 'backup_failed')
+            ->assertJsonPath('run.error.backup_id', Backup::sole()->id)
+            ->assertJsonPath('run.error.backup_reason', 'upload_failed');
 
         // Never even taken offline for the push.
         expect(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeFalse()
@@ -1483,8 +1489,8 @@ describe('a backup before the push (FS-B10)', function () {
 
         $this->withHeaders(stagingHeaders())
             ->postJson(stagingUrl().'/push', ['mode' => 'files'])
-            ->assertOk()
-            ->assertJsonPath('backup', null);
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded')
+            ->assertJsonPath('run.backup_id', null);
     });
 
     it('refuses before pushing when backups are not set up', function () {
@@ -1662,8 +1668,8 @@ describe('updating staging from live', function () {
 
         $this->withHeaders(stagingHeaders())
             ->postJson(stagingUrl().'/pull', ['mode' => 'full'])
-            ->assertOk()
-            ->assertJsonPath('staging.id', $this->staging->id);
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded')
+            ->assertJsonPath('run.kind', 'pull');
 
         $rsync = collect(PullHost::$runs)->first(fn ($r) => ($r['args'][0] ?? '') === 'rsync' && in_array('--delete', $r['args'], true)
             && in_array("{$live}/", $r['args'], true));
@@ -1689,7 +1695,7 @@ describe('updating staging from live', function () {
         fakePullServer();
         $live = '/home/siteowner/shop/public_html';
 
-        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'full'])->assertOk();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
         $writesLive = collect(PullHost::$runs)->contains(function ($r) use ($live) {
             $args = $r['args'];
@@ -1707,7 +1713,7 @@ describe('updating staging from live', function () {
     it('leaves the staging database alone on a files-only update', function () {
         fakePullServer();
 
-        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])->assertOk();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
 
         expect(pullRan('mysqldump'))->toBeNull()
             ->and(pullRan('search-replace'))->toBeNull()
@@ -1721,7 +1727,7 @@ describe('updating staging from live', function () {
             : null);
         $stage = "/home/siteowner/{$this->staging->slug}/public_html";
 
-        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'full'])->assertStatus(500);
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'full'])->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
 
         $restoredFiles = collect(PullHost::$runs)->contains(fn ($r) => ($r['args'][0] ?? '') === 'rsync'
             && str_contains(implode(' ', $r['args']), '/staging-rollbacks/') && end($r['args']) === "{$stage}/");
@@ -1734,7 +1740,7 @@ describe('updating staging from live', function () {
     it('refuses to call it done if staging is visible to search engines afterwards', function () {
         fakePullServer('1');
 
-        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'database'])->assertStatus(500);
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'database'])->assertStatus(202)->assertJsonPath('run.status', 'failed')->assertJsonPath('run.error_status', 500);
     });
 
     it('cannot run while a push holds live, or while staging restores a safety copy', function (string $which) {
@@ -1777,5 +1783,109 @@ describe('updating staging from live', function () {
         $this->staging->delete();
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])
             ->assertStatus(422)->assertJsonValidationErrors('application');
+    });
+});
+
+/*
+ * RC-16 (frontend QA, 16 Oct): push and update-from-live ran inside the
+ * request, so a large site answered 504 while the copy carried on and nothing
+ * could say how it ended. They run on the queue now; the run is the answer.
+ */
+describe('push and update from live on the queue (RC-16)', function () {
+    beforeEach(function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+    });
+
+    it('answers 202 with a queued run, and queues the job', function (string $kind) {
+        Queue::fake();
+
+        $response = $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/'.$kind, ['mode' => 'files'])
+            ->assertStatus(202)
+            ->assertJsonPath('run.kind', $kind)
+            ->assertJsonPath('run.mode', 'files')
+            ->assertJsonPath('run.status', 'queued');
+
+        Queue::assertPushed(RunStagingSync::class, fn ($job) => $job->runId === $response->json('run.id'));
+    })->with(['push', 'pull']);
+
+    it('shows the latest run on the staging page and as its own resource', function () {
+        $id = $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->json('run.id');
+
+        $this->withHeaders(stagingHeaders())->getJson(stagingUrl())
+            ->assertOk()
+            ->assertJsonPath('latest_run.id', $id)
+            ->assertJsonPath('latest_run.status', 'succeeded');
+
+        $this->withHeaders(stagingHeaders())->getJson(stagingUrl().'/runs/'.$id)
+            ->assertOk()
+            ->assertJsonPath('run.id', $id);
+    });
+
+    it('does not show one site\'s run under another', function () {
+        $id = $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->json('run.id');
+        $staging = Application::where('production_application_id', $this->production->id)->first();
+
+        $this->withHeaders(stagingHeaders())->getJson("/api/applications/{$staging->id}/staging/runs/{$id}")->assertNotFound();
+    });
+
+    it('refuses a second push while one is queued, before queueing anything', function () {
+        Queue::fake();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertStatus(202);
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'files'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('mode');
+
+        Queue::assertPushed(RunStagingSync::class, 1);
+        expect(StagingRun::count())->toBe(1);
+    });
+
+    it('refuses while a restore of the live site is running', function () {
+        Queue::fake();
+        $backup = Backup::create(['application_id' => $this->production->id, 'type' => 'full', 'status' => BackupStatus::Verified]);
+        Restore::create(['backup_id' => $backup->id, 'application_id' => $this->production->id, 'type' => 'full', 'status' => RestoreStatus::Running, 'reference' => 'r']);
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertUnprocessable();
+
+        Queue::assertNothingPushed();
+    });
+
+    it('reports a run whose worker died as failed, and does not let it block the next', function () {
+        $stranded = StagingRun::create(['application_id' => $this->production->id, 'kind' => 'push', 'mode' => 'files', 'status' => StagingRun::RUNNING]);
+        $stranded->forceFill(['created_at' => now()->subSeconds(StagingRun::staleAfterSeconds() + 60)])->save();
+
+        $this->withHeaders(stagingHeaders())->getJson(stagingUrl().'/runs/'.$stranded->id)
+            ->assertJsonPath('run.status', 'failed')
+            ->assertJsonPath('run.error.code', 'staging_run_lost');
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
+    });
+
+    it('marks the run failed when the job itself dies', function () {
+        $run = StagingRun::create(['application_id' => $this->production->id, 'kind' => 'push', 'mode' => 'files', 'status' => StagingRun::RUNNING]);
+
+        (new RunStagingSync($run->id, $this->production->id))->failed(new RuntimeException('killed'));
+
+        expect($run->fresh()->status)->toBe(StagingRun::FAILED)
+            ->and($run->fresh()->error['code'])->toBe('staging_failed')
+            ->and($run->fresh()->error['reference'])->not->toBeEmpty()
+            ->and(json_encode($run->fresh()->error))->not->toContain('killed');
+    });
+
+    it('still names who pushed, from the queue where no one is signed in', function () {
+        $run = StagingRun::create(['application_id' => $this->production->id, 'kind' => 'push', 'mode' => 'files', 'status' => StagingRun::QUEUED]);
+        // As on a queue worker: the request that created staging signed the admin in.
+        app()->instance('request', Request::create('/'));
+        auth()->forgetGuards();
+        expect(auth()->user())->toBeNull();
+
+        app(RunStagingSync::class, ['runId' => $run->id, 'applicationId' => $this->production->id, 'actorId' => $this->admin->id])
+            ->handle(app(PushStaging::class), app(PullStaging::class));
+
+        expect($run->fresh()->status)->toBe(StagingRun::SUCCEEDED)
+            ->and(ActivityLog::where('action', 'staging_pushed_files')->sole()->user_id)->toBe($this->admin->id);
     });
 });

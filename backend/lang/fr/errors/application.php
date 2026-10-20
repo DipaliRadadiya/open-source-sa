@@ -79,6 +79,7 @@ return [
     'staging_missing' => 'Cette application n’a pas de copie de staging à publier.',
     'staging_rollback_failed' => 'La publication depuis le staging a échoué et la production n\'a pas pu être restaurée. L’application reste désactivée. Communiquez la référence au support.',
     'staging_push_running' => 'Un envoi vers cette application est déjà en cours. Attendez qu’il se termine.',
+    'staging_run_lost' => 'Cet envoi ou cette mise à jour s\'est arrêté sans se terminer : le processus en arrière-plan qui l\'exécutait a été arrêté. Rien n\'est en cours ; vérifiez le site, puis relancez-le.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',
     'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 

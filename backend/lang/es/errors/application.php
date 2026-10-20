@@ -80,6 +80,7 @@ return [
     'staging_missing' => 'Esta aplicación no tiene una copia de staging que publicar.',
     'staging_rollback_failed' => 'La publicación desde staging falló y no se pudo restaurar producción. La aplicación permanece deshabilitada. Indica la referencia al soporte.',
     'staging_push_running' => 'Ya hay un envío en curso a esta aplicación. Espera a que termine.',
+    'staging_run_lost' => 'Este envío o actualización se detuvo sin terminar: el proceso en segundo plano que lo ejecutaba se detuvo. Ahora no hay nada en marcha; revisa el sitio y vuelve a iniciarlo.',
     'clone_failed' => 'La operación de clonación falló en el servidor.',
     'fail2ban_failed' => 'La operación de fail2ban falló en el servidor.',
 

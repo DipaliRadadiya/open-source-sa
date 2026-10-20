@@ -20,6 +20,10 @@ Route::post('/applications/{application}/staging/push', [ApplicationStagingContr
 // Update staging from live (v7's sync-to-staging): the reverse of a push.
 Route::post('/applications/{application}/staging/pull', [ApplicationStagingController::class, 'pull'])
     ->middleware(['permission:app_staging,manage', 'throttle:5,1']);
+// RC-16: push and pull run on the queue; this is one run, to poll.
+Route::get('/applications/{application}/staging/runs/{run}', [ApplicationStagingController::class, 'run'])
+    ->middleware('permission:app_staging');
+
 // ST-B3: the live database copies a push saves first — list them, put one back.
 Route::get('/applications/{application}/staging/safety-copies', [ApplicationStagingController::class, 'safetyCopies'])
     ->middleware('permission:app_staging');

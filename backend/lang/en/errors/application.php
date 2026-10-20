@@ -80,6 +80,7 @@ return [
     'staging_missing' => 'This application has no staging copy to push.',
     'staging_rollback_failed' => 'The staging push failed and production could not be restored. The application remains disabled. Quote the reference to support.',
     'staging_push_running' => 'A push to this application is already running. Wait for it to finish.',
+    'staging_run_lost' => 'This push or update stopped without finishing — the background worker running it was stopped. Nothing is running now; check the site, then start it again.',
     'clone_failed' => 'The clone operation failed on the server.',
     'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 

@@ -1456,6 +1456,13 @@ return [
     | project is usually most of the bytes on disk.
     |
     */
+    // RC-16: a staging push (with its optional backup first) or update from
+    // live, run on the queue. StagingManager's own lock is an hour; the
+    // backup before a push can take longer.
+    'staging' => [
+        'job_timeout' => (int) env('SERVER_STAGING_JOB_TIMEOUT', 7200),
+    ],
+
     'clone' => [
         'rsync_timeout' => (int) env('SERVER_CLONE_RSYNC_TIMEOUT', 900),
     ],

@@ -79,6 +79,7 @@ return [
     'staging_missing' => 'Diese Website hat keine Staging-Kopie, die übertragen werden kann.',
     'staging_rollback_failed' => 'Der Staging-Push ist fehlgeschlagen und die Produktionswebsite konnte nicht wiederhergestellt werden. Die Website bleibt deaktiviert. Nennen Sie dem Support die Referenz.',
     'staging_push_running' => 'Für diese Anwendung läuft bereits eine Übertragung. Warten Sie, bis sie abgeschlossen ist.',
+    'staging_run_lost' => 'Diese Übertragung oder Aktualisierung wurde nicht beendet – der Hintergrundprozess, der sie ausführte, wurde gestoppt. Gerade läuft nichts; prüfen Sie die Website und starten Sie sie erneut.',
     'clone_failed' => 'Der Klonvorgang ist auf dem Server fehlgeschlagen.',
     'fail2ban_failed' => 'Der Fail2ban-Vorgang ist auf dem Server fehlgeschlagen.',
 
