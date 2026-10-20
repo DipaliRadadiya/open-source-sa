@@ -24,7 +24,7 @@ class RestoreRunner
     /** @var list<RestoreStep> */
     private array $steps;
 
-    public function __construct(private ServerOps $serverOps, private SiteRootLock $rootLock)
+    public function __construct(private ServerOps $serverOps, private SiteRootLock $rootLock, private RollbackCopies $rollbacks)
     {
         $this->steps = array_map(
             fn (string $class): RestoreStep => app($class),
@@ -163,9 +163,10 @@ class RestoreRunner
      *
      * Only paths the panel itself recorded, on earlier *successful* restores of
      * the same site, and only where the path is exactly `.rollback-{that id}`
-     * beside the new copy. A failed restore's copy is never touched: if moving
-     * it back failed, that copy is the site. `rm -rf` on a symlink removes the
-     * link and not its target, so a copy swapped for one cannot redirect this.
+     * beside the new copy. A failed restore's copy is not touched here: if
+     * moving it back failed, that copy is the site. `restores:prune-rollbacks`
+     * removes those after a week, and only when that is safe
+     * ({@see RollbackCopies::pruneFailed()}).
      *
      * Never fails the restore: it has already succeeded, and tidying up is not
      * a reason to report otherwise.
@@ -193,17 +194,7 @@ class RestoreRunner
             }
 
             try {
-                $result = $this->rootLock->unlocked($context->application, fn () => $this->serverOps->run(
-                    ['rm', '-rf', $path],
-                    ['feature' => 'backup', 'op' => 'restore_prune_rollback', 'application' => $restore->application_id],
-                    timeout: 600,
-                ));
-
-                if ($result->failed()) {
-                    continue;
-                }
-
-                $previous->update(['rollback_path' => null]);
+                $this->rollbacks->remove($previous, $context->application);
             } catch (Throwable $e) {
                 Log::channel('server-ops')->warning('old restore copy not removed', [
                     'feature' => 'backup',
