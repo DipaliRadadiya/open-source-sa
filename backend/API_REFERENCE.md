@@ -480,11 +480,23 @@ Paginated, `per_page` defaults to **10**. Filters: `filter[scope]`, `filter[type
 ## Branding
 
 ### GET `/branding`
-Unauthenticated.
+Unauthenticated. (The example here was out of date; corrected 2026-10-20.)
 
 ```json
-{"branding": {"panel_name": "ServerAvatar", "logo_url": null}}
+{"branding": {
+  "name": "ServerAvatar",
+  "logo": "/brand/serveravatar-horizontal-light.svg", "logo_dark": "/brand/serveravatar-horizontal-dark.svg",
+  "icon": "/brand/serveravatar-mark-light.svg", "icon_dark": "/brand/serveravatar-mark-dark.svg",
+  "favicon": "/brand/serveravatar-favicon.svg", "primary_color": "#35b87a",
+  "tag_line": "Server management made simple",
+  "links": {"privacy_policy": "https://…", "terms": "https://…", "refund_policy": "https://…", "gdpr": "https://…"},
+  "display_message": null,
+  "source": "central"}}
 ```
+
+**From Central** (2026-10-20): when the panel knows Central's address (`CENTRAL_URL`, written by `install.sh` from the `CENTRAL_URL` environment variable), it reads Central's public `GET {central}/api/v1/site-settings` and uses Central's `name`, `logo`, `icon`, `favicon` and `primary_color` **value by value** — anything Central leaves empty, or sends in an unusable form (a non-http(s) link, a colour that is not a hex code), stays the panel's own. Central has no dark-mode logo or icon: `logo_dark`/`icon_dark` stay the panel's unless Central set a logo, which then stands in for both. `source` is `central` or `panel`. Kept for an hour; when Central does not answer, the panel's own branding is sent and Central is asked again after five minutes.
+
+`tag_line`, `links` (only the ones set) and `display_message` (Central's banner) are new and `null` without Central. Logos are root-relative paths for the panel's own files and absolute URLs for Central's.
 
 ---
 
