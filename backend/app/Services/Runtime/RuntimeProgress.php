@@ -73,11 +73,18 @@ class RuntimeProgress
      * WordPress. Only where the screen knows what "complete" means
      * (`missing_packages`); elsewhere the record stands.
      *
+     * Never a failed *removal* (FS-C18): a version apt refused to purge is
+     * still on disk with nothing missing — that is exactly what failing looks
+     * like — and treating it as settled showed `ready` with no reason, as if
+     * Remove had never been pressed.
+     *
      * @param  array<string, mixed>  $version
      */
     private function stillCurrent(?object $install, array $version): ?object
     {
-        if ($install?->status === InstallStatus::Failed && ($version['missing_packages'] ?? null) === []) {
+        if ($install?->status === InstallStatus::Failed
+            && ! str_starts_with((string) $install->reason, 'remove_')
+            && ($version['missing_packages'] ?? null) === []) {
             return null;
         }
 
