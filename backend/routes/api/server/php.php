@@ -41,6 +41,9 @@ Route::middleware('hosts-php')->group(function (): void {
     // deliberate, and for the backup/validate/rollback that surrounds it.
     Route::get('/php/versions/{version}/ini', [PhpController::class, 'showIni'])->middleware('permission:php');
     Route::put('/php/versions/{version}/ini', [PhpController::class, 'updateIni'])->middleware('permission:php,manage');
+    // RC-8: the common settings as fields — only their lines change.
+    Route::get('/php/versions/{version}/settings', [PhpController::class, 'showIniSettings'])->middleware('permission:php');
+    Route::put('/php/versions/{version}/settings', [PhpController::class, 'updateIniSettings'])->middleware('permission:php,manage');
 
     Route::get('/php/versions/{version}/extensions', [PhpController::class, 'extensions'])->middleware('permission:php');
     Route::put('/php/versions/{version}/extensions/{extension}', [PhpController::class, 'updateExtension'])->middleware('permission:php,manage');

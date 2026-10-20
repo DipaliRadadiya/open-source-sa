@@ -259,3 +259,94 @@ it('still saves the extension lines a real server has', function (string $line) 
     'v7 ionCube line' => ['zend_extension = /usr/lib/php/20240924/ioncube_loader_lin_8.4.so'],
     'extension_dir unchanged' => ['extension_dir = "/usr/lib/php/20240924/"'],
 ]);
+
+/*
+ * RC-8 (PHP page redesign, 12 Oct): the server's php.ini could only be edited
+ * as the whole raw file. The common settings now have fields of their own;
+ * only their lines change, through the same backup / check / rollback.
+ */
+describe('the common php.ini settings as fields', function () {
+    function fakeIni(string $contents, ?ArrayObject $written = null): void
+    {
+        Process::fake(function ($process) use ($contents, $written) {
+            if (($process->command[0] ?? '') === 'cat') {
+                return Process::result(output: $contents);
+            }
+            if (($process->command[0] ?? '') === 'tee' && $written !== null) {
+                $written[] = (string) $process->input;
+            }
+
+            return Process::result();
+        });
+    }
+
+    $ini = "[PHP]\n; Maximum amount of memory a script may consume\n;memory_limit = 64M\nmemory_limit = 128M\nupload_max_filesize = 2M\npost_max_size = 8M\n\n[Date]\n;date.timezone =\n";
+
+    it('reads what the file sets, and null where PHP\'s default applies', function () use ($ini) {
+        fakeIni($ini);
+
+        $this->withHeaders(phpHeaders())->getJson('/api/php/versions/8.4/settings')
+            ->assertOk()
+            ->assertJsonPath('settings.memory_limit', '128M')
+            ->assertJsonPath('settings.upload_max_filesize', '2M')
+            ->assertJsonPath('settings.post_max_size', '8M')
+            ->assertJsonPath('settings.max_execution_time', null);
+    });
+
+    it('changes only those lines, adds a missing one under [PHP], and leaves comments alone', function () use ($ini) {
+        $written = new ArrayObject;
+        fakeIni($ini, $written);
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/settings', [
+            'memory_limit' => '512m', 'upload_max_filesize' => '64M', 'post_max_size' => '64M', 'max_execution_time' => 120,
+        ])->assertOk();
+
+        $file = $written[0];
+        expect($file)->toContain("memory_limit = 512M\n")
+            ->toContain(";memory_limit = 64M\n")
+            ->toContain("upload_max_filesize = 64M\n")
+            ->toContain("post_max_size = 64M\n")
+            ->toContain("[PHP]\nmax_execution_time = 120\n")
+            ->toContain("[Date]\n;date.timezone =\n")
+            ->and(substr_count($file, "\nmemory_limit ="))->toBe(1);
+
+        // Through the raw editor's own path: backup, PHP's check, reload.
+        $path = "{$this->phpDir}/8.4/fpm/php.ini";
+        Process::assertRan(fn ($p) => $p->command === ['cp', '-f', $path, $path.'.panel-bak']);
+        Process::assertRan(fn ($p) => $p->command === ['/usr/sbin/php-fpm8.4', '-t']);
+    });
+
+    it('refuses a POST size below the upload size, counting what the file already says', function () use ($ini) {
+        fakeIni($ini);
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/settings', ['upload_max_filesize' => '16M'])
+            ->assertUnprocessable()->assertJsonValidationErrors('post_max_size');
+
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'tee');
+    });
+
+    it('refuses values PHP would not understand', function (array $body, string $field) use ($ini) {
+        fakeIni($ini);
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/settings', $body)
+            ->assertUnprocessable()->assertJsonValidationErrors($field);
+    })->with([
+        [['memory_limit' => "128M\nextension=evil.so"], 'memory_limit'],
+        [['memory_limit' => '128 MB'], 'memory_limit'],
+        [['max_execution_time' => 99999], 'max_execution_time'],
+        [['max_input_vars' => 10], 'max_input_vars'],
+    ]);
+
+    it('needs php manage to save, view to read', function () use ($ini) {
+        fakeIni($ini);
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'php');
+
+        $this->actingAs($viewer)->getJson('/api/php/versions/8.4/settings')->assertOk();
+        $this->actingAs($viewer)->putJson('/api/php/versions/8.4/settings', ['memory_limit' => '256M'])->assertForbidden();
+    });
+
+    it('answers 404 for a version that is not installed', function () {
+        $this->withHeaders(phpHeaders())->getJson('/api/php/versions/5.6/settings')->assertNotFound();
+    });
+});

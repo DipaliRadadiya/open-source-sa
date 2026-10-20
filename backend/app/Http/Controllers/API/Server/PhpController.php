@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Php\PhpDefaultRequest;
 use App\Http\Requests\Server\Php\PhpExtensionRequest;
 use App\Http\Requests\Server\Php\PhpVersionRequest;
+use App\Http\Requests\Server\Php\SavePhpIniSettingsRequest;
 use App\Http\Requests\Server\Php\UpdatePhpIniRequest;
 use App\Jobs\InstallIonCubeLoader;
 use App\Jobs\InstallPhpExtension;
@@ -17,6 +18,7 @@ use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Php\PhpExtensionManager;
+use App\Services\Server\Php\PhpIniDirectives;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Runtimes\PhpRuntime;
@@ -177,6 +179,38 @@ class PhpController extends Controller
         $log->log('php.ini_updated', properties: ['version' => $version]);
 
         return response()->json(['php_ini' => $this->ini($version, $php)]);
+    }
+
+    /**
+     * RC-8: the common settings of one version's php.ini, as fields. `null`
+     * where the file sets nothing and PHP's built-in default applies.
+     */
+    public function showIniSettings(string $version, PhpVersionManager $php, PhpIniDirectives $directives): JsonResponse
+    {
+        return response()->json([
+            'version' => $version,
+            'settings' => $directives->read($php->readIni($version)),
+        ]);
+    }
+
+    /**
+     * Save those settings: only their lines change, and the file is written
+     * the same way as the raw editor's — backed up, checked by PHP, put back
+     * if PHP refuses it.
+     */
+    public function updateIniSettings(string $version, SavePhpIniSettingsRequest $request, PhpVersionManager $php, PhpIniDirectives $directives, ActivityLogger $log): JsonResponse
+    {
+        $changes = $request->changes();
+
+        if ($changes !== []) {
+            $php->writeIni($version, $directives->apply($php->readIni($version), $changes));
+            $log->log('php.ini_updated', properties: ['version' => $version]);
+        }
+
+        return response()->json([
+            'version' => $version,
+            'settings' => $directives->read($php->readIni($version)),
+        ]);
     }
 
     /**

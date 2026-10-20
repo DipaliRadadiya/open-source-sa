@@ -6266,6 +6266,16 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
 `422` on invalid ini — including a **syntax error**, which PHP itself only warns about (exit 0) while ignoring every line after it.
 
 ---
+### GET / PUT `/php/versions/{version}/settings`
+**Permission:** `php` (view to read, manage to save) — added 2026-10-20 (RC-8)
+
+The common php.ini settings of one version **as fields**, so the PHP page does not have to parse the file: `memory_limit`, `upload_max_filesize`, `post_max_size` (`128M`, `1G`, `-1` for unlimited), `max_execution_time` (0–3600), `max_input_time` (-1–3600), `max_input_vars` (100–100000).
+
+**GET `200`:** `{"version": "8.4", "settings": {"memory_limit": "128M", "upload_max_filesize": "2M", "post_max_size": "8M", "max_execution_time": null, "max_input_time": null, "max_input_vars": null}}` — `null` where the file sets nothing and PHP's built-in default applies.
+
+**PUT:** any subset, e.g. `{"memory_limit": "512M", "max_execution_time": 120}`. Only those directives' lines change — every active line for a key is rewritten, a key the file does not set is added right after `[PHP]`, comments and everything else stay as they were. Saved through the raw editor's path: backed up, checked by PHP, put back if PHP refuses it (the same errors as `PUT …/ini`). `422` on `post_max_size` when it would end up below `upload_max_filesize` (judged against what the file already says for the one you did not send). Answers the new settings.
+
+---
 
 ### GET `/php/versions/{version}/extensions`
 **Permission:** `php` (view)
