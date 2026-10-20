@@ -30,8 +30,26 @@ class ServerTimezone
         self::$cached = null;
     }
 
+    /**
+     * `/etc/localtime` first, because it is what the system clock — and so
+     * cron — actually uses. `timedatectl set-timezone` repoints that link and
+     * on Ubuntu 24.04 leaves `/etc/timezone` as it was (RC-1, measured
+     * 2026-10-20): read first, the stale file kept every cron job saying
+     * "Etc/UTC" while it fired 5½ hours earlier in Asia/Kolkata.
+     *
+     * `/etc/timezone` stays as the fallback for systems where the link is a
+     * plain copy of the zone file (some containers), which names no zone.
+     */
     private static function detect(): string
     {
+        $link = (string) config('server.localtime_link', '/etc/localtime');
+
+        if (is_link($link) && ($target = readlink($link)) !== false) {
+            if (preg_match('#zoneinfo/(?:posix/|right/)?(.+)$#', $target, $matches) === 1) {
+                return $matches[1];
+            }
+        }
+
         // Debian/Ubuntu keep the plain name here.
         $file = (string) config('server.timezone_file', '/etc/timezone');
 
@@ -40,15 +58,6 @@ class ServerTimezone
 
             if ($timezone !== '') {
                 return $timezone;
-            }
-        }
-
-        // Fallback: /etc/localtime is a symlink into the zoneinfo database.
-        $link = (string) config('server.localtime_link', '/etc/localtime');
-
-        if (is_link($link) && ($target = readlink($link)) !== false) {
-            if (preg_match('#zoneinfo/(.+)$#', $target, $matches) === 1) {
-                return $matches[1];
             }
         }
 
