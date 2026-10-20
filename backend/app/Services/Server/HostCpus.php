@@ -44,6 +44,9 @@ class HostCpus
             return 1;
         }
 
-        return max(1, substr_count((string) @file_get_contents($path), 'processor'));
+        // Lines that *start* with the `processor` field (OLD-2): counting the
+        // word anywhere doubled the answer on a CPU whose model name contains
+        // it, such as "Intel(R) Xeon(R) processor".
+        return max(1, preg_match_all('/^processor\s*:/m', (string) @file_get_contents($path)));
     }
 }
