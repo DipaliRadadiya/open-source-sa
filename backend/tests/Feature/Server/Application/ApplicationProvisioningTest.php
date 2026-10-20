@@ -2,6 +2,7 @@
 
 use App\Exceptions\Server\Application\UnsupportedWebServerException;
 use App\Jobs\ProvisionApplication;
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Models\ServerCapability;
@@ -9,6 +10,8 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ProvisioningBudget;
+use App\Services\Server\Applications\StrandedProvisioning;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -540,4 +543,92 @@ it('still does not create one for a PHP site, which has no use for it', function
         fn (array $command): bool => in_array('touch', $command, true)
             && in_array($app->fresh()->envPath(), $command, true),
     ))->toBeFalse();
+});
+
+/*
+ * An install job that died without a word — worker killed, disk full — left the
+ * site `provisioning` for good, and Delete refuses a provisioning site, so the
+ * user could never remove it (found on a test server whose disk filled,
+ * 2026-10-18). Past its own budget nothing can still be installing it.
+ */
+describe('a site whose install job died without finishing', function () {
+    function provisionDeadline(): int
+    {
+        return app(ProvisioningBudget::class)->forSiteType('php') + ProvisionApplication::UNIQUE_LOCK_GRACE;
+    }
+
+    it('is marked failed once its time budget has passed', function () {
+        $app = makeApp(['status' => 'provisioning', 'provisioning_started_at' => now()->subSeconds(provisionDeadline() + 60)]);
+
+        $this->artisan('applications:close-stranded')->assertSuccessful();
+
+        $app->refresh();
+        expect($app->status->value)->toBe('failed')
+            ->and($app->failed_step)->toBe('worker')
+            ->and($app->reference)->not->toBeEmpty()
+            ->and(ActivityLog::where('action', 'provision_failed')->exists())->toBeTrue();
+    });
+
+    it('is left alone while its job may still be running', function () {
+        $app = makeApp(['status' => 'provisioning', 'provisioning_started_at' => now()->subSeconds(provisionDeadline() - 60)]);
+
+        $this->artisan('applications:close-stranded')->assertSuccessful();
+
+        expect($app->fresh()->status->value)->toBe('provisioning');
+    });
+
+    it('is left alone while it is still waiting in the queue, however long', function () {
+        $app = makeApp(['status' => 'provisioning', 'provisioning_started_at' => null, 'created_at' => now()->subDays(3)]);
+
+        $this->artisan('applications:close-stranded')->assertSuccessful();
+
+        expect($app->fresh()->status->value)->toBe('provisioning');
+    });
+
+    it('can be deleted', function () {
+        Process::fake();
+        $app = makeApp(['status' => 'provisioning', 'provisioning_started_at' => now()->subSeconds(provisionDeadline() + 60)]);
+
+        $this->withHeaders(provisionHeaders())
+            ->deleteJson("/api/applications/{$app->id}")
+            ->assertOk();
+
+        expect(Application::find($app->id))->toBeNull();
+    });
+
+    it('still refuses to delete a site whose install is running', function () {
+        Process::fake();
+        $app = makeApp(['status' => 'provisioning', 'provisioning_started_at' => now()->subMinute()]);
+
+        $this->withHeaders(provisionHeaders())
+            ->deleteJson("/api/applications/{$app->id}")
+            ->assertStatus(503);
+
+        expect(Application::find($app->id))->not->toBeNull()
+            ->and($app->fresh()->status->value)->toBe('provisioning');
+        Process::assertNothingRan();
+    });
+
+    it('does not mark failed a retry that started a moment ago', function () {
+        $app = makeApp(['status' => 'provisioning', 'provisioning_started_at' => now()->subSeconds(provisionDeadline() + 60)]);
+        $seen = $app->fresh();
+        // A retry restamps the start between the check and the write.
+        $app->update(['provisioning_started_at' => now()]);
+
+        expect(app(StrandedProvisioning::class)->close($seen))->toBeFalse()
+            ->and($app->fresh()->status->value)->toBe('provisioning');
+    });
+
+    it('leaves finished and failed sites alone', function (string $status) {
+        $app = makeApp(['status' => $status, 'provisioning_started_at' => now()->subDays(2)]);
+
+        $this->artisan('applications:close-stranded')->assertSuccessful();
+
+        expect($app->fresh()->status->value)->toBe($status)
+            ->and(app(StrandedProvisioning::class)->isStranded($app->fresh()))->toBeFalse();
+    })->with(['active', 'failed']);
+
+    it('is scheduled', function () {
+        $this->artisan('schedule:list')->expectsOutputToContain('applications:close-stranded')->assertSuccessful();
+    });
 });
