@@ -43,7 +43,10 @@ class SettingController extends Controller
     {
         // FS-C46: every group asks the server (sshd, apt, swap, timedatectl);
         // 1.4–1.9 s a load. Forgotten by every change made here.
-        $values = ProbeCache::remember('settings', fn (): array => $settings->all());
+        // Per language (RC-9): the payload carries diffForHumans() sentences,
+        // so one cache for all of them handed a Russian page "há 6 horas" right
+        // after a Portuguese request.
+        $values = ProbeCache::remember('settings:'.app()->getLocale(), fn (): array => $settings->all());
 
         return response()->json([
             'settings' => $values,

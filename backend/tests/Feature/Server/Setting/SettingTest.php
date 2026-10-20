@@ -4,6 +4,7 @@ use App\Models\ActivityLog;
 use App\Models\FirewallRule;
 use App\Models\User;
 use App\Services\Server\Fail2ban\Fail2banManager;
+use App\Services\Server\Settings\SettingsManager;
 use App\Support\ServerTimezone;
 use App\Support\SshPort;
 use Carbon\Carbon;
@@ -1264,4 +1265,26 @@ describe('whether the SSH-access toggle is enforced', function () {
             ->assertOk()
             ->assertJsonPath('meta.ssh_access_enforced', null);
     });
+});
+
+/*
+ * RC-9 (frontend QA, 12 Oct): GET /settings was cached whole, sentences
+ * included, so the first request's language won — a Russian page read
+ * "Проверено: há 6 horas" right after a Portuguese request.
+ */
+it('answers each language in its own words when the settings are cached', function () {
+    config(['server.probe_cache_seconds' => 60]);
+    $manager = Mockery::mock(SettingsManager::class);
+    $manager->shouldReceive('all')->andReturnUsing(fn () => ['updates' => ['lists_refreshed_at_human' => now()->subHours(6)->diffForHumans()]]);
+    app()->instance(SettingsManager::class, $manager);
+
+    $ask = fn (string $locale) => $this->withHeaders(['Authorization' => "Bearer {$this->token}", 'Accept-Language' => $locale])
+        ->getJson('/api/settings')->assertOk()->json('settings.updates.lists_refreshed_at_human');
+
+    $pt = $ask('pt');
+    $ru = $ask('ru');
+
+    expect($pt)->toContain('há')
+        ->and($ru)->not->toBe($pt)
+        ->and($ru)->toContain('назад');
 });
