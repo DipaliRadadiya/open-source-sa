@@ -209,7 +209,9 @@ class ProcessSupervisor
             $reference = $started->reference;
             $this->forget($application);
 
-            throw new ProvisioningFailedException('start_app', $reference);
+            // A reason, so the screen can say what happened (RC-2) rather than
+            // only which step it was — the one thing the user cannot see.
+            throw new ProvisioningFailedException('start_app', $reference, 'process_exited');
         }
     }
 

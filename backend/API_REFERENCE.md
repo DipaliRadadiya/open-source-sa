@@ -1013,6 +1013,7 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `script_php_missing` | The deploy script uses a `{PHPxx}` variable for a PHP version not installed on this server; nothing ran. Install it on the PHP screen or use `{php}`. |
 | `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
+| `process_exited` | The application's process was started and stopped straight away (`start_app`). Its log shows why — most often a missing package or a start command that does not exist. (2026-10-20) |
 | `container_restarting` | A Docker site's container keeps restarting. See `last_failure` for its last log lines. |
 | `container_exited` | A Docker site's container stopped right after starting. |
 | `container_port_mismatch` | Nothing answered on the container port, and the image declares a different one (DS-03). `last_failure.message` names both. |
@@ -1717,6 +1718,24 @@ check would have failed: `composer.json` requires real packages. Since
 deploy. A site with its own script or build command runs only that. The PHP
 `default_deploy_script` now ends with the same install, guarded by
 `if [ -f composer.json ]`.
+
+**The same for a Node application** (2026-10-20, RC-2): with no deploy script
+and no build command, an application served by Node whose `package.json` lists
+`dependencies` and has no `node_modules` runs the install + build of its
+`package_manager` (`package_manager_scripts`), or — with none on record — of the
+package manager whose lockfile the repository carries (`bun.lock`/`bun.lockb`,
+`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`); with no lockfile,
+`npm install` + `npm run build --if-present` (`npm ci` refuses without one).
+Never for a PHP or static application, so a PHP repository with a
+`package.json` for its assets deploys exactly as before. Before, nothing ran
+and the first start died on `MODULE_NOT_FOUND`.
+
+A process that would not start now fails `start_app` with `failed_reason:
+"process_exited"`, and **a failed first deploy** (`trigger: initial`) leaves the
+application `failed` instead of `active`: provisioning marks it active before
+its code arrives, so "back to what it was" showed a site that had never run as
+active while it answered 502. A failed *later* deploy of a live site still
+leaves it `active`.
 
 **No default script runs `git pull`** (since 2026-10-01). The panel has fetched
 and checked out the branch with the connected account before the script runs;

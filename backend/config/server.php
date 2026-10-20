@@ -1367,6 +1367,10 @@ return [
             'pnpm' => "pnpm install --frozen-lockfile\ngrep -q '\"build\"' package.json && pnpm build\n",
             'bun' => "bun install --frozen-lockfile\nbun run build --if-present\n",
         ],
+
+        // A Node application with no lockfile and no package manager on record
+        // (RC-2): `npm ci` refuses to run without package-lock.json.
+        'npm_install_without_lockfile' => "npm install\nnpm run build --if-present\n",
     ],
 
     'certificates' => [

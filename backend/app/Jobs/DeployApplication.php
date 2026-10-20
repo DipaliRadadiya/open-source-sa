@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Actions\Server\Application\UpdateApplicationWebRoot;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentStatus;
+use App\Enums\DeploymentTrigger;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
@@ -133,8 +134,11 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
         } catch (ProvisioningFailedException $e) {
             $application->update([
                 // Back to what it was: if the site was already live, a failed
-                // redeploy has not changed that.
-                'status' => $previousStatus === ApplicationStatus::Active
+                // redeploy has not changed that. Not after the first deploy
+                // (RC-2): provisioning marks the site active before its code
+                // arrives, so "what it was" is a site that has never run —
+                // and it was shown active while answering 502.
+                'status' => $previousStatus === ApplicationStatus::Active && $deployment?->trigger !== DeploymentTrigger::Initial
                     ? ApplicationStatus::Active
                     : ApplicationStatus::Failed,
                 'failed_step' => $e->step,

@@ -190,6 +190,11 @@ class GitDeployer
                 // serve without its packages: install them, rather than fail
                 // the check below. See `composer_install` in config/server.php.
                 $this->runScript($application, $documentRoot, (string) config('server.deployments.composer_install'));
+            } elseif (($install = $this->nodeInstall($documentRoot, $application)) !== null) {
+                // The same gap for a Node application (RC-2): no script, so
+                // nothing ran `npm ci`, and the first start died on
+                // MODULE_NOT_FOUND.
+                $this->runScript($application, $documentRoot, $install);
             }
 
             // Before the restarts and before the verify, because this is the
@@ -761,6 +766,55 @@ class GitDeployer
      * Does the checkout's `composer.json` require at least one real package?
      * The same question, and the same answer, as {@see checkDependencies()}.
      */
+    /**
+     * The install + build to run for a Node application nobody wrote a script
+     * for, or null when there is nothing it needs (RC-2).
+     *
+     * Only for an application served by Node — a PHP repository with a
+     * `package.json` for its assets deploys today without npm, and must keep
+     * doing so — whose `package.json` lists dependencies that are not on disk.
+     * The package manager is the one on record, else the one whose lockfile
+     * the repository carries; `npm ci` needs a lockfile, so a repository with
+     * none gets `npm install`.
+     */
+    private function nodeInstall(string $codeRoot, Application $application): ?string
+    {
+        if ($application->serving_profile !== 'node') {
+            return null;
+        }
+
+        $context = ['feature' => 'application', 'op' => 'check_node_dependencies', 'application' => $application->id];
+
+        $manifest = $this->serverOps->run(['cat', $codeRoot.'/package.json'], $context);
+        $decoded = $manifest->ok ? json_decode($manifest->output(), true) : null;
+
+        if (! is_array($decoded) || ! is_array($decoded['dependencies'] ?? null) || $decoded['dependencies'] === []) {
+            return null;
+        }
+
+        if ($this->serverOps->probe(['test', '-d', $codeRoot.'/node_modules'], $context)->ok) {
+            return null;
+        }
+
+        $scripts = (array) config('server.deployments.package_manager_scripts', []);
+        $manager = $application->package_manager;
+
+        if (! isset($scripts[$manager])) {
+            $manager = null;
+
+            foreach (['bun.lock' => 'bun', 'bun.lockb' => 'bun', 'pnpm-lock.yaml' => 'pnpm', 'yarn.lock' => 'yarn', 'package-lock.json' => 'npm'] as $lockfile => $candidate) {
+                if ($this->serverOps->probe(['test', '-f', $codeRoot.'/'.$lockfile], $context)->ok) {
+                    $manager = $candidate;
+                    break;
+                }
+            }
+        }
+
+        return $manager !== null && isset($scripts[$manager])
+            ? (string) $scripts[$manager]
+            : (string) config('server.deployments.npm_install_without_lockfile', "npm install\nnpm run build --if-present\n");
+    }
+
     private function requiresComposerPackages(string $codeRoot, Application $application): bool
     {
         $manifest = $this->serverOps->run(
