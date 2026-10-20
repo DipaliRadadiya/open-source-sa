@@ -97,7 +97,13 @@ class Fail2banException extends Exception
 
     public function render(Request $request): JsonResponse
     {
-        $payload = ['message' => __($this->messageKey, $this->replace)];
+        $payload = [
+            'message' => __($this->messageKey, $this->replace),
+            // RC-22: a stable code beside the sentence — the ignore-list route
+            // alone answers four different 422s, which the screen could tell
+            // apart only by guessing from what it had just tried.
+            'reason' => substr($this->messageKey, strrpos($this->messageKey, '.') + 1),
+        ];
 
         if ($this->reference !== null) {
             $payload['reference'] = $this->reference;

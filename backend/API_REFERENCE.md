@@ -3014,15 +3014,15 @@ Evidence for the policy decision: which bots hit this site recently, and whether
 
 **Query:** `?days=7` (default 7, max 30)
 
-**Response `200`:**
+**Response `200`** — wrapped in `bot_traffic` (corrected 2026-10-20, RC-11: this showed the object without it):
 ```json
-{"status": "ok", "days": 7, "scanned_lines": 4821, "since": "30-09-2026 10:00:00",
+{"bot_traffic": {"status": "ok", "days": 7, "scanned_lines": 4821, "since": "30-09-2026 10:00:00",
  "bots": [
    {"bot": "GPTBot", "hits": 142, "category": "training", "blocked": true,
     "blocked_hits": 120, "last_status": 403,
     "last_seen": "07-10-2026 09:12:44", "last_seen_human": "3 hours ago"}
  ],
- "totals": {"bots": 1, "hits": 142, "blocked_hits": 120}}
+ "totals": {"bots": 1, "hits": 142, "blocked_hits": 120}}}
 ```
 `category`: `training` | `search` | `agent` (v8's own lists) · `custom` (the site's own block/allow rule) · `legacy` (since 2026-10-13: a name from v7's list on a `legacy_v7` site that the owner did not add themselves).
 
@@ -5580,6 +5580,8 @@ Add or remove **one** ignore-list entry, against the list as it is on disk now. 
 | `404` `ignore_ip_missing` | DELETE: not on the list (the screen is out of date; refetch) |
 | `422` `lockout_risk` | DELETE: removing **your own address** while the SSH jail runs, with no other entry still covering you. Re-send with `"acknowledged": true` to confirm |
 | `422` `not_installed` | fail2ban is not installed |
+
+The code in the second column is the error's **`reason`** field (2026-10-20, RC-22) — every Fail2ban error now carries one beside `message`, so a screen can tell these apart without matching the sentence.
 
 The two loopback entries (`127.0.0.1/8`, `::1`) are always there and never part of `ignore_ips`, so they cannot be removed.
 

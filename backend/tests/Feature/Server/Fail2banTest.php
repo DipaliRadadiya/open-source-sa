@@ -983,7 +983,8 @@ describe('one ignore-list entry at a time (v7 ignore-ip add/remove)', function (
     it('stores the form fail2ban uses, so a mapped address is not a second entry', function () {
         f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '::ffff:203.0.113.5'])
             ->assertUnprocessable()
-            ->assertJsonPath('message', __('errors/fail2ban.ignore_ip_exists'));
+            ->assertJsonPath('message', __('errors/fail2ban.ignore_ip_exists'))
+            ->assertJsonPath('reason', 'ignore_ip_exists');
     });
 
     it('refuses a malformed address or an open-to-everyone range', function (string $ip) {
@@ -996,7 +997,8 @@ describe('one ignore-list entry at a time (v7 ignore-ip add/remove)', function (
 
         f2b('POST', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.7'])
             ->assertUnprocessable()
-            ->assertJsonPath('message', __('errors/fail2ban.ignore_list_full'));
+            ->assertJsonPath('message', __('errors/fail2ban.ignore_list_full'))
+            ->assertJsonPath('reason', 'ignore_list_full');
     });
 
     it('removes one entry, a range given in the query', function () {
@@ -1013,7 +1015,8 @@ describe('one ignore-list entry at a time (v7 ignore-ip add/remove)', function (
     it('says so when the entry is not on the list, instead of agreeing', function () {
         f2b('DELETE', '/api/fail2ban/ignore-ips', ['ip' => '198.51.100.9'])
             ->assertNotFound()
-            ->assertJsonPath('message', __('errors/fail2ban.ignore_ip_missing'));
+            ->assertJsonPath('message', __('errors/fail2ban.ignore_ip_missing'))
+            ->assertJsonPath('reason', 'ignore_ip_missing');
     });
 
     it('will not take your own address off while the SSH jail runs, unless you confirm', function () {
@@ -1021,7 +1024,8 @@ describe('one ignore-list entry at a time (v7 ignore-ip add/remove)', function (
 
         $as()->deleteJson('/api/fail2ban/ignore-ips', ['ip' => '203.0.113.5'])
             ->assertUnprocessable()
-            ->assertJsonPath('message', __('errors/fail2ban.lockout_risk'));
+            ->assertJsonPath('message', __('errors/fail2ban.lockout_risk'))
+            ->assertJsonPath('reason', 'lockout_risk');
         expect(dropIn())->toContain('203.0.113.5');
 
         $as()->deleteJson('/api/fail2ban/ignore-ips', ['ip' => '203.0.113.5', 'acknowledged' => true])->assertOk();
