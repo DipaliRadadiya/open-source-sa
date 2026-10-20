@@ -55,6 +55,10 @@ class BackupResource extends JsonResource
                 fn (): ?string => $this->resource->storageDestination?->name,
             ),
             'type' => $this->type->value,
+            // Whether the archive holds a database dump — not the same as the
+            // type: a site with no database has `full` backups without one.
+            // Offer "files and database" / "database" restores only when true.
+            'has_database' => $this->resource->holdsDatabase(),
             // Taken automatically just before a restore overwrote the site.
             // Worth marking in the list: it is the one entry someone scanning
             // timestamps after a bad restore is actually looking for, and it

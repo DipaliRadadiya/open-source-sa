@@ -108,6 +108,27 @@ class Backup extends Model
      * the database was deleted. `subject_engine` is written for every one of
      * them and for nothing else, so it survives the database going.
      */
+    /**
+     * Does the archive hold a database dump?
+     *
+     * Not the same as the type. A site with no database still gets a `full`
+     * backup when that is what its target says, and the dump step records the
+     * truth in the manifest (`databases: []`) — which nothing read, so a full
+     * restore of it got as far as "Restoring the database" and failed, after
+     * taking a safety backup and putting the files back (2026-10-18). A row
+     * from before the manifest recorded it answers by type, as before.
+     */
+    public function holdsDatabase(): bool
+    {
+        if (! in_array($this->type->value, ['database', 'full'], true)) {
+            return false;
+        }
+
+        $manifest = (array) ($this->manifest ?? []);
+
+        return ! array_key_exists('databases', $manifest) || $manifest['databases'] !== [];
+    }
+
     public function isDatabaseBackup(): bool
     {
         return $this->database_id !== null || ($this->application_id === null && $this->subject_engine !== null);
