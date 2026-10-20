@@ -9,6 +9,7 @@ use App\Support\CommandRedactor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -16,7 +17,9 @@ class ApiErrorLogWriter
 {
     public function record(Throwable $exception, Request $request): void
     {
-        if (! $request->is('api/*') || $this->status($exception) < 500) {
+        $status = $this->status($exception, $request);
+
+        if (! $request->is('api/*') || $status < 500) {
             return;
         }
 
@@ -27,7 +30,7 @@ class ApiErrorLogWriter
                 // references, the second saying only the class name, sent
                 // anyone looking it up to the wrong one.
                 'reference' => $this->reference($exception),
-                'status' => $this->status($exception),
+                'status' => $status,
                 'method' => $request->method(),
                 'route' => $request->route()?->uri() ?? $request->path(),
                 'exception' => $exception::class,
@@ -146,8 +149,30 @@ class ApiErrorLogWriter
         return str_starts_with($path, $base) ? substr($path, strlen($base)) : $path;
     }
 
-    private function status(Throwable $exception): int
+    /**
+     * The status the user was actually sent.
+     *
+     * An exception that renders its own response says so itself (RC-24): a
+     * Fail2ban "this would lock you out" is a 422 to the browser, and every
+     * one was recorded here as a 500 crash with a trace, because this matched
+     * a fixed list of classes and called everything else 500. Rendering is
+     * pure in every such exception (it builds the JSON and nothing else), so
+     * asking it costs nothing and cannot disagree with what the user saw.
+     */
+    private function status(Throwable $exception, Request $request): int
     {
+        if (method_exists($exception, 'render')) {
+            try {
+                $response = $exception->render($request);
+
+                if ($response instanceof SymfonyResponse) {
+                    return $response->getStatusCode();
+                }
+            } catch (Throwable) {
+                // Fall through to the class-based answer below.
+            }
+        }
+
         return match (true) {
             $exception instanceof HttpExceptionInterface => $exception->getStatusCode(),
             $exception instanceof FeatureException => $exception->status,

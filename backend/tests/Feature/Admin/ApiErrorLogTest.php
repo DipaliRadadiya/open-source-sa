@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Models\User;
 use App\Services\Admin\ApiErrorLogWriter;
@@ -475,4 +476,34 @@ it('gives an API 500 the reference the user was shown, not a new one', function 
         ->getJson('/api/admin/error-logs?reference=0d3f6c1e-6b1a-4c55-9f0e-1c2b3a4d5e6f')->assertOk()->json('error_logs');
 
     expect($entries)->not->toBeEmpty();
+});
+
+/*
+ * RC-24 (frontend QA, 17 Oct): an exception that renders its own 4xx was
+ * recorded as a 500 crash — the status came from a fixed list of classes —
+ * so a Fail2ban "this would lock you out" (422) filled the Error log and the
+ * dashboard's failure count. The status recorded is now the one rendered.
+ */
+it('does not record an exception that answered the user with a 4xx', function (Throwable $exception) {
+    Log::shouldReceive('channel')->never();
+
+    app(ApiErrorLogWriter::class)->record($exception, Request::create('/api/fail2ban/ignore-ips', 'DELETE'));
+})->with([
+    'fail2ban lockout risk (422)' => fn () => Fail2banException::lockoutRisk(),
+    'fail2ban ignore ip missing (404)' => fn () => Fail2banException::ignoreIpMissing(),
+]);
+
+it('still records an exception that rendered a 5xx, with that status', function () {
+    $logger = Mockery::mock();
+    $logger->shouldReceive('error')->once()->with('api.error', Mockery::on(function (array $context): bool {
+        expect($context['status'])->toBe(500);
+
+        return true;
+    }));
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    app(ApiErrorLogWriter::class)->record(
+        Fail2banException::operationFailed('ref-1'),
+        Request::create('/api/fail2ban', 'GET'),
+    );
 });
