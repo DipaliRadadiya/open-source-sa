@@ -500,6 +500,35 @@ Unauthenticated. (The example here was out of date; corrected 2026-10-20.)
 
 ---
 
+## Operations — every long job in one list
+
+### GET `/operations`
+**Auth:** any signed-in user — the list is cut down to the kinds their role can see. **Throttle:** `progress` (polled). Added 2026-10-20 (RC-20).
+
+Backups, restores, clones, staging runs, deployments, PHP/Node installs, database imports and exports, syncs, security updates and panel updates — running now, and finished within the last `hours` (default 24, max 168). Newest first, at most 100 rows (50 per kind).
+
+**Query:** `?active=1` — only queued and running work (what a header indicator polls) · `?hours=48`.
+
+```json
+{"operations": [
+  {"kind": "restore", "id": 12, "state": "running", "status": "running",
+   "subject": {"type": "application", "id": 3, "name": "Shop"},
+   "step": "swap_files", "reference": "8c1f…", "user_id": 1,
+   "created_at": "20-10-2026 14:02:11", "started_at": "20-10-2026 14:02:12",
+   "finished_at": null, "finished_at_human": null}
+ ],
+ "meta": {"running": 1, "hours": 24}}
+```
+
+- **`state`** is one word for every kind: `waiting` | `running` | `done` | `failed`. **`status`** is the kind's own word (`verified`, `completed`, `succeeded`, `ready`, …) for display. A staging run whose worker died reads `failed`.
+- **`kind`**: `backup` · `restore` · `clone` · `staging` · `deployment` · `database_export` · `database_import` · `runtime_install` · `sync` · `security_update` · `panel_update`.
+- **`subject`**: `{"type": "application"|"database"|"server", "id", "name"}` — link a row to the screen that owns it. Server-wide jobs have `id: null`; a runtime install names the version (`"PHP 8.3"`).
+- **`step`**: the current step where the kind records one (restore, clone, import, install, panel update), the failed step for a deployment, `push`/`pull` for a staging run; else `null`.
+- **Who sees what:** each kind needs the permission its own screen needs — `backup` (backups, restores), `app_clone`, `app_staging`, `app_deployment`, `database` (imports, exports), `php` / `node` (installs), `sync`, `setting` (security updates); panel updates are administrators only.
+- `meta.running` counts the `waiting` + `running` rows in the answer.
+
+---
+
 ## Permissions Check
 
 ### GET `/permissions`
