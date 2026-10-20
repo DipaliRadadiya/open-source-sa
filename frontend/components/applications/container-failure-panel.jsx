@@ -181,7 +181,7 @@ export function ContainerFailurePanel({
             ) : null}
             {canSeeLogs ? (
               <Button asChild size="sm" variant="outline">
-                <Link href={`/applications/${application.id}/logs`}>
+                <Link href={`/applications/${application.id}/logs?source=container`}>
                   <FileText className="size-4" />
                   {t("viewLogs")}
                 </Link>

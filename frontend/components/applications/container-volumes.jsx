@@ -148,11 +148,10 @@ export function ContainerVolumes({
             </Link>
           </Note>
         ) : (
-          <form
-            noValidate
-            className="flex flex-wrap items-start gap-2"
-            onSubmit={add}
-          >
+          // Not a form element: this sits inside the container settings form, and a nested
+          // form is invalid HTML that broke hydration of the whole page. Enter in the
+          // path adds the mount instead of submitting the outer settings form.
+          <div className="flex flex-wrap items-start gap-2">
             <Select value={volume} onValueChange={setVolume} disabled={pending}>
               <SelectTrigger className="h-9 w-48">
                 <SelectValue placeholder={t("choose")} />
@@ -183,9 +182,15 @@ export function ContainerVolumes({
               aria-label={t("pathLabel")}
               className="h-9 w-56 font-mono"
               disabled={pending}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                if (volume && path.trim() && !pending) add(event);
+              }}
             />
             <Button
-              type="submit"
+              type="button"
+              onClick={add}
               size="sm"
               disabled={pending || !volume || !path.trim()}
               disabledReason={!volume ? tc("chooseAnOption") : !path.trim() ? tc("enterAValue") : null}
@@ -193,7 +198,7 @@ export function ContainerVolumes({
               <Plus className="size-4" />
               {t("add")}
             </Button>
-          </form>
+          </div>
         )
       ) : null}
 

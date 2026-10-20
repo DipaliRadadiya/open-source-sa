@@ -10,6 +10,7 @@ import {
   getRegistries,
 } from "@/lib/docker/get-docker";
 import { ContainerCard } from "@/components/applications/container-card";
+import { getApplicationCompose } from "@/lib/applications/get-application-compose";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -95,6 +96,13 @@ export default async function ApplicationContainerPage({ params }) {
         ])
       : [[], [], [], {}];
 
+  // Whether the user owns the compose file. A failed read keeps the fields, as
+  // before; only a definite "not generated" hides them.
+  const compose = can(appPermissions, "app_compose", "view", "application")
+    ? await getApplicationCompose(id)
+    : null;
+  const ownCompose = Boolean(compose && !compose.failed && compose.generated === false);
+
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("pageSubtitle")} />
@@ -105,6 +113,7 @@ export default async function ApplicationContainerPage({ params }) {
         registries={registries}
         limits={limits}
         canManage={canManage}
+        ownCompose={ownCompose}
       />
     </div>
   );

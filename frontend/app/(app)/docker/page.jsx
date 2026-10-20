@@ -4,6 +4,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getDockerResources } from "@/lib/docker/get-docker";
 import { getAllApplications } from "@/lib/applications/get-applications";
+import { getApplicationCompose } from "@/lib/applications/get-application-compose";
 import { DockerResourcesPanel } from "@/components/docker/docker-resources-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -39,13 +40,17 @@ export default async function DockerPage() {
   // SITE's configuration and restarts it, so the permission that governs it is
   // the one that governs the site.
   const canManageSites = can(permissions, "application", "manage");
-  const sites = canManageSites
+  const serving = canManageSites
     ? (await getAllApplications()).applications.filter(
         (application) =>
           application.serving_profile === "docker" &&
           application.status === "active",
       )
     : [];
+  // Not one that runs its own compose file (a 1-Click Recipe, or one taken over):
+  // the mount would be stored and answered 200, and the container never gets it.
+  const composes = await Promise.all(serving.map((application) => getApplicationCompose(application.id)));
+  const sites = serving.filter((_, index) => !(composes[index].failed === false && composes[index].generated === false));
 
   return (
     <div className="space-y-6">

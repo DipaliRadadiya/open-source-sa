@@ -378,6 +378,8 @@ function ConfigField({
     config.label?.toLowerCase().includes("time zone");
   const isPassword = config.type === "password";
   const isPort = config.name === "app_port";
+  // No saved credential is the normal case, not a field with nothing to offer.
+  const isRegistry = config.name === "registry_id";
   const isStartCommand = config.name === "start_command";
   const isDatabaseEngine = config.name === "database_engine";
   const isToggle = config.type === "toggle";
@@ -554,7 +556,7 @@ function ConfigField({
                 onValueChange={field.onChange}
                 value={field.value ? String(field.value) : ""}
                 disabled={!options.length}
-                disabledReason={t("form.noOptions")}
+                disabledReason={isRegistry ? t("container.noRegistries") : t("form.noOptions")}
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
@@ -562,7 +564,9 @@ function ConfigField({
                       placeholder={
                         options.length
                           ? t("form.fieldSelectPlaceholder", { field: label })
-                          : t("form.noOptions")
+                          : isRegistry
+                            ? t("container.noRegistry")
+                            : t("form.noOptions")
                       }
                     />
                   </SelectTrigger>
@@ -669,6 +673,13 @@ function ConfigField({
                 runtime: config.source === "php_versions" ? "PHP" : "Node.js",
                 range: runtimeRequirement,
               })}
+            </FormDescription>
+          ) : isRegistry && !options.length ? (
+            <FormDescription>
+              {t("container.noRegistries")}{" "}
+              <Link href="/integrations/registries" className="font-medium text-primary underline">
+                {t("container.noRegistriesLink")}
+              </Link>
             </FormDescription>
           ) : config.help ? (
             <FormDescription>{config.help}</FormDescription>

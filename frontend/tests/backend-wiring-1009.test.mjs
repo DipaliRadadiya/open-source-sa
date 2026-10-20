@@ -23,7 +23,7 @@ test("B9: a staging push can back the live application up first, and its databas
 });
 
 test("B10: application logs can be downloaded", () => {
-  assert.match(read("components/applications/logs/application-logs-panel.jsx"), /downloadUrl=\{source \? applicationLogDownloadUrl\(appId, source\.key\) : undefined\}/);
+  assert.match(read("components/applications/logs/application-logs-panel.jsx"), /downloadUrl=\{source\?\.kind === "file" \? applicationLogDownloadUrl\(appId, source\.key\) : undefined\}/);
 });
 
 test("B11: the app's own bans are listed, banned and unbanned under app_fail2ban", async () => {

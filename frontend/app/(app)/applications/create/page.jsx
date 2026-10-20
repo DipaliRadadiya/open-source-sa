@@ -116,8 +116,9 @@ export default async function CreateApplicationPage({ searchParams }) {
         initialType={prefillType}
         initialDockerSource={initialDockerSource}
         // A marketplace slug is a valid site name, and the temporary domain
-        // is generated from the name.
-        initialName={prefillType}
+        // is generated from the name. Not "docker": the system user is named
+        // after it, and useradd refuses because the docker group exists.
+        initialName={prefillType === "docker" ? "" : prefillType}
         siteTypes={siteTypes}
         systemUsers={systemUsers.users}
         systemUsersFailed={systemUsers.failed}

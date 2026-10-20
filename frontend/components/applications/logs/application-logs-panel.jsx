@@ -414,8 +414,11 @@ export function ApplicationLogsPanel({
               t("copiedLines", { count: visible.length }),
             )
           }
-          downloadUrl={source ? applicationLogDownloadUrl(appId, source.key) : undefined}
-          onClear={canManage ? () => setConfirmClear(true) : null}
+          // Only a file can be downloaded or cleared: Docker keeps a container's
+          // output, so the API refuses the download and clear does nothing.
+          downloadUrl={source?.kind === "file" ? applicationLogDownloadUrl(appId, source.key) : undefined}
+          showDownload={source?.kind === "file"}
+          onClear={canManage && source?.kind === "file" ? () => setConfirmClear(true) : null}
           clearing={clearing}
           busy={busy}
           disabled={disabled}

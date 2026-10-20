@@ -45,3 +45,9 @@ test("a list row says Files only for a full backup with no database", async () =
   assert.match(read("components/backups/backups-history-table.jsx"), /backupTypeLabel\(row\.original, t\)/);
   assert.equal(read("components/backups/backups-cards.jsx").match(/backupTypeLabel\(backup, t\)/g).length, 2);
 });
+
+// A container backup's type (volumes_config…) is not one the restore request
+// accepts; sent, it was a 422 and the restore never started (20 Oct).
+test("a container backup is restored without naming a type", () => {
+  assert.match(read("components/backups/restore-dialog.jsx"), /allowed\.length \? \{ type, confirm: confirm\.trim\(\) \} : \{ confirm: confirm\.trim\(\) \}/);
+});

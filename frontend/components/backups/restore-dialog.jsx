@@ -54,7 +54,13 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
     try {
       const response = isDatabase
         ? await restoreDatabaseBackup(database.id, backup.id, confirm.trim())
-        : await startRestore(backup.id, { type, confirm: confirm.trim() });
+        : // A container backup (volumes, config) has no choice to make, and the
+          // API only names the PHP-site types: sent, it is a 422. Absent, the
+          // server restores what the backup holds.
+          await startRestore(
+            backup.id,
+            allowed.length ? { type, confirm: confirm.trim() } : { confirm: confirm.trim() },
+          );
       onStarted?.(response.data?.restore ?? null);
       onOpenChange?.(false);
     } catch (error) {

@@ -203,7 +203,8 @@ export function DockerResourcesPanel({
                       <div className="flex items-center justify-end gap-1">
                         {/* Attaching writes the SITE's config, so it is gated on
                             the site permission rather than the Docker one. */}
-                        {canManageSites ? (
+                        {/* Not into another application's own network: that is its private one. */}
+                        {canManageSites && !network.application_id ? (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -219,6 +220,7 @@ export function DockerResourcesPanel({
                         variant="ghost"
                         size="sm"
                         disabled={pending !== null}
+                        aria-label={t("networks.removeAria", { name: network.name })}
                         onClick={() =>
                           setConfirm({
                             kind: "network",
@@ -378,7 +380,7 @@ export function DockerResourcesPanel({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        {canManageSites ? (
+                        {canManageSites && !volume.application_id ? (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -394,6 +396,7 @@ export function DockerResourcesPanel({
                             variant="ghost"
                             size="sm"
                             disabled={pending !== null}
+                            aria-label={t("volumes.removeAria", { name: volume.name })}
                             onClick={() =>
                               setConfirm({
                                 kind: "volume",

@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Network, KeyRound, RefreshCw, Gauge } from "lucide-react";
+import { Network, KeyRound, RefreshCw, Gauge, FileCode } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
 import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
@@ -84,6 +84,7 @@ export function ContainerCard({
   registries = [],
   limits = {},
   canManage = false,
+  ownCompose = false,
   className,
 }) {
   const t = useTranslations("applications.container");
@@ -103,7 +104,7 @@ export function ContainerCard({
     memory_limit: application.memory_limit ?? "",
     cpu_limit: application.cpu_limit ?? "",
     // The sentinel, not `""`. Radix refuses an empty `SelectItem` value — it
-    // reserves that for "nothing selected" — so "Docker's default bridge" needs
+    // reserves that for "nothing selected" — so "Its own network" needs
     // a value of its own, and it has to be the SAME value in the defaults, the
     // item and the submit mapping. Using `""` here and a sentinel in the item
     // was the first version: picking the default left the form holding a string
@@ -129,6 +130,15 @@ export function ContainerCard({
   const missing =
     defaults.docker_network !== DEFAULT_NETWORK &&
     !networks.some((network) => network.name === defaults.docker_network);
+
+  // Only networks somebody created to share. Docker's own (bridge/host/none)
+  // break the published port, and another application's network is that
+  // application's private one. The site's current value stays listed.
+  const joinable = networks.filter(
+    (network) =>
+      (!network.built_in && !network.application_id) ||
+      network.name === defaults.docker_network,
+  );
 
   // Same idea for the registry, and it is a REACHABLE state here rather than a
   // defensive one: deleting a credential detaches its sites instead of refusing,
@@ -187,7 +197,7 @@ export function ContainerCard({
                   {t("image")}
                 </p>
                 <code className="block truncate rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">
-                  {application.image || t("noImage")}
+                  {application.image || (ownCompose ? t("ownCompose.title") : t("noImage"))}
                 </code>
                 <p className="text-xs text-muted-foreground">{t("imageHint")}</p>
               </div>
@@ -294,6 +304,21 @@ export function ContainerCard({
                 </Note>
               ) : null}
 
+              {/* A compose file the user owns (a 1-Click Recipe, or one taken over on
+                  the Compose File page) is what runs: port, limits, network and
+                  volumes saved here would answer "saved" and change nothing. */}
+              {ownCompose ? (
+                <Note icon={FileCode} title={t("ownCompose.title")}>
+                  {t("ownCompose.body")}{" "}
+                  <Link
+                    href={`/applications/${application.id}/compose`}
+                    className="font-medium text-primary underline"
+                  >
+                    {t("ownCompose.link")}
+                  </Link>
+                </Note>
+              ) : (
+              <>
               <FormField
                 control={form.control}
                 name="docker_network"
@@ -307,12 +332,12 @@ export function ContainerCard({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t("defaultBridge")} />
+                          <SelectValue placeholder={t("ownNetwork")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value={DEFAULT_NETWORK}>
-                          {t("defaultBridge")}
+                          {t("ownNetwork")}
                         </SelectItem>
                         {missing ? (
                           <SelectItem value={defaults.docker_network}>
@@ -321,7 +346,7 @@ export function ContainerCard({
                             })}
                           </SelectItem>
                         ) : null}
-                        {networks.map((network) => (
+                        {joinable.map((network) => (
                           <SelectItem key={network.name} value={network.name}>
                             {network.name}
                           </SelectItem>
@@ -334,7 +359,7 @@ export function ContainerCard({
                 )}
               />
 
-              {networks.length === 0 ? (
+              {joinable.length === 0 ? (
                 // An empty chooser with no explanation reads as a broken control.
                 <Note icon={Network}>
                   {t("noNetworks")}{" "}
@@ -511,6 +536,8 @@ export function ContainerCard({
                 volumes={volumes}
                 canManage={canManage}
               />
+              </>
+              )}
 
               {/* Only for a site the panel generated credentials for, and only for
                   somebody who can manage it — the endpoint is gated on `manage`, so

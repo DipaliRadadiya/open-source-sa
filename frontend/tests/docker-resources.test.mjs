@@ -382,7 +382,7 @@ test("attaching is gated on the site permission, not the docker one", () => {
   // It writes the SITE's configuration and restarts it, so the permission that
   // governs it is the one that governs the site.
   assert.match(dockerPage, /can\(permissions, "application", "manage"\)/);
-  assert.match(panel, /canManageSites \? \(/);
+  assert.match(panel, /canManageSites && !(network|volume)\.application_id \? \(/);
 });
 
 test("only running container sites are offered", () => {

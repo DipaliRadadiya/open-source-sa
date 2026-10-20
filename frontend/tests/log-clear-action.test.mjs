@@ -28,7 +28,7 @@ test("no clear action without the grant, hidden rather than disabled", () => {
   // "you may not" — which is better said by its absence.
   assert.match(
     panel,
-    /onClear=\{canManage \? \(\) => setConfirmClear\(true\) : null\}/,
+    /onClear=\{canManage && source\?\.kind === "file" \? \(\) => setConfirmClear\(true\) : null\}/,
     "the action must be null for a viewer, not merely disabled",
   );
   assert.match(

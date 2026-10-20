@@ -197,8 +197,9 @@ export const dockerNameSchema = z
 /**
  * The container settings form.
  *
- * `docker_network` is nullable and empty means Docker's default bridge — a real
- * answer, not a missing one, which is why it is not `.min(1)`.
+ * `docker_network` is nullable and empty means the site's own Compose network
+ * (`sv-app-{id}_default`) — a real answer, not a missing one, which is why it is
+ * not `.min(1)`.
  */
 export const containerSettingsFormSchema = z.object({
   container_port: z.coerce.number().int().min(1).max(65535),

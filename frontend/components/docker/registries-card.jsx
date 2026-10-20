@@ -109,6 +109,22 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     }
   }
 
+  // A refused login is a 200 with `success: false`, so the outcome is read from
+  // the body: a green "contacted" over a failed test read as success.
+  async function test(registry) {
+    setPending(`test-${registry.id}`);
+    try {
+      const { data } = await testRegistry(registry.id);
+      await refreshAndWait();
+      if (data?.success) toast.success(t("testPassed", { name: registry.name }));
+      else toast.error(t(`errors.${data?.registry?.last_test_error ?? "unknown"}`));
+    } catch (error) {
+      toast.error(apiMessage(error, t("failed")));
+    } finally {
+      setPending(null);
+    }
+  }
+
   function open(registry) {
     setEditing(registry?.id ?? "new");
     setErrors({});
@@ -116,9 +132,11 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     // instructions match the row rather than defaulting to Docker Hub and telling
     // somebody with a GHCR credential to go and read Docker Hub's settings page.
     setProvider(registry ? providerForAddress(registry.registry) : "dockerhub");
+    // A new one opens on Docker Hub, so it opens with Docker Hub's preset too:
+    // empty, the fixed address field could not be filled in at all.
     setForm({
-      name: registry?.name ?? "",
-      registry: registry?.registry ?? "",
+      name: registry?.name ?? t("providers.dockerhub.label"),
+      registry: registry?.registry ?? registryProvider("dockerhub").address,
       username: registry?.username ?? "",
       // Always empty, never a placeholder standing in for a stored value. A dotted
       // mask would be a length disclosure, and this is the one field where the
@@ -167,7 +185,11 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     const schema = creating
       ? registryFormSchema
       : registryFormSchema.partial({ token: true });
-    const parsed = schema.safeParse(form);
+    // An empty token on edit means "keep the stored one": leave it out before
+    // validating, or the token rule rejects the empty string and Save does nothing.
+    const parsed = schema.safeParse(
+      !creating && form.token === "" ? { ...form, token: undefined } : form,
+    );
 
     if (!parsed.success) {
       setErrors(
@@ -511,13 +533,7 @@ export function RegistriesCard({ initialRegistries, canManage }) {
                             size="sm"
                             variant="ghost"
                             disabled={pending === `test-${registry.id}`}
-                            onClick={() =>
-                              run(
-                                `test-${registry.id}`,
-                                () => testRegistry(registry.id),
-                                t("tested"),
-                              )
-                            }
+                            onClick={() => test(registry)}
                           >
                             <PlugZap className="size-4" />
                             <span className="sr-only">{t("test")}</span>
