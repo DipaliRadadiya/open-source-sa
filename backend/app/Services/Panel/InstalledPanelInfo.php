@@ -3,6 +3,8 @@
 namespace App\Services\Panel;
 
 use Illuminate\Contracts\Process\ProcessResult;
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 
@@ -103,8 +105,7 @@ class InstalledPanelInfo
             return null;
         }
 
-        $git = fn (array $args, int $timeout = 10) => Process::path($path)->timeout($timeout)
-            ->run(['git', '-c', 'safe.directory='.$path, ...$args]);
+        $git = fn (array $args, int $timeout = 10) => $this->git($path, $args, $timeout);
 
         $head ??= trim($git(['rev-parse', 'HEAD'])->output());
 
@@ -155,9 +156,7 @@ class InstalledPanelInfo
             return null;
         }
 
-        $result = Process::path($path)
-            ->timeout(10)
-            ->run(['git', '-c', 'safe.directory='.$path, 'describe', '--tags', '--exact-match', 'HEAD']);
+        $result = $this->git($path, ['describe', '--tags', '--exact-match', 'HEAD'], 10);
 
         if (! $result->successful()) {
             return null;
@@ -182,13 +181,28 @@ class InstalledPanelInfo
             return null;
         }
 
-        $result = Process::path($path)
-            ->timeout(10)
-            ->run(['git', '-c', 'safe.directory='.$path, 'log', '-1', '--format=%cI', 'HEAD']);
+        $result = $this->git($path, ['log', '-1', '--format=%cI', 'HEAD'], 10);
 
         $date = trim($result->output());
 
         return $result->successful() && $date !== '' ? $date : null;
+    }
+
+    /**
+     * One git command in the panel's own checkout, answered "could not tell"
+     * when it runs out of time (RC-13). A timeout used to throw straight out
+     * of GET /api/health and the admin's panel-update screen as a 500, so a
+     * box that was only busy — the frontend rebuilding on it — read as broken.
+     *
+     * @param  array<int, string>  $args
+     */
+    private function git(string $path, array $args, int $timeout = 10): ProcessResult
+    {
+        try {
+            return Process::path($path)->timeout($timeout)->run(['git', '-c', 'safe.directory='.$path, ...$args]);
+        } catch (ProcessTimedOutException) {
+            return new FakeProcessResult(errorOutput: 'timed out', exitCode: 124);
+        }
     }
 
     /**
@@ -237,9 +251,7 @@ class InstalledPanelInfo
             return null;
         }
 
-        $result = Process::path($path)
-            ->timeout(10)
-            ->run(['git', '-c', 'safe.directory='.$path, 'status', '--porcelain']);
+        $result = $this->git($path, ['status', '--porcelain'], 10);
 
         if (! $result->successful()) {
             return null;
@@ -267,9 +279,7 @@ class InstalledPanelInfo
             return null;
         }
 
-        $result = Process::path($path)
-            ->timeout(10)
-            ->run(['git', '-c', 'safe.directory='.$path, 'describe', '--tags', '--abbrev=0', 'HEAD']);
+        $result = $this->git($path, ['describe', '--tags', '--abbrev=0', 'HEAD'], 10);
 
         if (! $result->successful()) {
             return null;
