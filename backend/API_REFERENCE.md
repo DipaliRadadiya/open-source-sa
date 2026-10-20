@@ -2191,6 +2191,28 @@ Folder size on disk.
 
 ---
 
+### GET `/applications/{application}/files/breakdown`
+**Permission:** `app_file` (view) | **Throttle:** 30/min — documented 2026-10-20 (APP-6; the endpoint is older)
+
+How this folder's bytes divide by file type, counted recursively. Scoped to the folder asked for, so looking deep in a tree costs less than the site root.
+
+**Query:** `?path=wp-content` (empty for the web root)
+
+**Response `200`:**
+```json
+{"path": "wp-content", "breakdown": {
+  "available": true, "truncated": false,
+  "total_bytes": 52428800, "total_bytes_human": "50 MB", "file_count": 1840,
+  "categories": [
+    {"key": "images", "bytes": 31457280, "bytes_human": "30 MB", "count": 912},
+    {"key": "code", "bytes": 15728640, "bytes_human": "15 MB", "count": 870},
+    {"key": "other", "bytes": 5242880, "bytes_human": "5 MB", "count": 58}
+  ]}}
+```
+`categories[].key`: `images` · `video` · `audio` · `documents` · `archives` · `code` · `fonts` · `database` · `logs` · `other`, biggest first — label them on the client. `truncated: true` when the walk stopped at its file limit (the numbers cover what was counted). `available: false` (zeros, empty `categories`) when the tree could not be walked in the time allowed — say "too large to measure", not "empty".
+
+---
+
 ### GET `/applications/{application}/files/sizes`
 **Permission:** `app_file` (view) | **Throttle:** 60/min
 
