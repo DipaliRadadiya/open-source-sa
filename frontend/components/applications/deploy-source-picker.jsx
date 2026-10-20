@@ -1,19 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { Container, FileCode2, PackageCheck, PenLine, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ChoiceField } from "@/components/ui/choice-field";
 import { setDockerSource } from "@/lib/docker/create-request";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
 import { RecipeSummary } from "@/components/applications/recipe-summary";
 
-// Both tabs share one size, so a phone does not show them in two type sizes.
-const TAB = "min-w-0 whitespace-normal text-xs sm:text-sm";
+// Title over a one-line subtitle; the active half is raised with the brand outline
+// and a green icon. `h-auto`: the base trigger is sized for a single line.
+const TAB =
+  "h-auto min-w-0 flex-col items-start justify-start gap-0.5 whitespace-normal px-3 py-2.5 text-left data-active:bg-card data-active:ring-1 data-active:ring-primary/60 data-active:[&_svg]:text-primary";
 
 export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSource }) {
   const t = useTranslations("applications");
+  // Each tab is named by its title; the subtitle is its description.
+  const tabId = useId();
   const recipeTypes = siteTypes.filter((type) => type.recipe);
   const dockerType = siteTypes.find((type) => type.name === "docker");
   const [tab, setTab] = useState(() =>
@@ -68,17 +72,23 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
 
   return (
     <Tabs value={tab} onValueChange={changeTab} className="min-w-0 gap-3">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="recipes" className={TAB}>
-          <PackageCheck className="size-4" aria-hidden />{t("recipes.tabOneClick")}
+      {/* The first choice, so it reads as one: each half says what it gives you,
+          and the chosen half is raised with the brand outline. The mode cards
+          below are the second, smaller choice. */}
+      <TabsList className="grid w-full grid-cols-2 items-stretch gap-1 p-1 group-data-horizontal/tabs:h-auto">
+        <TabsTrigger value="recipes" className={TAB} aria-labelledby={`${tabId}-recipes`} aria-describedby={`${tabId}-recipes-hint`}>
+          <span id={`${tabId}-recipes`} className="flex items-center gap-2 text-sm font-semibold">
+            <PackageCheck className="size-4" aria-hidden />{t("recipes.tabOneClick")}
+          </span>
+          <span id={`${tabId}-recipes-hint`} className="text-xs font-normal text-muted-foreground">{t("recipes.tabOneClickShort")}</span>
         </TabsTrigger>
-        <TabsTrigger ref={dockerTrigger} value="docker" className={TAB}>
-          <Container className="size-4" aria-hidden />{t("recipes.tabDocker")}
+        <TabsTrigger ref={dockerTrigger} value="docker" className={TAB} aria-labelledby={`${tabId}-docker`} aria-describedby={`${tabId}-docker-hint`}>
+          <span id={`${tabId}-docker`} className="flex items-center gap-2 text-sm font-semibold">
+            <Container className="size-4" aria-hidden />{t("recipes.tabDocker")}
+          </span>
+          <span id={`${tabId}-docker-hint`} className="text-xs font-normal text-muted-foreground">{t("recipes.tabDockerShort")}</span>
         </TabsTrigger>
       </TabsList>
-      <p className="text-sm text-muted-foreground">
-        {tab === "recipes" ? t("recipes.tabOneClickHint") : t("recipes.tabDockerHint")}
-      </p>
       <TabsContent value="recipes" className="min-w-0 space-y-3">
         <SiteTypePicker
           types={recipeTypes}
@@ -98,27 +108,24 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
         {selected ? <RecipeSummary type={selected} /> : null}
       </TabsContent>
       <TabsContent value="docker" className="min-w-0 space-y-3">
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          className="grid w-full grid-cols-3 items-stretch"
+        {/* Cards, not a second row of tabs: each says what it is for, so the
+            Container tab needs no paragraph above or below it. */}
+        {/* Three across only where the column is wide enough; beside the review
+            panel it is ~600px and three cards squeezed each hint to four lines. */}
+        <div className="@container">
+        <ChoiceField
+          variant="card"
           aria-label={t("dockerModes.label")}
+          className="grid gap-2 @3xl:grid-cols-3"
           value={dockerSource}
-          onValueChange={(source) => { if (source) setDockerSource(form, source); }}
-        >
-          <ToggleGroupItem value="search" className="h-auto min-w-0 flex-col gap-1 whitespace-normal py-2 text-xs sm:flex-row sm:text-sm">
-            <Search className="size-4 shrink-0" aria-hidden />{t("dockerModes.search")}
-          </ToggleGroupItem>
-          <ToggleGroupItem value="compose" className="h-auto min-w-0 flex-col gap-1 whitespace-normal py-2 text-xs sm:flex-row sm:text-sm">
-            <FileCode2 className="size-4 shrink-0" aria-hidden />{t("dockerModes.compose")}
-          </ToggleGroupItem>
-          <ToggleGroupItem value="manual" className="h-auto min-w-0 flex-col gap-1 whitespace-normal py-2 text-xs sm:flex-row sm:text-sm">
-            <PenLine className="size-4 shrink-0" aria-hidden />{t("dockerModes.manual")}
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <p className="text-sm text-muted-foreground">
-          {dockerSource === "compose" ? t("dockerModes.composeHint") : dockerSource === "manual" ? t("dockerModes.manualHint") : t("dockerModes.searchHint")}
-        </p>
+          onChange={(source) => { if (source) setDockerSource(form, source); }}
+          options={[
+            { value: "search", label: t("dockerModes.search"), hint: t("dockerModes.searchHint"), icon: Search },
+            { value: "compose", label: t("dockerModes.compose"), hint: t("dockerModes.composeHint"), icon: FileCode2 },
+            { value: "manual", label: t("dockerModes.manual"), hint: t("dockerModes.manualHint"), icon: PenLine },
+          ]}
+        />
+        </div>
       </TabsContent>
     </Tabs>
   );

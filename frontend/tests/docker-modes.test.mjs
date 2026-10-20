@@ -226,11 +226,14 @@ test("Compose survives a recipe tab round-trip even though type reset unregister
   assert.equal(screen.queryByRole("combobox", { name: /^Docker image/ }), null);
 });
 
-test("the old Use compose and Use an image links update the visible mode switch too", async () => {
+test("the mode cards are the only switch: compose shows the file first and no image fields", async () => {
   renderForm();
-  fireEvent.click(screen.getByRole("button", { name: messages.applications.dockerImage.useCompose }));
+  assert.equal(screen.queryByRole("button", { name: /compose file instead/i }), null);
+  changeMode(mode.compose);
   assert.equal(screen.getByRole("radio", { name: mode.compose }).getAttribute("aria-checked"), "true");
-  fireEvent.click(screen.getByRole("button", { name: messages.applications.dockerImage.useImage }));
+  assert.ok(await screen.findByRole("textbox", { name: /^Compose file/ }));
+  assert.equal(screen.queryByText(/You are writing your own compose file/), null);
+  changeMode(mode.search);
   assert.equal(screen.getByRole("radio", { name: mode.search }).getAttribute("aria-checked"), "true");
   assert.ok(searchInput());
 });
@@ -249,4 +252,23 @@ test("manual discovery failure keeps the existing explicit-port fallback with no
   assert.equal(body.container_port, 8080);
   assert.equal(body.docker_mode, "simple");
   assert.equal(globalThis.__dockerApiCalls.search ?? 0, 0);
+});
+
+// Krishna, 20 Oct: the three modes read as a second row of tabs between two
+// paragraphs. Now cards with a one-line hint each, and no paragraph around them.
+test("the Container modes are cards named by their label, with no hint paragraph around them", () => {
+  const picker = readFileSync("components/applications/deploy-source-picker.jsx", "utf8");
+  assert.match(picker, /<div className="@container">\s*<ChoiceField\s+variant="card"\s+aria-label=\{t\("dockerModes\.label"\)\}\s+className="grid gap-2 @3xl:grid-cols-3"/);
+  assert.doesNotMatch(picker, /ToggleGroup|tabDockerHint/);
+  const field = readFileSync("components/ui/choice-field.jsx", "utf8");
+  assert.match(field, /aria-labelledby=\{`\$\{optionId\}-label`\}/);
+});
+
+// Krishna, 20 Oct: the 1-Click Recipes / Container switch read as a faint strip.
+// Each half now has a title and a subtitle, named by the title alone.
+test("the recipes/container switch shows a subtitle per tab and is named by its title", () => {
+  const picker = readFileSync("components/applications/deploy-source-picker.jsx", "utf8");
+  assert.match(picker, /aria-labelledby=\{`\$\{tabId\}-recipes`\} aria-describedby=\{`\$\{tabId\}-recipes-hint`\}/);
+  assert.match(picker, /t\("recipes\.tabDockerShort"\)/);
+  assert.doesNotMatch(picker, /tabOneClickHint/);
 });

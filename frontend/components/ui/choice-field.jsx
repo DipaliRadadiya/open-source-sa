@@ -5,7 +5,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 // `options`: [{ value, label, hint, icon, tone, disabledReason }]; `tone: "warning"` marks an option
 // that weakens the server. `variant="card"` boxes each option.
-export function ChoiceField({ value, onChange, options, disabled, name, className, variant }) {
+export function ChoiceField({ value, onChange, options, disabled, name, className, variant, "aria-label": ariaLabel }) {
   const id = useId();
   const card = variant === "card";
 
@@ -15,6 +15,7 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
       onValueChange={onChange}
       disabled={disabled}
       name={name}
+      aria-label={ariaLabel}
       // Callers may lay options out in columns; default is one per line.
       className={cn("gap-1.5", className)}
     >
@@ -48,6 +49,10 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
               id={optionId}
               disabled={disabled || blocked}
               className="mt-0.5"
+              // Named by the label alone; the hint or reason is its description,
+              // so a screen reader does not read both as one long name.
+              aria-labelledby={`${optionId}-label`}
+              aria-describedby={blocked || option.hint ? `${optionId}-hint` : undefined}
             />
             {option.icon ? (
               <span
@@ -62,6 +67,7 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
             <span className="space-y-0.5">
               {/* Weight marks the choice: it survives greyscale and colour-blindness. */}
               <span
+                id={`${optionId}-label`}
                 className={cn(
                   "block text-sm",
                   checked ? "font-semibold" : "font-medium",
@@ -71,11 +77,11 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
                 {option.label}
               </span>
               {blocked ? (
-                <span className="block text-xs font-medium text-warning">
+                <span id={`${optionId}-hint`} className="block text-xs font-medium text-warning">
                   {option.disabledReason}
                 </span>
               ) : option.hint ? (
-                <span className="block text-xs text-muted-foreground">
+                <span id={`${optionId}-hint`} className="block text-xs text-muted-foreground">
                   {option.hint}
                 </span>
               ) : null}

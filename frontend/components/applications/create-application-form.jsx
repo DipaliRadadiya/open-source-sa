@@ -95,13 +95,13 @@ import {
 } from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
 import { DockerImageSetup } from "@/components/applications/docker-image-setup";
+import { DockerComposeSetup } from "@/components/applications/docker-compose-setup";
 import {
   DOCKER_LIMITS,
   dockerCreateFields,
   dockerEnvProblem,
   dockerServerErrors,
   dockerVolumeProblem,
-  setDockerSource,
 } from "@/lib/docker/create-request";
 import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
 
@@ -930,14 +930,17 @@ export function CreateApplicationForm({
         ? { ...config, advanced: true }
         : isDockerSimple && (config.name === "image" || config.name === "container_port")
           ? { ...config, required: true }
-          : config,
+          : isDocker && !isDockerSimple && config.name === "compose"
+            ? { ...config, required: true }
+            : config,
     );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
   // The mode is chosen by a link, and simple mode's image fields by the picker.
   const renderedByForm = (config) =>
     !(isDocker && config.name === "docker_mode") &&
-    !(isDockerSimple && DOCKER_PICKER_FIELDS.has(config.name));
+    !(isDockerSimple && DOCKER_PICKER_FIELDS.has(config.name)) &&
+    !(isDocker && !isDockerSimple && (config.name === "compose" || config.name === "registry_id"));
   const formStandardFields = standardFields.filter(renderedByForm);
   const formAdvancedFields = advancedFields.filter(renderedByForm);
   const registryOptions =
@@ -2274,24 +2277,9 @@ export function CreateApplicationForm({
                       onUseRecipe={(slug) => form.setValue("site_type", slug, { shouldDirty: true })}
                       initialQuery={values.docker_search_query ?? ""}
                       registryOptions={registryOptions}
-                      onUseCompose={() => setDockerSource(form, "compose")}
                     />
                   ) : isDocker ? (
-                    // The form's note shape (as the DNS note above): icon on the first line.
-                    <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
-                      <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-                      <p className="min-w-0">
-                        {t("dockerImage.composeMode")}{" "}
-                        <Button
-                          type="button"
-                          variant="link"
-                          className="h-auto max-w-full p-0 text-start text-xs whitespace-normal"
-                          onClick={() => setDockerSource(form, "search")}
-                        >
-                          {t("dockerImage.useImage")}
-                        </Button>
-                      </p>
-                    </div>
+                    <DockerComposeSetup form={form} registryOptions={registryOptions} />
                   ) : null}
                   {formStandardFields.length ? (
                     <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">

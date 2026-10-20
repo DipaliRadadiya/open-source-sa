@@ -3,14 +3,14 @@ import { useWatch } from "react-hook-form";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Box,
-  ChevronDown,
-  FileCode2,
-  KeyRound,
+  HardDrive,
   Loader2,
+  Plug,
   Plus,
   Search,
   Star,
   Trash2,
+  Variable,
 } from "lucide-react";
 import {
   getDockerImageTags,
@@ -29,12 +29,13 @@ import {
   volumeNameFor,
 } from "@/lib/docker/image-ref";
 import { DOCKER_LIMITS, envRowProblem } from "@/lib/docker/create-request";
+import { beforeDeployWarnings } from "@/lib/docker/inspect-warnings";
+import { DockerRegistryPicker } from "@/components/applications/docker-registry-picker";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Note } from "@/components/ui/note";
@@ -60,6 +61,9 @@ const EXAMPLES = ["memos", "uptime-kuma", "nginx"];
 // Main's higher-contrast amber for warning TEXT; plain `text-warning` is faint on white.
 const WARNING_TEXT = "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning";
 const NO_REGISTRY = "__none__";
+// A fact row: label column on wide forms, label above on narrow ones.
+const FACT_ROW = "grid gap-2 p-3 @lg:grid-cols-[12.5rem_minmax(0,1fr)] @lg:gap-4";
+const FACT_LABEL = "flex items-center gap-2 self-start text-sm font-medium @lg:min-h-9";
 // Set by the base image or the build, never a setting of the app itself.
 const SYSTEM_ENV = /^(PATH|HOME|HOSTNAME|TERM|LANG|LANGUAGE|LC_[A-Z]+|SHLVL|PWD|GPG_KEYS?|[A-Z0-9_]+_(VERSION|SHA256|SHA512|CHECKSUM|GPG_KEY))$/;
 
@@ -98,7 +102,7 @@ function volumeRowsFrom(inspection) {
  * `docker_env`, `docker_required_env` and `docker_image_state`, which the create
  * form turns into the request.
  */
-export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mode = "search", recipes = [], onUseRecipe, initialQuery = "" }) {
+export function DockerImageSetup({ form, registryOptions = [], mode = "search", recipes = [], onUseRecipe, initialQuery = "" }) {
   const t = useTranslations("applications.dockerImage");
   const tm = useTranslations("applications.dockerModes");
   const tr = useTranslations("applications.recipes");
@@ -342,6 +346,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
   const portDiffers =
     detected?.suggested_port && String(port ?? "") !== "" && Number(port) !== detected.suggested_port;
   const otherPorts = (detected?.exposed_ports ?? []).filter((item) => item !== detected?.suggested_port);
+  const beforeDeploy = beforeDeployWarnings(detected);
   // Server errors placed by the create form (see dockerServerErrors).
   const envListError = errors.docker_env_list?.message;
   const volumeListError = errors.docker_volumes_list?.message;
@@ -564,13 +569,15 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
 
       {/* 2. The version */}
       {chosen ? (
-        <div data-field-name="image_tag" className="space-y-2">
+        // One column of the form's two-column grid, the width of every other field.
+        <div className="grid gap-4 @2xl:grid-cols-2">
+        <div data-field-name="image_tag" className="min-w-0 space-y-2">
           <Label htmlFor={versionId} hint={t("versionHint")}>{t("versionLabel")}</Label>
           {tags.state === "loading" ? (
-            <Skeleton className="h-9 w-full rounded-lg sm:w-72" />
+            <Skeleton className="h-9 w-full rounded-lg" />
           ) : tags.state === "ready" ? (
             <Select value={tag} onValueChange={setTag}>
-              <SelectTrigger id={versionId} className="w-full sm:w-72">
+              <SelectTrigger id={versionId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="max-h-64">
@@ -579,7 +586,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                   <SelectItem key={item.name} value={item.name}>
                     <span className="font-mono">{item.name}</span>
                     {item.name === tags.recommended ? (
-                      <Badge className="ms-2 font-normal">{t("recommended")}</Badge>
+                      <Badge className="ms-2 shrink-0 font-normal">{t("recommended")}</Badge>
                     ) : null}
                   </SelectItem>
                 ))}
@@ -588,7 +595,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
           ) : (
             <Input
               id={versionId}
-              className="w-full font-mono sm:w-72"
+              className="w-full font-mono"
               value={tag}
               maxLength={128}
               spellCheck={false}
@@ -596,8 +603,10 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
             />
           )}
           <p className="text-sm text-muted-foreground">
-            {tag === "latest" ? t("latestWarning") : t("versionHelp")}
+            {/* "We picked…" only when it did: not for a version typed or chosen by hand. */}
+            {tag === "latest" ? t("latestWarning") : tag && tag === tags.recommended ? t("versionHelp") : null}
           </p>
+        </div>
         </div>
       ) : null}
 
@@ -634,13 +643,19 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                 <Note title={t("inspectUnavailableTitle")}>{t("inspectUnavailableBody")}</Note>
               ) : null}
 
+              {/* One card, a row per fact: label and icon on the left, what the
+                  image says (and the way to change it) on the right. */}
+              <div className="@container divide-y rounded-lg border">
               {/* Port */}
               <FormField
                 control={form.control}
                 name="container_port"
                 render={({ field }) => (
-                  <FormItem data-field-name="container_port" className="space-y-1.5">
-                    <FormLabel hint={t("portHint")} required={portAsked}>{t("portLabel")}</FormLabel>
+                  <FormItem data-field-name="container_port" className={FACT_ROW}>
+                    <FormLabel hint={t("portHint")} required={portAsked} className={FACT_LABEL}>
+                      <Plug className="size-4 text-muted-foreground" aria-hidden />{t("portLabel")}
+                    </FormLabel>
+                    <div className="min-w-0 space-y-1.5">
                     {portAsked || portEditing ? (
                       <>
                         <FormControl>
@@ -654,7 +669,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                           />
                         </FormControl>
                         {portAsked ? (
-                          <FormDescription>{t("portAsk")}</FormDescription>
+                          <FormDescription className="text-sm">{t("portAsk")}</FormDescription>
                         ) : (
                           <Caution>
                             <span>{t("portChangeWarning", { port: detected?.suggested_port })}</span>{" "}
@@ -697,14 +712,18 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                       </FormDescription>
                     ) : null}
                     <FormMessage />
+                    </div>
                   </FormItem>
                 )}
               />
 
               {/* Storage */}
               {inspection.state === "ready" ? (
-                <div className="space-y-2" data-field-name="docker_volumes">
-                  <p className="text-sm font-medium">{t("storageLabel")}</p>
+                <div className={FACT_ROW} data-field-name="docker_volumes">
+                  <p className={FACT_LABEL}>
+                    <HardDrive className="size-4 text-muted-foreground" aria-hidden />{t("storageLabel")}
+                  </p>
+                  <div className="min-w-0 space-y-2">
                   {volumes.length ? (
                     <ul className="space-y-2">
                       {volumes.map((volume, index) => {
@@ -756,14 +775,18 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                   {volumeListError ? (
                     <p className="text-xs text-destructive" data-form-error>{volumeListError}</p>
                   ) : null}
+                  </div>
                 </div>
               ) : null}
 
               {/* Settings (environment variables) */}
               {inspection.state === "ready" || envRows.length ? (
-                <div className="space-y-2" data-field-name="docker_env">
-                  <p className="text-sm font-medium">{t("settingsLabel")}</p>
-                  <p className="text-sm text-muted-foreground">{t("settingsHint")}</p>
+                <div className={FACT_ROW} data-field-name="docker_env">
+                  <p className={FACT_LABEL}>
+                    <Variable className="size-4 text-muted-foreground" aria-hidden />{t("settingsLabel")}
+                  </p>
+                  <div className="min-w-0 space-y-2">
+                  {envRows.length ? <p className="text-sm text-muted-foreground">{t("settingsHint")}</p> : null}
                   {envRows.length ? (
                     <ul className="space-y-2">
                       {envRows.map((row, index) => {
@@ -813,7 +836,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="order-2 sm:order-3"
+                                  // Red like every other row's delete in the panel.
+                                  className="order-2 text-destructive hover:bg-destructive/10 hover:text-destructive sm:order-3"
                                   aria-label={t("envRemove", { key: row.key || "…" })}
                                   onClick={() => removeEnv(index)}
                                 >
@@ -846,14 +870,16 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
                       {t("envAdd")}
                     </Button>
                   )}
+                  </div>
                 </div>
               ) : null}
+              </div>
 
-              {detected?.warnings?.length ? (
+              {beforeDeploy.length ? (
                 <Caution size="md">
                   <p className="font-medium">{t("warningsTitle")}</p>
                   <ul className="list-disc ps-4">
-                    {detected.warnings.map((warning) => (
+                    {beforeDeploy.map((warning) => (
                       <li key={warning}>{warning}</li>
                     ))}
                   </ul>
@@ -866,55 +892,12 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mod
       ) : null}
 
       {/* Saved registry credentials are optional in search, open first in manual. */}
-      {registryOptions.length ? (
-        <Collapsible open={registryOpen} onOpenChange={setRegistryOpen}>
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" className="-ms-2 gap-1.5 text-muted-foreground">
-              <KeyRound className="size-3.5" aria-hidden />
-              {t("privateRegistry")}
-              <ChevronDown className={cn("size-3.5 transition-transform", registryOpen && "rotate-180")} aria-hidden />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2">
-            <FormField
-              control={form.control}
-              name="registry_id"
-              render={({ field }) => (
-                <FormItem data-field-name="registry_id" className="max-w-md">
-                  <Select
-                    value={field.value ? String(field.value) : NO_REGISTRY}
-                    onValueChange={(value) => field.onChange(value === NO_REGISTRY ? "" : value)}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full" aria-label={t("privateRegistry")}>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NO_REGISTRY}>{t("publicImage")}</SelectItem>
-                      {registryOptions.map((option) => (
-                        <SelectItem key={option.value} value={String(option.value)}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>{t("privateRegistryHint")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      ) : null}
-
-      <p className="border-t pt-4 text-sm text-muted-foreground">
-        <FileCode2 className="me-1.5 inline size-3.5 align-[-2px]" aria-hidden />
-        {t("composeLead")}{" "}
-        <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={onUseCompose}>
-          {t("useCompose")}
-        </Button>
-      </p>
+      <DockerRegistryPicker
+        form={form}
+        registryOptions={registryOptions}
+        open={registryOpen}
+        onOpenChange={setRegistryOpen}
+      />
     </div>
   );
 }
