@@ -7,6 +7,7 @@
  */
 
 return [
+    'application' => 'Application',
     'server' => 'Server',
     'integration' => 'Integrations',
 ];

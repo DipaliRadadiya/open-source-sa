@@ -34,7 +34,6 @@ return [
         'CCBot',
         'Bytespider',
         'Meta-ExternalAgent',
-        'meta-externalagent',
         'Amazonbot',
         'anthropic-ai',
         'cohere-ai',
