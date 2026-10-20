@@ -179,7 +179,7 @@ return [
         'table_prefix_optional' => 'Optional. Clear it and the tables are created with no prefix at all.',
         'start_command' => 'The entry file, for example "node server.js". Not "npm start" — a package manager forks the real process, so shutdown signals never reach it.',
         'app_port' => 'Left empty, the panel picks a free one.',
-        'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
+        'rendering_type' => 'PHP runs your code through the server\'s PHP. Server-side rendering runs your app as a process and proxies to it. Client-side rendering and static are built to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
         'build_command' => 'Run after the code is fetched, e.g. composer install --no-dev',
         'deploy_script' => 'Runs after the code is fetched, as your application user and on this application\'s own PHP version. Leave empty to use the build command.',

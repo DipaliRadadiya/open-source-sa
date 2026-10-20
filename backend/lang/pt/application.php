@@ -174,7 +174,7 @@ return [
         'table_prefix_optional' => 'Opcional. Se o limpar, as tabelas são criadas sem qualquer prefixo.',
         'start_command' => 'O ficheiro de entrada, por exemplo "node server.js". Não "npm start": um gestor de pacotes bifurca o processo real, por isso os sinais de encerramento nunca lhe chegam.',
         'app_port' => 'Se deixar vazio, o painel escolhe uma porta livre.',
-        'rendering_type' => 'A renderização no servidor executa a sua app e faz proxy para ela. As outras duas compilam ficheiros que o servidor web entrega diretamente — mais rápido e sem nada a manter em execução.',
+        'rendering_type' => 'PHP executa o seu código com o PHP do servidor. A renderização no servidor executa a sua app como um processo e faz proxy para ela. A renderização no cliente e a estática são compiladas em ficheiros que o servidor web entrega diretamente — mais rápido e sem nada a manter em execução.',
         'repository_url' => 'Um repositório público — sem necessidade de conta. Deve ser um endereço https://.',
         'build_command' => 'Executado após baixar o código, ex.: composer install --no-dev',
         'deploy_script' => 'É executado após obter o código, como o utilizador da aplicação e na versão de PHP desta aplicação. Deixe vazio para usar o comando de compilação.',

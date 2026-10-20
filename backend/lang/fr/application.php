@@ -174,7 +174,7 @@ return [
         'table_prefix_optional' => 'Facultatif. Si vous le videz, les tables sont créées sans aucun préfixe.',
         'start_command' => 'Le fichier d\'entrée, par exemple « node server.js ». Pas « npm start » : un gestionnaire de paquets fork le vrai processus, donc les signaux d\'arrêt ne l\'atteignent jamais.',
         'app_port' => 'Laissé vide, le panneau en choisit un libre.',
-        'rendering_type' => 'Le rendu côté serveur exécute votre app et lui sert de proxy. Les deux autres compilent des fichiers que le serveur web sert directement — plus rapide, et rien à maintenir en marche.',
+        'rendering_type' => 'PHP exécute votre code avec le PHP du serveur. Le rendu côté serveur lance votre app comme un processus et lui sert de proxy. Le rendu côté client et le statique sont compilés en fichiers que le serveur web sert directement — plus rapide, et rien à maintenir en marche.',
         'repository_url' => 'Un dépôt public — aucun compte requis. Doit être une adresse https://.',
         'build_command' => 'Exécutée après la récupération du code, ex. composer install --no-dev',
         'deploy_script' => 'S’exécute après la récupération du code, en tant qu’utilisateur de l’application et avec la version de PHP de cette application. Laissez vide pour utiliser la commande de build.',

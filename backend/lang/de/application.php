@@ -174,7 +174,7 @@ return [
         'table_prefix_optional' => 'Optional. Wird das Feld geleert, werden die Tabellen ganz ohne Präfix angelegt.',
         'start_command' => 'Die Einstiegsdatei, z. B. „node server.js“. Nicht „npm start“ – ein Paketmanager forkt den eigentlichen Prozess, sodass Shutdown-Signale ihn nie erreichen.',
         'app_port' => 'Leer gelassen wählt das Panel einen freien Port.',
-        'rendering_type' => 'Server-Rendering führt Ihre App aus und leitet an sie weiter. Die übrigen Arten liefern PHP oder fertig gebaute Dateien direkt über den Webserver aus – schneller, und nichts muss laufen.',
+        'rendering_type' => 'PHP führt Ihren Code über das PHP des Servers aus. Serverseitiges Rendering startet Ihre App als Prozess und leitet Anfragen per Proxy an sie weiter. Clientseitiges Rendering und Statisch werden zu Dateien gebaut, die der Webserver direkt ausliefert – schneller, und es muss nichts weiterlaufen.',
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
         'deploy_script' => 'Läuft nach dem Abrufen des Codes, als Ihr Site-Benutzer und mit der PHP-Version dieser Site. Leer lassen, um den Build-Befehl zu verwenden.',
