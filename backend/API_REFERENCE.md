@@ -3633,6 +3633,8 @@ Every application and its backup configuration — the overview screen.
 
 Paged. `?search=` case-insensitively matches application name and domain; **`?filter[protected]=0`** is the one this screen exists for — the sites with no backup configured at all; `?sort=name|domain|created_at`, default `name` ascending with case-insensitive name ordering; `?per_page=10|20|30|50|100`, default 10.
 
+**`?kind=database`** (2026-10-20, RC-23) lists **databases** instead: every database that is not part of a site — only those can have a schedule of their own; a site's database is backed up with the site. Same paging, `search` (name), `filter[protected]` and `meta` counts (over those databases), plus `meta.kind: "database"`; `sort=name|engine|created_at`. Each row: `{"database_id", "database_name", "database_engine", "backup_target": {…}|null, "last_backup": {…}|null}`. Without `kind` (or `kind=application`) the answer is exactly as below.
+
 **`meta.total` / `meta.protected` / `meta.unprotected` count every application on the server**, not the current page and not the current filter — the header reads "N of M sites protected", and that sentence must not change when you turn the page. **`meta.matched` is the separate number**: how many rows the current search and filter found. Two different questions, two fields.
 
 ```json

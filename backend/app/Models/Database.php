@@ -57,4 +57,10 @@ class Database extends Model
     {
         return $this->hasMany(Backup::class);
     }
+
+    /** The newest backup of this database on its own (RC-23). */
+    public function latestBackup(): HasOne
+    {
+        return $this->hasOne(Backup::class)->latestOfMany();
+    }
 }

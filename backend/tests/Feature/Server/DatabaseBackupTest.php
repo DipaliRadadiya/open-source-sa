@@ -411,3 +411,60 @@ describe('finding a database\'s restores', function () {
             ->assertJsonValidationErrors('filter.database_id');
     });
 });
+
+/*
+ * RC-23 (frontend QA, 17 Oct): database-only schedules had no list — GET
+ * /backup-targets returned applications only, so the overview needed one
+ * request per database to show which were backed up.
+ */
+describe('the overview\'s database rows', function () {
+    it('lists databases that are not part of a site, with their schedule and last backup', function () {
+        $backup = dbBackupRow();
+        $plain = Database::create(['name' => 'archive', 'engine' => 'pgsql']);
+        $site = Application::forceCreate([
+            'system_user_id' => SystemUser::create(['username' => 'rc23', 'home_path' => '/home/rc23'])->id,
+            'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'php',
+            'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+        Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $site->id]);
+
+        $rows = $this->withHeaders(dbBackupHeaders())->getJson('/api/backup-targets?kind=database&sort=name')
+            ->assertOk()
+            ->assertJsonPath('meta.kind', 'database')
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('meta.protected', 1)
+            ->assertJsonPath('meta.unprotected', 1)
+            ->assertJsonPath('meta.configured', 1)
+            ->json('backup_targets');
+
+        expect(array_column($rows, 'database_name'))->toBe(['archive', 'ledger'])
+            ->and($rows[0]['backup_target'])->toBeNull()
+            ->and($rows[0]['database_engine'])->toBe('pgsql')
+            ->and($rows[1]['database_id'])->toBe($this->db->id)
+            ->and($rows[1]['backup_target']['frequency'])->toBe('daily')
+            ->and($rows[1]['last_backup']['id'])->toBe($backup->id);
+    });
+
+    it('filters to the unprotected ones and searches by name', function () {
+        dbBackupRow();
+        Database::create(['name' => 'archive', 'engine' => 'mysql']);
+
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/backup-targets?kind=database&filter[protected]=0')
+            ->assertOk()->assertJsonCount(1, 'backup_targets')->assertJsonPath('backup_targets.0.database_name', 'archive');
+
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/backup-targets?kind=database&search=ledg')
+            ->assertOk()->assertJsonCount(1, 'backup_targets')->assertJsonPath('backup_targets.0.database_name', 'ledger');
+    });
+
+    it('still lists applications without a kind, and refuses an unknown one', function () {
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/backup-targets')
+            ->assertOk()->assertJsonMissingPath('meta.kind');
+
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/backup-targets?kind=server')
+            ->assertUnprocessable()->assertJsonValidationErrors('kind');
+
+        // A site's sort that databases do not have.
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/backup-targets?kind=database&sort=domain')
+            ->assertUnprocessable()->assertJsonValidationErrors('sort');
+    });
+});

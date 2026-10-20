@@ -25,6 +25,9 @@ class IndexBackupTargetsRequest extends FormRequest
 
     public const SORTS = ['name', 'domain', 'created_at'];
 
+    /** `kind=database` (RC-23): databases have no domain, and do have an engine. */
+    public const DATABASE_SORTS = ['name', 'engine', 'created_at'];
+
     public function authorize(): bool
     {
         return $this->user()?->canView('backup') ?? false;
@@ -42,7 +45,12 @@ class IndexBackupTargetsRequest extends FormRequest
 
             'filter.protected' => ['sometimes', 'nullable', 'boolean'],
 
-            'sort' => ListSort::rule(self::SORTS),
+            // RC-23: `database` lists the databases that are not part of a
+            // site — only those can have a schedule of their own — instead of
+            // the applications. Absent means `application`, as before.
+            'kind' => ['sometimes', Rule::in(['application', 'database'])],
+
+            'sort' => ListSort::rule($this->input('kind') === 'database' ? self::DATABASE_SORTS : self::SORTS),
 
             'per_page' => ['sometimes', Rule::in(self::PAGE_SIZES)],
         ];

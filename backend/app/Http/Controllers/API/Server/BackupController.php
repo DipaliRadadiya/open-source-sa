@@ -17,10 +17,12 @@ use App\Http\Requests\Server\Backup\SaveBackupTargetRequest;
 use App\Http\Resources\ApplicationBackupResource;
 use App\Http\Resources\BackupResource;
 use App\Http\Resources\BackupTargetResource;
+use App\Http\Resources\DatabaseBackupOverviewResource;
 use App\Jobs\RunBackup;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Database;
 use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
@@ -172,6 +174,10 @@ class BackupController extends Controller
     {
         $search = trim((string) $request->validated('search', ''));
         $filter = (array) $request->validated('filter', []);
+
+        if ($request->validated('kind') === 'database') {
+            return $this->indexDatabaseTargets($request, $search, $filter);
+        }
 
         $applications = Application::query()
             ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
@@ -622,6 +628,54 @@ class BackupController extends Controller
     }
 
     /** A backup target that will actually run on its own. */
+    /**
+     * The overview's database rows (RC-23): every database that is not part of
+     * a site, since only those can have a schedule of their own — a site's
+     * database is backed up with the site and already has its row. Same
+     * filters, paging and counts as the applications, so the screen renders
+     * both the same way.
+     *
+     * @param  array<string, mixed>  $filter
+     */
+    private function indexDatabaseTargets(IndexBackupTargetsRequest $request, string $search, array $filter): JsonResponse
+    {
+        $own = fn () => Database::query()->whereNull('application_id');
+
+        $databases = $own()
+            ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
+            ->when(array_key_exists('protected', $filter) && $filter['protected'] !== null,
+                fn ($query) => $filter['protected']
+                    ? $query->whereHas('backupTarget', $this->scheduled(...))
+                    : $query->whereDoesntHave('backupTarget', $this->scheduled(...)))
+            ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name']));
+
+        $databases = ListSort::apply(
+            $databases,
+            $request->validated('sort'),
+            IndexBackupTargetsRequest::DATABASE_SORTS,
+            'asc',
+            caseInsensitive: ['name'],
+        )->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
+
+        $total = $own()->count();
+        $protected = $own()->whereHas('backupTarget', $this->scheduled(...))->count();
+
+        return response()->json([
+            'backup_targets' => DatabaseBackupOverviewResource::collection($databases->items())->resolve(),
+            'meta' => [
+                'kind' => 'database',
+                'total' => $total,
+                'protected' => $protected,
+                'unprotected' => $total - $protected,
+                'configured' => $own()->whereHas('backupTarget')->count(),
+                'current_page' => $databases->currentPage(),
+                'per_page' => $databases->perPage(),
+                'matched' => $databases->total(),
+                'last_page' => $databases->lastPage(),
+            ],
+        ]);
+    }
+
     private function scheduled(Builder $query): void
     {
         $query->where('enabled', true)->where('frequency', '!=', 'manual');
