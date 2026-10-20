@@ -29,6 +29,8 @@ class IndexRestoresRequest extends FormRequest
     {
         return [
             'filter.application_id' => ['sometimes', 'integer', Rule::exists('applications', 'id')],
+            // RC-19: a database's own restores, for its Backups tab.
+            'filter.database_id' => ['sometimes', 'integer', Rule::exists('databases', 'id')],
             'filter.status' => ['sometimes', Rule::enum(RestoreStatus::class)],
             'filter.type' => ['sometimes', Rule::enum(BackupType::class)],
 

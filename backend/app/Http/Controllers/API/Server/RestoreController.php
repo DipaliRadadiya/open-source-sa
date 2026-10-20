@@ -67,8 +67,9 @@ class RestoreController extends Controller
         $filter = $request->validated('filter', []);
 
         $restores = Restore::query()
-            ->with('application:id,name,domain')
+            ->with(['application:id,name,domain', 'database:id,name,engine', 'backup'])
             ->when($filter['application_id'] ?? null, fn ($q, $id) => $q->where('application_id', $id))
+            ->when($filter['database_id'] ?? null, fn ($q, $id) => $q->where('database_id', $id))
             ->when($filter['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->when($filter['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
             ->when($filter['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', Carbon::parse($from)->startOfDay()))

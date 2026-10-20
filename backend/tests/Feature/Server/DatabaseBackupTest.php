@@ -347,3 +347,67 @@ it('serves a database\'s backup only under that database', function () {
     $this->withHeaders(dbBackupHeaders())->deleteJson("/api/databases/{$this->db->id}/backups/{$backup->id}")->assertNotFound();
     $this->withHeaders(dbBackupHeaders())->getJson("/api/databases/{$this->db->id}/backups/{$backup->id}/download")->assertNotFound();
 });
+
+/*
+ * RC-19 (frontend QA, 16 Oct): a database's own restore carried its database
+ * only in the row, never in the response, and GET /restores could not be
+ * asked for one database. Its Backups tab lost the restore on reload, and a
+ * database restore looked like a deleted site's (both have no application).
+ */
+describe('finding a database\'s restores', function () {
+    function dbRestore(Backup $backup, ?int $databaseId): Restore
+    {
+        return Restore::create([
+            'backup_id' => $backup->id, 'database_id' => $databaseId, 'type' => 'database',
+            'status' => RestoreStatus::Succeeded, 'reference' => (string) Str::uuid(),
+        ]);
+    }
+
+    it('names the database it restored, and filters by it', function () {
+        $restore = dbRestore(dbBackupRow(), $this->db->id);
+        $other = Database::create(['name' => 'other', 'engine' => 'mariadb', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci']);
+        dbRestore(dbBackupRow(dbBackupTarget($other), 'mariadb'), $other->id);
+
+        $this->withHeaders(dbBackupHeaders())->getJson("/api/restores?filter[database_id]={$this->db->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'restores')
+            ->assertJsonPath('restores.0.id', $restore->id)
+            ->assertJsonPath('restores.0.database_id', $this->db->id)
+            ->assertJsonPath('restores.0.database_name', 'ledger')
+            ->assertJsonPath('restores.0.database_engine', 'mysql')
+            ->assertJsonPath('restores.0.application_id', null);
+    });
+
+    it('keeps the name after the database is deleted, from the backup', function () {
+        $restore = dbRestore(dbBackupRow(), $this->db->id);
+        app(DeleteDatabase::class)->execute($this->db);
+
+        $this->withHeaders(dbBackupHeaders())->getJson("/api/restores/{$restore->id}")
+            ->assertOk()
+            ->assertJsonPath('restore.database_id', null)
+            ->assertJsonPath('restore.database_name', 'ledger')
+            ->assertJsonPath('restore.database_engine', 'mysql');
+    });
+
+    it('sends no database for a site\'s restore', function () {
+        $application = Application::forceCreate([
+            'system_user_id' => SystemUser::create(['username' => 'rc19', 'home_path' => '/home/rc19'])->id,
+            'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'php',
+            'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+        $backup = Backup::create(['application_id' => $application->id, 'type' => 'full', 'status' => BackupStatus::Verified, 'manifest' => ['databases' => []]]);
+        $restore = Restore::create(['backup_id' => $backup->id, 'application_id' => $application->id, 'type' => 'filesystem', 'status' => RestoreStatus::Succeeded, 'reference' => (string) Str::uuid()]);
+
+        $this->withHeaders(dbBackupHeaders())->getJson("/api/restores/{$restore->id}")
+            ->assertOk()
+            ->assertJsonPath('restore.database_id', null)
+            ->assertJsonPath('restore.database_name', null)
+            ->assertJsonPath('restore.database_engine', null);
+    });
+
+    it('refuses a database that does not exist as a filter', function () {
+        $this->withHeaders(dbBackupHeaders())->getJson('/api/restores?filter[database_id]=999999')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('filter.database_id');
+    });
+});

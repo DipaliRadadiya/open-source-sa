@@ -3909,12 +3909,15 @@ As `GET /backups/{backup}/download` and `DELETE /backups/{backup}`, for this dat
 
 Restore history — what was restored, when, and by whom. Paginated.
 
-**Query:** `?filter[application_id]=1&filter[status]=succeeded&page=1`
+**Query:** `?filter[application_id]=1&filter[status]=succeeded&page=1`. `filter[database_id]` (2026-10-20, RC-19) lists one database's own restores (an unknown id is a `422`).
+
+`database_id`, `database_name`, `database_engine` name the database of a database's own restore, and are `null` for a site's. After the database is deleted `database_id` is `null` and the name and engine still come from its backup, so the row never reads like a deleted site's.
 
 ```json
 {"restores": [{
   "id": 3, "backup_id": 14, "application_id": 1,
   "application_name": "shop", "application_domain": "shop.example.com",
+  "database_id": null, "database_name": null, "database_engine": null,
   "type": "full", "type_title": "Files and database",
   "status": "succeeded", "status_title": "Restored",
   "current_step": null, "current_step_title": null,

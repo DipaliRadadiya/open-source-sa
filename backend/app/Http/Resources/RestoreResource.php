@@ -28,6 +28,18 @@ class RestoreResource extends JsonResource
             'application_id' => $this->resource->application_id,
             'application_name' => $this->resource->application?->name,
             'application_domain' => $this->resource->application?->domain,
+            // RC-19: a database's own restore. Without these its Backups tab
+            // could not find the restore again after a reload, and a database
+            // restore looked like one of a deleted site (both have no
+            // application). The name and engine come from the backup when the
+            // database itself is gone, as the backup's own row keeps them.
+            'database_id' => $this->resource->database_id,
+            'database_name' => $this->databaseBackup()
+                ? ($this->resource->database?->name ?? $this->resource->backup?->subjectName())
+                : null,
+            'database_engine' => $this->databaseBackup()
+                ? ($this->resource->database?->engine ?? $this->resource->backup?->subject_engine)
+                : null,
             'type' => $this->resource->type->value,
             'type_title' => __('backup.type.'.$this->resource->type->value),
             'status' => $this->resource->status->value,
@@ -59,5 +71,11 @@ class RestoreResource extends JsonResource
             'finished_at' => $this->resource->finished_at?->format('d-m-Y H:i:s'),
             'finished_at_human' => $this->resource->finished_at?->diffForHumans(),
         ];
+    }
+
+    /** A restore of a database on its own, not through a site. */
+    private function databaseBackup(): bool
+    {
+        return $this->resource->database_id !== null || $this->resource->backup?->isDatabaseBackup() === true;
     }
 }
