@@ -213,6 +213,8 @@ return [
     'admin_password_strength_no_symbol' => 'A palavra-passe precisa de uma minúscula, uma maiúscula e um número.',
 
     'attributes' => [
+        'system_user.username' => 'nome de usuário',
+        'system_user.password' => 'senha',
         'name' => 'nome',
         'username' => 'nome de usuário',
         'password' => 'senha',

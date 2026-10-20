@@ -213,6 +213,8 @@ return [
     'admin_password_strength_no_symbol' => 'Пароль должен содержать строчную и заглавную буквы и цифру.',
 
     'attributes' => [
+        'system_user.username' => 'имя пользователя',
+        'system_user.password' => 'пароль',
         'name' => 'имя',
         'username' => 'имя пользователя',
         'password' => 'пароль',

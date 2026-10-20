@@ -310,6 +310,19 @@ describe('the name and password the form chose (FS-B9)', function () {
             ->assertJsonValidationErrors('system_user');
     });
 
+    it('names the field as a person would, not by its path (RC-7)', function (string $locale, string $word) {
+        SystemUser::create(['username' => 'blogowner', 'home_path' => '/home/blogowner']);
+        app()->setLocale($locale);
+
+        $message = $this->actingAs($this->admin)
+            ->withHeader('Accept-Language', $locale)
+            ->postJson('/api/applications', createPayload(['system_user' => ['username' => 'blogowner']]))
+            ->assertUnprocessable()
+            ->json('errors')['system_user.username'][0];
+
+        expect($message)->toContain($word)->not->toContain('system user.username')->not->toContain('system_user');
+    })->with([['en', 'username'], ['de', 'Benutzername'], ['ru', 'имя пользователя']]);
+
     it('refuses a name the server already has', function () {
         Process::fake(fn () => Process::result(output: "blogowner:x:1001:1001::/home/blogowner:/bin/bash\n"));
 

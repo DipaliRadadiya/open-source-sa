@@ -236,6 +236,8 @@ return [
     'admin_password_strength_no_symbol' => 'La contraseña necesita una minúscula, una mayúscula y un número.',
 
     'attributes' => [
+        'system_user.username' => 'nombre de usuario',
+        'system_user.password' => 'contraseña',
         'name' => 'nombre',
         'username' => 'nombre de usuario',
         'password' => 'contraseña',

@@ -213,6 +213,8 @@ return [
     'admin_password_strength_no_symbol' => 'Das Passwort braucht einen Klein- und einen Großbuchstaben und eine Ziffer.',
 
     'attributes' => [
+        'system_user.username' => 'Benutzername',
+        'system_user.password' => 'Passwort',
         'name' => 'Name',
         'username' => 'Benutzername',
         'password' => 'Passwort',

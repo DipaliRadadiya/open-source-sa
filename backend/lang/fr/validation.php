@@ -213,6 +213,8 @@ return [
     'admin_password_strength_no_symbol' => 'Le mot de passe doit contenir une minuscule, une majuscule et un chiffre.',
 
     'attributes' => [
+        'system_user.username' => 'nom d’utilisateur',
+        'system_user.password' => 'mot de passe',
         'name' => 'nom',
         'username' => 'nom d’utilisateur',
         'password' => 'mot de passe',

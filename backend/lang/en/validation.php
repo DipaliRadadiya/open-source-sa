@@ -246,6 +246,8 @@ return [
     'admin_password_strength_no_symbol' => 'The password needs a lowercase letter, an uppercase letter and a number.',
 
     'attributes' => [
+        'system_user.username' => 'username',
+        'system_user.password' => 'password',
         'name' => 'name',
         'username' => 'username',
         'password' => 'password',

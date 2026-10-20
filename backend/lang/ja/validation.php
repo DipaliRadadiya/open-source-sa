@@ -213,6 +213,8 @@ return [
     'admin_password_strength_no_symbol' => 'パスワードには小文字、大文字、数字をそれぞれ含めてください。',
 
     'attributes' => [
+        'system_user.username' => 'ユーザー名',
+        'system_user.password' => 'パスワード',
         'name' => '名前',
         'username' => 'ユーザー名',
         'password' => 'パスワード',

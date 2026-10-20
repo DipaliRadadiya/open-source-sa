@@ -213,6 +213,8 @@ return [
     'admin_password_strength_no_symbol' => 'पासवर्ड में एक छोटा अक्षर, एक बड़ा अक्षर और एक अंक होना चाहिए।',
 
     'attributes' => [
+        'system_user.username' => 'उपयोगकर्ता नाम',
+        'system_user.password' => 'पासवर्ड',
         'name' => 'नाम',
         'username' => 'उपयोगकर्ता नाम',
         'password' => 'पासवर्ड',
