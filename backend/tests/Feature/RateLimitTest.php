@@ -148,6 +148,9 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         // Kuma's rebuild take many minutes.
         'api/applications/{application}/update',
         'api/fail2ban',
+        // RC-20: the running-jobs list, polled by the header on every page —
+        // the one feed that is watched all the time, not just while one job runs.
+        'api/operations',
         // Polled while apt installs the compiler toolchain — up to
         // fifteen minutes, which the global limiter would cut short.
         'api/build-tools',
