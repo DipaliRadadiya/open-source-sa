@@ -312,14 +312,16 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         }
     }
 
-    public function databaseSize(string $name): int
+    public function databaseSize(string $name): ?int
     {
         $result = $this->run(
             'SELECT COALESCE(SUM(data_length + index_length), 0) FROM information_schema.tables '
             ."WHERE table_schema = '".$this->esc($name)."';"
         );
 
-        return $result->ok ? (int) trim($result->output()) : 0;
+        $output = trim($result->output());
+
+        return $result->ok && is_numeric($output) ? (int) $output : null;
     }
 
     /**

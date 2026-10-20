@@ -68,7 +68,7 @@ class CreateDatabase
                     'charset' => $charset,
                     'collation' => $collation,
                     'application_id' => $data['application_id'] ?? null,
-                    'size_bytes' => $engine->databaseSize($data['name']),
+                    'size_bytes' => $engine->databaseSize($data['name']) ?? 0,
                 ]);
 
                 $this->activityLogger->log('database.created', $database, ['name' => $data['name'], 'engine' => $engineName]);

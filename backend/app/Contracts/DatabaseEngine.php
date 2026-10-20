@@ -83,8 +83,12 @@ interface DatabaseEngine
      */
     public function teardownDatabase(string $name, array $users): void;
 
-    /** Size in bytes (0 when unknown). */
-    public function databaseSize(string $name): int;
+    /**
+     * Size in bytes; null when it could not be read (FS-C12). Never 0 for
+     * "unknown": the panel stored that 0 over the real size whenever a
+     * database was viewed while its engine was down, and showed it as empty.
+     */
+    public function databaseSize(string $name): ?int;
 
     /**
      * The character set and collation a database was created with.

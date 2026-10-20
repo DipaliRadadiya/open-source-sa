@@ -374,14 +374,16 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
         $this->must('DROP ROLE IF EXISTS '.$this->ident($this->ownerGroup($name)).';');
     }
 
-    public function databaseSize(string $name): int
+    public function databaseSize(string $name): ?int
     {
         $result = $this->run(sprintf(
             'SELECT COALESCE(pg_database_size(%s), 0);',
             $this->literal($name),
         ));
 
-        return $result->ok ? (int) trim($result->output()) : 0;
+        $output = trim($result->output());
+
+        return $result->ok && is_numeric($output) ? (int) $output : null;
     }
 
     /**

@@ -170,11 +170,13 @@ class MongoEngine implements DatabaseEngine
         }
     }
 
-    public function databaseSize(string $name): int
+    public function databaseSize(string $name): ?int
     {
         $result = $this->run('print(db.getSiblingDB('.$this->js($name).').stats().dataSize);');
 
-        return $result->ok ? (int) trim($result->output()) : 0;
+        $output = trim($result->output());
+
+        return $result->ok && is_numeric($output) ? (int) $output : null;
     }
 
     /**

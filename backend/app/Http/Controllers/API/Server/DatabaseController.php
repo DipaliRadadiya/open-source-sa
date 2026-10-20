@@ -236,8 +236,19 @@ class DatabaseController extends Controller
      */
     public function show(Database $database, DatabaseSizes $sizes): JsonResponse
     {
+        $unmeasured = $sizes->refreshReporting($database);
+
+        $resource = DatabaseResource::make($database->load('users'))->resolve();
+
+        // FS-C12: an engine that is down answers no size at all, and the
+        // stored one (0 for a new database) sent as a fact reads as empty.
+        if ($unmeasured !== null) {
+            $resource['size_bytes'] = null;
+            $resource['size_human'] = null;
+        }
+
         return response()->json([
-            'database' => DatabaseResource::make($sizes->refresh($database)->load('users'))->resolve(),
+            'database' => [...$resource, 'size_reason' => $unmeasured],
         ]);
     }
 

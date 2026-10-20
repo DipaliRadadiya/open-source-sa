@@ -4241,7 +4241,7 @@ Field limits differ and the difference is not arbitrary: `name` allows up to **6
 ### GET `/databases/{database}`
 **Permission:** `database` (view)
 
-Size is re-measured on this single-record view (exact figure worth one query).
+Size is re-measured on this single-record view (exact figure worth one query). When it cannot be measured (2026-10-20, FS-C12) `size_bytes` and `size_human` are `null` and `size_reason` says why: `engine_unreachable` (the engine does not answer — stopped) or `unmeasured` (it answers, the size query failed). `size_reason` is `null` when the size is current. The stored size is never overwritten by a failed reading; lists keep showing the last measured value.
 
 ```json
 {"database": {"id": 1, "name": "shop_db", …, "users": [{…full user object…}]}}

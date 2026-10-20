@@ -1005,6 +1005,46 @@ it('re-measures the size when a single database is shown', function () {
     expect($db->refresh()->size_bytes)->toBe(1048576);
 });
 
+it('says the size is unknown, not 0, when the engine is down (FS-C12)', function () {
+    // Everything fails — the engine is stopped.
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'connection refused'));
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}")->assertOk()
+        ->assertJsonPath('database.size_bytes', null)
+        ->assertJsonPath('database.size_human', null)
+        ->assertJsonPath('database.size_reason', 'engine_unreachable');
+
+    // The stored figure is the last known one, untouched.
+    expect($db->refresh()->size_bytes)->toBe(0);
+});
+
+it('says unmeasured when the engine answers but the size query fails', function () {
+    Process::fake(function ($process) {
+        $sql = (string) ($process->input ?? '');
+
+        return match (true) {
+            str_contains($sql, 'VERSION()') => Process::result(output: '8.0.36'),
+            str_contains($sql, 'SELECT COALESCE') => Process::result(exitCode: 1, errorOutput: 'denied'),
+            default => Process::result(),
+        };
+    });
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 4096]);
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}")->assertOk()
+        ->assertJsonPath('database.size_bytes', null)
+        ->assertJsonPath('database.size_reason', 'unmeasured');
+});
+
+it('sends no size reason when the size was measured', function () {
+    fakeDb();
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}")->assertOk()
+        ->assertJsonPath('database.size_bytes', 1048576)
+        ->assertJsonPath('database.size_reason', null);
+});
+
 it('refreshes every tracked database size on the scheduled tick', function () {
     fakeDb();
 

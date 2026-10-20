@@ -50,7 +50,7 @@ class AdoptDatabases
                     'engine' => $engineName,
                     'charset' => $described['charset'],
                     'collation' => $described['collation'],
-                    'size_bytes' => $engine->databaseSize($name),
+                    'size_bytes' => $engine->databaseSize($name) ?? 0,
                 ]);
 
                 $engineUsers ??= $engine->listUsers();

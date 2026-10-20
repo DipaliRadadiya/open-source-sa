@@ -38,6 +38,30 @@ class DatabaseSizes
     }
 
     /**
+     * Re-measure one database and say why when it could not be (FS-C12):
+     * `engine_unreachable` when its engine does not answer at all, otherwise
+     * `unmeasured`; null when the stored size is now current.
+     *
+     * The stored size is left as it was either way — on a stopped engine it is
+     * the last known figure, which for a new database is 0, and 0 sent as a
+     * fact read as "this database is empty".
+     */
+    public function refreshReporting(Database $database): ?string
+    {
+        $size = $this->measure($database);
+
+        if ($size === null) {
+            return $this->engineAnswers((string) $database->engine) ? 'unmeasured' : 'engine_unreachable';
+        }
+
+        if ($size !== (int) $database->size_bytes) {
+            $database->forceFill(['size_bytes' => $size])->save();
+        }
+
+        return null;
+    }
+
+    /**
      * Re-measure everything the panel tracks.
      *
      * Grouped by engine so an engine that is stopped costs one failed probe
