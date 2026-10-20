@@ -1091,6 +1091,54 @@ describe('frontend QA 2026-09-26 (CL-B1, CL-B2, CL-B4, CL-B5)', function () {
             ->and($clone->fresh()->reason)->toBe('crashed');
     });
 
+    /** The `rm -rf` targets a discard ran (sudo stripped). */
+    function cloneRemovals(callable $run): array
+    {
+        $removed = new ArrayObject;
+        Process::fake(function ($process) use ($removed) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            if (($args[0] ?? '') === 'rm' && ($args[1] ?? '') === '-rf') {
+                $removed[] = $args[2] ?? '';
+            }
+
+            return Process::result();
+        });
+
+        $run();
+
+        return $removed->getArrayCopy();
+    }
+
+    it('removes the half-made copy\'s files too, and never the source\'s (CL-B4)', function () {
+        $source = staticSource();
+        $clone = SiteClone::create(['source_application_id' => $source->id, 'domain' => 'half.test', 'status' => 'running']);
+        Application::forceCreate([
+            'system_user_id' => $this->systemUser->id, 'name' => 'Docs (Clone)', 'slug' => 'docs-clone',
+            'domain' => 'half.test', 'site_type' => 'static', 'serving_profile' => 'static',
+            'status' => 'pending', 'web_root' => '/', 'cloned_from_application_id' => $source->id,
+        ]);
+
+        $removed = cloneRemovals(fn () => (new RunClone($clone->id, $source->id))->failed(new RuntimeException('timed out')));
+
+        expect($removed)->toContain('/home/siteowner/docs-clone')
+            ->not->toContain('/home/siteowner/docs')
+            ->not->toContain('/home/siteowner');
+    });
+
+    it('keeps the files when the half-made row has no slug, which would mean the whole home', function () {
+        $source = staticSource();
+        $clone = SiteClone::create(['source_application_id' => $source->id, 'domain' => 'half.test', 'status' => 'running']);
+        Application::forceCreate([
+            'system_user_id' => $this->systemUser->id, 'name' => 'Docs (Clone)', 'slug' => null,
+            'domain' => 'half.test', 'site_type' => 'static', 'serving_profile' => 'static',
+            'status' => 'pending', 'web_root' => '/', 'cloned_from_application_id' => $source->id,
+        ]);
+
+        $removed = cloneRemovals(fn () => (new RunClone($clone->id, $source->id))->failed(new RuntimeException('timed out')));
+
+        expect($removed)->not->toContain('/home/siteowner');
+    });
+
     it('writes the source site\'s own table prefix into the copy\'s wp-config.php', function () {
         $written = new ArrayObject;
         Process::fake(function ($process) use ($written) {

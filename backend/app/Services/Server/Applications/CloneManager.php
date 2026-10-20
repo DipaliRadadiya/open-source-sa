@@ -420,7 +420,10 @@ class CloneManager
         }
 
         try {
-            $this->provisioner->deprovision($application);
+            // With its files (CL-B4): the copy is the clone's alone, and left
+            // behind it is a second copy of the source's site — 117 MB on a
+            // test server — in a directory nothing lists any more.
+            $this->provisioner->deprovision($application, removeFiles: $this->ownsItsDirectory($application));
         } catch (Throwable $cleanupFailure) {
             Log::channel('server-ops')->warning('could not deprovision a half-made clone', [
                 'feature' => 'application',
@@ -433,6 +436,16 @@ class CloneManager
         // The row is what blocks the retry: it holds the unique domain, the
         // unique name and slug, and any port allocated above.
         $application->delete();
+    }
+
+    /**
+     * Whether a half-made clone's directory is its own to remove: it has a
+     * slug (without one the path is the user's whole home), and slugs are
+     * unique, so `{home}/{slug}` is no other application's.
+     */
+    private function ownsItsDirectory(Application $application): bool
+    {
+        return filled($application->slug) && $application->systemUser !== null;
     }
 
     /**
