@@ -38,6 +38,8 @@
              prefix on every one of them would assert the prefix instead.
              ServerOpsPrivilegeTest enables it and covers the prefixing. -->
         <env name="SERVER_OPS_SUDO" value="false"/>
+        <!-- No test may call a real Central; BrandingTest sets central.url itself. -->
+        <env name="CENTRAL_URL" value=""/>
         <!-- The host's own clock must never decide a test: ServerTimezone reads
              /etc/localtime first (RC-1), so a test that sets only timezone_file
              would otherwise read this machine's zone. Tests that need a link set

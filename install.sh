@@ -122,6 +122,10 @@ CENTRAL_TOKEN="${CENTRAL_TOKEN:-}"
 PANEL_ADMIN_USERNAME="${PANEL_ADMIN_USERNAME:-}"
 PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
 PROGRESS_URL="${PROGRESS_URL:-}"
+# CENTRAL_URL — Central's own address (2026-10-20, RC-15). The panel reads its
+#   public branding from it (GET /api/v1/site-settings); unset, the panel keeps
+#   its built-in branding.
+CENTRAL_URL="${CENTRAL_URL:-}"
 PROGRESS_READY=0   # set once PROGRESS_URL has been checked
 
 # Secrets this script comes to know beyond the ones above (every Redis password
@@ -406,6 +410,11 @@ validate_central_inputs() {
             || die "the administrator password must be 12-128 characters."
         [[ ! "$PANEL_ADMIN_PASSWORD" =~ [[:cntrl:]] ]] \
             || die "the administrator password cannot contain line breaks or control characters."
+    fi
+
+    if [[ -n "$CENTRAL_URL" ]]; then
+        [[ "$CENTRAL_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?/?$ ]] \
+            || die "CENTRAL_URL must be an https:// address with no path, e.g. https://central.example.com"
     fi
 
     if [[ -n "$PROGRESS_URL" ]]; then
@@ -2366,6 +2375,7 @@ setup_backend() {
     set_env "${dir}/.env" APP_URL "${scheme}://${API_HOST}"
     set_env "${dir}/.env" FRONTEND_URL "${scheme}://${PANEL_HOST}"
     set_env "${dir}/.env" SANCTUM_STATEFUL_DOMAINS "$PANEL_HOST"
+    [[ -n "$CENTRAL_URL" ]] && set_env "${dir}/.env" CENTRAL_URL "${CENTRAL_URL%/}"
     set_env "${dir}/.env" DB_CONNECTION sqlite
     set_env "${dir}/.env" DB_DATABASE "$db"
     # All three follow whether Redis actually answered, not whether it was
