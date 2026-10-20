@@ -1,5 +1,6 @@
 import { getPermissions } from "@/lib/permissions/get-permissions";
-import { getApplication } from "@/lib/applications/get-applications";
+import { getApplication, getSiteTypes } from "@/lib/applications/get-applications";
+import { applicationIconDataUri } from "@/lib/applications/application-icon";
 import { ApplicationNav } from "@/components/sections/application-nav";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { SystemUserMissing } from "@/components/applications/system-user-missing";
@@ -24,11 +25,15 @@ export default async function ApplicationLayout({ children, params }) {
     ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
     : [];
   const gitProvider = gitProviderFor(result?.application, providersByAccountId(gitAccounts));
+  // Recipe logos come from the catalog; only container sites can have one (cached).
+  const iconDataUri = result?.application?.serving_profile === "docker"
+    ? applicationIconDataUri(result.application, (await getSiteTypes().catch(() => null))?.siteTypes ?? [])
+    : null;
 
   return (
     <>
       {/* Always reported, even as null: the sidebar needs to know the site has no menu. */}
-      <ApplicationNav items={items} application={result?.application ?? null} gitProvider={gitProvider} />
+      <ApplicationNav items={items} application={result?.application ?? null} gitProvider={gitProvider} iconDataUri={iconDataUri} />
       {name ? <PageCrumb href={`/applications/${application}`}>{name}</PageCrumb> : null}
       {result?.application ? (
         <ApplicationStatusWatcher id={result.application.id} status={result.application.status} />

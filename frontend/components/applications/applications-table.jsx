@@ -38,6 +38,7 @@ import {
   ApplicationStatusNotes,
   APPLICATION_STATUSES,
 } from "@/components/applications/application-status-badge";
+import { applicationIconDataUri } from "@/lib/applications/application-icon";
 
 
 /* Cells at module level: flexRender treats an inline cell as a new component type,
@@ -304,7 +305,7 @@ function ApplicationsList({
     () => [
       // `col` must be on the API's sort whitelist (else 422). Status sits right after
       // the name: beside it, PHP's short value read as part of the domain (7 Oct).
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={siteTypes.find((type) => type.name === row.original.site_type)?.recipe?.icon_data_uri} /> },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={applicationIconDataUri(row.original, siteTypes)} /> },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: widths.status, sortKey: "status" }, cell: StatusCell },
       { id: "runsOn", header: t("columns.runsOn"), meta: { className: `${widths.runsOn} h-auto min-h-10 whitespace-normal` }, cell: RunsOnCell },
       ...(withBackups ? [{ id: "lastBackup", header: t("columns.lastBackup"), meta: { className: `${widths.lastBackup} h-auto min-h-10 whitespace-normal` }, cell: LastBackupCell }] : []),

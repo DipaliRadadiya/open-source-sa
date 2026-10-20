@@ -23,6 +23,8 @@ const LOGOS = {
   php: "php.svg",
   // Not a brand: a static site is plain HTML, CSS and JavaScript.
   static: "html5.svg",
+  // Docker image and Docker compose sites; a known image gets its recipe's logo instead.
+  docker: "docker.svg",
 };
 
 /** The public path for a type's logo, or null when it has none. */

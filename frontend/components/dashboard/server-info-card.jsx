@@ -22,9 +22,11 @@ const RUNTIMES = {
 };
 
 // What a site depends on: the web server, PHP, Node.js and one database. The
-// rest (Redis, a second engine) sits behind "+N more" on the Services page.
+// rest (Redis, a second engine) fills the row while there is room, then "+N more".
 const MAIN_RUNTIMES = new Set(["nginx", "apache", "openlitespeed", "php", "node"]);
 const MAIN_ENGINE_ORDER = ["mariadb", "mysql", "postgresql", "mongodb"];
+// Tiles in one row of the strip at its widest (`lg:grid-cols-5` below).
+const ROW_TILES = 5;
 // Steel UI (Krishna's prototype, 14 Oct): a short mono code in a square instead of the
 // logo on a white tile, which looked odd on the dark theme (and the MariaDB seal is
 // dark blue, so a dark tile would hide it).
@@ -161,7 +163,16 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
     return rank === -1 ? MAIN_ENGINE_ORDER.length : rank;
   };
   const [mainEngine, ...otherEngines] = [...installedEngines].sort((a, b) => engineRank(a) - engineRank(b));
-  const more = runtimes.length - mainRuntimes.length + otherEngines.length;
+  // The rest go straight into the row while it has room (five tiles on a wide
+  // screen); "+N more" only when they do not fit, and it then takes the last tile.
+  const extraRuntimes = runtimes.filter(([name]) => !MAIN_RUNTIMES.has(name));
+  const extras = [
+    ...extraRuntimes.map(([name, version]) => ({ kind: "runtime", name, version })),
+    ...otherEngines.map((engine) => ({ kind: "engine", engine })),
+  ];
+  const room = ROW_TILES - mainRuntimes.length - (mainEngine ? 1 : 0) - (enginesFailed ? 1 : 0);
+  const inline = extras.length <= room ? extras : extras.slice(0, Math.max(0, room - 1));
+  const more = extras.length - inline.length;
 
 
   return (
@@ -195,6 +206,25 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
                 mark={ENGINE_MARKS[mainEngine.engine]}
               />
             ) : null}
+
+            {inline.map((item) =>
+              item.kind === "runtime" ? (
+                <SoftwareChip
+                  key={item.name}
+                  name={RUNTIMES[item.name]?.name ?? item.name}
+                  version={item.version}
+                  mark={RUNTIMES[item.name]?.mark}
+                />
+              ) : (
+                <SoftwareChip
+                  key={item.engine.engine}
+                  name={tDatabases(`engines.${item.engine.engine}`)}
+                  title={item.engine.version ?? undefined}
+                  version={shortVersion(item.engine.version)}
+                  mark={ENGINE_MARKS[item.engine.engine]}
+                />
+              ),
+            )}
 
             {/* Stated, not omitted, so the row never contradicts the databases
                 page. Muted: nothing is broken on the server. */}

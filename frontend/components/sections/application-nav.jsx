@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ApplicationNavContext = createContext(null);
 
 export function ApplicationNavProvider({ children }) {
-  const [state, setState] = useState({ items: null, resolved: false, application: null, gitProvider: null });
+  const [state, setState] = useState({ items: null, resolved: false, application: null, gitProvider: null, iconDataUri: null });
   return (
     <ApplicationNavContext.Provider value={{ ...state, setState }}>
       {children}
@@ -22,15 +22,15 @@ export function useApplicationNav() {
 }
 
 // Clears on the way out so a server page never inherits the last application's menu.
-export function ApplicationNav({ items, application = null, gitProvider = null }) {
+export function ApplicationNav({ items, application = null, gitProvider = null, iconDataUri = null }) {
   const { setState } = useApplicationNav();
 
   useEffect(() => {
     // Set even when `items` is null: that is the answer for a deleted site, and the
     // sidebar needs it to avoid rendering links that 404.
-    setState({ items, resolved: true, application, gitProvider });
-    return () => setState({ items: null, resolved: false, application: null, gitProvider: null });
-  }, [items, application, gitProvider, setState]);
+    setState({ items, resolved: true, application, gitProvider, iconDataUri });
+    return () => setState({ items: null, resolved: false, application: null, gitProvider: null, iconDataUri: null });
+  }, [items, application, gitProvider, iconDataUri, setState]);
 
   return null;
 }

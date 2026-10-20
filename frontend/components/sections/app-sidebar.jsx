@@ -109,7 +109,7 @@ export function AppSidebar({ items }) {
 
   // Inside an application, prefer its layout's catalog (filtered by site type);
   // until it arrives the shared catalog renders the same items unfiltered.
-  const { items: applicationItems, resolved, application, gitProvider } = useApplicationNav();
+  const { items: applicationItems, resolved, application, gitProvider, iconDataUri } = useApplicationNav();
   // Once the layout answers "no menu", the site does not exist: fall back to the
   // SERVER panel rather than a site menu whose links all 404.
   const insideApplication = Boolean(applicationId) && (applicationItems !== null || !resolved);
@@ -187,7 +187,7 @@ export function AppSidebar({ items }) {
                   <span className="relative flex w-full min-w-0 items-center gap-2.5">
                     {/* On its own tile so the brand mark has a surface against the tint. */}
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0!">
-                      <SiteTypeLogo name={application.site_type} provider={gitProvider} size="h-5 w-5" />
+                      <SiteTypeLogo name={application.site_type} provider={gitProvider} iconDataUri={iconDataUri} size="h-5 w-5" />
                     </span>
                     {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
                         button's LAST span (the domain line), and the rest would overflow. */}

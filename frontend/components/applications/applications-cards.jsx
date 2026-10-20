@@ -12,6 +12,7 @@ import { DomainText } from "@/components/ui/domain-text";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { gitProviderFor } from "@/lib/applications/git-provider";
+import { applicationIconDataUri } from "@/lib/applications/application-icon";
 
 // Narrow-screen sites list; the badge shares the facts line so the name fits at 320px.
 export function ApplicationsCards({
@@ -34,7 +35,7 @@ export function ApplicationsCards({
             <SiteTypeLogo
               name={application.site_type}
               provider={gitProviderFor(application, gitProviders)}
-              iconDataUri={siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
+              iconDataUri={applicationIconDataUri(application, siteTypes)}
               className="mt-0.5"
             />
             <div className="min-w-0 flex-1">

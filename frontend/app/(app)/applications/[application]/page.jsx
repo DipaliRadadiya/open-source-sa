@@ -49,6 +49,7 @@ import { ApplicationStatusBadge } from "@/components/applications/application-st
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 import { isSettled } from "@/lib/applications/settled";
+import { applicationIconDataUri } from "@/lib/applications/application-icon";
 
 export const dynamic = "force-dynamic";
 
@@ -312,7 +313,7 @@ export default async function ApplicationDetailPage({ params }) {
               <SiteTypeLogo
                 name={application.site_type}
                 provider={gitProviderFor(application, providersByAccountId(gitAccounts))}
-                iconDataUri={siteTypes.siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
+                iconDataUri={applicationIconDataUri(application, siteTypes.siteTypes)}
                 size="h-6 w-6"
               />
             </span>

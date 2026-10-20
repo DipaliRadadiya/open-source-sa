@@ -57,10 +57,10 @@ test("list, mobile cards and header reuse only their existing catalog for logos"
   const table = read("components/applications/applications-table.jsx");
   const cards = read("components/applications/applications-cards.jsx");
   const header = read("app/(app)/applications/[application]/page.jsx");
-  assert.match(table, /iconDataUri=\{siteTypes\.find\(\(type\) => type\.name === row\.original\.site_type\)\?\.recipe\?\.icon_data_uri\}/);
+  assert.match(table, /iconDataUri=\{applicationIconDataUri\(row\.original, siteTypes\)\}/);
   assert.match(table, /<ApplicationsCards[^\n]*siteTypes=\{siteTypes\}/);
-  assert.match(cards, /iconDataUri=\{siteTypes\.find\(\(type\) => type\.name === application\.site_type\)\?\.recipe\?\.icon_data_uri\}/);
-  assert.match(header, /iconDataUri=\{siteTypes\.siteTypes\.find\(\(type\) => type\.name === application\.site_type\)\?\.recipe\?\.icon_data_uri\}/);
+  assert.match(cards, /iconDataUri=\{applicationIconDataUri\(application, siteTypes\)\}/);
+  assert.match(header, /iconDataUri=\{applicationIconDataUri\(application, siteTypes\.siteTypes\)\}/);
   const facts = read("components/applications/site-facts-card.jsx");
   const relabel = read("components/applications/site-type-relabel-dialog.jsx");
   assert.match(facts, /targetTitle=\{relabelTitle\}\s*siteTypes=\{siteTypes\}/);
@@ -76,8 +76,7 @@ test("all eight locales preserve 1-Click and use the same tab names in their hin
     const t = JSON.parse(readFileSync(`messages/${locale}.json`, "utf8")).applications.recipes;
     assert.match(t.tabOneClick, /^1-Click/);
     assert.notEqual(t.tabDocker, "Docker");
-    assert.ok(t.tabOneClickHint.includes("1-Click"));
-    assert.ok(t.tabDockerHint.includes(t.tabDocker));
+    assert.ok(t.tabOneClickShort && t.tabDockerShort);
     assert.ok(t.searchDockerInstead.includes(t.tabDocker));
     assert.ok(t.searchDockerInstead.includes("{query}"));
     assert.ok(t.recipeAvailable.includes("{title}"));
