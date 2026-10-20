@@ -39,6 +39,26 @@ class DatabaseExport extends Model
         ExportStatus::Running->value,
     ];
 
+    /**
+     * Remove the dump file, then the row.
+     *
+     * basename() as well as the column, because this path is built from
+     * stored data and a file value is still a file value however it got
+     * there — one guard at the point of deletion, not a trust assumption.
+     */
+    public function deleteWithFile(): void
+    {
+        if ($this->file !== null) {
+            $path = rtrim((string) config('server.databases.export_dir'), '/').'/'.basename($this->file);
+
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        $this->delete();
+    }
+
     public function database(): BelongsTo
     {
         return $this->belongsTo(Database::class);

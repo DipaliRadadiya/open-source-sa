@@ -27,7 +27,8 @@ use Throwable;
  *     database's own user can load ({@see ImportSanitizer}). A file refused
  *     here has changed nothing.
  *  2. **Back up** the database as it is now — an ordinary export, marked
- *     `import_safety`, kept until the user deletes it.
+ *     `import_safety`, kept a week (`exports:prune-import-safety`) or until
+ *     the user deletes it.
  *  3. **Replace**: drop, recreate, give the users back, load the file as the
  *     database's own user.
  *  4. On a failed load, **put the backup back** the same way, as the panel —

@@ -124,3 +124,9 @@ Schedule::command('restores:prune-rollbacks')->daily()->withoutOverlapping(120);
 // its own time budget nothing can still be installing it
 // (StrandedProvisioning), so it is marked failed: Retry setup or Delete.
 Schedule::command('applications:close-stranded')->everyFiveMinutes()->withoutOverlapping(10);
+
+// The copy a database import takes before replacing anything (`import_safety`
+// exports). Each is a full dump on the database's own disk and nothing removed
+// them. Kept a week, then removed — never the copy of an import that failed
+// and was not put back (PruneImportSafetyExports).
+Schedule::command('exports:prune-import-safety')->daily()->withoutOverlapping(120);

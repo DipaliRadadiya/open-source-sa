@@ -4468,7 +4468,7 @@ Poll `GET /databases/exports`.
 
 **What a run does, in order — nothing is dropped before step 3:**
 1. **Checks** the file. SQL is decompressed and cleaned into what the database's own user can load: `CREATE DATABASE`/`USE`, definers, GTID lines (MySQL) and ownership/grants/role switches (PostgreSQL) are removed, the same things the panel's own exports leave out. A PostgreSQL file containing a **psql client command** (`\!`, `\connect`, `\copy`… outside strings, comments and data) is **refused**: psql runs those itself, and `\!` is a shell command.
-2. **Backs up** the database — an ordinary export, listed in `GET /databases/exports` with **`purpose: "import_safety"`** (label it *"Automatic backup before import"*), kept until the user deletes it.
+2. **Backs up** the database — an ordinary export, listed in `GET /databases/exports` with **`purpose: "import_safety"`** (label it *"Automatic backup before import"*), kept **7 days** (2026-10-20, RC-14) or until the user deletes it.
 3. **Replaces**: drop, recreate, give the users back, load the file **as the database's own user** (never the admin account — a dump's `USE other_db` reaches nothing). PostgreSQL loads in one transaction.
 4. If the load fails, **puts the backup back** automatically.
 
@@ -4517,7 +4517,7 @@ Cancel an upload or clear a finished row; removes the uploaded file. **`409`** w
 
 All exports, newest first. Includes in-flight rows.
 
-**`purpose`** (added 2026-10-14): `null` for an export someone asked for; **`"import_safety"`** for the backup an import takes automatically before replacing a database — show it as *"Automatic backup before import"*. It is kept, downloadable and deletable like any other export.
+**`purpose`** (added 2026-10-14): `null` for an export someone asked for; **`"import_safety"`** for the backup an import takes automatically before replacing a database — show it as *"Automatic backup before import"*. Downloadable and deletable like any other export, and **removed after 7 days** by the daily `exports:prune-import-safety` (2026-10-20, RC-14) — never while its import is still running, and never for an import that **failed and was not put back** (`restored: false`): then the copy may be the only good version of the database, and it stays until the user deletes it.
 
 ```json
 {"exports": [{

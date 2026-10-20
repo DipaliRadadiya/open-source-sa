@@ -492,23 +492,12 @@ class DatabaseController extends Controller
             ], 409);
         }
 
-        // basename() as well as the column, because this path is built from
-        // stored data and a file value is still a file value however it got
-        // there — one guard at the point of deletion, not a trust assumption.
-        if ($export->file !== null) {
-            $path = rtrim((string) config('server.databases.export_dir'), '/').'/'.basename($export->file);
-
-            if (is_file($path)) {
-                @unlink($path);
-            }
-        }
-
         $log->log('database.export_deleted', null, [
             'name' => $export->database_name,
             'file' => (string) $export->file,
         ]);
 
-        $export->delete();
+        $export->deleteWithFile();
 
         return response()->json(null, 204);
     }
