@@ -1324,6 +1324,114 @@ describe('who a worker may run as', function () {
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_environment')]);
     });
+
+    /*
+     * FS-C22 #2: the checks above matched `key =` only, and supervisord's
+     * parser reads more than that — `user: root` came out as root (checked
+     * with supervisor 4.2.5's own parser). Each form below is one it reads
+     * as the key on the left.
+     */
+    it('refuses the account in extra config in every form supervisord reads, even for the admin', function (string $extra) {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['extra_config' => $extra]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_user')]);
+
+        expect(Worker::count())->toBe(0);
+    })->with([
+        'colon' => ['user: root'],
+        'colon after a space' => ['user : root'],
+        'upper case' => ['USER:root'],
+        'tabs' => ["user\t:\troot"],
+        'non-breaking space before the colon' => ["user\u{A0}: root"],
+        'after a lone carriage return' => ["startsecs=5\ruser: root"],
+        'after a CRLF' => ["startsecs=5\r\nuser=root"],
+        'second line, after a comment' => ["; harmless\nstartsecs=5\nuser: root"],
+    ]);
+
+    it('refuses environment in extra config with a colon too, even for the admin', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['extra_config' => "startsecs=5\nenvironment: HOME=\"/root\""]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_environment')]);
+    });
+
+    it('refuses an indented line, which supervisord appends to the panel environment line', function (string $extra) {
+        // The line above Extra config is the panel's `environment=`, and an
+        // indented line continues it: `LD_PRELOAD` landed in the worker's
+        // environment past the check for `environment=`.
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['extra_config' => $extra]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_indented')]);
+    })->with([
+        'spaces' => ["startsecs=5\n    LD_PRELOAD=\"/home/workerowner/x.so\""],
+        'a tab' => ["startsecs=5\n\tstopsignal=INT"],
+        'a non-breaking space' => ["startsecs=5\n\u{A0}stopsignal=INT"],
+        // Python counts \v as indentation; splitting on it as a line break
+        // (which `\R` does) hid this one.
+        'a vertical tab' => ["startsecs=5\n\x0BLD_PRELOAD=\"/home/workerowner/x.so\""],
+        'a form feed' => ["startsecs=5\n\x0Cstopsignal=INT"],
+    ]);
+
+    it('refuses extra config that is not UTF-8', function () {
+        fakeWorkerSupervisor();
+
+        // Form-encoded, because JSON cannot carry the byte.
+        $this->actingAs($this->admin)->post(workerUrl(), workerPayload(['extra_config' => "startsecs=5\n\xFFuser=root"]), ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_encoding')]);
+    });
+
+    it('keeps a non-admin from setting a path or the command in extra config in any form', function (string $extra, string $key) {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload(['extra_config' => $extra]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_key', ['key' => $key])]);
+
+        expect(Worker::count())->toBe(0);
+    })->with([
+        'log with a colon' => ['stdout_logfile : /etc/cron.d/evil', 'stdout_logfile'],
+        'stderr log with a colon' => ["redirect_stderr=false\nstderr_logfile:/etc/y", 'stderr_logfile'],
+        'command with a colon' => ['command: /bin/sh -c id', 'command'],
+        'directory upper case' => ['DIRECTORY: /etc', 'directory'],
+        'log after a non-breaking space' => ["Stdout_Logfile\u{A0}= /etc/x", 'stdout_logfile'],
+        'log after a lone carriage return' => ["startsecs=5\rstdout_logfile=/etc/x", 'stdout_logfile'],
+    ]);
+
+    it('refuses the same on an edit', function () {
+        fakeWorkerSupervisor();
+        $id = $this->actingAs($this->member)->postJson(workerUrl(), workerPayload())->assertCreated()->json('worker.id');
+
+        $this->actingAs($this->member)->putJson(workerUrl("/{$id}"), workerPayload(['extra_config' => "startsecs=5\ruser: root"]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_user')]);
+
+        expect(Worker::findOrFail($id)->extra_config)->toBeNull();
+    });
+
+    it('still takes harmless settings in either form, and comments', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload([
+            'extra_config' => "startsecs: 5\nstopsignal=INT\n; user=root is only a comment\n# so is user: root\nstartretries = 3 ; inline note",
+        ]))->assertCreated();
+    });
+
+    it('still lets the admin set paths in extra config, as v7 did', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
+            'user' => 'root',
+            'extra_config' => "stdout_logfile: /var/log/custom-worker.log\ndirectory = /srv/app",
+        ]))->assertCreated();
+
+        expect(Worker::firstOrFail()->user)->toBe('root');
+    });
 });
 
 describe('an edit that will not start (W-edit)', function () {

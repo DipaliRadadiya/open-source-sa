@@ -39,6 +39,8 @@ return [
         'queue_conflict' => 'Cette application a déjà l\'autre type de worker de file. Horizon supervise ses propres workers : exécuter les deux fait traiter chaque tâche deux fois.',
         'extra_config_user' => 'Définissez le compte dans « Exécuter en tant que », pas dans la configuration supplémentaire.',
         'extra_config_environment' => 'Le panneau définit déjà l\'environnement de ce processus. Supprimez la ligne environment= de la configuration supplémentaire.',
+        'extra_config_indented' => 'Les lignes de la configuration supplémentaire ne peuvent pas commencer par une espace ou une tabulation : le processus les lirait comme la suite de la ligne précédente.',
+        'extra_config_encoding' => 'La configuration supplémentaire doit être du texte UTF-8 brut.',
         'did_not_start' => 'Le processus ne s’est pas maintenu, il n’a donc pas été ajouté. Vérifiez la commande. Référence : :reference',
         'did_not_start_said' => 'Le processus ne s’est pas maintenu, il n’a donc pas été ajouté. Il a affiché : « :output » (référence :reference)',
         'did_not_start_field' => 'Cette commande se termine tout de suite au lieu de continuer à tourner.',

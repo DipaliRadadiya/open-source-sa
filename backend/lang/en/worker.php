@@ -47,6 +47,8 @@ return [
         'queue_conflict' => 'This application already has the other kind of queue worker. Horizon supervises its own workers, so running both means every job is handled twice.',
         'extra_config_user' => 'Set the account in “Run as”, not in Extra config.',
         'extra_config_environment' => 'The panel already sets this worker\'s environment. Remove the environment= line from Extra config.',
+        'extra_config_indented' => 'Extra config lines cannot start with a space or tab: the worker would read them as part of the line above.',
+        'extra_config_encoding' => 'Extra config must be plain UTF-8 text.',
         'did_not_start' => 'The worker did not stay running, so it was not added. Check the command. Reference: :reference',
         'did_not_start_said' => 'The worker did not stay running, so it was not added. It printed: “:output” (reference :reference)',
         'did_not_start_field' => 'This command exits straight away instead of running.',

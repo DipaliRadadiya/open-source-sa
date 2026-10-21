@@ -139,17 +139,33 @@ class SaveWorkerRequest extends FormRequest
         $worker = $this->route('worker');
         $extra = (string) $this->input('extra_config', '');
 
+        // Read the way supervisord reads it, or the checks below are checks on
+        // a different file. An unreadable one is refused outright.
+        $keys = $this->extraConfigKeys($extra);
+
+        if ($keys === null) {
+            $validator->errors()->add('extra_config', __('worker.errors.extra_config_encoding'));
+            $keys = ['keys' => [], 'indented' => false];
+        }
+
         // Not even for the admin: the screen shows the "Run as" field, and a
         // `user=` underneath it would make that field lie.
-        if (preg_match('/^\s*user\s*=/mi', $extra) === 1) {
+        if (in_array('user', $keys['keys'], true)) {
             $validator->errors()->add('extra_config', __('worker.errors.extra_config_user'));
         }
 
         // W12: the panel writes its own `environment=` line (PATH),
         // and supervisord refuses a program with two — the worker never
         // starts again. Not even for the admin, for the same reason.
-        if (preg_match('/^\s*environment\s*=/mi', $extra) === 1) {
+        if (in_array('environment', $keys['keys'], true)) {
             $validator->errors()->add('extra_config', __('worker.errors.extra_config_environment'));
+        }
+
+        // An indented line is not a setting of its own: supervisord appends it
+        // to the value above. The line above the first one is the panel's own
+        // `environment=`, so indenting was a way past the check just made.
+        if ($keys['indented'] && ! $validator->errors()->has('extra_config')) {
+            $validator->errors()->add('extra_config', __('worker.errors.extra_config_indented'));
         }
 
         if ($this->user()?->is_admin) {
@@ -181,8 +197,63 @@ class SaveWorkerRequest extends FormRequest
             $validator->errors()->add('log_file', __('worker.errors.log_outside_logs', ['path' => $application->logsPath()]));
         }
 
-        if (preg_match('/^\s*('.implode('|', self::CONFINED_KEYS).')\s*=/mi', $extra, $match) === 1) {
-            $validator->errors()->add('extra_config', __('worker.errors.extra_config_key', ['key' => strtolower($match[1])]));
+        $confined = array_values(array_intersect($keys['keys'], self::CONFINED_KEYS));
+
+        if ($confined !== []) {
+            $validator->errors()->add('extra_config', __('worker.errors.extra_config_key', ['key' => $confined[0]]));
         }
+    }
+
+    /**
+     * Python's `str.isspace()` set, which is what configparser strips from a
+     * key. `\s` alone misses the non-breaking space, so `user\u{a0}: root`
+     * went through as a key PHP did not recognise and supervisord did.
+     */
+    private const INI_SPACE = '[\s\x{1C}-\x{1F}\x{85}\x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}]';
+
+    /**
+     * The keys supervisord will read out of Extra config, lower-cased, and
+     * whether any line is indented. Null when it is not valid UTF-8.
+     *
+     * Bug #72 was checked with `^\s*key\s*=`, and supervisord's parser
+     * (configparser, `strict=False`, so the last copy of a key wins) differs
+     * from that in three ways that each let `user` or a log path through:
+     * `:` is a delimiter as much as `=`; a lone `\r` ends a line, because the
+     * file is read with universal newlines; and the key is trimmed of Unicode
+     * spaces before it is lower-cased. So every line is read here the same
+     * way — split where Python splits, key up to the first `=` or `:` — and
+     * indented lines are read as keys too, which only ever refuses more.
+     *
+     * @return array{keys: array<int, string>, indented: bool}|null
+     */
+    private function extraConfigKeys(string $extra): ?array
+    {
+        if (! mb_check_encoding($extra, 'UTF-8')) {
+            return null;
+        }
+
+        $keys = [];
+        $indented = false;
+
+        // Exactly the breaks Python's universal newlines know. Splitting on
+        // more (`\R` takes \v and \f too) hid an indent: Python counts a
+        // leading \v as one, and continued the panel's `environment=` with it.
+        foreach (preg_split('/\r\n|\r|\n/', $extra) ?: [] as $line) {
+            $trimmed = (string) preg_replace('/^'.self::INI_SPACE.'+|'.self::INI_SPACE.'+$/u', '', $line);
+
+            // Blank, or a whole-line comment: configparser skips both.
+            if ($trimmed === '' || $trimmed[0] === ';' || $trimmed[0] === '#') {
+                continue;
+            }
+
+            if ($trimmed !== $line && preg_match('/^'.self::INI_SPACE.'/u', $line) === 1) {
+                $indented = true;
+            }
+
+            $key = preg_split('/[=:]/', $trimmed, 2)[0];
+            $keys[] = mb_strtolower((string) preg_replace('/'.self::INI_SPACE.'+$/u', '', $key));
+        }
+
+        return ['keys' => $keys, 'indented' => $indented];
     }
 }

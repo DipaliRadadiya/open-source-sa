@@ -39,6 +39,8 @@ return [
         'queue_conflict' => 'Esta aplicação já tem o outro tipo de worker de fila. O Horizon supervisiona os seus próprios workers, por isso correr ambos faz cada trabalho ser processado duas vezes.',
         'extra_config_user' => 'Defina a conta em «Executar como», não na configuração extra.',
         'extra_config_environment' => 'O painel já define o ambiente deste processo. Remova a linha environment= da configuração extra.',
+        'extra_config_indented' => 'As linhas da configuração extra não podem começar com um espaço ou uma tabulação: o processo as leria como parte da linha anterior.',
+        'extra_config_encoding' => 'A configuração extra deve ser texto UTF-8 simples.',
         'did_not_start' => 'O processo não continuou em execução, por isso não foi adicionado. Verifique o comando. Referência: :reference',
         'did_not_start_said' => 'O processo não continuou em execução, por isso não foi adicionado. Mostrou: «:output» (referência :reference)',
         'did_not_start_field' => 'Este comando termina imediatamente em vez de continuar a correr.',

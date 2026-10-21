@@ -101,6 +101,18 @@ function runFirstDeploy(Application $application): void
     );
 }
 
+/**
+ * The git part of a command, whether or not it runs as the site user:
+ * `runuser -u <user> -- git init` reads as `git init`.
+ *
+ * @param  array<int, string>  $args
+ * @return array<int, string>
+ */
+function firstDeployGit(array $args): array
+{
+    return ($args[0] ?? '') === 'runuser' && ($args[3] ?? '') === '--' ? array_slice($args, 4) : $args;
+}
+
 function firstDeployRan(ArrayObject $ran, callable $matches): bool
 {
     foreach ($ran as $args) {
@@ -210,8 +222,8 @@ it('uses init, not clone, even when the directory is empty', function () {
 
     runFirstDeploy($app);
 
-    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'clone'))->toBeFalse()
-        ->and(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'init'))->toBeTrue();
+    expect(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && (firstDeployGit($args)[1] ?? '') === 'clone'))->toBeFalse()
+        ->and(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && (firstDeployGit($args)[1] ?? '') === 'init'))->toBeTrue();
 });
 
 it('fetches instead of cloning when the directory already has files', function () {
@@ -223,9 +235,9 @@ it('fetches instead of cloning when the directory already has files', function (
 
     runFirstDeploy($app);
 
-    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'clone'))->toBeFalse()
-        ->and(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'init'))->toBeTrue()
-        ->and(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && in_array('fetch', $args, true)))->toBeTrue()
+    expect(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && (firstDeployGit($args)[1] ?? '') === 'clone'))->toBeFalse()
+        ->and(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && (firstDeployGit($args)[1] ?? '') === 'init'))->toBeTrue()
+        ->and(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && in_array('fetch', $args, true)))->toBeTrue()
         // The reset is what makes it equivalent to a clone rather than a merge
         // with whatever happened to be in the directory.
         ->and(firstDeployRan($ran, fn ($args) => in_array('reset', $args, true) && in_array('--hard', $args, true)))->toBeTrue();

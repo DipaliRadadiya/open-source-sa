@@ -32,6 +32,12 @@ use Throwable;
  * through a 0600 file that exists only for the length of the command. The file
  * path is on the command line; the token never is.
  *
+ * And git runs **as the site's own user** inside the site's repository, never
+ * as root (FS-C22 #1). The repository's `.git/config` is the site user's to
+ * write, and git executes some of what it says — `core.fsmonitor`,
+ * `core.sshCommand`, hooks — so root running git there ran the site user's
+ * commands as root on the next deploy or webhook.
+ *
  * Public repositories skip all of this — no credential is involved at all,
  * which makes them the safer path by construction.
  */
@@ -82,7 +88,7 @@ class GitDeployer
 
     public function deploy(Application $application, string $documentRoot): array
     {
-        $credentialFile = null;
+        $credentialDir = null;
         $handedOver = false;
 
         $this->progress->open($application);
@@ -93,17 +99,18 @@ class GitDeployer
             // and `ApplicationProvisioner` creates and chowns that directory
             // before this method is called — which for a git site it did not
             // do at all until provisioning stopped branching on the site type.
-            $this->trustDocumentRoot($documentRoot);
+            $this->reclaimGitDirectory($application, $documentRoot);
 
-            $credentialFile = $this->writeCredential($application);
+            $credentialDir = $this->writeSiteCredential($application);
+            $credentialFile = $credentialDir === null ? null : $credentialDir.'/credentials';
             $remote = $this->remoteUrl($application);
             $branch = $application->branch ?: 'main';
 
             // git init + fetch + reset-hard into the document root.
             // No credential survives past this block; the remote stays clean.
-            $this->run('init', null, [
-                'git', 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
-            ]);
+            $this->run('init', $this->git($application, null, [
+                'init', '--quiet', '--initial-branch', $branch, $documentRoot,
+            ]));
 
             // Added only when it is missing. It used to be run every time and
             // left to fail, which on every deploy after the first wrote
@@ -111,14 +118,14 @@ class GitDeployer
             // (bug #71) — noise that buries the real failures. `git remote`
             // lists and always succeeds.
             $remotes = $this->serverOps->run(
-                ['git', '-C', $documentRoot, 'remote'],
+                $this->git($application, null, ['-C', $documentRoot, 'remote']),
                 ['feature' => 'application', 'op' => 'git.remote_list'],
             );
 
             if (! in_array('origin', preg_split('/\s+/', trim($remotes->output())) ?: [], true)) {
-                $this->run('init', null, [
-                    'git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote,
-                ]);
+                $this->run('init', $this->git($application, null, [
+                    '-C', $documentRoot, 'remote', 'add', 'origin', $remote,
+                ]));
             }
 
             // **Before the fetch, not after it.**
@@ -133,17 +140,17 @@ class GitDeployer
             //
             // Succeeding while serving the wrong repository is worse than
             // failing, because nothing looks wrong.
-            $this->run('init', null, [
-                'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
-            ]);
+            $this->run('init', $this->git($application, null, [
+                '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
+            ]));
 
-            $this->run('fetch', $credentialFile, [
-                'git', '-C', $documentRoot, 'fetch', '--depth', '1', 'origin', $branch,
-            ]);
+            $this->run('fetch', $this->git($application, $credentialFile, [
+                '-C', $documentRoot, 'fetch', '--depth', '1', 'origin', $branch,
+            ]));
 
-            $this->run('checkout', null, [
-                'git', '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
-            ]);
+            $this->run('checkout', $this->git($application, null, [
+                '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
+            ]));
 
             // Give the checked-out branch an upstream. `git init` + `fetch` +
             // `reset` leaves none, so a deploy script that says a bare
@@ -154,12 +161,12 @@ class GitDeployer
             // Unchecked: the checkout above already succeeded, and a script
             // that never mentions git does not need this.
             $this->serverOps->run(
-                ['git', '-C', $documentRoot, 'branch', '--set-upstream-to=origin/'.$branch],
+                $this->git($application, null, ['-C', $documentRoot, 'branch', '--set-upstream-to=origin/'.$branch]),
                 ['feature' => 'application', 'op' => 'git.set_upstream'],
             );
 
-            $commit = $this->currentCommit($documentRoot);
-            $details = $this->commitDetails($documentRoot);
+            $commit = $this->currentCommit($application, $documentRoot);
+            $details = $this->commitDetails($application, $documentRoot);
 
             // Recorded here rather than only on success. Everything below this
             // line can fail — ownership, the deploy script, the restarts, the
@@ -168,9 +175,10 @@ class GitDeployer
             // is missing the one fact somebody debugging it needs.
             $this->recorder->commit($commit, $details['message'], $details['author']);
 
-            // Site is owned by its Linux user. Without this git operations as root
-            // inside a non-root-owned directory fail with "dubious ownership".
-            $this->run('set_ownership', null, [
+            // Site is owned by its Linux user. git now runs as that user and
+            // leaves nothing root-owned, but this stays: it is also what hands
+            // over a tree an older, root-run deploy left behind.
+            $this->run('set_ownership', [
                 'chown', '-R',
                 "{$application->systemUser->username}:{$application->systemUser->username}",
                 $documentRoot,
@@ -264,11 +272,8 @@ class GitDeployer
             }
 
             // Always — a failed deploy must not leave a credential on disk.
-            if ($credentialFile !== null) {
-                $this->serverOps->run(
-                    ['rm', '-f', $credentialFile],
-                    ['feature' => 'application', 'op' => 'remove_credential'],
-                );
+            if ($credentialDir !== null) {
+                $this->removeSiteCredential($application, $credentialDir);
             }
         }
     }
@@ -493,6 +498,9 @@ class GitDeployer
     /**
      * A 0600 credential file git reads through the `store` helper. Returns null
      * for a public repository, where no credential is needed at all.
+     *
+     * Root's, for the probe, which runs as root with no repository at all.
+     * A deploy uses {@see writeSiteCredential()}.
      */
     private function writeCredential(Application $application): ?string
     {
@@ -500,19 +508,13 @@ class GitDeployer
             return null;
         }
 
-        $account = $application->gitAccount;
-        $username = $this->providers->driver($account->provider)->credentialUsername();
-        $remote = parse_url($this->remoteUrl($application));
-        $host = ($remote['host'] ?? '').(isset($remote['port']) ? ':'.$remote['port'] : '');
-
-        $path = rtrim((string) config('server.git_credential_dir', sys_get_temp_dir()), '/')
-            .'/git-'.Str::uuid();
+        $path = $this->credentialBase().'/git-'.Str::uuid();
 
         // Written through stdin, never as a command argument.
         $write = $this->serverOps->run(
             ['tee', $path],
             ['feature' => 'application', 'op' => 'write_credential', 'application' => $application->id],
-            input: 'https://'.rawurlencode($username).':'.rawurlencode($account->token)."@{$host}\n",
+            input: $this->credentialLine($application),
         );
 
         if ($write->failed()) {
@@ -528,21 +530,129 @@ class GitDeployer
     }
 
     /**
+     * The credential for a deploy, in a directory only the site user can
+     * enter, since the site user is who runs git now. Returns the directory
+     * (the file is `credentials` inside it), or null for a public repository.
+     *
+     * Everything is done *as* the site user, root never writes here: the
+     * directory is theirs, and root writing a file into a directory somebody
+     * else owns follows whatever symlink they have put at that name. `mkdir`
+     * without `-p` fails on a path that already exists, so nothing can be
+     * waiting at it either. The token arrives on stdin, and `cat` echoes
+     * nothing back into a log the way `tee` would.
+     *
+     * The site user can read the token while the fetch runs — git needs it,
+     * and git is theirs. Nothing outlives the deploy.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function writeSiteCredential(Application $application): ?string
+    {
+        if ($application->git_account_id === null) {
+            return null;
+        }
+
+        $context = ['feature' => 'application', 'op' => 'write_credential', 'application' => $application->id];
+        $directory = $this->credentialBase().'/git-'.Str::uuid();
+
+        $made = $this->serverOps->run($this->asSiteUser($application, ['mkdir', '-m', '0700', $directory]), $context);
+
+        if ($made->failed()) {
+            throw new ProvisioningFailedException('write_credential', $made->reference);
+        }
+
+        $write = $this->serverOps->run(
+            $this->asSiteUser($application, ['sh', '-c', 'umask 077 && cat > "$1"', 'sh', $directory.'/credentials']),
+            $context,
+            input: $this->credentialLine($application),
+        );
+
+        if ($write->failed()) {
+            $this->removeSiteCredential($application, $directory);
+
+            throw new ProvisioningFailedException('write_credential', $write->reference);
+        }
+
+        return $directory;
+    }
+
+    /**
+     * As the site user first — it is their directory. Root only when that
+     * fails (the account went away mid-deploy, say); `rm -r` does not follow
+     * a symlink it meets, so root cannot be steered elsewhere by one.
+     */
+    private function removeSiteCredential(Application $application, string $directory): void
+    {
+        $context = ['feature' => 'application', 'op' => 'remove_credential'];
+
+        if ($this->serverOps->run($this->asSiteUser($application, ['rm', '-rf', $directory]), $context)->failed()) {
+            $this->serverOps->run(['rm', '-rf', $directory], $context);
+        }
+    }
+
+    private function credentialBase(): string
+    {
+        return rtrim((string) config('server.git_credential_dir', sys_get_temp_dir()), '/');
+    }
+
+    /**
+     * One `store`-helper line for the account's host.
+     */
+    private function credentialLine(Application $application): string
+    {
+        $account = $application->gitAccount;
+        $username = $this->providers->driver($account->provider)->credentialUsername();
+        $remote = parse_url($this->remoteUrl($application));
+        $host = ($remote['host'] ?? '').(isset($remote['port']) ? ':'.$remote['port'] : '');
+
+        return 'https://'.rawurlencode($username).':'.rawurlencode($account->token)."@{$host}\n";
+    }
+
+    /**
+     * A git command run as the site user, with the deploy's credential when
+     * there is one.
+     *
+     * `-c` values are parsed by git itself, not a shell. The path is visible
+     * in `ps`; the token inside the file is not. The empty helper comes first
+     * because it clears every helper configured before the command line —
+     * including one in the repository's own config, which the site user
+     * writes — so the token goes to this helper and to no other.
+     *
+     * @param  array<int, string>  $arguments
+     * @return array<int, string>
+     */
+    private function git(Application $application, ?string $credentialFile, array $arguments): array
+    {
+        $command = ['git'];
+
+        if ($credentialFile !== null) {
+            array_push(
+                $command,
+                '-c', 'credential.helper=',
+                '-c', "credential.helper=store --file={$credentialFile}",
+                '-c', 'credential.interactive=never',
+            );
+        }
+
+        return $this->asSiteUser($application, [...$command, ...$arguments]);
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     * @return array<int, string>
+     */
+    private function asSiteUser(Application $application, array $command): array
+    {
+        return array_merge(['runuser', '-u', $application->systemUser->username, '--'], $command);
+    }
+
+    /**
      * @param  array<int, string>  $command
      *
      * @throws ProvisioningFailedException
      */
-    private function run(string $step, ?string $credentialFile, array $command): ServerOpsResult
+    private function run(string $step, array $command): ServerOpsResult
     {
-        if ($credentialFile !== null) {
-            // `-c` values are parsed by git itself, not a shell. The path is
-            // visible in `ps`; the token inside the file is not.
-            array_splice($command, 1, 0, [
-                '-c', "credential.helper=store --file={$credentialFile}",
-                '-c', 'credential.interactive=never',
-            ]);
-        }
-
         $result = $this->serverOps->run(
             $command,
             ['feature' => 'application', 'op' => "git.{$step}"],
@@ -638,10 +748,7 @@ class GitDeployer
             'fi',
         ]);
 
-        $this->run('seed_env', null, [
-            'runuser', '-u', $application->systemUser->username, '--',
-            'sh', '-c', $script,
-        ]);
+        $this->run('seed_env', $this->asSiteUser($application, ['sh', '-c', $script]));
     }
 
     private function runScript(Application $application, string $documentRoot, ?string $script = null): void
@@ -925,10 +1032,10 @@ class GitDeployer
      *
      * @return array{message: ?string, author: ?string}
      */
-    public function commitDetails(string $documentRoot): array
+    public function commitDetails(Application $application, string $documentRoot): array
     {
         $result = $this->serverOps->run(
-            ['git', '-C', $documentRoot, 'log', '-1', '--pretty=format:%s%n%an'],
+            $this->git($application, null, ['-C', $documentRoot, 'log', '-1', '--pretty=format:%s%n%an']),
             ['feature' => 'application', 'op' => 'git.commit_details'],
         );
 
@@ -1013,45 +1120,35 @@ class GitDeployer
     }
 
     /**
-     * Every git command here runs as root — `git` is in the panel's
-     * privilege-elevation list, because `init`/`fetch`/`reset` on an
-     * application's directory cannot work as the unprivileged panel user.
-     * But `$documentRoot` is owned by the site's own system user (provisioning
-     * chowns it before any code arrives, and this method's own caller chowns
-     * it again after every deploy) — so root operating on it trips git's
-     * dubious-ownership protection (>=2.35.2, post-CVE-2022-24765): the very
-     * next git command against a directory `git init` (as root) just created
-     * inside a non-root-owned parent refuses outright with "fatal: detected
-     * dubious ownership", and on a redeploy, `fetch`/`reset` hit the same
-     * wall against the same non-root ownership left by the previous deploy's
-     * own chown. Adding a `safe.directory` exception for this application's
-     * document root, once, exempts every git command below from the check —
-     * same fix, same reasoning, as install.sh's own equivalent for the
-     * panel's own checkout.
+     * Hand a `.git` that root made back to the site user before git runs as
+     * them. Checkouts made before git ran as the site user — and v7's —
+     * may still hold root-owned objects, which the site user could not
+     * write, so the first deploy after the upgrade would fail at `fetch`.
+     *
+     * In place of what was here: a `safe.directory` entry added to root's
+     * global config for every document root, which is what let root run git
+     * in a directory the site user controls. Entries already written are left
+     * where they are; nothing runs git as root in these directories any more.
+     *
+     * `-h`: a symlink inside is changed itself, never what it points at.
      */
-    private function trustDocumentRoot(string $documentRoot): void
+    private function reclaimGitDirectory(Application $application, string $documentRoot): void
     {
-        $configured = $this->serverOps->run(
-            ['git', 'config', '--global', '--get-all', 'safe.directory'],
-            ['feature' => 'application', 'op' => 'git.safe_directory_check'],
-        );
+        $context = ['feature' => 'application', 'op' => 'git.reclaim_ownership'];
 
-        $trusted = preg_split('/\r?\n/', trim($configured->output())) ?: [];
-
-        if (in_array($documentRoot, $trusted, true)) {
+        if (! $this->serverOps->probe(['test', '-d', $documentRoot.'/.git'], $context)->ok) {
             return;
         }
 
-        $this->serverOps->run(
-            ['git', 'config', '--global', '--add', 'safe.directory', $documentRoot],
-            ['feature' => 'application', 'op' => 'git.safe_directory'],
-        );
+        $owner = $application->systemUser->username;
+
+        $this->serverOps->run(['chown', '-R', '-h', "{$owner}:{$owner}", $documentRoot.'/.git'], $context);
     }
 
-    private function currentCommit(string $documentRoot): ?string
+    private function currentCommit(Application $application, string $documentRoot): ?string
     {
         $result = $this->serverOps->run(
-            ['git', '-C', $documentRoot, 'rev-parse', 'HEAD'],
+            $this->git($application, null, ['-C', $documentRoot, 'rev-parse', 'HEAD']),
             ['feature' => 'application', 'op' => 'git.commit'],
         );
 

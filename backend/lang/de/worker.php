@@ -39,6 +39,8 @@ return [
         'queue_conflict' => 'Diese Anwendung hat bereits die andere Art von Queue-Worker. Horizon überwacht eigene Worker, sodass bei beidem jeder Job doppelt verarbeitet wird.',
         'extra_config_user' => 'Legen Sie das Konto unter „Ausführen als“ fest, nicht in der Zusatzkonfiguration.',
         'extra_config_environment' => 'Das Panel legt die Umgebung dieses Workers bereits fest. Entfernen Sie die Zeile environment= aus der Zusatzkonfiguration.',
+        'extra_config_indented' => 'Zeilen der Zusatzkonfiguration dürfen nicht mit einem Leerzeichen oder Tabulator beginnen: Der Worker würde sie als Teil der Zeile darüber lesen.',
+        'extra_config_encoding' => 'Die Zusatzkonfiguration muss reiner UTF-8-Text sein.',
         'did_not_start' => 'Der Worker lief nicht weiter und wurde daher nicht hinzugefügt. Prüfen Sie den Befehl. Referenz: :reference',
         'did_not_start_said' => 'Der Worker lief nicht weiter und wurde daher nicht hinzugefügt. Ausgabe: „:output“ (Referenz :reference)',
         'did_not_start_field' => 'Dieser Befehl beendet sich sofort, statt weiterzulaufen.',

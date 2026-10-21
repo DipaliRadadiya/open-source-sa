@@ -93,12 +93,14 @@ it('clones a private repository without the token ever touching the command line
     // This is the point of the whole design: the secret is never an argument.
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), 'ghp_super_secret_value'));
 
-    // It reaches git through a credential file written over stdin instead.
-    Process::assertRan(fn ($p) => $p->command[0] === 'tee'
+    // It reaches git through a credential file written over stdin instead —
+    // by the site user, who runs git, into a directory only they can enter.
+    Process::assertRan(fn ($p) => array_slice($p->command, 0, 5) === ['runuser', '-u', 'deploy', '--', 'mkdir']
+        && $p->command[5] === '-m' && $p->command[6] === '0700');
+    Process::assertRan(fn ($p) => array_slice($p->command, 0, 5) === ['runuser', '-u', 'deploy', '--', 'sh']
+        && str_contains($p->command[6], 'umask 077')
         && str_contains((string) $p->input, 'ghp_super_secret_value')
         && str_contains((string) $p->input, 'x-access-token'));
-
-    Process::assertRan(fn ($p) => $p->command[0] === 'chmod' && $p->command[1] === '0600');
 
     // The remote itself is clean — nothing sensitive lands in .git/config.
     // (`git init` + `remote add`, not `clone` — see GitDeployer::deploy() for
@@ -146,9 +148,8 @@ it('deletes the credential file even when the fetch fails', function () {
     runDeploy($app);
 
     // A failed deploy must not leave a token sitting on disk.
-    Process::assertRan(fn ($p) => $p->command[0] === 'rm'
-        && $p->command[1] === '-f'
-        && str_contains((string) $p->command[2], 'git-'));
+    Process::assertRan(fn ($p) => array_slice($p->command, 0, 6) === ['runuser', '-u', 'deploy', '--', 'rm', '-rf']
+        && str_contains((string) $p->command[6], 'git-'));
 });
 
 it('keeps a live site live when a redeploy fails', function () {
@@ -254,7 +255,7 @@ it('needs no credential at all for a public repository', function () {
     runDeploy($app);
 
     // Nothing to write, nothing to leak, nothing to clean up.
-    Process::assertNotRan(fn ($p) => $p->command[0] === 'tee');
+    Process::assertNotRan(fn ($p) => $p->command[0] === 'tee' || in_array('umask 077 && cat > "$1"', $p->command, true));
     Process::assertRan(fn ($p) => in_array('https://github.com/laravel/laravel.git', $p->command, true));
 });
 
@@ -308,7 +309,7 @@ it('pairs the token with the right username per provider', function () {
     runDeploy($app);
 
     // The wrong username fails auth even with a valid token.
-    Process::assertRan(fn ($p) => $p->command[0] === 'tee' && str_contains((string) $p->input, 'oauth2'));
+    Process::assertRan(fn ($p) => in_array('umask 077 && cat > "$1"', $p->command, true) && str_contains((string) $p->input, 'oauth2'));
 });
 
 it('queues a deploy and refuses one for a non-git application', function () {

@@ -39,6 +39,8 @@ return [
         'queue_conflict' => 'Esta aplicación ya tiene el otro tipo de worker de cola. Horizon supervisa sus propios workers, así que ejecutar ambos hace que cada trabajo se procese dos veces.',
         'extra_config_user' => 'Indique la cuenta en «Ejecutar como», no en la configuración adicional.',
         'extra_config_environment' => 'El panel ya define el entorno de este proceso. Quite la línea environment= de la configuración adicional.',
+        'extra_config_indented' => 'Las líneas de la configuración adicional no pueden empezar con un espacio o una tabulación: el proceso las leería como parte de la línea anterior.',
+        'extra_config_encoding' => 'La configuración adicional debe ser texto UTF-8 sin formato.',
         'did_not_start' => 'El proceso no siguió en ejecución, así que no se añadió. Revise el comando. Referencia: :reference',
         'did_not_start_said' => 'El proceso no siguió en ejecución, así que no se añadió. Mostró: «:output» (referencia :reference)',
         'did_not_start_field' => 'Este comando termina enseguida en lugar de seguir ejecutándose.',
