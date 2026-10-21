@@ -51,7 +51,7 @@ export default async function RegistriesPage() {
   // After the 409: on a server without Docker the backend leaves `registry` out of
   // everyone's permissions, so checking it first told an admin "no access".
   if (!can(permissions, "registry", "view"))
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} feature="registry" />;
   const canManage = can(permissions, "registry", "manage");
 
   if (list.failed) {

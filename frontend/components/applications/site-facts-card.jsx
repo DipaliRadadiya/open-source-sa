@@ -54,7 +54,7 @@ function factColumns(count) {
   return FACT_COLUMNS[4];
 }
 
-function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false }) {
+function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false, wide = false }) {
   const noteNode = note ? (
     // Not truncated: a filename or refusal is the content.
     <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
@@ -156,7 +156,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
     return (
       // Steel UI: one cell of a hairline grid with a mono caps label, like Server
       // information on the dashboard (Krishna's prototype). Edges are drawn inside the cell.
-      <div className="group/fact min-w-0 px-5 py-3 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]">
+      <div className={`group/fact min-w-0 px-5 py-3 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)] ${wide ? "col-span-2 xl:col-span-1" : ""}`}>
         <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
         <dd className="flex min-h-7 min-w-0 items-center gap-2">
           <span
@@ -359,6 +359,10 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       ? null
       : formatBytes(application.volume_size_bytes, format);
 
+  // A container's type is its Source (image, compose file or recipe) and the web root is
+  // a proxy, not a folder; both were noise and pushed the row onto an empty second line.
+  const container = application.serving_profile === "docker";
+
   const origin = application.origin;
   // For an image the value is the image reference alone, copyable: "Docker image" is
   // already the origin pill in the header, and as a prefix it pushed the reference
@@ -378,11 +382,14 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       value: originValue,
       mono: origin?.kind === "image",
       copy: origin?.kind === "image" && Boolean(origin.image),
+      // A container's five facts: Source takes two cells, so 2 and 3 columns come out
+      // full. On one row (xl) every column is sized by its content instead.
+      wide: container && strip,
     },
     {
       icon: Package,
       label: t("columns.type"),
-      value: application.site_type_title ?? application.site_type,
+      value: container ? null : application.site_type_title ?? application.site_type,
       note: typeNote,
       // The backend refuses to probe git sites. Only a suggestion gets its own button.
       action:
@@ -404,7 +411,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     {
       icon: FolderTree,
       label: t("facts.webRoot"),
-      value: application.web_root,
+      value: container ? null : application.web_root,
       mono: true,
       copy: true,
       // The one fact on this card that is a setting rather than a record.
@@ -499,10 +506,13 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   );
 
   if (strip) {
+    const cells = facts.reduce((count, fact) => count + (fact.wide ? 2 : 1), 0);
     return (
       <>
-        {/* One row up to six facts; seven or eight go four across, so none is left alone. */}
-        <dl className={`-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 ${facts.length > 6 ? "xl:grid-cols-4" : "xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]"} ${className ?? ""}`}>
+        {/* One row up to six facts; seven or eight go four across, so none is left alone.
+            A container's row is sized by content: equal columns left "Docker Compose" with
+            empty room while Size's note wrapped (Krishna, 20 Oct). */}
+        <dl className={`-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 ${cells === 6 && facts.some((fact) => fact.wide) ? "xl:grid-cols-none xl:grid-flow-col xl:auto-cols-[minmax(0,auto)]" : facts.length > 6 ? "xl:grid-cols-4" : "xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]"} ${className ?? ""}`}>
           {facts.map((fact) => (
             <Fact key={fact.label} editLabel={t("webRoot.title")} strip {...fact} />
           ))}

@@ -8,6 +8,7 @@ import {
 } from "@/lib/cron-jobs/get-cron-presets";
 import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
 import { getAllApplications } from "@/lib/applications/get-applications";
+import { availablePresets } from "@/lib/cron-jobs/preset-fit";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { withTimeout } from "@/lib/api/with-timeout";
 import { CronjobsPanel } from "@/components/cron-jobs/cronjobs-panel";
@@ -70,7 +71,8 @@ export default async function CronjobsPage({ searchParams }) {
             canManage={canManage}
             canViewLogs={canViewLogs}
             schedulePresets={schedulePresets}
-            commandPresets={commandPresets.presets}
+            // Only templates some application here can run; all when the list is unknown.
+            commandPresets={availablePresets(commandPresets.presets, sites.applications, canManage && !sites.failed)}
             placeholder={commandPresets.placeholder}
             timezone={timezone}
             isFiltered={Boolean(sp.user || sp.active)}

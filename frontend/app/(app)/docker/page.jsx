@@ -25,7 +25,7 @@ export default async function DockerPage() {
   ]);
 
   if (!can(permissions, "docker", "view"))
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} feature="docker" />;
   const canManage = can(permissions, "docker", "manage");
 
   const { networks, volumes, failed, status, failure, message } =
@@ -40,8 +40,13 @@ export default async function DockerPage() {
   // SITE's configuration and restarts it, so the permission that governs it is
   // the one that governs the site.
   const canManageSites = can(permissions, "application", "manage");
+  // Names for the "belongs to" badges; anyone who can see applications gets them.
+  const allApplications = can(permissions, "application", "view")
+    ? (await getAllApplications()).applications
+    : [];
+  const applicationNames = Object.fromEntries(allApplications.map((application) => [application.id, application.name]));
   const serving = canManageSites
-    ? (await getAllApplications()).applications.filter(
+    ? allApplications.filter(
         (application) =>
           application.serving_profile === "docker" &&
           application.status === "active",
@@ -91,6 +96,7 @@ export default async function DockerPage() {
           initialNetworks={networks}
           initialVolumes={volumes}
           sites={sites}
+          applicationNames={applicationNames}
           canManage={canManage}
           canManageSites={canManageSites}
         />

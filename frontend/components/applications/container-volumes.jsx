@@ -8,8 +8,8 @@ import { volumeMountSchema } from "@/lib/schemas/docker";
 import { updateContainerSettings } from "@/lib/api/docker";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Note } from "@/components/ui/note";
 import {
   Select,
@@ -95,8 +95,6 @@ export function ContainerVolumes({
 
   return (
     <div className="space-y-3">
-      <Label>{t("title")}</Label>
-
       <ul className="divide-y rounded-lg border">
         {mounts.length === 0 ? (
           <li className="px-3 py-6 text-center text-sm text-muted-foreground">
@@ -113,11 +111,14 @@ export function ContainerVolumes({
                 <span className="text-muted-foreground"> → {mount.path}</span>
               </span>
               {canManage ? (
-                <button
+                <IconTooltip label={t("remove", { volume: mount.volume })}>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   disabled={pending}
                   aria-label={t("remove", { volume: mount.volume })}
-                  className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                  className="text-muted-foreground hover:text-destructive"
                   onClick={() =>
                     save(
                       mounts.filter(
@@ -132,7 +133,8 @@ export function ContainerVolumes({
                   }
                 >
                   <X className="size-4" />
-                </button>
+                </Button>
+                </IconTooltip>
               ) : null}
             </li>
           ))
@@ -206,7 +208,6 @@ export function ContainerVolumes({
           is a thing to read twice, and it arrives after the row has been typed. */}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      <p className="text-xs text-muted-foreground">{t("hint")}</p>
     </div>
   );
 }

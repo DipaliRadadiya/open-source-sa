@@ -55,7 +55,8 @@ test("a refused page names itself, not whatever it would have bounced to", () =>
       strip(read(p)),
       // createTitle: the create page's own heading; it also says which
       // permission is missing, since "view" is not the one it lacks.
-      /<PermissionDenied title=\{t\("(title|pageTitle|createTitle)"\)\}( description=\{t\("noPermission"\)\})? \/>/,
+      // feature: stack-only screens, so an unavailable one says so instead.
+      /<PermissionDenied title=\{t\("(title|pageTitle|createTitle)"\)\}( description=\{t\("noPermission"\)\})?( feature="[a-z_]+")? \/>/,
       `${p} must name itself`,
     );
   }

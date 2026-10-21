@@ -6,7 +6,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
-import { Label } from "@/components/ui/label";
 
 /**
  * The credentials the panel generated when it installed a one-click app.
@@ -56,8 +55,6 @@ export function ContainerCredentials({ application }) {
 
   return (
     <div className="space-y-3">
-      <Label>{t("title")}</Label>
-
       <ul className="divide-y rounded-lg border">
         {keys.map((key) => (
           <li
@@ -102,11 +99,7 @@ export function ContainerCredentials({ application }) {
         </Button>
       )}
 
-      {secrets ? (
-        <Caution icon={KeyRound}>{t("shownWarning")}</Caution>
-      ) : (
-        <p className="text-xs text-muted-foreground">{t("hint")}</p>
-      )}
+      {secrets ? <Caution icon={KeyRound}>{t("shownWarning")}</Caution> : null}
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>

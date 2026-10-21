@@ -40,8 +40,6 @@ test("every provider names where to get the token, in every locale", () => {
 
       for (const key of [
         "label",
-        "step1",
-        "step2",
         "usernameHint",
         "tokenHint",
       ]) {
@@ -59,24 +57,21 @@ test("the two traps that produce a credential nobody can debug are stated", () =
 
   // GHCR: a fine-grained token cannot carry read:packages, so it is refused while
   // looking entirely valid. If the form does not say so, the user blames the panel.
-  assert.match(providers.ghcr.step1, /read:packages/);
-  assert.match(providers.ghcr.step2 + providers.ghcr.tokenHint, /classic/i);
+  // Said under the field it applies to (21 Oct), not in a step list above the form.
+  assert.match(providers.ghcr.tokenHint, /read:packages/);
+  assert.match(providers.ghcr.tokenHint, /classic/i);
 
   // GitLab: the username is the deploy token's own, not the account's.
-  assert.match(providers.gitlab.step2, /deploy token/i);
+  assert.match(providers.gitlab.usernameHint, /deploy token/i);
 
   // Docker Hub: the username is the Docker ID, not the sign-in email.
-  assert.match(
-    providers.dockerhub.step2 + providers.dockerhub.usernameHint,
-    /Docker ID/,
-  );
+  assert.match(providers.dockerhub.usernameHint, /Docker ID/);
 });
 
-test("the fixed-address warning explains that a wrong host is ignored, not rejected", () => {
-  // The single worst failure this feature has: Docker ignores a credential stored
-  // under an address it does not recognise, and the pull then fails exactly as if
-  // none existed. Saying "invalid address" would not convey that.
-  assert.match(messages.en.docker.registries.registryHintFixed, /ignored/i);
+test("a hosted provider's address is not editable, so it cannot be mistyped", () => {
+  // Docker ignores a credential stored under an address it does not recognise, and
+  // the pull then fails exactly as if none existed; the field is not shown at all.
+  assert.match(readFileSync("components/docker/registries-card.jsx", "utf8"), /\{preset\.addressFixed \? null : \(/);
 });
 
 test("hosted providers pin their address; self-hosted ones do not", () => {

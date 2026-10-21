@@ -34,7 +34,12 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
 
   // Server state with installs started here overlaid; derived, so an override
   // stops applying once the server resolves that component.
-  const components = setup.components.map((c) =>
+  // The installer puts Docker on a Docker-stack server and the API does not list
+  // it (RC-34); shown so the setup page matches what the server runs.
+  const listed = setup.stack === "docker" && !setup.components.some((c) => c.key === "docker")
+    ? [...setup.components, { key: "docker", title: "Docker", detail: t("dockerDetail"), state: "installed", recommended: false, action: null, options: [] }]
+    : setup.components;
+  const components = listed.map((c) =>
     started[c.key] && c.state !== "installed" && c.state !== "failed"
       ? { ...c, state: "installing" }
       : c,

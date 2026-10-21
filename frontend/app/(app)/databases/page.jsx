@@ -55,7 +55,7 @@ export default async function DatabasesPage({ searchParams }) {
   const { engines, failed, status, failure, message } = live;
 
   if (!can(permissions, "database", "view"))
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} feature="database" />;
   const canManage = can(permissions, "database", "manage");
 
   // A 409 is the honest answer on a Docker box, not a failure to report: an

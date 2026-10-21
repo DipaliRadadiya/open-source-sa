@@ -94,6 +94,14 @@ const text = (id) => screen.getByTestId(id).textContent;
 const keyField = () => screen.getByLabelText(m.turnOn.key, { selector: "textarea" });
 const passwordField = () => screen.getByLabelText(m.turnOn.password, { selector: "input" });
 const answer = (data) => async () => ({ data });
+// The form is a dialog behind the card's Turn on button.
+async function openTurnOn() {
+  fireEvent.click(await screen.findByRole("button", { name: m.turnOn.open }));
+  return screen.findByRole("button", { name: m.turnOn.submit });
+}
+async function showMore() {
+  fireEvent.click(await screen.findByRole("button", { name: m.commands.more }));
+}
 function recordPost(result = async () => ({ data: {} })) {
   const sent = [];
   globalThis.__dockerApi.enableAccess = async (id, payload) => {
@@ -136,18 +144,23 @@ test("renders only for docker apps and never asks the API for others", async () 
   assert.equal(globalThis.__dockerApiCalls.access ?? 0, 0);
 });
 
-test("off: skeleton first, then the owner and one turn-on step with a key and a password", async () => {
+test("off: skeleton first, then a short card, and the turn-on form in a dialog", async () => {
   let finish;
   globalThis.__dockerApi.access = () => new Promise((resolve) => { finish = resolve; });
   show();
   assert.ok(screen.getByLabelText(m.loading));
   finish({ data: off });
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await screen.findByRole("button", { name: m.turnOn.open });
 
-  assert.equal(text("container-access-owner"), "This app's system user: oc-app");
+  assert.equal(text("container-access-owner"), `${m.systemUser}oc-app`);
+  assert.equal(text("container-access-state"), m.stateOff);
   assert.equal(screen.getByRole("link", { name: "oc-app" }).getAttribute("href"), "/system-users?search=oc-app");
-  assert.ok(screen.getByText(fill(m.turnOn.title, { username: "oc-app" })));
   assert.ok(screen.getByText(fill(m.turnOn.body, { username: "oc-app" })));
+  assert.equal(screen.queryByRole("textbox"), null, "no form on the dashboard itself");
+
+  await openTurnOn();
+  const dialog = screen.getByRole("dialog");
+  assert.ok(dialog.textContent.includes(fill(m.turnOn.title, { username: "oc-app" })));
   assert.ok(keyField());
   assert.ok(passwordField());
   assert.equal(screen.queryByTestId("container-access-shell"), null, "no command before it is on");
@@ -161,10 +174,12 @@ test("off: an owner that already has a key turns on with one click and an empty 
   globalThis.__dockerApi.access = answer({ ...off, owner: { ...owner, ssh_keys: 1 } });
   const sent = recordPost(async () => ({ data: on }));
   show();
-  const button = await screen.findByRole("button", { name: m.turnOn.submit });
+  const button = await openTurnOn();
   assert.equal(screen.queryByLabelText(m.turnOn.key, { selector: "textarea" }), null, "nothing to ask for");
   fireEvent.click(button);
   await screen.findByTestId("container-access-shell");
+  await waitFor(() => assert.equal(screen.queryByRole("dialog"), null, "the dialog closes once it is on"));
+  assert.equal(text("container-access-state"), m.stateOn);
   assert.deepEqual(sent, [{ id: 12, payload: {} }]);
   assert.deepEqual(globalThis.__toasts, [{ kind: "success", message: fill(m.turnOn.done, { username: "oc-app" }) }]);
   assert.equal(globalThis.__dockerApiCalls.access, 1, "the POST answer switched the card, no re-read");
@@ -176,7 +191,7 @@ test("off: a key or a password is required when the owner has neither, and the k
   let reads = 0;
   globalThis.__dockerApi.access = async () => ({ data: reads++ === 0 ? off : on });
   show();
-  const button = await screen.findByRole("button", { name: m.turnOn.submit });
+  const button = await openTurnOn();
   fireEvent.click(button);
   await screen.findByText(v.sshKeyOrPassword);
   assert.equal(sent.length, 0);
@@ -191,7 +206,7 @@ test("off: a key or a password is required when the owner has neither, and the k
 test("off: a password alone is enough while password login is on, and the System Users rules apply", async () => {
   const sent = recordPost(async () => ({ data: on }));
   show();
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await openTurnOn();
   fireEvent.change(passwordField(), { target: { value: "short" } });
   fireEvent.click(screen.getByRole("button", { name: m.turnOn.submit }));
   await screen.findByText(v.min10);
@@ -207,7 +222,7 @@ test("off: password login off and no key: no password field, the key is required
   globalThis.__dockerApi.access = answer({ ...off, password_login: false });
   const sent = recordPost();
   show();
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await openTurnOn();
   assert.equal(screen.queryByLabelText(m.turnOn.password, { selector: "input" }), null);
   assert.equal(screen.getByRole("link", { name: "Access & security" }).getAttribute("href"), "/settings/security");
   fireEvent.click(screen.getByRole("button", { name: m.turnOn.submit }));
@@ -218,7 +233,7 @@ test("off: password login off and no key: no password field, the key is required
 test("off: Security is plain text for someone who cannot open settings", async () => {
   globalThis.__dockerApi.access = answer({ ...off, password_login: false });
   show({ ...admin, canOpenSecurity: false });
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await openTurnOn();
   assert.equal(screen.queryByRole("link", { name: "Access & security" }), null);
   assert.ok(screen.getByText(/Access & security/));
 });
@@ -227,7 +242,7 @@ test("off: other apps warn, and the confirm box is required and sent", async () 
   globalThis.__dockerApi.access = answer({ ...off, owner: { ...owner, ssh_keys: 1, other_apps: 2 } });
   const sent = recordPost(async () => ({ data: on }));
   show();
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await openTurnOn();
   assert.ok(screen.getByText(/oc-app also owns 2 other apps\. After this, its SSH login opens this container only/));
   fireEvent.click(screen.getByRole("button", { name: m.turnOn.submit }));
   await screen.findByText(v.confirmContainerOnly);
@@ -242,6 +257,7 @@ test("off: other apps warn, and the confirm box is required and sent", async () 
 test("off: one other app reads in the singular", async () => {
   globalThis.__dockerApi.access = answer({ ...off, owner: { ...owner, ssh_keys: 1, other_apps: 1 } });
   show();
+  await openTurnOn();
   await screen.findByText(/oc-app also owns 1 other app\./);
 });
 
@@ -249,7 +265,7 @@ test("off: a viewer without System Users manage gets read-only text and no form"
   show({ canSeeSystemUsers: false, canManageSystemUsers: false });
   await screen.findByTestId("container-access-read-only");
   assert.equal(text("container-access-read-only"), fill(m.readOnly, { username: "oc-app" }));
-  assert.equal(screen.queryByRole("button", { name: m.turnOn.submit }), null);
+  assert.equal(screen.queryByRole("button", { name: m.turnOn.open }), null);
   assert.equal(screen.queryByRole("link", { name: "oc-app" }), null, "no System Users link without view");
   assert.ok(screen.getByText("oc-app").tagName === "STRONG");
 });
@@ -262,7 +278,7 @@ test("POST errors: field errors land on the field, others above the button, a 50
     throw error;
   });
   show();
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await openTurnOn();
   fireEvent.change(keyField(), { target: { value: KEY } });
   fireEvent.click(screen.getByRole("button", { name: m.turnOn.submit }));
   await screen.findByText("That key is already used.");
@@ -288,6 +304,8 @@ test("on: shell, one command and logs exactly as the API wrote them, plus the no
   show();
   await screen.findByTestId("container-access-shell");
   assert.equal(text("container-access-shell"), "ssh -t -p 2222 oc-app@203.0.113.10");
+  assert.equal(screen.queryByTestId("container-access-exec"), null, "folded until asked for");
+  await showMore();
   assert.equal(text("container-access-exec"), commands.exec_example);
   assert.equal(text("container-access-logs"), commands.logs);
   for (const label of [m.commands.shell, m.commands.exec, m.commands.logs]) assert.ok(screen.getByText(label));
@@ -298,7 +316,7 @@ test("on: shell, one command and logs exactly as the API wrote them, plus the no
     screen.getByRole("link", { name: "For normal server SSH, create a separate system user." }).getAttribute("href"),
     "/system-users",
   );
-  assert.equal(screen.queryByRole("button", { name: m.turnOn.submit }), null);
+  assert.equal(screen.queryByRole("button", { name: m.turnOn.open }), null);
 });
 
 test("on: several containers get a select; another service adds @<service>", async () => {
@@ -310,6 +328,7 @@ test("on: several containers get a select; another service adds @<service>", asy
   assert.deepEqual(screen.getAllByRole("option").map((o) => o.textContent), ["ghost", "db"]);
   fireEvent.click(screen.getByRole("option", { name: "db" }));
   await waitFor(() => assert.equal(text("container-access-shell"), "ssh -t oc-app@203.0.113.10 @db"));
+  await showMore();
   assert.equal(text("container-access-exec"), commands.exec_example, "only the shell line follows the select");
 });
 
@@ -345,7 +364,7 @@ test("on: an admin can turn it off; the card goes back to the turn-on step", asy
   globalThis.__dockerApi.disableAccess = async () => ({ data: { message: "ok" } });
   show();
   fireEvent.click(await screen.findByRole("button", { name: m.commands.turnOff }));
-  await screen.findByRole("button", { name: m.turnOn.submit });
+  await screen.findByRole("button", { name: m.turnOn.open });
   assert.equal(globalThis.__dockerApiCalls.disableAccess, 1);
   assert.deepEqual(globalThis.__toasts, [{ kind: "success", message: fill(m.commands.turnedOff, { username: "oc-app" }) }]);
 });

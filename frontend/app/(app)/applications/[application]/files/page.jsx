@@ -1,5 +1,5 @@
 import Link from "@/components/ui/app-link";
-import { FolderSearch, FolderX } from "lucide-react";
+import { FileCode, FolderSearch, FolderX } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
@@ -17,6 +17,7 @@ import { TrashPanel } from "@/components/applications/files/trash-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Button } from "@/components/ui/button";
+import { Note } from "@/components/ui/note";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 import { isSettled } from "@/lib/applications/settled";
 
@@ -98,6 +99,24 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
         title={t("pageTitle")}
         subtitle={t("pageSubtitle")}
       />
+
+      {/* The panel rewrites compose.yml here from its own copy every time it applies
+          the container, so an edit in Files looks saved and is then lost. */}
+      {settled && application.serving_profile === "docker" ? (
+        <Note icon={FileCode}>
+          {t.rich("dockerNote", {
+            link: (chunks) =>
+              can(appPermissions, "app_compose", "view", "application") ? (
+                <Link href={`/applications/${id}/compose`} prefetch={false} className="font-medium text-primary underline-offset-4 hover:underline">
+                  {chunks}
+                </Link>
+              ) : (
+                <span className="font-medium text-foreground">{chunks}</span>
+              ),
+            code: (chunks) => <code className="font-mono text-xs text-foreground">{chunks}</code>,
+          })}
+        </Note>
+      ) : null}
 
       {!settled ? (
         <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">

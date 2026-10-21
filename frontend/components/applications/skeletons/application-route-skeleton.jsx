@@ -5,6 +5,8 @@ import { ApplicationDashboardSkeleton } from "@/components/applications/skeleton
 import BackupsSkeleton from "@/app/(app)/applications/[application]/backups/loading";
 import BotBlockerSkeleton from "@/app/(app)/applications/[application]/bot-blocker/loading";
 import CloneSkeleton from "@/app/(app)/applications/[application]/clone/loading";
+import ComposeSkeleton from "@/app/(app)/applications/[application]/compose/loading";
+import ContainerSkeleton from "@/app/(app)/applications/[application]/container/loading";
 import DeploymentSkeleton from "@/app/(app)/applications/[application]/deployment/loading";
 import DomainsSkeleton from "@/app/(app)/applications/[application]/domains/loading";
 import EnvironmentSkeleton from "@/app/(app)/applications/[application]/environment/loading";
@@ -21,6 +23,8 @@ const BY_SECTION = {
   "backups": BackupsSkeleton,
   "bot-blocker": BotBlockerSkeleton,
   "clone": CloneSkeleton,
+  "compose": ComposeSkeleton,
+  "container": ContainerSkeleton,
   "deployment": DeploymentSkeleton,
   "domains": DomainsSkeleton,
   "environment": EnvironmentSkeleton,

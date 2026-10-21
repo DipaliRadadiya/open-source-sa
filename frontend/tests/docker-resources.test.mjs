@@ -25,8 +25,9 @@ test("Docker's own networks get no delete button at all", () => {
   // A label, not a disabled control. Disabled says "not now"; the truth is
   // "never" — Docker recreates bridge/host/none on restart, so a delete could
   // only fail or do damage.
-  assert.match(panel, /network\.built_in \?/);
-  assert.match(panel, /networks\.builtIn/);
+  // They are not rows at all (20 Oct): one locked line names them under the table.
+  assert.match(panel, /initialNetworks\.filter\(\(network\) => !network\.built_in\)/);
+  assert.match(panel, /networks\.builtInLine/);
 });
 
 test("removal always goes through a confirmation", () => {
@@ -64,7 +65,8 @@ test("every string the screen uses exists in every locale", () => {
   const needed = [
     ["title"],
     ["subtitle"],
-    ["create"],
+    ["networks", "createAction"],
+    ["volumes", "createAction"],
     ["remove"],
     ["failed"],
     ["loadFailed"],
@@ -75,13 +77,13 @@ test("every string the screen uses exists in every locale", () => {
     ["columns", "usedBy"],
     ["columns", "attached"],
     ["networks", "title"],
-    ["networks", "builtIn"],
+    ["networks", "builtInLine"],
     ["networks", "removeTitle"],
     ["networks", "removeBody"],
     ["networks", "removeBusy"],
     ["networks", "hint"],
     ["volumes", "title"],
-    ["volumes", "inUse"],
+    ["volumes", "inUseUnnamed"],
     ["volumes", "removeTitle"],
     ["volumes", "removeBody"],
     ["volumes", "removeBusy"],
@@ -204,7 +206,8 @@ test("saving the card refreshes the server-rendered siblings", () => {
 test("the card says the site restarts before the click, not after", () => {
   // Saving recreates the container. That is downtime, and it is not something
   // to discover from a graph.
-  assert.match(card, /note=\{t\("restartNote"\)\}/);
+  // Beside each card's Save, where the click happens.
+  assert.equal(card.match(/changedBy=\{canManage \? t\("restartNote"\) : null\}/g).length, 2);
   for (const locale of LOCALES) {
     assert.ok(
       messages[locale].applications.container.restartNote,
@@ -233,7 +236,7 @@ test("every container card string exists in every locale", () => {
 
 test("the volumes table names the containers using a volume", () => {
   assert.match(panel, /volume\.container_names\.length > 0/);
-  assert.match(panel, /volume\.container_names\.map/);
+  assert.match(panel, /volume\.container_names\.join\(", "\)/);
 });
 
 test("the count survives as a fallback, not as the default", () => {
@@ -382,7 +385,7 @@ test("attaching is gated on the site permission, not the docker one", () => {
   // It writes the SITE's configuration and restarts it, so the permission that
   // governs it is the one that governs the site.
   assert.match(dockerPage, /can\(permissions, "application", "manage"\)/);
-  assert.match(panel, /canManageSites && !(network|volume)\.application_id \? \(/);
+  assert.match(panel, /!canManageSites \? t\("attach\.noPermission"\)/);
 });
 
 test("only running container sites are offered", () => {
@@ -486,12 +489,13 @@ const deleteDialog = read(
 test("the volumes table shows where the volume is on disk", () => {
   // Wanted for the unglamorous reasons: rsyncing it elsewhere, checking what is
   // actually on disk, pointing a support answer at a directory.
-  assert.match(panel, /columns\.path/);
+  // Under the volume's name (20 Oct), with a Copy whose label says what it copies.
   assert.match(panel, /volume\.mountpoint/);
+  assert.match(panel, /<bdi dir="ltr">\{volume\.mountpoint\}<\/bdi>/);
   for (const locale of LOCALES) {
     assert.ok(
-      messages[locale].docker.columns.path,
-      `${locale} is missing docker.columns.path`,
+      messages[locale].docker.volumes.copyPath,
+      `${locale} is missing docker.volumes.copyPath`,
     );
   }
 });

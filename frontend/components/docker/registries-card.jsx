@@ -1,19 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
-  KeyRound,
-  Plus,
-  Trash2,
-  PlugZap,
-  Check,
-  X,
+  CheckCircle2,
+  ChevronRight,
   Clock,
   ExternalLink,
-  Info,
+  KeyRound,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  PlugZap,
+  Plus,
+  Server,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import {
   createRegistry,
@@ -29,90 +36,57 @@ import {
   issuesTemporaryTokens,
 } from "@/lib/docker/registry-providers";
 import { apiMessage } from "@/lib/api/error-message";
+import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Caution } from "@/components/ui/caution";
-import { Label } from "@/components/ui/label";
-import { Note } from "@/components/ui/note";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormModal } from "@/components/ui/form-modal";
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { ReasonTooltip, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MenuItemHint } from "@/components/data-table/menu-item-hint";
+import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 /**
- * The registry credentials this server can pull private images with.
+ * The registry credentials this server can pull private images with, laid out like
+ * Git integrations (Krishna, 21 Oct): a card head with Add, one row per credential
+ * with its check and a ⋯ menu, and a two-step dialog — pick where the image is
+ * hosted, then the fields that host needs.
  *
- * Its own card on the Docker page, beside networks and volumes, because it is the
- * same kind of thing: a server-level object configured once and chosen by many
- * sites.
- *
- * **What this card deliberately cannot do.** It never shows a token, and there is
- * no reveal control to add — the API does not serve one. The password box is
- * always empty, including when editing, and an empty box means "keep what is
- * stored" rather than "clear it". That is why the field's help text says so: an
- * empty input that silently preserves is friendly, and an empty input that
- * silently wipes is a support ticket.
- *
- * There is no rotate button either, for the reason the container-secrets panel has
- * none: rotating a credential the panel does not own means changing it at the
- * registry too, and a panel that claims to have rotated something it only forgot
- * is worse than one that makes you do it yourself.
+ * It never shows a token, and there is no reveal: the API does not serve one. On
+ * edit the token box is empty and empty means "keep what is stored".
  */
 export function RegistriesCard({ initialRegistries, canManage }) {
   const t = useTranslations("docker.registries");
   const { refreshAndWait } = useRefresh();
 
-  const [pending, setPending] = useState(null);
+  const [testing, setTesting] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  // The row being edited, or "new" for the create form. One at a time: two open
-  // forms on one card is two password boxes, and it stops being obvious which
-  // credential an empty one preserves.
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({
-    name: "",
-    registry: "",
-    username: "",
-    token: "",
-  });
-  const [errors, setErrors] = useState({});
-  // Which registry the form is giving instructions for; set again on every open.
-  const [provider, setProvider] = useState("dockerhub");
+  const [dialog, setDialog] = useState(null);
 
-  async function run(key, action, successMessage) {
-    setPending(key);
-    try {
-      await action();
-      // Before the toast: every sibling on this page is server-rendered, so a toast
-      // first leaves the table showing page-load state.
-      await refreshAndWait();
-      toast.success(successMessage);
-      return true;
-    } catch (error) {
-      toast.error(apiMessage(error, t("failed")));
-      return false;
-    } finally {
-      setPending(null);
-    }
-  }
-
-  // A refused login is a 200 with `success: false`, so the outcome is read from
-  // the body: a green "contacted" over a failed test read as success.
   async function test(registry) {
-    setPending(`test-${registry.id}`);
+    setTesting(registry.id);
     try {
       const { data } = await testRegistry(registry.id);
       await refreshAndWait();
@@ -121,478 +95,485 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
     } finally {
-      setPending(null);
+      setTesting(null);
     }
   }
 
-  function open(registry) {
-    setEditing(registry?.id ?? "new");
-    setErrors({});
-    // Editing opens on the provider the saved address looks like, so the
-    // instructions match the row rather than defaulting to Docker Hub and telling
-    // somebody with a GHCR credential to go and read Docker Hub's settings page.
-    setProvider(registry ? providerForAddress(registry.registry) : "dockerhub");
-    // A new one opens on Docker Hub, so it opens with Docker Hub's preset too:
-    // empty, the fixed address field could not be filled in at all.
-    setForm({
-      name: registry?.name ?? t("providers.dockerhub.label"),
-      registry: registry?.registry ?? registryProvider("dockerhub").address,
-      username: registry?.username ?? "",
-      // Always empty, never a placeholder standing in for a stored value. A dotted
-      // mask would be a length disclosure, and this is the one field where the
-      // length is a meaningful hint about the token.
-      token: "",
-    });
-  }
-
-  /**
-   * Choosing a provider fills the address and names the credential it wants.
-   *
-   * The name is filled too, but only when the user has not typed one — a prefill
-   * that overwrites something they wrote is worse than no prefill.
-   */
-  function chooseProvider(id) {
-    const preset = registryProvider(id);
-    const previous = registryProvider(provider);
-
-    setProvider(id);
-    setErrors({});
-    setForm((current) => ({
-      ...current,
-      // Replaced only when the box is empty or still holds the last preset's
-      // value, so a hand-typed self-hosted host survives a mis-click.
-      registry:
-        current.registry === "" || current.registry === previous.address
-          ? preset.address
-          : current.registry,
-      name:
-        current.name === "" || current.name === t(`providers.${provider}.label`)
-          ? id === "other"
-            ? ""
-            : t(`providers.${id}.label`)
-          : current.name,
-    }));
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-
-    const creating = editing === "new";
-
-    // On edit the token is optional, because omitting it preserves. On create it
-    // is required, since a registry row with no token cannot do the one thing it
-    // exists for.
-    const schema = creating
-      ? registryFormSchema
-      : registryFormSchema.partial({ token: true });
-    // An empty token on edit means "keep the stored one": leave it out before
-    // validating, or the token rule rejects the empty string and Save does nothing.
-    const parsed = schema.safeParse(
-      !creating && form.token === "" ? { ...form, token: undefined } : form,
-    );
-
-    if (!parsed.success) {
-      setErrors(
-        Object.fromEntries(
-          Object.entries(parsed.error.flatten().fieldErrors).map(([k, v]) => [
-            k,
-            v?.[0],
-          ]),
-        ),
-      );
-      return;
+  async function remove(target) {
+    setDeleting(target.id);
+    try {
+      await deleteRegistry(target.id);
+      await refreshAndWait();
+      toast.success(t("removed", { name: target.name }));
+      setConfirm(null);
+    } catch (error) {
+      toast.error(apiMessage(error, t("failed")));
+    } finally {
+      setDeleting(null);
     }
-
-    setErrors({});
-
-    const payload = { ...parsed.data };
-
-    // An empty string is not "clear it" — the API treats an absent key as "keep".
-    if (!payload.token) delete payload.token;
-
-    const ok = creating
-      ? await run(
-          "save",
-          () => createRegistry(payload),
-          t("created", { name: payload.name }),
-        )
-      : await run(
-          "save",
-          () => updateRegistry(editing, payload),
-          t("updated", { name: payload.name }),
-        );
-
-    if (ok) setEditing(null);
   }
 
-  function statusBadge(registry) {
-    if (registry.status === "connected") {
-      return (
-        <Badge variant="secondary" className="gap-1">
-          <Check className="size-3" />
-          {registry.status_title}
-        </Badge>
-      );
-    }
-
-    if (registry.status === "failed") {
-      return (
-        <Badge variant="destructive" className="gap-1">
-          <X className="size-3" />
-          {registry.status_title}
-        </Badge>
-      );
-    }
-
-    // `never_tested`, and muted rather than a warning colour: the panel not having
-    // asked yet is not a fault in the credential.
-    return (
-      <Badge variant="outline" className="gap-1 text-muted-foreground">
-        <Clock className="size-3" />
-        {registry.status_title}
-      </Badge>
-    );
-  }
+  const addButton = (
+    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+      <Button disabled={!canManage} onClick={() => setDialog({ registry: null })} data-registry-add>
+        <Plus className="size-4" />
+        {t("add")}
+      </Button>
+    </ReasonTooltip>
+  );
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
-          <CardTitle>
-            {t("title")}
-          </CardTitle>
-          {canManage && editing === null ? (
-            <Button type="button" size="sm" onClick={() => open(null)}>
-              <Plus className="size-4" />
-              {t("add")}
-            </Button>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4 max-w-prose text-sm text-muted-foreground">
-            {t("hint")}
-          </p>
+      <Card className="gap-0 overflow-hidden py-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
+          <div>
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("listTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{t("hint")}</p>
+          </div>
+          {/* Empty, Add sits in the empty state instead of twice. */}
+          {initialRegistries.length > 0 ? addButton : null}
+        </div>
 
-          {editing !== null ? (
-            <form
-              noValidate
-              className="mb-6 grid gap-4 rounded-md border p-4 sm:grid-cols-2"
-              onSubmit={submit}
-            >
-              {/* The first field, because it decides what the other three mean.
-                  Before this the form was three text boxes and a placeholder, and
-                  none of the answers are guessable: Docker Hub's host is
-                  `docker.io` and not the address in your browser, GHCR needs a
-                  CLASSIC token carrying read:packages, and GitLab wants a deploy
-                  token whose username is the token's own name. */}
-              <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="registry-provider">
-                  {t("fields.provider")}
-                </Label>
-                <Select value={provider} onValueChange={chooseProvider}>
-                  <SelectTrigger id="registry-provider">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REGISTRY_PROVIDERS.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {t(`providers.${option.id}.label`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Where to get the token, and which scope. The whole reason the
-                  picker exists — a scope that is merely plausible produces a
-                  credential the registry refuses, which reads as a panel bug. */}
-              <div className="sm:col-span-2">
-                <Note icon={Info} title={t("howTo.title")}>
-                  <ol className="ml-4 list-decimal space-y-1">
-                    <li>{t(`providers.${provider}.step1`)}</li>
-                    <li>{t(`providers.${provider}.step2`)}</li>
-                    <li>{t("howTo.step3")}</li>
-                  </ol>
-                  {registryProvider(provider).docsUrl ? (
-                    <a
-                      href={registryProvider(provider).docsUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="mt-2 inline-flex items-center gap-1 font-medium text-primary underline"
-                    >
-                      {t(`providers.${provider}.linkLabel`)}
-                      <ExternalLink className="size-3" />
-                    </a>
-                  ) : null}
-                </Note>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="registry-name">{t("fields.name")}</Label>
-                <Input
-                  id="registry-name"
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm({ ...form, name: event.target.value })
-                  }
-                  placeholder={t("placeholders.name")}
-                />
-                {errors.name ? (
-                  <p className="text-xs text-destructive">
-                    {t("invalid.name")}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="registry-host">{t("fields.registry")}</Label>
-                <Input
-                  id="registry-host"
-                  value={form.registry}
-                  onChange={(event) =>
-                    setForm({ ...form, registry: event.target.value })
-                  }
-                  placeholder={t("placeholders.registry")}
-                  className="font-mono text-xs"
-                  // Read-only for the hosted providers rather than merely
-                  // prefilled. Their address is not a preference, and a typo in it
-                  // is the worst failure this feature has: Docker ignores a
-                  // credential stored under an address it does not recognise, and
-                  // the pull then fails exactly as if none existed.
-                  readOnly={registryProvider(provider).addressFixed}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {registryProvider(provider).addressFixed
-                    ? t("registryHintFixed")
-                    : t("registryHint")}
-                </p>
-                {issuesTemporaryTokens(form.registry) ? (
-                  // AWS ECR, Google Artifact Registry and Azure ACR issue
-                  // credentials that expire in hours — ECR's in twelve. A token
-                  // pasted here authenticates once and then starts failing, and the
-                  // panel does not refresh it. Said at the form rather than
-                  // discovered on tomorrow's deploy.
-                  <Caution size="md">{t("temporaryToken")}</Caution>
-                ) : null}
-                {/* Names the mistake rather than saying "invalid": a namespace here
-                    is the common one, and it is the one that would otherwise be
-                    accepted and silently never apply. */}
-                {errors.registry ? (
-                  <p className="text-xs text-destructive">
-                    {t("invalid.registry")}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="registry-username">
-                  {t("fields.username")}
-                </Label>
-                <Input
-                  id="registry-username"
-                  value={form.username}
-                  onChange={(event) =>
-                    setForm({ ...form, username: event.target.value })
-                  }
-                  placeholder={registryProvider(provider).usernamePlaceholder}
-                  autoComplete="off"
-                />
-                {/* Whose username, which is not obvious for two of the four: a
-                    GitLab deploy token's username is the token's own name, not the
-                    account that made it. */}
-                <p className="text-xs text-muted-foreground">
-                  {t(`providers.${provider}.usernameHint`)}
-                </p>
-                {errors.username ? (
-                  <p className="text-xs text-destructive">
-                    {t("invalid.username")}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="registry-token">{t("fields.token")}</Label>
-                <Input
-                  id="registry-token"
-                  type="password"
-                  value={form.token}
-                  onChange={(event) =>
-                    setForm({ ...form, token: event.target.value })
-                  }
-                  placeholder={registryProvider(provider).tokenPlaceholder}
-                  autoComplete="new-password"
-                  className="font-mono text-xs"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {/* On edit the field is empty and empty means KEEP, so that
-                      sentence replaces the provider guidance rather than sitting
-                      under it — a box that silently preserves needs saying more
-                      than a scope does. */}
-                  {editing === "new"
-                    ? t(`providers.${provider}.tokenHint`)
-                    : t("tokenHintEdit")}
-                </p>
-                {errors.token ? (
-                  <p className="text-xs text-destructive">
-                    {t("invalid.token")}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="flex items-center gap-2 sm:col-span-2">
-                <Button type="submit" size="sm" disabled={pending === "save"}>
-                  {t("save")}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setEditing(null)}
-                >
-                  {t("cancel")}
-                </Button>
-              </div>
-            </form>
-          ) : null}
-
+        <CardContent className="px-5 py-0">
           {initialRegistries.length === 0 ? (
-            /* Was one sentence, which told somebody the shelf was empty and
-               nothing about how to fill it. An empty state is the only
-               instruction most people will read, so it carries the two facts
-               that decide whether they can proceed: what to have ready, and
-               that public images need none of this. */
-            <div className="rounded-lg border border-dashed p-6 text-center">
-              <KeyRound className="mx-auto size-6 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">{t("emptyTitle")}</p>
-              <p className="mx-auto mt-1 max-w-prose text-sm text-muted-foreground">
-                {t("emptyBody")}
-              </p>
-              {canManage ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => open(null)}
-                >
-                  <Plus className="size-4" />
-                  {t("add")}
-                </Button>
-              ) : null}
+            /* What to have ready, and that public images need none of this. */
+            <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-10 text-center sm:py-12">
+              <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                <KeyRound className="size-6" aria-hidden />
+              </span>
+              <div className="space-y-2">
+                <p className="text-[15px] font-semibold tracking-tight">{t("emptyTitle")}</p>
+                <p className="max-w-md text-sm leading-6 text-muted-foreground">{t("emptyBody")}</p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {REGISTRY_PROVIDERS.map((provider) => (
+                  <span
+                    key={provider.id}
+                    className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground"
+                  >
+                    <RegistryLogo provider={provider.id} className="size-3.5" />
+                    {t(`providers.${provider.id}.label`)}
+                  </span>
+                ))}
+              </div>
+              {addButton}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("columns.name")}</TableHead>
-                  <TableHead>{t("columns.registry")}</TableHead>
-                  <TableHead>{t("columns.username")}</TableHead>
-                  <TableHead>{t("columns.status")}</TableHead>
-                  <TableHead>{t("columns.usedBy")}</TableHead>
-                  <TableHead className="w-32" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {initialRegistries.map((registry) => (
-                  <TableRow key={registry.id}>
-                    <TableCell>{registry.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {registry.registry}
-                      {/* Hub's credentials are keyed on the legacy v1 index URL,
-                          not on what was typed. Shown, because the alternative is
-                          a user comparing their entry to Docker's docs and
-                          concluding the panel stored it wrong. */}
-                      {registry.is_docker_hub ? (
-                        <Badge variant="outline" className="ml-2 font-sans">
-                          {t("dockerHub")}
-                        </Badge>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {registry.username}
-                    </TableCell>
-                    <TableCell>
-                      {statusBadge(registry)}
-                      {registry.last_test_error ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {t(`errors.${registry.last_test_error}`)}
-                        </p>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {registry.applications_count
-                        ? t("usedBySites", {
-                            count: registry.applications_count,
-                          })
-                        : t("usedByNone")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canManage ? (
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            disabled={pending === `test-${registry.id}`}
-                            onClick={() => test(registry)}
-                          >
-                            <PlugZap className="size-4" />
-                            <span className="sr-only">{t("test")}</span>
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => open(registry)}
-                          >
-                            {t("edit")}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setConfirm(registry)}
-                          >
-                            <Trash2 className="size-4" />
-                            <span className="sr-only">{t("remove")}</span>
-                          </Button>
-                        </div>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="divide-y">
+              {initialRegistries.map((registry) => (
+                <RegistryRow
+                  key={registry.id}
+                  registry={registry}
+                  canManage={canManage}
+                  testing={testing === registry.id}
+                  onTest={() => test(registry)}
+                  onEdit={() => setDialog({ registry })}
+                  onDelete={() => setConfirm(registry)}
+                />
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Mounted only while open, so the last credential's values never flash. */}
+      {dialog ? (
+        <RegistryDialog
+          key={dialog.registry?.id ?? "new"}
+          registry={dialog.registry}
+          onOpenChange={(next) => !next && setDialog(null)}
+        />
+      ) : null}
+
       <ConfirmDialog
         open={confirm !== null}
-        onOpenChange={(open) => !open && setConfirm(null)}
+        onOpenChange={(open) => !open && deleting === null && setConfirm(null)}
+        icon={Trash2}
+        tone="destructive"
         title={t("confirm.title", { name: confirm?.name ?? "" })}
-        /* Says what happens to the sites, because the answer is not obvious and
-           both other answers would be wrong: the sites are NOT deleted, and the
-           delete is NOT blocked by them. A credential that cannot be revoked
-           while anything uses it is a credential that cannot be revoked. */
+        /* The applications are NOT deleted and the delete is NOT blocked by them: a
+           credential that cannot be revoked while in use cannot be revoked at all. */
         description={
           confirm?.applications_count
             ? t("confirm.bodyInUse", { count: confirm.applications_count })
             : t("confirm.body")
         }
         confirmLabel={t("remove")}
-        tone="destructive"
         confirmVariant="destructive"
-        onConfirm={async () => {
-          const target = confirm;
-          setConfirm(null);
-          if (target)
-            await run(
-              `delete-${target.id}`,
-              () => deleteRegistry(target.id),
-              t("removed", { name: target.name }),
-            );
-        }}
+        pending={deleting !== null}
+        onConfirm={() => confirm && remove(confirm)}
       />
     </>
+  );
+}
+
+/** Docker Hub's whale, GitHub and GitLab marks; a server for anything else. */
+function RegistryLogo({ provider, className = "size-4" }) {
+  if (provider === "dockerhub") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src="/site-types/docker.svg" alt="" aria-hidden className={`shrink-0 ${className}`} />;
+  }
+  if (provider === "ghcr") return <ProviderLogo provider="github" className={className} />;
+  if (provider === "gitlab") return <ProviderLogo provider="gitlab" className={className} />;
+  return <Server className={`shrink-0 text-muted-foreground ${className}`} aria-hidden />;
+}
+
+function RegistryStatus({ registry }) {
+  const t = useTranslations("docker.registries");
+
+  if (registry.status === "connected") {
+    return (
+      <p className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+        <CheckCircle2 className="size-3.5" />
+        {registry.status_title}
+      </p>
+    );
+  }
+  if (registry.status === "failed") {
+    return (
+      <p className="inline-flex items-center gap-1.5 text-xs text-destructive">
+        <XCircle className="size-3.5 shrink-0" />
+        {registry.status_title}
+        {registry.last_test_error ? <span>· {t(`errors.${registry.last_test_error}`)}</span> : null}
+      </p>
+    );
+  }
+  // Not tested yet is not a fault in the credential, so muted rather than amber.
+  return (
+    <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Clock className="size-3.5" />
+      {registry.status_title}
+    </p>
+  );
+}
+
+function RegistryRow({ registry, canManage, testing, onTest, onEdit, onDelete }) {
+  const t = useTranslations("docker.registries");
+  const provider = providerForAddress(registry.registry);
+
+  return (
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="flex flex-wrap items-start justify-between gap-3 py-3.5">
+        <div className="flex min-w-64 flex-1 gap-3">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+            <RegistryLogo provider={provider} />
+          </span>
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="min-w-0 text-sm font-medium break-all">{registry.name}</span>
+              <Badge variant="secondary" className="font-normal">
+                {t(`providers.${provider}.label`)}
+              </Badge>
+              {/* Hub's credential is keyed on the legacy index URL, not what was typed;
+                  the address shown is the stored one. */}
+              <span className="truncate font-mono text-xs text-muted-foreground">{registry.registry}</span>
+              <span className="truncate font-mono text-xs text-muted-foreground">· {registry.username}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <RegistryStatus registry={registry} />
+              <span className="text-xs text-muted-foreground">
+                {registry.applications_count
+                  ? t("usedBySites", { count: registry.applications_count })
+                  : t("usedByNone")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:ps-11 sm:ms-auto sm:justify-end">
+          <Button variant="outline" size="sm" disabled={!canManage || testing} aria-busy={testing} onClick={onTest}>
+            {testing ? <Loader2 className="size-3.5 animate-spin" /> : <PlugZap className="size-3.5" />}
+            {t("test")}
+          </Button>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-8" aria-label={t("moreActions", { name: registry.name })}>
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t("moreActions", { name: registry.name })}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-48">
+              <MenuItemHint hint={canManage ? null : t("noPermission")}>
+                <DropdownMenuItem disabled={!canManage} onSelect={onEdit}>
+                  <Pencil className="size-4" />
+                  {t("edit")}
+                </DropdownMenuItem>
+              </MenuItemHint>
+              <DropdownMenuSeparator />
+              <MenuItemHint hint={canManage ? null : t("noPermission")}>
+                <DropdownMenuItem variant="destructive" disabled={!canManage} onSelect={onDelete}>
+                  <Trash2 className="size-4" />
+                  {t("remove")}
+                </DropdownMenuItem>
+              </MenuItemHint>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </DisabledReasonProvider>
+  );
+}
+
+// Empty gets the panel's "X is required"; anything else names the actual mistake.
+function fieldError(error, invalid) {
+  if (!error) return null;
+  return error.type === "too_small" ? "requiredField" : invalid;
+}
+
+function focusAddButton(event) {
+  const opener = document.querySelector("[data-registry-add]");
+  if (!opener) return;
+  event.preventDefault();
+  opener.focus();
+}
+
+/**
+ * Add: choose where the image is hosted, then that host's fields. Edit opens on the
+ * fields for the stored host.
+ */
+function RegistryDialog({ registry, onOpenChange }) {
+  const t = useTranslations("docker.registries");
+  const tc = useTranslations("common");
+  const { refreshAndWait } = useRefresh();
+  const creating = registry === null;
+  const [provider, setProvider] = useState(creating ? null : providerForAddress(registry.registry));
+
+  if (!provider) {
+    return (
+      <FormModal
+        open
+        onOpenChange={onOpenChange}
+        onCloseAutoFocus={focusAddButton}
+        icon={KeyRound}
+        title={t("add")}
+        description={t("fields.provider")}
+      >
+        <div className="space-y-2">
+          {REGISTRY_PROVIDERS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setProvider(option.id)}
+              className="flex w-full items-center gap-3 rounded-lg border px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                <RegistryLogo provider={option.id} className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{t(`providers.${option.id}.label`)}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {option.address ? <span className="font-mono">{option.address}</span> : t("providers.other.hint")}
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </FormModal>
+    );
+  }
+
+  return (
+    <RegistryForm
+      registry={registry}
+      provider={provider}
+      onBack={creating ? () => setProvider(null) : null}
+      onOpenChange={onOpenChange}
+      onSaved={async (name) => {
+        await refreshAndWait();
+        toast.success(creating ? t("created", { name }) : t("updated", { name }));
+        onOpenChange(false);
+      }}
+      tc={tc}
+    />
+  );
+}
+
+function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc }) {
+  const t = useTranslations("docker.registries");
+  const creating = registry === null;
+  const preset = registryProvider(provider);
+  const [failure, setFailure] = useState(null);
+
+  // On edit the token is optional: empty keeps the stored one. On create it is
+  // required, since a credential with no token cannot do the one thing it is for.
+  const schema = creating
+    ? registryFormSchema
+    : registryFormSchema.extend({ token: z.literal("").or(registryFormSchema.shape.token) });
+
+  const form = useForm({
+    resolver: zodResolver(schema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+    defaultValues: {
+      name: registry?.name ?? (provider === "other" ? "" : t(`providers.${provider}.label`)),
+      registry: registry?.registry ?? preset.address,
+      username: registry?.username ?? "",
+      // Always empty, never a mask standing in for a stored value.
+      token: "",
+    },
+  });
+  const address = useWatch({ control: form.control, name: "registry" });
+  const submitting = form.formState.isSubmitting;
+
+  async function onSubmit(values) {
+    setFailure(null);
+    const payload = { ...values };
+    // An absent token means "keep"; an empty string is not "clear it".
+    if (!payload.token) delete payload.token;
+    try {
+      if (creating) await createRegistry(payload);
+      else await updateRegistry(registry.id, payload);
+      await onSaved(payload.name);
+    } catch (error) {
+      if (error.response?.data?.errors) {
+        handleValidationError(error, form);
+        return;
+      }
+      setFailure(apiMessage(error, t("failed")));
+    }
+  }
+
+  return (
+    <Form {...form}>
+      <FormModal
+        open
+        onOpenChange={(next) => !submitting && onOpenChange(next)}
+        onCloseAutoFocus={creating ? focusAddButton : undefined}
+        asForm
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        icon={KeyRound}
+        title={creating ? t("add") : t("editTitle", { name: registry.name })}
+        description={t("formDescription")}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+              {tc("cancel")}
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
+              {creating ? t("add") : t("save")}
+            </Button>
+          </>
+        }
+      >
+        {/* Where the image is hosted, with Change while adding. */}
+        <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/[0.06] p-3 shadow-e1">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1">
+            <RegistryLogo provider={provider} className="size-6" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{t(`providers.${provider}.label`)}</p>
+            <p className="truncate font-mono text-xs text-muted-foreground">
+              {preset.addressFixed ? preset.address : t("providers.other.hint")}
+            </p>
+          </div>
+          {onBack ? (
+            <Button type="button" variant="outline" size="sm" onClick={onBack} disabled={submitting}>
+              {t("change")}
+            </Button>
+          ) : null}
+        </div>
+
+        {failure ? (
+          <Caution tone="destructive" size="md">
+            <p className="leading-relaxed">{failure}</p>
+          </Caution>
+        ) : null}
+
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required hint={t("nameHint")}>{t("fields.name")}</FormLabel>
+              <FormControl>
+                <Input placeholder={t("placeholders.name")} autoComplete="off" {...field} />
+              </FormControl>
+              <FormMessage field={t("fields.name")}>{fieldError(form.formState.errors.name, t("invalid.name"))}</FormMessage>
+            </FormItem>
+          )}
+        />
+
+        {/* Fixed for the hosted providers: Docker ignores a credential stored under an
+            address it does not recognise, so a typo here fails like no credential. */}
+        {preset.addressFixed ? null : (
+          <FormField
+            control={form.control}
+            name="registry"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("fields.registry")}</FormLabel>
+                <FormControl>
+                  <Input placeholder={t("placeholders.registry")} autoComplete="off" spellCheck={false} className="font-mono text-sm" {...field} />
+                </FormControl>
+                <FormDescription>{t("registryHint")}</FormDescription>
+                {/* Named, not "invalid": a namespace is the common mistake. */}
+                <FormMessage field={t("fields.registry")}>{fieldError(form.formState.errors.registry, t("invalid.registry"))}</FormMessage>
+                {/* ECR, Artifact Registry and ACR tokens expire within hours. */}
+                {issuesTemporaryTokens(address) ? <Caution size="md">{t("temporaryToken")}</Caution> : null}
+              </FormItem>
+            )}
+          />
+        )}
+
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel required>{t("fields.username")}</FormLabel>
+              <FormControl>
+                <Input placeholder={preset.usernamePlaceholder} autoComplete="off" spellCheck={false} {...field} />
+              </FormControl>
+              <FormDescription>{t(`providers.${provider}.usernameHint`)}</FormDescription>
+              <FormMessage field={t("fields.username")}>{fieldError(form.formState.errors.username, t("invalid.username"))}</FormMessage>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="token"
+          render={({ field }) => (
+            <FormItem>
+              {/* Where to create the token, on the label row like Git's "Create a token". */}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <FormLabel required={creating}>{t("fields.token")}</FormLabel>
+                {preset.docsUrl ? (
+                  <a
+                    href={preset.docsUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    {t(`providers.${provider}.linkLabel`)}
+                    <ExternalLink className="size-3" aria-hidden />
+                  </a>
+                ) : null}
+              </div>
+              <FormControl>
+                <PasswordInput
+                  autoComplete="new-password"
+                  spellCheck={false}
+                  placeholder={preset.tokenPlaceholder}
+                  className="font-mono text-sm"
+                  {...field}
+                  onChange={(event) => field.onChange(event.target.value.trim())}
+                />
+              </FormControl>
+              <FormDescription>
+                {creating ? t(`providers.${provider}.tokenHint`) : t("tokenHintEdit")}
+              </FormDescription>
+              <FormMessage field={t("fields.token")}>{fieldError(form.formState.errors.token, t("invalid.token"))}</FormMessage>
+            </FormItem>
+          )}
+        />
+      </FormModal>
+    </Form>
   );
 }

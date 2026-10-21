@@ -135,6 +135,8 @@ export const getServerCapabilities = cache(async function getServerCapabilities(
     webServer: capabilities?.web_server ?? null,
     serverIp: capabilities?.server_ip ?? null,
     temporaryDomainSuffixes: capabilities?.temporary_domain_suffixes ?? [],
+    // Null when unknown, never [] (which would claim the server runs nothing).
+    servingProfiles: capabilities?.capabilities?.serving_profiles ?? null,
     failed: result.failed,
     status: result.status,
     failure: result.failure, message: result.message, debug: result.debug,

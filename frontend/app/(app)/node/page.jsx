@@ -32,7 +32,7 @@ export default async function NodePage() {
     await Promise.all([getPermissions(), getTranslations("node"), getNode()]);
 
   if (!can(permissions, "node", "view"))
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} feature="node" />;
   const canManage = can(permissions, "node", "manage");
 
   // A 409 is the honest answer on a Docker box, which runs nothing on the host at

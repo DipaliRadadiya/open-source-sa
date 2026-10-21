@@ -404,6 +404,12 @@ export const serverCapabilitiesResponseSchema = z.object({
     web_server: z.string().nullish(),
     server_ip: z.string().nullish(),
     temporary_domain_suffixes: z.array(z.string()).default([]),
+    // What the server runs ("php", "node", "static", "docker"); decides which
+    // server screens exist at all.
+    capabilities: z
+      .object({ serving_profiles: z.array(z.string()).nullish() })
+      .partial()
+      .nullish(),
   }),
 });
 

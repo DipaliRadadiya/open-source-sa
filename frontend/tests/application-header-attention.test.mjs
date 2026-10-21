@@ -68,7 +68,8 @@ test("the page has no quick actions: the sidebar already lists every screen", ()
   assert.doesNotMatch(page, /QuickActions/);
   // Status first; then the deploy card, then the packed cards.
   assert.ok(page.indexOf("<AppStatusTiles") < page.indexOf("<SourceCard"));
-  assert.ok(page.indexOf("<SourceCard") < page.indexOf("<DomainsCard"));
+  // The cards are built above the return; their placement is `{domainsCard}`.
+  assert.ok(page.indexOf("<SourceCard") < page.indexOf("{domainsCard}"));
 });
 
 test("a git site's header shows its Git host, as the list does", () => {

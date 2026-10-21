@@ -67,7 +67,9 @@
     },
     "permissionDenied": {
       "title": "Vous n'avez pas accès à {feature}",
-      "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
+      "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur.",
+      "unavailableTitle": "Non disponible sur ce serveur",
+      "unavailableDescription": "Ce serveur n'a pas été configuré pour cela, il n'y a donc rien à gérer ici."
     },
     "serverNavigation": "Menu du serveur",
     "loadingPage": "Chargement de la page…",
@@ -4912,7 +4914,8 @@
         "measureAgain": "Mesurer à nouveau",
         "tryAgain": "Réessayer",
         "notMeasured": "Non mesuré"
-      }
+      },
+      "dockerNote": "Modifiez <code>compose.yml</code> sur la page <link>Fichier compose</link> : une modification faite ici est remplacée à la prochaine mise à jour du conteneur. Les données du conteneur sont dans des volumes Docker, pas dans ce dossier."
     },
     "workers": {
       "pageTitle": "Workers",
@@ -6093,9 +6096,9 @@
       "title": "Conteneur",
       "image": "Image",
       "noImage": "Aucune image enregistrée",
-      "imageHint": "Se change en redéployant l'application, pas ici : la nouvelle image est récupérée avant de remplacer l'ancien conteneur.",
+      "imageHint": "« Récupérer et redéployer » la récupère à nouveau et redémarre le conteneur.",
       "network": "Réseau",
-      "networkHint": "Les conteneurs d'un même réseau s'atteignent par leur nom. Pour que cette application atteigne un autre conteneur, choisissez un réseau créé sur la page Docker.",
+      "networkHint": "Les conteneurs d'un même réseau se joignent par leur nom.",
       "ownNetwork": "Son propre réseau (aucune autre application dessus)",
       "noNetworks": "Ce serveur n'a pas encore de réseau propre, il n'y a donc rien à rejoindre.",
       "noNetworksLink": "Créez un réseau sur la page Docker.",
@@ -6107,21 +6110,18 @@
       "containerPort": "Port du conteneur",
       "containerPortHint": "Le port sur lequel votre application écoute à l'intérieur du conteneur.",
       "memoryLimit": "Limite de mémoire",
-      "memoryLimitHint": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur : {default}.",
-      "memoryLimitHintUnknown": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur.",
+      "memoryLimitHint": "Par exemple 512m ou 2g ; un nombre seul est en octets, pas en mégaoctets. Vide utilise la valeur par défaut du serveur, {default}.",
+      "memoryLimitHintUnknown": "Par exemple 512m ou 2g ; un nombre seul est en octets, pas en mégaoctets. Vide utilise la valeur par défaut du serveur.",
       "cpuLimit": "Limite de CPU",
       "cpuLimitPlaceholder": "Aucune limite",
-      "cpuLimitHint": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Ce serveur en a {cores}. Vide signifie aucune limite.",
-      "cpuLimitHintUnknown": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Vous ne pouvez pas dépasser ce que possède ce serveur. Vide signifie aucune limite.",
-      "limitsTitle": "Comment se comportent ces deux limites",
-      "limitsBody": "Ce sont des plafonds pour ce conteneur seul, pas des réservations — rien ne lui est mis de côté. Leurs défaillances sont opposées, ce qu’il vaut mieux savoir avant de chercher la cause : au-delà du plafond mémoire, le conteneur est tué puis redémarré et l’application perd des requêtes ; au-delà du quota CPU, rien n’est tué, le conteneur attend simplement, et l’application est lente sans aucune erreur.",
+      "cpuLimitHint": "En cœurs, par exemple 0.5. Ce serveur en a {cores}. Vide signifie aucune limite.",
+      "cpuLimitHintUnknown": "En cœurs, par exemple 0.5, jusqu'au nombre dont dispose ce serveur. Vide signifie aucune limite.",
+      "limitsBody": "Ce sont des plafonds, pas des réservations : au-delà de la mémoire, le conteneur est arrêté puis redémarré ; au-delà du CPU, il est simplement lent.",
       "saveAction": "Enregistrer les paramètres du conteneur",
       "restartNote": "L'enregistrement recrée le conteneur : l'application est indisponible quelques secondes.",
-      "savingNote": "Réécriture du fichier compose et recréation du conteneur…",
       "saved": "Paramètres du conteneur enregistrés.",
       "failed": "Impossible d'enregistrer les paramètres du conteneur.",
       "noPermission": "Vous n'avez pas la permission de modifier cette application.",
-      "nothingToSave": "Rien n'a changé.",
       "volumes": {
         "title": "Volumes",
         "empty": "Aucun volume monté. Le conteneur ne conserve rien qui survive à une reconstruction.",
@@ -6137,7 +6137,7 @@
         "invalid": "Choisissez un volume et indiquez un chemin absolu dans le conteneur, par exemple /var/lib/mysql.",
         "noVolumes": "Ce serveur n'a pas encore de volume, il n'y a donc rien à monter.",
         "noVolumesLink": "Créez un volume sur la page Docker.",
-        "hint": "Un volume conserve des données qui survivent à la reconstruction du conteneur. Le monter recrée le conteneur, et il démarre vide : ce que l'image contenait à ce chemin est masqué, pas fusionné."
+        "hint": "Les données d'un volume survivent aux reconstructions. En monter un redémarre le conteneur, et le chemin démarre vide."
       },
       "credentials": {
         "title": "Identifiants générés",
@@ -6166,12 +6166,10 @@
       },
       "registry": "Registre",
       "noRegistry": "Aucun — récupération anonyme",
-      "registryHint": "L’identifiant enregistré avec lequel cette application récupère son image. Laissez Aucun pour une image publique.",
+      "registryHint": "Laissez Aucun pour une image publique.",
       "missingRegistryOption": "Identifiant supprimé — la prochaine récupération de cette application sera anonyme",
       "noRegistries": "Aucun identifiant de registre n’est enregistré sur ce serveur : seules les images publiques peuvent être récupérées.",
       "noRegistriesLink": "Ajoutez-en un dans Intégrations → Registres Docker.",
-      "pullTitle": "Mettre à jour l’image",
-      "pullHint": "Récupère l’image à nouveau et recrée le conteneur. Redémarrer l’application ne revérifie pas le registre : un tag déplacé nécessite ceci.",
       "pull": "Récupérer et redéployer",
       "pulled": "L’image a été récupérée et le conteneur recréé.",
       "pullFailed": "L’image n’a pas pu être récupérée.",
@@ -6180,14 +6178,18 @@
         "title": "Défini dans le fichier compose",
         "body": "Cette application utilise son propre fichier compose : son port, ses limites de mémoire et de CPU, son réseau et ses volumes se modifient là, pas ici.",
         "link": "Ouvrir le fichier compose"
-      }
+      },
+      "imageSection": "Image",
+      "imageSectionHint": "Ce que ce conteneur exécute et l'identifiant avec lequel il le récupère.",
+      "saveImage": "Enregistrer le registre",
+      "settingsSection": "Réseau et limites",
+      "settingsSectionHint": "Comment ce conteneur se connecte et quelle part du serveur il peut utiliser."
     },
     "compose": {
       "title": "Fichier compose",
-      "hint": "Le fichier que cette application exécute. Variables d’environnement, services supplémentaires et volumes vivent ici — un conteneur n’a pas d’écran Environnement séparé.",
-      "description": "Édité avec le parseur de Docker lui-même pour vérification. Le panneau refuse un fichier qui publie ailleurs que sur 127.0.0.1 ou qui monte quelque chose en dehors du répertoire de cette application.",
+      "hint": "L’image, les ports, les volumes et les variables d’environnement de cette application sont tous dans ce fichier.",
       "loadFailed": "Le fichier compose n’a pas pu être lu.",
-      "safety": "L’enregistrement recrée le conteneur de cette application, qui est donc brièvement indisponible. Si le nouveau fichier ne démarre pas, le panneau remet le précédent et redémarre l’application avec celui-ci — vous ne resterez pas avec une application arrêtée.",
+      "safety": "L’enregistrement redémarre le conteneur, l’application est donc brièvement indisponible. Si le nouveau fichier ne démarre pas, le panneau remet le précédent.",
       "takeover": "Cette application exécute actuellement un fichier que le panneau génère à partir de son image et des réglages de la page Conteneur. Enregistrer ici reprend le fichier à votre compte : à partir de là, c’est ce texte qui s’exécute et ces réglages ne le pilotent plus. Il n’y a pas de retour au fichier généré, sauf en effaçant celui-ci.",
       "acknowledge": "Je comprends que l’enregistrement remplace définitivement le fichier généré.",
       "save": "Enregistrer et appliquer",
@@ -6195,7 +6197,14 @@
       "failed": "Le fichier compose n’a pas pu être appliqué.",
       "copy": "Copier",
       "revert": "Rétablir",
-      "unsaved": "Modifications non enregistrées"
+      "unsaved": "Modifications non enregistrées",
+      "lines": "{count, plural, one {# ligne} other {# lignes}}",
+      "rules": {
+        "parser": "Vérifié par Docker avant l’exécution",
+        "ports": "Ports publiés uniquement sur 127.0.0.1",
+        "mounts": "Montages limités au dossier de cette application"
+      },
+      "tickFirst": "Cochez d'abord la case ci-dessus pour confirmer."
     },
     "nodeVersion": {
       "title": "Modifier la version de Node",
@@ -6364,15 +6373,16 @@
       "imageTooltip": "Déployée à partir de l’image {image}.",
       "composeTooltip": "Exécute le fichier compose que vous avez fourni.",
       "factLabel": "Source",
-      "factRecipe": "Application en un clic · {title} (recette v{version})"
+      "factRecipe": "{title} (recette v{version})"
     },
     "containerAccess": {
       "title": "Accès en ligne de commande",
-      "description": "Ouvrez un shell dans le conteneur de cette application depuis votre ordinateur.",
+      "stateOn": "Activé",
+      "stateOff": "Désactivé",
+      "systemUser": "Utilisateur système",
       "loading": "Chargement de l'accès en ligne de commande",
       "copied": "Commande copiée",
       "copyLabel": "Copier : {label}",
-      "owner": "Utilisateur système de cette application : <user>{username}</user>",
       "readOnly": "Demandez à un administrateur d'activer la connexion au conteneur pour {username}.",
       "turnOn": {
         "title": "Activer la connexion au conteneur pour {username}",
@@ -6387,7 +6397,8 @@
         "confirm": "Je comprends que {username} ne se connectera plus qu'à ce conteneur",
         "submit": "Activer la connexion au conteneur",
         "done": "La connexion au conteneur est activée pour {username}",
-        "failed": "Impossible d'activer la connexion au conteneur."
+        "failed": "Impossible d'activer la connexion au conteneur.",
+        "open": "Activer"
       },
       "commands": {
         "shell": "Ouvrir un shell dans le conteneur",
@@ -6398,7 +6409,8 @@
         "note": "Pas besoin de sudo. Avec une clé SSH, aucun mot de passe n'est demandé ; sinon, le mot de passe de {username} est demandé une fois. <link>Pour un accès SSH normal au serveur, créez un utilisateur système distinct.</link>",
         "turnOff": "Désactiver",
         "turnedOff": "La connexion au conteneur est désactivée pour {username}",
-        "turnOffFailed": "Impossible de désactiver la connexion au conteneur."
+        "turnOffFailed": "Impossible de désactiver la connexion au conteneur.",
+        "more": "Plus de commandes"
       }
     },
     "health": {
@@ -6683,7 +6695,8 @@
     "purposePostgresql": "Pour les applications qui demandent Postgres par son nom",
     "fail2banOff": "Installé, mais rien n'est encore protégé. <link>Activez la protection SSH dans Fail2ban</link>.",
     "recommendedProgress": "{done} recommandés installés sur {total}",
-    "optionalLeft": "{count, plural, one {# extra facultatif disponible ci-dessous} other {# extras facultatifs disponibles ci-dessous}}"
+    "optionalLeft": "{count, plural, one {# extra facultatif disponible ci-dessous} other {# extras facultatifs disponibles ci-dessous}}",
+    "dockerDetail": "exécute les conteneurs de vos applications"
   },
   "storage": {
     "title": "Stockage",
@@ -7762,7 +7775,6 @@
   "docker": {
     "title": "Docker",
     "subtitle": "Réseaux et volumes partagés par les conteneurs de ce serveur.",
-    "create": "Créer",
     "remove": "Retirer",
     "none": "Aucune",
     "failed": "Cela n'a pas fonctionné.",
@@ -7774,42 +7786,50 @@
     },
     "columns": {
       "name": "Nom",
-      "path": "Chemin",
-      "driver": "Pilote",
       "attached": "Conteneurs",
       "size": "Taille",
-      "usedBy": "Utilisé par"
+      "usedBy": "Utilisé par",
+      "actions": "Actions"
     },
     "networks": {
       "title": "Réseaux",
       "placeholder": "nom-du-reseau",
-      "hint": "Les conteneurs d'un même réseau défini par l'utilisateur se joignent par leur nom. Le pont intégré de Docker ne le permet pas : c'est pourquoi une app et sa base de données en ont besoin.",
-      "builtIn": "Propre à Docker",
+      "hint": "Les conteneurs d'un même réseau se joignent par leur nom.",
       "created": "Réseau {name} créé.",
       "removed": "Réseau {name} supprimé.",
       "removeTitle": "Supprimer le réseau {name} ?",
-      "removeAria": "Supprimer le réseau {name}",
       "removeBody": "Rien n'y est attaché. Les conteneurs qui l'attendront plus tard ne démarreront pas tant qu'il n'est pas recréé.",
       "removeBusy": "Des conteneurs sont encore attachés à ce réseau. Arrêtez-les ou détachez-les d'abord.",
       "removeUsedBySites": "Ces applications sont configurées pour rejoindre ce réseau : {sites}. Changez d'abord leur réseau — le supprimer maintenant les empêcherait de démarrer.",
       "noPorts": "Aucun port",
-      "internalOnly": "interne uniquement"
+      "internalOnly": "interne uniquement",
+      "empty": "Aucun réseau personnalisé pour l'instant.",
+      "shared": "Aucune application ne l'a encore rejoint.",
+      "joinedBy": "Rejoint par {sites}",
+      "builtInLine": "Les réseaux intégrés de Docker ({names}) ne peuvent pas être modifiés.",
+      "createAction": "Créer le réseau",
+      "actionsAria": "Actions pour le réseau {name}",
+      "ownedBy": "Réseau propre à {app}",
+      "emptyBody": "Créez-en un pour qu'une application et sa base de données se joignent par leur nom."
     },
     "volumes": {
       "title": "Volumes",
       "placeholder": "nom-du-volume",
-      "hint": "Un volume est l'endroit où un conteneur conserve les données qui doivent survivre à une reconstruction.",
+      "hint": "Les données d'un volume survivent à la reconstruction du conteneur.",
       "empty": "Aucun volume sur ce serveur pour l'instant.",
-      "inUse": "{count} conteneur(s)",
       "inUseUnnamed": "{count} conteneur(s) — noms indisponibles",
       "unused": "Inutilisé",
       "created": "Volume {name} créé.",
       "removed": "Volume {name} supprimé.",
       "removeTitle": "Supprimer le volume {name} ?",
-      "removeAria": "Supprimer le volume {name}",
       "removeBody": "Cela efface les données qu'il contient. Rien ne l'utilise actuellement, mais un conteneur arrêté peut encore l'attendre.",
       "removeBusy": "Un conteneur en cours d'exécution utilise ce volume. Le supprimer effacerait des données qu'un processus écrit encore.",
-      "removeUsedBySites": "Ces applications montent ce volume : {sites}. Retirez d'abord le montage — le supprimer maintenant détruit les données qu'elles y conservent."
+      "removeUsedBySites": "Ces applications montent ce volume : {sites}. Retirez d'abord le montage — le supprimer maintenant détruit les données qu'elles y conservent.",
+      "createAction": "Créer le volume",
+      "copyPath": "Copier le chemin sur le serveur",
+      "actionsAria": "Actions pour le volume {name}",
+      "ownedBy": "Données de {app}",
+      "emptyBody": "Créez-en un, puis montez-le sur la page Conteneur d'une application."
     },
     "attach": {
       "action": "Rattacher une application",
@@ -7829,24 +7849,23 @@
       "failed": "Le rattachement a échoué.",
       "cancel": "Annuler",
       "theSite": "l'application",
-      "restartWarning": "Cela réécrit la configuration de {site} et recrée son conteneur : l'application est indisponible quelques secondes."
+      "restartWarning": "Cela réécrit la configuration de {site} et recrée son conteneur : l'application est indisponible quelques secondes.",
+      "ownedReason": "C'est celui, privé, d'une autre application.",
+      "noPermission": "Votre rôle n'inclut pas l'accès en gestion aux applications. Demandez à un administrateur de l'accorder."
     },
     "registries": {
       "title": "Identifiants de registre",
       "add": "Ajouter un registre",
       "save": "Enregistrer",
-      "cancel": "Annuler",
       "edit": "Modifier",
       "remove": "Retirer",
       "test": "Tester la connexion",
-      "hint": "Ajoutez un identifiant ici, puis choisissez-le sur une application conteneur — au moment de la création, ou plus tard sur la page Conteneur de l’application. Les applications laissées sur « Aucun » récupèrent l’image de façon anonyme, ce qui est correct pour toute image publique.",
-      "empty": "Aucun identifiant de registre n’est enregistré. Ajoutez-en un pour exécuter une image privée.",
+      "hint": "Choisissez-en un dans le formulaire de création ou sur la page Conteneur d'une application pour récupérer une image privée.",
       "failed": "Cela n’a pas fonctionné.",
       "created": "{name} a été ajouté.",
       "updated": "{name} a été enregistré.",
       "removed": "{name} a été supprimé.",
       "testPassed": "{name} a accepté ce nom d'utilisateur et ce jeton.",
-      "dockerHub": "Docker Hub",
       "tokenHintEdit": "Laissez vide pour conserver le jeton enregistré. Saisissez-en un nouveau pour le remplacer.",
       "usedBySites": "{count, plural, one {# application} other {# applications}}",
       "usedByNone": "Aucune application",
@@ -7860,13 +7879,6 @@
       "placeholders": {
         "name": "GHCR",
         "registry": "ghcr.io"
-      },
-      "columns": {
-        "name": "Nom",
-        "registry": "Registre",
-        "username": "Nom d'utilisateur",
-        "status": "Statut",
-        "usedBy": "Utilisé par"
       },
       "invalid": {
         "name": "Donnez à cet identifiant un nom que vous reconnaîtrez.",
@@ -7887,49 +7899,46 @@
       "emptyTitle": "Aucun identifiant de registre",
       "emptyBody": "Vous n’en avez besoin que pour exécuter une image privée. Préparez votre nom d’utilisateur de registre et un jeton d’accès — pas le mot de passe de votre compte. Les images publiques ne nécessitent rien ici.",
       "registryHint": "L’hôte seul — pas de https://, pas d’espace de noms, pas de dépôt. Ajoutez un port si le vôtre en utilise un.",
-      "registryHintFixed": "Fixe pour ce fournisseur. Docker enregistre les identifiants sous cette adresse exacte ; toute autre écriture est ignorée plutôt que refusée.",
-      "howTo": {
-        "title": "Comment l’obtenir",
-        "step3": "Collez-le ci-dessous et appuyez sur Tester la connexion — le panneau interroge le registre immédiatement, au lieu de vous laisser le découvrir au premier déploiement."
-      },
       "temporaryToken": "Ce registre délivre des identifiants de courte durée — ceux d’AWS ECR durent douze heures. Un jeton collé ici fonctionnera maintenant puis échouera à son expiration, car le panneau ne le renouvelle pas. Utilisez un registre avec un jeton de longue durée, ou prévoyez de le mettre à jour à la main.",
       "providers": {
         "dockerhub": {
           "label": "Docker Hub",
-          "step1": "Dans Docker Hub, ouvrez Paramètres du compte → Jetons d’accès personnels et créez un jeton avec l’accès Read.",
-          "step2": "Votre nom d’utilisateur est votre Docker ID — le nom dans l’URL de votre profil, pas votre adresse e-mail.",
           "usernameHint": "Votre Docker ID, pas l’e-mail de connexion.",
           "tokenHint": "Un jeton d’accès personnel avec l’accès Read. Le mot de passe du compte ne fonctionnera pas si l’authentification à deux facteurs est active.",
           "linkLabel": "Ouvrir les jetons d’accès Docker Hub"
         },
         "ghcr": {
           "label": "GitHub Container Registry",
-          "step1": "Dans GitHub, ouvrez Settings → Developer settings → Personal access tokens → Tokens (classic) et créez-en un avec la portée read:packages.",
-          "step2": "Ce doit être un jeton « classic ». Un jeton fine-grained ne peut pas porter read:packages : il est donc refusé même s’il paraît valide.",
           "usernameHint": "Votre nom d’utilisateur GitHub.",
           "tokenHint": "Un jeton d’accès personnel classique avec read:packages. Les jetons fine-grained ne fonctionnent pas ici.",
           "linkLabel": "Ouvrir les jetons d’accès personnels GitHub"
         },
         "gitlab": {
           "label": "GitLab Container Registry",
-          "step1": "Dans votre projet GitLab, ouvrez Settings → Repository → Deploy tokens et créez-en un avec la portée read_registry.",
-          "step2": "Le nom d’utilisateur est celui du jeton de déploiement, que GitLab n’affiche qu’une fois à sa création — pas le nom de votre compte GitLab.",
           "usernameHint": "Le nom d’utilisateur du jeton de déploiement, pas votre compte GitLab.",
           "tokenHint": "Un jeton de déploiement de projet ou de groupe avec read_registry. Un jeton d’accès personnel convient aussi, avec la même portée.",
           "linkLabel": "Lire le guide GitLab sur les jetons de déploiement"
         },
         "other": {
           "label": "Autre registre ou registre auto-hébergé",
-          "step1": "Saisissez l’hôte du registre, avec un port s’il en utilise un — par exemple registry.example.com:5000.",
-          "step2": "Utilisez le nom d’utilisateur et le jeton ou mot de passe que ce registre accepte pour un docker login. Un compte en lecture seule suffit : cet identifiant ne fait que récupérer des images.",
           "usernameHint": "Ce que ce registre accepte pour docker login.",
           "tokenHint": "Le jeton ou mot de passe de ce compte. Un accès en lecture seule suffit — le panneau ne fait que récupérer.",
-          "linkLabel": ""
+          "linkLabel": "",
+          "hint": "Tout registre qui accepte docker login"
         }
       },
       "subtitle": "Identifiants utilisés par ce serveur pour récupérer des images de conteneurs privées.",
       "unavailableTitle": "Ce serveur n’héberge aucun conteneur",
-      "unavailableBody": "Les identifiants de registre servent à récupérer des images de conteneurs. Ce serveur n’en exécute aucun, il n’y a donc rien à récupérer."
-    }
+      "unavailableBody": "Les identifiants de registre servent à récupérer des images de conteneurs. Ce serveur n’en exécute aucun, il n’y a donc rien à récupérer.",
+      "listTitle": "Identifiants enregistrés",
+      "editTitle": "Modifier {name}",
+      "formDescription": "Un nom d'utilisateur et un jeton d'accès avec lesquels ce serveur récupère les images privées.",
+      "noPermission": "Votre rôle n'inclut pas les registres avec l'accès Manage. Demandez à un administrateur de l'accorder.",
+      "moreActions": "Actions pour {name}",
+      "change": "Modifier",
+      "nameHint": "Comment cet identifiant apparaît dans le panneau, par exemple sur la page Conteneur d'une application."
+    },
+    "noPermission": "Votre rôle n'inclut pas Docker avec l'accès Manage. Demandez à un administrateur de l'accorder.",
+    "nameRule": "Lettres, chiffres, points, tirets et traits de soulignement ; commencez par une lettre ou un chiffre."
   }
 }

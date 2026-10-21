@@ -6,10 +6,14 @@ import path from "node:path";
 const root = path.join(import.meta.dirname, "..");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 
-// The Container settings card is one <form>; anything rendered inside it must not
-// open another one (React #418 on the live Container page, 19 Oct).
+// The Container page's two forms (image, network and limits) are siblings, and the
+// volumes and credentials cards sit outside both; none of them may open a form
+// inside another (React #418 on the live Container page, 19 Oct).
 test("nothing inside the Container settings form opens its own form", () => {
-  assert.match(read("components/applications/container-card.jsx"), /<form noValidate onSubmit=\{form\.handleSubmit\(save\)\}>/);
+  const card = read("components/applications/container-card.jsx");
+  assert.match(card, /<form noValidate onSubmit=\{imageForm\.handleSubmit\(saveImage\)\}>/);
+  assert.match(card, /<form noValidate onSubmit=\{form\.handleSubmit\(saveSettings\)\}>/);
+  assert.equal(card.match(/<form\b/g).length, 2);
   for (const file of ["components/applications/container-volumes.jsx", "components/applications/container-credentials.jsx"]) {
     assert.doesNotMatch(read(file), /<form\b/, file);
   }
@@ -29,7 +33,7 @@ test("the network chooser names the site's own network and offers only shared on
   assert.doesNotMatch(card, /defaultBridge/);
   assert.match(card, /\(!network\.built_in && !network\.application_id\) \|\|\s*network\.name === defaults\.docker_network/);
   assert.match(card, /\{joinable\.map\(\(network\) => \(/);
-  assert.match(card, /\{joinable\.length === 0 \? \(/);
+  assert.match(card, /joinable\.length === 0 \? \(/);
 });
 
 // A container's output is Docker's: the API refuses its download (422) and its
@@ -53,10 +57,11 @@ test("an application on its own compose file gets a pointer, not inert fields", 
 });
 
 // "Add registry" opened on Docker Hub with an empty, read-only address (20 Oct).
-test("a new registry credential opens with Docker Hub's preset filled in", () => {
+// Since 21 Oct the host is picked first, and the form starts on that host's preset.
+test("a new registry credential opens with the chosen host's preset filled in", () => {
   const card = read("components/docker/registries-card.jsx");
-  assert.match(card, /name: registry\?\.name \?\? t\("providers\.dockerhub\.label"\),/);
-  assert.match(card, /registry: registry\?\.registry \?\? registryProvider\("dockerhub"\)\.address,/);
+  assert.match(card, /name: registry\?\.name \?\? \(provider === "other" \? "" : t\(`providers\.\$\{provider\}\.label`\)\),/);
+  assert.match(card, /registry: registry\?\.registry \?\? preset\.address,/);
 });
 
 // A refused login is a 200 with success:false; and an empty token on edit means
@@ -65,7 +70,8 @@ test("registry test reads the outcome, and edit keeps the stored token", () => {
   const card = read("components/docker/registries-card.jsx");
   assert.match(card, /if \(data\?\.success\) toast\.success\(t\("testPassed"/);
   assert.match(card, /else toast\.error\(t\(`errors\.\$\{data\?\.registry\?\.last_test_error \?\? "unknown"\}`\)\)/);
-  assert.match(card, /!creating && form\.token === "" \? \{ \.\.\.form, token: undefined \} : form/);
+  assert.match(card, /registryFormSchema\.extend\(\{ token: z\.literal\(""\)\.or\(registryFormSchema\.shape\.token\) \}\)/);
+  assert.match(card, /if \(!payload\.token\) delete payload\.token;/);
 });
 
 // Attaching from the Docker page to an application on its own compose file was
@@ -80,6 +86,6 @@ test("the Docker page offers attaching only to applications on a generated compo
 // application to it from the Docker page breaks that isolation (20 Oct).
 test("the Docker page does not offer attaching to an application's own network or volume", () => {
   const panel = read("components/docker/docker-resources-panel.jsx");
-  assert.match(panel, /canManageSites && !network\.application_id \? \(/);
-  assert.match(panel, /canManageSites && !volume\.application_id \? \(/);
+  // One rule for both rows, shown as the reason on the disabled menu item (21 Oct).
+  assert.match(panel, /resource\.application_id \? t\("attach\.ownedReason"\) : !canManageSites \? t\("attach\.noPermission"\) : null/);
 });

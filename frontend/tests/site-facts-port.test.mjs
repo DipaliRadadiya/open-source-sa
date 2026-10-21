@@ -41,3 +41,17 @@ test("a non-container application keeps its application port", () => {
   assert.equal(screen.queryAllByText("Container port").length, 0);
   assert.equal(tile("Application port").textContent, "Application port3001");
 });
+
+// Krishna, 20 Oct: the masthead's facts wrapped to a second row with an empty cell.
+test("a container drops Type and Web root: Source says what it runs and the root is a proxy", () => {
+  renderFacts({ serving_profile: "docker", container_port: 80, app_port: 3003, site_type_title: "Docker container", web_root: "/" });
+  assert.equal(screen.queryAllByText("Type").length, 0);
+  assert.equal(screen.queryAllByText("Web root").length, 0);
+  assert.ok(screen.getByText("Container port"));
+});
+
+test("other applications keep Type and Web root", () => {
+  renderFacts({ serving_profile: "php", site_type: "wordpress", site_type_title: "WordPress", web_root: "/public", container_port: null, app_port: null });
+  assert.equal(tile("Type").textContent.startsWith("TypeWordPress"), true);
+  assert.ok(screen.getByText("Web root"));
+});

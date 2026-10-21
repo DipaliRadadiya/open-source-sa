@@ -295,6 +295,43 @@ export default async function ApplicationDetailPage({ params }) {
       : null;
   const deployTile = isGit && canSeeDeployment ? { inFlight: Boolean(latestDeploy.latest?.in_flight) } : null;
 
+  const domainsCard = canSeeDomains ? (
+    <DomainsCard
+      application={application}
+      domains={domainList.domains}
+      certificate={certificate.certificate}
+      failed={domainList.failed || certificate.failed}
+      href={`/applications/${id}/domains`}
+    />
+  ) : null;
+  // Shown for every site type; the card itself distinguishes types
+  // that need a database from those that do not declare it.
+  const databaseCard = canSeeDatabases ? (
+    <DatabaseCard
+      application={application}
+      unattached={spareDatabases.databases}
+      engines={engineList.engines}
+      databases={siteDatabases.databases}
+      failed={siteDatabases.failed}
+      needsDatabase={needsDatabase}
+      canSeeDatabases={canManageDatabases}
+    />
+  ) : null;
+  const backupCard = canSeeBackups ? (
+    <BackupCard
+      applicationId={id}
+      target={backup.target}
+      backups={backupRuns.backups}
+      // The target keeps its last run time after every backup is
+      // deleted, so the list decides whether one is actually kept.
+      noneKept={backupTile?.noneKept ?? false}
+      failed={backup.failed}
+      canManage={canRunBackup}
+      href={`/applications/${id}/backups`}
+    />
+  ) : null;
+  const protectionCard = <ProtectionCard application={application} items={protectionItems} />;
+
   return (
     <div className="space-y-6">
       {/* The header card IS the application's details (Krishna, 7 Oct: they are what this
@@ -431,17 +468,6 @@ export default async function ApplicationDetailPage({ params }) {
             alerts={alerts}
           />
 
-          {/* A container's command line: wide, like Source; a container site has no Deploy card.
-              Protection stays in the two-by-two grid below. */}
-          {showContainerAccess ? (
-            <ContainerAccessCard
-              application={application}
-              canSeeSystemUsers={can(permissions, "system_user", "view")}
-              canManageSystemUsers={can(permissions, "system_user", "manage")}
-              canOpenSecurity={can(permissions, "setting", "manage")}
-            />
-          ) : null}
-
           {/* Wide, like Source: three facts in one row. Streamed on its own because the
               first open can wait on a release lookup; renders nothing for other types. */}
           {settled && UPDATABLE_SITE_TYPES.includes(application.site_type) ? (
@@ -466,47 +492,35 @@ export default async function ApplicationDetailPage({ params }) {
               deployInFlight={Boolean(latestDeploy.latest?.in_flight)}
             />
           ) : null}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {canSeeDomains ? (
-              <DomainsCard
-                application={application}
-                domains={domainList.domains}
-                certificate={certificate.certificate}
-                failed={domainList.failed || certificate.failed}
-                href={`/applications/${id}/domains`}
-              />
-            ) : null}
-            {/* Shown for every site type; the card itself distinguishes types
-                that need a database from those that do not declare it. */}
-            {canSeeDatabases ? (
-              <DatabaseCard
-                application={application}
-                unattached={spareDatabases.databases}
-                engines={engineList.engines}
-                databases={siteDatabases.databases}
-                failed={siteDatabases.failed}
-                needsDatabase={needsDatabase}
-                canSeeDatabases={canManageDatabases}
-              />
-            ) : null}
-            {canSeeBackups ? (
-              <BackupCard
-                applicationId={id}
-                target={backup.target}
-                backups={backupRuns.backups}
-                // The target keeps its last run time after every backup is
-                // deleted, so the list decides whether one is actually kept.
-                noneKept={backupTile?.noneKept ?? false}
-                failed={backup.failed}
-                canManage={canRunBackup}
-                href={`/applications/${id}/backups`}
-              />
-            ) : null}
-            <ProtectionCard application={application} items={protectionItems} />
-            {application.has_process ? (
-              <ProcessCard application={application} canManage={canManage} className="lg:col-span-2" />
-            ) : null}
-          </div>
+          {/* A container app: two independent columns, so a short card never stretches to
+              its neighbour's height (Krishna, 20 Oct: one domain left a half-empty card and
+              Security sat alone under it). Website on the left, operations on the right. */}
+          {showContainerAccess ? (
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+              <div className="space-y-6">
+                {domainsCard}
+                {databaseCard}
+                {protectionCard}
+              </div>
+              <div className="space-y-6">
+                {backupCard}
+                <ContainerAccessCard
+                  application={application}
+                  canSeeSystemUsers={can(permissions, "system_user", "view")}
+                  canManageSystemUsers={can(permissions, "system_user", "manage")}
+                  canOpenSecurity={can(permissions, "setting", "manage")}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {domainsCard}
+              {databaseCard}
+              {backupCard}
+              {protectionCard}
+            </div>
+          )}
+          {application.has_process ? <ProcessCard application={application} canManage={canManage} /> : null}
         </>
       )}
     </div>

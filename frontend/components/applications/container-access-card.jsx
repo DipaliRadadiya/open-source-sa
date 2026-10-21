@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Copy, Loader2, Power, UserRound } from "lucide-react";
+import { ChevronDown, Copy, Loader2, Power, SquareTerminal, UserRound } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import {
   disableContainerAccess,
@@ -22,14 +22,15 @@ import {
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { apiMessage } from "@/lib/api/error-message";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SkForm } from "@/components/ui/skeleton-kit";
+import { FormModal } from "@/components/ui/form-modal";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Caution } from "@/components/ui/caution";
 import { Note } from "@/components/ui/note";
 import {
@@ -61,8 +62,9 @@ const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
 
 /**
  * The app's own system user is the way in: once container login is on, its SSH
- * login opens this app's container, with no sudo. Off, the card is one step to
- * turn it on; on, it is the lines to copy.
+ * login opens this app's container, with no sudo. A dashboard card like Backups:
+ * off, one row and a Turn on button (the form is a dialog, not a wall on the
+ * dashboard); on, the shell line to copy, the rest folded.
  *
  * An extra, not a status: a failed read hides the card (with a console warning)
  * rather than putting an error on the dashboard.
@@ -79,6 +81,7 @@ export function ContainerAccessCard({
   const [access, setAccess] = useState(null);
   const [failed, setFailed] = useState(false);
   const [offPending, setOffPending] = useState(false);
+  const [turningOn, setTurningOn] = useState(false);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -116,7 +119,6 @@ export function ContainerAccessCard({
     }
   }
 
-  // The "on" state's one action, so it sits in the header like the other cards' buttons.
   async function turnOff() {
     setOffPending(true);
     try {
@@ -138,76 +140,87 @@ export function ContainerAccessCard({
 
   return (
     <Card className={className} aria-labelledby="container-access-heading">
-      {/* The application page's card head: plain title, its line, the action on the right. */}
-      <CardHeader className="border-b">
-        <CardTitle id="container-access-heading" as="h2">
+      {/* The dashboard card head: title with its state, the one action on the right. */}
+      <CardHeader className="items-center border-b">
+        <CardTitle id="container-access-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
+          {access ? (
+            <span className="text-xs font-normal text-muted-foreground" data-testid="container-access-state">
+              {loginOn ? t("stateOn") : t("stateOff")}
+            </span>
+          ) : null}
         </CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-        {loginOn && canManageSystemUsers ? (
-          <CardAction className="self-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={turnOff}
-              disabled={offPending}
-            >
-              {offPending ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
-              {t("commands.turnOff")}
-            </Button>
+        {access && canManageSystemUsers ? (
+          <CardAction className="row-span-1 self-center">
+            {loginOn ? (
+              <Button type="button" variant="outline" size="sm" onClick={turnOff} disabled={offPending}>
+                {offPending ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
+                {t("commands.turnOff")}
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" onClick={() => setTurningOn(true)}>
+                <Power className="size-4" />
+                {t("turnOn.open")}
+              </Button>
+            )}
           </CardAction>
         ) : null}
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {!access ? (
-          // Shaped like what loads: the owner line, then labels over wells in two columns.
-          <div className="space-y-5" aria-busy="true" aria-label={t("loading")}>
+          <div className="space-y-3 px-(--card-spacing)" aria-busy="true" aria-label={t("loading")}>
             <Skeleton className="h-4 w-56" />
-            <SkForm fields={2} />
+            <Skeleton className="h-4 w-full" />
           </div>
         ) : (
-          <div className="space-y-5">
-            <p className="flex items-center gap-2 text-sm" data-testid="container-access-owner">
+          <div className="-mt-(--card-spacing) divide-y text-sm">
+            <div className="flex items-center gap-3 px-(--card-spacing) py-3" data-testid="container-access-owner">
               <UserRound className="size-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 wrap-anywhere">
-                {t.rich("owner", {
-                  username,
-                  user: (chunks) =>
-                    canSeeSystemUsers ? (
-                      <Link href={systemUserHref} prefetch={false} className={linkClass}>
-                        {chunks}
-                      </Link>
-                    ) : (
-                      <strong className="font-medium">{chunks}</strong>
-                    ),
-                })}
-              </span>
-            </p>
+              <span className="flex-1 font-medium">{t("systemUser")}</span>
+              {canSeeSystemUsers ? (
+                <Link href={systemUserHref} prefetch={false} className={`font-mono text-[13px] ${linkClass}`}>
+                  {username}
+                </Link>
+              ) : (
+                <strong className="font-mono text-[13px] font-medium">{username}</strong>
+              )}
+            </div>
 
             {loginOn ? (
-              <Commands access={access} canSeeSystemUsers={canSeeSystemUsers} />
+              <div className="px-(--card-spacing) py-4">
+                <Commands access={access} canSeeSystemUsers={canSeeSystemUsers} />
+              </div>
             ) : canManageSystemUsers ? (
-              <TurnOn
-                access={access}
-                applicationId={application.id}
-                canOpenSecurity={canOpenSecurity}
-                onEnabled={settle}
-              />
+              <p className="px-(--card-spacing) py-3 text-muted-foreground">{t("turnOn.body", { username })}</p>
             ) : (
-              <p className="text-sm text-muted-foreground" data-testid="container-access-read-only">
+              <p className="px-(--card-spacing) py-3 text-muted-foreground" data-testid="container-access-read-only">
                 {t("readOnly", { username })}
               </p>
             )}
           </div>
         )}
       </CardContent>
+
+      {access && !loginOn && canManageSystemUsers ? (
+        <TurnOnDialog
+          open={turningOn}
+          onOpenChange={setTurningOn}
+          access={access}
+          applicationId={application.id}
+          canOpenSecurity={canOpenSecurity}
+          onEnabled={async (response) => {
+            setTurningOn(false);
+            await settle(response);
+          }}
+        />
+      ) : null}
     </Card>
   );
 }
 
-function TurnOn({ access, applicationId, canOpenSecurity, onEnabled }) {
+function TurnOnDialog({ open, onOpenChange, access, applicationId, canOpenSecurity, onEnabled }) {
   const t = useTranslations("applications.containerAccess.turnOn");
+  const tc = useTranslations("common");
   const ts = useTranslations("systemUsers.sshForm");
   const { owner } = access;
   const username = owner.username;
@@ -222,6 +235,12 @@ function TurnOn({ access, applicationId, canOpenSecurity, onEnabled }) {
   });
   const submitting = form.formState.isSubmitting;
   const rootError = form.formState.errors.root?.server?.message;
+
+  // Each opening starts clean: a dialog opened by our own button skips onOpenChange.
+  const { reset } = form;
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
 
   async function onSubmit(values) {
     const payload = {};
@@ -239,64 +258,68 @@ function TurnOn({ access, applicationId, canOpenSecurity, onEnabled }) {
 
   return (
     <Form {...form}>
-      <form
-        noValidate
+      <FormModal
+        open={open}
+        onOpenChange={(next) => !submitting && onOpenChange(next)}
+        asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        // Flat under a hairline, not a box inside the card.
-        className="space-y-4 border-t pt-5"
-        aria-labelledby="container-login-heading"
+        icon={SquareTerminal}
+        title={t("title", { username })}
+        description={t("body", { username })}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+              {tc("cancel")}
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
+              {t("submit")}
+            </Button>
+          </>
+        }
       >
-        <div className="space-y-1">
-          <h3 id="container-login-heading" className="text-sm font-medium">
-            {t("title", { username })}
-          </h3>
-          <p className="text-sm text-muted-foreground">{t("body", { username })}</p>
-        </div>
-
         {askKey ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="ssh_key"
-              render={({ field }) => (
-                <FormItem className={askPassword ? undefined : "md:col-span-2"}>
-                  <FormLabel required={needs === "key"} hint={ts("publicKeyHint")}>
-                    {t("key")}
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={3}
-                      spellCheck={false}
-                      autoComplete="off"
-                      placeholder={ts("publicKeyPlaceholder")}
-                      className="font-mono text-xs"
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">{t("keyRecommended")}</p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {askPassword ? (
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("password")}</FormLabel>
-                    <FormControl>
-                      <PasswordInput autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      {owner.has_password ? t("passwordReplaces", { username }) : t("passwordHint")}
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : null}
-          </div>
+          <FormField
+            control={form.control}
+            name="ssh_key"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required={needs === "key"} hint={ts("publicKeyHint")}>
+                  {t("key")}
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    spellCheck={false}
+                    autoComplete="off"
+                    placeholder={ts("publicKeyPlaceholder")}
+                    className="font-mono text-xs"
+                    {...field}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">{t("keyRecommended")}</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
+        {askPassword ? (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("password")}</FormLabel>
+                <FormControl>
+                  <PasswordInput autoComplete="new-password" {...field} />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  {owner.has_password ? t("passwordReplaces", { username }) : t("passwordHint")}
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         ) : null}
 
         {needs === "key" ? (
@@ -346,12 +369,7 @@ function TurnOn({ access, applicationId, canOpenSecurity, onEnabled }) {
             <p role="alert">{rootError}</p>
           </Caution>
         ) : null}
-
-        <Button type="submit" disabled={submitting}>
-          {submitting ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
-          {t("submit")}
-        </Button>
-      </form>
+      </FormModal>
     </Form>
   );
 }
@@ -363,7 +381,7 @@ function Commands({ access, canSeeSystemUsers }) {
   const selected = containers.find((item) => item.name === container) ?? defaultContainer(containers);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <CommandLine
         label={t("shell")}
         command={shellCommandFor(access, selected)}
@@ -390,44 +408,50 @@ function Commands({ access, canSeeSystemUsers }) {
           ) : null
         }
       />
-      <div className="grid gap-5 md:grid-cols-2">
-        <CommandLine label={t("exec")} command={commands.exec_example} testId="container-access-exec" />
-        <CommandLine label={t("logs")} command={commands.logs} testId="container-access-logs" />
-      </div>
 
+      {/* The app's own commands stay open: a recipe's first sign-in can depend on one. */}
       {access.cli_examples.length > 0 ? (
-        <section className="space-y-3 border-t pt-5" aria-labelledby="container-access-app-commands">
+        <section className="space-y-3" aria-labelledby="container-access-app-commands">
           <h3 id="container-access-app-commands" className="text-sm font-medium">
             {t("appCommands")}
           </h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {access.cli_examples.map((example) => (
-              <CommandLine
-                key={`${example.label}\n${example.command}`}
-                label={example.label}
-                command={example.command}
-                testId="container-access-example"
-                quiet
-              />
-            ))}
-          </div>
+          {access.cli_examples.map((example) => (
+            <CommandLine
+              key={`${example.label}\n${example.command}`}
+              label={example.label}
+              command={example.command}
+              testId="container-access-example"
+              quiet
+            />
+          ))}
         </section>
       ) : null}
 
-      {/* A footnote under a hairline; Turn off is in the card's header. */}
-      <p className="border-t pt-4 text-xs leading-5 text-muted-foreground">
-        {t.rich("note", {
-          username: owner.username,
-          link: (chunks) =>
-            canSeeSystemUsers ? (
-              <Link href="/system-users" prefetch={false} className={linkClass}>
-                {chunks}
-              </Link>
-            ) : (
-              chunks
-            ),
-        })}
-      </p>
+      <Collapsible className="border-t pt-3">
+        <CollapsibleTrigger asChild>
+          <Button type="button" variant="ghost" size="sm" className="group -ms-2 text-muted-foreground">
+            <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
+            {t("more")}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 pt-3">
+          <CommandLine label={t("exec")} command={commands.exec_example} testId="container-access-exec" />
+          <CommandLine label={t("logs")} command={commands.logs} testId="container-access-logs" />
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t.rich("note", {
+              username: owner.username,
+              link: (chunks) =>
+                canSeeSystemUsers ? (
+                  <Link href="/system-users" prefetch={false} className={linkClass}>
+                    {chunks}
+                  </Link>
+                ) : (
+                  chunks
+                ),
+            })}
+          </p>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

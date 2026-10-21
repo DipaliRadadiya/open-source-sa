@@ -67,7 +67,9 @@
     },
     "permissionDenied": {
       "title": "You don't have access to {feature}",
-      "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
+      "description": "Your role doesn't include permission to view this. Ask an administrator to grant it.",
+      "unavailableTitle": "Not available on this server",
+      "unavailableDescription": "This server wasn't set up to run it, so there is nothing to manage here."
     },
     "serverNavigation": "Server menu",
     "loadingPage": "Loading page…",
@@ -4912,7 +4914,8 @@
         "measureAgain": "Measure again",
         "tryAgain": "Try again",
         "notMeasured": "Not measured"
-      }
+      },
+      "dockerNote": "Edit <code>compose.yml</code> on the <link>Compose File</link> page: an edit made here is replaced the next time the container is updated. The container's data lives in Docker volumes, not in this folder."
     },
     "workers": {
       "pageTitle": "Workers",
@@ -6093,9 +6096,9 @@
       "title": "Container",
       "image": "Image",
       "noImage": "No image recorded",
-      "imageHint": "Changed by redeploying the application, not here — a new image is pulled before the old container is replaced.",
+      "imageHint": "Pull and redeploy fetches it again and restarts the container.",
       "network": "Network",
-      "networkHint": "Containers on the same network reach each other by name. To let this application reach another container, choose a network created on the Docker page.",
+      "networkHint": "Containers on the same network reach each other by name.",
       "ownNetwork": "Its own network (no other application on it)",
       "noNetworks": "This server has no networks of its own yet, so there is nothing to join.",
       "noNetworksLink": "Create a network on the Docker page.",
@@ -6107,21 +6110,18 @@
       "containerPort": "Container port",
       "containerPortHint": "The port your application listens on inside the container.",
       "memoryLimit": "Memory limit",
-      "memoryLimitHint": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default of {default}.",
-      "memoryLimitHintUnknown": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default.",
+      "memoryLimitHint": "Like 512m or 2g; a bare number is bytes, not megabytes. Empty uses the server default of {default}.",
+      "memoryLimitHintUnknown": "Like 512m or 2g; a bare number is bytes, not megabytes. Empty uses the server default.",
       "cpuLimit": "CPU limit",
       "cpuLimitPlaceholder": "No limit",
-      "cpuLimitHint": "In cores — 1 for one full core, 0.5 for half. This server has {cores}. Empty means no limit at all.",
-      "cpuLimitHintUnknown": "In cores — 1 for one full core, 0.5 for half. You cannot set more than this server has. Empty means no limit at all.",
-      "limitsTitle": "How these two limits behave",
-      "limitsBody": "Both are ceilings for this container alone, not reservations — nothing is set aside for it. They fail in opposite ways, which is worth knowing before you debug one: past the memory ceiling the container is killed and restarted, so the application drops requests; past the CPU quota nothing is killed and the container simply waits, so the application is slow with no error anywhere.",
+      "cpuLimitHint": "In cores, like 0.5. This server has {cores}. Empty means no limit.",
+      "cpuLimitHintUnknown": "In cores, like 0.5, up to what this server has. Empty means no limit.",
+      "limitsBody": "Both are ceilings, not reservations: over memory the container is killed and restarted; over CPU it just runs slow.",
       "saveAction": "Save container settings",
       "restartNote": "Saving recreates the container, so the application is down for a few seconds.",
-      "savingNote": "Rewriting the compose file and recreating the container…",
       "saved": "Container settings saved.",
       "failed": "Couldn't save the container settings.",
       "noPermission": "You don't have permission to change this application.",
-      "nothingToSave": "Nothing has changed.",
       "volumes": {
         "title": "Volumes",
         "empty": "No volumes mounted. The container keeps nothing that survives a rebuild.",
@@ -6137,7 +6137,7 @@
         "invalid": "Pick a volume and give an absolute path inside the container, for example /var/lib/mysql.",
         "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
         "noVolumesLink": "Create a volume on the Docker page.",
-        "hint": "A volume keeps data that survives the container being rebuilt. Mounting one recreates the container, and it starts empty — whatever the image had at that path is hidden, not merged."
+        "hint": "Data in a volume survives rebuilds. Mounting one restarts the container, and the path starts empty."
       },
       "credentials": {
         "title": "Generated credentials",
@@ -6166,12 +6166,10 @@
       },
       "registry": "Registry",
       "noRegistry": "None — pull anonymously",
-      "registryHint": "The stored credential this application pulls its image with. Leave it as None for a public image.",
+      "registryHint": "Leave it as None for a public image.",
       "missingRegistryOption": "Deleted credential — this application's next pull will be anonymous",
       "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
       "noRegistriesLink": "Add one under Integrations → Docker Registries.",
-      "pullTitle": "Update the image",
-      "pullHint": "Fetches the image again and recreates the container. Bringing the application up on its own does not re-check the registry, so a moved tag needs this.",
       "pull": "Pull and redeploy",
       "pulled": "The image was pulled and the container recreated.",
       "pullFailed": "The image could not be pulled.",
@@ -6180,14 +6178,18 @@
         "title": "Set in the compose file",
         "body": "This application runs its own compose file, so its port, memory and CPU limits, network and volumes are changed there, not here.",
         "link": "Open the compose file"
-      }
+      },
+      "imageSection": "Image",
+      "imageSectionHint": "What this container runs, and the credential it pulls with.",
+      "saveImage": "Save registry",
+      "settingsSection": "Network and limits",
+      "settingsSectionHint": "How this container connects, and how much of the server it may use."
     },
     "compose": {
       "title": "Compose file",
-      "hint": "The file this application runs. Environment variables, extra services and volumes all live here — a container has no separate Environment screen.",
-      "description": "Edited with Docker's own parser checking it. The panel refuses a file that publishes off 127.0.0.1 or mounts anything outside this application's own directory.",
+      "hint": "Image, ports, volumes and environment variables for this application all live in this file.",
       "loadFailed": "The compose file could not be read.",
-      "safety": "Saving recreates this application's container, so it is briefly down. If the new file will not come up, the panel puts the previous one back and starts the application on that — you will not be left with a stopped application.",
+      "safety": "Saving restarts the container, so the application is briefly down. If the new file won't start, the panel puts the previous one back.",
       "takeover": "This application currently runs a file the panel generates from its image and the settings on the Container page. Saving here takes the file over: from then on this text is what runs, and those settings stop driving it. There is no way back to the generated file except clearing this one.",
       "acknowledge": "I understand that saving replaces the generated file permanently.",
       "save": "Save and apply",
@@ -6195,7 +6197,14 @@
       "failed": "The compose file could not be applied.",
       "copy": "Copy",
       "revert": "Revert",
-      "unsaved": "Unsaved changes"
+      "unsaved": "Unsaved changes",
+      "lines": "{count, plural, one {# line} other {# lines}}",
+      "rules": {
+        "parser": "Checked by Docker before it runs",
+        "ports": "Ports publish on 127.0.0.1 only",
+        "mounts": "Mounts stay inside this application's folder"
+      },
+      "tickFirst": "Tick the box above to confirm first."
     },
     "nodeVersion": {
       "title": "Change Node version",
@@ -6364,15 +6373,16 @@
       "imageTooltip": "Deployed from the image {image}.",
       "composeTooltip": "Runs the compose file you provided.",
       "factLabel": "Source",
-      "factRecipe": "One-click app · {title} (recipe v{version})"
+      "factRecipe": "{title} (recipe v{version})"
     },
     "containerAccess": {
       "title": "Command-line access",
-      "description": "Open a shell inside this app's container from your computer.",
+      "stateOn": "On",
+      "stateOff": "Off",
+      "systemUser": "System user",
       "loading": "Loading command-line access",
       "copied": "Command copied",
       "copyLabel": "Copy: {label}",
-      "owner": "This app's system user: <user>{username}</user>",
       "readOnly": "Ask an admin to turn on container login for {username}.",
       "turnOn": {
         "title": "Turn on container login for {username}",
@@ -6387,7 +6397,8 @@
         "confirm": "I understand that {username} will log in to this container only",
         "submit": "Turn on container login",
         "done": "Container login is on for {username}",
-        "failed": "Container login could not be turned on."
+        "failed": "Container login could not be turned on.",
+        "open": "Turn on"
       },
       "commands": {
         "shell": "Open a shell in the container",
@@ -6398,7 +6409,8 @@
         "note": "No sudo needed. With an SSH key there is no password prompt; otherwise it asks for {username}'s password once. <link>For normal server SSH, create a separate system user.</link>",
         "turnOff": "Turn off",
         "turnedOff": "Container login is off for {username}",
-        "turnOffFailed": "Container login could not be turned off."
+        "turnOffFailed": "Container login could not be turned off.",
+        "more": "More commands"
       }
     },
     "health": {
@@ -6683,7 +6695,8 @@
     "purposePostgresql": "For apps that ask for Postgres by name",
     "fail2banOff": "Installed, but nothing is protected yet. <link>Turn on SSH protection in Fail2ban</link>.",
     "recommendedProgress": "{done} of {total} recommended installed",
-    "optionalLeft": "{count, plural, one {# optional extra available below} other {# optional extras available below}}"
+    "optionalLeft": "{count, plural, one {# optional extra available below} other {# optional extras available below}}",
+    "dockerDetail": "runs your applications' containers"
   },
   "storage": {
     "title": "Storage",
@@ -7762,7 +7775,6 @@
   "docker": {
     "title": "Docker",
     "subtitle": "Networks and volumes shared by this server's containers.",
-    "create": "Create",
     "remove": "Remove",
     "none": "None",
     "failed": "That didn't work.",
@@ -7774,42 +7786,50 @@
     },
     "columns": {
       "name": "Name",
-      "path": "Path",
-      "driver": "Driver",
       "attached": "Containers",
       "size": "Size",
-      "usedBy": "Used by"
+      "usedBy": "Used by",
+      "actions": "Actions"
     },
     "networks": {
       "title": "Networks",
       "placeholder": "network-name",
-      "hint": "Containers on the same user-defined network can reach each other by name. Docker's built-in bridge can't do that, which is why an app and its database need one of these.",
-      "builtIn": "Docker's own",
+      "hint": "Containers on the same network reach each other by name.",
       "created": "Network {name} created.",
       "removed": "Network {name} removed.",
       "removeTitle": "Remove network {name}?",
-      "removeAria": "Remove network {name}",
       "removeBody": "Nothing is attached to it. Containers that later expect it will fail to start until it's recreated.",
       "removeBusy": "Containers are still attached to this network. Stop or detach them first.",
       "removeUsedBySites": "These applications are set to join this network: {sites}. Change their network first — removing it now would stop them starting.",
       "noPorts": "No ports",
-      "internalOnly": "internal only"
+      "internalOnly": "internal only",
+      "empty": "No networks of your own yet.",
+      "shared": "No application has joined it yet.",
+      "joinedBy": "Joined by {sites}",
+      "builtInLine": "Docker's built-in networks ({names}) can't be changed.",
+      "createAction": "Create network",
+      "actionsAria": "Actions for network {name}",
+      "ownedBy": "{app}'s own network",
+      "emptyBody": "Create one so an application and its database can reach each other by name."
     },
     "volumes": {
       "title": "Volumes",
       "placeholder": "volume-name",
-      "hint": "A volume is where a container keeps data that has to survive being rebuilt.",
+      "hint": "Data in a volume survives the container being rebuilt.",
       "empty": "No volumes on this server yet.",
-      "inUse": "{count} container(s)",
       "inUseUnnamed": "{count} container(s) — names unavailable",
       "unused": "Not in use",
       "created": "Volume {name} created.",
       "removed": "Volume {name} removed.",
       "removeTitle": "Remove volume {name}?",
-      "removeAria": "Remove volume {name}",
       "removeBody": "This deletes the data inside it. Nothing is using it right now, but a stopped container may still expect it.",
       "removeBusy": "A running container is using this volume. Removing it would delete data something is still writing to.",
-      "removeUsedBySites": "These applications mount this volume: {sites}. Remove the mount from them first — deleting it now destroys the data they keep in it."
+      "removeUsedBySites": "These applications mount this volume: {sites}. Remove the mount from them first — deleting it now destroys the data they keep in it.",
+      "createAction": "Create volume",
+      "copyPath": "Copy path on the server",
+      "actionsAria": "Actions for volume {name}",
+      "ownedBy": "{app}'s data",
+      "emptyBody": "Create one, then mount it on an application's Container page."
     },
     "attach": {
       "action": "Attach an application",
@@ -7829,24 +7849,23 @@
       "failed": "Couldn't attach it.",
       "cancel": "Cancel",
       "theSite": "the application",
-      "restartWarning": "This rewrites {site}'s configuration and recreates its container, so the application is down for a few seconds."
+      "restartWarning": "This rewrites {site}'s configuration and recreates its container, so the application is down for a few seconds.",
+      "ownedReason": "This is another application's private one.",
+      "noPermission": "Your role does not include Application with Manage access. Ask an administrator to grant it."
     },
     "registries": {
       "title": "Registry credentials",
       "add": "Add registry",
       "save": "Save",
-      "cancel": "Cancel",
       "edit": "Edit",
       "remove": "Remove",
       "test": "Test connection",
-      "hint": "Add a credential here, then choose it on a container application — on the create form, or later on the application's Container page. Applications left on “None” pull anonymously, which is correct for every public image.",
-      "empty": "No registry credentials are stored. Add one to run a private image.",
+      "hint": "Pick one on the create form or an application's Container page to pull a private image.",
       "failed": "That did not work.",
       "created": "{name} was added.",
       "updated": "{name} was saved.",
       "removed": "{name} was deleted.",
       "testPassed": "{name} accepted this username and token.",
-      "dockerHub": "Docker Hub",
       "tokenHintEdit": "Leave empty to keep the stored token. Type a new one to replace it.",
       "usedBySites": "{count, plural, one {# application} other {# applications}}",
       "usedByNone": "No applications",
@@ -7860,13 +7879,6 @@
       "placeholders": {
         "name": "GHCR",
         "registry": "ghcr.io"
-      },
-      "columns": {
-        "name": "Name",
-        "registry": "Registry",
-        "username": "Username",
-        "status": "Status",
-        "usedBy": "Used by"
       },
       "invalid": {
         "name": "Give this credential a name you will recognise.",
@@ -7887,49 +7899,46 @@
       "emptyTitle": "No registry credentials yet",
       "emptyBody": "You only need one to run a private image. Have your registry username and an access token ready — not your account password. Public images need nothing here.",
       "registryHint": "The host on its own — no https://, no namespace, no repository. Add a port if yours uses one.",
-      "registryHintFixed": "Fixed for this provider. Docker stores credentials under this exact address, and any other spelling is ignored rather than rejected.",
-      "howTo": {
-        "title": "How to get this",
-        "step3": "Paste it below and press Test connection — the panel asks the registry straight away rather than leaving you to find out on your first deploy."
-      },
       "temporaryToken": "This registry issues short-lived credentials — AWS ECR's last twelve hours. A token pasted here will authenticate now and start failing once it expires, because the panel does not refresh it. Use a registry with a long-lived token, or expect to update this by hand.",
       "providers": {
         "dockerhub": {
           "label": "Docker Hub",
-          "step1": "In Docker Hub, open Account settings → Personal access tokens and create a token with Read access.",
-          "step2": "Your username is your Docker ID — the name in your profile URL, not your email address.",
           "usernameHint": "Your Docker ID, not the email you sign in with.",
           "tokenHint": "A personal access token with Read access. Your account password will not work if two-factor authentication is on.",
           "linkLabel": "Open Docker Hub access tokens"
         },
         "ghcr": {
           "label": "GitHub Container Registry",
-          "step1": "In GitHub, open Settings → Developer settings → Personal access tokens → Tokens (classic) and create one with the read:packages scope.",
-          "step2": "It must be a classic token. A fine-grained token cannot carry read:packages, so it is refused even though it looks valid.",
           "usernameHint": "Your GitHub username.",
           "tokenHint": "A classic personal access token with read:packages. Fine-grained tokens do not work here.",
           "linkLabel": "Open GitHub personal access tokens"
         },
         "gitlab": {
           "label": "GitLab Container Registry",
-          "step1": "In your GitLab project, open Settings → Repository → Deploy tokens and create one with the read_registry scope.",
-          "step2": "The username is the deploy token's own username, which GitLab shows you once when the token is created — not your GitLab account name.",
           "usernameHint": "The deploy token's username, not your GitLab account.",
           "tokenHint": "A project or group deploy token with read_registry. A personal access token also works, with the same scope.",
           "linkLabel": "Read GitLab's deploy token guide"
         },
         "other": {
           "label": "Other or self-hosted registry",
-          "step1": "Enter the registry's host, with a port if it uses one — for example registry.example.com:5000.",
-          "step2": "Use whatever username and token or password that registry accepts for a docker login. A read-only account is enough; this credential only pulls.",
           "usernameHint": "Whatever this registry accepts for docker login.",
           "tokenHint": "The token or password for that account. Read-only access is enough — the panel only pulls.",
-          "linkLabel": ""
+          "linkLabel": "",
+          "hint": "Any registry that accepts docker login"
         }
       },
       "subtitle": "Credentials this server uses to pull private container images.",
       "unavailableTitle": "This server hosts no containers",
-      "unavailableBody": "Registry credentials are for pulling container images. This server runs none, so there is nothing for a credential to pull for."
-    }
+      "unavailableBody": "Registry credentials are for pulling container images. This server runs none, so there is nothing for a credential to pull for.",
+      "listTitle": "Saved credentials",
+      "editTitle": "Edit {name}",
+      "formDescription": "A username and access token this server pulls private images with.",
+      "noPermission": "Your role does not include Registry with Manage access. Ask an administrator to grant it.",
+      "moreActions": "Actions for {name}",
+      "change": "Change",
+      "nameHint": "How this credential is listed in the panel, for example on an application's Container page."
+    },
+    "noPermission": "Your role does not include Docker with Manage access. Ask an administrator to grant it.",
+    "nameRule": "Letters, numbers, dots, dashes and underscores; start with a letter or number."
   }
 }

@@ -47,6 +47,8 @@ export function FirstRunCredentials({ application, className }) {
   const [credentials, setCredentials] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  // Gone the moment the API agrees, not after the page re-renders (~1.5 s later).
+  const [dismissed, setDismissed] = useState(false);
 
   const keys = application.container_secret_keys ?? [];
   const LABELS = {
@@ -90,6 +92,7 @@ export function FirstRunCredentials({ application, className }) {
     setSaving(true);
     try {
       await acknowledgeContainerSecrets(application.id);
+      setDismissed(true);
       // The card's visibility comes from a server-rendered field, so without this
       // it would sit there after a successful dismiss until the next navigation.
       router.refresh();
@@ -100,7 +103,7 @@ export function FirstRunCredentials({ application, className }) {
     }
   }
 
-  if (keys.length === 0) return null;
+  if (keys.length === 0 || dismissed) return null;
 
   return (
     <Card className={className}>

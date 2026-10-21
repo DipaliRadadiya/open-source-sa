@@ -73,6 +73,8 @@ export function Section({
   badge,
   readOnly,
   actions,
+  // One button beside the title (Add …), for a card whose body is a list.
+  headerAction,
   changedBy,
   // Overrides the two-column field grid when a card's fields want another split.
   gridClassName,
@@ -97,7 +99,7 @@ export function Section({
               <Icon className="size-[18px]" aria-hidden />
             </span>
           ) : null}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold tracking-tight">
               {title}
               {badge}
@@ -106,6 +108,7 @@ export function Section({
               <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
             ) : null}
           </div>
+          {headerAction ? <div className="shrink-0 self-center">{headerAction}</div> : null}
         </div>
       ) : null}
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, FolderPen, Wand2 } from "lucide-react";
+import { presetFits } from "@/lib/cron-jobs/preset-fit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,9 @@ import {
 } from "@/components/ui/select";
 
 const CUSTOM = "custom";
+// Examples are commands, so not translated. The PHP one only where a PHP template fits.
+const PHP_EXAMPLE = "php /home/deploy/myapp/artisan schedule:run";
+const GENERIC_EXAMPLE = "/usr/bin/curl -fsS https://example.com/cron";
 const CUSTOM_PATH = "__custom_path__";
 
 // A template fills BOTH command and expression (the API pairs them: WordPress wants 5 min, Laravel 1).
@@ -45,12 +49,17 @@ export function CommandField({
     ? presets.find((p) => p.key === starterKey && p.command)
     : null;
   const [template, setTemplate] = useState(starter?.command ?? null);
+  const [templateKey, setTemplateKey] = useState(starter?.key ?? null);
   const [path, setPath] = useState("");
   // Which site the path came from, or CUSTOM_PATH; empty means nothing picked yet.
   const [source, setSource] = useState("");
 
   // Only sites with a `path` (absent on older APIs). Provisioning sites are kept: the path is derived.
-  const sites = applications.filter((application) => application.path);
+  // Only sites the chosen template can run in (a Laravel command on a WordPress
+  // or Docker site finds nothing). Without a template, every site with a path.
+  const sites = applications.filter(
+    (application) => application.path && (!templateKey || presetFits(templateKey, application)),
+  );
   const selectedSite = sites.find((application) => String(application.id) === source);
 
   function applyTemplate(tpl, dir) {
@@ -68,6 +77,7 @@ export function CommandField({
   function onPick(preset) {
     if (preset.key === CUSTOM || !preset.command) {
       setTemplate(null);
+      setTemplateKey(null);
       setPath("");
       // Reset `source` too, or the next template resolves {path} against a stale site.
       setSource("");
@@ -76,7 +86,16 @@ export function CommandField({
       return;
     }
     setTemplate(preset.command);
-    applyTemplate(preset.command, path);
+    setTemplateKey(preset.key);
+    // A site picked for the previous template that this one cannot run in is dropped.
+    const picked = applications.find((application) => String(application.id) === source);
+    if (picked && !presetFits(preset.key, picked)) {
+      setSource("");
+      setPath("");
+      applyTemplate(preset.command, "");
+    } else {
+      applyTemplate(preset.command, path);
+    }
     if (preset.expression) {
       form.setValue("expression", preset.expression, {
         shouldValidate: true,
@@ -132,7 +151,8 @@ export function CommandField({
           <FormItem>
             <div className="flex items-center justify-between gap-2">
               <FormLabel required>{t("form.command")}</FormLabel>
-              {presets.length > 0 ? (
+              {/* Only "Custom" left (e.g. a Docker-only server) is no menu at all. */}
+              {presets.some((p) => p.command) ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -163,7 +183,7 @@ export function CommandField({
                 className="font-mono"
                 autoComplete="off"
                 spellCheck={false}
-                placeholder="php /home/deploy/myapp/artisan schedule:run"
+                placeholder={presets.some((p) => p.command) ? PHP_EXAMPLE : GENERIC_EXAMPLE}
                 {...field}
               />
             </FormControl>

@@ -43,7 +43,7 @@ export default async function PhpPage({ searchParams }) {
 
   // Runtimes are gated by the same permission as the rest of the server config.
   if (!can(permissions, "php", "view"))
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} feature="php" />;
   const canManage = can(permissions, "php", "manage");
 
   // A 409 is not a failure to report — it is the honest answer on a Docker box,
