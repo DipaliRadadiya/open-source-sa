@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Exceptions\Server\Application\FileRefusedException;
 use App\Exceptions\Server\Application\FixPermissionsFailedException;
 use App\Models\Application;
 use App\Services\Server\Php\PoolManager;
@@ -24,6 +25,25 @@ use App\Services\Server\ServerOps;
  */
 class PermissionFixer
 {
+    /**
+     * Profiles for which the panel retains its established permission reset.
+     *
+     * PHP source and static assets are read by their serving runtimes. A Node
+     * process or a container also needs executable files in its tree, and the
+     * bulk `chmod 0644` below can strip their executable bit (FS-C22 #18).
+     * Refuse those profiles rather than breaking their runtime.
+     *
+     * This deliberately preserves the existing PHP/static behaviour; it is
+     * not a runtime-aware reset. Build-time executables in node_modules or
+     * vendor/bin can still need repair after a reset on those profiles.
+     *
+     * Read from the row's `serving_profile`, not `site_type`: a git site is
+     * php, node or static by the rendering type the user picked (see
+     * `ServingProfile::resolve()`). An allowlist, so a profile added later is
+     * refused until someone decides this reset is safe for it.
+     */
+    private const RESETTABLE_PROFILES = ['php', 'static'];
+
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
@@ -34,6 +54,12 @@ class PermissionFixer
 
     public function fix(Application $application): void
     {
+        // First, before anything is asked of the server: a refusal that ran
+        // the chown first would already have done the damage.
+        if (! in_array($application->serving_profile, self::RESETTABLE_PROFILES, true)) {
+            throw FileRefusedException::because('application', 'unsupported_runtime', 'errors/application.permissions_fix_unsupported_runtime');
+        }
+
         $root = $this->provisioner->documentRoot($application);
         $user = $application->systemUser->username;
 

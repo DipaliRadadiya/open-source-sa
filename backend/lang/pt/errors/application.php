@@ -85,6 +85,7 @@ return [
     'fail2ban_failed' => 'A operação do fail2ban falhou no servidor.',
 
     'permissions_fix_failed' => 'Falha ao redefinir as permissões de arquivo no servidor.',
+    'permissions_fix_unsupported_runtime' => 'A redefinição de permissões está disponível apenas para sites PHP e estáticos. Esta aplicação é executada como um processo Node ou um contêiner, cujos arquivos incluem programas que precisam continuar executáveis, por isso o painel mantém as permissões como estão.',
 
     'unsafe_path' => 'Esse caminho não é permitido.',
     'file_too_large' => 'Esse ficheiro é demasiado grande para abrir no editor. Transfira-o — as transferências não têm limite de tamanho.',
