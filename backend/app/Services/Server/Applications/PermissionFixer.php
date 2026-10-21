@@ -26,14 +26,16 @@ use App\Services\Server\ServerOps;
 class PermissionFixer
 {
     /**
-     * The serving profiles this reset is right for, and the only ones.
+     * Profiles for which the panel retains its established permission reset.
      *
-     * Both have files that are read, never executed: PHP interprets what it
-     * reads, and a static site is a directory the web server hands out. A Node
-     * process or a container runs files out of its tree — `node_modules/.bin`
-     * targets, native addons, a container's entrypoint and the volumes it
-     * mounts — and the bulk `chmod 0644` below stripped their executable bit
-     * (FS-C22 #18), so an app that worked stopped starting.
+     * PHP source and static assets are read by their serving runtimes. A Node
+     * process or a container also needs executable files in its tree, and the
+     * bulk `chmod 0644` below can strip their executable bit (FS-C22 #18).
+     * Refuse those profiles rather than breaking their runtime.
+     *
+     * This deliberately preserves the existing PHP/static behaviour; it is
+     * not a runtime-aware reset. Build-time executables in node_modules or
+     * vendor/bin can still need repair after a reset on those profiles.
      *
      * Read from the row's `serving_profile`, not `site_type`: a git site is
      * php, node or static by the rendering type the user picked (see
