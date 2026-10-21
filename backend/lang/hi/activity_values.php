@@ -7,6 +7,7 @@ return [
     'adopted_left_unexpected_path' => 'इसका दर्ज स्थान ऐसा नहीं है जिसे पैनल हटाए',
     'adopted_left_other_site' => 'यह किसी दूसरी साइट या सर्वर का है',
     'adopted_left_not_this_site' => 'यह अब केवल इस साइट को सर्व नहीं करता',
+    'adopted_left_unprovable_config' => 'यह इस साइट को सर्व करने से अधिक करता है, ऐसे तरीके से जिसे पैनल जाँच नहीं सकता — बिना नाम का ब्लॉक, डिफ़ॉल्ट सर्वर, include, या साइट के बाहर का alias',
     'adopted_left_not_regular' => 'यह एक सामान्य फ़ाइल नहीं है',
     'adopted_left_foreign_link' => 'वेब सर्वर इसे ऐसे लिंक या कॉपी से लोड करता है जिसकी पैनल को उम्मीद नहीं थी',
     'adopted_left_unreadable' => 'इसे पढ़ा नहीं जा सका',

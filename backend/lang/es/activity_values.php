@@ -7,6 +7,7 @@ return [
     'adopted_left_unexpected_path' => 'su ubicación registrada no es una que el panel quitaría',
     'adopted_left_other_site' => 'pertenece a otro sitio o al servidor',
     'adopted_left_not_this_site' => 'ya no sirve solo a este sitio',
+    'adopted_left_unprovable_config' => 'hace algo más que servir este sitio de una forma que el panel no puede comprobar: un bloque sin nombre, el servidor predeterminado, un include o un alias fuera del sitio',
     'adopted_left_not_regular' => 'no es un archivo normal',
     'adopted_left_foreign_link' => 'el servidor web lo carga mediante un enlace o una copia que el panel no esperaba',
     'adopted_left_unreadable' => 'no se pudo leer',

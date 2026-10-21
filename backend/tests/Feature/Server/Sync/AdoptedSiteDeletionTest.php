@@ -49,6 +49,9 @@ class AdoptedDeletionHost
     /** @var array<string, string> symlink => target, as written */
     public static array $links = [];
 
+    /** @var array<string, array{mode: string, uid: string, gid: string}> what `ls -l` would show; unset = 644 root:root */
+    public static array $meta = [];
+
     /** @var array<int, array<int, string>> */
     public static array $commands = [];
 
@@ -64,6 +67,7 @@ class AdoptedDeletionHost
     {
         self::$files = [];
         self::$links = [];
+        self::$meta = [];
         self::$commands = [];
         self::$fail = [];
         self::$unreadable = [];
@@ -99,14 +103,17 @@ class AdoptedDeletionHost
                     }
 
                     $path = $directory.'/'.$args[array_search('-name', $args, true) + 1];
-                    $withTarget = str_contains((string) end($args), '%l');
+                    $type = isset(self::$links[$path]) ? 'l' : (isset(self::$files[$path]) ? 'f' : null);
 
-                    if (isset(self::$links[$path])) {
-                        return Process::result(output: $withTarget ? "l\t".self::$links[$path]."\n" : "l\n");
-                    }
+                    if ($type !== null) {
+                        // `-printf` exactly as find does it, for the
+                        // directives the panel uses.
+                        $meta = self::$meta[$path] ?? ['mode' => $type === 'l' ? '777' : '644', 'uid' => '0', 'gid' => '0'];
 
-                    if (isset(self::$files[$path])) {
-                        return Process::result(output: $withTarget ? "f\t\n" : "f\n");
+                        return Process::result(output: strtr((string) end($args), [
+                            '%y' => $type, '%m' => $meta['mode'], '%U' => $meta['uid'], '%G' => $meta['gid'],
+                            '%l' => self::$links[$path] ?? '', '\\t' => "\t", '\\n' => "\n",
+                        ]));
                     }
                 }
 
@@ -126,18 +133,39 @@ class AdoptedDeletionHost
                     : Process::result(errorOutput: 'No such file or directory', exitCode: 1);
 
             case 'tee':
+                // A new file gets root's umask; an existing one keeps its mode.
+                self::$meta[$args[1]] ??= ['mode' => '644', 'uid' => '0', 'gid' => '0'];
                 self::$files[$args[1]] = (string) $process->input;
+
+                return Process::result();
+
+            case 'install':
+                // install -m MODE /dev/null PATH: an empty file, that mode, root's.
+                self::$files[$args[count($args) - 1]] = '';
+                self::$meta[$args[count($args) - 1]] = ['mode' => ltrim($args[array_search('-m', $args, true) + 1], '0') ?: '0', 'uid' => '0', 'gid' => '0'];
+
+                return Process::result();
+
+            case 'chown':
+                [$uid, $gid] = explode(':', $args[count($args) - 2]);
+                self::$meta[$args[count($args) - 1]] = array_merge(self::$meta[$args[count($args) - 1]] ?? ['mode' => '644'], ['uid' => $uid, 'gid' => $gid]);
+
+                return Process::result();
+
+            case 'chmod':
+                self::$meta[$args[2]] = array_merge(['mode' => '644', 'uid' => '0', 'gid' => '0'], self::$meta[$args[2]] ?? [], ['mode' => ltrim($args[1], '0') ?: '0']);
 
                 return Process::result();
 
             case 'ln':
                 self::$links[$args[count($args) - 1]] = $args[count($args) - 2];
+                self::$meta[$args[count($args) - 1]] = ['mode' => '777', 'uid' => '0', 'gid' => '0'];
 
                 return Process::result();
 
             case 'rm':
                 $target = (string) end($args);
-                unset(self::$files[$target], self::$links[$target]);
+                unset(self::$files[$target], self::$links[$target], self::$meta[$target]);
 
                 if (in_array('-rf', $args, true)) {
                     foreach (array_keys(self::$files) as $path) {
@@ -168,7 +196,7 @@ class AdoptedDeletionHost
     /** Anything that could have changed the server. */
     public static function mutations(): array
     {
-        return array_values(array_filter(self::lines(), fn (string $l): bool => preg_match('/^(rm|tee|ln|cp|mv|chattr|chown|chmod|supervisorctl|systemctl|service|kill|userdel|certbot|fail2ban-client|nginx -s|apachectl -k|mysql|psql|docker) ?/', $l) === 1
+        return array_values(array_filter(self::lines(), fn (string $l): bool => preg_match('/^(rm|tee|ln|install|cp|mv|chattr|chown|chmod|supervisorctl|systemctl|service|kill|userdel|certbot|fail2ban-client|nginx -s|apachectl -k|mysql|psql|docker) ?/', $l) === 1
             || (str_starts_with($l, 'find') && str_contains($l, '-delete'))));
     }
 }
@@ -576,6 +604,9 @@ describe('removing the vhost Sync adopted the site from', function () {
         'a location with its own root' => [adoptedNginxVhost(extra: "    location /acme { root /var/www/html; }\n"), 'not_this_site'],
         'a catch-all name' => [adoptedNginxVhost('example.com _'), 'not_this_site'],
         'a wildcard name' => [adoptedNginxVhost('example.com *.example.com'), 'not_this_site'],
+        'an empty name' => [adoptedNginxVhost('example.com ""'), 'not_this_site'],
+        'a quoted name the pattern does not see' => [adoptedNginxVhost()."server {\n    listen 80;\n    \"server_name\" stranger.example.net;\n    root ".ADOPTED_ROOT.";\n}\n", 'not_this_site'],
+        'a quoted root the pattern does not see' => [adoptedNginxVhost(extra: "    location /x {\n        \"root\" /var/www/other;\n    }\n"), 'not_this_site'],
         'a root outside the site' => [adoptedNginxVhost(root: '/var/www/example'), 'not_this_site'],
     ]);
 
@@ -832,6 +863,279 @@ describe('the site\'s workers', function () {
     });
 });
 
+/** v7's own nginx vhost (`config_files/nginx/basic_vhost`), as rendered for this site. */
+function v7NginxVhost(string $listen = "listen 80;\n        listen [::]:80;"): string
+{
+    return <<<CONF
+    server {
+            {$listen}
+
+            server_name example.com www.example.com;
+            root /home/siteowner/shop/public_html;
+
+            index index.php index.html;
+
+            include snippets/lets-encrypt-alias.conf;
+
+            access_log /home/siteowner/shop/logs/access.log;
+            error_log /home/siteowner/shop/logs/error.log;
+
+            location / {
+                    try_files \$uri \$uri/ /index.php?\$args;
+            }
+
+            location ~ /\.(?!well-known).* {
+                    deny all;
+            }
+
+            location ~ \.php$ {
+                    include fastcgi.conf;
+                    fastcgi_intercept_errors on;
+                    fastcgi_pass unix:/run/php/shop.sock;
+                    fastcgi_read_timeout 300;
+            }
+
+            location ~* \.(?:css|js|mjs|jsx|ts|tsx)$ {
+                    expires 7d;
+                    add_header Cache-Control "public, immutable";
+                    try_files \$uri \$uri/ /index.php\$is_args\$args;
+            }
+
+            include /home/siteowner/shop/conf/nginx/*.conf;
+    }
+    CONF;
+}
+
+/** v7's own Apache vhost (`config_files/apache2/basic_vhost`), as rendered for this site. */
+function v7ApacheVhost(string $open = '<VirtualHost *:80>', string $extra = ''): string
+{
+    return <<<CONF
+    {$open}
+    	ServerAdmin support@example.com
+    	ServerName example.com
+    	ServerAlias example.com www.example.com
+    	DocumentRoot /home/siteowner/shop/public_html
+
+    	ErrorLog /home/siteowner/shop/logs/error.log
+    	CustomLog /home/siteowner/shop/logs/access.log combined
+
+    	<Directory />
+    		Options FollowSymLinks
+    		AllowOverride None
+    	</Directory>
+
+    	<Directory /home/siteowner/shop/public_html>
+    		Options -Indexes +FollowSymLinks +MultiViews
+    		AllowOverride All
+    		Require all granted
+    	</Directory>
+
+    	<IfModule proxy_fcgi_module>
+    		<FilesMatch \.php$>
+    			SetHandler "proxy:unix:/run/php/shop.sock|fcgi://shop/"
+    		</FilesMatch>
+    	</IfModule>
+
+    	SetEnvIfNoCase ^Authorization$ "(.+)" HTTP_AUTHORIZATION=$1
+    {$extra}
+    	IncludeOptional /home/siteowner/shop/conf/apache/*
+    </VirtualHost>
+
+    CONF;
+}
+
+function useApache(): void
+{
+    ServerCapability::query()->update(['stack' => 'lamp', 'web_server' => 'apache']);
+}
+
+/** Recorded, served and linked the way a2ensite links it. */
+function servedApacheVhost(Application $application, string $contents): void
+{
+    recordAdoption($application, '/etc/apache2/sites-available/example.com.conf');
+    AdoptedDeletionHost::$files['/etc/apache2/sites-available/example.com.conf'] = $contents;
+    AdoptedDeletionHost::$links['/etc/apache2/sites-enabled/example.com.conf'] = '../sites-available/example.com.conf';
+}
+
+describe('a vhost that may serve more than this site', function () {
+    // The domains and the root can be exactly this site's while the file
+    // still does something for somebody else: a second server block with no
+    // name answers every request nothing else claims on its port, an include
+    // pulls in whatever another file says, an alias serves another folder.
+    // None of that is provably this site's, so none of it is removed.
+    it('leaves an nginx file whose domains and root are this site\'s but which does more', function (string $contents) {
+        $application = adoptedSite();
+        recordAdoption($application, ADOPTED_AVAILABLE.'/example.com.conf');
+        servedVhost('example.com.conf', $contents);
+        $files = AdoptedDeletionHost::$files;
+        $links = AdoptedDeletionHost::$links;
+
+        deleteSite($application)->assertOk()->assertExactJson(['deleted' => true]);
+
+        expect(AdoptedDeletionHost::$files[ADOPTED_AVAILABLE.'/example.com.conf'])->toBe($files[ADOPTED_AVAILABLE.'/example.com.conf'])
+            ->and(AdoptedDeletionHost::$links[ADOPTED_ENABLED.'/example.com.conf'])->toBe($links[ADOPTED_ENABLED.'/example.com.conf'])
+            ->and(AdoptedDeletionHost::lines())->not->toContain('rm -f '.ADOPTED_AVAILABLE.'/example.com.conf')
+            ->not->toContain('rm -f '.ADOPTED_ENABLED.'/example.com.conf')
+            ->and(leftovers())->toBe([[ADOPTED_AVAILABLE.'/example.com.conf', 'unprovable_config']])
+            // The rest of the delete still ran.
+            ->and(AdoptedDeletionHost::lines())->toContain('rm -rf /home/siteowner/shop')
+            ->and(Application::find($application->id))->toBeNull();
+    })->with([
+        'a second server block with no name' => [adoptedNginxVhost()."server {\n    listen 8080;\n}\n"],
+        'a second unnamed block for the same root' => [adoptedNginxVhost()."server {\n    listen 8080;\n    root ".ADOPTED_ROOT.";\n}\n"],
+        'an unnamed block on one line' => [adoptedNginxVhost().'server { listen 8080; return 444; }'],
+        'the default server' => [adoptedNginxVhost(extra: "    listen 443 ssl default_server;\n")],
+        'the default server, old spelling' => [str_replace('listen 80;', 'listen 80 default;', adoptedNginxVhost())],
+        'an include of another file' => [adoptedNginxVhost(extra: "    include /etc/nginx/conf.d/foreign.conf;\n")],
+        'a relative include of another snippet' => [adoptedNginxVhost(extra: "    include sites-enabled/blog.conf;\n")],
+        'an include out of the site through ..' => [adoptedNginxVhost(extra: "    include /home/siteowner/shop/../blog/conf/nginx/*.conf;\n")],
+        'an include of a neighbour with the same prefix' => [adoptedNginxVhost(extra: "    include /home/siteowner/shop2/conf/nginx/*.conf;\n")],
+        'an include inside a location' => [adoptedNginxVhost(extra: "    location /x {\n        include /etc/nginx/conf.d/foreign.conf;\n    }\n")],
+        'an include outside any server block' => ["include /etc/nginx/conf.d/foreign.conf;\n".adoptedNginxVhost()],
+        'an upstream other files may use' => ["upstream shared_php {\n    server 127.0.0.1:9000;\n}\n".adoptedNginxVhost()],
+        'a map other files may use' => ["map \$http_upgrade \$connection_upgrade {\n    default upgrade;\n}\n".adoptedNginxVhost()],
+        'an alias to another folder' => [adoptedNginxVhost(extra: "    location /media/ {\n        alias /var/www/shared/media/;\n    }\n")],
+        'an alias out of the site through ..' => [adoptedNginxVhost(extra: "    location /b/ {\n        alias /home/siteowner/shop/../blog/;\n    }\n")],
+        'a quoted directive name discovery\'s pattern does not see' => [adoptedNginxVhost()."server {\n    listen 8080;\n    \"server_name\" example.com;\n    \"include\" /etc/nginx/conf.d/foreign.conf;\n}\n"],
+        'a server block hidden after a quoted #' => [adoptedNginxVhost(extra: '    add_header X-Note "#"; } server { listen 8080; root '.ADOPTED_ROOT.";\n")],
+        'an unbalanced file' => [adoptedNginxVhost()."}\n"],
+        'an unterminated quote' => [adoptedNginxVhost(extra: "    add_header X \"open;\n")],
+    ]);
+
+    it('leaves an Apache file whose names and root are this site\'s but which does more', function (string $contents) {
+        useApache();
+        $application = adoptedSite();
+        servedApacheVhost($application, $contents);
+        $original = AdoptedDeletionHost::$files['/etc/apache2/sites-available/example.com.conf'];
+
+        deleteSite($application)->assertOk()->assertExactJson(['deleted' => true]);
+
+        expect(AdoptedDeletionHost::$files['/etc/apache2/sites-available/example.com.conf'])->toBe($original)
+            ->and(AdoptedDeletionHost::$links['/etc/apache2/sites-enabled/example.com.conf'])->toBe('../sites-available/example.com.conf')
+            ->and(AdoptedDeletionHost::lines())->not->toContain('rm -f /etc/apache2/sites-available/example.com.conf')
+            ->not->toContain('rm -f /etc/apache2/sites-enabled/example.com.conf')
+            ->and(leftovers())->toBe([['/etc/apache2/sites-available/example.com.conf', 'unprovable_config']]);
+    })->with([
+        'a second VirtualHost with no ServerName' => [v7ApacheVhost()."<VirtualHost *:8080>\n    DocumentRoot ".ADOPTED_ROOT."\n</VirtualHost>\n"],
+        'a VirtualHost with only an alias' => [v7ApacheVhost()."<VirtualHost *:8080>\n    ServerAlias example.com\n    DocumentRoot ".ADOPTED_ROOT."\n</VirtualHost>\n"],
+        'the _default_ VirtualHost' => [v7ApacheVhost('<VirtualHost _default_:80>')],
+        'an Include of another file' => [v7ApacheVhost(extra: "\tInclude /etc/apache2/conf-available/foreign.conf\n")],
+        'an IncludeOptional out of the site through ..' => [v7ApacheVhost(extra: "\tIncludeOptional /home/siteowner/shop/../blog/conf/apache/*\n")],
+        'an Include outside any VirtualHost' => ["Include /etc/apache2/conf-available/foreign.conf\n".v7ApacheVhost()],
+        'a server-wide directive outside any VirtualHost' => ["Listen 8080\n".v7ApacheVhost()],
+        'an Alias to another folder' => [v7ApacheVhost(extra: "\tAlias /media /var/www/shared/media\n")],
+        'a ScriptAlias to another folder' => [v7ApacheVhost(extra: "\tScriptAlias /cgi-bin/ /usr/lib/cgi-bin/\n")],
+        'an AliasMatch out of the site' => [v7ApacheVhost(extra: "\tAliasMatch ^/b/(.*)$ \"/home/siteowner/blog/\$1\"\n")],
+        'a macro from elsewhere' => [v7ApacheVhost(extra: "\tUse SharedSite blog.example.org\n")],
+        'an unbalanced file' => [v7ApacheVhost()."</VirtualHost>\n"],
+    ]);
+
+    it('still removes the configs v7 and certbot write, includes and all', function (string $driver, string $contents) {
+        if ($driver === 'apache') {
+            useApache();
+        }
+
+        $application = adoptedSite();
+
+        $driver === 'apache' ? servedApacheVhost($application, $contents) : (function () use ($application, $contents) {
+            recordAdoption($application, ADOPTED_AVAILABLE.'/example.com.conf');
+            servedVhost('example.com.conf', $contents);
+        })();
+
+        deleteSite($application)->assertOk();
+
+        $available = $driver === 'apache' ? '/etc/apache2/sites-available' : ADOPTED_AVAILABLE;
+
+        expect(AdoptedDeletionHost::$files)->not->toHaveKey($available.'/example.com.conf')
+            ->and(AdoptedDeletionHost::lines())->toContain('rm -f '.$available.'/example.com.conf')
+            ->and(leftovers())->toBe([]);
+    })->with([
+        'v7 nginx' => ['nginx', v7NginxVhost()],
+        'v7 nginx HTTPS' => ['nginx', v7NginxVhost("listen   443 ssl http2;\n        listen   [::]:443 ssl http2;")."\n"],
+        'v7 nginx force-https' => ['nginx', "server {\n    listen 80;\n    listen [::]:80;\n\n    server_name example.com www.example.com;\n\n\tinclude snippets/lets-encrypt-alias.conf;\n\n    return 301 https://\$host\$request_uri;\n}\n".v7NginxVhost('listen 443 ssl http2;')],
+        'certbot nginx' => ['nginx', "server {\n    server_name example.com www.example.com;\n    root ".ADOPTED_ROOT.";\n    location ~ \\.php\$ {\n        include snippets/fastcgi-php.conf;\n        fastcgi_pass unix:/run/php/shop.sock;\n    }\n    listen 443 ssl; # managed by Certbot\n    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem; # managed by Certbot\n    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot\n    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot\n}\nserver {\n    if (\$host = www.example.com) {\n        return 301 https://\$host\$request_uri;\n    } # managed by Certbot\n\n    listen 80;\n    server_name example.com www.example.com;\n    return 404; # managed by Certbot\n}\n"],
+        'nginx with an alias inside the site' => ['nginx', adoptedNginxVhost(extra: "    location /media/ {\n        alias /home/siteowner/shop/media/;\n    }\n    add_header X-Note \"a # not a comment\";\n    set \$x \"\${host}-x\";\n")],
+        'v7 Apache' => ['apache', v7ApacheVhost()],
+        'v7 Apache HTTPS' => ['apache', v7ApacheVhost('<VirtualHost *:443>', "\tSSLEngine on\n\tSSLCertificateFile /etc/letsencrypt/live/example.com/fullchain.pem\n")],
+        'certbot Apache' => ['apache', "<IfModule mod_ssl.c>\n".v7ApacheVhost('<VirtualHost *:443>', "\tInclude /etc/letsencrypt/options-ssl-apache.conf\n")."</IfModule>\n"],
+        'Apache with an Alias inside the site and a comment' => ['apache', "# managed by hand\n".v7ApacheVhost(extra: "\tAlias /media \"/home/siteowner/shop/media\"\n\t# Include /etc/apache2/conf-available/foreign.conf\n")],
+    ]);
+
+    it('puts a removed file back with its own mode and owner, never readable by others in between', function () {
+        $application = adoptedSite();
+        $run = recordAdoption($application, ADOPTED_AVAILABLE.'/example.com.conf');
+        recordSibling($run, ADOPTED_AVAILABLE.'/example.com-le-ssl.conf');
+        servedVhost('example.com.conf', adoptedNginxVhost());
+        // A copy in sites-enabled rather than a link, and a hand-set mode on each.
+        AdoptedDeletionHost::$files[ADOPTED_AVAILABLE.'/example.com-le-ssl.conf'] = adoptedNginxVhost(extra: "    listen 443 ssl;\n");
+        AdoptedDeletionHost::$files[ADOPTED_ENABLED.'/example.com-le-ssl.conf'] = adoptedNginxVhost(extra: "    listen 443 ssl;\n");
+        AdoptedDeletionHost::$meta[ADOPTED_AVAILABLE.'/example.com.conf'] = ['mode' => '640', 'uid' => '0', 'gid' => '4'];
+        AdoptedDeletionHost::$meta[ADOPTED_AVAILABLE.'/example.com-le-ssl.conf'] = ['mode' => '600', 'uid' => '0', 'gid' => '0'];
+        AdoptedDeletionHost::$meta[ADOPTED_ENABLED.'/example.com-le-ssl.conf'] = ['mode' => '2640', 'uid' => '33', 'gid' => '33'];
+        AdoptedDeletionHost::$meta[ADOPTED_ENABLED.'/example.com.conf'] = ['mode' => '777', 'uid' => '0', 'gid' => '4'];
+        $files = AdoptedDeletionHost::$files;
+        $links = AdoptedDeletionHost::$links;
+        $meta = AdoptedDeletionHost::$meta;
+        AdoptedDeletionHost::$configTestFails = true;
+
+        deleteSite($application, 'remove_files=false')->assertOk();
+
+        $lines = AdoptedDeletionHost::lines();
+        $path = ADOPTED_AVAILABLE.'/example.com.conf';
+        $create = array_search("install -m 0600 -o 0 -g 0 /dev/null {$path}", $lines, true);
+
+        expect(collect(AdoptedDeletionHost::$files)->only(array_keys($files))->sortKeys()->all())->toBe(collect($files)->sortKeys()->all())
+            ->and(AdoptedDeletionHost::$links)->toBe($links)
+            ->and(collect(AdoptedDeletionHost::$meta)->only(array_keys($meta))->sortKeys()->all())->toBe(collect($meta)->sortKeys()->all())
+            // Created private, filled, then given back its owner and mode —
+            // owner first, because chown clears a setgid bit.
+            ->and($create)->toBeInt()
+            ->and(array_search("tee {$path}", $lines, true))->toBeGreaterThan($create)
+            ->and(array_search("chown 0:4 {$path}", $lines, true))->toBeGreaterThan(array_search("tee {$path}", $lines, true))
+            ->and(array_search("chmod 640 {$path}", $lines, true))->toBeGreaterThan(array_search("chown 0:4 {$path}", $lines, true))
+            ->and($lines)->toContain('chmod 2640 '.ADOPTED_ENABLED.'/example.com-le-ssl.conf')
+            ->toContain('chown 33:33 '.ADOPTED_ENABLED.'/example.com-le-ssl.conf')
+            ->toContain('chown -h 0:4 '.ADOPTED_ENABLED.'/example.com.conf')
+            // A link is never chmod-ed: that would change the file it points at.
+            ->not->toContain('chmod 777 '.ADOPTED_ENABLED.'/example.com.conf')
+            ->and(leftovers())->toBe([
+                [ADOPTED_AVAILABLE.'/example.com.conf', 'config_test_failed'],
+                [ADOPTED_AVAILABLE.'/example.com-le-ssl.conf', 'config_test_failed'],
+            ]);
+    });
+
+    it('calls a restore that could not put the mode or owner back a failed restore', function (string $step) {
+        $application = adoptedSite();
+        recordAdoption($application, ADOPTED_AVAILABLE.'/example.com.conf');
+        servedVhost('example.com.conf', adoptedNginxVhost());
+        AdoptedDeletionHost::$meta[ADOPTED_AVAILABLE.'/example.com.conf'] = ['mode' => '640', 'uid' => '0', 'gid' => '4'];
+        AdoptedDeletionHost::$configTestFails = true;
+        AdoptedDeletionHost::$fail = [$step];
+
+        deleteSite($application, 'remove_files=false')->assertOk();
+
+        expect(leftovers())->toBe([[ADOPTED_AVAILABLE.'/example.com.conf', 'restore_failed']]);
+    })->with([
+        'install -m 0600 -o 0 -g 0 /dev/null '.ADOPTED_AVAILABLE.'/example.com.conf',
+        'chown 0:4 '.ADOPTED_AVAILABLE.'/example.com.conf',
+        'chmod 640 '.ADOPTED_AVAILABLE.'/example.com.conf',
+        'chown -h 0:0 '.ADOPTED_ENABLED.'/example.com.conf',
+    ]);
+
+    it('removes nothing whose mode and owner it could not read', function () {
+        $application = adoptedSite();
+        recordAdoption($application, ADOPTED_AVAILABLE.'/example.com.conf');
+        servedVhost('example.com.conf', adoptedNginxVhost());
+        AdoptedDeletionHost::$meta[ADOPTED_AVAILABLE.'/example.com.conf'] = ['mode' => '', 'uid' => 'x', 'gid' => '0'];
+
+        deleteSite($application, 'remove_files=false')->assertOk();
+
+        expect(AdoptedDeletionHost::$files)->toHaveKey(ADOPTED_AVAILABLE.'/example.com.conf')
+            ->and(AdoptedDeletionHost::lines())->not->toContain('rm -f '.ADOPTED_AVAILABLE.'/example.com.conf')
+            ->and(leftovers())->toBe([[ADOPTED_AVAILABLE.'/example.com.conf', 'unreadable']]);
+    });
+});
+
 describe('the activity log entry for a leftover', function () {
     it('reads as a sentence with its reason, in the reader\'s language', function () {
         $application = adoptedSite();
@@ -850,7 +1154,7 @@ describe('the activity log entry for a leftover', function () {
     });
 
     it('has a word for every reason in every locale', function () {
-        $reasons = ['unexpected_path', 'other_site', 'not_this_site', 'not_regular', 'foreign_link', 'unreadable', 'config_test_failed', 'remove_failed', 'restore_failed', 'ols_shared', 'worker_shared', 'worker_systemd'];
+        $reasons = ['unexpected_path', 'other_site', 'not_this_site', 'not_regular', 'foreign_link', 'unreadable', 'config_test_failed', 'remove_failed', 'restore_failed', 'ols_shared', 'worker_shared', 'worker_systemd', 'unprovable_config'];
 
         foreach (['en', 'de', 'es', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
             $values = require lang_path("{$locale}/activity_values.php");

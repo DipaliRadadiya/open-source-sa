@@ -7,6 +7,7 @@ return [
     'adopted_left_unexpected_path' => '記録された場所はパネルが削除する場所ではありません',
     'adopted_left_other_site' => '別のサイトまたはサーバーに属しています',
     'adopted_left_not_this_site' => 'このサイトだけを提供するものではなくなっています',
+    'adopted_left_unprovable_config' => 'パネルが確認できない形でこのサイト以外のものも提供しています（名前のないブロック、デフォルトサーバー、include、またはサイト外を指す alias）',
     'adopted_left_not_regular' => '通常のファイルではありません',
     'adopted_left_foreign_link' => 'Web サーバーがパネルの想定していないリンクまたはコピー経由で読み込んでいます',
     'adopted_left_unreadable' => '読み取れませんでした',

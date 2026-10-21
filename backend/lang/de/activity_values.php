@@ -7,6 +7,7 @@ return [
     'adopted_left_unexpected_path' => 'der gespeicherte Ort ist keiner, den das Panel entfernen würde',
     'adopted_left_other_site' => 'es gehört zu einer anderen Website oder zum Server',
     'adopted_left_not_this_site' => 'es bedient nicht mehr nur diese Website',
+    'adopted_left_unprovable_config' => 'es tut mehr, als diese Website zu bedienen, auf eine Weise, die das Panel nicht prüfen kann – ein Block ohne Namen, der Standardserver, ein Include oder ein Alias außerhalb der Website',
     'adopted_left_not_regular' => 'es ist keine normale Datei',
     'adopted_left_foreign_link' => 'der Webserver lädt es über einen Link oder eine Kopie, die das Panel nicht erwartet hat',
     'adopted_left_unreadable' => 'es konnte nicht gelesen werden',

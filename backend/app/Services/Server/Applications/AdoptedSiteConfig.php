@@ -36,8 +36,11 @@ use Illuminate\Support\Facades\Log;
  *  - a vhost file is removed only if it is a plain file at the recorded path,
  *    still serves exactly this site's root and only this site's domains, is
  *    not another site's file, and its enabled entry is a link to it (or an
- *    identical copy). Then the web server's config test must pass, or every
- *    file and link is put back exactly as it was;
+ *    identical copy). Every block in it must be named and none the default;
+ *    nothing at the top but those blocks; every include one of the distro's
+ *    or certbot's own snippets or inside the site; every alias inside the
+ *    site. Then the web server's config test must pass, or every file and
+ *    link is put back exactly as it was — bytes, link target, mode, owner;
  *  - an OpenLiteSpeed vhost under another name lives in the server-wide
  *    `httpd_config.conf`, outside the panel's markers: reported, not edited;
  *  - a worker adopted from a shared file or a systemd unit is never stopped,
@@ -268,12 +271,23 @@ class AdoptedSiteConfig
     }
 
     /**
+     * Snippets a vhost may include that are not this site's but are the same
+     * on every server: the distro's FastCGI parameters, v7's ACME location
+     * and certbot's TLS settings. Relative names are under the web server's
+     * own directory, as the web server resolves them.
+     */
+    private const STANDARD_INCLUDES = [
+        'nginx' => ['fastcgi.conf', 'fastcgi_params', 'snippets/fastcgi-php.conf', 'snippets/lets-encrypt-alias.conf', '/etc/letsencrypt/options-ssl-nginx.conf'],
+        'apache' => ['/etc/letsencrypt/options-ssl-apache.conf'],
+    ];
+
+    /**
      * One recorded vhost path: null when there is nothing to do (gone, or the
      * driver's own file), a reason string when it must be left, otherwise
      * what removing it — and putting it back — needs.
      *
      * @param  array<int, string>  $recordedRoots
-     * @return array{path: string, contents: string, link: array{kind: string, path: string, target?: string, contents?: string}|null}|string|null
+     * @return array{path: string, contents: string, meta: array{mode: string, uid: string, gid: string}, link: array{kind: string, path: string, meta: array{mode: string, uid: string, gid: string}, target?: string, contents?: string}|null}|string|null
      */
     private function inspect(Application $application, WebServerDriver $driver, string $path, array $recordedRoots): array|string|null
     {
@@ -333,7 +347,7 @@ class AdoptedSiteConfig
         }
 
         $contents = $read->output();
-        $owned = $this->ownership($application, $this->parser->parse($contents), $recordedRoots);
+        $owned = $this->ownership($application, $driver->name(), $available, $this->parser->parse($contents), $this->parser->structure($contents, $driver->name()), $recordedRoots);
 
         if ($owned !== null) {
             return $owned;
@@ -345,8 +359,10 @@ class AdoptedSiteConfig
             return 'unreadable';
         }
 
+        $file = ['path' => $path, 'contents' => $contents, 'meta' => $entry['meta']];
+
         if ($link === null) {
-            return ['path' => $path, 'contents' => $contents, 'link' => null];
+            return $file + ['link' => null];
         }
 
         $linkPath = $enabled.'/'.$base;
@@ -357,7 +373,7 @@ class AdoptedSiteConfig
             $relative = dirname($enabled) === dirname($available) ? '../'.basename($available).'/'.$base : null;
 
             return $link['target'] === $path || ($relative !== null && $link['target'] === $relative)
-                ? ['path' => $path, 'contents' => $contents, 'link' => ['kind' => 'symlink', 'path' => $linkPath, 'target' => $link['target']]]
+                ? $file + ['link' => ['kind' => 'symlink', 'path' => $linkPath, 'target' => $link['target'], 'meta' => $link['meta']]]
                 : 'foreign_link';
         }
 
@@ -369,7 +385,7 @@ class AdoptedSiteConfig
             }
 
             return hash_equals(hash('sha256', $contents), hash('sha256', $copy->output()))
-                ? ['path' => $path, 'contents' => $contents, 'link' => ['kind' => 'copy', 'path' => $linkPath, 'contents' => $copy->output()]]
+                ? $file + ['link' => ['kind' => 'copy', 'path' => $linkPath, 'contents' => $copy->output(), 'meta' => $link['meta']]]
                 : 'foreign_link';
         }
 
@@ -380,13 +396,20 @@ class AdoptedSiteConfig
      * Does this config still serve this site and nothing else?
      *
      * @param  array{domains: array<int, string>, roots: array<int, string>, unowned_names: array<int, string>}  $parsed
+     * @param  array{blocks: array<int, array{names: array<int, string>, default: bool}>, includes: array<int, string>, aliases: array<int, string>, roots: array<int, string>, stray: array<int, string>}  $structure
      * @param  array<int, string>  $recordedRoots
      */
-    private function ownership(Application $application, array $parsed, array $recordedRoots): ?string
+    private function ownership(Application $application, string $server, string $available, array $parsed, array $structure, array $recordedRoots): ?string
     {
+        // The names and folders as the web server reads them too, so a
+        // spelling the patterns miss (a quoted directive) still counts.
+        $named = array_map('strtolower', array_merge(...array_column($structure['blocks'], 'names')));
+        $roots = array_values(array_unique([...$parsed['roots'], ...array_map(fn (string $r): string => rtrim($r, '/'), $structure['roots'])]));
+
         // A catch-all, a wildcard, or a second directory: shared by
         // construction, whoever wrote it.
-        if ($parsed['domains'] === [] || $parsed['unowned_names'] !== [] || count($parsed['roots']) !== 1) {
+        if ($parsed['domains'] === [] || $parsed['unowned_names'] !== [] || count($roots) !== 1
+            || array_filter($named, fn (string $d): bool => $d === '' || $d === '_' || str_contains($d, '*')) !== []) {
             return 'not_this_site';
         }
 
@@ -396,7 +419,7 @@ class AdoptedSiteConfig
             ->merge(Application::query()->whereKeyNot($application->id)->pluck('domain'))
             ->filter()->map(fn (string $d): string => strtolower($d))->all();
 
-        foreach ($parsed['domains'] as $domain) {
+        foreach (array_unique([...$parsed['domains'], ...$named]) as $domain) {
             if (in_array($domain, $theirs, true)) {
                 return 'other_site';
             }
@@ -406,7 +429,7 @@ class AdoptedSiteConfig
             }
         }
 
-        $root = $parsed['roots'][0];
+        $root = $roots[0];
 
         try {
             $siteRoot = rtrim($application->rootPath(), '/');
@@ -441,7 +464,63 @@ class AdoptedSiteConfig
             }
         }
 
-        return null;
+        return $this->provablyAlone($server, $available, $structure, $siteRoot) ? null : 'unprovable_config';
+    }
+
+    /**
+     * The rest of "this site's and nothing else's": the parts that serve
+     * something without naming a domain or a root.
+     *
+     *  - every block is named, and none is the default: an unnamed block, or
+     *    `default_server`/`_default_`, answers requests for names nobody
+     *    else claims — removing it hands them to some other site;
+     *  - nothing at the top but those blocks: an `upstream`, `map` or include
+     *    there is shared with every other file the web server loads;
+     *  - every include is one of the standard snippets or inside this site:
+     *    anything else says whatever another file says;
+     *  - every alias is inside this site.
+     *
+     * @param  array{blocks: array<int, array{names: array<int, string>, default: bool}>, includes: array<int, string>, aliases: array<int, string>, roots: array<int, string>, stray: array<int, string>}  $structure
+     */
+    private function provablyAlone(string $server, string $available, array $structure, string $siteRoot): bool
+    {
+        if ($structure['stray'] !== [] || $structure['blocks'] === []) {
+            return false;
+        }
+
+        foreach ($structure['blocks'] as $block) {
+            if ($block['default'] || $block['names'] === []) {
+                return false;
+            }
+        }
+
+        $prefix = dirname($available);
+        $standard = array_map(fn (string $p): string => str_starts_with($p, '/') ? $p : $prefix.'/'.$p, self::STANDARD_INCLUDES[$server] ?? []);
+
+        foreach ($structure['includes'] as $include) {
+            $include = str_starts_with($include, '/') ? $include : $prefix.'/'.$include;
+
+            if (! in_array($include, $standard, true) && ! $this->insideSite($include, $siteRoot)) {
+                return false;
+            }
+        }
+
+        foreach ($structure['aliases'] as $alias) {
+            if (! $this->insideSite($alias, $siteRoot)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** The folder itself or a path under it, spelt without `.`/`..` or `//`. */
+    private function insideSite(string $path, string $siteRoot): bool
+    {
+        $path = rtrim($path, '/');
+
+        return preg_match('#(^|/)\.\.?(/|$)#', $path) !== 1 && ! str_contains($path, '//')
+            && ($path === $siteRoot || str_starts_with($path, $siteRoot.'/'));
     }
 
     /**
@@ -459,7 +538,7 @@ class AdoptedSiteConfig
         foreach ($removable as $plan) {
             // The link before its file, so the web server never reads a link
             // to nothing.
-            foreach ([$plan['link'], ['kind' => 'file', 'path' => $plan['path'], 'contents' => $plan['contents']]] as $entry) {
+            foreach ([$plan['link'], ['kind' => 'file', 'path' => $plan['path'], 'contents' => $plan['contents'], 'meta' => $plan['meta']]] as $entry) {
                 if ($entry === null) {
                     continue;
                 }
@@ -491,21 +570,47 @@ class AdoptedSiteConfig
         }
 
         // Back in reverse: each file before the link that points at it, each
-        // exactly as it was — same link target, same bytes. Only into the web
-        // server's own directories, which only root can write.
+        // exactly as it was — same link target, same bytes, same mode and
+        // owner. Only into the web server's own directories, which only root
+        // can write.
         $restored = true;
 
         foreach (array_reverse($removed) as $entry) {
-            $result = $entry['kind'] === 'symlink'
-                ? $this->files->symlink((string) $entry['target'], $entry['path'], $context)
-                : $this->files->put($entry['path'], (string) $entry['contents'], $context);
-
-            $restored = $restored && $result->ok;
+            $restored = $this->restore($entry, $context) && $restored;
         }
 
         foreach ($removable as $plan) {
             $this->leftover($application, 'adopted_vhost', $plan['path'], $restored ? $reason : 'restore_failed');
         }
+    }
+
+    /**
+     * Put one removed file or link back.
+     *
+     * A file is created empty, 0600 and root's, before a byte goes into it —
+     * `tee` keeps the mode of a file that exists and would otherwise create
+     * it with root's umask, so contents that were private would be readable
+     * by everyone until the chmod. Then its owner, then its mode: `chown`
+     * clears setuid/setgid bits. If the private file cannot be made, nothing
+     * is written into a wider one: the restore failed, and is said to.
+     * A link is never chmod-ed — that would change the file it points at.
+     *
+     * @param  array{kind: string, path: string, meta: array{mode: string, uid: string, gid: string}, target?: string, contents?: string}  $entry
+     * @param  array<string, mixed>  $context
+     */
+    private function restore(array $entry, array $context): bool
+    {
+        $owner = $entry['meta']['uid'].':'.$entry['meta']['gid'];
+
+        if ($entry['kind'] === 'symlink') {
+            return $this->files->symlink((string) $entry['target'], $entry['path'], $context)->ok
+                && $this->serverOps->run(['chown', '-h', $owner, $entry['path']], $context)->ok;
+        }
+
+        return $this->serverOps->run(['install', '-m', '0600', '-o', '0', '-g', '0', '/dev/null', $entry['path']], $context)->ok
+            && $this->files->put($entry['path'], (string) $entry['contents'], $context)->ok
+            && $this->serverOps->run(['chown', $owner, $entry['path']], $context)->ok
+            && $this->serverOps->run(['chmod', $entry['meta']['mode'], $entry['path']], $context)->ok;
     }
 
     /**
@@ -539,13 +644,15 @@ class AdoptedSiteConfig
      *
      * The directory is listed rather than the path tested, so "not there" is
      * an empty answer — not an error indistinguishable from a refused grant.
+     * Its mode and owner come from the same listing, for putting it back
+     * exactly; one that does not read as numbers is "could not be read".
      *
-     * @return array{type: string, target: string}|false|null
+     * @return array{type: string, target: string, meta: array{mode: string, uid: string, gid: string}}|false|null
      */
     private function entry(string $directory, string $name, Application $application): array|false|null
     {
         $result = $this->serverOps->run(
-            ['find', '-P', $directory, '-mindepth', '1', '-maxdepth', '1', '-name', $name, '-printf', '%y\t%l\n'],
+            ['find', '-P', $directory, '-mindepth', '1', '-maxdepth', '1', '-name', $name, '-printf', '%y\t%m\t%U\t%G\t%l\n'],
             $this->context($application),
         );
 
@@ -563,9 +670,16 @@ class AdoptedSiteConfig
             return false;
         }
 
-        [$type, $target] = explode("\t", $lines[0], 2);
+        $fields = explode("\t", $lines[0], 5);
 
-        return ['type' => $type, 'target' => $target];
+        if (count($fields) !== 5 || preg_match('/^[0-7]{1,4}$/D', $fields[1]) !== 1
+            || preg_match('/^\d+$/D', $fields[2]) !== 1 || preg_match('/^\d+$/D', $fields[3]) !== 1) {
+            return false;
+        }
+
+        [$type, $mode, $uid, $gid, $target] = $fields;
+
+        return ['type' => $type, 'target' => $target, 'meta' => ['mode' => $mode, 'uid' => $uid, 'gid' => $gid]];
     }
 
     /**

@@ -24,6 +24,7 @@ return [
     'adopted_left_unexpected_path' => 'its recorded location is not one the panel would remove',
     'adopted_left_other_site' => 'it belongs to another site or to the server',
     'adopted_left_not_this_site' => 'it no longer serves only this site',
+    'adopted_left_unprovable_config' => 'it does more than serve this site in a way the panel cannot check — a block without a name, the default server, an include, or an alias outside the site',
     'adopted_left_not_regular' => 'it is not a plain file',
     'adopted_left_foreign_link' => 'the web server loads it through a link or copy the panel did not expect',
     'adopted_left_unreadable' => 'it could not be read',
