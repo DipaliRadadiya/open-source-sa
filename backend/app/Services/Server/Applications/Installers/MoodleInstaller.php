@@ -67,18 +67,22 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * Moodle 5.0 raised its PostgreSQL minimum to 14 — its release notes mark
-     * it "increased in this Moodle version" — and the panel installs whatever
-     * Moodle's own download serves, which is current.
+     * Moodle 5.0's floors, from the `<MOODLE version="5.0">` block of
+     * `admin/environment.xml` on `MOODLE_500_STABLE` — the line
+     * `server.installers.moodle.download_url` pins: MariaDB 10.11.0, MySQL
+     * 8.4, PostgreSQL 14.
      *
-     * MySQL and MariaDB carry no entry: their minimums are old enough that no
-     * server the panel will run on can fall below them.
+     * 🔴 MySQL used to carry no entry, on the argument that its minimum was too
+     * old for any server to fall below. 5.0 raised it to 8.4, and Ubuntu 24.04
+     * ships 8.0: every Moodle on a stock 24.04 box was offered, created, and
+     * then refused by Moodle's own installer ("version 8.4 is required and you
+     * are running 8.0.46"). Found by the CF-06 create matrix, 2026-10-21.
      *
      * @return array<string, string>
      */
     public function minimumEngineVersions(): array
     {
-        return ['postgresql' => '14'];
+        return ['mysql' => '8.4', 'mariadb' => '10.11.0', 'postgresql' => '14'];
     }
 
     /**
