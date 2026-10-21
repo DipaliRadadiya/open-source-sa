@@ -504,3 +504,89 @@ it('protects the panel own database account from deletion', function () {
 
     expect(app(DatabaseManager::class)->isSystemUser($username))->toBeTrue();
 });
+
+describe('another package install holding the lock (S-09)', function () {
+    /**
+     * A fresh box: unattended-upgrades holds the dpkg lock for every apt-get
+     * run until `$freeAfter` of them have been refused (null: never frees).
+     */
+    function lockedBox(array &$seen, ?int $freeAfter = null): void
+    {
+        $refused = 0;
+
+        Process::fake(function ($process) use (&$seen, &$refused, $freeAfter) {
+            $seen[] = $process;
+            $command = $process->command;
+
+            if (($command[0] ?? '') === 'dpkg-query') {
+                return Process::result(output: 'unknown ok not-installed');
+            }
+
+            if (($command[0] ?? '') === 'apt-get' && ($freeAfter === null || $refused < $freeAfter)) {
+                $refused++;
+
+                return Process::result(
+                    errorOutput: 'E: Could not get lock /var/lib/dpkg/lock-frontend. It is held by process 15959 (unattended-upgr)',
+                    exitCode: 100,
+                );
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('fails as apt_lock, not unknown, when the lock outlasts the wait', function (string $engine) {
+        config(['server.apt.lock_attempts' => 3, 'server.apt.lock_delay_ms' => 0]);
+        $seen = [];
+        $steps = [];
+        lockedBox($seen);
+
+        $error = null;
+
+        try {
+            installer($engine)->install(function (string $step) use (&$steps) {
+                $steps[] = $step;
+            });
+        } catch (EngineInstallException $e) {
+            $error = $e;
+        }
+
+        expect($error?->reason)->toBe('apt_lock')
+            // The screen says what it is waiting for, not "Preparing".
+            ->and($steps)->toContain('waiting_for_package_manager')
+            ->and(collect($seen)->filter(fn ($p) => ($p->command[0] ?? '') === 'apt-get')->count())->toBe(3);
+    })->with(['mysql', 'mariadb', 'postgresql']);
+
+    it('installs once the other install lets go', function () {
+        config(['server.apt.lock_attempts' => 5, 'server.apt.lock_delay_ms' => 0]);
+        $seen = [];
+        lockedBox($seen, freeAfter: 2);
+
+        installer('mariadb')->install();
+
+        expect(collect($seen)->contains(fn ($p) => $p->command === ['systemctl', 'enable', '--now', 'mariadb']))->toBeTrue();
+    });
+
+    it('says another install is running, in words that fit after a wait', function () {
+        RuntimeInstall::create([
+            'runtime' => 'database', 'version' => 'postgresql', 'extension' => '',
+            'status' => 'failed', 'reason' => 'apt_lock',
+            'reference' => '11111111-2222-3333-4444-555555555555',
+            'current_step' => 'waiting_for_package_manager',
+            'started_at' => now()->subMinutes(10), 'finished_at' => now(),
+        ]);
+
+        $message = RuntimeInstall::query()->first()->toProgress()['message'];
+
+        expect($message)->toContain('Another package install is running')
+            ->and($message)->toContain('few minutes')
+            ->and($message)->not->toContain('in a moment');
+    });
+
+    it('outlives the lock wait as well as the install', function () {
+        config(['server.apt.lock_attempts' => 40, 'server.apt.lock_delay_ms' => 15000]);
+
+        expect((new InstallDatabaseEngine('postgresql'))->timeout)
+            ->toBeGreaterThan((int) config('server.databases.install_timeout') + 600);
+    });
+});

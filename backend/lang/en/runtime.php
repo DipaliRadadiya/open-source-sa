@@ -89,6 +89,9 @@ return [
     ],
 
     'database_install_failed' => [
+        // Engine installs wait out a held lock first (ServerOps::apt), so
+        // "in a moment" would be wrong by the time this is shown.
+        'apt_lock' => 'Another package install is running on the server, and it was still running after the panel waited for it. Try again in a few minutes.',
         'package_not_found' => 'No package for :version is available on this server. Check that its package repository is configured and reachable.',
         // The repository was added and its index fetched successfully;
         // the engine simply has no build for this Ubuntu release.

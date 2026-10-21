@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\InstallDatabaseEngine;
 use App\Jobs\RunBackup;
 use App\Jobs\RunRestore;
 use App\Services\Server\Applications\ProvisioningBudget;
@@ -90,7 +91,7 @@ it('keeps the jobs that size themselves inside it too', function (string $connec
     // ProvisionApplication and DeployApplication compute their timeout from
     // the budget; InstallDatabaseEngine from the installer's own limit.
     expect(app(ProvisioningBudget::class)->longest())->toBeLessThan($retryAfter)
-        ->and((int) config('server.databases.install_timeout', 900) + 120)->toBeLessThan($retryAfter);
+        ->and((new InstallDatabaseEngine('mysql'))->timeout)->toBeLessThan($retryAfter);
 
     // RunBackup and RunRestore, the two jobs this whole file was written for.
     // They read `job_timeout` in their constructors, so the reflection pass

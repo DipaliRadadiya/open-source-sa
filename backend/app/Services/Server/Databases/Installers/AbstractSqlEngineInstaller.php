@@ -110,6 +110,9 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
                 timeout: (int) config('server.databases.install_timeout', 900),
                 env: ['DEBIAN_FRONTEND' => 'noninteractive'],
                 onOutput: $onOutput,
+                // A fresh box's unattended-upgrades holds the lock for
+                // minutes; the screen should say so rather than "Preparing".
+                onWait: fn () => $this->report($onStep, 'waiting_for_package_manager'),
             );
 
             if ($result->failed()) {

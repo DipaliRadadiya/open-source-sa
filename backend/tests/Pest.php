@@ -110,6 +110,18 @@ function fakeEngineVersionAnswer(mixed $process): ?FakeProcessResult
 }
 
 /**
+ * An apt-get command as ServerOps::apt() runs it: with apt's own lock wait
+ * switched off, so a held lock fails and is retried on the panel's budget
+ * rather than hanging until the process timeout (S-09).
+ *
+ * @return list<string>
+ */
+function aptCommand(string ...$args): array
+{
+    return ['apt-get', ...$args, '-o', 'DPkg::Lock::Timeout=0'];
+}
+
+/**
  * Move the panel's connection for an engine onto a port the application does
  * not assume — what `PUT /databases/connections/{engine}` does when someone
  * points the panel at a managed database.
