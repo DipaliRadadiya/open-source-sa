@@ -44,6 +44,7 @@ return [
         'stack_profile' => 'Dieser Server ist nicht dafür eingerichtet, diese Art von Anwendung zu hosten.',
         'profile' => 'Dieser Server liefert keine :profile-Anwendungen aus, daher ist diese Darstellungsart hier nicht möglich. Wählen Sie eine, die dieser Server unterstützt.',
         'database' => 'Diese Anwendung benötigt :engines, das auf diesem Server fehlt.',
+        'database_version' => ':type benötigt :engine :minimum oder neuer, auf diesem Server läuft :engine :version. Aktualisiere es oder nutze einen Server mit einer neueren :engine-Version.',
         'php' => 'Auf diesem Server ist PHP nicht installiert.',
         'php_version_install' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range). Installieren Sie zuerst PHP :version im PHP-Bereich.',
         'php_version_none' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range), und keine dieser Versionen lässt sich aus dem Paket-Repository des Servers installieren.',

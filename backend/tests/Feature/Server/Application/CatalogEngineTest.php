@@ -42,31 +42,35 @@ beforeEach(function () {
 /**
  * @param  array<string, string>  $versions  what an engine reports for its
  *                                           version, where the default 16.4 /
- *                                           8.0.36 is not what the test is about
+ *                                           8.4.6 is not what the test is about
  */
 function onlyEngines(array $engines, array $versions = []): void
 {
     // Counted in the fake rather than read back from `Process::recorded()`,
     // which is not reachable through the facade here.
     $GLOBALS['engineProbes'] = [];
+    $GLOBALS['engineVersionReads'] = [];
 
     Process::fake(function ($process) use ($engines, $versions) {
         $command = implode(' ', (array) $process->command);
 
         foreach (['mysql' => 'mysql', 'mariadb' => 'mariadb', 'mongodb' => 'mongosh', 'postgresql' => 'psql'] as $engine => $client) {
             if (str_contains($command, $client)) {
-                $GLOBALS['engineProbes'][] = $engine;
+                // A version query needs a version: answering `1` describes a
+                // server running PostgreSQL 1, which every type with a
+                // minimum reads as unusable.
+                $sql = (string) $process->input;
+                $versionQuery = str_contains($sql, 'server_version') || str_contains($sql, 'VERSION()');
+
+                // Counted apart: an engine some type holds to a minimum is
+                // asked twice, once whether it answers and once its version.
+                $GLOBALS[$versionQuery ? 'engineVersionReads' : 'engineProbes'][] = $engine;
 
                 if (! in_array($engine, $engines, true)) {
                     return Process::result(exitCode: 1, errorOutput: 'command not found');
                 }
 
-                // A version query needs a version: answering `1` describes a
-                // server running PostgreSQL 1, which every type with a
-                // minimum reads as unusable.
-                $sql = (string) $process->input;
-
-                if (str_contains($sql, 'server_version') || str_contains($sql, 'VERSION()')) {
+                if ($versionQuery) {
                     return Process::result(output: $versions[$engine] ?? fakeEngineVersionAnswer($process)?->output() ?? '1');
                 }
 
@@ -150,9 +154,13 @@ it('probes each engine once however many types ask about it', function () {
     siteTypeCatalog();
 
     $probes = collect($GLOBALS['engineProbes']);
+    $versions = collect($GLOBALS['engineVersionReads']);
 
-    // One per distinct engine, not one per type that asks.
-    expect($probes->count())->toBe($probes->unique()->count());
+    // One per distinct engine, not one per type that asks — and the same for
+    // the version, which Moodle and Mautic both read from MySQL.
+    expect($probes->count())->toBe($probes->unique()->count())
+        ->and($versions)->not->toBeEmpty()
+        ->and($versions->count())->toBe($versions->unique()->count());
 });
 
 it('publishes the engines each type accepts', function () {
@@ -424,7 +432,11 @@ it('drops a too-old engine out of the catalog for the types that cannot use it',
     $types = siteTypeCatalog();
 
     expect($types['moodle']['available'])->toBeFalse()
-        ->and($types['moodle']['unavailable_code'])->toBe('database')
+        // Not `database`: the engine is installed, so offering to install one
+        // would be the wrong way out.
+        ->and($types['moodle']['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_DATABASE_VERSION)
+        ->and($types['moodle']['unavailable_reason'])->toContain('PostgreSQL 14 or newer')
+        ->and($types['moodle']['unavailable_reason'])->toContain('13.15')
         // Joomla's floor is 12, so the same server is fine for it.
         ->and($types['joomla']['available'])->toBeTrue();
 });
@@ -482,4 +494,83 @@ describe('the minimum engine version', function () {
 
         createWithEngine('moodle', 'postgresql')->assertSuccessful();
     });
+});
+
+describe('Moodle and Mautic on Ubuntu 24.04\'s MySQL 8.0 (S-09)', function () {
+    beforeEach(function () {
+        $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    // What a stock 24.04 box answered in the CF-06 create matrix. Moodle 5.0
+    // and Mautic both need 8.4, and both were offered there and then failed
+    // inside their own installers.
+    $ubuntu2404 = '8.0.46-0ubuntu0.24.04.4';
+
+    it('greys both on MySQL 8.0 with a reason that names the versions', function () use ($ubuntu2404) {
+        onlyEngines(['mysql'], ['mysql' => $ubuntu2404]);
+
+        $types = siteTypeCatalog();
+
+        foreach (['moodle' => 'Moodle', 'mautic' => 'Mautic'] as $type => $title) {
+            expect($types[$type]['available'])->toBeFalse($type)
+                ->and($types[$type]['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_DATABASE_VERSION, $type)
+                ->and($types[$type]['unavailable_reason'])->toContain($title)
+                ->and($types[$type]['unavailable_reason'])->toContain('MySQL 8.4')
+                // The bare number, not Ubuntu's packaging suffix.
+                ->and($types[$type]['unavailable_reason'])->toContain('MySQL 8.0.46.')
+                // Nothing to install fixes it, so the card must not offer that.
+                ->and($types[$type]['installable_runtime'])->toBeNull();
+        }
+
+        // The rest of the catalog is unaffected by the same MySQL.
+        expect($types['wordpress']['available'])->toBeTrue()
+            ->and($types['joomla']['available'])->toBeTrue();
+    });
+
+    it('offers both where the engine meets the minimum', function () {
+        onlyEngines(['mysql'], ['mysql' => '8.4.6-0ubuntu0.26.04.1']);
+
+        $types = siteTypeCatalog();
+
+        expect($types['moodle']['available'])->toBeTrue()
+            ->and($types['mautic']['available'])->toBeTrue();
+    });
+
+    it('holds MariaDB to 10.11, which 24.04 ships and 22.04 does not', function () {
+        onlyEngines(['mariadb'], ['mariadb' => '10.6.22-MariaDB-0ubuntu0.22.04.1']);
+        expect(siteTypeCatalog()['mautic']['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_DATABASE_VERSION);
+
+        onlyEngines(['mariadb'], ['mariadb' => '10.11.14-MariaDB-0ubuntu0.24.04.1']);
+        expect(siteTypeCatalog()['mautic']['available'])->toBeTrue();
+    });
+
+    it('still offers Moodle when PostgreSQL is there beside the old MySQL', function () use ($ubuntu2404) {
+        // Moodle accepts PostgreSQL, so a 24.04 box with both can host it — on
+        // PostgreSQL. Greying it would be inventing a block.
+        onlyEngines(['mysql', 'postgresql'], ['mysql' => $ubuntu2404]);
+
+        $types = siteTypeCatalog();
+
+        expect($types['moodle']['available'])->toBeTrue()
+            ->and($types['mautic']['available'])->toBeFalse();
+    });
+
+    it('refuses the create with a 422 and the same reason', function (string $type) use ($ubuntu2404) {
+        onlyEngines(['mysql'], ['mysql' => $ubuntu2404]);
+
+        $response = $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->postJson('/api/applications', [
+                'system_user_id' => $this->su->id,
+                'name' => ucfirst($type), 'domain' => "{$type}.example.com",
+                'site_type' => $type,
+                'admin_email' => 'a@example.com', 'admin_password' => 'A-long-Passw0rd!',
+                'site_name' => 'T', 'short_name' => 'tshort', 'admin_user' => 'admin',
+                'admin_username' => 'admin', 'admin_name' => 'Admin Person',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('site_type');
+
+        expect($response->json('errors.site_type.0'))->toContain('MySQL 8.4')->toContain('8.0.46')
+            ->and(Application::query()->count())->toBe(0);
+    })->with(['moodle', 'mautic']);
 });
