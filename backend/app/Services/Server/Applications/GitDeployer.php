@@ -433,15 +433,15 @@ class GitDeployer
     public function checkRemoteBranch(Application $application): ?string
     {
         $branch = $application->branch ?: 'main';
-        $credentialFile = null;
+        $credentialDirectory = null;
 
         try {
-            $credentialFile = $this->writeCredential($application);
+            $credentialDirectory = $this->writeCredential($application);
 
             $command = ['git'];
 
-            if ($credentialFile !== null) {
-                array_push($command, '-c', "credential.helper=store --file={$credentialFile}", '-c', 'credential.interactive=never');
+            if ($credentialDirectory !== null) {
+                array_push($command, '-c', "credential.helper=store --file={$credentialDirectory}/credentials", '-c', 'credential.interactive=never');
             }
 
             array_push($command, 'ls-remote', '--heads', $this->remoteUrl($application), 'refs/heads/'.$branch);
@@ -453,12 +453,15 @@ class GitDeployer
                 env: ['GIT_TERMINAL_PROMPT' => '0'],
             );
         } catch (ProvisioningFailedException) {
-            // The credential could not be written: no answer either way, so
-            // the probe stays out of the way rather than refusing a site.
+            // The credential could not be written privately, so git never ran
+            // with it: no answer either way, and the probe stays out of the
+            // way rather than refusing a site.
             return null;
         } finally {
-            if ($credentialFile !== null) {
-                $this->serverOps->run(['rm', '-f', $credentialFile], ['feature' => 'application', 'op' => 'remove_credential']);
+            // Only a directory the writer itself made. `rm` does not follow a
+            // symlink given as its operand.
+            if ($credentialDirectory !== null) {
+                $this->serverOps->run(['rm', '-rf', $credentialDirectory], ['feature' => 'application', 'op' => 'remove_credential']);
             }
         }
 
@@ -496,11 +499,23 @@ class GitDeployer
     }
 
     /**
-     * A 0600 credential file git reads through the `store` helper. Returns null
-     * for a public repository, where no credential is needed at all.
+     * The probe's credential: root's, since the probe runs as root with no
+     * repository and no site user yet. Returns the directory (the file is
+     * `credentials` inside it), or null for a public repository. A deploy
+     * uses {@see writeSiteCredential()}.
      *
-     * Root's, for the probe, which runs as root with no repository at all.
-     * A deploy uses {@see writeSiteCredential()}.
+     * Private from the moment it exists, never made private afterwards. This
+     * used to `tee` a file straight into /tmp under the default umask and
+     * `chmod 0600` it after: the token sat world-readable in between — a
+     * watcher on a test server caught it at 0644 — and a failed chmod went
+     * unnoticed. Now `mkdir -m 0700` makes a directory only root can enter
+     * (mkdir without `-p` fails on any path already there, symlink included,
+     * so nothing planted at the name is followed, written or later removed),
+     * and the umask is set before the shell opens the file inside it, so the
+     * file is 0600 from open(2). The token arrives on stdin, and `cat` echoes
+     * nothing back into a log the way `tee` would.
+     *
+     * @throws ProvisioningFailedException
      */
     private function writeCredential(Application $application): ?string
     {
@@ -508,25 +523,29 @@ class GitDeployer
             return null;
         }
 
-        $path = $this->credentialBase().'/git-'.Str::uuid();
+        $context = ['feature' => 'application', 'op' => 'write_credential', 'application' => $application->id];
+        $directory = $this->credentialBase().'/git-'.Str::uuid();
 
-        // Written through stdin, never as a command argument.
+        $made = $this->serverOps->run(['mkdir', '-m', '0700', $directory], $context);
+
+        // Not ours, whatever is at that path: nothing to remove.
+        if ($made->failed()) {
+            throw new ProvisioningFailedException('write_credential', $made->reference);
+        }
+
         $write = $this->serverOps->run(
-            ['tee', $path],
-            ['feature' => 'application', 'op' => 'write_credential', 'application' => $application->id],
+            ['sh', '-c', 'umask 077 && cat > "$1"', 'sh', $directory.'/credentials'],
+            $context,
             input: $this->credentialLine($application),
         );
 
         if ($write->failed()) {
+            $this->serverOps->run(['rm', '-rf', $directory], ['feature' => 'application', 'op' => 'remove_credential']);
+
             throw new ProvisioningFailedException('write_credential', $write->reference);
         }
 
-        $this->serverOps->run(
-            ['chmod', '0600', $path],
-            ['feature' => 'application', 'op' => 'chmod_credential'],
-        );
-
-        return $path;
+        return $directory;
     }
 
     /**
