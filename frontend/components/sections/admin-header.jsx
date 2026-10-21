@@ -10,6 +10,7 @@ import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
+import { OperationsIndicator } from "@/components/sections/operations-indicator";
 
 export function AdminHeader({ breadcrumb = null }) {
   // `usePathname` is kept as a subscription: dropping it stops this header
@@ -25,6 +26,8 @@ export function AdminHeader({ breadcrumb = null }) {
       <SidebarToggle />
       <div className="min-w-0 flex-1 max-sm:invisible">{breadcrumb}</div>
       <div className="flex shrink-0 items-center gap-2">
+        {/* Administrators: panel updates show here as well as every other kind. */}
+        <OperationsIndicator canOpenApplications />
         <LocaleSwitcher />
         <ThemeToggle />
         <UserMenu

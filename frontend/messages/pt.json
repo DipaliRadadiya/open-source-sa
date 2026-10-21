@@ -1980,6 +1980,22 @@
     "confirmSecure": {
       "title": "Bloquear tráfego de entrada por padrão?",
       "description": "Apenas as regras listadas abaixo serão permitidas. SSH e as portas do próprio painel são liberadas primeiro, para que você não perca o acesso a este servidor."
+    },
+    "unmanaged": {
+      "title": "Adicionadas fora do painel",
+      "description": "Regras que alguém adicionou com o comando ufw. Funcionam, mas o painel não as gere.",
+      "adoptableLine": "Pode ser gerida no painel.",
+      "notAdoptable": "O painel não consegue gerir este tipo de regra.",
+      "adopt": "Gerir no painel",
+      "remove": "Remover",
+      "actions": "Ações de {rule}",
+      "adopted": "{rule} passou a ser gerida no painel.",
+      "removed": "{rule} foi removida.",
+      "removeTitle": "Remover esta regra?",
+      "removeBody": "{rule} será removida da firewall de imediato.",
+      "failed": "Não foi possível concluir.",
+      "noPermission": "Seu papel não inclui Firewall com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
+      "removeOnServer": "O painel não consegue remover este tipo de regra. Remova-a com o comando ufw no servidor."
     }
   },
   "settings": {
@@ -2309,7 +2325,9 @@
       "perApp": "Para alterar o tamanho de envio, a memória ou os limites de tempo de uma só aplicação, use as configurações do PHP dessa aplicação.",
       "perAppLink": "Ir para Aplicações",
       "retry": "Tentar novamente",
-      "discard": "Descartar alterações"
+      "discard": "Descartar alterações",
+      "stale": "Este ficheiro foi alterado no separador Configurações comuns. Recarregue-o antes de guardar, ou guardar desfará essa alteração.",
+      "reload": "Recarregar o arquivo"
     },
     "loadFailed": "Não foi possível ler a configuração de PHP deste servidor.",
     "noPermission": "Seu papel não inclui PHP com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
@@ -2556,11 +2574,24 @@
     "tabs": {
       "extensions": "Extensões",
       "ioncube": "ionCube",
-      "ini": "php.ini"
+      "ini": "php.ini",
+      "settings": "Configurações comuns"
     },
     "unavailable": {
       "title": "O PHP não é gerido neste servidor",
       "body": "Este servidor aloja contentores, por isso não serve sites PHP nem tem versões de PHP para gerir. O PHP continua instalado para o próprio painel, e o seu serviço pode ser reiniciado em Serviços."
+    },
+    "common": {
+      "title": "Configurações comuns",
+      "description": "Os limites que as aplicações mais precisam de aumentar. Aplicam-se a todas as aplicações no PHP {version} que não definem os seus.",
+      "appliesNote": "Guardado no php.ini e verificado pelo PHP antes de ser aplicado.",
+      "saveAction": "Guardar configurações do PHP",
+      "saved": "Configurações do PHP {version} guardadas.",
+      "failed": "Não foi possível guardar as configurações do PHP.",
+      "loadFailed": "Não foi possível ler as configurações desta versão.",
+      "notSet": "Não definido (padrão do PHP)",
+      "uploadHint": "post_max_size é {post}; ultrapassá-lo aqui também o aumenta.",
+      "uploadRaisesPost": "post_max_size também será aumentado para {size}, ou os envios desse tamanho continuariam a falhar."
     }
   },
   "node": {
@@ -2676,6 +2707,11 @@
     "unavailable": {
       "title": "O Node.js não é gerido neste servidor",
       "body": "Este servidor aloja contentores e não executa aplicações no próprio anfitrião, por isso não há versões do Node.js para gerir. Um contentor traz o seu próprio ambiente de execução."
+    },
+    "buildTools": {
+      "missing": "Alguns pacotes Node precisam de ferramentas de compilação para instalar, e este servidor não as tem. <link>Instale-as na página de configuração</link>.",
+      "installing": "As ferramentas de compilação estão a ser instaladas. <link>Acompanhe na página de configuração</link>.",
+      "failed": "A instalação das ferramentas de compilação falhou. <link>Veja porquê e tente de novo na página de configuração</link>."
     }
   },
   "diskCleaner": {
@@ -7940,5 +7976,41 @@
     },
     "noPermission": "Seu papel não inclui Docker com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
     "nameRule": "Letras, números, pontos, hífenes e sublinhados; comece com uma letra ou número."
+  },
+  "operations": {
+    "title": "Tarefas em segundo plano",
+    "description": "Em curso agora, e concluídas nas últimas 24 horas.",
+    "trigger": "{count, plural, one {# tarefa em curso} other {# tarefas em curso}}",
+    "running": "em curso",
+    "loading": "A carregar tarefas…",
+    "empty": "Sem tarefas nas últimas 24 horas.",
+    "footer": "Cada tarefa também mostra o progresso na sua própria página.",
+    "groups": {
+      "running": "Em execução",
+      "finished": "Concluídas"
+    },
+    "state": {
+      "waiting": "À espera de começar",
+      "running": "Em execução",
+      "done": "Concluída {time}",
+      "failed": "Falhou {time}"
+    },
+    "toast": {
+      "done": "{job} concluída",
+      "failed": "{job} falhou"
+    },
+    "kinds": {
+      "backup": "Backup",
+      "restore": "Restauro de backup",
+      "clone": "Clonagem",
+      "staging": "Staging",
+      "deployment": "Deploy",
+      "database_export": "Exportação de base de dados",
+      "database_import": "Importação de base de dados",
+      "runtime_install": "Instalação de software",
+      "sync": "Sincronização do servidor",
+      "security_update": "Atualizações de segurança",
+      "panel_update": "Atualização do painel"
+    }
   }
 }

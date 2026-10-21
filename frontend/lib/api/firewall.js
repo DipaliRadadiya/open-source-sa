@@ -21,3 +21,13 @@ export function deleteFirewallRule(id) {
 export function toggleFirewall(enabled) {
   return api.put("/firewall/toggle", { enabled });
 }
+
+// Rules added outside the panel: take one over, or remove it from ufw. Removing goes
+// through the same SSH-lockout guard as any rule (422 when it is the only SSH rule).
+export function adoptUnmanagedRule(key) {
+  return api.post("/firewall/unmanaged/adopt", { key });
+}
+
+export function deleteUnmanagedRule(key) {
+  return api.delete("/firewall/unmanaged", { data: { key } });
+}

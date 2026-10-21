@@ -127,3 +127,29 @@ export const phpIniResponseSchema = z.object({
     contents: z.string(),
   }),
 });
+
+// GET/PUT /php/versions/{version}/settings. `null` where the file sets nothing and
+// PHP's built-in default applies.
+const iniNumber = z.union([z.number(), z.string()]).nullish();
+export const phpCommonSettingsSchema = z.object({
+  version: z.string(),
+  settings: z.object({
+    memory_limit: z.string().nullish(),
+    upload_max_filesize: z.string().nullish(),
+    post_max_size: z.string().nullish(),
+    max_execution_time: iniNumber,
+    max_input_time: iniNumber,
+    max_input_vars: iniNumber,
+  }),
+});
+
+// Mirrors the request's rules; empty means "leave as it is".
+const optionalInt = (min, max) =>
+  z.union([z.literal(""), z.coerce.number().int().min(min).max(max)]);
+export const phpCommonSettingsFormSchema = z.object({
+  memory_limit: z.union([z.literal(""), z.string().regex(/^(-1|\d+[KMG]?)$/i, "phpSize")]),
+  upload_max_filesize: z.union([z.literal(""), z.string().regex(/^(-1|\d+[KMG]?)$/i, "phpSize")]),
+  max_execution_time: optionalInt(0, 3600),
+  max_input_time: optionalInt(-1, 3600),
+  max_input_vars: optionalInt(100, 100000),
+});

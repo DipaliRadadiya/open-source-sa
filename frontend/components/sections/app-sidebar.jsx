@@ -26,6 +26,7 @@ import { SidebarLevelTransition } from "@/components/sections/sidebar-level-tran
 import { NavIcon } from "@/components/nav-icon";
 import { SidebarServerCard } from "@/components/sections/sidebar-server-card";
 import { can } from "@/lib/permissions/can";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -113,6 +114,9 @@ export function AppSidebar({ items }) {
   // Once the layout answers "no menu", the site does not exist: fall back to the
   // SERVER panel rather than a site menu whose links all 404.
   const insideApplication = Boolean(applicationId) && (applicationItems !== null || !resolved);
+  // Until the application's own menu arrives, placeholders: the shared catalog is
+  // unfiltered, so a Docker app showed PHP, Staging and Deployments for a moment.
+  const pendingApplication = Boolean(applicationId) && !resolved;
   const currentPanel = insideApplication ? "application" : "server";
   const source = insideApplication ? (applicationItems ?? items) : items;
 
@@ -154,6 +158,12 @@ export function AppSidebar({ items }) {
       {!insideApplication && can(items, "dashboard", "view") ? (
         <SidebarGroup className="px-2 pt-3 pb-0 group-data-[collapsible=icon]:hidden">
           <SidebarServerCard />
+        </SidebarGroup>
+      ) : null}
+      {pendingApplication ? (
+        <SidebarGroup className="border-b px-2 pt-2 pb-4" aria-hidden>
+          <Skeleton className="mb-1 h-8 w-40" />
+          <Skeleton className="h-20 w-full rounded-[2px] group-data-[collapsible=icon]:h-8" />
         </SidebarGroup>
       ) : null}
       {application ? (
@@ -231,7 +241,8 @@ export function AppSidebar({ items }) {
         {/* Keyed on level AND application id: switching sites is also a level change,
             though `currentPanel` stays "application". */}
         <SidebarLevelTransition level={insideApplication ? `application:${applicationId}` : "server"}>
-        {groups.map((group) => {
+        {pendingApplication ? <PendingMenu /> : null}
+        {pendingApplication ? null : groups.map((group) => {
           const title = groupTitle(group);
           // Icon-only rail has no labels, so nothing in it may be hidden.
           const open =
@@ -293,5 +304,24 @@ export function AppSidebar({ items }) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+// Fixed widths: random ones (as shadcn's menu skeleton uses) differ between the server
+// and the browser and break hydration.
+const PENDING_ROWS = ["w-24", "w-28", "w-20", "w-16", "w-12", "w-24", "w-32", "w-28"];
+
+function PendingMenu() {
+  return (
+    <SidebarGroup aria-busy="true">
+      <SidebarMenu className="gap-1">
+        {PENDING_ROWS.map((width, index) => (
+          <SidebarMenuItem key={index} className="flex h-8 items-center gap-2 px-2">
+            <Skeleton className="size-4 shrink-0 rounded-md" />
+            <Skeleton className={`h-3.5 ${width} group-data-[collapsible=icon]:hidden`} />
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarGroup>
   );
 }

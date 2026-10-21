@@ -1,8 +1,13 @@
 import { getTranslations } from "next-intl/server";
-import { Hexagon } from "lucide-react";
+import { Hexagon, Wrench } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getNode } from "@/lib/node/get-node";
+import { read } from "@/lib/api/read";
+import { buildToolsResponseSchema } from "@/lib/schemas/node";
+import { Note } from "@/components/ui/note";
+import Link from "@/components/ui/app-link";
+
 import { VersionsCard } from "@/components/runtime/versions-table";
 import { rowGrid } from "@/lib/runtime/version-rows";
 import { compareVersions } from "@/lib/runtime/version-range";
@@ -28,8 +33,14 @@ export async function generateMetadata() {
 }
 
 export default async function NodePage() {
-  const [permissions, t, { data, failed, status, failure, message }] =
-    await Promise.all([getPermissions(), getTranslations("node"), getNode()]);
+  const [permissions, t, { data, failed, status, failure, message }, buildTools] =
+    await Promise.all([
+      getPermissions(),
+      getTranslations("node"),
+      getNode(),
+      // A failed read shows nothing rather than a guess either way.
+      read("/build-tools", buildToolsResponseSchema).catch(() => ({ failed: true })),
+    ]);
 
   if (!can(permissions, "node", "view"))
     return <PermissionDenied title={t("title")} feature="node" />;
@@ -93,6 +104,27 @@ export default async function NodePage() {
       ) : null}
 
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+
+      {/* Some npm packages compile on install; without a compiler the deploy dies in
+          node-gyp with an error that never says so. The install lives on Setup. */}
+      {!buildTools.failed && buildTools.data && !buildTools.data.build_tools.installed ? (
+        <Note icon={Wrench}>
+          {t.rich(
+            buildTools.data.build_tools.install_status === "installing"
+              ? "buildTools.installing"
+              : buildTools.data.build_tools.install_status === "failed"
+                ? "buildTools.failed"
+                : "buildTools.missing",
+            {
+              link: (chunks) => (
+                <Link href="/setup" prefetch={false} className="font-medium text-primary underline-offset-4 hover:underline">
+                  {chunks}
+                </Link>
+              ),
+            },
+          )}
+        </Note>
+      ) : null}
 
       {/* No managed Node is a normal state, not an error; the note covers a system Node. */}
       {versions.length === 0 ? (

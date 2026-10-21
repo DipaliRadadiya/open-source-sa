@@ -15,6 +15,7 @@ import { ExtensionsCard } from "@/components/php/extensions-card";
 import { IonCubeCard } from "@/components/php/ioncube-card";
 import { PhpVersionTabs } from "@/components/php/version-tabs";
 import { IniEditor } from "@/components/php/ini-editor";
+import { PhpCommonSettings } from "@/components/php/php-common-settings";
 import { RevealSettings } from "@/components/php/reveal-settings";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -184,6 +185,7 @@ export default async function PhpPage({ searchParams }) {
               ) : (
                 <PhpVersionTabs
                   initial={sp?.tab}
+                  settings={<PhpCommonSettings key={selected} version={selected} canManage={canManage} />}
                   // Excludes built-ins, matching the card's own count.
                   extensionCount={extensions?.extensions?.filter((e) => !e.builtin).length}
                   ionCubeState={ioncube}

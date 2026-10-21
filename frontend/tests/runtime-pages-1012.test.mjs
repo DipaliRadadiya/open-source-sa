@@ -72,7 +72,7 @@ test("a PHP row selects its version, keeps the open tab, and asks before droppin
 
 test("php.ini is a tab that keeps its edit while you look at another tab", () => {
   const tabs = read("components/php/version-tabs.jsx");
-  assert.match(tabs, /const VALUES = \["extensions", "ioncube", "ini"\];/);
+  assert.match(tabs, /const VALUES = \["settings", "extensions", "ioncube", "ini"\];/);
   assert.match(tabs, /section\.keep && opened\.has\(section\.value\)/);
   assert.match(tabs, /forceMount/);
   const page = read("app/(app)/php/page.jsx");

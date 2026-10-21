@@ -61,6 +61,18 @@ export const firewallResponseSchema = z.object({
       }),
     )
     .default([]),
+  // Rules ufw enforces that the panel has no row for (added with the ufw command).
+  // Null when ufw could not be read: unknown, not "none".
+  unmanaged_rules: z
+    .array(
+      z.object({
+        key: z.string(),
+        rule: z.string(),
+        adoptable: z.boolean().default(false),
+        reason: z.string().nullish(),
+      }),
+    )
+    .nullish(),
 });
 
 export const firewallPresetSchema = z.object({

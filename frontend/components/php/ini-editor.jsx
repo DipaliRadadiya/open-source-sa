@@ -16,6 +16,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { apiMessage } from "@/lib/api/error-message";
+import { Caution } from "@/components/ui/caution";
+
+// Shared with the Settings tab (php-common-settings.jsx); a literal here keeps this file
+// free of that component's imports.
+const PHP_INI_CHANGED = "php-ini-changed";
 
 async function fetchIni(version) {
   try {
@@ -66,6 +71,7 @@ export function IniEditor({ version, canManage }) {
   }, [version, apply]);
 
   async function retry() {
+    setStale(false);
     setLoading(true);
     setLoadError(null);
     setPhpError(null);
@@ -74,6 +80,18 @@ export function IniEditor({ version, canManage }) {
   }
 
   const dirty = file !== null && contents !== file.contents;
+  // The Settings tab rewrote lines in this file. Untouched: reload. Mid-edit: say so,
+  // because saving this copy would undo that change.
+  const [stale, setStale] = useState(false);
+  useEffect(() => {
+    const onChange = (event) => {
+      if (event.detail?.version !== version || event.detail?.source !== "settings") return;
+      if (dirty) setStale(true);
+      else fetchIni(version).then(apply);
+    };
+    window.addEventListener(PHP_INI_CHANGED, onChange);
+    return () => window.removeEventListener(PHP_INI_CHANGED, onChange);
+  }, [version, dirty, apply]);
   // Leaving the page or picking another version would drop the edit.
   useWatchUnsaved(`php-ini-${version}`, dirty);
 
@@ -86,6 +104,8 @@ export function IniEditor({ version, canManage }) {
       // What is on disk now; a second save needs a fresh acknowledgement.
       setFile((current) => ({ ...current, contents }));
       setAcknowledged(false);
+      setStale(false);
+      window.dispatchEvent(new CustomEvent(PHP_INI_CHANGED, { detail: { version, source: "ini" } }));
     } catch (error) {
       // A 422 is PHP refusing the file (old one already restored) or a form error.
       if (error.response?.status === 422) {
@@ -173,6 +193,17 @@ export function IniEditor({ version, canManage }) {
             )}
           </div>
         )}
+
+        {stale ? (
+          <Caution size="md">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p>{tPhp("ini.stale")}</p>
+              <Button type="button" variant="outline" size="sm" onClick={retry}>
+                {tPhp("ini.reload")}
+              </Button>
+            </div>
+          </Caution>
+        ) : null}
 
         {phpError ? (
           <p

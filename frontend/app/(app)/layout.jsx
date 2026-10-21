@@ -12,6 +12,9 @@ import { ImpersonationBanner } from "@/components/sections/impersonation-banner"
 import { RebootRequiredBanner } from "@/components/sections/reboot-required-banner";
 import { getRebootRequired } from "@/lib/server/get-reboot-required";
 import { can } from "@/lib/permissions/can";
+
+// The server-level permissions behind the kinds GET /operations returns.
+const OPERATION_PERMISSIONS = ["backup", "application", "database", "php", "node", "sync", "setting"];
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarAutoCollapse } from "@/components/sections/sidebar-auto-collapse";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -89,6 +92,12 @@ export default async function AppLayout({ children }) {
                   {/* One bar: the trail sits beside the controls rather than in a second band. */}
                   <AppHeader
                     impersonating={!!impersonatedBy}
+                    // The jobs list holds only kinds the role can see; nothing to show, no icon.
+                    operations={
+                      user?.is_admin || OPERATION_PERMISSIONS.some((name) => can(permissions, name, "view"))
+                        ? { canOpenApplications: can(permissions, "application", "view") }
+                        : null
+                    }
                     breadcrumb={<AppBreadcrumb items={permissions} />}
                   />
                 </div>

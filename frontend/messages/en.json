@@ -1980,6 +1980,22 @@
     "confirmSecure": {
       "title": "Block incoming traffic by default?",
       "description": "Only the rules listed below will be let in. SSH and the panel's own ports are allowed first, so you will not lose access to this server."
+    },
+    "unmanaged": {
+      "title": "Added outside the panel",
+      "description": "Rules someone added with the ufw command. They work, but the panel doesn't manage them.",
+      "adoptableLine": "Can be managed in the panel.",
+      "notAdoptable": "The panel can't manage this kind of rule.",
+      "adopt": "Manage in panel",
+      "remove": "Remove",
+      "actions": "Actions for {rule}",
+      "adopted": "{rule} is now managed in the panel.",
+      "removed": "{rule} was removed.",
+      "removeTitle": "Remove this rule?",
+      "removeBody": "{rule} will be removed from the firewall straight away.",
+      "failed": "That didn't work.",
+      "noPermission": "Your role does not include Firewall with Manage access. Ask an administrator to grant it.",
+      "removeOnServer": "The panel can't remove this kind of rule. Remove it with the ufw command on the server."
     }
   },
   "settings": {
@@ -2309,7 +2325,9 @@
       "perApp": "To change upload size, memory or time limits for one application only, use that application’s PHP settings instead.",
       "perAppLink": "Go to Applications",
       "retry": "Try again",
-      "discard": "Discard changes"
+      "discard": "Discard changes",
+      "stale": "This file was changed on the Common settings tab. Reload it before saving, or your save will undo that change.",
+      "reload": "Reload file"
     },
     "loadFailed": "We couldn't read this server's PHP setup.",
     "noPermission": "Your role does not include PHP with Manage access. Ask an administrator to grant it.",
@@ -2556,11 +2574,24 @@
     "tabs": {
       "extensions": "Extensions",
       "ioncube": "ionCube",
-      "ini": "php.ini"
+      "ini": "php.ini",
+      "settings": "Common settings"
     },
     "unavailable": {
       "title": "PHP is not managed on this server",
       "body": "This server hosts containers, so it serves no PHP sites and has no PHP versions to manage. PHP is still installed for the panel itself, and its service can be restarted from Services."
+    },
+    "common": {
+      "title": "Common settings",
+      "description": "The limits applications most often need raised. They apply to every application on PHP {version} that doesn't set its own.",
+      "appliesNote": "Saved to php.ini and checked by PHP before it applies.",
+      "saveAction": "Save PHP settings",
+      "saved": "PHP {version} settings saved.",
+      "failed": "Couldn't save the PHP settings.",
+      "loadFailed": "Couldn't read this version's settings.",
+      "notSet": "Not set (PHP default)",
+      "uploadHint": "post_max_size is {post}; raising this above it raises that too.",
+      "uploadRaisesPost": "post_max_size will be raised to {size} too, or uploads that size would still fail."
     }
   },
   "node": {
@@ -2676,6 +2707,11 @@
     "unavailable": {
       "title": "Node.js is not managed on this server",
       "body": "This server hosts containers and runs no applications on the host itself, so there are no Node.js versions to manage. A container brings its own runtime."
+    },
+    "buildTools": {
+      "missing": "Some Node packages need build tools to install, and this server doesn't have them. <link>Install them on the Setup page</link>.",
+      "installing": "Build tools are being installed. <link>Follow it on the Setup page</link>.",
+      "failed": "Installing the build tools failed. <link>See why and try again on the Setup page</link>."
     }
   },
   "diskCleaner": {
@@ -7940,5 +7976,41 @@
     },
     "noPermission": "Your role does not include Docker with Manage access. Ask an administrator to grant it.",
     "nameRule": "Letters, numbers, dots, dashes and underscores; start with a letter or number."
+  },
+  "operations": {
+    "title": "Background jobs",
+    "description": "Running now, and finished in the last 24 hours.",
+    "trigger": "{count, plural, one {# job running} other {# jobs running}}",
+    "running": "running",
+    "loading": "Loading jobs…",
+    "empty": "No jobs in the last 24 hours.",
+    "footer": "Each job also shows its progress on its own page.",
+    "groups": {
+      "running": "Running",
+      "finished": "Finished"
+    },
+    "state": {
+      "waiting": "Waiting to start",
+      "running": "Running",
+      "done": "Finished {time}",
+      "failed": "Failed {time}"
+    },
+    "toast": {
+      "done": "{job} finished",
+      "failed": "{job} failed"
+    },
+    "kinds": {
+      "backup": "Backup",
+      "restore": "Backup restore",
+      "clone": "Clone",
+      "staging": "Staging",
+      "deployment": "Deployment",
+      "database_export": "Database export",
+      "database_import": "Database import",
+      "runtime_install": "Software install",
+      "sync": "Server sync",
+      "security_update": "Security updates",
+      "panel_update": "Panel update"
+    }
   }
 }

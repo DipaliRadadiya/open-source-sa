@@ -59,3 +59,14 @@ export const nodeGroupSchema = z.object({
     )
     .default([]),
 });
+
+// GET /build-tools. `install_status` is only ever `installing` or `failed`; a finished
+// install deletes its row, so "installed" comes from `installed` alone.
+export const buildToolsResponseSchema = z.object({
+  build_tools: z.object({
+    installed: z.boolean(),
+    missing: z.array(z.string()).default([]),
+    install_status: z.string().nullish(),
+    install_message: z.string().nullish(),
+  }),
+});

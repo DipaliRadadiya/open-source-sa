@@ -53,3 +53,13 @@ export function savePhpIni(version, contents) {
     acknowledged: true,
   });
 }
+
+// The common php.ini settings as fields (RC-8). PUT takes any subset; the backend
+// rewrites only those lines and tests the file as the raw editor does.
+export function readPhpSettings(version) {
+  return api.get(`/php/versions/${encodeURIComponent(version)}/settings`);
+}
+
+export function savePhpSettings(version, settings) {
+  return api.put(`/php/versions/${encodeURIComponent(version)}/settings`, settings);
+}

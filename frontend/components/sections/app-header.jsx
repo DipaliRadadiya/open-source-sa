@@ -10,8 +10,9 @@ import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
+import { OperationsIndicator } from "@/components/sections/operations-indicator";
 
-export function AppHeader({ impersonating = false, breadcrumb = null }) {
+export function AppHeader({ impersonating = false, breadcrumb = null, operations = null }) {
   const user = useUser();
   const t = useTranslations("admin");
   const tAccount = useTranslations("account");
@@ -28,6 +29,8 @@ export function AppHeader({ impersonating = false, breadcrumb = null }) {
           title and the sidebar's way back carry it there. */}
       <div className="min-w-0 flex-1 max-sm:invisible">{breadcrumb}</div>
       <div className="flex shrink-0 items-center gap-2">
+        {/* Only for someone who can see at least one kind of job. */}
+        {operations ? <OperationsIndicator canOpenApplications={operations.canOpenApplications} /> : null}
         <LocaleSwitcher />
         <ThemeToggle />
         <UserMenu

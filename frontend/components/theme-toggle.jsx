@@ -18,7 +18,8 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
+        {/* Boxed like the language switch beside it, so the top bar reads as one row of buttons. */}
+        <Button variant="neutral" size="icon">
           <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
           <Moon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
           <span className="sr-only">{t("label")}</span>

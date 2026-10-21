@@ -5,6 +5,7 @@ import { getFirewall, getFirewallPresets, getFirewallRules } from "@/lib/firewal
 import { FirewallStatusCard } from "@/components/firewall/firewall-status-card";
 import { BrowserIpProvider } from "@/components/network/browser-ip";
 import { RulesCard } from "@/components/firewall/rules-card";
+import { UnmanagedRulesCard } from "@/components/firewall/unmanaged-rules-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
@@ -90,6 +91,9 @@ export default async function FirewallPage({ searchParams }) {
             {!rulesFailed && rules.length > 0 ? (
               <DataTablePagination meta={meta} />
             ) : null}
+
+            {/* Rules someone added with the ufw command: real, but not in the list above. */}
+            <UnmanagedRulesCard rules={data.unmanaged_rules} canManage={canManage} />
           </div>
         </NavTransitionProvider>
       )}

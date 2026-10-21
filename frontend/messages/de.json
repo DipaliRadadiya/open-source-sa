@@ -1980,6 +1980,22 @@
     "confirmSecure": {
       "title": "Eingehenden Verkehr standardmäßig blockieren?",
       "description": "Nur die unten aufgeführten Regeln werden hereingelassen. SSH und die eigenen Ports des Panels werden vorher erlaubt — Sie verlieren also nicht den Zugang zu diesem Server."
+    },
+    "unmanaged": {
+      "title": "Außerhalb des Panels hinzugefügt",
+      "description": "Regeln, die jemand mit dem ufw-Befehl hinzugefügt hat. Sie wirken, werden aber nicht vom Panel verwaltet.",
+      "adoptableLine": "Kann im Panel verwaltet werden.",
+      "notAdoptable": "Diese Art Regel kann das Panel nicht verwalten.",
+      "adopt": "Im Panel verwalten",
+      "remove": "Entfernen",
+      "actions": "Aktionen für {rule}",
+      "adopted": "{rule} wird jetzt im Panel verwaltet.",
+      "removed": "{rule} wurde entfernt.",
+      "removeTitle": "Diese Regel entfernen?",
+      "removeBody": "{rule} wird sofort aus der Firewall entfernt.",
+      "failed": "Das hat nicht funktioniert.",
+      "noPermission": "Ihre Rolle enthält nicht „Firewall“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "removeOnServer": "Diese Art Regel kann das Panel nicht entfernen. Entfernen Sie sie mit dem ufw-Befehl auf dem Server."
     }
   },
   "settings": {
@@ -2309,7 +2325,9 @@
       "perApp": "Um Upload-Größe, Speicher oder Zeitlimits nur für eine Anwendung zu ändern, nutzen Sie stattdessen die PHP-Einstellungen dieser Anwendung.",
       "perAppLink": "Zu den Anwendungen",
       "retry": "Erneut versuchen",
-      "discard": "Änderungen verwerfen"
+      "discard": "Änderungen verwerfen",
+      "stale": "Diese Datei wurde im Tab „Allgemeine Einstellungen“ geändert. Laden Sie sie vor dem Speichern neu, sonst macht Ihr Speichern diese Änderung rückgängig.",
+      "reload": "Datei neu laden"
     },
     "loadFailed": "Die PHP-Einrichtung dieses Servers konnte nicht gelesen werden.",
     "noPermission": "Ihre Rolle enthält nicht „PHP“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
@@ -2556,11 +2574,24 @@
     "tabs": {
       "extensions": "Erweiterungen",
       "ioncube": "ionCube",
-      "ini": "php.ini"
+      "ini": "php.ini",
+      "settings": "Allgemeine Einstellungen"
     },
     "unavailable": {
       "title": "PHP wird auf diesem Server nicht verwaltet",
       "body": "Dieser Server hostet Container, serviert also keine PHP-Sites und hat keine PHP-Versionen zu verwalten. PHP ist weiterhin für das Panel selbst installiert, und sein Dienst kann unter Dienste neu gestartet werden."
+    },
+    "common": {
+      "title": "Allgemeine Einstellungen",
+      "description": "Die Limits, die Anwendungen am häufigsten erhöht brauchen. Sie gelten für jede Anwendung auf PHP {version}, die keine eigenen setzt.",
+      "appliesNote": "Wird in php.ini gespeichert und vorher von PHP geprüft.",
+      "saveAction": "PHP-Einstellungen speichern",
+      "saved": "Einstellungen für PHP {version} gespeichert.",
+      "failed": "Die PHP-Einstellungen konnten nicht gespeichert werden.",
+      "loadFailed": "Die Einstellungen dieser Version konnten nicht gelesen werden.",
+      "notSet": "Nicht gesetzt (PHP-Standard)",
+      "uploadHint": "post_max_size ist {post}; ein höherer Wert hier hebt diesen mit an.",
+      "uploadRaisesPost": "post_max_size wird ebenfalls auf {size} angehoben, sonst würden Uploads dieser Größe weiter scheitern."
     }
   },
   "node": {
@@ -2676,6 +2707,11 @@
     "unavailable": {
       "title": "Node.js wird auf diesem Server nicht verwaltet",
       "body": "Dieser Server hostet Container und führt auf dem Host selbst keine Anwendungen aus, daher gibt es keine Node.js-Versionen zu verwalten. Ein Container bringt seine eigene Laufzeitumgebung mit."
+    },
+    "buildTools": {
+      "missing": "Manche Node-Pakete brauchen zum Installieren Build-Tools, und dieser Server hat keine. <link>Installieren Sie sie auf der Einrichtungsseite</link>.",
+      "installing": "Die Build-Tools werden installiert. <link>Verfolgen Sie es auf der Einrichtungsseite</link>.",
+      "failed": "Die Installation der Build-Tools ist fehlgeschlagen. <link>Grund ansehen und erneut versuchen auf der Einrichtungsseite</link>."
     }
   },
   "diskCleaner": {
@@ -7940,5 +7976,41 @@
     },
     "noPermission": "Ihre Rolle enthält nicht „Docker“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "nameRule": "Buchstaben, Ziffern, Punkte, Binde- und Unterstriche; Beginn mit Buchstabe oder Ziffer."
+  },
+  "operations": {
+    "title": "Hintergrundaufgaben",
+    "description": "Laufen gerade oder in den letzten 24 Stunden beendet.",
+    "trigger": "{count, plural, one {# Aufgabe läuft} other {# Aufgaben laufen}}",
+    "running": "laufen",
+    "loading": "Aufgaben werden geladen…",
+    "empty": "Keine Aufgaben in den letzten 24 Stunden.",
+    "footer": "Jede Aufgabe zeigt ihren Fortschritt auch auf ihrer eigenen Seite.",
+    "groups": {
+      "running": "Läuft",
+      "finished": "Beendet"
+    },
+    "state": {
+      "waiting": "Wartet auf den Start",
+      "running": "Läuft",
+      "done": "Beendet {time}",
+      "failed": "Fehlgeschlagen {time}"
+    },
+    "toast": {
+      "done": "{job} beendet",
+      "failed": "{job} fehlgeschlagen"
+    },
+    "kinds": {
+      "backup": "Backup",
+      "restore": "Backup-Wiederherstellung",
+      "clone": "Klon",
+      "staging": "Staging",
+      "deployment": "Deployment",
+      "database_export": "Datenbankexport",
+      "database_import": "Datenbankimport",
+      "runtime_install": "Software-Installation",
+      "sync": "Server-Sync",
+      "security_update": "Sicherheitsupdates",
+      "panel_update": "Panel-Update"
+    }
   }
 }

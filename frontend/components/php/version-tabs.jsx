@@ -9,7 +9,7 @@ import { isInFlight } from "@/lib/runtime/in-flight";
 
 // ionCube is separate from extensions: a vendor `.so`, not an apt package.
 
-const VALUES = ["extensions", "ioncube", "ini"];
+const VALUES = ["settings", "extensions", "ioncube", "ini"];
 
 // Uses `isInFlight`, never a hand-written test: the API sends `idle` when untouched.
 function ionCubeBadge(ioncube, failed, t) {
@@ -28,6 +28,7 @@ function ionCubeBadge(ioncube, failed, t) {
 }
 
 export function PhpVersionTabs({
+  settings,
   extensions,
   ioncube,
   ini,
@@ -37,7 +38,7 @@ export function PhpVersionTabs({
   initial,
 }) {
   const t = useTranslations("php");
-  const [tab, setTab] = useState(() => (VALUES.includes(initial) ? initial : "extensions"));
+  const [tab, setTab] = useState(() => (VALUES.includes(initial) ? initial : "settings"));
   // php.ini mounts on first open (it costs a read) and then stays, so its edits survive a
   // look at another tab.
   const [opened, setOpened] = useState(() => new Set([tab]));
@@ -45,6 +46,8 @@ export function PhpVersionTabs({
   const badge = ionCubeBadge(ionCubeState, ionCubeFailed, t);
 
   const sections = [
+    // First: the limits people come here to change, without editing the file.
+    { value: "settings", label: t("tabs.settings"), badge: null, node: settings },
     {
       value: "extensions",
       label: t("tabs.extensions"),
