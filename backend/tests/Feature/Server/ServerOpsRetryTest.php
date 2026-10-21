@@ -282,9 +282,10 @@ describe('apt', function () {
 
 describe('apt\'s own lock wait (S-09)', function () {
     it('tells apt-get not to wait on the lock itself', function () {
-        // On Ubuntu 26.04 apt-get waited on unattended-upgrades' lock for the
-        // whole 900 s install timeout, was killed, and the retry above never
-        // ran. Switched off, the panel's bounded loop does the waiting.
+        // install.sh leaves a `DPkg::Lock::Timeout "900"` drop-in behind, so
+        // apt-get waited on unattended-upgrades' lock for the whole 900 s
+        // install timeout, was killed, and the retry above never ran.
+        // Switched off on the command line, the panel's bounded loop waits.
         Process::fake(fn () => Process::result(output: 'done'));
 
         app(ServerOps::class)->apt(['apt-get', 'install', '-y', 'mariadb-server'], ['feature' => 'test']);

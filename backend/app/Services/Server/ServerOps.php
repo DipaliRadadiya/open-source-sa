@@ -366,14 +366,18 @@ class ServerOps
      * with no race in it.
      *
      * 🔴 **`DPkg::Lock::Timeout=0`, said out loud.** The loop above only works
-     * if apt *refuses* a held lock, and newer apt waits instead: on Ubuntu
-     * 26.04 `apt-get` printed "Waiting for cache lock: … held by process 15959
-     * (unattended-upgr)" for the whole 900 s install timeout, was killed at
-     * the ceiling, and the engine install failed as `unknown` with nothing
-     * retried (CF-06, ref d2c1e572). Telling apt not to wait gives the loop
-     * back its job, so the wait is bounded by `lock_attempts × lock_delay_ms`
-     * on every release, and a lock still held at the end fails as "Could not
-     * get lock" — classified `apt_lock`, not `unknown`.
+     * if apt *refuses* a held lock, and on a panel server it does not:
+     * install.sh writes `/etc/apt/apt.conf.d/99<slug>-lock-wait` with
+     * `DPkg::Lock::Timeout "900"` for its own run and leaves it there. So the
+     * panel's `apt-get` printed "Waiting for cache lock: … held by process
+     * 15959 (unattended-upgr)" for 900 s — exactly the engine install
+     * timeout — was killed at the ceiling, and the install failed as
+     * `unknown` with nothing retried (CF-06, ref d2c1e572; reproduced on a
+     * fresh 26.04 box with that drop-in). The command line beats the drop-in,
+     * which other apt users (certbot, add-apt-repository) keep. Telling apt
+     * not to wait gives the loop back its job, so the wait is bounded by
+     * `lock_attempts × lock_delay_ms`, and a lock still held at the end fails
+     * as "Could not get lock" — classified `apt_lock`, not `unknown`.
      *
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
