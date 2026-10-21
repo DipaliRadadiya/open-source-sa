@@ -7,6 +7,7 @@ use App\Actions\Server\Backup\DeleteBackup;
 use App\Actions\Server\Cronjob\DeleteCronjob;
 use App\Enums\CertificateType;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Exceptions\Server\Application\UnprovenWorkerProgramException;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\Cronjob;
@@ -114,13 +115,38 @@ class ApplicationArtifacts
             // before the row for exactly this reason; deleting the application
             // skipped it.
             $workers = app(WorkerSupervisor::class);
+            $adopted = app(AdoptedSiteConfig::class);
 
             // Queried rather than read off a relation: `Application` has none,
             // and adding one here would be a second way to reach the same rows
             // for the sake of one loop.
+            //
+            // One attempt per worker. A single `attempt()` around the loop let
+            // the first worker that would not stop end it, and every worker
+            // after it was left running with its row about to cascade away.
             foreach (Worker::where('application_id', $application->id)->get() as $worker) {
-                $workers->remove($worker);
+                $this->attempt($application, 'workers', function () use ($application, $worker, $workers, $adopted) {
+                    // The program Sync adopted this from, when it was a shared
+                    // file or a systemd unit: never the panel's to stop, so it
+                    // is named instead (FS-C22 #14).
+                    $adopted->reportWorkerSource($application, $worker);
+
+                    try {
+                        $workers->remove($worker);
+                    } catch (UnprovenWorkerProgramException $e) {
+                        $adopted->reportWorker($application, $e->path, $e->reason);
+                    }
+                });
             }
+        });
+
+        // The vhost Server Sync adopted the site from, when it is not the
+        // `{slug}.conf` the driver removes below — removed only once it is
+        // proven to be this site's alone ({@see AdoptedSiteConfig}). Before
+        // the driver's removal and any `rm -rf`, so a site never keeps being
+        // served from a config pointing at deleted files.
+        $this->attempt($application, 'adopted_vhost', function () use ($application) {
+            app(AdoptedSiteConfig::class)->remove($application);
         });
 
         $this->attempt($application, 'cronjobs', function () use ($application) {

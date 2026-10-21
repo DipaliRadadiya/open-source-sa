@@ -257,6 +257,16 @@ class WorkerDiscoverer implements Discoverable
             return null;
         }
 
+        // A site with no worker screen cannot own a worker: nothing could ever
+        // edit, start or remove it, and deleting the site would be the first
+        // the panel did with it (FS-C22 #14). Static, Docker and marketplace
+        // PHP sites. Asked of the feature, not of `serving_profile`, because a
+        // git site rendered static still has workers. Not reported, like a
+        // program the panel cannot place.
+        if (! $application->supports('app_worker')) {
+            return null;
+        }
+
         if (($tracked[$application->id] ?? collect())->contains(fn (Worker $worker) => $worker->name === $name || $worker->program === $name
             || ($worker->program === null && 'sv-worker-'.$worker->slug === $name))) {
             return null;

@@ -141,6 +141,7 @@ return [
     'application.container_secrets_viewed' => ':name のコンテナ資格情報を表示しました',
     'application.docker_resources_removed' => ':name の Docker ネットワークとボリュームを削除しました',
     'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
+    'application.adopted_config_left' => ':name の削除中に :path を安全に削除できませんでした: :left_reason',
     'application.process_start' => ':name を開始しました',
     'application.process_stop' => ':name を停止しました',
     'application.process_restart' => ':name を再起動しました',

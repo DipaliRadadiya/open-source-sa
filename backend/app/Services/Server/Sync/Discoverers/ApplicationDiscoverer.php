@@ -11,6 +11,7 @@ use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeDetector;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\OlsVhostLayout;
+use App\Services\Server\WebServers\VhostParser;
 use App\Services\Server\WebServers\WebServerManager;
 use RuntimeException;
 
@@ -32,6 +33,7 @@ class ApplicationDiscoverer implements Discoverable
         private ServerOps $serverOps,
         private WebServerManager $webServers,
         private SiteTypeDetector $detector,
+        private VhostParser $parser,
     ) {}
 
     public function resourceType(): string
@@ -148,7 +150,9 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            $parsed = $this->parse($contents->output());
+            // Shared with deleting an adopted site, so both read a file the same
+            // way ({@see VhostParser}).
+            $parsed = $this->parser->parse($contents->output());
 
             if ($parsed['domains'] === [] || $parsed['root'] === null) {
                 // A config this cannot read is reported rather than dropped:
@@ -523,93 +527,6 @@ class ApplicationDiscoverer implements Discoverable
             'slug' => $parts[0],
             'web_root' => $inside === [] ? '/' : implode('/', $inside),
         ];
-    }
-
-    /**
-     * The names a vhost answers to and the directory it serves.
-     *
-     * Both syntaxes in one pass — nginx `server_name`/`root`, Apache
-     * `ServerName`/`ServerAlias`/`DocumentRoot` — because which one is in
-     * front is a per-server fact and the file itself says which it is.
-     *
-     * @return array{domains: array<int, string>, root: string|null}
-     */
-    private function parse(string $contents): array
-    {
-        $domains = [];
-
-        // nginx directives end at `;`, not at a newline, so a whole server
-        // block can sit on one line — `server { listen 80; server_name x;
-        // root /y; }` — and Sync skipped it (bug #41). A directive starts
-        // after a newline, `{` or `;`. Comments are dropped first so that
-        // widening cannot pick a commented-out `root` out of one.
-        $nginx = (string) preg_replace('/#[^\n]*/', '', $contents);
-        $start = '(?:^|[;{])\s*';
-
-        // nginx: `server_name a b c;`
-        if (preg_match_all('/'.$start.'server_name\s+([^;]+);/mi', $nginx, $matches)) {
-            foreach ($matches[1] as $group) {
-                $domains = array_merge($domains, preg_split('/\s+/', trim($group)) ?: []);
-            }
-        }
-
-        // Apache: ServerName one, ServerAlias many.
-        if (preg_match_all('/^\s*Server(?:Name|Alias)\s+(.+)$/mi', $contents, $matches)) {
-            foreach ($matches[1] as $group) {
-                $domains = array_merge($domains, preg_split('/\s+/', trim($group)) ?: []);
-            }
-        }
-
-        // OpenLiteSpeed: vhDomain and vhAliases, both comma-separated lists
-        // rather than space-separated — split on either, since a config
-        // written by hand may use spaces after the commas or instead of them.
-        if (preg_match_all('/^\s*vh(?:Domain|Aliases)\s+(.+)$/mi', $contents, $matches)) {
-            foreach ($matches[1] as $group) {
-                $domains = array_merge($domains, preg_split('/[,\s]+/', trim($group)) ?: []);
-            }
-        }
-
-        $domains = array_values(array_unique(array_filter(
-            array_map('strtolower', array_map('trim', $domains)),
-            // `_` is nginx's catch-all and names nothing; a wildcard is not a
-            // domain the panel can own.
-            fn (string $d): bool => $d !== '' && $d !== '_' && ! str_contains($d, '*'),
-        )));
-
-        $root = null;
-
-        if (preg_match('/'.$start.'root\s+([^;]+);/mi', $nginx, $m)) {
-            $root = trim($m[1]);
-        } elseif (preg_match('/^\s*DocumentRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
-            $root = trim($m[1]);
-        } elseif (preg_match('/^\s*docRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
-            // OpenLiteSpeed. Matched last because `docRoot` is also a legal
-            // Apache-ish spelling nobody uses, and nginx/Apache should keep
-            // answering for their own files.
-            $root = trim($m[1]);
-        }
-
-        // The port a Node application is proxied to. Nothing else in this
-        // discoverer needs one — a PHP or static site is served from its root
-        // — but a Node site's port is the only thing tying the vhost to the
-        // process, and it lives nowhere else the panel can read.
-        //
-        // Without it an adopted Node application arrives with a null
-        // `app_port`, the allocator hands out a fresh one on the first deploy,
-        // and nginx goes on proxying to the old number: a site that was
-        // working answers 502 the first time the panel touches it. Seen on a
-        // real v7 box, where n8n is proxied to 50241.
-        //
-        // Loopback only. A `proxy_pass` to another host is a reverse proxy to
-        // something this server does not run, and claiming its port would be
-        // wrong.
-        $port = null;
-
-        if (preg_match('#'.$start.'proxy_pass\s+https?://(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)#mi', $nginx, $m)) {
-            $port = (int) $m[1];
-        }
-
-        return ['domains' => $domains, 'root' => $root, 'port' => $port];
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Exceptions\Server\Application\SupervisorMissingException;
+use App\Exceptions\Server\Application\SystemUserMissingException;
+use App\Exceptions\Server\Application\UnprovenWorkerProgramException;
 use App\Exceptions\Server\Application\WorkerControlException;
 use App\Exceptions\Server\ServerOperationException;
 use App\Models\SystemUser;
@@ -12,6 +14,8 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Throwable;
@@ -412,9 +416,120 @@ class WorkerSupervisor
         return true;
     }
 
+    /**
+     * Why an adopted worker's own program file no longer proves that it is
+     * this worker's alone — or null when it still does. Read-only.
+     *
+     * Null straight away for the panel's own workers (`sv-worker-{slug}`):
+     * nothing but the panel writes that name. `program` is set only by
+     * Server Sync, for a file holding exactly one program named after the
+     * file, inside this site ({@see WorkerDiscoverer::adopt()}).
+     * That was true when it was adopted; this checks it is still true before
+     * the file is deleted, because a file edited since into a shared one
+     * would take somebody else's programs with it.
+     *
+     * A file that is gone proves nothing is left to delete, and the program
+     * is still stopped by its recorded name.
+     */
+    public function unprovableProgram(Worker $worker): ?string
+    {
+        if (! $worker->hasProgram()) {
+            return null;
+        }
+
+        $program = (string) $worker->program;
+        $directory = rtrim((string) config('server.applications.supervisor_dir', '/etc/supervisor/conf.d'), '/');
+
+        // The rule adopt() recorded it under. A name it could not have
+        // recorded is not one to build a path from.
+        if ($directory === '' || preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/D', $program) !== 1) {
+            return 'unexpected_path';
+        }
+
+        $context = $this->context($worker, 'worker_verify_adopted');
+
+        // `-P` and a listing of the directory rather than of the file: a
+        // symlink is reported as one instead of followed, and "not there"
+        // is an empty answer rather than an error that a refused grant
+        // would look exactly like.
+        $listing = $this->serverOps->run(
+            ['find', '-P', $directory, '-mindepth', '1', '-maxdepth', '1', '-name', $program.'.conf', '-printf', '%y\n'],
+            $context,
+        );
+
+        if ($listing->failed()) {
+            return 'unreadable';
+        }
+
+        $type = trim($listing->output());
+
+        if ($type === '') {
+            return null;
+        }
+
+        if ($type !== 'f') {
+            return 'not_regular';
+        }
+
+        $read = $this->files->get($this->configPath($worker), $context);
+
+        if ($read->failed()) {
+            return 'unreadable';
+        }
+
+        preg_match_all('/^[ \t]*\[program:([^\]]+)\]/mi', $read->output(), $blocks);
+
+        if (count($blocks[1]) !== 1 || trim($blocks[1][0]) !== $program) {
+            return 'worker_shared';
+        }
+
+        try {
+            $root = rtrim((string) $worker->application?->rootPath(), '/');
+        } catch (SystemUserMissingException) {
+            return 'not_this_site';
+        }
+
+        // Where the discoverer looked when it attributed the program: the
+        // working directory, otherwise the command.
+        $directoryValue = $this->programSetting($read->output(), 'directory');
+        $command = $this->programSetting($read->output(), 'command') ?? '';
+
+        if ($root === '') {
+            return 'not_this_site';
+        }
+
+        if ($directoryValue !== null) {
+            $inside = ! str_contains($directoryValue.'/', '/../')
+                && (rtrim($directoryValue, '/') === $root || str_starts_with($directoryValue, $root.'/'));
+        } else {
+            // A path token, not a substring: `/home/u/shop` must not claim
+            // `/home/u/shopping`, and `/home/u/shop/../x` is somewhere else.
+            $inside = ! str_contains($command, '/../')
+                && preg_match('#(^|[\s=\'"])'.preg_quote($root, '#').'(/|[\s\'"]|$)#', $command) === 1;
+        }
+
+        return $inside ? null : 'not_this_site';
+    }
+
     /** Stop every copy, then delete the program and let supervisord forget it. */
     public function remove(Worker $worker): void
     {
+        // An adopted program whose file may now hold somebody else's programs
+        // is neither stopped nor deleted. Refused before anything runs.
+        $unprovable = $this->unprovableProgram($worker);
+
+        if ($unprovable !== null) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->warning('adopted worker program left in place: it no longer provably belongs to this worker', $this->context($worker, 'worker_remove') + [
+                'reference' => $reference,
+                'reason' => $unprovable,
+                'path' => $this->configPath($worker),
+            ]);
+
+            throw new UnprovenWorkerProgramException($reference, $unprovable, $this->configPath($worker));
+        }
+
         $loaded = true;
         $stopped = $this->supervisorctl(['stop', $this->group($worker)], $worker, 'worker_stop');
         if ($stopped->failed()) {
@@ -746,6 +861,16 @@ class WorkerSupervisor
         }
 
         return $result;
+    }
+
+    /** `key=value` in a program block, first occurrence, quotes stripped — as the discoverer reads it. */
+    private function programSetting(string $contents, string $key): ?string
+    {
+        if (! preg_match('/^\s*'.preg_quote($key, '/').'\s*=\s*(.+?)\s*$/mi', $contents, $matches)) {
+            return null;
+        }
+
+        return trim($matches[1], " \t\"'") ?: null;
     }
 
     /**

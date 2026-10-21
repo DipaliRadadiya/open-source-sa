@@ -147,6 +147,7 @@ return [
     'application.container_secrets_viewed' => 'Viewed the container credentials for :name',
     'application.docker_resources_removed' => 'Removed the Docker network and volumes for :name',
     'application.deleted' => 'Deleted application :name (:site_type)',
+    'application.adopted_config_left' => 'Could not safely remove :path while deleting :name: :left_reason',
     'application.process_start' => 'Started :name',
     'application.process_stop' => 'Stopped :name',
     'application.process_restart' => 'Restarted :name',

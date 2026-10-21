@@ -141,6 +141,7 @@ return [
     'application.container_secrets_viewed' => 'Consultó las credenciales del contenedor de :name',
     'application.docker_resources_removed' => 'Eliminó la red y los volúmenes de Docker de :name',
     'application.deleted' => 'Eliminó la aplicación :name (:site_type)',
+    'application.adopted_config_left' => 'No se pudo quitar :path de forma segura al eliminar :name: :left_reason',
     'application.process_start' => 'Se inició :name',
     'application.process_stop' => 'Se detuvo :name',
     'application.process_restart' => 'Se reinició :name',

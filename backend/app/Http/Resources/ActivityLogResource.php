@@ -6,6 +6,7 @@ use App\Services\ActivityKinds;
 use App\Services\ActivityScopes;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Lang;
 
 class ActivityLogResource extends JsonResource
 {
@@ -94,7 +95,7 @@ class ActivityLogResource extends JsonResource
     {
         $properties = (array) ($this->properties ?? []);
 
-        return array_map(function (mixed $value): mixed {
+        $replacements = array_map(function (mixed $value): mixed {
             if (is_array($value)) {
                 return $value === []
                     ? __('activity_values.none')
@@ -110,5 +111,16 @@ class ActivityLogResource extends JsonResource
 
             return $value;
         }, $properties);
+
+        // A reason stored as a code, so it reads in the viewer's language
+        // rather than the deleter's: why a deleted site's adopted config was
+        // left in place (FS-C22 #14). An unknown code stays as it is.
+        $reason = $properties['left_reason'] ?? null;
+
+        if (is_string($reason) && Lang::has('activity_values.adopted_left_'.$reason)) {
+            $replacements['left_reason'] = __('activity_values.adopted_left_'.$reason);
+        }
+
+        return $replacements;
     }
 }

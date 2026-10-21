@@ -141,6 +141,7 @@ return [
     'application.container_secrets_viewed' => ':name की कंटेनर क्रेडेंशियल देखीं',
     'application.docker_resources_removed' => ':name के Docker नेटवर्क और वॉल्यूम हटाए',
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
+    'application.adopted_config_left' => ':name को हटाते समय :path को सुरक्षित रूप से नहीं हटाया जा सका: :left_reason',
     'application.process_start' => ':name शुरू किया',
     'application.process_stop' => ':name बंद किया',
     'application.process_restart' => ':name पुनः आरंभ किया',

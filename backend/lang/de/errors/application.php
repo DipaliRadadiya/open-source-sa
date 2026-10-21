@@ -162,4 +162,5 @@ return [
     'staging_backup_not_permitted' => 'Sie können übertragen, aber keine Sicherung dieser Anwendung erstellen. Bitten Sie einen Administrator um Zugriff auf „Sicherungen“ oder übertragen Sie ohne Sicherung.',
     'staging_safety_copy_missing' => 'Diese Kopie der Datenbank ist nicht mehr auf dem Server. Laden Sie die Liste neu.',
     'staging_safety_copy_no_database' => 'Mit dieser Anwendung ist keine Datenbank verknüpft, daher gibt es nichts, in das die Kopie zurückgespielt werden kann.',
+    'delete_files_adopted_worker' => 'Es wurde nichts gelöscht. Die Dateien dieser Website werden noch von :workers verwendet. Server Sync hat dies in der Website laufend gefunden, aber das Panel kann nicht nachweisen, dass es ihm gehört. Stoppen Sie es auf dem Server und entfernen Sie es unter „Worker“ dieser Website, und löschen Sie dann erneut – oder löschen Sie die Website und behalten Sie ihre Dateien.',
 ];

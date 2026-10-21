@@ -163,4 +163,5 @@ return [
     'staging_backup_not_permitted' => 'You can push, but not take a backup of this application. Ask an administrator for Backups access, or push without a backup.',
     'staging_safety_copy_missing' => 'That copy of the database is not on the server any more. Reload the list.',
     'staging_safety_copy_no_database' => 'This application has no database linked to it, so there is nothing to put the copy back into.',
+    'delete_files_adopted_worker' => 'Nothing was deleted. This site\'s files are still used by :workers, which Server Sync found running from the site but the panel cannot prove it owns. Stop it on the server and remove it from this site\'s Workers, then delete again — or delete the site and keep its files.',
 ];

@@ -162,4 +162,5 @@ return [
     'staging_backup_not_permitted' => 'Vous pouvez envoyer, mais pas sauvegarder cette application. Demandez à un administrateur l’accès aux Sauvegardes, ou envoyez sans sauvegarde.',
     'staging_safety_copy_missing' => 'Cette copie de la base de données n’est plus sur le serveur. Rechargez la liste.',
     'staging_safety_copy_no_database' => 'Aucune base de données n’est liée à cette application, il n’y a donc rien où rétablir la copie.',
+    'delete_files_adopted_worker' => 'Rien n\'a été supprimé. Les fichiers de ce site sont encore utilisés par :workers, que Server Sync a trouvé en cours d\'exécution depuis le site, mais le panneau ne peut pas prouver qu\'il lui appartient. Arrêtez-le sur le serveur et retirez-le des Workers de ce site, puis supprimez à nouveau — ou supprimez le site en conservant ses fichiers.',
 ];

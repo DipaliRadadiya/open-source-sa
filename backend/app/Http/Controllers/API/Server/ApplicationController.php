@@ -31,6 +31,7 @@ use App\Models\Backup;
 use App\Models\Permission;
 use App\Models\Restore;
 use App\Models\SystemUser;
+use App\Services\Server\Applications\AdoptedSiteConfig;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\FileBrowser;
@@ -351,7 +352,18 @@ class ApplicationController extends Controller
         DeleteApplicationDatabases $databases,
         DeleteApplicationDockerResources $dockerResources,
         StrandedProvisioning $stranded,
+        AdoptedSiteConfig $adopted,
     ): JsonResponse {
+        // First, before anything at all changes: deleting the files of a site
+        // that a worker Server Sync adopted — from a shared supervisor file or
+        // a systemd unit the panel cannot prove it owns — still runs from is
+        // refused, and that worker is named (FS-C22 #14). Read-only; a refusal
+        // leaves the site, its record, its backups and every service as they
+        // were. Without `remove_files` the delete goes ahead and names it.
+        if ($request->boolean('remove_files')) {
+            $adopted->refuseUnprovenWorkers($application);
+        }
+
         // A queued worker can still be writing this site's files and config.
         // Deleting its record now would leave those mutations untracked — unless
         // its install job is provably gone, which would otherwise leave the site

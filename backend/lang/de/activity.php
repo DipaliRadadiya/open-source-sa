@@ -141,6 +141,7 @@ return [
     'application.container_secrets_viewed' => 'Container-Zugangsdaten für :name angesehen',
     'application.docker_resources_removed' => 'Docker-Netzwerk und -Volumes für :name entfernt',
     'application.deleted' => 'Anwendung :name (:site_type) gelöscht',
+    'application.adopted_config_left' => ':path konnte beim Löschen von :name nicht sicher entfernt werden: :left_reason',
     'application.process_start' => ':name gestartet',
     'application.process_stop' => ':name gestoppt',
     'application.process_restart' => ':name neu gestartet',

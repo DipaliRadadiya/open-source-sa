@@ -141,6 +141,7 @@ return [
     'application.container_secrets_viewed' => 'A consulté les identifiants du conteneur de :name',
     'application.docker_resources_removed' => 'A supprimé le réseau et les volumes Docker de :name',
     'application.deleted' => 'A supprimé l\'application :name (:site_type)',
+    'application.adopted_config_left' => 'Impossible de retirer :path en toute sécurité lors de la suppression de :name : :left_reason',
     'application.process_start' => ':name démarrée',
     'application.process_stop' => ':name arrêtée',
     'application.process_restart' => ':name redémarrée',
