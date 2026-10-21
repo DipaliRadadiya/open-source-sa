@@ -85,6 +85,7 @@ return [
     'fail2ban_failed' => 'La operación de fail2ban falló en el servidor.',
 
     'permissions_fix_failed' => 'No se pudieron restablecer los permisos de archivo en el servidor.',
+    'permissions_fix_unsupported_runtime' => 'El restablecimiento de permisos solo está disponible para sitios PHP y estáticos. Esta aplicación se ejecuta como un proceso Node o un contenedor, cuyos archivos incluyen programas que deben seguir siendo ejecutables, por lo que el panel deja sus permisos como están.',
 
     'unsafe_path' => 'Esa ruta no está permitida.',
     'file_too_large' => 'Ese archivo es demasiado grande para abrirlo en el editor. Descárgalo: las descargas no tienen límite de tamaño.',

@@ -85,6 +85,7 @@ return [
     'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 
     'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
+    'permissions_fix_unsupported_runtime' => 'Resetting permissions is only available for PHP and static sites. This application runs as a Node process or a container, whose files include programs that must stay executable, so the panel leaves its permissions as they are.',
 
     'unsafe_path' => 'That path is not allowed.',
     'file_too_large' => 'That file is too large to open in the editor. Download it instead — downloads have no size limit.',

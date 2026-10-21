@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Exceptions\Server\Application\FileRefusedException;
 use App\Exceptions\Server\Application\FixPermissionsFailedException;
 use App\Models\Application;
 use App\Services\Server\Php\PoolManager;
@@ -24,6 +25,23 @@ use App\Services\Server\ServerOps;
  */
 class PermissionFixer
 {
+    /**
+     * The serving profiles this reset is right for, and the only ones.
+     *
+     * Both have files that are read, never executed: PHP interprets what it
+     * reads, and a static site is a directory the web server hands out. A Node
+     * process or a container runs files out of its tree — `node_modules/.bin`
+     * targets, native addons, a container's entrypoint and the volumes it
+     * mounts — and the bulk `chmod 0644` below stripped their executable bit
+     * (FS-C22 #18), so an app that worked stopped starting.
+     *
+     * Read from the row's `serving_profile`, not `site_type`: a git site is
+     * php, node or static by the rendering type the user picked (see
+     * `ServingProfile::resolve()`). An allowlist, so a profile added later is
+     * refused until someone decides this reset is safe for it.
+     */
+    private const RESETTABLE_PROFILES = ['php', 'static'];
+
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
@@ -34,6 +52,12 @@ class PermissionFixer
 
     public function fix(Application $application): void
     {
+        // First, before anything is asked of the server: a refusal that ran
+        // the chown first would already have done the damage.
+        if (! in_array($application->serving_profile, self::RESETTABLE_PROFILES, true)) {
+            throw FileRefusedException::because('application', 'unsupported_runtime', 'errors/application.permissions_fix_unsupported_runtime');
+        }
+
         $root = $this->provisioner->documentRoot($application);
         $user = $application->systemUser->username;
 

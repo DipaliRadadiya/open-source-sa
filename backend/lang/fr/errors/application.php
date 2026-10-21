@@ -84,6 +84,7 @@ return [
     'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 
     'permissions_fix_failed' => 'La réinitialisation des permissions de fichiers a échoué sur le serveur.',
+    'permissions_fix_unsupported_runtime' => 'La réinitialisation des permissions n\'est disponible que pour les sites PHP et statiques. Cette application s\'exécute comme un processus Node ou un conteneur, dont les fichiers contiennent des programmes qui doivent rester exécutables : le panneau laisse donc ses permissions inchangées.',
 
     'unsafe_path' => 'Ce chemin n\'est pas autorisé.',
     'file_too_large' => 'Ce fichier est trop volumineux pour l\'éditeur. Téléchargez-le : les téléchargements n\'ont aucune limite de taille.',

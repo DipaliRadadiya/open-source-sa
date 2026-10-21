@@ -84,6 +84,7 @@ return [
     'fail2ban_failed' => 'Der Fail2ban-Vorgang ist auf dem Server fehlgeschlagen.',
 
     'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
+    'permissions_fix_unsupported_runtime' => 'Das Zurücksetzen der Berechtigungen ist nur für PHP- und statische Websites verfügbar. Diese Anwendung läuft als Node-Prozess oder Container, dessen Dateien Programme enthalten, die ausführbar bleiben müssen. Daher lässt das Panel ihre Berechtigungen unverändert.',
 
     'unsafe_path' => 'Dieser Pfad ist nicht zulässig.',
     'file_too_large' => 'Diese Datei ist zu groß für den Editor. Laden Sie sie stattdessen herunter — Downloads haben keine Größenbeschränkung.',

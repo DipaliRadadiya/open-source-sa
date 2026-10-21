@@ -262,6 +262,87 @@ it('reports a server failure and does not log success', function () {
     expect(ActivityLog::where('action', 'permissions_fixed')->exists())->toBeFalse();
 });
 
+/*
+ * FS-C22 #18. The reset is `chown -R` plus every file to 0644 — right for a
+ * tree PHP or the web server only reads, and damaging for one a Node process
+ * or a container executes from: it stripped the executable bit from
+ * `node_modules/.bin` targets and container scripts. Decided by the row's
+ * serving profile, so a git site is judged by what it renders as.
+ */
+describe('runtimes the reset is not for', function () {
+    it('refuses before running anything', function (string $siteType, string $profile, ?string $rendering) {
+        fakeFileServer();
+        $this->application->forceFill([
+            'site_type' => $siteType,
+            'serving_profile' => $profile,
+            'rendering_type' => $rendering,
+            'php_version' => null,
+        ])->save();
+
+        $this->actingAs($this->admin)->postJson(fixUrl())
+            ->assertStatus(422)
+            ->assertJsonPath('reason', 'unsupported_runtime')
+            ->assertJsonPath('message', __('errors/application.permissions_fix_unsupported_runtime'))
+            ->assertJsonPath('errors.application.0', __('errors/application.permissions_fix_unsupported_runtime'));
+
+        // Not one command — no chown, no chmod, not even the existence probes.
+        Process::assertNothingRan();
+        expect(FixPermissionsFake::$ran)->toBe([])
+            ->and(ActivityLog::where('action', 'permissions_fixed')->exists())->toBeFalse();
+    })->with([
+        'node marketplace app' => ['n8n', 'node', null],
+        'git site rendered server-side' => ['git', 'node', 'ssr'],
+        'docker app' => ['docker', 'docker', null],
+        'one-click container app' => ['ghost', 'docker', null],
+    ]);
+
+    it('says why in the caller\'s language', function () {
+        fakeFileServer();
+        $this->application->forceFill(['site_type' => 'n8n', 'serving_profile' => 'node', 'php_version' => null])->save();
+
+        $this->actingAs($this->admin)->withHeader('Accept-Language', 'de')->postJson(fixUrl())
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('errors/application.permissions_fix_unsupported_runtime', [], 'de'));
+
+        expect(__('errors/application.permissions_fix_unsupported_runtime', [], 'de'))
+            ->not->toBe(__('errors/application.permissions_fix_unsupported_runtime', [], 'en'));
+    });
+
+    it('still resets the sites it is for', function (string $siteType, string $profile, ?string $rendering) {
+        fakeFileServer();
+        $this->application->forceFill([
+            'site_type' => $siteType,
+            'serving_profile' => $profile,
+            'rendering_type' => $rendering,
+        ])->save();
+
+        $this->actingAs($this->admin)->postJson(fixUrl())->assertOk()->assertExactJson(['fixed' => true]);
+
+        $root = '/home/siteowner/shop/public_html';
+
+        expect(FixPermissionsFake::$ran)->toContain("chown -R siteowner:siteowner {$root}")
+            ->and(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, "find {$root} -type f -exec chmod 0644")))->toBeTrue()
+            ->and(ActivityLog::where('action', 'permissions_fixed')->exists())->toBeTrue();
+    })->with([
+        'php marketplace app' => ['wordpress', 'php', null],
+        'git site rendered by php' => ['git', 'php', 'php'],
+        // Unchanged on purpose: the web server only reads a static tree, and
+        // 0644 is what it needs (bug #96 made the reset work here).
+        'git site rendered static' => ['git', 'static', 'static'],
+    ]);
+
+    it('still resets a php site on OpenLiteSpeed, secret files included', function () {
+        fakeFileServer();
+        FixPermissionsFake::$envExists = true;
+        ServerCapability::query()->update(['stack' => 'ols', 'web_server' => 'openlitespeed']);
+
+        $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
+
+        expect(FixPermissionsFake::$ran)->toContain('chown -R siteowner:siteowner /home/siteowner/shop/public_html')
+            ->and(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod') && str_contains($c, '/home/siteowner/shop/.env')))->toBeTrue();
+    });
+});
+
 describe('permissions', function () {
     it('refuses a viewer who cannot manage', function () {
         fakeFileServer();
@@ -275,6 +356,29 @@ describe('permissions', function () {
         fakeFileServer();
 
         $this->postJson(fixUrl())->assertUnauthorized();
+    });
+
+    // The runtime check is not a way round the permission one: who may ask is
+    // decided first, and on an app the reset would refuse it is still a 403
+    // or 401 rather than the 422 that describes the app.
+    it('refuses a viewer on a node app as forbidden, without running anything', function () {
+        fakeFileServer();
+        $this->application->forceFill(['site_type' => 'n8n', 'serving_profile' => 'node', 'php_version' => null])->save();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)->postJson(fixUrl())->assertForbidden();
+
+        Process::assertNothingRan();
+    });
+
+    it('denies an unauthenticated caller on a docker app, without running anything', function () {
+        fakeFileServer();
+        $this->application->forceFill(['site_type' => 'docker', 'serving_profile' => 'docker', 'php_version' => null])->save();
+
+        $this->postJson(fixUrl())->assertUnauthorized();
+
+        Process::assertNothingRan();
     });
 });
 
