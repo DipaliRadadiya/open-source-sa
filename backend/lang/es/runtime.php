@@ -89,6 +89,7 @@ return [
     ],
 
     'database_install_failed' => [
+        'apt_lock' => 'Hay otra instalación de paquetes en curso en el servidor y seguía en marcha después de que el panel la esperara. Inténtalo de nuevo en unos minutos.',
         'package_not_found' => 'No hay paquete para :version en este servidor. Comprueba que su repositorio de paquetes esté configurado y accesible.',
         // The repository was added and its index fetched successfully;
         // the engine simply has no build for this Ubuntu release.

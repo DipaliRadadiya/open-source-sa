@@ -88,7 +88,7 @@ describe('a fresh install', function () {
         $order = collect($seen)->map(fn ($p) => implode(' ', $p->command))->values();
 
         $list = $order->search(fn (string $c) => str_starts_with($c, 'tee /etc/apt/sources.list.d/mongodb'));
-        $update = $order->search(fn (string $c) => $c === 'apt-get update');
+        $update = $order->search(fn (string $c) => $c === implode(' ', aptCommand('update')));
         $install = $order->search(fn (string $c) => str_starts_with($c, 'apt-get install'));
 
         // The list on disk is not the index. Without the update in between,
@@ -179,7 +179,7 @@ describe('a fresh install', function () {
         expect($download)->not->toBeNull()
             ->and($download->command)->toContain('/etc/apt/keyrings/mongodb-server-8.0.asc')
             ->and($write->input)->toContain('signed-by=/etc/apt/keyrings/mongodb-server-8.0.asc')
-            ->and(collect($seen)->contains(fn ($p) => $p->command === ['apt-get', 'update']))->toBeTrue();
+            ->and(collect($seen)->contains(fn ($p) => $p->command === aptCommand('update')))->toBeTrue();
     });
 
     it('restores a missing key even when the repository list is already correct', function () {
@@ -216,7 +216,7 @@ describe('a fresh install', function () {
         mongoInstaller()->install();
 
         expect(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'curl'))->toBeTrue()
-            ->and(collect($seen)->contains(fn ($p) => $p->command === ['apt-get', 'update']))->toBeTrue();
+            ->and(collect($seen)->contains(fn ($p) => $p->command === aptCommand('update')))->toBeTrue();
     });
 
     it('leaves a valid repository pair alone', function () {
@@ -251,7 +251,7 @@ describe('a fresh install', function () {
         expect(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'curl'))->toBeFalse()
             ->and(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'tee'
                 && str_contains((string) ($p->command[1] ?? ''), 'mongodb-org-8.0.list')))->toBeFalse()
-            ->and(collect($seen)->contains(fn ($p) => $p->command === ['apt-get', 'update']))->toBeFalse();
+            ->and(collect($seen)->contains(fn ($p) => $p->command === aptCommand('update')))->toBeFalse();
     });
 
     it('names the codename the server actually runs, not a guess', function () {

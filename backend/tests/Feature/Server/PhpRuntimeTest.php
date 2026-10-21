@@ -308,7 +308,7 @@ it('purges and then clears what the purge cannot', function () {
     app(PhpRuntime::class)->uninstall('8.3');
 
     expect(collect($runs)->pluck('command'))
-        ->toContain(['apt-get', 'purge', '-y', 'php8.3-*'])
+        ->toContain(aptCommand('purge', '-y', 'php8.3-*'))
         ->toContain(['rm', '-rf', config('server.php_dir').'/8.3']);
 });
 

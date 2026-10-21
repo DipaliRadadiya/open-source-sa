@@ -95,8 +95,9 @@ function fakeExtensions(?callable $override = null, string $startupWarning = '')
         }
 
         // apt puts the package's .so and its mods-available ini in place.
+        // The package, not the last argument: apt() appends its lock option.
         if ($first === 'apt-get' && in_array('install', $command, true)
-            && preg_match('/^php(\d+\.\d+)-([a-z0-9_]+)$/', (string) end($command), $m)) {
+            && preg_match('/^php(\d+\.\d+)-([a-z0-9_]+)$/', (string) collect($command)->first(fn ($arg) => str_starts_with((string) $arg, 'php')), $m)) {
             File::put(test()->phpDir."/{$m[1]}/mods-available/{$m[2]}.ini", "extension={$m[2]}.so\n");
             File::put("{$soDir}/{$m[2]}.so", '');
 
@@ -470,7 +471,7 @@ it('installs with --no-install-recommends and no prompt', function () {
     app(PhpExtensionManager::class)->install($this->panel, 'xdebug');
 
     expect(collect($runs))->toContain(
-        ['apt-get', 'install', '-y', '--no-install-recommends', "php{$this->panel}-xdebug"]
+        aptCommand('install', '-y', '--no-install-recommends', "php{$this->panel}-xdebug")
     );
 });
 

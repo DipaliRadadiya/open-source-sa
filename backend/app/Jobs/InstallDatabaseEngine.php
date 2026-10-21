@@ -10,6 +10,7 @@ use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
+use App\Services\Server\ServerOps;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -41,14 +42,18 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
     /**
      * Long enough for the package download plus its post-install scripts, with
-     * room for the account provisioning after. `retry_after` in config/queue.php
+     * room for the account provisioning after — and for apt's wait on a lock
+     * another install holds, which on a fresh box (unattended-upgrades) is the
+     * usual case rather than the odd one. `retry_after` in config/queue.php
      * has to stay above this — a test asserts it does.
      */
     public int $timeout;
 
     public function __construct(public string $engine, public ?int $actorId = null)
     {
-        $this->timeout = (int) config('server.databases.install_timeout', 900) + 120;
+        $this->timeout = (int) config('server.databases.install_timeout', 900)
+            + ServerOps::aptLockBudgetSeconds()
+            + 120;
     }
 
     /**

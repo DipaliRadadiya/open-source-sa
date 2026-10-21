@@ -108,7 +108,7 @@ class PostgresInstaller implements EngineInstaller
 
         if ($fresh) {
             $this->report($onStep, 'preparing');
-            $this->installPackages($onOutput);
+            $this->installPackages($onOutput, fn () => $this->report($onStep, 'waiting_for_package_manager'));
         }
 
         $this->startCluster($onStep);
@@ -119,7 +119,7 @@ class PostgresInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    private function installPackages(?callable $onOutput): void
+    private function installPackages(?callable $onOutput, ?callable $onWait = null): void
     {
         $result = $this->serverOps->apt(
             array_merge(['apt-get', 'install', '-y', '--no-install-recommends'], $this->packages()),
@@ -127,6 +127,9 @@ class PostgresInstaller implements EngineInstaller
             timeout: (int) config('server.databases.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
             onOutput: $onOutput,
+            // A fresh box's unattended-upgrades holds the lock for minutes;
+            // the screen should say so rather than "Preparing packages".
+            onWait: $onWait,
         );
 
         if ($result->failed()) {
