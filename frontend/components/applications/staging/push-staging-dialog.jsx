@@ -54,10 +54,12 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
   async function push() {
     setPending(true);
     try {
+      // 202 with a run (RC-16): it has only started. The page shows its progress
+      // and the result; saying "pushed" here was a guess that could be wrong.
       await pushApplicationStaging(appId, mode, { backup: canBackUp && backup });
       await refreshAndWait();
       onOpenChange(false);
-      toast.success(t("done", { domain }));
+      toast.info(t("started", { domain }));
     } catch (error) {
       // A retry would only be refused as "already running"; close and let the page catch up.
       if (mayStillBeRunning(error)) {

@@ -148,6 +148,7 @@ export async function getApplicationStaging(id) {
   const result = await read(`/applications/${id}/staging`, applicationStagingResponseSchema);
   return {
     staging: result.data?.staging ?? null,
+    latestRun: result.data?.latest_run ?? null,
     failed: result.failed,
     status: result.status,
     failure: result.failure,

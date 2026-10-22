@@ -81,6 +81,7 @@ export default async function ApplicationStagingPage({ params }) {
           appId={id}
           production={application}
           staging={staging.staging}
+          latestRun={staging.latestRun}
           canManage={canManage}
           canDelete={canDelete}
           canBackUp={canBackUp && Boolean(target)}

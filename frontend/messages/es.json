@@ -5765,7 +5765,6 @@
         "cancel": "Cancelar",
         "submit": "Publicar en producción",
         "pushing": "Publicando…",
-        "done": "Pruebas publicadas en {domain}.",
         "failed": "La publicación no terminó.",
         "stillRunning": "Esto tarda más de lo que la página puede esperar. Sigue ejecutándose en el servidor, y {domain} queda fuera de servicio hasta que termine. Vuelve a comprobarlo en unos minutos.",
         "copyAge": "Copia hecha {age}",
@@ -5774,7 +5773,8 @@
         "backupToggle": "Hacer antes una copia de seguridad de la aplicación en producción",
         "backupOn": "Primero se hace una copia de seguridad. La publicación solo empieza si termina bien, así podrás restaurarla después.",
         "backupOff": "No se hace copia de seguridad. No se puede deshacer una vez terminada la publicación.",
-        "pushingWithBackup": "Haciendo copia de seguridad y publicando…"
+        "pushingWithBackup": "Haciendo copia de seguridad y publicando…",
+        "started": "Publicación en {domain} iniciada. Su progreso aparece en esta página."
       },
       "pullDialog": {
         "title": "¿Actualizar pruebas desde producción?",
@@ -5803,9 +5803,9 @@
         "cancel": "Cancelar",
         "submit": "Actualizar pruebas",
         "pulling": "Actualizando pruebas…",
-        "done": "{domain} se actualizó desde producción.",
         "failed": "No se pudo actualizar pruebas.",
-        "stillRunning": "Esto tarda más de lo que la página puede esperar. Sigue ejecutándose en el servidor. Vuelve a comprobar {domain} en unos minutos."
+        "stillRunning": "Esto tarda más de lo que la página puede esperar. Sigue ejecutándose en el servidor. Vuelve a comprobar {domain} en unos minutos.",
+        "started": "Actualizando {domain} desde producción. Su progreso aparece en esta página."
       },
       "isCopy": {
         "title": "Esta aplicación es una copia de pruebas",
@@ -5841,6 +5841,23 @@
         "confirmBody": "La base de datos de pruebas se reemplaza por la copia de {when}. Todo lo escrito en ella desde entonces también se reemplaza. Antes se guarda la base de datos actual.",
         "restored": "La base de datos de pruebas se restauró con la copia de {when}.",
         "restoreFailed": "No se pudo restaurar la copia de la base de datos."
+      },
+      "run": {
+        "busy": "Ya hay una publicación o actualización en curso. Espere a que termine.",
+        "queued": "En cola. Empieza en un momento.",
+        "running": "En curso.",
+        "pushOffline": "{domain} está fuera de línea hasta que termine.",
+        "pushRunning": "Publicando staging en {domain}…",
+        "pullRunning": "Actualizando {domain} desde producción…",
+        "pushDone": "Pruebas publicadas en {domain}.",
+        "pullDone": "{domain} se actualizó desde producción.",
+        "pushFailed": "Falló la publicación en {domain}.",
+        "pullFailed": "Falló la actualización de {domain} desde producción.",
+        "pushDoneAt": "La última publicación en {domain} terminó {time}.",
+        "pullDoneAt": "La última actualización de {domain} desde producción terminó {time}.",
+        "pushFailedAt": "La última publicación en {domain} falló {time}.",
+        "pullFailedAt": "La última actualización de {domain} desde producción falló {time}.",
+        "reference": "Referencia: {reference}"
       }
     },
     "stagingBadge": "Pruebas",
@@ -7603,6 +7620,16 @@
       "emptyFiltered": {
         "description": "Prueba con otro tipo de copia u otro periodo."
       }
+    },
+    "databases": {
+      "title": "Bases de datos independientes",
+      "description": "Bases de datos que no forman parte de ninguna aplicación. Se respaldan con su propia programación, configurada en la pestaña Copias de seguridad de cada base de datos.",
+      "manage": "Gestionar",
+      "loadFailed": "No se pudo leer qué bases de datos tienen copia de seguridad.",
+      "columns": {
+        "database": "Base de datos"
+      },
+      "notSetUpLine": "Sin configurar: no se respalda esta base de datos."
     }
   },
   "sync": {

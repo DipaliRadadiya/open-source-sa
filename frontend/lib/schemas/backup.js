@@ -207,6 +207,25 @@ export const backupTargetsResponseSchema = z.object({
  * whether a container site has any volumes, null when unknown or not a container
  * site (S-02). Declared, or Zod strips it.
  */
+// GET /backup-targets?kind=database (RC-23): databases that are not part of an
+// application, each with its own schedule. A site's database is backed up with the site.
+export const databaseBackupTargetsResponseSchema = z.object({
+  backup_targets: z
+    .array(
+      z
+        .object({
+          database_id: z.number(),
+          database_name: z.string(),
+          database_engine: z.string().nullish(),
+          backup_target: backupTargetSchema.nullable(),
+          last_backup: backupSchema.nullable(),
+        })
+        .passthrough(),
+    )
+    .default([]),
+  meta: z.object({ total: z.number().default(0) }).passthrough().default({ total: 0 }),
+});
+
 export const backupTargetResponseSchema = z.object({
   backup_target: backupTargetSchema.nullable(),
   has_volumes: z.boolean().nullable().default(null),

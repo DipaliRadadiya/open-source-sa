@@ -5765,7 +5765,6 @@
         "cancel": "Annuler",
         "submit": "Pousser en production",
         "pushing": "Envoi…",
-        "done": "Préproduction envoyée vers {domain}.",
         "failed": "L'envoi ne s'est pas terminé.",
         "stillRunning": "Cela prend plus de temps que la page ne peut attendre. L'opération continue sur le serveur, et {domain} reste hors ligne jusqu'à la fin. Revenez vérifier dans quelques minutes.",
         "copyAge": "Copie effectuée {age}",
@@ -5774,7 +5773,8 @@
         "backupToggle": "Sauvegarder d'abord l'application en production",
         "backupOn": "Une sauvegarde est faite d'abord. L'envoi ne démarre que si elle se termine, vous pourrez donc restaurer à partir d'elle ensuite.",
         "backupOff": "Aucune sauvegarde n'est faite. Impossible d'annuler une fois l'envoi terminé.",
-        "pushingWithBackup": "Sauvegarde puis envoi…"
+        "pushingWithBackup": "Sauvegarde puis envoi…",
+        "started": "Envoi vers {domain} lancé. Sa progression s'affiche sur cette page."
       },
       "pullDialog": {
         "title": "Mettre à jour la préproduction depuis la production ?",
@@ -5803,9 +5803,9 @@
         "cancel": "Annuler",
         "submit": "Mettre à jour la préproduction",
         "pulling": "Mise à jour de la préproduction…",
-        "done": "{domain} a été mise à jour depuis la production.",
         "failed": "La préproduction n'a pas pu être mise à jour.",
-        "stillRunning": "Cela prend plus de temps que la page ne peut attendre. L'opération continue sur le serveur. Revenez vérifier {domain} dans quelques minutes."
+        "stillRunning": "Cela prend plus de temps que la page ne peut attendre. L'opération continue sur le serveur. Revenez vérifier {domain} dans quelques minutes.",
+        "started": "Mise à jour de {domain} depuis la production lancée. Sa progression s'affiche sur cette page."
       },
       "isCopy": {
         "title": "Cette application est une copie de préproduction",
@@ -5841,6 +5841,23 @@
         "confirmBody": "La base de préproduction est remplacée par la copie de {when}. Tout ce qui y a été écrit depuis est aussi remplacé. La base actuelle est enregistrée d'abord.",
         "restored": "La base de préproduction a été remise depuis la copie de {when}.",
         "restoreFailed": "Impossible de remettre la copie de la base de données."
+      },
+      "run": {
+        "busy": "Un envoi ou une mise à jour est déjà en cours. Attendez qu'il se termine.",
+        "queued": "En file d'attente. Démarre dans un instant.",
+        "running": "En cours.",
+        "pushOffline": "{domain} est hors ligne jusqu'à la fin.",
+        "pushRunning": "Envoi du staging vers {domain}…",
+        "pullRunning": "Mise à jour de {domain} depuis la production…",
+        "pushDone": "Préproduction envoyée vers {domain}.",
+        "pullDone": "{domain} a été mise à jour depuis la production.",
+        "pushFailed": "L'envoi vers {domain} a échoué.",
+        "pullFailed": "La mise à jour de {domain} depuis la production a échoué.",
+        "pushDoneAt": "Dernier envoi vers {domain} terminé {time}.",
+        "pullDoneAt": "Dernière mise à jour de {domain} depuis la production terminée {time}.",
+        "pushFailedAt": "Le dernier envoi vers {domain} a échoué {time}.",
+        "pullFailedAt": "La dernière mise à jour de {domain} depuis la production a échoué {time}.",
+        "reference": "Référence : {reference}"
       }
     },
     "stagingBadge": "Préproduction",
@@ -7603,6 +7620,16 @@
       "emptyFiltered": {
         "description": "Essayez un autre type de sauvegarde ou une autre période."
       }
+    },
+    "databases": {
+      "title": "Bases de données indépendantes",
+      "description": "Les bases de données qui ne font partie d'aucune application. Elles sont sauvegardées selon leur propre planification, réglée dans l'onglet Sauvegardes de chaque base.",
+      "manage": "Gérer",
+      "loadFailed": "Impossible de lire quelles bases de données sont sauvegardées.",
+      "columns": {
+        "database": "Base de données"
+      },
+      "notSetUpLine": "Non configurée — cette base de données n'est pas sauvegardée."
     }
   },
   "sync": {

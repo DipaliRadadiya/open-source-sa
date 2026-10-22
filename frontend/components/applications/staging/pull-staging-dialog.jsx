@@ -46,10 +46,11 @@ export function PullStagingDialog({ appId, production, staging, open, onOpenChan
   async function pull() {
     setPending(true);
     try {
+      // 202 with a run (RC-16): it has only started; the page shows how it ends.
       await pullApplicationStaging(appId, mode);
       await refreshAndWait();
       onOpenChange(false);
-      toast.success(t("done", { domain: staging?.domain ?? "" }));
+      toast.info(t("started", { domain: staging?.domain ?? "" }));
     } catch (error) {
       // A retry would only be refused as "already running"; close and let the page catch up.
       if (mayStillBeRunning(error)) {

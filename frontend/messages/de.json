@@ -5765,7 +5765,6 @@
         "cancel": "Abbrechen",
         "submit": "In die Produktion übertragen",
         "pushing": "Wird übertragen…",
-        "done": "Staging nach {domain} übertragen.",
         "failed": "Die Übertragung wurde nicht abgeschlossen.",
         "stillRunning": "Das dauert länger, als die Seite warten kann. Es läuft auf dem Server weiter, und {domain} bleibt offline, bis es fertig ist. Sehen Sie in ein paar Minuten noch einmal nach.",
         "copyAge": "Kopie erstellt {age}",
@@ -5774,7 +5773,8 @@
         "backupToggle": "Zuerst ein Backup der Live-Anwendung erstellen",
         "backupOn": "Zuerst läuft ein Backup. Die Übertragung startet nur, wenn es abgeschlossen ist, sodass Sie danach daraus wiederherstellen können.",
         "backupOff": "Es wird kein Backup erstellt. Nach Abschluss der Übertragung gibt es kein Zurück.",
-        "pushingWithBackup": "Backup läuft, dann Übertragung…"
+        "pushingWithBackup": "Backup läuft, dann Übertragung…",
+        "started": "Push nach {domain} gestartet. Der Fortschritt erscheint auf dieser Seite."
       },
       "pullDialog": {
         "title": "Staging von live aktualisieren?",
@@ -5803,9 +5803,9 @@
         "cancel": "Abbrechen",
         "submit": "Staging aktualisieren",
         "pulling": "Staging wird aktualisiert…",
-        "done": "{domain} wurde von live aktualisiert.",
         "failed": "Staging konnte nicht aktualisiert werden.",
-        "stillRunning": "Das dauert länger, als die Seite warten kann. Es läuft auf dem Server weiter. Sehen Sie sich {domain} in ein paar Minuten noch einmal an."
+        "stillRunning": "Das dauert länger, als die Seite warten kann. Es läuft auf dem Server weiter. Sehen Sie sich {domain} in ein paar Minuten noch einmal an.",
+        "started": "{domain} wird vom Live-System aktualisiert. Der Fortschritt erscheint auf dieser Seite."
       },
       "isCopy": {
         "title": "Diese Anwendung ist eine Staging-Kopie",
@@ -5841,6 +5841,23 @@
         "confirmBody": "Die Staging-Datenbank wird durch die Kopie von {when} ersetzt. Alles, was seitdem hineingeschrieben wurde, wird ebenfalls ersetzt. Die aktuelle Datenbank wird zuerst gesichert.",
         "restored": "Die Staging-Datenbank wurde aus der Kopie von {when} zurückgespielt.",
         "restoreFailed": "Die Datenbankkopie konnte nicht zurückgespielt werden."
+      },
+      "run": {
+        "busy": "Ein Push oder eine Aktualisierung läuft bereits. Warten Sie, bis er fertig ist.",
+        "queued": "In der Warteschlange. Startet gleich.",
+        "running": "Läuft gerade.",
+        "pushOffline": "{domain} ist offline, bis er fertig ist.",
+        "pushRunning": "Staging wird nach {domain} übertragen…",
+        "pullRunning": "{domain} wird vom Live-System aktualisiert…",
+        "pushDone": "Staging nach {domain} übertragen.",
+        "pullDone": "{domain} wurde von live aktualisiert.",
+        "pushFailed": "Der Push nach {domain} ist fehlgeschlagen.",
+        "pullFailed": "Die Aktualisierung von {domain} vom Live-System ist fehlgeschlagen.",
+        "pushDoneAt": "Letzter Push nach {domain} beendet {time}.",
+        "pullDoneAt": "Letzte Aktualisierung von {domain} vom Live-System beendet {time}.",
+        "pushFailedAt": "Der letzte Push nach {domain} ist {time} fehlgeschlagen.",
+        "pullFailedAt": "Die letzte Aktualisierung von {domain} vom Live-System ist {time} fehlgeschlagen.",
+        "reference": "Referenz: {reference}"
       }
     },
     "stagingBadge": "Staging",
@@ -7603,6 +7620,16 @@
       "emptyFiltered": {
         "description": "Versuchen Sie eine andere Backup-Art oder einen anderen Zeitraum."
       }
+    },
+    "databases": {
+      "title": "Eigenständige Datenbanken",
+      "description": "Datenbanken, die zu keiner Anwendung gehören. Sie werden nach eigenem Zeitplan gesichert, eingestellt im Tab „Backups“ der jeweiligen Datenbank.",
+      "manage": "Verwalten",
+      "loadFailed": "Es konnte nicht gelesen werden, welche Datenbanken gesichert werden.",
+      "columns": {
+        "database": "Datenbank"
+      },
+      "notSetUpLine": "Nicht eingerichtet — diese Datenbank wird nicht gesichert."
     }
   },
   "sync": {

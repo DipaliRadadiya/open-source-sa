@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getBackupCoverage, getBackupTargetOptions } from "@/lib/backups/get-backups";
+import { getBackupCoverage, getBackupTargetOptions, getDatabaseBackupCoverage } from "@/lib/backups/get-backups";
+import { DatabaseCoverageCard } from "@/components/backups/database-coverage-card";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import { getSiteTypes } from "@/lib/applications/get-applications";
@@ -12,7 +13,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function BackupsPage() {
-  const [coverage, { destinations }, databases, appPermissions, t, { options: backupOptions }, { siteTypes }] = await Promise.all([
+  const [coverage, { destinations }, databases, appPermissions, t, { options: backupOptions }, { siteTypes }, databaseCoverage, permissions] = await Promise.all([
     getBackupCoverage(),
     getStorageDestinations(),
     // Lets the setup form warn when the chosen site has no database.
@@ -25,7 +26,17 @@ export default async function BackupsPage() {
     getBackupTargetOptions(),
     // Which site types never have a database, so their setup offers Files only.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
+    getDatabaseBackupCoverage(),
+    getPermissions(),
   ]);
+  // Databases that are not part of an application have schedules of their own (RC-23).
+  const databasesCard = (
+    <DatabaseCoverageCard
+      coverage={databaseCoverage}
+      options={backupOptions}
+      canOpenDatabases={can(permissions, "database", "view")}
+    />
+  );
 
   if (coverage.failed) return <LoadFailed description={t("loadFailed")} status={coverage.status} failure={coverage.failure} message={coverage.message} debug={coverage.debug} />;
 
@@ -36,6 +47,7 @@ export default async function BackupsPage() {
 
   if (nothingConfigured && coverage.total > 0) {
     return (
+      <div className="space-y-6">
       <BackupsEmptyState
         applications={coverage.rows.map((row) => row.application)}
         destinations={destinations}
@@ -45,10 +57,13 @@ export default async function BackupsPage() {
         siteTypes={siteTypes}
         backupOptions={backupOptions}
       />
+      {databasesCard}
+      </div>
     );
   }
 
   return (
+    <div className="space-y-6">
     <CoverageCard
       coverage={coverage}
       applications={coverage.rows.map((row) => row.application)}
@@ -59,5 +74,7 @@ export default async function BackupsPage() {
       siteTypes={siteTypes}
       backupOptions={backupOptions}
     />
+    {databasesCard}
+    </div>
   );
 }

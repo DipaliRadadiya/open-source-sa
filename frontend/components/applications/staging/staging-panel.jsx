@@ -13,10 +13,12 @@ import { PullStagingDialog } from "@/components/applications/staging/pull-stagin
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { SafetyCopiesCard } from "@/components/applications/staging/safety-copies-card";
+import { StagingRunStatus } from "@/components/applications/staging/staging-run-status";
+import { stagingRunActive } from "@/lib/schemas/application-staging";
 
 // Push takes production offline and rsyncs with `--delete` (`files` mode keeps no
 // safety copy), so it needs typed confirmation and has no default mode.
-export function StagingPanel({ appId, production, staging, canManage, canDelete = false, canBackUp = false, safetyCopies = [] }) {
+export function StagingPanel({ appId, production, staging, latestRun = null, canManage, canDelete = false, canBackUp = false, safetyCopies = [] }) {
   const t = useTranslations("applications.staging");
   const tApp = useTranslations("applications");
   const [creating, setCreating] = useState(false);
@@ -24,6 +26,8 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   const [pulling, setPulling] = useState(false);
   const [removing, setRemoving] = useState(false);
   const ready = staging?.status === "active";
+  // One push or update at a time; the API refuses a second while one is queued or running.
+  const busyReason = stagingRunActive(latestRun) ? t("run.busy") : null;
 
   // The dialogs close by being unmounted with their view, so clear their
   // flags whenever the copy appears or goes.
@@ -100,6 +104,8 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
 
   return (
     <div className="space-y-4">
+      <StagingRunStatus run={latestRun} production={production} staging={staging} />
+
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
           <div className="min-w-60 flex-1 space-y-1">
@@ -141,10 +147,12 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
             <p className="text-sm text-muted-foreground">{t("pull.body", { domain: production.domain })}</p>
           </div>
           {canManage && ready ? (
-            <Button variant="outline" onClick={() => setPulling(true)}>
-              <ArrowDownToLine className="size-4" />
-              {t("pull.action")}
-            </Button>
+            <ReasonTooltip reason={busyReason}>
+              <Button variant="outline" disabled={Boolean(busyReason)} onClick={() => setPulling(true)}>
+                <ArrowDownToLine className="size-4" />
+                {t("pull.action")}
+              </Button>
+            </ReasonTooltip>
           ) : null}
         </div>
 
@@ -165,10 +173,12 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
             ) : null}
           </div>
           {canManage && ready ? (
-            <Button variant="destructive" onClick={() => setPushing(true)}>
-              <ArrowUpFromLine className="size-4" />
-              {t("push.action")}
-            </Button>
+            <ReasonTooltip reason={busyReason}>
+              <Button variant="destructive" disabled={Boolean(busyReason)} onClick={() => setPushing(true)}>
+                <ArrowUpFromLine className="size-4" />
+                {t("push.action")}
+              </Button>
+            </ReasonTooltip>
           ) : null}
         </div>
       </Card>

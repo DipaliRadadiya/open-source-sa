@@ -5765,7 +5765,6 @@
         "cancel": "Cancelar",
         "submit": "Enviar para produção",
         "pushing": "Enviando…",
-        "done": "Staging enviado para {domain}.",
         "failed": "O envio não foi concluído.",
         "stillRunning": "Isto está demorando mais do que a página consegue esperar. Continua em execução no servidor, e {domain} fica offline até terminar. Verifique novamente em alguns minutos.",
         "copyAge": "Cópia feita {age}",
@@ -5774,7 +5773,8 @@
         "backupToggle": "Fazer antes um backup da aplicação em produção",
         "backupOn": "Primeiro é feito um backup. A publicação só começa se ele terminar, para que você possa restaurar a partir dele depois.",
         "backupOff": "Nenhum backup é feito. Não há como desfazer depois que a publicação terminar.",
-        "pushingWithBackup": "Fazendo backup e publicando…"
+        "pushingWithBackup": "Fazendo backup e publicando…",
+        "started": "Envio para {domain} iniciado. O progresso aparece nesta página."
       },
       "pullDialog": {
         "title": "Atualizar o staging a partir da produção?",
@@ -5803,9 +5803,9 @@
         "cancel": "Cancelar",
         "submit": "Atualizar staging",
         "pulling": "Atualizando o staging…",
-        "done": "{domain} foi atualizado a partir da produção.",
         "failed": "Não foi possível atualizar o staging.",
-        "stillRunning": "Isto está demorando mais do que a página consegue esperar. Continua em execução no servidor. Verifique {domain} novamente em alguns minutos."
+        "stillRunning": "Isto está demorando mais do que a página consegue esperar. Continua em execução no servidor. Verifique {domain} novamente em alguns minutos.",
+        "started": "A atualizar {domain} a partir da produção. O progresso aparece nesta página."
       },
       "isCopy": {
         "title": "Esta aplicação é uma cópia de staging",
@@ -5841,6 +5841,23 @@
         "confirmBody": "O banco de dados do staging é substituído pela cópia de {when}. Tudo o que foi escrito nele desde então também é substituído. O banco de dados atual é salvo antes.",
         "restored": "O banco de dados do staging foi restaurado a partir da cópia de {when}.",
         "restoreFailed": "Não foi possível restaurar a cópia do banco de dados."
+      },
+      "run": {
+        "busy": "Já há um envio ou atualização em curso. Aguarde que termine.",
+        "queued": "Em fila. Começa dentro de momentos.",
+        "running": "Em curso.",
+        "pushOffline": "{domain} fica offline até terminar.",
+        "pushRunning": "A enviar o staging para {domain}…",
+        "pullRunning": "A atualizar {domain} a partir da produção…",
+        "pushDone": "Staging enviado para {domain}.",
+        "pullDone": "{domain} foi atualizado a partir da produção.",
+        "pushFailed": "O envio para {domain} falhou.",
+        "pullFailed": "A atualização de {domain} a partir da produção falhou.",
+        "pushDoneAt": "O último envio para {domain} terminou {time}.",
+        "pullDoneAt": "A última atualização de {domain} a partir da produção terminou {time}.",
+        "pushFailedAt": "O último envio para {domain} falhou {time}.",
+        "pullFailedAt": "A última atualização de {domain} a partir da produção falhou {time}.",
+        "reference": "Referência: {reference}"
       }
     },
     "stagingBadge": "Staging",
@@ -7603,6 +7620,16 @@
       "emptyFiltered": {
         "description": "Tente outro tipo de backup ou outro período."
       }
+    },
+    "databases": {
+      "title": "Bancos de dados independentes",
+      "description": "Bancos de dados que não fazem parte de nenhuma aplicação. São copiados conforme o próprio agendamento, definido na aba Backups de cada banco de dados.",
+      "manage": "Gerenciar",
+      "loadFailed": "Não foi possível ler quais bancos de dados têm backup.",
+      "columns": {
+        "database": "Banco de dados"
+      },
+      "notSetUpLine": "Não configurado — este banco de dados não está sendo copiado."
     }
   },
   "sync": {

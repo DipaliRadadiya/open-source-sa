@@ -43,6 +43,8 @@ test("a finished job is announced once, from the change in the running list", ()
   const indicator = read("components/sections/operations-indicator.jsx");
   assert.match(indicator, /The first answer is the starting point, not news\./);
   assert.match(indicator, /if \(document\.hidden\) return;/);
+  // On the job's own page that page announces it; no second toast.
+  assert.match(indicator, /if \(href && window\.location\.pathname === href\) continue;/);
 });
 
 // The sidebar showed PHP, Staging and Deployments for a Docker app while it loaded.
@@ -85,4 +87,47 @@ test("the Node page points to Setup when the build tools are missing", () => {
   const page = read("app/(app)/node/page.jsx");
   assert.match(page, /!buildTools\.data\.build_tools\.installed/);
   assert.match(page, /href="\/setup"/);
+});
+
+// RC-16 made push and update-from-live answer 202 with a queued run; the dialogs said
+// "pushed" on that, and a failure later was never shown (Krishna, 21 Oct).
+test("staging push and pull say they started, and the page shows how the run ends", async () => {
+  for (const file of ["push-staging-dialog.jsx", "pull-staging-dialog.jsx"]) {
+    const dialog = read(`components/applications/staging/${file}`);
+    assert.match(dialog, /toast\.info\(t\("started"/, file);
+    assert.doesNotMatch(dialog, /toast\.success\(t\("done"/, file);
+  }
+  const status = read("components/applications/staging/staging-run-status.jsx");
+  assert.match(status, /<AutoRefresh intervalMs=\{3000\}/);
+  assert.match(status, /run\.error\?\.message/);
+  const panel = read("components/applications/staging/staging-panel.jsx");
+  assert.match(panel, /const busyReason = stagingRunActive\(latestRun\) \? t\("run\.busy"\) : null;/);
+  const { applicationStagingResponseSchema, stagingRunActive } = await import("../lib/schemas/application-staging.js");
+  const parsed = applicationStagingResponseSchema.parse({
+    staging: null,
+    latest_run: { id: 7, kind: "push", mode: "files", backup: false, status: "failed", error: { message: "Backup failed", code: "staging_failed" }, error_status: 409, backup_id: null },
+  });
+  assert.equal(parsed.latest_run.error.message, "Backup failed");
+  assert.equal(stagingRunActive({ status: "queued" }), true);
+  assert.equal(stagingRunActive({ status: "succeeded" }), false);
+});
+
+// Databases outside any application (RC-23) had schedules but no place on Backups →
+// Overview, so an unprotected one went unnoticed.
+test("Backups overview lists standalone databases and links each to its Backups tab", async () => {
+  const { databaseBackupTargetsResponseSchema } = await import("../lib/schemas/backup.js");
+  const parsed = databaseBackupTargetsResponseSchema.parse({
+    backup_targets: [
+      { database_id: 4, database_name: "shop", database_engine: "mariadb", backup_target: null, last_backup: null },
+    ],
+    meta: { total: 1 },
+  });
+  assert.equal(parsed.backup_targets[0].backup_target, null);
+  const card = read("components/backups/database-coverage-card.jsx");
+  assert.match(card, /href=\{`\/databases\/\$\{row\.original\.database\.id\}\?tab=backups`\}/);
+  assert.match(card, /t\("notSetUpLine"\)/);
+  assert.match(card, /canOpenDatabases \?/);
+  const page = read("app/(app)/backups/page.jsx");
+  assert.match(page, /getDatabaseBackupCoverage\(\)/);
+  assert.match(page, /canOpenDatabases=\{can\(permissions, "database", "view"\)\}/);
 });

@@ -92,7 +92,7 @@ function TypeCell({ row }) {
   return <span className="block truncate text-sm">{target.type_title ?? target.type}</span>;
 }
 
-function StorageCell({ row }) {
+export function StorageCell({ row }) {
   const t = useTranslations("backups.coverage");
   const { target } = row.original;
   return (
@@ -102,7 +102,7 @@ function StorageCell({ row }) {
   );
 }
 
-function ScheduleCell({ row, options }) {
+export function ScheduleCell({ row, options }) {
   const t = useTranslations("backups.coverage");
   const tb = useTranslations("backups");
   const format = useFormatter();
@@ -131,7 +131,7 @@ function ScheduleCell({ row, options }) {
 }
 
 /** `next_run_at_human` comes from the backend, never computed here. */
-function RunsCell({ row }) {
+export function RunsCell({ row }) {
   const t = useTranslations("backups.coverage");
   const { target, lastBackup } = row.original;
   if (!target) return <Placeholder>{t("placeholders.lastRun")}</Placeholder>;

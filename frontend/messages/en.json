@@ -5765,7 +5765,6 @@
         "cancel": "Cancel",
         "submit": "Push to production",
         "pushing": "Pushing…",
-        "done": "Staging pushed to {domain}.",
         "failed": "The push did not finish.",
         "stillRunning": "This is taking longer than the page can wait. It's still running on the server, and {domain} stays offline until it finishes. Check again in a few minutes.",
         "copyAge": "Copy made {age}",
@@ -5774,7 +5773,8 @@
         "backupToggle": "Back up the live application first",
         "backupOn": "A backup runs first. The push only starts if it finishes, so you can restore from it afterwards.",
         "backupOff": "No backup is taken. There is no undo once the push finishes.",
-        "pushingWithBackup": "Backing up, then pushing…"
+        "pushingWithBackup": "Backing up, then pushing…",
+        "started": "Push to {domain} started. Its progress shows on this page."
       },
       "pullDialog": {
         "title": "Update staging from live?",
@@ -5803,9 +5803,9 @@
         "cancel": "Cancel",
         "submit": "Update staging",
         "pulling": "Updating staging…",
-        "done": "{domain} was updated from live.",
         "failed": "Staging couldn't be updated.",
-        "stillRunning": "This is taking longer than the page can wait. It's still running on the server. Check {domain} again in a few minutes."
+        "stillRunning": "This is taking longer than the page can wait. It's still running on the server. Check {domain} again in a few minutes.",
+        "started": "Updating {domain} from live. Its progress shows on this page."
       },
       "isCopy": {
         "title": "This application is a staging copy",
@@ -5841,6 +5841,23 @@
         "confirmBody": "The staging database is replaced with the copy from {when}. Anything written to it since then is replaced too. The current database is saved first.",
         "restored": "The staging database was put back from the copy from {when}.",
         "restoreFailed": "The database copy couldn't be put back."
+      },
+      "run": {
+        "busy": "A push or update is already running. Wait for it to finish.",
+        "queued": "Queued. It starts in a moment.",
+        "running": "Running now.",
+        "pushOffline": "{domain} is offline until it finishes.",
+        "pushRunning": "Pushing staging to {domain}…",
+        "pullRunning": "Updating {domain} from live…",
+        "pushDone": "Staging pushed to {domain}.",
+        "pullDone": "{domain} was updated from live.",
+        "pushFailed": "The push to {domain} failed.",
+        "pullFailed": "Updating {domain} from live failed.",
+        "pushDoneAt": "Last push to {domain} finished {time}.",
+        "pullDoneAt": "Last update of {domain} from live finished {time}.",
+        "pushFailedAt": "The last push to {domain} failed {time}.",
+        "pullFailedAt": "The last update of {domain} from live failed {time}.",
+        "reference": "Reference: {reference}"
       }
     },
     "stagingBadge": "Staging",
@@ -7603,6 +7620,16 @@
       "emptyFiltered": {
         "description": "Try a different backup type or time."
       }
+    },
+    "databases": {
+      "title": "Databases on their own",
+      "description": "Databases that aren't part of an application. They are backed up on their own schedule, set on each database's Backups tab.",
+      "manage": "Manage",
+      "loadFailed": "Couldn't read which databases are backed up.",
+      "columns": {
+        "database": "Database"
+      },
+      "notSetUpLine": "Not set up — this database is not being backed up."
     }
   },
   "sync": {

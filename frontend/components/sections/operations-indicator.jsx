@@ -79,11 +79,14 @@ export function OperationsIndicator({ canOpenApplications = false }) {
       for (const previous of gone) {
         const now = recent.find((row) => row.kind === previous.kind && String(row.id) === String(previous.id));
         if (!now || isActive(now)) continue;
+        // Already on the job's own page: that page says how it ended; one message, not two.
+        const href = operationHref(now, { canOpenApplications });
+        if (href && window.location.pathname === href) continue;
         if (now.state === "failed") toast.error(t("toast.failed", { job: label(now) }));
         else toast.success(t("toast.done", { job: label(now) }));
       }
     },
-    [fetchList, label, t],
+    [fetchList, label, t, canOpenApplications],
   );
 
   useEffect(() => {

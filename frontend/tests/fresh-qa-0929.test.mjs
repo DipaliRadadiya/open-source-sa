@@ -360,7 +360,8 @@ test("Flicker sweep: dialogs re-read the page before they close and toast", () =
     const at = src.indexOf(`await ${call}(`);
     assert.ok(at > 0, `${file}: ${call}`);
     const after = src.slice(at, src.indexOf("} catch", at));
-    assert.match(after, /await refreshAndWait\(\);[\s\S]*toast\.success|await refreshAndWait\(\);[\s\S]*showActionSuccess/, file);
+    // A queued staging push says it started (toast.info), not that it finished.
+    assert.match(after, /await refreshAndWait\(\);[\s\S]*toast\.(success|info)|await refreshAndWait\(\);[\s\S]*showActionSuccess/, file);
     assert.doesNotMatch(after, /router\.refresh\(\);/, file);
   }
 });

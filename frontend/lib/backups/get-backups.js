@@ -17,6 +17,7 @@ import {
   databaseBackupTargetResponseSchema,
   backupsResponseSchema,
   restoresResponseSchema,
+  databaseBackupTargetsResponseSchema,
 } from "@/lib/schemas/backup";
 
 // How long a finished restore keeps its banner (and its Undo) across reloads.
@@ -224,6 +225,21 @@ export async function getBackupCoverage() {
     status: result.status,
     failure: result.failure, message: result.message, debug: result.debug,
   };
+}
+
+// Databases with no application (RC-23), shaped like the coverage rows so the same
+// cells render them. A failed read is reported, never shown as "no databases".
+export async function getDatabaseBackupCoverage() {
+  const result = await read("/backup-targets", databaseBackupTargetsResponseSchema, {
+    searchParams: { kind: "database", per_page: 100 },
+  });
+  const rows = (result.data?.backup_targets ?? []).map((entry) => ({
+    database: { id: entry.database_id, name: entry.database_name, engine: entry.database_engine ?? null },
+    target: entry.backup_target,
+    lastBackup: entry.last_backup,
+    state: classify(entry.backup_target, entry.last_backup),
+  }));
+  return { rows, total: result.data?.meta?.total ?? rows.length, failed: result.failed, status: result.status, failure: result.failure, message: result.message };
 }
 
 // Each application's backup standing for the Applications list, by id: one request for
