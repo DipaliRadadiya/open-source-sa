@@ -11,15 +11,28 @@ use Illuminate\Support\Facades\File;
  *
  * Deliberately a filesystem read rather than `timedatectl`: this is called once
  * per cron job in a list response, and spawning a process per row would make a
- * cheap endpoint expensive. Memoized per request on top of that.
+ * cheap endpoint expensive.
+ *
+ * Memoized against what it was read from — the link's target and the file's
+ * mtime — not for the life of the process. The queue worker runs for days:
+ * a plain memo kept the zone it first read, so a PHP version installed after
+ * a timezone change was given the old zone (OLD-4, 2026-10-22). Checking the
+ * key is a readlink and a stat; reading the zone again only follows a change.
  */
 class ServerTimezone
 {
-    private static ?string $cached = null;
+    /** @var array{0: string, 1: string}|null [what it was read from, the zone] */
+    private static ?array $cached = null;
 
     public static function get(): string
     {
-        return self::$cached ??= self::detect();
+        $source = self::source();
+
+        if (self::$cached === null || self::$cached[0] !== $source) {
+            self::$cached = [$source, self::detect()];
+        }
+
+        return self::$cached[1];
     }
 
     /**
@@ -28,6 +41,21 @@ class ServerTimezone
     public static function forget(): void
     {
         self::$cached = null;
+    }
+
+    /**
+     * What a timezone change rewrites: the link (`timedatectl`) or the file.
+     */
+    private static function source(): string
+    {
+        $link = (string) config('server.localtime_link', '/etc/localtime');
+        $file = (string) config('server.timezone_file', '/etc/timezone');
+
+        // PHP's stat cache would otherwise answer from before the change.
+        clearstatcache(true, $link);
+        clearstatcache(true, $file);
+
+        return (is_link($link) ? (string) readlink($link) : '').'|'.(@filemtime($file) ?: 0);
     }
 
     /**

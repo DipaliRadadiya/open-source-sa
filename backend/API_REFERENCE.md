@@ -4897,7 +4897,7 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 
 **`422` on `ssh_access`** when it is `true` alongside a shell with `allows_login: false`.
 
-**`422` on `username`** when a user **or group** of that name already exists on the server (e.g. `lsadm`, `ssh-users`, the panel's own account) — the name is only unique among the panel's rows.
+**`422` on `username`** when a user **or group** of that name already exists on the server (e.g. `lsadm`, `ssh-users`, the panel's own account) — the name is only unique among the panel's rows. Asked of the server (`getent passwd` and `getent group`) once the rest of the request is valid, before anything is written; the same check guards `system_user.username` on `POST /applications` and the generated name (2026-10-22 — a group-only name such as `docker` used to pass there and fail in the provisioning job). Names that are system groups or the panel's own (`sudo`, `adm`, `docker`, `lxd`, `ssh-users`, `sv-app-shell`, `panel`, …) are refused as reserved without asking.
 
 **`422` on `password`** when it contains a line break or any other control character. **`422` on `public_key`** when it is more than one line, or its key data is not the type it claims to be.
 

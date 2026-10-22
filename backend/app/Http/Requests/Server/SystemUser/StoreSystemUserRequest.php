@@ -6,6 +6,7 @@ use App\Enums\LoginShell;
 use App\Rules\InstalledShell;
 use App\Services\Server\SshKeyManager;
 use App\Services\Server\SystemUsers\ChpasswdLine;
+use App\Services\Server\SystemUsers\SystemUsernameGenerator;
 use Closure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,6 +25,11 @@ class StoreSystemUserRequest extends FormRequest
         'news', 'uucp', 'proxy', 'www-data', 'backup', 'list', 'irc', 'gnats',
         'nobody', 'systemd-network', 'mysql', 'postgres', 'mongodb', 'redis',
         'ubuntu', 'admin', 'sshd',
+        // Groups useradd would collide with, and the panel's own accounts
+        // and groups (RC-27). The server check catches these too; listed so
+        // the sync discoverer never adopts them either.
+        'sudo', 'adm', 'docker', 'lxd', 'staff', 'users', 'nogroup', 'syslog',
+        'systemd-journal', 'ssh-users', 'sv-app-shell', 'panel',
     ];
 
     public function authorize(): bool
@@ -81,6 +87,16 @@ class StoreSystemUserRequest extends FormRequest
 
             if (LoginShell::allowsLoginFor($shell) === false) {
                 $validator->errors()->add('ssh_access', __('errors/system-user.ssh_needs_login_shell'));
+            }
+        });
+
+        // Last, and only for an otherwise valid request, so a refused form runs
+        // nothing on the server: a name that is already a user or group there
+        // (`docker`, `lxd`, an account made by hand) is a 422 now, as on the
+        // application form, rather than useradd's failure (RC-27).
+        $validator->after(function (Validator $validator) {
+            if ($validator->errors()->isEmpty() && ! app(SystemUsernameGenerator::class)->available((string) $this->input('username'))) {
+                $validator->errors()->add('username', __('errors/system-user.username_taken_on_server'));
             }
         });
     }

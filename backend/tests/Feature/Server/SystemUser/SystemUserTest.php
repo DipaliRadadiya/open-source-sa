@@ -40,7 +40,13 @@ it('creates a system user, running useradd and persisting the row', function () 
 });
 
 it('returns a translated error with a reference when useradd fails', function () {
-    Process::fake(['useradd*' => Process::result(output: '', errorOutput: 'boom', exitCode: 1)]);
+    // getent answered too ("no such name"): unfaked, it reads the machine
+    // running the tests, which may well have a `deploy` account.
+    Process::fake(fn ($process) => match (true) {
+        in_array('getent', (array) $process->command, true) => Process::result(exitCode: 2),
+        in_array('useradd', (array) $process->command, true) => Process::result(output: '', errorOutput: 'boom', exitCode: 1),
+        default => Process::result(),
+    });
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('t')->plainTextToken;
 

@@ -50,3 +50,28 @@ it('says UTC when neither names a zone', function () {
 
     expect(ServerTimezone::get())->toBe('UTC');
 });
+
+/*
+ * OLD-4 (2026-10-22): the zone was memoised for the life of the process, and
+ * the queue worker lives for days — a PHP version installed after a timezone
+ * change was given the zone the worker first read. No forget() here: that is
+ * exactly what a long-lived worker never calls.
+ */
+it('follows a timezone change in the same process without being told', function () {
+    symlink('/usr/share/zoneinfo/Etc/UTC', $this->tzDir.'/localtime');
+    expect(ServerTimezone::get())->toBe('Etc/UTC');
+
+    unlink($this->tzDir.'/localtime');
+    symlink('/usr/share/zoneinfo/Asia/Kolkata', $this->tzDir.'/localtime');
+
+    expect(ServerTimezone::get())->toBe('Asia/Kolkata');
+});
+
+it('follows a rewritten /etc/timezone when there is no link', function () {
+    expect(ServerTimezone::get())->toBe('Etc/UTC');
+
+    file_put_contents($this->tzDir.'/timezone', "Europe/Berlin\n");
+    touch($this->tzDir.'/timezone', time() + 5);
+
+    expect(ServerTimezone::get())->toBe('Europe/Berlin');
+});

@@ -4,7 +4,6 @@ namespace App\Services\Server\SystemUsers;
 
 use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
 use App\Models\SystemUser;
-use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -35,7 +34,7 @@ class SystemUsernameGenerator
     /** Enough that exhausting them means something is wrong, not unlucky. */
     private const ATTEMPTS = 12;
 
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(private ServerAccountNames $names) {}
 
     public function forApplication(string $applicationName): string
     {
@@ -124,20 +123,14 @@ class SystemUsernameGenerator
         // empty — so `id` would report every absent user as an unreadable
         // failure. `getent` exits 2 and says nothing, which is the shape
         // ServerOps is built to read. Verified on the box rather than assumed.
-        $result = $this->serverOps->run(
-            ['getent', 'passwd', $username],
-            ['feature' => 'system_user', 'op' => 'probe_username'],
-            expectedExitCodes: [2],
-        );
-
-        // Not `failed()`. A command that could not run at all — sudo refusing,
-        // getent missing — must not read as "the name is free", because the
-        // next step would be a useradd that fails for a reason nobody can see.
-        // Unanswerable is treated as taken, so the caller tries another name.
-        if (! $result->answered) {
-            return false;
-        }
-
-        return ! $result->ok;
+        //
+        // A group counts too: useradd makes one of the same name, so a name
+        // that is only a group (`docker`) fails just like a user (RC-27).
+        //
+        // A command that could not run at all — sudo refusing, getent missing
+        // — must not read as "the name is free", because the next step would
+        // be a useradd that fails for a reason nobody can see. Unanswerable is
+        // treated as taken, so the caller tries another name.
+        return $this->names->taken($username) === false;
     }
 }
