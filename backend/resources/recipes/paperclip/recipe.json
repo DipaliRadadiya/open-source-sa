@@ -1,0 +1,103 @@
+{
+    "schema": 1,
+    "slug": "paperclip",
+    "version": 1,
+    "title": "Paperclip",
+    "tagline": {
+        "en": "Run a team of AI agents like a company, with goals, budgets and approvals",
+        "es": "Dirige un equipo de agentes de IA como una empresa, con objetivos, presupuestos y aprobaciones",
+        "de": "Ein Team aus KI-Agenten wie ein Unternehmen führen, mit Zielen, Budgets und Freigaben",
+        "fr": "Dirigez une équipe d’agents IA comme une entreprise, avec des objectifs, des budgets et des validations",
+        "pt": "Gerencie uma equipe de agentes de IA como uma empresa, com metas, orçamentos e aprovações",
+        "ja": "目標・予算・承認を備えた会社のように AI エージェントのチームを運営",
+        "ru": "Управляйте командой ИИ-агентов как компанией: цели, бюджеты и согласования",
+        "hi": "लक्ष्यों, बजट और स्वीकृतियों के साथ AI एजेंटों की टीम को एक कंपनी की तरह चलाएँ"
+    },
+    "category": "ai",
+    "icon": "paperclip",
+    "popular": false,
+    "catalog_order": 870,
+    "docs_url": "https://github.com/paperclipai/paperclip/blob/v2026.1012.0/doc/DOCKER.md",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/paperclipai/paperclip:2026.1012.0",
+            "tested": [
+                "ghcr.io/paperclipai/paperclip:2026.1012.0"
+            ]
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
+        }
+    },
+    "services": [
+        {
+            "name": "paperclip",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 3100,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/paperclip",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "BETTER_AUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "PAPERCLIP_TOOL_ACTION_SIGNING_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "POSTGRES_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "PAPERCLIP_PUBLIC_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "cli_examples": [
+        {
+            "label": "Check the server's health",
+            "command": "gosu node node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts health --api-base http://localhost:3100"
+        },
+        {
+            "label": "Back up the database",
+            "command": "gosu node node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts db:backup"
+        },
+        {
+            "label": "List CLI commands",
+            "command": "gosu node node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts --help"
+        }
+    ],
+    "notes": [
+        "The first visitor creates the instance administrator: open the site right after install, choose \"Sign in / Create account\", create an account, then claim the instance on the \"Finish setting up this Paperclip\" page. Until then anyone who reaches the URL can claim it. The host fallback that page mentions (`paperclipai auth bootstrap-ceo`) does not work in this container: the CLI needs a config.json that an env-only Docker install never writes (the same is true of `doctor`), so claim the instance from the browser.",
+        "Paperclip runs in authenticated mode with private exposure, upstream's own Docker default and the mode that allows the browser claim. Public exposure would disable the claim and fail local stdio MCP closed, so it is not used.",
+        "PAPERCLIP_PUBLIC_URL is the url key: the auth base URL, trusted origins and allowed hostnames derive from it, so a domain change or a new certificate re-renders it.",
+        "Auth rate limiting is on (PAPERCLIP_AUTH_RATE_LIMIT_ENABLED=true; Better Auth's sign-in rule is 3 attempts per 10 s). It keys on the client IP from the panel's X-Forwarded-For, which holds exactly one address for a normal client, so one client hitting the limit does not lock out others (verified live). A request that brings its own X-Forwarded-For falls back to one shared bucket; Paperclip exposes no trusted-proxy setting for Better Auth.",
+        "Pending database migrations are applied on start (PAPERCLIP_MIGRATION_AUTO_APPLY=true): a fresh database is migrated on first boot, and after an image update the new migrations run before the server listens. The log shows \"Migrations already applied\" on a normal restart.",
+        "The image ships the Claude Code, Codex, OpenCode, Gemini and Kimi CLIs for local agents. The recipe ships no provider key: connect a subscription or an API key in Paperclip when you create an agent (the agent wizard asks for one first, and an agent's environment test reports \"login is required\" until then). Agent commands run inside this container with its access to the /paperclip volume and the internet; there is no docker.sock.",
+        "No user is set: the image's tini entrypoint starts as root, makes /paperclip owned by the node user and runs the server as node with gosu. The CLI commands below go through `gosu node` for the same reason (HOME is the volume); the CLI runs from source with the bundled tsx, because the image has no built `paperclipai` binary, and `pnpm paperclipai` would first download pnpm. Paperclip also writes its own database backups to /paperclip/instances/default/data/backups every hour.",
+        "The startup banner's \"Agent JWT missing\" warning is cosmetic: with PAPERCLIP_AGENT_JWT_SECRET unset (as in upstream's compose), Paperclip signs agent tokens with BETTER_AUTH_SECRET.",
+        "pids_limit 2048 and the 90 s stop grace period are upstream's: the limit is a backstop against leaked agent processes, and the grace period lets running heartbeat jobs drain on stop.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-49), Medium boxes: created from the 1-Click Recipes tab, Running in 206 to 219 s including the 2.6 GB pull (10 GB unpacked), HTTPS, sign-up and claim, company, agent and environment test, a task appearing live over the WebSocket, per-IP rate limiting, restart and re-create with data kept. The app idles at about 0.75 to 0.9 GiB of the 2g floor and peaked at 1.35 GiB (67 percent) during an agent environment test; the database idles near 100 MiB. Every image ref below is in its tested list."
+    ]
+}

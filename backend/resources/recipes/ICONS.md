@@ -169,6 +169,7 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | --- | --- | --- | --- |
 | `crawl4ai` | [official raster](https://raw.githubusercontent.com/unclecode/crawl4ai/v0.9.5/deploy/docker/static/assets/logo.png) | Apache-2.0 | The official mark is raster-only (no SVG in the repository at v0.9.5). The "X" with two chevrons was cut from the 746 × 130 wordmark logo, without the lettering, and traced to a one-colour vector (potrace on an 8× upscale, colour `#48dddd` sampled from the PNG), centred in a square viewBox; no raster embedded. |
 | `khoj` | [source](https://raw.githubusercontent.com/khoj-ai/khoj/2.0.0-beta.28/src/khoj/interface/web/assets/icons/khoj.svg) | AGPL-3.0 | Official lantern mark from the 2.0.0-beta.28 tag. Its outline uses `currentColor`, which is set here to near-black (`#18181b`, upstream's `fill-zinc-950`), on a rounded white backing so it stays legible in the dark panel theme; the React-only `className`/`clipPath` attributes and comments removed, paths and the three flame colours unchanged. |
+| `paperclip` | [official vector](https://raw.githubusercontent.com/paperclipai/paperclip/v2026.1012.0/docs/favicon.svg) | MIT | Official paperclip mark from the docs favicon (white paperclip on the brand-blue rounded square); unchanged. |
 
 ## Licence references
 

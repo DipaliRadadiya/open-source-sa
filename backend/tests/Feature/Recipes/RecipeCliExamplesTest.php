@@ -64,5 +64,5 @@ it('gives every other recipe no examples yet', function () {
         ->values()
         ->all();
 
-    expect($with)->toBe(['openclaw']);
+    expect($with)->toBe(['openclaw', 'paperclip']);
 });
