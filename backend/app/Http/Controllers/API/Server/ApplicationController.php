@@ -38,6 +38,7 @@ use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\StrandedProvisioning;
+use App\Services\Server\Certificates\CertificateLock;
 use App\Services\VisiblePermissions;
 use App\Support\ListSearch;
 use App\Support\ListSort;
@@ -353,6 +354,7 @@ class ApplicationController extends Controller
         DeleteApplicationDockerResources $dockerResources,
         StrandedProvisioning $stranded,
         AdoptedSiteConfig $adopted,
+        CertificateLock $certificates,
     ): JsonResponse {
         // First, before anything at all changes: deleting the files of a site
         // that a worker Server Sync adopted — from a shared supervisor file or
@@ -364,64 +366,77 @@ class ApplicationController extends Controller
             $adopted->refuseUnprovenWorkers($application);
         }
 
-        // A queued worker can still be writing this site's files and config.
-        // Deleting its record now would leave those mutations untracked — unless
-        // its install job is provably gone, which would otherwise leave the site
-        // undeletable for good (StrandedProvisioning).
-        if ($stranded->close($application)) {
-            $application->refresh();
+        // Takes turns with issuing this site's certificate (CertificateLock),
+        // before the first write below — the stranded-install close included —
+        // so a delete that waits out an issuance answers 503 with nothing
+        // changed. Held until the row is gone: an issuance that then gets the
+        // lock finds no site and creates nothing, and one that held it first
+        // has finished, so the certificate step below removes a lineage that
+        // exists instead of losing to certbot's own lock (2026-10-21).
+        $certificateLock = $certificates->forDelete($application);
+
+        try {
+            // A queued worker can still be writing this site's files and config.
+            // Deleting its record now would leave those mutations untracked — unless
+            // its install job is provably gone, which would otherwise leave the site
+            // undeletable for good (StrandedProvisioning).
+            if ($stranded->close($application)) {
+                $application->refresh();
+            }
+
+            abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
+
+            // Its backups are archived on delete; one still being written, or a
+            // restore still replacing the site, would finish against nothing.
+            // Refused before anything is removed from the server.
+            $backupBusy = Backup::query()->where('application_id', $application->id)
+                ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
+                ->exists()
+                || Restore::inProgressFor($application->id);
+
+            if ($backupBusy) {
+                throw ValidationException::withMessages([
+                    'application' => [__('backup.errors.delete_site_backup_running')],
+                ]);
+            }
+
+            // Read before the record goes. `databases.application_id` is
+            // `nullOnDelete`, so the moment the application row is deleted nothing
+            // points at these any more and the databases this call was asked to
+            // remove can no longer be found.
+            $attached = $request->boolean('remove_databases')
+                ? $application->databases()->with('users')->get()
+                : null;
+
+            // Decided BEFORE the row is deleted, because "does another site mount this"
+            // is a query over applications and after the delete every volume looks
+            // unclaimed. Removed AFTER deprovision, because `docker volume rm` refuses a
+            // volume any container references and `docker network rm` refuses a network
+            // with an attached endpoint — and until `compose down` runs, this site's own
+            // containers are both.
+            //
+            // Doing both halves up front was the first attempt and failed on a real box
+            // with `solo-net:remove-failed`. Same before/after split as the databases
+            // below, for the same kind of reason.
+            $dockerPlan = $request->boolean('remove_docker_resources')
+                ? $dockerResources->plan($application)
+                : null;
+
+            // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
+            // pasted compose file's own named volumes survive the delete they were
+            // explicitly included in — found on a real box, see ContainerSupervisor.
+            // Read before the row goes, as the databases are.
+            $owner = $request->boolean('remove_system_user') ? $application->systemUser : null;
+
+            $deprovision->execute(
+                $application,
+                $request->boolean('remove_files'),
+                $request->boolean('remove_docker_resources'),
+            );
+            $action->execute($application);
+        } finally {
+            $certificateLock->release();
         }
-
-        abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
-
-        // Its backups are archived on delete; one still being written, or a
-        // restore still replacing the site, would finish against nothing.
-        // Refused before anything is removed from the server.
-        $backupBusy = Backup::query()->where('application_id', $application->id)
-            ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
-            ->exists()
-            || Restore::inProgressFor($application->id);
-
-        if ($backupBusy) {
-            throw ValidationException::withMessages([
-                'application' => [__('backup.errors.delete_site_backup_running')],
-            ]);
-        }
-
-        // Read before the record goes. `databases.application_id` is
-        // `nullOnDelete`, so the moment the application row is deleted nothing
-        // points at these any more and the databases this call was asked to
-        // remove can no longer be found.
-        $attached = $request->boolean('remove_databases')
-            ? $application->databases()->with('users')->get()
-            : null;
-
-        // Decided BEFORE the row is deleted, because "does another site mount this"
-        // is a query over applications and after the delete every volume looks
-        // unclaimed. Removed AFTER deprovision, because `docker volume rm` refuses a
-        // volume any container references and `docker network rm` refuses a network
-        // with an attached endpoint — and until `compose down` runs, this site's own
-        // containers are both.
-        //
-        // Doing both halves up front was the first attempt and failed on a real box
-        // with `solo-net:remove-failed`. Same before/after split as the databases
-        // below, for the same kind of reason.
-        $dockerPlan = $request->boolean('remove_docker_resources')
-            ? $dockerResources->plan($application)
-            : null;
-
-        // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
-        // pasted compose file's own named volumes survive the delete they were
-        // explicitly included in — found on a real box, see ContainerSupervisor.
-        // Read before the row goes, as the databases are.
-        $owner = $request->boolean('remove_system_user') ? $application->systemUser : null;
-
-        $deprovision->execute(
-            $application,
-            $request->boolean('remove_files'),
-            $request->boolean('remove_docker_resources'),
-        );
-        $action->execute($application);
 
         if ($dockerPlan !== null) {
             $dockerResources->apply($application, $dockerPlan);

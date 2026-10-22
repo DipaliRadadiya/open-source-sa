@@ -654,6 +654,11 @@ return [
             'is another process using it',
             // Generic EAGAIN from a lock file.
             'resource temporarily unavailable',
+            // certbot takes its lock before it does anything, so this one
+            // started nothing either. Usually certbot's own renew timer; it
+            // made a site delete's `certbot delete` fail outright while an
+            // issuance was running (2026-10-21).
+            'another instance of certbot is already running',
         ],
     ],
 
@@ -1412,6 +1417,32 @@ return [
         // successful issuance and leaves a certificate on disk that the panel
         // thinks failed.
         'timeout' => 180,
+
+        // Issuing a site's certificate and deleting the site take turns
+        // (CertificateLock). The numbers have to fit the things around them:
+        //
+        // ttl:           longer than any live holder, so the lock never lapses
+        //                under one. The issuing job is killed at its 600s
+        //                timeout; a delete is a request behind a 300s proxy
+        //                timeout. 900 clears both, and is how long a holder
+        //                that died without releasing blocks the next one.
+        // delete_wait:   how long a delete waits for an issuance before
+        //                answering 503 "busy, try again" — far inside the
+        //                proxy's 300s, so the answer arrives.
+        // requeue_delay: the job never waits for the lock inside a worker
+        //                (that would spend its own 600s timeout). Held, it
+        //                dispatches a fresh copy of itself this much later —
+        //                still one attempt each, so a certbot error is never
+        //                retried against Let's Encrypt's rate limit.
+        // max_requeues:  bounds that. 30 x 30s outlasts the ttl, so even a
+        //                dead holder's lock has lapsed before the job gives up
+        //                and marks the certificate failed.
+        'lock' => [
+            'ttl' => (int) env('SV_CERTIFICATE_LOCK_TTL', 900),
+            'delete_wait' => (int) env('SV_CERTIFICATE_LOCK_DELETE_WAIT', 20),
+            'requeue_delay' => (int) env('SV_CERTIFICATE_LOCK_REQUEUE_DELAY', 30),
+            'max_requeues' => (int) env('SV_CERTIFICATE_LOCK_MAX_REQUEUES', 30),
+        ],
 
         // Try for a certificate on its own once a site is provisioned, when
         // the domain already points here — a migrated site, or a record set in
