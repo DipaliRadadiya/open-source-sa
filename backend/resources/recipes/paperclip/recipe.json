@@ -1,0 +1,78 @@
+{
+    "schema": 1,
+    "slug": "paperclip",
+    "version": 1,
+    "title": "Paperclip",
+    "tagline": {
+        "en": "Run a team of AI agents like a company, with goals, budgets and approvals",
+        "es": "Dirige un equipo de agentes de IA como una empresa, con objetivos, presupuestos y aprobaciones",
+        "de": "Ein Team aus KI-Agenten wie ein Unternehmen führen, mit Zielen, Budgets und Freigaben",
+        "fr": "Dirigez une équipe d’agents IA comme une entreprise, avec des objectifs, des budgets et des validations",
+        "pt": "Gerencie uma equipe de agentes de IA como uma empresa, com metas, orçamentos e aprovações",
+        "ja": "目標・予算・承認を備えた会社のように AI エージェントのチームを運営",
+        "ru": "Управляйте командой ИИ-агентов как компанией: цели, бюджеты и согласования",
+        "hi": "लक्ष्यों, बजट और स्वीकृतियों के साथ AI एजेंटों की टीम को एक कंपनी की तरह चलाएँ"
+    },
+    "category": "ai",
+    "icon": "paperclip",
+    "popular": false,
+    "catalog_order": 870,
+    "docs_url": "https://github.com/paperclipai/paperclip/blob/v2026.1012.0/doc/DOCKER.md",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/paperclipai/paperclip:2026.1012.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "paperclip",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 3100,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/paperclip",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "BETTER_AUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "PAPERCLIP_TOOL_ACTION_SIGNING_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "POSTGRES_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "PAPERCLIP_PUBLIC_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor creates the instance administrator: open the site right after install, sign up, then click \"Claim this instance\". Until then anyone who reaches the URL can claim it.",
+        "Paperclip runs in authenticated mode with private exposure, upstream's own Docker default; it is the mode that allows the browser claim. Public exposure would disable the claim and fail local stdio MCP closed, so it is not used.",
+        "PAPERCLIP_PUBLIC_URL is the url key: the auth base URL, callbacks and the allowed hostnames derive from it, so a domain change or a new certificate re-renders it."
+    ]
+}

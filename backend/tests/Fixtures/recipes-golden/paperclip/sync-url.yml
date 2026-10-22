@@ -1,0 +1,64 @@
+name: sv-app-4242
+
+services:
+  paperclip:
+    image: ghcr.io/paperclipai/paperclip:2026.1012.0
+    restart: unless-stopped
+    mem_limit: 2g
+    pids_limit: 2048
+    stop_grace_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3100"
+
+    environment:
+      DATABASE_URL: "postgres://paperclip:7050918e2d8fd46f6391a911e3dd6e82@db:5432/paperclip"
+      PAPERCLIP_DEPLOYMENT_MODE: authenticated
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: private
+      PAPERCLIP_PUBLIC_URL: "http://paperclip.golden.test"
+      PAPERCLIP_AUTH_RATE_LIMIT_ENABLED: "true"
+      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
+      BETTER_AUTH_SECRET: "0e36e956e72938d41c15776fc5cc4994"
+      PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: "fc63e74f9841381d39c88625a543db73"
+
+    volumes:
+      - sv-app-4242_data:/paperclip
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: paperclip
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: "7050918e2d8fd46f6391a911e3dd6e82"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true
