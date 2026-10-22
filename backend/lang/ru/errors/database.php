@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => 'Выбранное сравнение не относится к выбранной кодировке.',
     'application_already_attached' => 'К :application уже привязана база данных :database. Сначала отвяжите её или привяжите эту базу данных к другому приложению.',
     'engine_not_accepted' => ':application не может использовать базу данных :engine. Поддерживается: :accepted.',
+    'engine_not_running' => ':engine не запущен на этом сервере. Сначала установите или запустите его на странице «Базы данных» или выберите работающий движок.',
     'engine_not_installable' => 'Панель пока не может установить этот движок базы данных. Установите его сами, и панель его обнаружит.',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.

@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => 'La colación seleccionada no pertenece al conjunto de caracteres elegido.',
     'application_already_attached' => ':application ya tiene vinculada la base de datos :database. Desvincula esa primero o vincula esta base de datos a otra aplicación.',
     'engine_not_accepted' => ':application no puede usar una base de datos :engine. Acepta :accepted.',
+    'engine_not_running' => ':engine no se está ejecutando en este servidor. Instálalo o inícialo primero en la página Bases de datos, o elige un motor que esté en ejecución.',
     'engine_not_installable' => 'El panel aún no puede instalar este motor de base de datos. Instálelo usted mismo y el panel lo detectará.',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.

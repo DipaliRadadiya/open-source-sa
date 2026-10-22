@@ -4332,6 +4332,8 @@ Field limits differ and the difference is not arbitrary: `name` allows up to **6
 
 `collation` must belong to the chosen `charset` — a valid-but-mismatched pair fails validation on `collation`, it is not silently corrected. Reserved system schema names are refused.
 
+`engine` must be one that is **running** on this server (`running: true` in `GET /databases/engines`), otherwise **`422`** on `engine` (*"MySQL is not running on this server…"*) before any SQL runs. Until 2026-10-22 a stopped or absent engine was accepted and failed as a `500` — e.g. `mysql` on a MariaDB server, whose port answers as MariaDB and refuses the password-less `root`.
+
 ---
 
 ### GET `/databases/{database}`

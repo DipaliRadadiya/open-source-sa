@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => 'चयनित कोलेशन चुने गए वर्ण सेट से संबंधित नहीं है।',
     'application_already_attached' => ':application से पहले से ही :database डेटाबेस जुड़ा है। पहले उसे अलग करें, या इस डेटाबेस को किसी दूसरे एप्लिकेशन से जोड़ें।',
     'engine_not_accepted' => ':application :engine डेटाबेस का उपयोग नहीं कर सकता। यह :accepted स्वीकार करता है।',
+    'engine_not_running' => ':engine इस सर्वर पर नहीं चल रहा है। पहले डेटाबेस पेज पर इसे इंस्टॉल या शुरू करें, या कोई ऐसा इंजन चुनें जो चल रहा हो।',
     'engine_not_installable' => 'पैनल यह डेटाबेस इंजन अभी इंस्टॉल नहीं कर सकता। इसे स्वयं इंस्टॉल करें और पैनल इसे पहचान लेगा।',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.

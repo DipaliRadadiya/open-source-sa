@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => "Le classement sélectionné n'appartient pas au jeu de caractères choisi.",
     'application_already_attached' => "La base de données :database est déjà rattachée à :application. Détachez-la d'abord, ou rattachez cette base de données à une autre application.",
     'engine_not_accepted' => ':application ne peut pas utiliser une base de données :engine. Elle accepte :accepted.',
+    'engine_not_running' => ':engine ne fonctionne pas sur ce serveur. Installez-le ou démarrez-le d’abord depuis la page Bases de données, ou choisissez un moteur en cours d’exécution.',
     'engine_not_installable' => 'Le panneau ne peut pas encore installer ce moteur de base de données. Installez-le vous-même et le panneau le détectera.',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.

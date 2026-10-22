@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => 'The selected collation does not belong to the chosen character set.',
     'application_already_attached' => ':application already has the database :database attached. Detach that one first, or attach this database to another application.',
     'engine_not_accepted' => ':application cannot use a :engine database. It accepts :accepted.',
+    'engine_not_running' => ':engine is not running on this server. Install or start it on the Databases page first, or choose an engine that is running.',
     'engine_not_installable' => 'The panel cannot install this database engine yet. Install it yourself and the panel will detect it.',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.

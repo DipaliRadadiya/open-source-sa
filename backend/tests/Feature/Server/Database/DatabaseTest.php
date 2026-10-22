@@ -227,9 +227,13 @@ it('rolls back a new database when its requested initial user cannot be created'
     Process::fake(function ($process) {
         $sql = (string) ($process->input ?? '');
 
-        return str_contains($sql, 'CREATE USER')
-            ? Process::result(exitCode: 1, errorOutput: 'user create failed')
-            : Process::result(exitCode: 0);
+        return match (true) {
+            // A running engine: creating on one that does not answer is now a
+            // 422 before any SQL (DatabaseEngineNotRunningTest).
+            str_contains($sql, 'VERSION()') => Process::result(output: '8.0.36'),
+            str_contains($sql, 'CREATE USER') => Process::result(exitCode: 1, errorOutput: 'user create failed'),
+            default => Process::result(exitCode: 0),
+        };
     });
 
     test()->withHeaders(dbAuth())->postJson('/api/databases', [

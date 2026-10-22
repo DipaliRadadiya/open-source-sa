@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => 'Die gewählte Kollation gehört nicht zum gewählten Zeichensatz.',
     'application_already_attached' => 'Mit :application ist bereits die Datenbank :database verknüpft. Heben Sie diese Verknüpfung zuerst auf, oder verknüpfen Sie diese Datenbank mit einer anderen Anwendung.',
     'engine_not_accepted' => ':application kann keine :engine-Datenbank verwenden. Akzeptiert wird :accepted.',
+    'engine_not_running' => ':engine läuft auf diesem Server nicht. Installieren oder starten Sie es zuerst auf der Seite „Datenbanken“, oder wählen Sie eine laufende Datenbank-Engine.',
     'engine_not_installable' => 'Das Panel kann diese Datenbank-Engine noch nicht installieren. Installieren Sie sie selbst, das Panel erkennt sie dann.',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.

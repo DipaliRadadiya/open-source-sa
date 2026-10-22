@@ -81,6 +81,8 @@ class StoreDatabaseRequest extends FormRequest
                 }
             }
 
+            $this->refuseEngineNotAnswering($validator);
+
             // FS-C13: the attach screen's rules, for a database made for an
             // application.
             $application = $this->input('application_id') ? Application::find($this->input('application_id')) : null;
@@ -90,6 +92,33 @@ class StoreDatabaseRequest extends FormRequest
                 $this->refuseUnusableEngine($validator, $application, (string) $this->input('engine'));
             }
         });
+    }
+
+    /**
+     * Refuse an engine that does not answer on this server, before any SQL.
+     *
+     * The create screen only offers running engines, but the API took any
+     * configured one: `mysql` on a MariaDB server went to MariaDB's port as
+     * `root` with no password and came back a 500 "operation failed"
+     * (2026-10-22). One `SELECT VERSION()` on the requested engine only — the
+     * same probe that sets `running` on the engines list, so the API and the
+     * screen agree on what is usable.
+     */
+    private function refuseEngineNotAnswering(Validator $validator): void
+    {
+        $engine = (string) $this->input('engine');
+
+        if ($validator->errors()->has('engine') || ! in_array($engine, app(DatabaseManager::class)->engineNames(), true)) {
+            return;
+        }
+
+        if (app(DatabaseManager::class)->engine($engine)->version() !== null) {
+            return;
+        }
+
+        $validator->errors()->add('engine', __('errors/database.engine_not_running', [
+            'engine' => (string) config("server.databases.engines.{$engine}.label", $engine),
+        ]));
     }
 
     /**

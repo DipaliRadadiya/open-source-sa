@@ -6,6 +6,7 @@ return [
     'collation_mismatch' => '選択した照合順序は、選択した文字セットに属していません。',
     'application_already_attached' => ':application にはすでに :database データベースが紐付いています。先にそちらの紐付けを解除するか、このデータベースを別のアプリケーションに紐付けてください。',
     'engine_not_accepted' => ':application は :engine データベースを使用できません。使用できるのは :accepted です。',
+    'engine_not_running' => 'このサーバーでは :engine が動作していません。先にデータベースページでインストールまたは起動するか、動作中のエンジンを選択してください。',
     'engine_not_installable' => 'このデータベースエンジンはまだパネルからインストールできません。ご自身でインストールすればパネルが検出します。',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.
