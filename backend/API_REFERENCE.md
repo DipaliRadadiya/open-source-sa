@@ -507,7 +507,7 @@ Unauthenticated. (The example here was out of date; corrected 2026-10-20.)
 
 Backups, restores, clones, staging runs, deployments, PHP/Node installs, database imports and exports, syncs, security updates and panel updates — running now, and finished within the last `hours` (default 24, max 168). Newest first, at most 100 rows (50 per kind).
 
-**Query:** `?active=1` — only queued and running work (what a header indicator polls) · `?hours=48`.
+**Query:** `?active=1` — only queued and running work (what a header indicator polls) · `?hours=48` · `?finished_after=22-10-2026 17:55:00` — with `active=1`, also the work that finished after that moment (pass the time of your previous poll), so a job that started and ended between two polls still reaches you as `done`/`failed` (RC-36, 2026-10-22). Same `d-m-Y H:i:s` format as every date here; at most a day back, else `422`. `meta.running` still counts only waiting/running rows.
 
 ```json
 {"operations": [

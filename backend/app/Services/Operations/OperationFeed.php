@@ -51,11 +51,11 @@ class OperationFeed
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function for(User $user, bool $activeOnly, CarbonInterface $since): Collection
+    public function for(User $user, bool $activeOnly, CarbonInterface $since, ?CarbonInterface $finishedAfter = null): Collection
     {
         return collect($this->kinds())
             ->filter(fn (array $kind) => $this->allowed($user, $kind['permission']))
-            ->flatMap(function (array $kind) use ($activeOnly, $since) {
+            ->flatMap(function (array $kind) use ($activeOnly, $since, $finishedAfter) {
                 $model = $kind['model'];
                 $active = array_keys(array_filter(self::STATE, fn ($state) => in_array($state, ['waiting', 'running'], true)));
 
@@ -69,6 +69,8 @@ class OperationFeed
                 $rows = $query
                     ->where(fn (Builder $query) => $activeOnly
                         ? $query->whereIn('status', $active)
+                            // RC-36: and what ended since the caller last looked.
+                            ->when($finishedAfter !== null, fn (Builder $query) => $query->orWhere('finished_at', '>', $finishedAfter))
                         : $query->whereIn('status', $active)->orWhere('created_at', '>=', $since))
                     ->latest('id')
                     ->limit(self::PER_KIND)

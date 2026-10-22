@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Operation\IndexOperationsRequest;
 use App\Services\Operations\OperationFeed;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class OperationController extends Controller
 {
@@ -19,7 +20,14 @@ class OperationController extends Controller
         $active = $request->boolean('active');
         $hours = (int) $request->validated('hours', 24);
 
-        $operations = $feed->for($request->user(), $active, now()->subHours($hours));
+        $finishedAfter = $request->validated('finished_after');
+
+        $operations = $feed->for(
+            $request->user(),
+            $active,
+            now()->subHours($hours),
+            $finishedAfter === null ? null : Carbon::createFromFormat('d-m-Y H:i:s', $finishedAfter),
+        );
 
         return response()->json([
             'operations' => $operations,

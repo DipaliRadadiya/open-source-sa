@@ -25,6 +25,10 @@ class IndexOperationsRequest extends FormRequest
             'active' => ['sometimes', 'boolean'],
             // How far back finished work is included otherwise.
             'hours' => ['sometimes', 'integer', 'min:1', 'max:168'],
+            // With `active`: also work that finished after this moment, so one
+            // light poll sees a job that started and ended between two polls
+            // (RC-36). The API's own date format; at most a day back.
+            'finished_after' => ['sometimes', 'date_format:d-m-Y H:i:s', 'after_or_equal:'.now()->subDay()->format('Y-m-d H:i:s')],
         ];
     }
 }

@@ -110,3 +110,33 @@ it('refuses a window longer than a week', function () {
 it('needs a signed-in user', function () {
     $this->getJson('/api/operations')->assertUnauthorized();
 });
+
+/*
+ * RC-36: the top bar polls `?active=1` every 5 s. A backup that started and
+ * finished between two polls was never seen running, so the "finished" toast
+ * never fired. `finished_after` adds what ended since the last poll.
+ */
+it('adds work that finished after the given moment to the active list, and nothing older', function () {
+    $poll = now()->subSeconds(5);
+    Backup::create(['application_id' => $this->site->id, 'type' => 'full', 'status' => BackupStatus::Running]);
+    $quick = Backup::create(['application_id' => $this->site->id, 'type' => 'full', 'status' => BackupStatus::Verified, 'finished_at' => now()->subSeconds(2)]);
+    $failed = Backup::create(['application_id' => $this->site->id, 'type' => 'full', 'status' => BackupStatus::Failed, 'finished_at' => now()->subSecond()]);
+    Backup::create(['application_id' => $this->site->id, 'type' => 'full', 'status' => BackupStatus::Verified, 'finished_at' => now()->subMinutes(10)]);
+
+    // Without it, exactly as before: only what is still going.
+    expect(array_column(operations($this->admin, '?active=1')['operations'], 'state'))->toBe(['running']);
+
+    $ops = operations($this->admin, '?active=1&finished_after='.urlencode($poll->format('d-m-Y H:i:s')));
+
+    expect(collect($ops['operations'])->pluck('state', 'id')->sortKeys()->all())
+        ->toBe([$quick->id - 1 => 'running', $quick->id => 'done', $failed->id => 'failed'])
+        ->and($ops['meta']['running'])->toBe(1);
+});
+
+it('refuses a finished_after in another format or more than a day back', function (string $value) {
+    $this->actingAs($this->admin)->getJson('/api/operations?active=1&finished_after='.urlencode($value))
+        ->assertStatus(422)->assertJsonValidationErrors('finished_after');
+})->with([
+    'ISO' => fn () => now()->toIso8601String(),
+    'two days back' => fn () => now()->subDays(2)->format('d-m-Y H:i:s'),
+]);
