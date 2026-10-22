@@ -393,6 +393,25 @@ return [
         'working_dir' => env('BACKUP_WORKING_DIR', storage_path('app/backups')),
 
         /*
+         * Downloads of backups kept on SFTP or FTP (prepare, then download).
+         *
+         * Those providers have no link a browser can follow, so the panel
+         * copies the archive here first and serves the copy itself. Under
+         * storage/ for the reason `working_dir` is: /tmp is often a small
+         * tmpfs. Each copy is kept `download_ttl_seconds`, then removed by
+         * `backups:prune-downloads`.
+         *
+         * `download_free_margin_bytes` is what must still be free after the
+         * copy lands — the sites on this server keep writing while it does.
+         * `download_concurrency` caps how many copies are being sent at once:
+         * each one holds a PHP worker for the whole transfer.
+         */
+        'download_dir' => env('BACKUP_DOWNLOAD_DIR', storage_path('app/backup-downloads')),
+        'download_ttl_seconds' => (int) env('BACKUP_DOWNLOAD_TTL_SECONDS', 3600),
+        'download_free_margin_bytes' => (int) env('BACKUP_DOWNLOAD_FREE_MARGIN_BYTES', 1024 * 1024 * 1024),
+        'download_concurrency' => (int) env('BACKUP_DOWNLOAD_CONCURRENCY', 2),
+
+        /*
          * How long one backup or restore may run before the worker kills it.
          *
          * This was a hardcoded 3600 and it made large sites impossible, not

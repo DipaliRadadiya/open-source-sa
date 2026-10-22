@@ -4,10 +4,12 @@ namespace App\Services\Server\Backups\Storage\Drivers;
 
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
+use League\Flysystem\PhpseclibV3\SftpConnectionProvider;
 use League\Flysystem\PhpseclibV3\UnableToAuthenticate;
 use League\Flysystem\PhpseclibV3\UnableToConnectToSftpHost;
 use League\Flysystem\PhpseclibV3\UnableToEstablishAuthenticityOfHost;
 use League\Flysystem\PhpseclibV3\UnableToLoadPrivateKey;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -126,6 +128,45 @@ class SftpDriver extends RemoteHostDriver
             // one they think it is.
             'host_fingerprint' => $destination->configValue('host_fingerprint'),
         ];
+    }
+
+    /**
+     * Download straight onto disk, never through `php://temp`.
+     *
+     * The adapter's `readStream()` is `fopen('php://temp')` + `$sftp->get()`
+     * into it — the whole archive buffered, spilling into the system temp
+     * directory (a tmpfs of a couple of gigabytes on a normal install) before
+     * the caller sees a byte. The same trap {@see FtpDriver::downloadTo()}
+     * documents, in the other adapter. phpseclib's `get()` takes a local
+     * path and writes to it chunk by chunk, so this hands it the destination
+     * file instead.
+     *
+     * The connection is the disk's own — same credentials, same pinned host
+     * key, same single login attempt — so this cannot be laxer than an
+     * upload. A refused connection throws the adapter's own exception rather
+     * than returning false: the caller's fallback would only log in a second
+     * time (two failed logins towards the server's fail2ban), and the typed
+     * exception is what `classify()` names — a changed host key, a refused
+     * login. A transfer that fails part-way throws too, rather than falling
+     * back into the very buffer this exists to avoid.
+     */
+    public function downloadTo(StorageDestination $destination, string $key, string $path): bool
+    {
+        $config = $this->config($destination);
+        $connection = SftpConnectionProvider::fromArray($config)->provideConnection();
+
+        try {
+            $root = (string) $config['root'];
+            $remote = ($root === '' ? '' : rtrim($root, '/').'/').ltrim($key, '/');
+
+            if ($connection->get($remote, $path) === false) {
+                throw new RuntimeException('the archive could not be downloaded from the SFTP server');
+            }
+
+            return true;
+        } finally {
+            $connection->disconnect();
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\BackupController;
+use App\Http\Controllers\API\Server\BackupDownloadController;
 use App\Http\Controllers\API\Server\RestoreController;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +47,29 @@ Route::get('/backups/{backup}', [BackupController::class, 'show'])
 */
 Route::get('/backups/{backup}/download', [BackupController::class, 'download'])
     ->middleware(['permission:backup,manage', 'throttle:6,1']);
+
+/*
+| Download for SFTP and FTP — prepare, then download.
+|
+| Those providers have no link to hand over, so the download above answers
+| 409 `prepare_required` and the archive is copied to the panel first. Same
+| `manage` tier as the download, for the same reason: the end of this road is
+| every file on the site plus its database.
+|
+| The status is polled, so it gets the progress limiter rather than the
+| general one. The file itself is signed as well as authenticated: the link
+| names one copy, and stops working when that copy is removed.
+*/
+Route::post('/backups/{backup}/download/prepare', [BackupDownloadController::class, 'store'])
+    ->middleware(['permission:backup,manage', 'throttle:6,1']);
+
+Route::get('/backups/{backup}/download/prepare', [BackupDownloadController::class, 'show'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:backup,manage', 'throttle:progress']);
+
+Route::get('/backups/{backup}/download/file', [BackupDownloadController::class, 'file'])
+    ->middleware(['permission:backup,manage', 'signed:relative', 'throttle:20,1'])
+    ->name('backups.download.file');
 
 /*
 | Restore — the destructive half.

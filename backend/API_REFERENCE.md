@@ -3904,6 +3904,111 @@ Get a time-limited presigned download URL for the archive.
 
 `url` expires 5 minutes after issuance. `filename` is human-readable (`domain-YYYY-MM-DD-HHMMSS-type.tar.gz`).
 
+**S3 and Google Drive** answer as above (Drive's `expires_at` is `null`). **SFTP and FTP** have no link to hand over, and answer **`409`** instead — call the prepare endpoint below (2026-10-22):
+
+```json
+{"message": "This backup is stored on an SFTP or FTP server, so the panel first copies it here. Prepare the download, then download it when it is ready.",
+ "reason": "prepare_required"}
+```
+
+Branch on `reason`, never on `message` (translated). `422` (`errors.backup`) is unchanged for the other refusals: no archive recorded, destination gone, archive missing from the bucket, or a destination that can do neither (`download_not_supported`).
+
+---
+
+### SFTP / FTP backups: prepare, then download (2026-10-22)
+
+The panel copies the archive from the SFTP/FTP server to its own disk on the queue, then serves that copy to the browser through a signed link. The copy is kept **1 hour** after it is ready, then removed (`backups:prune-downloads`, every 5 minutes); it is also removed when the backup is deleted. Flow for the Download button:
+
+1. `GET /backups/{backup}/download` → `409 prepare_required` (S3/Drive: `200` with the link, as before).
+2. `POST /backups/{backup}/download/prepare` → `202` (started) or `200` (already preparing/ready — a second click never starts a second copy).
+3. Poll `GET /backups/{backup}/download/prepare` every few seconds while `status` is `preparing` (show `bytes_transferred` of `bytes_total`).
+4. On `ready`: offer `url` as a plain `<a href>` (cookie-authenticated, like the file manager's download). On `failed`: show `message` and `reference`; the next `POST` starts over. On `expired`: `POST` again.
+
+All three routes: **Permission:** `backup` (**manage**) — the same tier as the download above.
+
+#### POST `/backups/{backup}/download/prepare`
+**Throttle:** 6/min. No body.
+
+**Response `202`** (copy started) or **`200`** (the existing one):
+
+```json
+{"download_preparation": {
+  "reference": "3f0c1d8e-6a59-4b8e-9d0e-0b3f1c2a7e44",
+  "status": "preparing",
+  "filename": "shop-example-com-2026-10-22-020000-full.tar.gz",
+  "bytes_total": 52428800,
+  "bytes_transferred": null,
+  "url": null,
+  "expires_at": null,
+  "reason": null,
+  "message": null,
+  "created_at": "22-10-2026 18:00:00",
+  "ready_at": null
+}}
+```
+
+**`422`** (`errors.backup`, nothing queued):
+
+| case | message key |
+|---|---|
+| not enough free disk on the panel's server for the copy (+1 GiB margin) | `backup.errors.download_no_space` — *"…It needs :needed and only :free is free…"* |
+| S3 / Drive backup (downloadable directly) | `backup.errors.download_prepare_not_needed` |
+| no archive recorded / destination gone | `download_no_artifact` / `download_no_destination` (as the download) |
+
+#### GET `/backups/{backup}/download/prepare`
+**Throttle:** progress limiter (polling). `{"download_preparation": null}` when none was ever started.
+
+`status` is one of:
+
+| status | meaning | fields |
+|---|---|---|
+| `preparing` | being copied from the storage server | `bytes_transferred` (bytes on the panel's disk so far, or `null` before the first byte), `bytes_total` |
+| `ready` | copy on disk | `url` (signed link), `expires_at` (`d-m-Y H:i:s`, 1 hour after `ready_at`) |
+| `failed` | the copy could not be made | `reason`, `message` (translated), `reference` |
+| `expired` | past its hour, or its worker died | `message`; `POST` again |
+
+`ready` example:
+
+```json
+{"download_preparation": {
+  "reference": "3f0c1d8e-6a59-4b8e-9d0e-0b3f1c2a7e44",
+  "status": "ready",
+  "filename": "shop-example-com-2026-10-22-020000-full.tar.gz",
+  "bytes_total": 52428800,
+  "bytes_transferred": null,
+  "url": "https://panel.example.com/api/backups/12/download/file?expires=1792695600&preparation=3f0c1d8e-6a59-4b8e-9d0e-0b3f1c2a7e44&signature=…",
+  "expires_at": "22-10-2026 19:00:00",
+  "reason": null,
+  "message": null,
+  "created_at": "22-10-2026 18:00:00",
+  "ready_at": "22-10-2026 18:00:00"
+}}
+```
+
+`failed` example:
+
+```json
+{"download_preparation": {
+  "reference": "3f0c1d8e-6a59-4b8e-9d0e-0b3f1c2a7e44",
+  "status": "failed",
+  "reason": "invalid_credentials",
+  "message": "The backup could not be copied from the storage server. The destination rejected the credentials.",
+  "url": null, "expires_at": null, "…": "…"
+}}
+```
+
+`reason` values: the storage categories the destination's **Test** button reports (`unreachable`, `invalid_credentials`, `host_key_mismatch`, `tls_failed`, `tls_certificate_changed`, `ftp_no_tls`, `root_missing`, `forbidden_host`, …), plus `missing` (archive no longer on the server), `no_space` (the real size did not fit), `incomplete` (the copy came back shorter than the server's file), `crashed` (worker died / timed out). `reference` is in the server-ops log (`backup download preparation failed`).
+
+#### GET `/backups/{backup}/download/file?preparation=…&expires=…&signature=…`
+Use the `url` from the status exactly as given. **Throttle:** 20/min. Authenticated **and** signed: a link alone is not enough, and a link names one copy.
+
+- **`200`** — the archive: `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename=<filename>`, `Content-Length`. `Range` is supported (`206`), so a browser can resume. Recorded once in the activity log as `backup.downloaded` (a resumed range is not logged again); the link is never logged.
+- **`503`** `{"message": "Two downloads are already in progress…", "reason": "busy"}` with **`Retry-After: 30`** — at most **2** prepared copies are sent at once (each holds a PHP worker for the whole transfer).
+- **`410`** `{"message": "This download is no longer available. Prepare it again.", "reason": "not_ready"}` — expired, removed, or not ready.
+- **`403`** — bad or expired signature, or no `backup` manage permission.
+
+Settings (`config/server.php`, `.env`): `BACKUP_DOWNLOAD_DIR` (default `storage/app/backup-downloads`, dirs `0700`, file `0600`), `BACKUP_DOWNLOAD_TTL_SECONDS` (3600), `BACKUP_DOWNLOAD_FREE_MARGIN_BYTES` (1 GiB), `BACKUP_DOWNLOAD_CONCURRENCY` (2).
+
 ---
 
 ### POST `/backups/{backup}/retry`
@@ -3987,7 +4092,7 @@ A restore first takes a **safety backup** of the database as it is now (through 
 **`422`** — the backup is not verified; it belongs to another database and is not archived; engine differs (*"This backup is from a mysql database and cannot be restored into a postgresql database."*); the database has no backup schedule (*"Set up backups for this database first…"*); wrong `confirm`; a restore, import or export of this database is running. Imports and exports refuse while a restore runs, too.
 
 ### GET `/databases/{database}/backups/{backup}/download` · DELETE `/databases/{database}/backups/{backup}`
-As `GET /backups/{backup}/download` and `DELETE /backups/{backup}`, for this database's own backups only (`404` otherwise).
+As `GET /backups/{backup}/download` and `DELETE /backups/{backup}`, for this database's own backups only (`404` otherwise). An SFTP/FTP database backup answers the same `409 prepare_required`; prepare and fetch it through `/backups/{backup}/download/prepare` (which needs `backup` manage).
 
 ### Archived backups
 **Deleting a database archives its backups** instead of deleting them (decision 2026-10-16): the schedule goes, the backups stay — `database_id` becomes null, `archived: true`, and `database_name`/`database_engine` still say what they were. They stay listed in `GET /backups` (`?filter[archived]=1`, `?filter[engine]=mysql`), downloadable and deletable there, and restorable **into another database of the same engine** with the route above called on that database. Nothing deletes them automatically. Deleting a database is refused (`422`) while a backup or restore of it is running.

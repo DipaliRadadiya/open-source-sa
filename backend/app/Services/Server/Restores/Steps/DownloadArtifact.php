@@ -3,6 +3,7 @@
 namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
+use App\Services\Server\Backups\Storage\ArtifactFetcher;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Restores\RestoreContext;
@@ -17,10 +18,14 @@ use RuntimeException;
  */
 class DownloadArtifact implements RestoreStep
 {
+    private ArtifactFetcher $fetcher;
+
     public function __construct(
         private DestinationDisk $disks,
-        private StorageDriverFactory $drivers,
-    ) {}
+        StorageDriverFactory $drivers,
+    ) {
+        $this->fetcher = new ArtifactFetcher($disks, $drivers);
+    }
 
     public function key(): string
     {
@@ -61,45 +66,9 @@ class DownloadArtifact implements RestoreStep
 
         $archive = $context->track($context->workingDirectory.'/restore.tar.gz');
 
-        // Ask the driver for a direct download first.
-        //
-        // `readStream()` is not always a stream: the FTP adapter implements it
-        // as `fopen('php://temp')` + `ftp_fget`, so the whole archive is
-        // buffered before a byte reaches us — and that buffer spills into the
-        // system temp directory, usually a tmpfs of a couple of gigabytes. A
-        // 24 GB restore therefore failed with "Unable to read file" while the
-        // transfer itself was healthy.
-        //
-        // The working directory is deliberately not on /tmp for exactly this
-        // reason (`server.backups.working_dir`), so a driver able to write
-        // there directly should. Drivers whose `readStream()` genuinely
-        // streams return false and fall through to the copy below.
-        if ($this->drivers->for($destination)->downloadTo($destination, $key, $archive)) {
-            $context->archivePath = $archive;
-
-            return;
-        }
-
-        $source = $disk->readStream($key);
-
-        if ($source === null || $source === false) {
-            throw new RuntimeException('the artefact could not be opened for download');
-        }
-
-        $handle = fopen($archive, 'wb');
-
-        if ($handle === false) {
-            @fclose($source);
-
-            throw new RuntimeException('the download could not be written to disk');
-        }
-
-        try {
-            stream_copy_to_stream($source, $handle);
-        } finally {
-            @fclose($source);
-            fclose($handle);
-        }
+        // Straight to disk, never through the FTP adapter's `php://temp`
+        // buffer — see ArtifactFetcher.
+        $this->fetcher->fetch($destination, $key, $archive);
 
         $context->archivePath = $archive;
     }

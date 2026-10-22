@@ -6,6 +6,7 @@ use App\Actions\Server\Backup\DeleteBackup;
 use App\Actions\Server\Backup\DeleteBackups;
 use App\Actions\Server\Backup\DeleteBackupTarget;
 use App\Actions\Server\Backup\SaveBackupTarget;
+use App\Contracts\PreparesDownloads;
 use App\Enums\BackupStatus;
 use App\Enums\BackupType;
 use App\Http\Controllers\Controller;
@@ -37,7 +38,6 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BackupController extends Controller
@@ -392,6 +392,13 @@ class BackupController extends Controller
      * dead panel; a 302 would send the browser cross-origin carrying headers
      * the presigned signature does not cover.
      *
+     * SFTP and FTP have no such link, and answer 409 `prepare_required`: the
+     * archive is copied to the panel on the queue first, and only that local
+     * copy is ever served — a few at once at most
+     * ({@see BackupDownloadController}). Never proxied from the storage
+     * server itself: the FTP adapter's read buffers the whole archive before
+     * the first byte.
+     *
      * Deliberately not gated on `verified` the way restore is. Restore
      * overwrites a live site, so an unverified source is dangerous;
      * downloading changes nothing, and a failed run's partial archive is
@@ -423,7 +430,21 @@ class BackupController extends Controller
         // SFTP and both Drive destinations answered a raw 500 for the entire
         // life of the feature, surfacing the day the first Drive backup got
         // far enough to be downloadable.
-        $driverUrl = $drivers->for($destination)->downloadUrl($destination, $key);
+        $driver = $drivers->for($destination);
+
+        // SFTP and FTP: no link exists to hand over, so the panel copies the
+        // archive here first (`POST …/download/prepare`) and serves the copy.
+        // Answered before the disk is touched — saying "prepare it" needs no
+        // connection to the storage server, and the prepare step makes one
+        // on the queue rather than in this request.
+        if ($driver instanceof PreparesDownloads) {
+            return response()->json([
+                'message' => __('backup.errors.download_prepare_required'),
+                'reason' => 'prepare_required',
+            ], 409);
+        }
+
+        $driverUrl = $driver->downloadUrl($destination, $key);
 
         $disk = $disks->for($destination);
 
@@ -463,7 +484,7 @@ class BackupController extends Controller
                 // on a clock — and printing a five-minute countdown next to one
                 // would be a confident lie about when it stops working.
                 'expires_at' => $driverUrl !== null ? null : $expiresAt->format('d-m-Y H:i:s'),
-                'filename' => $this->filename($backup),
+                'filename' => $backup->downloadFilename(),
                 'size_bytes' => $backup->size_bytes,
             ],
         ]);
@@ -488,28 +509,6 @@ class BackupController extends Controller
         }
 
         return $disk->temporaryUrl($key, $expiresAt);
-    }
-
-    /**
-     * A name that means something in a downloads folder.
-     *
-     * The object key is a uuid — fine on the destination, useless once four
-     * of them are sitting side by side on someone's laptop.
-     */
-    private function filename(Backup $backup): string
-    {
-        $site = $backup->application?->domain ?? match (true) {
-            $backup->isDatabaseBackup() => 'database-'.$backup->subjectName(),
-            // An archived site's backup still carries the domain it was taken of.
-            filled($backup->subject_name) => (string) $backup->subject_name,
-            default => 'backup',
-        };
-        $stamp = $backup->created_at?->format('Y-m-d-His') ?? 'unknown';
-
-        // Dots become hyphens before slugging — Str::slug strips them, which
-        // turns shop.example.com into "shopexamplecom" and makes the one
-        // part of the name the user recognises unreadable.
-        return Str::slug(str_replace('.', '-', $site)).'-'.$stamp.'-'.$backup->type->value.'.tar.gz';
     }
 
     /** Poll one backup while it runs. */

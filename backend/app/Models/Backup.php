@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Enums\BackupStatus;
 use App\Enums\BackupType;
+use App\Services\Server\Backups\Downloads\PreparedDownloads;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 #[Fillable(['backup_target_id', 'application_id', 'database_id', 'subject_name', 'subject_engine', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'error_class', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at'])]
@@ -61,6 +63,16 @@ class Backup extends Model
                     ->whereKey($backup->backup_target_id)
                     ->value('storage_destination_id');
             }
+        });
+
+        // The local copy a prepared download left (SFTP/FTP). Its row goes
+        // with the backup by cascade, but a cascade cannot remove a file, and
+        // an hour-long copy of a deleted backup is exactly the archive the
+        // user just asked to be rid of. Every Eloquent delete passes here —
+        // `DeleteBackup` and retention alike; a delete by cascade from
+        // further up is swept by `backups:prune-downloads`.
+        static::deleting(function (self $backup): void {
+            app(PreparedDownloads::class)->forget($backup);
         });
     }
 
@@ -157,5 +169,34 @@ class Backup extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function downloadPreparation(): HasOne
+    {
+        return $this->hasOne(BackupDownloadPreparation::class);
+    }
+
+    /**
+     * A name that means something in a downloads folder.
+     *
+     * The object key is a uuid — fine on the destination, useless once four
+     * of them are sitting side by side on someone's laptop. Here rather than
+     * in the controller so the link and the prepared copy name a file the
+     * same way.
+     */
+    public function downloadFilename(): string
+    {
+        $site = $this->application?->domain ?? match (true) {
+            $this->isDatabaseBackup() => 'database-'.$this->subjectName(),
+            // An archived site's backup still carries the domain it was taken of.
+            filled($this->subject_name) => (string) $this->subject_name,
+            default => 'backup',
+        };
+        $stamp = $this->created_at?->format('Y-m-d-His') ?? 'unknown';
+
+        // Dots become hyphens before slugging — Str::slug strips them, which
+        // turns shop.example.com into "shopexamplecom" and makes the one
+        // part of the name the user recognises unreadable.
+        return Str::slug(str_replace('.', '-', $site)).'-'.$stamp.'-'.$this->type->value.'.tar.gz';
     }
 }

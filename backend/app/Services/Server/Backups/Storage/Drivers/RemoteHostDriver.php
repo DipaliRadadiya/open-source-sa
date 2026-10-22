@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Backups\Storage\Drivers;
 
+use App\Contracts\PreparesDownloads;
 use App\Contracts\StorageDriver;
 use App\Http\Controllers\API\Server\BackupController;
 use App\Models\StorageDestination;
@@ -24,7 +25,7 @@ use App\Support\RemoteHost;
  * backups folder. So the composition happens here, once, rather than in each
  * driver.
  */
-abstract class RemoteHostDriver implements StorageDriver
+abstract class RemoteHostDriver implements PreparesDownloads, StorageDriver
 {
     /**
      * The effective directory for this destination: the connection root with
@@ -113,8 +114,11 @@ abstract class RemoteHostDriver implements StorageDriver
     public function heal(StorageDestination $destination): void {}
 
     /**
-     * No special path needed: this driver's `readStream()` genuinely streams,
-     * so the caller's copy never holds the whole archive anywhere.
+     * No direct path by default; the caller falls back to `readStream()`.
+     *
+     * Both FTP and SFTP override this, because neither adapter's
+     * `readStream()` actually streams: each fills a `php://temp` buffer with
+     * the whole archive first.
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool
     {
@@ -125,11 +129,10 @@ abstract class RemoteHostDriver implements StorageDriver
      * Null: FTP and SFTP have no concept of a URL at all.
      *
      * There is no honest link to hand a browser here, and inventing one would
-     * mean the panel streaming 25 GB through a PHP worker — which
-     * {@see BackupController::download()}
-     * rejects for pinning that worker for the length of the transfer. The
-     * caller reports that Download is unavailable for this destination, which
-     * is the truth.
+     * mean the panel proxying 25 GB from the storage server through a PHP
+     * worker — which {@see BackupController::download()} rejects. Instead
+     * these drivers are {@see PreparesDownloads}: the archive is copied to the
+     * panel on the queue, and the local copy is what gets served.
      */
     public function downloadUrl(StorageDestination $destination, string $key): ?string
     {
