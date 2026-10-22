@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
-import { applicationById } from "@/lib/backups/database-availability";
+import { attachedApplication } from "@/lib/backups/database-availability";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
@@ -20,6 +20,7 @@ export function DatabasesCards({
   onDelete,
   // The site each database belongs to; it decides what gets backed up.
   applications = [],
+  canOpenApplications = false,
   onAttach = null,
 }) {
   const t = useTranslations("databases");
@@ -32,9 +33,9 @@ export function DatabasesCards({
         const users = userCount(database);
         // Attached to a site this reader cannot see is not "not linked": an
         // attach there would be refused.
-        const ownedBy = applicationById(applications, database.application_id);
-        const orphanUnknown =
-          !ownedBy && database.application_id !== null && database.application_id !== undefined;
+        const attached = attachedApplication(database, applications);
+        const ownedBy = attached?.name ? attached : null;
+        const orphanUnknown = Boolean(attached) && !ownedBy;
 
         return (
           <CardListItem key={database.id}>
@@ -94,7 +95,7 @@ export function DatabasesCards({
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">{t("columns.application")}</dt>
                     <dd className="min-w-0 truncate">
-                      {ownedBy ? (
+                      {ownedBy && canOpenApplications ? (
                         <Link
                           href={`/applications/${ownedBy.id}`}
                           prefetch={false}
@@ -102,6 +103,8 @@ export function DatabasesCards({
                         >
                           {ownedBy.name}
                         </Link>
+                      ) : ownedBy ? (
+                        ownedBy.name
                       ) : (
                         <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>
                       )}

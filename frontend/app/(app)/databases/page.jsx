@@ -209,6 +209,7 @@ export default async function DatabasesPage({ searchParams }) {
             phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
             adminerSites={adminer?.known ? adminer.sites : null}
             applications={appList.applications}
+            canOpenApplications={can(permissions, "application", "view")}
             databaseCounts={dbCounts.counts}
             databasesKnown={dbCounts.known}
             // Lets the site picker grey sites that cannot use the chosen engine.

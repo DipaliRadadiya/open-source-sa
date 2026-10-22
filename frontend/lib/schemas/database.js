@@ -125,6 +125,8 @@ export const databaseSchema = z.object({
   charset: z.string().nullable().optional(),
   collation: z.string().nullable().optional(),
   application_id: z.number().nullable().optional(),
+  // The list only (22 Oct): the attached site's name, so no lookup is needed.
+  application_name: z.string().nullable().optional(),
   size_bytes: z.number().nullable().optional(),
   size_human: z.string().nullable().optional(),
   // No `.default(0)`: only the list counts users, and a default on the detail

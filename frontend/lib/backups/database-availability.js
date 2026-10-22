@@ -47,6 +47,17 @@ export function sitesMissingDatabase(applications = [], siteTypes = [], counts =
   );
 }
 
+/**
+ * The site a listed database is attached to: from the sites this reader can manage,
+ * else the name the list now sends (22 Oct), which a view-only reader also gets.
+ * Null when not attached; `{ id, name: null }` when attached but unnamed.
+ */
+export function attachedApplication(database, applications = []) {
+  if (database?.application_id === null || database?.application_id === undefined) return null;
+  const known = applicationById(applications, database.application_id);
+  return { id: database.application_id, name: known?.name ?? database.application_name ?? null };
+}
+
 /** Compares ids as strings: the API sends numbers, forms send strings. */
 export function applicationById(applications = [], applicationId) {
   if (applicationId === null || applicationId === undefined) return null;

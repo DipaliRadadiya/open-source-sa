@@ -21,7 +21,7 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { SortHeader } from "@/components/data-table/sort-header";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
-import { applicationById } from "@/lib/backups/database-availability";
+import { attachedApplication } from "@/lib/backups/database-availability";
 import { DatabasesCards } from "@/components/databases/databases-cards";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
@@ -78,14 +78,13 @@ function SizeCell({ row }) {
 }
 
 // "Not linked" is a warning: no site backup contains this database.
-function ApplicationCell({ database, applications, onAttach }) {
+function ApplicationCell({ database, applications, canOpenApplications, onAttach }) {
   const t = useTranslations("databases");
-  const application = applicationById(applications, database.application_id);
+  const application = attachedApplication(database, applications);
 
-  if (application) {
-    // `block truncate`: an inline link never shows the ellipsis. `title`
-    // keeps the full name reachable.
-    return (
+  if (application?.name) {
+    // A link only for a reader who may open the application.
+    return canOpenApplications ? (
       <Link
         href={`/applications/${application.id}`}
         prefetch={false}
@@ -94,12 +93,14 @@ function ApplicationCell({ database, applications, onAttach }) {
       >
         {application.name}
       </Link>
+    ) : (
+      <span className="break-words">{application.name}</span>
     );
   }
 
-  // Attached to a site outside this user's reach is not "not linked": an
-  // attach there would be refused.
-  if (database.application_id !== null && database.application_id !== undefined) {
+  // Attached but unnamed (an older API) is not "not linked": an attach there
+  // would be refused.
+  if (application) {
     return <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>;
   }
 
@@ -195,6 +196,7 @@ function DatabasesList({
   siteTypes = [],
   // For the create dialog's site picker.
   applications = [],
+  canOpenApplications = false,
   databaseCounts = null,
   databasesKnown = false,
 }) {
@@ -218,8 +220,7 @@ function DatabasesList({
     {
       // The site link decides what gets backed up.
       id: "application",
-      accessorFn: (row) =>
-        applicationById(applications, row.application_id)?.name ?? "",
+      accessorFn: (row) => attachedApplication(row, applications)?.name ?? "",
       header: t("columns.application"),
       // Wraps rather than truncating: with `max-w-0` the action buttons squeezed this
       // column to 32px in Russian. Wrapped, it never drops below its longest word.
@@ -228,6 +229,7 @@ function DatabasesList({
         <ApplicationCell
           database={row.original}
           applications={applications}
+          canOpenApplications={canOpenApplications}
           onAttach={canManage ? setAttaching : null}
         />
       ),
@@ -360,6 +362,7 @@ function DatabasesList({
               lastBackup={lastBackup}
               backupsUnknown={backupsUnknown}
               applications={applications}
+              canOpenApplications={canOpenApplications}
               onAttach={canManage ? setAttaching : null}
             />
           </div>
@@ -405,7 +408,7 @@ function DatabasesList({
           />
           <DeleteDatabaseDialog
             database={deleting}
-            application={applicationById(applications, deleting?.application_id)}
+            application={attachedApplication(deleting, applications)?.name ? attachedApplication(deleting, applications) : null}
             open={deleting !== null}
             onOpenChange={(next) => !next && setDeleting(null)}
           />

@@ -158,3 +158,16 @@ test("restores of a database on its own are named, filterable, and followed afte
   assert.match(read("components/backups/subject-filter.jsx"), /database: kind === "database" \? id : undefined/);
   assert.match(read("app/(app)/databases/[database]/page.jsx"), /getActiveRestore\(undefined, \{\n\s+database: data\.id,/);
 });
+
+// The list names the attached site since 22 Oct (583aab36). It was looked up in the
+// manager-only applications list, so a view-only reader saw "Another application".
+test("the database list names the attached application from the list itself", async () => {
+  const { attachedApplication } = await import("../lib/backups/database-availability.js");
+  assert.equal(attachedApplication({ application_id: null }, []), null);
+  assert.deepEqual(attachedApplication({ application_id: 19, application_name: "akaunting" }, []), { id: 19, name: "akaunting" });
+  assert.deepEqual(attachedApplication({ application_id: 19, application_name: null }, [{ id: 19, name: "renamed" }]), { id: 19, name: "renamed" });
+  assert.deepEqual(attachedApplication({ application_id: 7 }, []), { id: 7, name: null });
+  const { databaseSchema } = await import("../lib/schemas/database.js");
+  assert.equal(databaseSchema.parse({ id: 1, name: "x", engine: "mariadb", application_id: 19, application_name: "akaunting" }).application_name, "akaunting");
+  assert.match(read("app/(app)/databases/page.jsx"), /canOpenApplications=\{can\(permissions, "application", "view"\)\}/);
+});
