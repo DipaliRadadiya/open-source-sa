@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { backupCounts, getBackups } from "@/lib/backups/get-backups";
+import { backupCounts, getBackups, getDatabaseBackupCoverage } from "@/lib/backups/get-backups";
+import { filterDatabases } from "@/lib/backups/filter-databases";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { getDatabase } from "@/lib/databases/get-database";
 import { BackupsHistory } from "@/components/backups/backups-history";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BackupsHistoryPage({ searchParams }) {
   const sp = await searchParams;
-  const [{ backups, meta, failed, status, failure, message }, { applications, failed: applicationsFailed }, permissions, appPermissions, t, database] = await Promise.all([
+  const [{ backups, meta, failed, status, failure, message }, { applications, failed: applicationsFailed }, permissions, appPermissions, t, database, coverage] = await Promise.all([
     // Archived backups have their own tab.
     getBackups({ ...sp, archived: false }),
     getAllApplications(),
@@ -25,6 +26,8 @@ export default async function BackupsHistoryPage({ searchParams }) {
     getTranslations("backups"),
     // "View all" on a database's Backups tab; named so the filter is visible.
     sp.database ? getDatabase(sp.database) : null,
+    // Databases on their own, for the filter; a failed read only loses those entries.
+    getDatabaseBackupCoverage(),
   ]);
 
   // Only a refusal (422) can be the filter; anything else is a real failure.
@@ -53,6 +56,7 @@ export default async function BackupsHistoryPage({ searchParams }) {
           counts={counts}
           applications={applications}
           database={sp.database ? { id: String(sp.database), name: database?.data?.name ?? `#${sp.database}` } : null}
+          databases={filterDatabases(coverage.rows, sp.database ? { id: sp.database, name: database?.data?.name } : null)}
           canRestore={canRestore}
           canRun={canRun}
           hasFilters={hasFilters}

@@ -4787,7 +4787,8 @@
         "whenToUse": "À utiliser quand des téléversements, extensions ou un déploiement ont laissé des fichiers appartenant au mauvais utilisateur.",
         "confirm": "Corriger les autorisations",
         "done": "Permissions réinitialisées.",
-        "failed": "Impossible de réinitialiser les permissions."
+        "failed": "Impossible de réinitialiser les permissions.",
+        "notForRuntime": "Uniquement pour les applications PHP et statiques. Les applications Node.js et Docker gardent leurs permissions, car certains de leurs fichiers doivent rester exécutables."
       },
       "bulk": {
         "selected": "{count, plural, one {# sélectionné} other {# sélectionnés}}",
@@ -7190,7 +7191,6 @@
     },
     "history": {
       "allApplications": "Toutes les applications",
-      "allDatabases": "Toutes les bases de données",
       "allStatuses": "Tout statut",
       "statuses": {
         "verified": "Terminé",
@@ -7555,7 +7555,8 @@
       },
       "notStarted": "Non démarré",
       "undo": "Annuler",
-      "safetyGone": "Cette copie de sécurité n’est plus conservée. Seules les deux plus récentes le sont."
+      "safetyGone": "Cette copie de sécurité n’est plus conservée. Seules les deux plus récentes le sont.",
+      "undoOnDatabase": "Annuler dans son onglet Sauvegardes"
     },
     "pausedFrequency": "En pause : {frequency}",
     "database": {
@@ -7630,6 +7631,11 @@
         "database": "Base de données"
       },
       "notSetUpLine": "Non configurée — cette base de données n'est pas sauvegardée."
+    },
+    "subjectFilter": {
+      "all": "Toutes les applications et bases de données",
+      "applications": "Applications",
+      "databases": "Bases de données"
     }
   },
   "sync": {

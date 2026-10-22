@@ -131,3 +131,30 @@ test("Backups overview lists standalone databases and links each to its Backups 
   assert.match(page, /getDatabaseBackupCoverage\(\)/);
   assert.match(page, /canOpenDatabases=\{can\(permissions, "database", "view"\)\}/);
 });
+
+// The API resets permissions only for php/static serving profiles since 22 Oct (cbb078e5);
+// the button was still offered on Node and Docker apps and failed after the confirm.
+test("Fix permissions is disabled with a reason on Node and Docker applications", () => {
+  const button = read("components/applications/files/fix-permissions-button.jsx");
+  assert.match(button, /const RESETTABLE_PROFILES = \["php", "static"\];/);
+  assert.match(button, /t\("fixPermissions\.notForRuntime"\)/);
+  assert.match(button, /disabled=\{Boolean\(reason\)\}/);
+  assert.match(read("app/(app)/applications/[application]/files/page.jsx"), /servingProfile=\{application\.serving_profile\}/);
+});
+
+// RC-19: a restore names its database. The Restores list showed a database's own restore
+// as "Deleted application", and its Backups tab lost the restore after a reload.
+test("restores of a database on its own are named, filterable, and followed after a reload", async () => {
+  const { restoresResponseSchema } = await import("../lib/schemas/backup.js");
+  const parsed = restoresResponseSchema.parse({
+    restores: [{ id: 5, application_id: null, database_id: 6, database_name: "qa_small", database_engine: "mariadb", type: "database", status: "succeeded" }],
+  });
+  const { backupSubject } = await import("../lib/backups/backup-subject.js");
+  assert.deepEqual(backupSubject(parsed.restores[0]), { kind: "database", name: "qa_small", href: "/databases/6?tab=backups", archived: false });
+  const { filterDatabases } = await import("../lib/backups/filter-databases.js");
+  assert.deepEqual(filterDatabases([{ database: { id: 6, name: "qa_small" } }], { id: "9", name: "gone" }), [{ id: 6, name: "qa_small" }, { id: "9", name: "gone" }]);
+  assert.match(read("lib/backups/get-backups.js"), /"filter\[database_id\]": searchParams\.database,\n\s+"filter\[status\]": oneOf\(searchParams\.status, RESTORE_STATUSES\)/);
+  assert.match(read("components/backups/restores-list.jsx"), /const subject = backupSubject\(row\.original\);/);
+  assert.match(read("components/backups/subject-filter.jsx"), /database: kind === "database" \? id : undefined/);
+  assert.match(read("app/(app)/databases/[database]/page.jsx"), /getActiveRestore\(undefined, \{\n\s+database: data\.id,/);
+});

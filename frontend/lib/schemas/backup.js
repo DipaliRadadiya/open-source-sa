@@ -250,6 +250,10 @@ export const restoreSchema = z
     // Null when the site has since been deleted.
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
+    // A database's own restore (RC-19); name and engine outlive the database.
+    database_id: z.number().nullish(),
+    database_name: z.string().nullish(),
+    database_engine: z.string().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),
     status: z.string(),

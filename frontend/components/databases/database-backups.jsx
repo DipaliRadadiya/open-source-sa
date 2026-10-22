@@ -8,7 +8,7 @@ import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 
 // A database on its own gets the application backup screen, worded for a database. One
 // that belongs to an application is backed up with it, and its own schedule is refused.
-export function DatabaseBackups({ database, read, backups, destinations, backupOptions, archived = [], canManage, canHandleArchives }) {
+export function DatabaseBackups({ database, read, backups, destinations, backupOptions, archived = [], activeRestore = null, canManage, canHandleArchives }) {
   const t = useTranslations("backups.database");
 
   if (read.failed) {
@@ -50,6 +50,7 @@ export function DatabaseBackups({ database, read, backups, destinations, backupO
           ? null
           : backups.backups.filter((backup) => backup.status === "verified" && !backup.is_safety).length
       }
+      activeRestore={activeRestore}
       canManage={canManage}
       canRestore={canManage}
       canTurnOff={canManage}

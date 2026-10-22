@@ -4787,7 +4787,8 @@
         "whenToUse": "アップロード・プラグイン・デプロイなどでファイルの所有者が想定外のユーザーになっている場合に使用してください。",
         "confirm": "権限を修正",
         "done": "権限をリセットしました。",
-        "failed": "権限をリセットできませんでした。"
+        "failed": "権限をリセットできませんでした。",
+        "notForRuntime": "PHP と静的アプリケーションのみ。Node.js と Docker のアプリケーションは、一部のファイルが実行可能である必要があるため、権限をそのまま保ちます。"
       },
       "bulk": {
         "selected": "{count, plural, other {# 件選択中}}",
@@ -7190,7 +7191,6 @@
     },
     "history": {
       "allApplications": "すべてのアプリケーション",
-      "allDatabases": "すべてのデータベース",
       "allStatuses": "すべての状態",
       "statuses": {
         "verified": "完了",
@@ -7555,7 +7555,8 @@
       },
       "notStarted": "未開始",
       "undo": "元に戻す",
-      "safetyGone": "そのセーフティコピーはもう保持されていません。保持されるのは最新の 2 件だけです。"
+      "safetyGone": "そのセーフティコピーはもう保持されていません。保持されるのは最新の 2 件だけです。",
+      "undoOnDatabase": "「バックアップ」タブで元に戻す"
     },
     "pausedFrequency": "一時停止中：{frequency}",
     "database": {
@@ -7630,6 +7631,11 @@
         "database": "データベース"
       },
       "notSetUpLine": "未設定 — このデータベースはバックアップされていません。"
+    },
+    "subjectFilter": {
+      "all": "すべてのアプリケーションとデータベース",
+      "applications": "アプリケーション",
+      "databases": "データベース"
     }
   },
   "sync": {

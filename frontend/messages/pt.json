@@ -4787,7 +4787,8 @@
         "whenToUse": "Use isto quando uploads, plugins ou um deploy deixaram arquivos do usuário errado.",
         "confirm": "Corrigir permissões",
         "done": "Permissões redefinidas.",
-        "failed": "Não foi possível redefinir as permissões."
+        "failed": "Não foi possível redefinir as permissões.",
+        "notForRuntime": "Apenas para aplicações PHP e estáticas. Aplicações Node.js e Docker mantêm as permissões, porque alguns dos seus arquivos precisam continuar executáveis."
       },
       "bulk": {
         "selected": "{count, plural, one {# selecionado} other {# selecionados}}",
@@ -7190,7 +7191,6 @@
     },
     "history": {
       "allApplications": "Todas as aplicações",
-      "allDatabases": "Todos os bancos de dados",
       "allStatuses": "Qualquer status",
       "statuses": {
         "verified": "Concluída",
@@ -7555,7 +7555,8 @@
       },
       "notStarted": "Não iniciada",
       "undo": "Desfazer",
-      "safetyGone": "Essa cópia de segurança não é mais mantida. Só as duas mais recentes são."
+      "safetyGone": "Essa cópia de segurança não é mais mantida. Só as duas mais recentes são.",
+      "undoOnDatabase": "Desfazer na aba Backups"
     },
     "pausedFrequency": "Pausado: {frequency}",
     "database": {
@@ -7630,6 +7631,11 @@
         "database": "Banco de dados"
       },
       "notSetUpLine": "Não configurado — este banco de dados não está sendo copiado."
+    },
+    "subjectFilter": {
+      "all": "Todas as aplicações e bancos de dados",
+      "applications": "Aplicações",
+      "databases": "Bancos de dados"
     }
   },
   "sync": {

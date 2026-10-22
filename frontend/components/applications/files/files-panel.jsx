@@ -52,6 +52,7 @@ export function FilesPanel({
   canManage,
   breakdown = null,
   siteType = null,
+  servingProfile = null,
   // A file named in the link (`?open=`), opened on arrival.
   openName = null,
 }) {
@@ -241,7 +242,7 @@ export function FilesPanel({
       {/* Gated like the first one: wrapped onto a phone line it stood alone before Fix
           permissions. 52rem fits the widest locale's row (French, 815px). */}
       <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center hidden @[52rem]/toolbar:block" />
-      <FixPermissionsButton appId={appId} canManage={canManage} />
+      <FixPermissionsButton appId={appId} canManage={canManage} servingProfile={servingProfile} />
       {/* Text is red mixed 22% toward foreground: plain `text-destructive` on this tint is under 4.5:1. */}
       <Button
         variant="outline"

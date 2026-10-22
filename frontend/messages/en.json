@@ -4787,7 +4787,8 @@
         "whenToUse": "Use this when uploads, plugins, or a deploy have left files owned by the wrong user.",
         "confirm": "Fix permissions",
         "done": "Permissions reset.",
-        "failed": "Couldn't reset permissions."
+        "failed": "Couldn't reset permissions.",
+        "notForRuntime": "Only for PHP and static applications. Node.js and Docker applications keep their permissions, because some of their files must stay executable."
       },
       "bulk": {
         "selected": "{count, plural, one {# selected} other {# selected}}",
@@ -7190,7 +7191,6 @@
     },
     "history": {
       "allApplications": "All applications",
-      "allDatabases": "All databases",
       "allStatuses": "Any status",
       "statuses": {
         "verified": "Complete",
@@ -7555,7 +7555,8 @@
       },
       "notStarted": "Not started",
       "undo": "Undo",
-      "safetyGone": "That safety copy is no longer kept. Only the newest two are."
+      "safetyGone": "That safety copy is no longer kept. Only the newest two are.",
+      "undoOnDatabase": "Undo on its Backups tab"
     },
     "pausedFrequency": "Paused: {frequency}",
     "database": {
@@ -7630,6 +7631,11 @@
         "database": "Database"
       },
       "notSetUpLine": "Not set up — this database is not being backed up."
+    },
+    "subjectFilter": {
+      "all": "All applications and databases",
+      "applications": "Applications",
+      "databases": "Databases"
     }
   },
   "sync": {

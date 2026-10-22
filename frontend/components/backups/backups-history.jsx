@@ -29,6 +29,7 @@ import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
+import { SubjectFilter } from "@/components/backups/subject-filter";
 
 // Server-paginated: the list grows without bound.
 export function BackupsHistory({
@@ -39,6 +40,7 @@ export function BackupsHistory({
   canRun,
   hasFilters,
   database = null,
+  databases = [],
   pager = null,
 }) {
   const t = useTranslations("backups.history");
@@ -171,26 +173,13 @@ export function BackupsHistory({
   const toolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       {/* Searchable picker: `/backups` has no text search, so this is how a site is found. */}
-      <FacetSelect
-        paramKey="application"
+      <SubjectFilter
+        applications={applications}
+        databases={databases}
         label={t("columns.site")}
         allLabel={t("allApplications")}
-        options={applications.map((application) => ({
-          value: String(application.id),
-          label: application.name,
-        }))}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
-      {/* Only arriving from a database's Backups tab; "All databases" drops it. */}
-      {database ? (
-        <FacetSelect
-          paramKey="database"
-          label={t("subject.database")}
-          allLabel={t("allDatabases")}
-          options={[{ value: database.id, label: database.name }]}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-      ) : null}
       <FacetSelect
         paramKey="status"
         label={t("columns.status")}

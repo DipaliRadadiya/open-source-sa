@@ -28,7 +28,9 @@ import { getImports } from "@/lib/databases/get-imports";
 import { applicationById } from "@/lib/backups/database-availability";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
 import { DatabaseBackups } from "@/components/databases/database-backups";
-import { getArchivedDatabaseBackups, getBackupTargetOptions, getDatabaseBackups, getDatabaseBackupTarget } from "@/lib/backups/get-backups";
+import { getActiveRestore, getArchivedDatabaseBackups, getBackupTargetOptions, getDatabaseBackups, getDatabaseBackupTarget } from "@/lib/backups/get-backups";
+import { DISMISSED_RESTORES_COOKIE, parseDismissedRestores } from "@/lib/backups/dismissed-restores";
+import { cookies } from "next/headers";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -119,6 +121,15 @@ export default async function DatabasePage({ params, searchParams }) {
   const engineName = t(`engines.${data.engine}`);
   // Backups of deleted databases of this engine can be restored into this one. The
   // server-wide list needs `backup` view; without it the section is not offered.
+  // Seeded from the server so a reload still shows a running restore (RC-19); the
+  // list of restores needs `backup` view, like the archives below.
+  const activeRestore =
+    canManage && !backupRead.backedUpWith && !backupRead.failed && can(permissions, "backup", "view")
+      ? await getActiveRestore(undefined, {
+          database: data.id,
+          dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
+        })
+      : null;
   const archived =
     canManage && !backupRead.backedUpWith && !backupRead.failed && can(permissions, "backup", "view")
       ? (await getArchivedDatabaseBackups(data.engine)).backups
@@ -266,6 +277,7 @@ export default async function DatabasePage({ params, searchParams }) {
               destinations={destinations}
               backupOptions={backupOptions}
               archived={archived}
+              activeRestore={activeRestore}
               canManage={canManage}
               canHandleArchives={canHandleArchives}
             />

@@ -10,8 +10,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { useRefresh } from "@/hooks/use-refresh";
 
+// The API resets only these, by the same field: a Node or container app's files include
+// programs that must stay executable (422 `unsupported_runtime` otherwise).
+const RESETTABLE_PROFILES = ["php", "static"];
+
 // Always targets the application's own document root, never a user-picked path.
-export function FixPermissionsButton({ appId, canManage }) {
+export function FixPermissionsButton({ appId, canManage, servingProfile = null }) {
   const t = useTranslations("applications.files");
   const sentenceFor = useModeSentence();
   const { pending: refreshing, refreshThen } = useRefresh();
@@ -33,18 +37,21 @@ export function FixPermissionsButton({ appId, canManage }) {
     }
   }
 
-  const canFix = canManage;
+  const reason = !canManage
+    ? t("noPermission")
+    : !RESETTABLE_PROFILES.includes(servingProfile)
+      ? t("fixPermissions.notForRuntime")
+      : null;
 
   return (
     <>
-      <ReasonTooltip reason={canFix ? null : t("noPermission")}>
+      <ReasonTooltip reason={reason}>
         {/* Outlined like New folder / New file; muted or ghost styles read as disabled on
             the tinted strip. */}
         <Button
           variant="outline"
           size="sm"
-         
-          disabled={!canFix}
+          disabled={Boolean(reason)}
           onClick={() => setOpen(true)}
         >
           <Wrench className="size-3.5" />

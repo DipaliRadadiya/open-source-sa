@@ -4787,7 +4787,8 @@
         "whenToUse": "Nutzen Sie das, wenn Uploads, Plugins oder ein Deployment Dateien mit dem falschen Besitzer hinterlassen haben.",
         "confirm": "Berechtigungen korrigieren",
         "done": "Berechtigungen zurückgesetzt.",
-        "failed": "Die Berechtigungen konnten nicht zurückgesetzt werden."
+        "failed": "Die Berechtigungen konnten nicht zurückgesetzt werden.",
+        "notForRuntime": "Nur für PHP- und statische Anwendungen. Node.js- und Docker-Anwendungen behalten ihre Berechtigungen, weil einige ihrer Dateien ausführbar bleiben müssen."
       },
       "bulk": {
         "selected": "{count, plural, one {# ausgewählt} other {# ausgewählt}}",
@@ -7190,7 +7191,6 @@
     },
     "history": {
       "allApplications": "Alle Anwendungen",
-      "allDatabases": "Alle Datenbanken",
       "allStatuses": "Jeder Status",
       "statuses": {
         "verified": "Abgeschlossen",
@@ -7555,7 +7555,8 @@
       },
       "notStarted": "Nicht gestartet",
       "undo": "Rückgängig",
-      "safetyGone": "Diese Sicherheitskopie wird nicht mehr aufbewahrt. Nur die zwei neuesten bleiben."
+      "safetyGone": "Diese Sicherheitskopie wird nicht mehr aufbewahrt. Nur die zwei neuesten bleiben.",
+      "undoOnDatabase": "Im Tab „Backups“ rückgängig machen"
     },
     "pausedFrequency": "Pausiert: {frequency}",
     "database": {
@@ -7630,6 +7631,11 @@
         "database": "Datenbank"
       },
       "notSetUpLine": "Nicht eingerichtet — diese Datenbank wird nicht gesichert."
+    },
+    "subjectFilter": {
+      "all": "Alle Anwendungen und Datenbanken",
+      "applications": "Anwendungen",
+      "databases": "Datenbanken"
     }
   },
   "sync": {

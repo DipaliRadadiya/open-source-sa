@@ -169,6 +169,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             canManage={canManage}
             breakdown={breakdown}
             siteType={application.site_type}
+            servingProfile={application.serving_profile}
             openName={openName}
           />
       )}

@@ -24,6 +24,9 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 import { UndoRestoreButton } from "@/components/backups/undo-restore-button";
 import { FACT_LABEL } from "@/lib/theme/facts";
+import { backupSubject } from "@/lib/backups/backup-subject";
+import { subjectLine } from "@/components/backups/backups-history-table";
+import { SubjectFilter } from "@/components/backups/subject-filter";
 
 // The key comes from the API and `t()` throws on a miss, so fall back to the raw status.
 function statusLabel(restore, t) {
@@ -32,7 +35,7 @@ function statusLabel(restore, t) {
   return t.has(key) ? t(key) : restore.status;
 }
 
-export function RestoresList({ restores, applications = [], hasFilters = false, canRestore = false, pager = null }) {
+export function RestoresList({ restores, applications = [], databases = [], hasFilters = false, canRestore = false, pager = null }) {
   const t = useTranslations("backups.restores");
 
   const running = restores.some((restore) => RESTORE_IN_FLIGHT.includes(restore.status));
@@ -48,14 +51,11 @@ export function RestoresList({ restores, applications = [], hasFilters = false, 
   // Same filters, order and widths as the backup history tab; URL-driven, so a view is a link.
   const toolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      <FacetSelect
-        paramKey="application"
+      <SubjectFilter
+        applications={applications}
+        databases={databases}
         label={t("columns.site")}
         allLabel={t("allApplications")}
-        options={applications.map((application) => ({
-          value: String(application.id),
-          label: application.name,
-        }))}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
       <FacetSelect
@@ -104,7 +104,7 @@ export function RestoresList({ restores, applications = [], hasFilters = false, 
             description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
             badge={hasFilters ? "search" : null}
             // Only when filters emptied the list.
-            action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
+            action={hasFilters ? <ClearFiltersButton keys={["application", "database", "status", "period", "type", "search"]} /> : null}
           />
         </ListCard>
       ) : (
@@ -123,23 +123,23 @@ export function RestoresList({ restores, applications = [], hasFilters = false, 
   );
 }
 
+// A site, a database on its own (RC-19), or either after it was deleted: as in History.
 function SiteCell({ row }) {
   const t = useTranslations("backups.restores");
-  const restore = row.original;
+  const th = useTranslations("backups.history");
+  const subject = backupSubject(row.original);
+  const name = subject.name ?? t("unknownApplication");
 
   return (
     <div className="min-w-0">
-      {restore.application_id ? (
-        <Link
-          href={`/applications/${restore.application_id}/backups`}
-          className="truncate font-medium underline-offset-4 hover:underline"
-        >
-          {restore.application_name ?? t("unknownApplication")}
+      {subject.href ? (
+        <Link href={subject.href} className="truncate font-medium underline-offset-4 hover:underline">
+          {name}
         </Link>
       ) : (
-        <span className="truncate font-medium">{t("unknownApplication")}</span>
+        <span className="truncate font-medium">{name}</span>
       )}
-      <p className="truncate text-xs text-muted-foreground">{restore.application_domain ?? ""}</p>
+      <p className="truncate text-xs text-muted-foreground">{subjectLine(subject, th)}</p>
     </div>
   );
 }
@@ -200,7 +200,15 @@ function UndoCell({ row, table }) {
   if (!restore.safety_backup_id) {
     return <span className="text-sm text-muted-foreground">{t("noSafetyCopy")}</span>;
   }
-  // No site: a database's own restore (undone from its Backups tab) or a deleted site's.
+  // A database's own restore is undone on its Backups tab, which follows it (RC-19).
+  if (restore.database_id) {
+    return (
+      <Link href={`/databases/${restore.database_id}?tab=backups`} className="text-sm underline-offset-4 hover:underline">
+        {t("undoOnDatabase")}
+      </Link>
+    );
+  }
+  // No site: a deleted site's, or a deleted database's.
   if (!restore.application_id) {
     return <span className="text-sm text-muted-foreground">{t("undoUnavailable")}</span>;
   }
@@ -210,6 +218,7 @@ function UndoCell({ row, table }) {
 
 function RestoreCards({ restores, canRestore = false }) {
   const t = useTranslations("backups.restores");
+  const th = useTranslations("backups.history");
 
   return (
     <div className="space-y-3">
@@ -217,18 +226,15 @@ function RestoreCards({ restores, canRestore = false }) {
         const meta = outcomeOf(RESTORE_OUTCOME, restore.status);
         const Icon = meta.icon;
         const duration = apiDuration(restore.started_at, restore.finished_at);
+        const subject = backupSubject(restore);
 
         return (
           <Card key={restore.id} className="gap-0 py-0 shadow-sm">
             <CardContent className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {restore.application_name ?? t("unknownApplication")}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {restore.application_domain ?? ""}
-                  </p>
+                  <p className="truncate font-medium">{subject.name ?? t("unknownApplication")}</p>
+                  <p className="truncate text-xs text-muted-foreground">{subjectLine(subject, th)}</p>
                 </div>
                 <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
                   <Icon className={cn("size-3", meta.spin && "animate-spin")} />
@@ -263,7 +269,11 @@ function RestoreCards({ restores, canRestore = false }) {
               ) : null}
 
               {/* Cards had no way back at all; same action as the table's column. */}
-              {restore.safety_backup_id && restore.application_id ? (
+              {restore.safety_backup_id && restore.database_id ? (
+                <Link href={`/databases/${restore.database_id}?tab=backups`} className="block text-sm underline-offset-4 hover:underline">
+                  {t("undoOnDatabase")}
+                </Link>
+              ) : restore.safety_backup_id && restore.application_id ? (
                 <UndoRestoreButton restore={restore} canRestore={canRestore} className="w-full sm:w-auto" />
               ) : null}
             </CardContent>

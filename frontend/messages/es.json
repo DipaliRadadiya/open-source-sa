@@ -4787,7 +4787,8 @@
         "whenToUse": "Úsalo cuando subidas, plugins o un despliegue hayan dejado archivos con un propietario incorrecto.",
         "confirm": "Corregir permisos",
         "done": "Permisos restablecidos.",
-        "failed": "No se pudieron restablecer los permisos."
+        "failed": "No se pudieron restablecer los permisos.",
+        "notForRuntime": "Solo para aplicaciones PHP y estáticas. Las aplicaciones Node.js y Docker conservan sus permisos, porque algunos de sus archivos deben seguir siendo ejecutables."
       },
       "bulk": {
         "selected": "{count, plural, one {# seleccionado} other {# seleccionados}}",
@@ -7190,7 +7191,6 @@
     },
     "history": {
       "allApplications": "Todas las aplicaciones",
-      "allDatabases": "Todas las bases de datos",
       "allStatuses": "Cualquier estado",
       "statuses": {
         "verified": "Completada",
@@ -7555,7 +7555,8 @@
       },
       "notStarted": "Sin empezar",
       "undo": "Deshacer",
-      "safetyGone": "Esa copia de seguridad previa ya no se conserva. Solo se guardan las dos más recientes."
+      "safetyGone": "Esa copia de seguridad previa ya no se conserva. Solo se guardan las dos más recientes.",
+      "undoOnDatabase": "Deshacer en su pestaña Copias de seguridad"
     },
     "pausedFrequency": "En pausa: {frequency}",
     "database": {
@@ -7630,6 +7631,11 @@
         "database": "Base de datos"
       },
       "notSetUpLine": "Sin configurar: no se respalda esta base de datos."
+    },
+    "subjectFilter": {
+      "all": "Todas las aplicaciones y bases de datos",
+      "applications": "Aplicaciones",
+      "databases": "Bases de datos"
     }
   },
   "sync": {

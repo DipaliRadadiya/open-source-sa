@@ -113,6 +113,7 @@ export async function getRestores(searchParams = {}) {
       page: searchParams.page,
       per_page: perPage(searchParams.per_page),
       "filter[application_id]": searchParams.application,
+      "filter[database_id]": searchParams.database,
       "filter[status]": oneOf(searchParams.status, RESTORE_STATUSES),
       "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
       "filter[from]": since(searchParams.period),
@@ -128,13 +129,12 @@ export async function getRestores(searchParams = {}) {
   };
 }
 
-// Filtered to the site by the API; the in-flight check is local because
-// `filter[status]` takes one value. The backend 422s a second restore per app.
-export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
-  const { restores: rows } = await getRestores({ application: applicationId, per_page: 5 });
-  // Server-wide: a database's own restore has no site, and its row does not say
-  // which database it was (16 Oct), so it can be neither worded nor undone here.
-  const restores = applicationId ? rows : rows.filter((restore) => restore.application_id);
+// Filtered to the site (or a database on its own) by the API; the in-flight check is
+// local because `filter[status]` takes one value. The backend 422s a second restore.
+export async function getActiveRestore(applicationId, { dismissed = [], database } = {}) {
+  const { restores: rows } = await getRestores({ application: applicationId, database, per_page: 5 });
+  // Server-wide: a database's own restore is followed and undone on its Backups tab.
+  const restores = applicationId || database ? rows : rows.filter((restore) => restore.application_id);
   const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 
   // Otherwise the newest one finished within the last day and not dismissed,
@@ -229,7 +229,8 @@ export async function getBackupCoverage() {
 
 // Databases with no application (RC-23), shaped like the coverage rows so the same
 // cells render them. A failed read is reported, never shown as "no databases".
-export async function getDatabaseBackupCoverage() {
+// Cached per request: the overview card and the History/Restores filter both read it.
+export const getDatabaseBackupCoverage = cache(async function getDatabaseBackupCoverage() {
   const result = await read("/backup-targets", databaseBackupTargetsResponseSchema, {
     searchParams: { kind: "database", per_page: 100 },
   });
@@ -240,7 +241,7 @@ export async function getDatabaseBackupCoverage() {
     state: classify(entry.backup_target, entry.last_backup),
   }));
   return { rows, total: result.data?.meta?.total ?? rows.length, failed: result.failed, status: result.status, failure: result.failure, message: result.message };
-}
+});
 
 // Each application's backup standing for the Applications list, by id: one request for
 // the whole list (the API maximum of 100 rows). `null` when it could not be read, so
