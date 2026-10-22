@@ -183,6 +183,9 @@ class DatabaseController extends Controller
 
         $databases = Database::query()
             ->withCount('users')
+            // One query for the page, not one per row: the resource names the
+            // attached application only when this relation is loaded.
+            ->with('application:id,name')
             ->when($filter['engine'] ?? null, fn ($query, $engine) => $query->where('engine', $engine))
             ->when(
                 ($filter['application_id'] ?? null) !== null,

@@ -21,6 +21,10 @@ class DatabaseResource extends JsonResource
             'charset' => $this->charset,
             'collation' => $this->collation,
             'application_id' => $this->application_id,
+            // Only where the caller eager-loaded `application` (the list does),
+            // so no other endpoint lazy-loads it or grows this field; null when
+            // the database is not attached.
+            'application_name' => $this->whenLoaded('application', fn (): ?string => $this->application?->name),
             'size_bytes' => (int) $this->size_bytes,
             'size_human' => Bytes::human((int) $this->size_bytes),
             'users_count' => $this->whenCounted('users'),
