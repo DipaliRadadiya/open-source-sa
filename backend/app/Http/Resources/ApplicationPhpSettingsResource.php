@@ -111,7 +111,7 @@ class ApplicationPhpSettingsResource extends JsonResource
             // Compared with the default, not "is a value stored" (PHP-ob): a
             // new site has open_basedir_enabled written as true at provision,
             // which *is* the default, and the field read "changed" forever.
-            'overridden' => $this->overridden($settings),
+            'overridden' => $this->overridden($settings, (string) $application->site_type),
 
             // Three named starting points instead of asking anyone to reason
             // about worker counts, each carrying the memory it implies.
@@ -166,7 +166,7 @@ class ApplicationPhpSettingsResource extends JsonResource
     /**
      * @return array<string, bool>
      */
-    private function overridden(ApplicationPhpSettings $settings): array
+    private function overridden(ApplicationPhpSettings $settings, string $siteType): array
     {
         $defaults = ApplicationPhpSettings::defaults();
         $normal = fn (mixed $value): string => is_bool($value) ? ($value ? '1' : '0') : trim((string) $value);
@@ -177,6 +177,17 @@ class ApplicationPhpSettingsResource extends JsonResource
             $stored = $settings->getAttribute($key);
 
             $flags[$key] = $stored !== null && $stored !== '' && $normal($stored) !== $normal($defaults[$key]);
+        }
+
+        // RC-3: a new site is provisioned with its type's strict list, which
+        // the generic default (null) never equals, so every untouched site
+        // read "changed". The list it was given is its default. Compared as a
+        // set: order and spacing are not a change.
+        $functions = fn (mixed $value): array => collect(explode(',', (string) $value))
+            ->map(fn (string $name): string => trim($name))->filter()->unique()->sort()->values()->all();
+
+        if ($flags['disable_functions'] && $functions($settings->disable_functions) === $functions(ApplicationPhpSettings::strictDisabledFunctionsFor($siteType))) {
+            $flags['disable_functions'] = false;
         }
 
         return $flags;

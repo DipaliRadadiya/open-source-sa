@@ -1550,6 +1550,26 @@ describe('values that are the right shape but wrong (bug #61)', function () {
     });
 });
 
+it('does not call disable_functions changed when it is the list the site was provisioned with (RC-3)', function () {
+    fakePhpServer();
+    $strict = ApplicationPhpSettings::strictDisabledFunctionsFor((string) $this->application->site_type);
+    // As provisioned, in another order and spacing: still the same list.
+    ApplicationPhpSettings::updateOrCreate(['application_id' => $this->application->id], ['disable_functions' => implode(', ', array_reverse(explode(',', $strict)))]);
+
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', false);
+
+    // One function allowed again by the owner: that is a change.
+    ApplicationPhpSettings::where('application_id', $this->application->id)
+        ->update(['disable_functions' => implode(',', array_slice(explode(',', $strict), 1))]);
+
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
+
+    // So is a list of the owner's own.
+    ApplicationPhpSettings::where('application_id', $this->application->id)->update(['disable_functions' => 'exec,system']);
+
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
+});
+
 it('does not call a value changed when it is the default (PHP-ob)', function () {
     fakePhpServer();
     // As a new site is provisioned: open_basedir written explicitly as the

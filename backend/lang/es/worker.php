@@ -43,6 +43,8 @@ return [
         'extra_config_encoding' => 'La configuración adicional debe ser texto UTF-8 sin formato.',
         'did_not_start' => 'El proceso no siguió en ejecución, así que no se añadió. Revise el comando. Referencia: :reference',
         'did_not_start_said' => 'El proceso no siguió en ejecución, así que no se añadió. Mostró: «:output» (referencia :reference)',
+        'edit_did_not_start' => 'El worker no siguió en ejecución con la nueva configuración, así que el cambio no se guardó y conserva su comando anterior. Revisa el comando. Referencia: :reference',
+        'edit_did_not_start_said' => 'El worker no siguió en ejecución con la nueva configuración, así que el cambio no se guardó y conserva su comando anterior. Mostró: «:output» (referencia :reference)',
         'did_not_start_field' => 'Este comando termina enseguida en lugar de seguir ejecutándose.',
         'user_not_allowed' => 'Los workers solo pueden ejecutarse con la cuenta de la aplicación (:user). Solo el administrador del panel puede elegir otra cuenta.',
         'directory_outside_home' => 'El directorio debe estar dentro de la carpeta personal de la aplicación (:home).',

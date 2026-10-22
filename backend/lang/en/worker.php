@@ -51,6 +51,8 @@ return [
         'extra_config_encoding' => 'Extra config must be plain UTF-8 text.',
         'did_not_start' => 'The worker did not stay running, so it was not added. Check the command. Reference: :reference',
         'did_not_start_said' => 'The worker did not stay running, so it was not added. It printed: “:output” (reference :reference)',
+        'edit_did_not_start' => 'The worker did not stay running with the new settings, so the change was not saved and it keeps its previous command. Check the command. Reference: :reference',
+        'edit_did_not_start_said' => 'The worker did not stay running with the new settings, so the change was not saved and it keeps its previous command. It printed: “:output” (reference :reference)',
         'did_not_start_field' => 'This command exits straight away instead of running.',
         'user_not_allowed' => 'Workers can only run as the application\'s own account (:user). Only the panel administrator can choose another account.',
         'directory_outside_home' => 'The directory must be inside the application\'s home folder (:home).',

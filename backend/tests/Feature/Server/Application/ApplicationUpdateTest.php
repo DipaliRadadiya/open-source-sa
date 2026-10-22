@@ -1,15 +1,18 @@
 <?php
 
 use App\Enums\ApplicationUpdateStatus;
+use App\Enums\BackupStatus;
 use App\Jobs\UpdateApplication;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\ApplicationUpdate;
+use App\Models\Backup;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationUpdates;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
@@ -160,6 +163,20 @@ it('says a site type it cannot update is unsupported', function () {
         ->assertOk()
         ->assertJsonPath('update.supported', false)
         ->assertJsonPath('update.blocked_reason', 'unsupported');
+});
+
+it('dates the last backup like every other date in the API (RC-10)', function () {
+    $application = updateApp('php');
+    $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
+        ->assertJsonPath('update.last_backup_at', null);
+
+    Backup::create(['application_id' => $application->id, 'type' => 'full', 'status' => BackupStatus::Verified->value,
+        'finished_at' => Carbon::parse('2026-10-13 09:10:02')]);
+    Backup::create(['application_id' => $application->id, 'type' => 'full', 'status' => BackupStatus::Failed->value,
+        'finished_at' => Carbon::parse('2026-10-14 09:00:00')]);
+
+    $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
+        ->assertJsonPath('update.last_backup_at', '13-10-2026 09:10:02');
 });
 
 it('reports the installed version, the newest in its line, and a newer line it will not cross', function () {

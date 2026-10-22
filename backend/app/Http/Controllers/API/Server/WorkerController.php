@@ -228,7 +228,7 @@ class WorkerController extends Controller
                 }
             }
 
-            throw $this->explainStart($e, $worker, $supervisor);
+            throw $this->explainStart($e, $worker, $supervisor, edit: true);
         }
 
         $activity->log('application.worker_updated', $application, [
@@ -270,7 +270,7 @@ class WorkerController extends Controller
      * reference. Answered 422 with what the program last printed — the
      * output a command that exits at once leaves in its log.
      */
-    private function explainStart(Throwable $e, Worker $worker, WorkerSupervisor $supervisor): Throwable
+    private function explainStart(Throwable $e, Worker $worker, WorkerSupervisor $supervisor, bool $edit = false): Throwable
     {
         if (! $e instanceof ProvisioningFailedException || $e->step !== 'start_worker') {
             return $e;
@@ -283,9 +283,11 @@ class WorkerController extends Controller
         }
 
         return new HttpResponseException(response()->json([
+            // An edit is never "not added": the change was rolled back and the
+            // worker keeps its previous command (RC-4).
             'message' => $said === null
-                ? __('worker.errors.did_not_start', ['reference' => $e->reference])
-                : __('worker.errors.did_not_start_said', ['output' => $said, 'reference' => $e->reference]),
+                ? __($edit ? 'worker.errors.edit_did_not_start' : 'worker.errors.did_not_start', ['reference' => $e->reference])
+                : __($edit ? 'worker.errors.edit_did_not_start_said' : 'worker.errors.did_not_start_said', ['output' => $said, 'reference' => $e->reference]),
             'reason' => 'worker_did_not_start',
             'output' => $said,
             'reference' => $e->reference,

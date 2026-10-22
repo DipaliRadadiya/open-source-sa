@@ -9,6 +9,7 @@ use App\Enums\BackupStatus;
 use App\Models\Application;
 use App\Models\ApplicationUpdate;
 use App\Models\Backup;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -49,10 +50,12 @@ class ApplicationUpdates
             'blocked_reason' => null,
             // Shown beside the button: the backup is the user's to take first,
             // from the backups screen (Dipali, 2026-10-13).
-            'last_backup_at' => Backup::query()
+            // `max()` returns the column's raw string (`Y-m-d H:i:s`); every other
+            // date in the API, history[] here included, is `d-m-Y H:i:s` (RC-10).
+            'last_backup_at' => ($last = Backup::query()
                 ->where('application_id', $application->id)
                 ->where('status', BackupStatus::Verified)
-                ->max('finished_at'),
+                ->max('finished_at')) === null ? null : Carbon::parse($last)->format('d-m-Y H:i:s'),
         ];
 
         if ($updater === null) {

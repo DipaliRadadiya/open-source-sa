@@ -43,6 +43,8 @@ return [
         'extra_config_encoding' => 'La configuration supplémentaire doit être du texte UTF-8 brut.',
         'did_not_start' => 'Le processus ne s’est pas maintenu, il n’a donc pas été ajouté. Vérifiez la commande. Référence : :reference',
         'did_not_start_said' => 'Le processus ne s’est pas maintenu, il n’a donc pas été ajouté. Il a affiché : « :output » (référence :reference)',
+        'edit_did_not_start' => 'Le worker ne s’est pas maintenu avec les nouveaux réglages : la modification n’a pas été enregistrée et il garde sa commande précédente. Vérifiez la commande. Référence : :reference',
+        'edit_did_not_start_said' => 'Le worker ne s’est pas maintenu avec les nouveaux réglages : la modification n’a pas été enregistrée et il garde sa commande précédente. Il a affiché : « :output » (référence :reference)',
         'did_not_start_field' => 'Cette commande se termine tout de suite au lieu de continuer à tourner.',
         'user_not_allowed' => 'Les workers ne peuvent s\'exécuter qu\'avec le compte de l’application (:user). Seul l\'administrateur du panneau peut choisir un autre compte.',
         'directory_outside_home' => 'Le répertoire doit se trouver dans le dossier personnel de l’application (:home).',

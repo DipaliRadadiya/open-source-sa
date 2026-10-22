@@ -432,6 +432,7 @@ it('refuses a worker whose unit will not stay up', function () {
         ->postJson(workerUrl(), workerPayload())
         ->assertStatus(422)
         ->assertJsonPath('reason', 'worker_did_not_start')
+        ->assertJsonPath('message', fn (string $message) => str_contains($message, 'so it was not added'))
         ->assertJsonStructure(['reference', 'output', 'errors' => ['command']]);
 });
 
@@ -1472,7 +1473,10 @@ describe('an edit that will not start (W-edit)', function () {
         $this->actingAs($this->admin)
             ->putJson(workerUrl('/'.$worker->id), workerPayload(['command' => 'no-such-binary --work']))
             ->assertStatus(422)
-            ->assertJsonPath('reason', 'worker_did_not_start');
+            ->assertJsonPath('reason', 'worker_did_not_start')
+            // RC-4: an edit is rolled back, never "not added".
+            ->assertJsonPath('message', fn (string $message) => str_contains($message, 'the change was not saved and it keeps its previous command')
+                && ! str_contains($message, 'not added'));
 
         expect($worker->fresh()->command)->toBe('php8.4 artisan queue:work --sleep=3 --tries=3')
             ->and(WorkerFake::$running[$program] ?? 0)->toBe(1)

@@ -43,6 +43,8 @@ return [
         'extra_config_encoding' => 'Die Zusatzkonfiguration muss reiner UTF-8-Text sein.',
         'did_not_start' => 'Der Worker lief nicht weiter und wurde daher nicht hinzugefügt. Prüfen Sie den Befehl. Referenz: :reference',
         'did_not_start_said' => 'Der Worker lief nicht weiter und wurde daher nicht hinzugefügt. Ausgabe: „:output“ (Referenz :reference)',
+        'edit_did_not_start' => 'Der Worker lief mit den neuen Einstellungen nicht weiter, daher wurde die Änderung nicht gespeichert und er behält seinen bisherigen Befehl. Prüfen Sie den Befehl. Referenz: :reference',
+        'edit_did_not_start_said' => 'Der Worker lief mit den neuen Einstellungen nicht weiter, daher wurde die Änderung nicht gespeichert und er behält seinen bisherigen Befehl. Ausgabe: „:output“ (Referenz :reference)',
         'did_not_start_field' => 'Dieser Befehl beendet sich sofort, statt weiterzulaufen.',
         'user_not_allowed' => 'Worker können nur mit dem Konto der Website (:user) laufen. Nur der Panel-Administrator kann ein anderes Konto wählen.',
         'directory_outside_home' => 'Das Verzeichnis muss im Home-Ordner der Website liegen (:home).',

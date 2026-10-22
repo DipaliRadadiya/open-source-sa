@@ -43,6 +43,8 @@ return [
         'extra_config_encoding' => '追加設定はプレーンな UTF-8 テキストにしてください。',
         'did_not_start' => 'ワーカーが動作し続けなかったため、追加されませんでした。コマンドを確認してください。参照: :reference',
         'did_not_start_said' => 'ワーカーが動作し続けなかったため、追加されませんでした。出力:「:output」（参照 :reference）',
+        'edit_did_not_start' => '新しい設定ではワーカーが動作し続けなかったため、変更は保存されず、以前のコマンドのままです。コマンドを確認してください。参照: :reference',
+        'edit_did_not_start_said' => '新しい設定ではワーカーが動作し続けなかったため、変更は保存されず、以前のコマンドのままです。出力:「:output」(参照 :reference)',
         'did_not_start_field' => 'このコマンドは動作し続けずにすぐ終了します。',
         'user_not_allowed' => 'ワーカーはアプリケーション自身のアカウント (:user) でのみ実行できます。別のアカウントを選べるのはパネル管理者だけです。',
         'directory_outside_home' => 'ディレクトリはアプリケーションのホームフォルダー (:home) 内である必要があります。',
