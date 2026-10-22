@@ -15,6 +15,7 @@ use App\Http\Resources\CertificateDryRunResource;
 use App\Http\Resources\CertificateResource;
 use App\Models\Application;
 use App\Services\Server\Certificates\CertificateDryRunStore;
+use App\Services\Server\Certificates\CertificateLock;
 use App\Services\Server\Certificates\CertificateOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,15 +49,23 @@ class CertificateController extends Controller
      * trip back to this box and routinely outlasts the request, while writing
      * two files does not.
      */
-    public function store(Application $application, StoreCertificateRequest $request, RequestCertificate $issue, UploadCertificate $upload): JsonResponse
+    public function store(Application $application, StoreCertificateRequest $request, RequestCertificate $issue, UploadCertificate $upload, CertificateLock $certificates): JsonResponse
     {
         $type = CertificateType::from($request->validated('type'));
 
         if ($type === CertificateType::Custom) {
+            // Takes turns with an issuance in progress (CertificateLock): the
+            // upload revokes the site's Let's Encrypt lineage.
+            $lock = $certificates->forChange($application);
+
+            try {
+                $certificate = $upload->execute($application->refresh(), $request->validated());
+            } finally {
+                $lock->release();
+            }
+
             return response()->json([
-                'certificate' => CertificateResource::make(
-                    $upload->execute($application, $request->validated())
-                )->resolve(),
+                'certificate' => CertificateResource::make($certificate)->resolve(),
             ], 201);
         }
 
@@ -119,12 +128,20 @@ class CertificateController extends Controller
         ]);
     }
 
-    public function destroy(Application $application, RemoveCertificate $action): JsonResponse
+    public function destroy(Application $application, RemoveCertificate $action, CertificateLock $certificates): JsonResponse
     {
-        $certificate = $application->certificate;
+        // Same turn-taking as the upload; the certificate is read only once
+        // the lock is held, so an issuance that just finished is the one removed.
+        $lock = $certificates->forChange($application);
 
-        if ($certificate !== null) {
-            $action->execute($certificate);
+        try {
+            $certificate = $application->refresh()->certificate;
+
+            if ($certificate !== null) {
+                $action->execute($certificate);
+            }
+        } finally {
+            $lock->release();
         }
 
         return response()->json(null, 204);

@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 /**
  * One certificate operation per lineage name at a time: issuing a site's
- * certificate, and deleting the site.
+ * certificate, uploading or removing one, and deleting the site.
  *
  * Without it the two raced on a real server (sync-deletion QA, 2026-10-21):
  * the delete's `certbot delete` lost to certbot's own process lock while the
@@ -55,6 +55,27 @@ class CertificateLock
      */
     public function forDelete(Application $application): Lock
     {
+        return $this->waitFor($application, 'application', 'site delete waited out a certificate operation');
+    }
+
+    /**
+     * Held by an upload or a removal of the site's certificate for its whole
+     * run (2026-10-22). Both revoke the site's Let's Encrypt lineage, which
+     * loses to certbot's own lock mid-issuance exactly as the delete did; an
+     * issuance that starts meanwhile finds the lock taken and requeues.
+     *
+     * @throws CertificateBusyException
+     */
+    public function forChange(Application $application): Lock
+    {
+        return $this->waitFor($application, 'certificate', 'certificate change waited out a certificate operation');
+    }
+
+    /**
+     * @throws CertificateBusyException
+     */
+    private function waitFor(Application $application, string $feature, string $message): Lock
+    {
         $name = $this->name($application);
         $lock = $this->lock($name);
         $wait = max(1, (int) config('server.certificates.lock.delete_wait', 20));
@@ -64,8 +85,8 @@ class CertificateLock
         } catch (LockTimeoutException) {
             $reference = (string) Str::uuid();
 
-            Log::channel('server-ops')->warning('site delete waited out a certificate operation', [
-                'feature' => 'application',
+            Log::channel('server-ops')->warning($message, [
+                'feature' => $feature,
                 'op' => 'certificate_lock_busy',
                 'application' => $application->id,
                 'lineage' => $name,

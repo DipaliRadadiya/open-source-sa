@@ -665,3 +665,125 @@ function activeRaceCertificate(Application $application): Certificate
         'private_key_path' => "/etc/letsencrypt/live/{$application->slug}/privkey.pem",
     ]);
 }
+
+/*
+ * Uploading or removing a site's certificate while it is being issued
+ * (2026-10-22). Both revoke the site's Let's Encrypt lineage, the same
+ * `certbot delete` the site delete lost to certbot's lock, so they take the
+ * same turn on the site's name.
+ */
+describe('removing or uploading a certificate while one is being issued', function () {
+    $keyPair = function (string $commonName): array {
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $cert = openssl_csr_sign(openssl_csr_new(['commonName' => $commonName], $key, ['digest_alg' => 'sha256']), null, $key, 365, ['digest_alg' => 'sha256']);
+        openssl_x509_export($cert, $pem);
+        openssl_pkey_export($key, $private);
+
+        return [$pem, $private];
+    };
+
+    it('waits for the issuance, answers busy with nothing changed, and the next removal revokes the lineage', function () {
+        $certificate = pendingCertificate($this->application);
+        $seen = [];
+
+        CertRaceHost::$during = function () use (&$seen, $certificate) {
+            $before = count(CertRaceHost::$commands);
+            $response = test()->actingAs(test()->admin)->deleteJson("/api/applications/{$this->application->id}/certificate");
+            $seen = [
+                'status' => $response->status(),
+                'code' => $response->json('code'),
+                // Anything that changes the server; a read such as `which node`
+                // from request setup is not part of the removal.
+                'commands' => array_values(array_filter(
+                    array_slice(CertRaceHost::lines(), $before),
+                    fn (string $line): bool => preg_match('#certbot|^tee |^rm |^mv |sites-available|systemctl#', $line) === 1,
+                )),
+                'row' => Certificate::whereKey($certificate->id)->exists(),
+            ];
+        };
+
+        runRaceJob(new IssueCertificate($certificate->id));
+
+        expect($seen['status'])->toBe(503)
+            ->and($seen['code'])->toBe('server_busy')
+            ->and($seen['commands'])->toBe([])
+            ->and($seen['row'])->toBeTrue()
+            ->and($certificate->fresh()->status)->toBe(CertificateStatus::Active)
+            ->and(lockFree('shop'))->toBeTrue();
+
+        test()->actingAs(test()->admin)->deleteJson("/api/applications/{$this->application->id}/certificate")->assertNoContent();
+
+        expect(CertRaceHost::$lineages)->toBe([])
+            ->and(CertRaceHost::deleted())->toBe(['shop'])
+            ->and(Certificate::find($certificate->id))->toBeNull()
+            ->and(lockFree('shop'))->toBeTrue();
+    });
+
+    it('holds the lock through the removal: a job arriving mid-removal goes back on the queue', function () {
+        Queue::fake();
+        $certificate = Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::LetsEncrypt,
+            'status' => CertificateStatus::Active,
+            'domains' => [$this->application->domain],
+        ]);
+        CertRaceHost::$lineages['shop'] = true;
+        $retry = pendingCertificate(raceSite('blog', 'blog.example.com'));
+        $freeDuring = null;
+
+        CertRaceHost::$on['certbot delete'] = function () use (&$freeDuring) {
+            $freeDuring = lockFree('shop');
+        };
+
+        test()->actingAs(test()->admin)->deleteJson("/api/applications/{$this->application->id}/certificate")->assertNoContent();
+
+        expect($freeDuring)->toBeFalse()
+            ->and(lockFree('shop'))->toBeTrue()
+            ->and(lockFree('blog'))->toBeTrue()
+            ->and($retry->fresh()->status)->toBe(CertificateStatus::Pending);
+    });
+
+    it('answers busy for an upload while the lock is held, writing nothing', function () use ($keyPair) {
+        [$pem, $key] = $keyPair('shop.example.com');
+        $held = Cache::lock('certificate:shop', 60);
+        expect($held->get())->toBeTrue();
+
+        try {
+            CertRaceHost::$commands = [];
+
+            test()->actingAs(test()->admin)->postJson("/api/applications/{$this->application->id}/certificate", [
+                'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+            ])->assertStatus(503)->assertJsonPath('code', 'server_busy');
+
+            expect(array_filter(CertRaceHost::lines(), fn (string $line): bool => str_starts_with($line, 'tee ') || str_contains($line, 'certbot')))->toBe([])
+                ->and($this->application->fresh()->certificate)->toBeNull();
+        } finally {
+            $held->release();
+        }
+    });
+
+    it('uploads normally once the lock is free, and releases it', function () use ($keyPair) {
+        [$pem, $key] = $keyPair('shop.example.com');
+
+        test()->actingAs(test()->admin)->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+        ])->assertCreated();
+
+        expect($this->application->fresh()->certificate?->type)->toBe(CertificateType::Custom)
+            ->and(lockFree('shop'))->toBeTrue();
+    });
+
+    it('releases the lock when the removal fails', function () {
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::LetsEncrypt,
+            'status' => CertificateStatus::Active,
+            'domains' => [$this->application->domain],
+        ]);
+        // No lineage on disk and never one: certbot delete fails every time.
+
+        test()->actingAs(test()->admin)->deleteJson("/api/applications/{$this->application->id}/certificate")->assertStatus(500);
+
+        expect(lockFree('shop'))->toBeTrue();
+    });
+});
