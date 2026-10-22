@@ -142,6 +142,9 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/setup',
         'api/databases/status/{engine}',
         'api/backups/{backup}',
+        // Polled while an SFTP/FTP backup is copied to the panel for
+        // download — a large archive takes minutes, as a backup does.
+        'api/backups/{backup}/download/prepare',
         'api/restores/{restore}',
         'api/clones/{clone}',
         // Polled while a one-click update runs: Moodle's upgrade and Uptime
