@@ -65,6 +65,26 @@ class ProvisioningFailedException extends Exception
             return 'script_git_auth';
         }
 
+        // The panel's own fetch: the repository or the branch is not there, or
+        // the account cannot read it (FS-C22). Measured with git 2.43 on a
+        // test server, 2026-10-23:
+        //   fatal: couldn't find remote ref <branch>
+        //   fatal: could not read Username for 'https://github.com': … (no
+        //     account, and the repository is missing or private)
+        //   fatal: Authentication failed for '<url>' (a token GitHub refused)
+        // An unreachable host falls through to `download_unreachable` below.
+        if ($step === 'fetch') {
+            $output = $result->output()."\n".$result->errorOutput();
+
+            if (str_contains($output, "couldn't find remote ref")) {
+                return 'git_branch_missing';
+            }
+
+            if (preg_match("/could not read (Username|Password) for 'https?:|Authentication failed for|Repository not found|repository '[^']*' not found/i", $output) === 1) {
+                return 'git_repository_unreachable';
+            }
+        }
+
         // A native addon needed compiling and this server has no compiler.
         //
         // Checked before the exit status because npm exits 1, which says

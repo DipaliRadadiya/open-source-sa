@@ -104,6 +104,8 @@ it('keeps the record of a deploy that failed, and says where', function () {
 
     expect($deployment->status)->toBe(DeploymentStatus::Failed)
         ->and($deployment->failed_step)->not->toBeNull()
+        // And why, in words (FS-C22): this used to stay null.
+        ->and($deployment->failed_reason)->toBe('git_repository_unreachable')
         // The output is the whole point: "failed" without it is an invitation
         // to guess.
         ->and($deployment->output)->toContain('repository not found');

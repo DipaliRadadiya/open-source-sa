@@ -311,8 +311,9 @@ it('names a deploy script that tried to log in to the repository', function (str
 
     expect(ProvisioningFailedException::fromResult('script', $result)->reason)->toBe('script_git_auth')
         // Only the user's script lacks the credential; the panel's own fetch
-        // failing like this is a different problem with a different fix.
-        ->and(ProvisioningFailedException::fromResult('fetch', $result)->reason)->toBeNull()
+        // failing like this is a different problem with a different fix, and
+        // has its own reason (FS-C22): the repository, or its account.
+        ->and(ProvisioningFailedException::fromResult('fetch', $result)->reason)->toBe('git_repository_unreachable')
         ->and(__('application.failure_reason.script_git_auth'))->toContain('git pull');
 })->with([
     "fatal: could not read Username for 'https://github.com': No such device or address",

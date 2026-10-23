@@ -683,8 +683,11 @@ class GitDeployer
         // row to write to.
         $this->recorder->step($step, $result);
 
+        // Classified, like the deploy script's failure: a fetch that failed
+        // used to leave `failed_reason` empty, so a typo in the repository or
+        // the branch read as "failed at fetch" and a reference to the log.
         if ($result->failed()) {
-            throw new ProvisioningFailedException($step, $result->reference);
+            throw ProvisioningFailedException::fromResult($step, $result);
         }
 
         $this->progress->record($step);

@@ -232,6 +232,10 @@ return [
 
     'failure_reason' => [
 
+        'git_repository_unreachable' => 'Das Panel konnte das Repository nicht abrufen. Es existiert nicht, oder es ist privat und das Git-Konto dieser Website kann es nicht lesen (eine Website mit öffentlicher URL hat kein Konto). Prüfen Sie die Repository-Adresse und das Konto und deployen Sie erneut.',
+
+        'git_branch_missing' => 'Der Branch, den diese Website deployt, existiert im Repository nicht. Wählen Sie in den Deployment-Einstellungen einen vorhandenen Branch und deployen Sie erneut.',
+
         'download_unreachable' => 'Der Download hat nicht stattgefunden: Der Server konnte den Host, von dem er lädt, nicht erreichen. Prüfen Sie Internetzugang und DNS des Servers und versuchen Sie es erneut.',
 
         'release_not_found' => 'Die Release-Liste war erreichbar, enthält aber keine Version, die dieser Server installieren kann. Prüfen Sie die PHP-Version oder versuchen Sie es später erneut.',

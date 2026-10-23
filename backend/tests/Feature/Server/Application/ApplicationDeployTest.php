@@ -170,6 +170,45 @@ it('keeps a live site live when a redeploy fails', function () {
     expect($app->reference)->not->toBeEmpty();
 });
 
+it('says why the fetch failed, in words', function (string $stderr, ?string $reason) {
+    // FS-C22: a failed fetch left `failed_reason` empty, so a typo in the
+    // repository or the branch read as "failed at fetch" plus a log
+    // reference. The stderr is git 2.43's, measured on a test server.
+    Process::fake(fn ($process) => match (true) {
+        $process->command[0] === 'test' => Process::result(exitCode: 0),
+        in_array('fetch', $process->command, true) => Process::result(errorOutput: $stderr, exitCode: 128),
+        default => Process::result(exitCode: 0),
+    });
+
+    $app = gitApp();
+    runDeploy($app);
+
+    $app->refresh();
+    expect($app->failed_step)->toBe('fetch')
+        ->and($app->failed_reason)->toBe($reason);
+
+    $this->getJson("/api/applications/{$app->id}", deployHeaders())
+        ->assertOk()
+        ->assertJsonPath('application.failed_reason', $reason)
+        ->assertJsonPath('application.failed_reason_title', $reason === null ? null : __("application.failure_reason.{$reason}"));
+})->with([
+    'branch missing' => ["fatal: couldn't find remote ref release-9\n", 'git_branch_missing'],
+    'repository missing or private, no account' => ["fatal: could not read Username for 'https://github.com': terminal prompts disabled\n", 'git_repository_unreachable'],
+    'token refused' => ["remote: Invalid username or token. Password authentication is not supported for Git operations.\nfatal: Authentication failed for 'https://github.com/octocat/hello.git/'\n", 'git_repository_unreachable'],
+    'repository not found with a valid token' => ["remote: Repository not found.\nfatal: repository 'https://github.com/octocat/hello.git/' not found\n", 'git_repository_unreachable'],
+    'host unreachable' => ["fatal: unable to access 'https://github.com/octocat/hello.git/': Could not resolve host: github.com\n", 'download_unreachable'],
+    // Anything else stays unclassified: a guessed reason is worse than none.
+    'something else' => ["error: RPC failed; curl 92 HTTP/2 stream 5 was not closed cleanly\n", null],
+]);
+
+it('has the fetch reasons translated in every locale', function () {
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        foreach (['git_repository_unreachable', 'git_branch_missing'] as $reason) {
+            expect(__("application.failure_reason.{$reason}", [], $locale))->not->toBe("application.failure_reason.{$reason}");
+        }
+    }
+});
+
 it('fetches and hard-resets an already-cloned repository', function () {
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 0),

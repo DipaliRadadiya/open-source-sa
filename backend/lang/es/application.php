@@ -232,6 +232,10 @@ return [
 
     'failure_reason' => [
 
+        'git_repository_unreachable' => 'El panel no pudo descargar el repositorio. No existe, o es privado y la cuenta de git de este sitio no puede leerlo (un sitio con URL pública no tiene cuenta). Revisa la dirección del repositorio y la cuenta, y vuelve a desplegar.',
+
+        'git_branch_missing' => 'La rama que despliega este sitio no existe en el repositorio. Elige una rama que exista en la configuración de despliegue y vuelve a desplegar.',
+
         'download_unreachable' => 'La descarga no se realizó: el servidor no pudo llegar al host desde el que descarga. Compruebe el acceso a internet y el DNS del servidor y vuelva a intentarlo.',
 
         'release_not_found' => 'Se accedió a la lista de versiones, pero no hay ninguna que este servidor pueda instalar. Compruebe la versión de PHP o vuelva a intentarlo más tarde.',

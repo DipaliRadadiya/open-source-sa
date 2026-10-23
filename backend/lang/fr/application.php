@@ -232,6 +232,10 @@ return [
 
     'failure_reason' => [
 
+        'git_repository_unreachable' => 'Le panneau n\'a pas pu récupérer le dépôt. Il n\'existe pas, ou il est privé et le compte git de ce site ne peut pas le lire (un site sur une URL publique n\'a pas de compte). Vérifiez l\'adresse du dépôt et le compte, puis déployez à nouveau.',
+
+        'git_branch_missing' => 'La branche que ce site déploie n\'existe pas dans le dépôt. Choisissez une branche existante dans les paramètres de déploiement, puis déployez à nouveau.',
+
         'download_unreachable' => 'Le téléchargement n’a pas eu lieu : le serveur n’a pas pu joindre l’hôte de téléchargement. Vérifiez l’accès à Internet et le DNS du serveur, puis réessayez.',
 
         'release_not_found' => 'La liste des versions a été atteinte mais ne contient aucune version installable sur ce serveur. Vérifiez la version de PHP ou réessayez plus tard.',

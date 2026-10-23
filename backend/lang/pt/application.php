@@ -232,6 +232,10 @@ return [
 
     'failure_reason' => [
 
+        'git_repository_unreachable' => 'O painel não conseguiu obter o repositório. Ele não existe, ou é privado e a conta git deste site não o consegue ler (um site com URL pública não tem conta). Verifique o endereço do repositório e a conta, e faça o deploy de novo.',
+
+        'git_branch_missing' => 'O branch que este site publica não existe no repositório. Escolha um branch existente nas definições de deploy e faça o deploy de novo.',
+
         'download_unreachable' => 'A transferência não aconteceu: o servidor não conseguiu chegar ao anfitrião de onde transfere. Verifique o acesso à Internet e o DNS do servidor e tente novamente.',
 
         'release_not_found' => 'A lista de versões foi alcançada, mas não tem nenhuma versão que este servidor possa instalar. Verifique a versão do PHP ou tente mais tarde.',

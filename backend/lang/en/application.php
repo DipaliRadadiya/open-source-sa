@@ -241,6 +241,8 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'git_repository_unreachable' => 'The panel could not fetch the repository. It does not exist, or it is private and this site\'s git account cannot read it (a site on a public URL has no account). Check the repository address and the account, then deploy again.',
+        'git_branch_missing' => 'The branch this site deploys does not exist in the repository. Choose a branch that exists in the deployment settings, then deploy again.',
         'download_unreachable' => 'The download did not happen: the server could not reach the host it downloads from. Check the server\'s internet access and DNS, then retry.',
         'release_not_found' => 'The release list was reached but held no version this server can install. Check the PHP version, or retry later.',
         'verify_http' => 'After the deploy the application answered with a server error (HTTP 5xx) instead of a page. Check its log — the deployment log has the exact status.',

@@ -1053,6 +1053,8 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `composer_platform` | Composer refused to install the dependencies under the PHP version the site is set to — the version, or an extension, does not meet what the project requires. |
 | `script_php_missing` | The deploy script uses a `{PHPxx}` variable for a PHP version not installed on this server; nothing ran. Install it on the PHP screen or use `{php}`. |
 | `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
+| `git_repository_unreachable` | The panel's own fetch could not read the repository: it does not exist, or it is private and the site's git account cannot read it (or the site is on a public URL). Only on the `fetch` step (FS-C22, 2026-10-23; was `null`). |
+| `git_branch_missing` | The panel's own fetch found no such branch in the repository. Only on the `fetch` step (FS-C22, 2026-10-23; was `null`). An unreachable git host on `fetch` is `download_unreachable`. |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
 | `process_exited` | The application's process was started and stopped straight away (`start_app`). Its log shows why — most often a missing package or a start command that does not exist. (2026-10-20) |
 | `container_restarting` | A Docker site's container keeps restarting. See `last_failure` for its last log lines. |
