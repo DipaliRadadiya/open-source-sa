@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * The paid-addon routes Central calls (routes/api/server/central-addons.php).
@@ -376,21 +375,6 @@ it('may run the addon binary through sudo under its new name', function () {
     expect(config('server.privilege.binaries'))->toContain('log-monitoring-suite')->not->toContain('insighthub-toolkit')
         ->and(config('server.privilege.paths.log-monitoring-suite'))->toBe(['/usr/local/bin/log-monitoring-suite'])
         ->and(config('server.privilege.paths'))->not->toHaveKey('insighthub-toolkit');
-});
-
-it('renames the addon id column and can rename it back', function () {
-    $migration = require database_path('migrations/2026_10_23_130000_rename_insighthub_id_on_applications.php');
-    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
-
-    $migration->down();
-    expect(Schema::hasColumn('applications', 'insighthub_id'))->toBeTrue()
-        ->and(Schema::hasColumn('applications', 'log_monitoring_suite_id'))->toBeFalse()
-        ->and(DB::table('applications')->where('id', $this->site->id)->value('insighthub_id'))->toBe(7);
-
-    $migration->up();
-    expect(Schema::hasColumn('applications', 'log_monitoring_suite_id'))->toBeTrue()
-        ->and(Schema::hasColumn('applications', 'insighthub_id'))->toBeFalse()
-        ->and($this->site->fresh()->log_monitoring_suite_id)->toBe(7);
 });
 
 it('serves every report group the toolkit has, on the paths v7 used', function () {

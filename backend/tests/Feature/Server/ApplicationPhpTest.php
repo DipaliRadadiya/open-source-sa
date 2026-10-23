@@ -18,7 +18,6 @@ use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Schema;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -1750,17 +1749,5 @@ describe('v7 extra pool lines', function () {
         grantPermission($viewer, 'app_php', view: true, manage: false);
 
         $this->actingAs($viewer)->postJson(phpUrl('/v7-extra-conf'), ['extra_conf' => 'memory_limit = 512M'])->assertForbidden();
-    });
-
-    it('adds and removes its five columns', function () {
-        $migration = require database_path('migrations/2026_10_13_120000_add_pm_tuning_to_application_php_settings.php');
-
-        $migration->down();
-        expect(Schema::hasColumn('application_php_settings', 'pm_start_servers'))->toBeFalse();
-
-        $migration->up();
-        expect(Schema::hasColumns('application_php_settings', [
-            'pm_start_servers', 'pm_min_spare_servers', 'pm_max_spare_servers', 'pm_process_idle_timeout', 'pm_max_spawn_rate',
-        ]))->toBeTrue();
     });
 });

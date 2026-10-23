@@ -561,7 +561,7 @@ it('has every new message in every locale', function () {
 });
 
 it('has a migration that can be rolled back', function () {
-    $migration = require database_path('migrations/2026_10_22_180000_create_backup_download_preparations_table.php');
+    $migration = require database_path('migrations/2026_10_24_000060_create_backup_download_preparations_table.php');
 
     $migration->down();
     expect(Schema::hasTable('backup_download_preparations'))->toBeFalse();

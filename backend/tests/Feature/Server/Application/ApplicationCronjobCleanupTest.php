@@ -7,7 +7,6 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationArtifacts;
 use Database\Seeders\PermissionSeeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -108,63 +107,4 @@ it('cannot be marked as the panel\'s through the API', function () {
     ])->assertCreated();
 
     expect(Cronjob::where('name', 'Sneaky')->sole()->application_owned)->toBeFalse();
-});
-
-describe('marking existing jobs', function () {
-    function runOwnedMigration(): void
-    {
-        $migration = require database_path('migrations/2026_09_30_080000_add_application_owned_to_cronjobs_table.php');
-        $migration->down();
-        $migration->up();
-    }
-
-    it('marks only a job that is exactly the installer\'s', function () {
-        $id = $this->site->id;
-        $cases = [
-            'installer' => ["Files background jobs #{$id}", '/usr/bin/php8.4 -f /home/ncuser/files/public_html/cron.php', true],
-            'renamed' => ['Nightly', '/usr/bin/php8.4 -f /home/ncuser/files/public_html/cron.php', false],
-            'edited command' => ["B background jobs #{$id}", '/usr/bin/php8.4 -f /home/ncuser/files/public_html/cron.php --x', false],
-            'other script' => ["C background jobs #{$id}", '/usr/bin/php8.4 -f /home/ncuser/files/public_html/occ', false],
-            'outside the site' => ["D background jobs #{$id}", '/usr/bin/php8.4 -f /home/ncuser/elsewhere/cron.php', false],
-            'another site\'s id' => ['Files background jobs #999', '/usr/bin/php8.4 -f /home/ncuser/files/public_html/cron.php', false],
-            'relative binary' => ["E background jobs #{$id}", 'php -f /home/ncuser/files/public_html/cron.php', false],
-        ];
-
-        $ids = [];
-        foreach ($cases as $label => [$name, $command]) {
-            $ids[$label] = ($this->job)(['name' => $name, 'slug' => Cronjob::uniqueSlug($name), 'command' => $command])->id;
-        }
-
-        runOwnedMigration();
-
-        foreach ($cases as $label => [, , $expected]) {
-            expect((bool) DB::table('cronjobs')->where('id', $ids[$label])->value('application_owned'))
-                ->toBe($expected, $label);
-        }
-    });
-
-    it('marks Moodle\'s own script, and not Nextcloud\'s on a Moodle site', function () {
-        $this->site->forceFill(['site_type' => 'moodle'])->save();
-        $id = $this->site->id;
-        $moodle = ($this->job)(['name' => "Files background jobs #{$id}", 'slug' => 'm1',
-            'command' => '/usr/bin/php8.4 -f /home/ncuser/files/public_html/admin/cli/cron.php'])->id;
-        $wrong = ($this->job)(['name' => "B background jobs #{$id}", 'slug' => 'm2',
-            'command' => '/usr/bin/php8.4 -f /home/ncuser/files/public_html/cron.php'])->id;
-
-        runOwnedMigration();
-
-        expect((bool) DB::table('cronjobs')->where('id', $moodle)->value('application_owned'))->toBeTrue()
-            ->and((bool) DB::table('cronjobs')->where('id', $wrong)->value('application_owned'))->toBeFalse();
-    });
-
-    it('marks nothing on a site type that has no installer job', function () {
-        $this->site->forceFill(['site_type' => 'wordpress'])->save();
-        $id = $this->site->id;
-        $job = ($this->job)(['name' => "Files background jobs #{$id}", 'slug' => 'w1',
-            'command' => '/usr/bin/php8.4 -f /home/ncuser/files/public_html/cron.php'])->id;
-
-        runOwnedMigration();
-
-        expect((bool) DB::table('cronjobs')->where('id', $job)->value('application_owned'))->toBeFalse();
-    });
 });

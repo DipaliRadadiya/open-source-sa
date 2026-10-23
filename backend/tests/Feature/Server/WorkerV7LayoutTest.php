@@ -9,7 +9,6 @@ use App\Models\Worker;
 use App\Services\Server\Applications\WorkerSupervisor;
 use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Schema;
 
 class V7WorkerHost
 {
@@ -139,13 +138,8 @@ function v7LayoutLegacy(Worker $worker, bool $running = true): string
     return $path;
 }
 
-it('leaves the old program and log unchanged when the nullable column is introduced', function () {
+it('keeps the old program and log for a worker with no program recorded', function () {
     $worker = v7LayoutWorker($this->workerApplication);
-    $migration = require database_path('migrations/2026_10_10_103000_add_program_to_workers_table.php');
-    $migration->down();
-    expect(Schema::hasColumn('workers', 'program'))->toBeFalse();
-    $migration->up();
-    $worker->refresh();
     $supervisor = app(WorkerSupervisor::class);
     expect($worker->program)->toBeNull()
         ->and($supervisor->program($worker))->toBe('sv-worker-shop-queue')

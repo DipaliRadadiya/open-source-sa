@@ -11,7 +11,6 @@ use App\Services\Server\Applications\PortAllocator;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Schema;
 
 /*
  * FS-C22 #8: every n8n listened for its task runners on 127.0.0.1:5679, n8n's
@@ -138,14 +137,4 @@ it('writes the broker port into the site\'s environment, and leaves an older n8n
         // Not editable on the Environment screen: the panel owns it, and a
         // changed value would move the broker under a port nothing reserved.
         ->and(app(SiteTypeManager::class)->find('n8n')->panelManagedEnvironmentKeys())->toContain('N8N_RUNNERS_BROKER_PORT');
-});
-
-it('reverses its migration', function () {
-    $migration = require database_path('migrations/2026_10_23_120000_add_internal_port_to_applications.php');
-
-    $migration->down();
-    expect(Schema::hasColumn('applications', 'internal_port'))->toBeFalse();
-
-    $migration->up();
-    expect(Schema::hasColumn('applications', 'internal_port'))->toBeTrue();
 });

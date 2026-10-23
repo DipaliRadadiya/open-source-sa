@@ -489,7 +489,7 @@ it('lists the recent updates with readable status and reason', function () {
 });
 
 it('creates and drops its table', function () {
-    $migration = require database_path('migrations/2026_10_13_100000_create_application_updates_table.php');
+    $migration = require database_path('migrations/2026_10_24_000058_create_application_updates_table.php');
 
     $migration->down();
     expect(Schema::hasTable('application_updates'))->toBeFalse();
