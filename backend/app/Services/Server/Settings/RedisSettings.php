@@ -68,6 +68,9 @@ use Throwable;
  */
 class RedisSettings implements SettingGroup
 {
+    /** The error replies redis-cli prints, and still exits 0 for. */
+    private const ERROR_REPLY = '/^(?:ERR|NOAUTH|WRONGPASS|NOPERM|WRONGTYPE|READONLY|MISCONF|LOADING|BUSY|OOM|EXECABORT|NOSCRIPT|NOREPLICAS|CROSSSLOT)\b/';
+
     public function __construct(
         private ServerOps $serverOps,
         private EnvFile $env,
@@ -275,7 +278,7 @@ class RedisSettings implements SettingGroup
             env: $this->authEnv($previous),
         );
 
-        if ($set->failed()) {
+        if ($this->refused($set)) {
             $this->logFailure('redis password could not be set', $set->reference);
 
             return;
@@ -289,7 +292,7 @@ class RedisSettings implements SettingGroup
         // writing it anywhere.
         $ping = $this->authenticated(['ping'], $password);
 
-        if ($rewrite->failed() || $ping->failed() || ! str_contains(strtoupper($ping->output()), 'PONG')) {
+        if ($this->refused($rewrite) || $ping->failed() || ! str_contains(strtoupper($ping->output()), 'PONG')) {
             $this->rollback($previous, $password);
             $this->logFailure('redis password could not be verified', $ping->reference);
 
@@ -379,7 +382,9 @@ class RedisSettings implements SettingGroup
     {
         $result = $this->authenticated(['config', 'get', 'requirepass'], (string) config('database.redis.default.password'));
 
-        if ($result->failed()) {
+        // A rejected credential answers `NOAUTH …` with exit 0. The name check
+        // below already refuses that reply; this says why, up front.
+        if ($this->refused($result)) {
             return null;
         }
 
@@ -442,7 +447,10 @@ class RedisSettings implements SettingGroup
         // is the state nothing used to report: someone changed `requirepass`
         // on the server, the panel's copy is stale, and every session, cache
         // read and queued job is failing behind this same rejection.
-        $outOfSync = ! $ping->ok;
+        // Not `! $ping->ok`: redis-cli exits 0 on an error reply, so a wrong
+        // password came back "ok" and this never once said out of sync
+        // (measured on redis-cli 7.0.15, 2026-10-23). In sync means PONG.
+        $outOfSync = $this->refused($ping) || ! str_contains(strtoupper($ping->output()), 'PONG');
 
         $info = $this->cli(['info', 'memory']);
 
@@ -472,6 +480,10 @@ class RedisSettings implements SettingGroup
     private function configGet(string $key): string
     {
         $result = $this->authenticated(['config', 'get', $key], (string) config('database.redis.default.password'));
+
+        if ($this->refused($result)) {
+            return '';
+        }
 
         $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
 
@@ -515,8 +527,25 @@ class RedisSettings implements SettingGroup
 
     private function must(ServerOpsResult $result): void
     {
-        if ($result->failed()) {
+        if ($this->refused($result)) {
             throw new SettingOperationException($result->reference);
         }
+    }
+
+    /**
+     * Did the command fail, or did Redis refuse it?
+     *
+     * redis-cli exits 0 when Redis answers with an error: a wrong password
+     * prints `NOAUTH Authentication required.` and exits 0, so `failed()`
+     * alone took a rejected CONFIG SET for a saved setting (2026-10-23). An
+     * error reply is one upper-case code word at the start of the answer.
+     */
+    private function refused(ServerOpsResult $result): bool
+    {
+        if ($result->failed()) {
+            return true;
+        }
+
+        return preg_match(self::ERROR_REPLY, ltrim($result->output())) === 1;
     }
 }

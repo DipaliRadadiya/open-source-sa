@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Sync\Discoverers;
 
+use App\Actions\Server\SystemUser\ToggleSudo;
 use App\Contracts\Discoverable;
 use App\Enums\SyncMode;
 use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
@@ -33,7 +34,7 @@ class SystemUserDiscoverer implements Discoverable
     private const MAX_UID = 60000;
 
     /** Groups that grant sudo in a stock Debian/Ubuntu sudoers. */
-    private const SUDO_GROUPS = ['sudo', 'admin'];
+    private const SUDO_GROUPS = ToggleSudo::SUDO_GROUPS;
 
     public function __construct(private ServerOps $serverOps) {}
 

@@ -59,16 +59,102 @@ it('grants sudo, running usermod and persisting the flag', function () {
     Process::assertRan(fn ($p) => $p->command === ['usermod', '-aG', 'sudo', 'deploy']);
 });
 
+/**
+ * A server whose groups change as gpasswd runs: `id -nG` answers from $groups.
+ *
+ * @param  array<int, string>  $groups
+ * @param  array<int, string>  $stuck  groups gpasswd "removes" but that stay
+ */
+function fakeSudoGroups(array &$groups, array $stuck = []): void
+{
+    Process::fake(function ($process) use (&$groups, $stuck) {
+        $command = (array) $process->command;
+
+        if (($command[0] ?? '') === 'id') {
+            return Process::result(output: implode(' ', ['deploy', ...$groups])."\n");
+        }
+
+        if (($command[0] ?? '') === 'gpasswd' && ($command[1] ?? '') === '-d') {
+            if (! in_array($command[3], $groups, true)) {
+                return Process::result(errorOutput: "gpasswd: user 'deploy' is not a member of '{$command[3]}'\n", exitCode: 3);
+            }
+
+            if (! in_array($command[3], $stuck, true)) {
+                $groups = array_values(array_diff($groups, [$command[3]]));
+            }
+        }
+
+        return Process::result();
+    });
+}
+
 it('revokes sudo, running gpasswd', function () {
-    Process::fake();
+    $groups = ['sudo'];
+    fakeSudoGroups($groups);
     $this->su->update(['sudo' => true]);
 
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson("/api/system-users/{$this->su->id}/sudo", ['sudo' => false]);
 
     $response->assertOk()->assertJsonPath('system_user.sudo', false);
-    expect($this->su->fresh()->sudo)->toBeFalse();
+    expect($this->su->fresh()->sudo)->toBeFalse()->and($groups)->toBe([]);
     Process::assertRan(fn ($p) => $p->command === ['gpasswd', '-d', 'deploy', 'sudo']);
+});
+
+/*
+ * FS-C22 #16 (2026-10-23): `admin` also grants sudo (the default sudoers on
+ * older Ubuntu, servers moved from v7), and Server Sync counts it. Turning sudo
+ * off removed only `sudo`: a user in `admin` alone got a failing gpasswd, one
+ * in both kept sudo while the panel said off.
+ */
+it('takes sudo away from a user who has it only through admin', function () {
+    $groups = ['admin', 'www-data'];
+    fakeSudoGroups($groups);
+    $this->su->update(['sudo' => true]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/system-users/{$this->su->id}/sudo", ['sudo' => false])
+        ->assertOk()->assertJsonPath('system_user.sudo', false);
+
+    expect($groups)->toBe(['www-data']);
+    Process::assertRan(fn ($p) => $p->command === ['gpasswd', '-d', 'deploy', 'admin']);
+    Process::assertNotRan(fn ($p) => $p->command === ['gpasswd', '-d', 'deploy', 'sudo']);
+});
+
+it('takes the user out of both sudo and admin', function () {
+    $groups = ['sudo', 'admin'];
+    fakeSudoGroups($groups);
+    $this->su->update(['sudo' => true]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/system-users/{$this->su->id}/sudo", ['sudo' => false])
+        ->assertOk();
+
+    expect($groups)->toBe([])->and($this->su->fresh()->sudo)->toBeFalse();
+});
+
+it('does not report sudo off while a sudo group is still there', function () {
+    $groups = ['sudo', 'admin'];
+    fakeSudoGroups($groups, stuck: ['admin']);
+    $this->su->update(['sudo' => true]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/system-users/{$this->su->id}/sudo", ['sudo' => false])
+        ->assertStatus(500)->assertJsonStructure(['message', 'reference']);
+
+    expect($this->su->fresh()->sudo)->toBeTrue();
+});
+
+it('turns sudo off for a user already in no sudo group without running gpasswd', function () {
+    $groups = ['www-data'];
+    fakeSudoGroups($groups);
+    $this->su->update(['sudo' => true]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/system-users/{$this->su->id}/sudo", ['sudo' => false])
+        ->assertOk()->assertJsonPath('system_user.sudo', false);
+
+    Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'gpasswd');
 });
 
 it('changes the shell to an allowlisted value, running usermod', function () {

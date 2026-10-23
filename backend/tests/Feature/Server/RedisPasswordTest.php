@@ -34,18 +34,28 @@ afterEach(function () {
 
 /**
  * @param  array<int, string>  $failing  redis-cli sub-commands that should fail
+ * @param  array<int, string>  $rejected  sub-commands Redis refuses the way the
+ *                                        real redis-cli reports it: the error
+ *                                        reply on stdout, and exit 0 (measured on
+ *                                        redis-cli 7.0.15, 2026-10-23)
  */
-function fakeRedis(array $failing = []): ArrayObject
+function fakeRedis(array $failing = [], array $rejected = []): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs, $failing) {
+    Process::fake(function ($process) use ($runs, $failing, $rejected) {
         $runs[] = ['command' => $process->command, 'input' => $process->input, 'env' => $process->environment ?? []];
         $command = implode(' ', $process->command);
 
         foreach ($failing as $fail) {
             if (str_contains($command, $fail)) {
                 return Process::result(exitCode: 1, errorOutput: 'NOAUTH Authentication required.');
+            }
+        }
+
+        foreach ($rejected as $reject) {
+            if (str_contains($command, $reject)) {
+                return Process::result(output: "NOAUTH Authentication required.\n", errorOutput: "AUTH failed: WRONGPASS invalid username-password pair or user is disabled.\n");
             }
         }
 
@@ -462,4 +472,50 @@ it('does not refresh the panel for a change that did not stick', function () {
     $commands = collect($runs)->map(fn (array $r) => implode(' ', $r['command']));
 
     expect($commands->contains(fn (string $c) => str_contains($c, 'systemctl restart')))->toBeFalse();
+});
+
+/*
+ * FS-C22 #19 (2026-10-23): redis-cli exits 0 when Redis refuses a command, with
+ * the error reply on stdout. Every check above used a fake that exited 1, which
+ * is not what the real tool does, so a wrong password was never once reported.
+ */
+it('reports a stale credential as out of sync when redis-cli exits 0 on NOAUTH', function () {
+    config(['database.redis.default.password' => 'stale-value']);
+    fakeRedis(rejected: ['ping', 'config get', 'info']);
+
+    $redis = test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()->json('settings.redis');
+
+    expect($redis['running'])->toBeTrue()
+        ->and($redis['password_out_of_sync'])->toBeTrue();
+});
+
+it('still reports a working credential as in sync', function () {
+    config(['database.redis.default.password' => 'right-value']);
+    fakeRedis();
+
+    expect(test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()->json('settings.redis.password_out_of_sync'))->toBeFalse();
+});
+
+it('does not read a refused CONFIG GET requirepass as "no password"', function () {
+    // The real refusal (exit 0, NOAUTH on stdout) is one line, like the answer
+    // of a Redis with no password. Guarded twice: refused() and the reply-name
+    // check; this pins the behaviour with the realistic reply.
+    config(['database.redis.default.password' => 'stale-value']);
+    $runs = fakeRedis(rejected: ['config get requirepass']);
+
+    saveRedis(['password' => 'NewSecret123'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('password');
+
+    applyDeferred();
+    expect(passwordWrites($runs))->toHaveCount(0);
+});
+
+it('does not report memory settings as saved when Redis refused them', function () {
+    config(['database.redis.default.password' => 'stale-value']);
+    fakeRedis(rejected: ['config set maxmemory']);
+
+    saveRedisAndApply(['maxmemory' => '256mb'])->assertStatus(500)->assertJsonStructure(['message', 'reference']);
 });
