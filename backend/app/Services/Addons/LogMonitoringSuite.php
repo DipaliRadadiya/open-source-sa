@@ -8,14 +8,15 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
- * The InsightHub toolkit (sv-insighthub-toolkit): access-log analytics read
- * from its own SQLite database.
+ * Log Monitoring Suite (the `log-monitoring-suite` binary, built from
+ * sv-insighthub-toolkit): access-log analytics read from its own SQLite
+ * database.
  *
  * Sites are known to it by its own id, which `register()` stores on the
  * application. Its `--key` is the panel's reference (`v8-<id>`), so a lost
  * answer to `applications:add` is recovered rather than added twice.
  */
-class InsightHubToolkit extends AddonCli
+class LogMonitoringSuite extends AddonCli
 {
     public function __construct(ServerOps $serverOps, private WebServerManager $webServers)
     {
@@ -24,24 +25,22 @@ class InsightHubToolkit extends AddonCli
 
     public function name(): string
     {
-        return 'insighthub-toolkit';
+        return 'log-monitoring-suite';
     }
 
     public function label(): string
     {
-        // The product's current name. It launched as InsightHub, which is still
-        // what the binary, its repository and its database are called.
         return 'Log Monitoring Suite';
     }
 
     protected function binary(): string
     {
-        return (string) config('server.addons.insighthub.binary');
+        return (string) config('server.addons.log_monitoring_suite.binary');
     }
 
     protected function workdir(): ?string
     {
-        return (string) config('server.addons.insighthub.workdir');
+        return (string) config('server.addons.log_monitoring_suite.workdir');
     }
 
     public function key(Application $application): string
@@ -51,7 +50,7 @@ class InsightHubToolkit extends AddonCli
 
     /**
      * Register the site (or adopt the record already carrying its key) and
-     * remember InsightHub's id for it.
+     * remember the addon's id for it.
      *
      * @return array<string, mixed> the addon's answer
      */
@@ -75,7 +74,7 @@ class InsightHubToolkit extends AddonCli
             // lost answer. Anything else holding the name or domain is a real
             // conflict and is reported as one.
             if (($e->details['code'] ?? null) === 'conflict' && ($e->details['field'] ?? null) === 'key') {
-                $application->forceFill(['insighthub_id' => (int) $e->details['application_id']])->save();
+                $application->forceFill(['log_monitoring_suite_id' => (int) $e->details['application_id']])->save();
 
                 return ['status' => 'success', 'message' => 'Application already registered', 'application' => ['id' => (int) $e->details['application_id']]];
             }
@@ -83,13 +82,13 @@ class InsightHubToolkit extends AddonCli
             throw $e;
         }
 
-        $application->forceFill(['insighthub_id' => (int) ($answer['application']['id'] ?? 0) ?: null])->save();
+        $application->forceFill(['log_monitoring_suite_id' => (int) ($answer['application']['id'] ?? 0) ?: null])->save();
 
         return $answer;
     }
 
     /**
-     * Unregister the site; one InsightHub has never heard of is already gone.
+     * Unregister the site; one the addon has never heard of is already gone.
      */
     public function unregister(Application $application): void
     {
@@ -101,6 +100,6 @@ class InsightHubToolkit extends AddonCli
             }
         }
 
-        $application->forceFill(['insighthub_id' => null])->save();
+        $application->forceFill(['log_monitoring_suite_id' => null])->save();
     }
 }

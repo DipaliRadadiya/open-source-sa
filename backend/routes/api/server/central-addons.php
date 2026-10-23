@@ -77,7 +77,7 @@ Route::middleware('central.only')->prefix('central/addons')->group(function (): 
         $wp('put', 'security/{rule}', 'security.set')->whereIn('rule', ['xmlrpc', 'uploads-php']);
     });
 
-    // ── Log Monitoring Suite (binary: insighthub-toolkit) ───────────────────────────────────────────────────────────
+    // ── Log Monitoring Suite (binary: log-monitoring-suite) ───────────────────────────────────────────────────────────
     Route::get('log-monitoring/applications', [InsightsAddonController::class, 'applications']);
     Route::post('applications/{application}/log-monitoring/register', [InsightsAddonController::class, 'register']);
     Route::delete('applications/{application}/log-monitoring/register', [InsightsAddonController::class, 'unregister']);

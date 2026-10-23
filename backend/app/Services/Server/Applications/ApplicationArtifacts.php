@@ -12,7 +12,7 @@ use App\Models\Application;
 use App\Models\Backup;
 use App\Models\Cronjob;
 use App\Models\Worker;
-use App\Services\Addons\InsightHubToolkit;
+use App\Services\Addons\LogMonitoringSuite;
 use App\Services\Addons\SiteRedisAccount;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
@@ -176,13 +176,14 @@ class ApplicationArtifacts
             app(SiteRedisAccount::class)->remove($application);
         });
 
-        $this->attempt($application, 'insighthub', function () use ($application) {
-            // Registered only through Central; a site InsightHub never heard
-            // of has nothing to remove. Resolved lazily like the others here.
-            $insighthub = app(InsightHubToolkit::class);
+        $this->attempt($application, 'log_monitoring_suite', function () use ($application) {
+            // Registered only through Central; a site Log Monitoring Suite
+            // never heard of has nothing to remove. Resolved lazily like the
+            // others here.
+            $logMonitoring = app(LogMonitoringSuite::class);
 
-            if ($application->insighthub_id !== null && $insighthub->installed()) {
-                $insighthub->unregister($application);
+            if ($application->log_monitoring_suite_id !== null && $logMonitoring->installed()) {
+                $logMonitoring->unregister($application);
             }
         });
 
