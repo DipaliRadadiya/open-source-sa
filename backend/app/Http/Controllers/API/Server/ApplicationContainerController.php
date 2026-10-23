@@ -52,6 +52,7 @@ class ApplicationContainerController extends Controller
         // Logged before returning, not after. A response that is never read still
         // handed the values over.
         $log->log('application.container_secrets_viewed', $application, [
+            'name' => $application->name,
             'keys' => array_keys((array) ($application->docker_secrets ?? [])),
         ]);
 

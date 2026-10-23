@@ -3664,7 +3664,7 @@ Permission `application` **manage**, `throttle:10,1`. No body: the target is `la
 A pending update whose job never started is released (`abandoned`) after 60 minutes.
 Failure `reason`: `step_failed` (with `step` + `reference` into the server-ops log), `version_unchanged`, `release_not_found`,
 `download_unreachable`, `out_of_memory`, `composer_platform`, `no_build_tools`, `node_unsupported`, `app_not_ready`, `worker` (job died/timed out), `abandoned`, `failed`.
-Activity: `application.update_started`, `application.updated`, `application.update_failed`.
+Activity: `application.update_started`, `application.update_completed`, `application.update_failed`. (`application.update_completed` was logged as `application.updated` until FS-C22 #21. That key is the settings save, and the two shared one sentence. Rows written before then still read "Updated application :name".)
 
 ## Backups
 

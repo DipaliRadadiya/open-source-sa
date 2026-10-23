@@ -248,7 +248,7 @@ return [
     'application.cloned' => 'Cloned :name to :domain',
     'application.v7_leftovers_removed' => 'Removed :files old v7 config file(s) for :name',
     'application.update_started' => 'Started updating :name from :from to :to',
-    'application.updated' => 'Updated :name from :from to :to',
+    'application.update_completed' => 'Updated :name from :from to :to',
     'application.update_failed' => 'Update of :name to :to failed',
     'application.fail2ban_enabled' => 'Enabled fail2ban for :name',
     'application.fail2ban_disabled' => 'Disabled fail2ban for :name',

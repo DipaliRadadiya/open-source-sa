@@ -242,7 +242,7 @@ return [
     'application.cloned' => 'Clonou :name para :domain',
     'application.v7_leftovers_removed' => 'Removeu :files arquivo(s) de configuração antigos do v7 de :name',
     'application.update_started' => 'Iniciou a atualização de :name de :from para :to',
-    'application.updated' => 'Atualizou :name de :from para :to',
+    'application.update_completed' => 'Atualizou :name de :from para :to',
     'application.update_failed' => 'A atualização de :name para :to falhou',
     'application.fail2ban_enabled' => 'Ativou o fail2ban para :name',
     'application.fail2ban_disabled' => 'Desativou o fail2ban para :name',

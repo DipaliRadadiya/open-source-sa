@@ -242,7 +242,7 @@ return [
     'application.cloned' => ':name nach :domain geklont',
     'application.v7_leftovers_removed' => ':files alte v7-Konfigurationsdatei(en) für :name entfernt',
     'application.update_started' => 'Update von :name von :from auf :to gestartet',
-    'application.updated' => ':name von :from auf :to aktualisiert',
+    'application.update_completed' => ':name von :from auf :to aktualisiert',
     'application.update_failed' => 'Update von :name auf :to fehlgeschlagen',
     'application.fail2ban_enabled' => 'Fail2ban für :name aktiviert',
     'application.fail2ban_disabled' => 'Fail2ban für :name deaktiviert',

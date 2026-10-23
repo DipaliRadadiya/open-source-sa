@@ -312,7 +312,7 @@ it('updates Moodle: maintenance on, new code of its branch, upgrade, maintenance
 
     // config.php is never touched: the package does not carry one.
     expect(collect(UpdateHost::$runs)->contains(fn ($r) => in_array('rm', $r['command'], true) && str_contains(implode(' ', $r['command']), 'config.php')))->toBeFalse();
-    expect(ActivityLog::where('action', 'updated')->exists())->toBeTrue();
+    expect(ActivityLog::where('action', 'update_completed')->exists())->toBeTrue();
 });
 
 it('turns Moodle maintenance off even when the upgrade fails, and records the step', function () {

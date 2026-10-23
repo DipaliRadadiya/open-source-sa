@@ -189,6 +189,7 @@ class DeleteApplicationDockerResources
         }
 
         $this->activityLogger->log('application.docker_resources_removed', $application, [
+            'name' => $application->name,
             'removed' => $removed,
             // Recorded, because "we did not delete this" is the half somebody comes
             // looking for when they find a volume still on the server.

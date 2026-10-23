@@ -242,7 +242,7 @@ return [
     'application.cloned' => ':name को :domain पर क्लोन किया',
     'application.v7_leftovers_removed' => ':name की :files पुरानी v7 कॉन्फ़िग फ़ाइल(ें) हटाईं',
     'application.update_started' => ':name को :from से :to पर अपडेट करना शुरू किया',
-    'application.updated' => ':name को :from से :to पर अपडेट किया',
+    'application.update_completed' => ':name को :from से :to पर अपडेट किया',
     'application.update_failed' => ':name का :to पर अपडेट विफल रहा',
     'application.fail2ban_enabled' => ':name के लिए fail2ban सक्षम किया',
     'application.fail2ban_disabled' => ':name के लिए fail2ban अक्षम किया',

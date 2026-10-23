@@ -242,7 +242,7 @@ return [
     'application.cloned' => ':name を :domain に複製しました',
     'application.v7_leftovers_removed' => ':name の古い v7 設定ファイルを :files 件削除しました',
     'application.update_started' => ':name の :from から :to への更新を開始しました',
-    'application.updated' => ':name を :from から :to に更新しました',
+    'application.update_completed' => ':name を :from から :to に更新しました',
     'application.update_failed' => ':name の :to への更新に失敗しました',
     'application.fail2ban_enabled' => ':name の fail2ban を有効にしました',
     'application.fail2ban_disabled' => ':name の fail2ban を無効にしました',

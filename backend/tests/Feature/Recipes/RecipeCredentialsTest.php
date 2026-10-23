@@ -19,7 +19,7 @@ it('curates Grafana login credentials while preserving the legacy secrets map an
             'credentials' => [['label' => 'username', 'value' => 'admin', 'secret' => false], ['label' => 'password', 'value' => 'stored-admin-value', 'secret' => true]],
         ]);
     $log = ActivityLog::where('action', 'container_secrets_viewed')->sole();
-    expect($log->properties)->toBe(['keys' => array_keys($secrets)])->and($log->user_id)->toBe(auth()->id());
+    expect($log->properties)->toBe(['name' => $site->name, 'keys' => array_keys($secrets)])->and($log->user_id)->toBe(auth()->id());
     expect(json_encode($log->getAttributes()))->not->toContain('stored-admin-value', 'not-a-login');
     expect($site->fresh()->getRawOriginal('docker_secrets'))->toBe($before);
 });

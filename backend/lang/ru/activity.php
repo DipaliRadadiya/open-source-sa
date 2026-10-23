@@ -242,7 +242,7 @@ return [
     'application.cloned' => 'Клонировал :name на :domain',
     'application.v7_leftovers_removed' => 'Удалил старые файлы конфигурации v7 для :name: :files',
     'application.update_started' => 'Начал обновление :name с :from до :to',
-    'application.updated' => 'Обновил :name с :from до :to',
+    'application.update_completed' => 'Обновил :name с :from до :to',
     'application.update_failed' => 'Обновление :name до :to не удалось',
     'application.fail2ban_enabled' => 'Включил fail2ban для :name',
     'application.fail2ban_disabled' => 'Отключил fail2ban для :name',
