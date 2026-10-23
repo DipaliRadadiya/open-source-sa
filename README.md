@@ -1,239 +1,236 @@
-# open-source-sa
+# ServerAvatar OSS
 
-A self-hosted server control panel. Install it on a fresh Ubuntu server and manage
-sites, databases, runtimes and security from a browser — no SSH for day-to-day work.
+A self-hosted server control panel with a Laravel API and a Next.js interface.
+It runs on the server it manages: create applications, manage databases and
+runtimes, deploy code, and handle routine server operations from a browser.
+Optional Central integration provides remote management and access to paid addons.
 
-It runs **on** the server it manages. There is no agent, no central service, and
-nothing phones home.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/DipaliRadadiya/open-source-sa/main/install.sh \
-  | sudo bash -s -- --stack=lemp
-```
-
-The installer prints a URL when it finishes. Open it, register — the first account
-becomes the administrator and registration then closes — and the setup page walks
-you through anything else the server needs.
-
-> **Pre-1.0.** Read [Status](#status) before putting anything you care about on it.
-
----
+> **Pre-1.0:** evaluate on a disposable server first. Features and platform support
+> depend on the selected stack, installed runtimes, and upstream packages. This
+> README describes the current source, not a guarantee of production readiness.
 
 ## What it does
 
-**Applications.** 17 site types, installed in one step: WordPress, Nextcloud,
-Joomla, Moodle, Mautic, PrestaShop, Craft CMS, Statamic, Akaunting, phpMyAdmin,
-Uptime Kuma, n8n, Node-RED, NodeBB, plus plain PHP, static, and deploy-from-git.
+- **Applications:** native PHP, Node.js and static sites, one-click installers
+  such as WordPress, Nextcloud and n8n, and deploy-from-git applications. The
+  Docker stack supports image-based apps, Compose projects and curated recipes.
+- **Deployment and site operations:** GitHub, GitLab and Bitbucket accounts,
+  signature-verified deploy webhooks, deployment history, environment editing,
+  file management, background workers, domains and Let's Encrypt certificates.
+  Clone, staging, application updates and server-to-server sync are available
+  where the application type supports them.
+- **Databases and runtimes:** manage MariaDB/MySQL, PostgreSQL and MongoDB where
+  supported, database users, imports/exports and query monitoring; manage PHP
+  versions and Node.js through fnm. The panel's own database defaults to SQLite.
+- **Backups:** manual and scheduled application backups, standalone database
+  backups, retention, verification, downloads and restores. Destinations are
+  S3-compatible storage, FTP, SFTP and Google Drive (service account or OAuth).
+  There is **no local archive destination**; temporary local files are not a
+  substitute for configuring backup storage.
+- **Security:** per-site Linux accounts, PHP isolation, firewall and fail2ban
+  management, SSH settings, per-site 8G WAF and AI bot controls where supported.
+- **Operations:** CPU/memory/disk metrics, service management and resource usage,
+  logs, cron jobs, disk cleaning, task progress, activity and error logs,
+  permission-based users/roles, and panel updates.
+- **Localisation and branding:** English, Spanish, German, French, Portuguese,
+  Japanese, Russian and Hindi; configurable branding and optional Central branding.
 
-**Deploy from git.** Connect GitHub, GitLab or Bitbucket with a token, or point at
-a public repository. Push to the tracked branch and it deploys — signature-verified
-webhooks, one queued deploy per burst rather than one per commit.
-
-**Databases.** MariaDB, MySQL, PostgreSQL or MongoDB. The panel installs the
-engine, creates its own credentialed account, and manages databases and users per
-site.
-
-**Runtimes.** Multiple PHP versions side by side, and Node versions through fnm, so
-each site pins what it needs.
-
-**Security.** ufw firewall, fail2ban, Let's Encrypt certificates, SSH hardening,
-per-site Linux users so one site cannot read another's files.
-
-**Operations.** Live CPU/memory/disk metrics, per-service resource usage, log
-viewer, cron jobs with captured output, scheduled disk cleaner, and an activity log
-of who did what.
-
-**Eight languages.** English, Spanish, German, French, Portuguese, Japanese,
-Russian and Hindi — including error messages, which are rendered in the *reader's*
-language rather than the language of whoever caused them.
+See the [API reference](backend/API_REFERENCE.md) for supported operations,
+permissions and feature-specific restrictions.
 
 ## Requirements
 
-- Ubuntu 22.04 LTS, 24.04 LTS or 26.04 LTS — see
-  [Supported platforms](SUPPORTED_PLATFORMS.md) for what differs between them
-  (**MongoDB is not available on 26.04**, because MongoDB does not publish for it)
-- Root access
-- Ports 80 and 443 free
-- 1 GB RAM (the installer adds swap below 2 GB so the frontend build survives)
+Use a **fresh, dedicated server** with root access:
 
-## Installing
+- Ubuntu **22.04, 24.04 or 26.04 LTS** on **x86_64 or aarch64**.
+- At least **3 GB free on `/var`**, plus room for swap, applications, databases
+  and temporary backup/restore files.
+- Memory sized for your workloads. The installer sizes swap to provide at least
+  **3072 MB RAM + swap** for the frontend build and at least **1024 MB swap**.
+  This is a build budget, not a promise that every application fits a small VPS.
+- Ports **80 and 443** available for the selected web server, reachable for HTTP
+  traffic and certificate validation; outbound access to package repositories
+  and other services used during installation.
 
-```bash
-sudo bash install.sh --stack=lemp     # nginx + PHP          (default)
-sudo bash install.sh --stack=lamp     # Apache + PHP
-sudo bash install.sh --stack=mern     # nginx + Node
-sudo bash install.sh --stack=ols      # OpenLiteSpeed + PHP
-```
+[Supported platforms](SUPPORTED_PLATFORMS.md) documents upstream package caveats,
+including MongoDB unavailability on Ubuntu 26.04 and LSPHP version differences.
+Recheck dated vendor availability before choosing a platform.
 
-Run it without `--stack` from a terminal and it asks. Under `curl | bash` there is
-no terminal to ask on, so pass the flag.
+## Installation
 
-**On `--stack=ols`:** supported, with two differences worth knowing before you
-pick it rather than after. The **8G firewall and the bot blocker both work** on
-OpenLiteSpeed; in detect mode the firewall marks its matches in the site's
-access log (`waf=1`) rather than a separate file, because OpenLiteSpeed allows
-one access log per site.
-
-**There is no per-site PHP isolation.** OpenLiteSpeed starts PHP itself and has
-no per-site pools. Per-site `php.ini` settings do work, through `lsphp`.
-
-**Only WordPress reads its own `.htaccess`.** OpenLiteSpeed needs a restart to
-pick up a change to one, so it is enabled for WordPress alone — LiteSpeed Cache
-talks to the cache module through that file and has no other way in. Every site
-gets the standard front-controller rewrite from its vhost either way, so normal
-routing and permalinks work; what does not apply is any *additional* rule an
-application ships in its own `.htaccess`.
-
-Everything else is the same: vhosts, certificates (OLS binds them to a listener
-rather than a vhost, which the panel handles), per-site logs, staging, clone and
-Sync. On this stack **everything runs on LSPHP** -- the panel and its hosted
-sites alike, one PHP build per box. The other stacks run the panel and their
-sites on PHP-FPM.
-
-One thing to keep in mind whichever stack you choose: the web server the
-installer picks is the one serving the panel itself, so if it misbehaves there is
-no working panel left to fix it from.
-
-| Option | |
-|---|---|
-| `--domain=panel.example.com` | Use your own domain. Point its A record here first. |
-| `--email=you@example.com` | For Let's Encrypt expiry notices. |
-| `--no-ssl` | Plain HTTP. Fine behind another proxy. |
-| `--dry-run` | Print the steps without touching anything. |
-
-**Without a domain** the panel is reachable at a [nip.io](https://nip.io) address
-derived from the server's IP, so there is no DNS to configure. Certificates for
-those names come from a rate limit shared by everyone using nip.io, so issuance
-sometimes fails — the installer falls back to a self-signed certificate and keeps
-going rather than failing. Pass `--domain=` for a certificate that works reliably.
-
-The installer is **re-runnable**: if it fails partway, fix the cause and run it
-again rather than rebuilding the server.
-
-**Installing on someone's behalf** (a central panel, a provisioning script):
-pass the first administrator so the panel is never open for registration, and an
-address to report progress to. Environment variables, so nothing secret is on a
-command line (`sudo --preserve-env=…` if you go through sudo):
+The installer changes packages, users, services and system configuration. Do not
+run it on your workstation or an existing production server as a development
+setup. Review [install.sh](install.sh) before running it.
 
 ```bash
-PANEL_ADMIN_USERNAME=owner PANEL_ADMIN_PASSWORD='…12+ characters…' \
-CENTRAL_TOKEN='…' PROGRESS_URL=https://central.example.com/servers/42/install-progress \
-  bash install.sh --stack=lemp
+curl -fsSL https://raw.githubusercontent.com/DipaliRadadiya/open-source-sa/main/install.sh \
+  -o install.sh
+sudo bash install.sh --stack=lemp
 ```
 
-Each step is POSTed to `PROGRESS_URL` as JSON (`state` installing/failed/installed,
-`step`, `total`, `title`, and at the end the panel and API URLs), with
-`Authorization: Bearer $CENTRAL_TOKEN`. A report that fails never stops the
-install. A `failed` report also has `reason` (one line), `log_file` (the log's
-path on the server) and `log_tail`: the last 40 lines of that log as one JSON
-string, newlines kept, colour codes stripped, at most 8 KB (the end is kept),
-with `PANEL_ADMIN_PASSWORD`, `CENTRAL_TOKEN` and every Redis password the
-installer tried replaced by `[redacted]`. When the install stopped before the
-log existed (any stop in the preflight checks, the fresh-server stop included),
-`log_tail` is empty and `log_file` is left out of the report — never `null`,
-never a path to a file that isn't there. The log lines the installer prints in
-the terminal on a failure are redacted the same way. The addresses, stack and
-administrator username are also left in `/root/panel-details.txt` (root only; no
-password).
+Choose one of five installation profiles:
 
-The installer is for a fresh server. It stops at step 1, changing nothing, on a
-server that already hosts something: another control panel (or the v7 agent on
-port 43210), a web server with sites besides its default page, a database server
-with databases or users of its own, Redis with keys, PHP-FPM pools besides `www`,
-Docker containers or images, files in `/var/www`, a `public_html` in a home, or a
-Let's Encrypt certificate. What stock cloud images ship (snapd, cloud-init, guest
-agents, swap, firewall rules, an MTA, an empty database server or Docker) never
-stops it. A re-run on a server this installer already ran on (its state file in
-`/var/lib/panel-install/`, the panel's own site, `/var/www/panel` or the `panel`
-account) skips the check, so a Retry always works. `--force` installs anyway,
-with each finding printed as a warning and `FRESH_CHECK=forced` in the state file
-and the log; taking a server over from another panel needs it. That stop's
-`failed` report also has `code: "not_fresh"` and `findings`, a list of short
-strings, one per thing found (`"nginx with 12 sites (a.com, b.com, c.com and 9
-more)"`), while `reason` stays one plain sentence that names them all. Other
-failures have neither field.
-
-## What runs where
-
-Every application type works on every stack. The web server is not what decides
-it — **the runtime and the database are**, and the installer puts both PHP and
-Node on every server because the panel itself needs them.
-
-| Application | Runtime | Database |
-|---|---|---|
-| WordPress, Nextcloud, Joomla, Moodle, Mautic, Craft CMS, Akaunting, PrestaShop | PHP | MySQL or MariaDB |
-| Statamic, phpMyAdmin, git deploy, plain PHP | PHP | — |
-| Uptime Kuma, n8n, Node-RED | Node | — |
-| NodeBB | Node | MongoDB **or** PostgreSQL |
-| Static site | — | — |
-
-NodeBB is the only one that can be greyed out on an otherwise working server: it
-speaks MongoDB or PostgreSQL and neither flavour of MySQL, so on a MySQL-only box
-the card says so rather than failing halfway through its setup. Everything else
-needs either no database or the MySQL/MariaDB pair, which the panel can install
-for you.
-
-NodeBB is also the only application where you get a **choice** of engine, and the
-create form offers one only when the server actually has both — MySQL and MariaDB
-cannot coexist on one box, so listing both of those is not a choice. The choice is
-permanent: nothing moves a forum from one engine to the other afterwards.
-
-Databases are independent of the web server — all four engines install the same
-way on all four stacks.
-
-**One OpenLiteSpeed caveat.** On that stack *everything* runs LiteSpeed's own
-`lsphp` build -- hosted sites and the panel alike -- and LiteSpeed publishes a
-smaller extension set than `ppa:ondrej/php`. Most
-of the difference is not real — `gd`, `mbstring`, `xml` and `zip` are compiled into
-`lsphp` rather than shipped as separate packages — but there is genuinely **no
-`lsphp*-mongodb`**, so a PHP application that needs the MongoDB *driver* would have
-to build it with pecl. Nothing shipped here needs it; NodeBB is a Node application
-and talks to MongoDB directly. The panel's extension screen lists what your server
-can actually install rather than a fixed list, so it will not offer you something
-apt would then refuse.
-
-## Built with
-
-Laravel 13 on PHP 8.4, SQLite by default, Redis for cache, Sanctum for auth,
-[Pest](https://pestphp.com) for tests. The interface is Next.js 16 with React 19 and
-Tailwind 4. **2,567 tests** cover the backend.
-
-```
-backend/     Laravel API
-frontend/    Next.js interface
-install.sh   installer
-```
-
-## Status
-
-Honest about what has and has not been exercised:
-
-| | |
+| Flag | Web server / application profile |
 |---|---|
-| Backend features | passing; 3 tests skipped, naming an endpoint that was never built (`POST /applications/{id}/rollback`) |
-| `install.sh` | confirmed end to end on real hardware 2026-09-01, on the OpenLiteSpeed stack |
-| nginx / Apache / MERN stacks | exercised by the installer |
-| OpenLiteSpeed | installs and served the panel on PHP-FPM (2026-09-01); ⚠️ the LSPHP move (2026-09-10) has **not run on hardware**, and **no site has been created on one yet** |
-| MongoDB | installable from the panel |
-| Licence | ⚠️ **not chosen yet** — see below |
+| `--stack=lemp` | nginx; native PHP, Node.js and static applications (default) |
+| `--stack=lamp` | Apache; native PHP, Node.js and static applications |
+| `--stack=mern` | nginx; Node.js and static applications, not hosted PHP apps |
+| `--stack=ols` | OpenLiteSpeed; native PHP, Node.js and static applications |
+| `--stack=docker` | nginx + Docker; container applications only |
 
-**There is no licence file yet**, which means the usual copyright default applies
-and you do not currently have permission to use, modify or redistribute this. That
-is an oversight rather than an intention; a licence will be added.
+The panel itself still needs PHP and Node.js regardless of the hosted application
+profile. Installing a runtime does **not** make all application types available
+on every stack. The API's site-type catalog reflects the server's capabilities;
+application database/runtime requirements still apply. For example, NodeBB needs
+MongoDB or PostgreSQL, not MySQL/MariaDB.
 
-## White-labelling
+Without `--stack`, an interactive terminal prompts; a non-interactive run defaults
+to LEMP. Other supported options:
 
-Nothing the panel writes to your server carries a product name — not the cron files,
-not the fail2ban config, not the config it generates inside your applications. The
-installer names every account, path, service and file from a single `PANEL_SLUG`
-(default `panel`), and the interface reads its name and logo from `BRANDING_*`
-environment variables.
+| Option | Purpose |
+|---|---|
+| `--domain=panel.example.com` | Panel hostname; point its A record at the server first. |
+| `--email=you@example.com` | Contact for Let's Encrypt expiry warnings. |
+| `--no-ssl` | Serve plain HTTP, for example behind a separately secured proxy. |
+| `--dry-run` | Run checks and print the plan without changing the server. |
+| `--branch=main` | Select the source branch. |
+| `--repo=URL` | Select a fork or mirror. |
+| `--force` | Bypass the fresh-server guard; **not** a migration or compatibility guarantee. |
 
-## Contributing
+Without a domain, the installer derives a nip.io hostname from the server's IP.
+Certificate issuance can hit shared rate limits; the installer can fall back to a
+self-signed certificate. Use your own hostname for a publicly trusted deployment.
 
-Issues and pull requests welcome. Two things worth knowing before you send code:
+On completion, open the printed URL. Unless an administrator was supplied during
+installation, the first registered account becomes administrator and public
+registration closes. Finish the setup checks before creating applications.
 
-- **Tests are Pest**, and every endpoint has a feature test covering both the
-  allowed and the denied case.
-- **User-facing strings are translation keys**, never literals — all eight locales
-  are kept key-complete.
+The fresh-server guard refuses conflicting panels, sites, databases and other
+existing workloads. A recognised installation can be rerun after fixing a failed
+step. Rerunning is not a general recovery tool for arbitrary existing servers;
+inspect the error and preserve backups before retrying or using `--force`.
+
+### OpenLiteSpeed differences
+
+OLS runs the panel and hosted PHP sites on **LSPHP**, not PHP-FPM. Hosted PHP sites
+have per-site external processors, users and sockets: **PHP isolation exists**,
+although there is no FPM-pool isolation toggle. Per-site PHP settings use an ini
+file. Available PHP versions/extensions depend on LiteSpeed's packages.
+
+Only WordPress enables automatic `.htaccess` loading; other sites receive their
+routing rules through the generated vhost. WAF detect-mode matches are marked in
+the site's access log (`waf=1`) rather than a separate WAF log. Do not assume
+Apache/FPM configuration instructions apply unchanged to OLS.
+
+### Automated installs and Central
+
+Automation can provide `PANEL_ADMIN_USERNAME` and `PANEL_ADMIN_PASSWORD` to create
+the first administrator during installation. The password must be 12–128
+characters. Keep passwords and tokens out of command arguments, shell history
+and logs; inject them through your provisioning system's secret environment.
+
+`CENTRAL_TOKEN` can provision the management connection, and `PROGRESS_URL` can
+receive best-effort HTTPS JSON progress reports authenticated with that token.
+The corresponding non-secret flags include `--admin-username` and
+`--progress-url`; prefer the environment variable over `--central-token` for the
+secret. Use `sudo --preserve-env` deliberately when passing provisioning variables
+through sudo. Progress-report failures do not stop installation.
+
+Central management is optional: administrators can enable/rotate or revoke its
+management token. The API also supports ordinary Sanctum bearer tokens and browser
+sessions. Central cannot use its token to change panel users or roles.
+
+**Network behaviour:** this is not an offline-only panel. Installers, release and
+runtime metadata, certificate issuance, configured storage/integrations and
+Central features contact external services. Central's public branding endpoint
+has a configured default; explicitly set `CENTRAL_URL=` in the backend environment
+(and clear cached configuration) to disable that branding lookup. Revoking the
+management token and disabling branding lookup are separate settings.
+
+### Optional paid addons
+
+The OSS backend includes **Central-only API adapters** for WP Toolkit
+(`wp-toolkit`) and Log Monitoring Suite (`log-monitoring-suite`, repository
+[`srvrsoorg/log-monitoring-suite`](https://github.com/srvrsoorg/log-monitoring-suite)).
+These are separate CLI binaries, not built-in OSS screens. They must be
+provisioned separately for Central to use them and perform their own licence
+checks. Installing the OSS panel does not install, update or unlock them. See [Central paid addons](backend/API_REFERENCE.md#central--paid-addons-wp-toolkit-log-monitoring-suite)
+for the bounded operations and error responses; this repository does not provide
+a standalone addon installation/update guide.
+
+## Migration baseline — 23 October 2026
+
+The migration history was consolidated into a **fresh-install baseline** (files
+named `2026_10_24_*`). Older panels must be **reinstalled** for this baseline;
+do not treat a normal update or `php artisan migrate` as an upgrade path for their
+old databases. Preserve application data and verified off-server backups before
+reinstallation. There is no general v7 migration promise here.
+
+For future changes, **add new, reversible migrations after the baseline**. Do not
+edit the baseline create-table migrations to change an installed schema.
+
+## Development and checks
+
+Use an isolated checkout and a disposable Linux VM for real server-operation
+work. API actions can execute privileged host commands; a local web server is
+not a sandbox. See [backend setup](backend/README.md) for Composer, database,
+queue and scheduler instructions.
+
+The frontend uses Node.js (the installer defaults to Node 24), Next.js 16,
+React 19 and Tailwind 4:
+
+```bash
+cd frontend
+npm ci
+```
+
+Create `frontend/.env.local` with local origins, not deployed server addresses:
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Run `npm run dev` and the backend separately. Keep the same hostname on both
+origins for browser session authentication. The backend CORS/Sanctum settings must
+allow the frontend origin.
+
+Checks provided by the current manifests/configuration:
+
+```bash
+# From backend/ (after setup)
+composer test
+vendor/bin/pint --test
+vendor/bin/phpstan analyse --no-progress
+
+# From frontend/
+npm run lint
+npm test
+npm run build
+```
+
+The backend also has a small Vite asset build (`npm ci && npm run build` inside
+`backend/`); it is separate from the Next.js interface. Do not substitute the
+Laravel skeleton's `composer setup`/`composer dev` scripts for the complete panel
+setup documented in the backend guide.
+
+## Repository layout and contributing
+
+```text
+backend/                 Laravel API, server operations and Pest tests
+backend/API_REFERENCE.md API contracts and restrictions
+frontend/                Next.js interface and frontend checks
+install.sh               server installer
+SUPPORTED_PLATFORMS.md   OS and upstream-package caveats
+```
+
+Use Pest for backend tests and cover validation and authorization for changed
+endpoints. Keep user-facing strings in translation dictionaries across all eight
+locales. Match existing services, Form Requests, Resources and policies; do not
+put server-operation logic directly in controllers. Keep secrets and generated
+files out of commits. Run the relevant tests, formatting/static analysis and
+build checks before submitting a pull request.
+
+**Licence:** there is currently no project licence file at the repository root.
+Dependency/framework licences do not establish the licence for this project;
+clarify permitted use and redistribution with the maintainers.
