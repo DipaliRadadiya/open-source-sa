@@ -1879,13 +1879,16 @@ and `branch` all default to what the application already holds.
 
 **Response `200`:** the full application resource.
 
-**Verified before it is stored.** The candidate account is asked to list the
-repository's branches, and only a successful answer is persisted:
+**Verified before it is stored.** On the account path the candidate account is
+asked to list the repository's branches. On the public-URL path the server runs
+the same `git ls-remote` probe as creating a site (FS-C22 #24 — any URL used to
+be saved). Only a successful answer is persisted:
 
 | Status | When |
 |---|---|
-| `422` on `repository` | that account cannot reach that repository — bad, revoked or wrongly-scoped token |
-| `422` on `branch` | the branch does not exist in the repository |
+| `422` on `repository` | (account) that account cannot reach that repository — bad, revoked or wrongly-scoped token |
+| `422` on `repository_url` | (public URL) the repository does not exist or is private (`validation.git_repository_unreachable`), or the server cannot reach the git host (`validation.git_host_unreachable`) |
+| `422` on `branch` | the branch does not exist in the repository — on the public-URL path, the branch sent or else the site's current one |
 
 A rejected re-link leaves the application **exactly as it was**. Storing first
 would move the failure to the next deploy, where it reads as a deployment

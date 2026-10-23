@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Re-pointing a git application at a different account.
@@ -178,8 +179,33 @@ it('refuses a branch the repository does not have', function () {
     expect($application->fresh()->branch)->toBe('main');
 });
 
+/**
+ * Answer `git ls-remote` the way real git does for a public URL, measured on a
+ * test server (FS-C22 #24): a repository that does not exist asks for a
+ * username GIT_TERMINAL_PROMPT forbids, and exits 128; a missing branch is
+ * an empty success.
+ */
+function relinkRemote(string $answer = 'present'): void
+{
+    Process::fake(function ($process) use ($answer) {
+        $command = (array) $process->command;
+
+        if (! in_array('ls-remote', $command, true)) {
+            return Process::result(exitCode: 0);
+        }
+
+        return match ($answer) {
+            'missing_branch' => Process::result(output: ''),
+            'no_repository' => Process::result(errorOutput: "fatal: could not read Username for 'https://github.com': terminal prompts disabled", exitCode: 128),
+            'offline' => Process::result(errorOutput: "fatal: unable to access 'https://github.com/octo/public.git/': Could not resolve host: github.com", exitCode: 128),
+            default => Process::result(output: "0123456789abcdef0123456789abcdef01234567\t".end($command)."\n"),
+        };
+    });
+}
+
 it('switches an account-backed site to a public URL', function () {
     $application = relinkGitApp();
+    relinkRemote();
 
     $this->actingAs($this->admin)
         ->putJson("/api/applications/{$application->id}/git-account", [
@@ -196,6 +222,83 @@ it('switches an account-backed site to a public URL', function () {
     expect($fresh->git_account_id)->toBeNull()
         ->and($fresh->repository)->toBeNull()
         ->and($fresh->repository_url)->toBe('https://github.com/octo/public.git');
+
+    // It was asked, for the branch the site keeps.
+    Process::assertRan(fn ($p) => (array) $p->command === ['git', 'ls-remote', '--heads', 'https://github.com/octo/public.git', 'refs/heads/main']);
+});
+
+it('refuses a public URL that does not answer, and saves nothing', function (string $answer, string $field, string $key) {
+    // FS-C22 #24: any URL was stored, and the next deploy failed on it. The
+    // account path already asked the provider; this path asked nobody.
+    $application = relinkGitApp();
+    relinkRemote($answer);
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}/git-account", [
+            'git_source' => 'public_url',
+            'repository_url' => 'https://github.com/octo/public.git',
+            'branch' => 'release',
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors([$field => __($key, ['branch' => 'release'])]);
+
+    $fresh = $application->fresh();
+
+    expect($fresh->git_account_id)->toBe($this->account->id)
+        ->and($fresh->repository)->toBe('octo/shop')
+        ->and($fresh->repository_url)->toBeNull()
+        ->and($fresh->branch)->toBe('main');
+})->with([
+    'repository does not exist' => ['no_repository', 'repository_url', 'validation.git_repository_unreachable'],
+    'branch does not exist' => ['missing_branch', 'branch', 'validation.git_branch_missing'],
+    'host unreachable' => ['offline', 'repository_url', 'validation.git_host_unreachable'],
+]);
+
+it('checks the site\'s own branch when the request names none', function () {
+    $application = relinkGitApp(['branch' => 'develop']);
+    relinkRemote('missing_branch');
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}/git-account", [
+            'repository_url' => 'https://github.com/octo/public.git',
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['branch' => __('validation.git_branch_missing', ['branch' => 'develop'])]);
+
+    Process::assertRan(fn ($p) => in_array('refs/heads/develop', (array) $p->command, true));
+    expect($application->fresh()->repository_url)->toBeNull();
+});
+
+it('does not reach the git host for a user who may not change deployment', function () {
+    // Deny first: the probe goes out to the network, so it must never run on
+    // behalf of someone the request would refuse anyway.
+    $application = relinkGitApp();
+    relinkRemote();
+
+    $this->actingAs(User::factory()->create())
+        ->putJson("/api/applications/{$application->id}/git-account", [
+            'git_source' => 'public_url',
+            'repository_url' => 'https://github.com/octo/public.git',
+        ])
+        ->assertForbidden();
+
+    Process::assertNotRan(fn ($p) => in_array('ls-remote', (array) $p->command, true));
+    expect($application->fresh()->repository_url)->toBeNull();
+});
+
+it('does not reach the git host when the URL itself is refused', function () {
+    $application = relinkGitApp();
+    relinkRemote();
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}/git-account", [
+            'git_source' => 'public_url',
+            'repository_url' => 'http://127.0.0.1/octo/public.git',
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('repository_url');
+
+    Process::assertNotRan(fn ($p) => in_array('ls-remote', (array) $p->command, true));
 });
 
 it('disables deploy-on-push when the provider changes', function () {

@@ -4,8 +4,10 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Models\Application;
 use App\Rules\SafeProviderHost;
+use App\Services\Server\Applications\GitDeployer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Re-point a git application at a different account, repository or public URL.
@@ -103,5 +105,42 @@ class UpdateGitAccountRequest extends FormRequest
             // repository usually needs.
             'branch' => ['sometimes', 'string', 'max:255'],
         ];
+    }
+
+    /**
+     * A public URL must answer, and have the branch, before it is saved
+     * (FS-C22 #24). The account path is checked in `RelinkGitAccount`
+     * against the provider's API; this one has no API to ask, so it gets the
+     * same `git ls-remote` probe as creating a site and changing its branch.
+     * Without it any URL was stored and the next deploy failed on it.
+     *
+     * Last, and only when the fields themselves passed, because it reaches
+     * the git host.
+     *
+     * @return array<int, \Closure>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $application = $this->route('application');
+
+            if (! $application instanceof Application || $validator->errors()->isNotEmpty()
+                || $this->input('git_source') !== 'public_url') {
+                return;
+            }
+
+            $probe = (new Application)->forceFill([
+                'git_account_id' => null,
+                'repository_url' => (string) $this->input('repository_url'),
+                'branch' => (string) ($this->input('branch') ?? $application->branch),
+            ]);
+
+            if (($reason = app(GitDeployer::class)->checkRemoteBranch($probe)) !== null) {
+                $validator->errors()->add(
+                    $reason === 'branch_missing' ? 'branch' : 'repository_url',
+                    __("validation.git_{$reason}", ['branch' => $probe->branch]),
+                );
+            }
+        }];
     }
 }
