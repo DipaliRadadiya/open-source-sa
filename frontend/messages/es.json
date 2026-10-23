@@ -7506,6 +7506,27 @@
         "noPermission": "Tu rol no incluye Copias de seguridad con acceso de gestión. Pide a un administrador que te lo conceda.",
         "inFlight": "Esta copia aún se está escribiendo.",
         "noArtifact": "Esta copia falló, así que no hay ningún archivo que descargar."
+      },
+      "prepare": {
+        "preparingTitle": "Preparando la descarga",
+        "preparingBody": "Esta copia está guardada en un servidor SFTP o FTP, así que el panel la copia aquí primero. Las copias grandes pueden tardar unos minutos.",
+        "progress": "{done} de {total}",
+        "connecting": "Conectando con el servidor de almacenamiento…",
+        "closeHint": "Puedes cerrar esta ventana. La copia continúa y Descargar la retoma.",
+        "readyTitle": "Tu copia está lista",
+        "readyBody": "La copia está lista para descargar.",
+        "availableUntil": "Disponible durante 1 hora, hasta las {time} (hora del servidor).",
+        "download": "Descargar",
+        "busy": "El servidor ya está enviando dos descargas. Inténtalo de nuevo en {seconds} segundos.",
+        "failedTitle": "No se pudo preparar la descarga",
+        "failedBody": "No se pudo copiar la copia desde el servidor de almacenamiento.",
+        "expiredTitle": "Esta descarga ha caducado",
+        "expiredBody": "La copia se eliminó al cabo de una hora. Prepárala de nuevo para descargarla.",
+        "tryAgain": "Reintentar",
+        "prepareAgain": "Preparar de nuevo",
+        "close": "Cerrar",
+        "startFailed": "No se pudo iniciar la descarga.",
+        "fileFailed": "No se pudo descargar el archivo. Inténtalo de nuevo."
       }
     },
     "destinationHealth": {

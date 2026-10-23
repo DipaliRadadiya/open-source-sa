@@ -7506,6 +7506,27 @@
         "noPermission": "Your role does not include Backups with Manage access. Ask an administrator to grant it.",
         "inFlight": "This backup is still being written.",
         "noArtifact": "This backup failed, so there is no archive to download."
+      },
+      "prepare": {
+        "preparingTitle": "Preparing your download",
+        "preparingBody": "This backup is stored on an SFTP or FTP server, so the panel copies it here first. Large backups can take a few minutes.",
+        "progress": "{done} of {total}",
+        "connecting": "Connecting to the storage server…",
+        "closeHint": "You can close this window. The copy keeps going, and Download picks it up again.",
+        "readyTitle": "Your backup is ready",
+        "readyBody": "The copy is ready to download.",
+        "availableUntil": "Available for 1 hour, until {time} (server time).",
+        "download": "Download",
+        "busy": "The server is already sending two downloads. Try again in {seconds} seconds.",
+        "failedTitle": "The download could not be prepared",
+        "failedBody": "The backup could not be copied from the storage server.",
+        "expiredTitle": "This download has expired",
+        "expiredBody": "The copy was removed after an hour. Prepare it again to download.",
+        "tryAgain": "Try again",
+        "prepareAgain": "Prepare again",
+        "close": "Close",
+        "startFailed": "The download could not be started.",
+        "fileFailed": "The file could not be downloaded. Try again."
       }
     },
     "destinationHealth": {

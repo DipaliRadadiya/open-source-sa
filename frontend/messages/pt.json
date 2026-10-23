@@ -7506,6 +7506,27 @@
         "noPermission": "Seu papel não inclui Backups com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "inFlight": "Este backup ainda está sendo gravado.",
         "noArtifact": "Esta cópia falhou, então não há nenhum arquivo para baixar."
+      },
+      "prepare": {
+        "preparingTitle": "Preparando o download",
+        "preparingBody": "Este backup está guardado em um servidor SFTP ou FTP, então o painel o copia para cá primeiro. Backups grandes podem levar alguns minutos.",
+        "progress": "{done} de {total}",
+        "connecting": "Conectando ao servidor de armazenamento…",
+        "closeHint": "Você pode fechar esta janela. A cópia continua, e Baixar a retoma.",
+        "readyTitle": "Seu backup está pronto",
+        "readyBody": "A cópia está pronta para baixar.",
+        "availableUntil": "Disponível por 1 hora, até {time} (horário do servidor).",
+        "download": "Baixar",
+        "busy": "O servidor já está enviando dois downloads. Tente novamente em {seconds} segundos.",
+        "failedTitle": "Não foi possível preparar o download",
+        "failedBody": "Não foi possível copiar o backup do servidor de armazenamento.",
+        "expiredTitle": "Este download expirou",
+        "expiredBody": "A cópia foi removida após uma hora. Prepare-a novamente para baixar.",
+        "tryAgain": "Tentar novamente",
+        "prepareAgain": "Preparar novamente",
+        "close": "Fechar",
+        "startFailed": "Não foi possível iniciar o download.",
+        "fileFailed": "Não foi possível baixar o arquivo. Tente novamente."
       }
     },
     "destinationHealth": {

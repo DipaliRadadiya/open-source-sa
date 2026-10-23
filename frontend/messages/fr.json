@@ -7506,6 +7506,27 @@
         "noPermission": "Votre rôle n'inclut pas Sauvegardes avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "inFlight": "Cette sauvegarde est encore en cours d'écriture.",
         "noArtifact": "Cette sauvegarde a échoué, il n'y a donc aucune archive à télécharger."
+      },
+      "prepare": {
+        "preparingTitle": "Préparation du téléchargement",
+        "preparingBody": "Cette sauvegarde est stockée sur un serveur SFTP ou FTP : le panneau la copie donc d'abord ici. Les grosses sauvegardes peuvent prendre quelques minutes.",
+        "progress": "{done} sur {total}",
+        "connecting": "Connexion au serveur de stockage…",
+        "closeHint": "Vous pouvez fermer cette fenêtre. La copie continue, et Télécharger la reprend.",
+        "readyTitle": "Votre sauvegarde est prête",
+        "readyBody": "La copie est prête à être téléchargée.",
+        "availableUntil": "Disponible pendant 1 heure, jusqu'à {time} (heure du serveur).",
+        "download": "Télécharger",
+        "busy": "Le serveur envoie déjà deux téléchargements. Réessayez dans {seconds} secondes.",
+        "failedTitle": "Le téléchargement n'a pas pu être préparé",
+        "failedBody": "La sauvegarde n'a pas pu être copiée depuis le serveur de stockage.",
+        "expiredTitle": "Ce téléchargement a expiré",
+        "expiredBody": "La copie a été supprimée au bout d'une heure. Préparez-la à nouveau pour la télécharger.",
+        "tryAgain": "Réessayer",
+        "prepareAgain": "Préparer à nouveau",
+        "close": "Fermer",
+        "startFailed": "Le téléchargement n'a pas pu démarrer.",
+        "fileFailed": "Le fichier n'a pas pu être téléchargé. Réessayez."
       }
     },
     "destinationHealth": {

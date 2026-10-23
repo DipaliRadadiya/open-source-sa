@@ -41,6 +41,17 @@ export function fetchBackupDownload(backupId) {
   return api.get(`/backups/${backupId}/download`);
 }
 
+// SFTP/FTP: the GET above answers 409 `prepare_required`, and the panel copies the
+// archive to its own disk first. A second POST returns the copy already under way.
+export function prepareBackupDownload(backupId) {
+  return api.post(`/backups/${backupId}/download/prepare`);
+}
+
+/** Polled while `preparing`; `{download_preparation: null}` before the first POST. */
+export function fetchBackupDownloadPreparation(backupId, { signal } = {}) {
+  return api.get(`/backups/${backupId}/download/prepare`, { signal });
+}
+
 /** Used for a restore's safety copy, whose type decides what an undo can put back. */
 export function fetchBackup(backupId) {
   return api.get(`/backups/${backupId}`);

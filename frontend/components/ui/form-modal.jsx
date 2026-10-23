@@ -14,6 +14,7 @@ const FOCUSABLE =
 const ICON_TONES = {
   primary: "bg-primary/10 text-primary",
   success: "bg-success/10 text-success",
+  destructive: "bg-destructive/10 text-destructive",
 };
 
 export function FormModal({

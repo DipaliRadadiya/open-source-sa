@@ -4,10 +4,11 @@ import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
-import { fetchBackupDownload } from "@/lib/api/backups";
+import { fetchBackupDownload, prepareBackupDownload } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { PrepareDownloadDialog } from "@/components/backups/prepare-download-dialog";
 
 // The presigned link expires in five minutes, so fetch on click; never render it, as
 // the URL is the credential.
@@ -15,6 +16,8 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
   const t = useTranslations("backups.download");
   const format = useFormatter();
   const [pending, setPending] = useState(false);
+  // The first POST's outcome; set means the preparation dialog is open.
+  const [preparing, setPreparing] = useState(null);
 
   // Only a verified run has an archive (others get 422 download_no_artifact). Use the
   // shared predicate: the success state is `verified`, not "completed".
@@ -44,6 +47,16 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       link.click();
       link.remove();
     } catch (error) {
+      // SFTP/FTP: no direct link; the panel copies the archive first.
+      if (error?.response?.status === 409 && error.response.data?.reason === "prepare_required") {
+        try {
+          const { data } = await prepareBackupDownload(backup.id);
+          setPreparing({ prep: data?.download_preparation ?? null });
+        } catch (prepareError) {
+          setPreparing({ refusal: apiMessage(prepareError, t("prepare.startFailed")) });
+        }
+        return;
+      }
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setPending(false);
@@ -53,8 +66,9 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
   const size = backup.size_bytes ? formatBytes(backup.size_bytes, format) : null;
 
   return (
-    // Only the blocked state gets the wrapper: `ReasonTooltip` makes its span
-    // focusable, which would add a second tab stop to an enabled button.
+    <>
+    {/* Only the blocked state gets the wrapper: `ReasonTooltip` makes its span
+        focusable, which would add a second tab stop to an enabled button. */}
     <ReasonTooltip reason={blocker}>
       <Button
         variant="outline"
@@ -68,5 +82,16 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
         {label ? t("label") : null}
       </Button>
     </ReasonTooltip>
+    {preparing ? (
+      <PrepareDownloadDialog
+        backup={backup}
+        initial={preparing}
+        open
+        onOpenChange={(next) => {
+          if (!next) setPreparing(null);
+        }}
+      />
+    ) : null}
+    </>
   );
 }

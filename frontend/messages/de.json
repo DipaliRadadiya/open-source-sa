@@ -7506,6 +7506,27 @@
         "noPermission": "Ihre Rolle enthält nicht „Backups“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "inFlight": "Dieses Backup wird noch geschrieben.",
         "noArtifact": "Dieses Backup ist fehlgeschlagen, es gibt also kein Archiv zum Herunterladen."
+      },
+      "prepare": {
+        "preparingTitle": "Download wird vorbereitet",
+        "preparingBody": "Dieses Backup liegt auf einem SFTP- oder FTP-Server, daher kopiert das Panel es zuerst hierher. Große Backups können einige Minuten dauern.",
+        "progress": "{done} von {total}",
+        "connecting": "Verbindung zum Speicherserver wird hergestellt…",
+        "closeHint": "Sie können dieses Fenster schließen. Die Kopie läuft weiter, und Herunterladen greift sie wieder auf.",
+        "readyTitle": "Ihr Backup ist bereit",
+        "readyBody": "Die Kopie kann heruntergeladen werden.",
+        "availableUntil": "1 Stunde verfügbar, bis {time} (Serverzeit).",
+        "download": "Herunterladen",
+        "busy": "Der Server sendet bereits zwei Downloads. Versuchen Sie es in {seconds} Sekunden erneut.",
+        "failedTitle": "Der Download konnte nicht vorbereitet werden",
+        "failedBody": "Das Backup konnte nicht vom Speicherserver kopiert werden.",
+        "expiredTitle": "Dieser Download ist abgelaufen",
+        "expiredBody": "Die Kopie wurde nach einer Stunde entfernt. Bereiten Sie sie erneut vor, um sie herunterzuladen.",
+        "tryAgain": "Erneut versuchen",
+        "prepareAgain": "Erneut vorbereiten",
+        "close": "Schließen",
+        "startFailed": "Der Download konnte nicht gestartet werden.",
+        "fileFailed": "Die Datei konnte nicht heruntergeladen werden. Versuchen Sie es erneut."
       }
     },
     "destinationHealth": {
