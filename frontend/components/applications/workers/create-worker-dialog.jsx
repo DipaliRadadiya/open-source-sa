@@ -120,6 +120,11 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       }
       // `kind` errors (e.g. a Horizon conflict) are shown at form level.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
+      // The command would not stay running, so nothing was added. The field says what is
+      // wrong; the message adds what the program printed and the reference.
+      if (error.response?.data?.reason === "worker_did_not_start") {
+        form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
+      }
       // The dialog scrolls; the reason can land above or below what is on screen.
       scrollToFirstError();
     }

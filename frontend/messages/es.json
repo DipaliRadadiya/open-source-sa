@@ -5038,8 +5038,7 @@
         "title": "Editar worker",
         "subtitle": "Al guardar, los cambios se aplican de inmediato: el worker se reinicia con ellos, salvo que esté desactivado.",
         "submit": "Guardar cambios",
-        "failed": "No se pudieron aplicar estos cambios. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo.",
-        "failedStopped": "No se pudieron aplicar estos cambios, así que el worker se detuvo. Corrige el comando y guarda de nuevo."
+        "failed": "No se pudieron aplicar estos cambios. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo."
       },
       "delete": {
         "title": "¿Eliminar este worker?",

@@ -5038,8 +5038,7 @@
         "title": "Edit worker",
         "subtitle": "Saving applies the changes right away — the worker restarts with them unless it is turned off.",
         "submit": "Save changes",
-        "failed": "These changes could not be applied. Check that the command runs for this application, then try again.",
-        "failedStopped": "These changes could not be applied, so the worker was stopped. Fix the command and save again."
+        "failed": "These changes could not be applied. Check that the command runs for this application, then try again."
       },
       "delete": {
         "title": "Delete this worker?",

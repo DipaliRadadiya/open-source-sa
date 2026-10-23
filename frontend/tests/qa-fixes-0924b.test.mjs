@@ -32,14 +32,15 @@ test("a worker that will not start is explained on the form, not in a vanishing 
   const create = read("components/applications/workers/create-worker-dialog.jsx");
   assert.match(create, /\(error\.response\?\.status \?\? 0\) >= 500/);
   assert.match(create, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\("create\.failed"\)\) \}\)/);
-  // Edit: the API saved the row and then could not start it, so the worker is
-  // now stopped — a different sentence, and the list is re-read behind it.
+  // Edit: since RC-4 (22 Oct) the API rolls a failed edit back, so a server fault shows the
+  // API's own sentence and reference rather than claiming the worker was stopped.
   const edit = read("components/applications/workers/edit-worker-dialog.jsx");
   assert.match(edit, /\(error\.response\?\.status \?\? 0\) >= 500/);
-  assert.match(edit, /form\.setError\("root\.server", \{ message: t\("edit\.failedStopped"\) \}\);\s*refresh\(\);/);
+  assert.match(edit, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\("edit\.failed"\)\) \}\);\s*refresh\(\);/);
   for (const locale of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
     const w = JSON.parse(read(`messages/${locale}.json`)).applications.workers;
-    assert.ok(w.create.failed && w.edit.failedStopped, locale);
+    assert.ok(w.create.failed && w.edit.failed, locale);
+    assert.equal(w.edit.failedStopped, undefined, locale);
   }
 });
 

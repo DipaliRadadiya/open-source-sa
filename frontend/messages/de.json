@@ -5038,8 +5038,7 @@
         "title": "Worker bearbeiten",
         "subtitle": "Beim Speichern greifen die Änderungen sofort — der Worker startet damit neu, außer er ist ausgeschaltet.",
         "submit": "Änderungen speichern",
-        "failed": "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut.",
-        "failedStopped": "Diese Änderungen konnten nicht angewendet werden, daher wurde der Worker gestoppt. Korrigieren Sie den Befehl und speichern Sie erneut."
+        "failed": "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut."
       },
       "delete": {
         "title": "Diesen Worker löschen?",

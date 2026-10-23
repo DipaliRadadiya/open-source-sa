@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Loader2, Pencil, ChevronDown, TriangleAlert } from "lucide-react";
 import { workerFormSchemaFor } from "@/lib/schemas/worker";
 import { updateWorker } from "@/lib/api/workers";
+import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -104,16 +105,20 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
         onOpenChange?.(false);
       });
     } catch (error) {
-      // Not rolled back: the API saves the settings first and leaves a worker
-      // that cannot start stopped. Say so and re-read the list.
+      // A server fault: its own sentence and reference. Re-read the list in case it changed.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
-        form.setError("root.server", { message: t("edit.failedStopped") });
+        form.setError("root.server", { message: apiMessage(error, t("edit.failed")) });
         refresh();
         scrollToFirstError();
         return;
       }
       // `kind` errors (e.g. a Horizon conflict) are shown at form level.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
+      // The command would not stay running: the edit was rolled back and the worker keeps its
+      // previous command. The field says what is wrong; the message says that, and what it printed.
+      if (error.response?.data?.reason === "worker_did_not_start") {
+        form.setError("root.server", { message: apiMessage(error, t("edit.failed")) });
+      }
       // The dialog scrolls; the reason can land above or below what is on screen.
       scrollToFirstError();
     }

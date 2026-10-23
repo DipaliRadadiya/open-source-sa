@@ -143,7 +143,11 @@ export function CreateDatabaseDialog({
       setCreated(data?.database ?? null);
     } catch (error) {
       if (await restart.retry(error, () => onSubmit({ ...submitted, restart_cluster: true }))) return;
-      handleValidationError(withUserFieldErrors(error, form), form, { fallback: t("createFailed") });
+      // With one engine there is no engine field, so its 422 ("MySQL is not running…") is a toast.
+      handleValidationError(withUserFieldErrors(error, form), form, {
+        fallback: t("createFailed"),
+        unrendered: usable.length > 1 ? [] : ["engine"],
+      });
     }
   }
 

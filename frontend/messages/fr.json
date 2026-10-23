@@ -5038,8 +5038,7 @@
         "title": "Modifier le worker",
         "subtitle": "L'enregistrement applique les modifications tout de suite : le worker redémarre avec elles, sauf s'il est désactivé.",
         "submit": "Enregistrer les modifications",
-        "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez.",
-        "failedStopped": "Ces modifications n'ont pas pu être appliquées, le worker a donc été arrêté. Corrigez la commande et enregistrez à nouveau."
+        "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez."
       },
       "delete": {
         "title": "Supprimer ce worker ?",

@@ -5038,8 +5038,7 @@
         "title": "Editar worker",
         "subtitle": "Ao salvar, as alterações se aplicam na hora — o worker reinicia com elas, a menos que esteja desativado.",
         "submit": "Salvar alterações",
-        "failed": "Não foi possível aplicar estas alterações. Verifique se o comando funciona nesta aplicação e tente novamente.",
-        "failedStopped": "Estas alterações não puderam ser aplicadas, então o worker foi parado. Corrija o comando e salve novamente."
+        "failed": "Não foi possível aplicar estas alterações. Verifique se o comando funciona nesta aplicação e tente novamente."
       },
       "delete": {
         "title": "Excluir este worker?",
