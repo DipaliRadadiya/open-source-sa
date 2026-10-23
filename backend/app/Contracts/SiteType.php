@@ -75,6 +75,13 @@ interface SiteType
     public function needsDatabase(): bool;
 
     /**
+     * Does this application's own process listen on a second loopback port,
+     * besides `app_port`? Allocated at create time into `internal_port`
+     * (FS-C22 #8: n8n's task broker).
+     */
+    public function needsInternalPort(): bool;
+
+    /**
      * Does this application's own browser client authenticate using the HTTP
      * `Authorization` header?
      *

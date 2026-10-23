@@ -203,6 +203,10 @@ class ApplicationResource extends JsonResource
                 'reference' => $this->node_version_failed_reference,
             ],
             'app_port' => $this->app_port,
+            // A second loopback port the site's own process listens on (n8n's
+            // task broker, FS-C22 #8). Null for every other site, and for an
+            // n8n created before it, which keeps n8n's default 5679.
+            'internal_port' => $this->internal_port,
             'web_root' => $this->web_root,
             'build_command' => $this->build_command,
             'start_command' => $this->start_command,

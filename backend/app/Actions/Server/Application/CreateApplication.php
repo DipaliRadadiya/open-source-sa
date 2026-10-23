@@ -100,6 +100,12 @@ class CreateApplication
                 // choosing which file the panel overwrites.
                 $slug = Application::uniqueSlug((string) $data['name']);
 
+                // Allocated when the app needs a process and the user did not pick
+                // one. A port the panel chose is checked against both the database
+                // and what is actually listening; a port the user typed is checked
+                // the same way at validation.
+                $appPort = $this->port($data, $servingProfile);
+
                 $application = Application::forceCreate([
                     'slug' => $slug,
                     'site_type' => $type->name(),
@@ -156,11 +162,10 @@ class CreateApplication
                         ? (($data['php_version'] ?? null) ?: app(ServerDefaultPhp::class)->version())
                         : ($data['php_version'] ?? null),
                     'node_version' => $data['node_version'] ?? null,
-                    // Allocated when the app needs a process and the user did not pick
-                    // one. A port the panel chose is checked against both the database
-                    // and what is actually listening; a port the user typed is checked
-                    // the same way at validation.
-                    'app_port' => $this->port($data, $servingProfile),
+                    'app_port' => $appPort,
+                    // A second port for a process that binds one more (n8n's
+                    // task broker, FS-C22 #8), never the one just picked.
+                    'internal_port' => $type?->needsInternalPort() ? $this->ports->allocate(array_filter([$appPort])) : null,
                     // The type's own default, not a bare '/': a framework
                     // application served from its root publishes its own source.
                     'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',

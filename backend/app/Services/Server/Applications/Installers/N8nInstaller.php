@@ -218,6 +218,11 @@ class N8nInstaller extends AbstractNodeInstaller implements ApplicationUpdater
             'N8N_ENCRYPTION_KEY' => $this->existingEncryptionKey($application, $documentRoot) ?? bin2hex(random_bytes(32)),
             'N8N_USER_FOLDER' => $documentRoot,
             'N8N_PORT' => (string) ($application->app_port ?: 5678),
+            // The task-runner broker. n8n binds it on 5679 unless told, so a
+            // second n8n on the server found it taken and exited on start
+            // (FS-C22 #8). Left out for a site created before it had a port of
+            // its own, which keeps the default it is running on.
+            ...($application->internal_port ? ['N8N_RUNNERS_BROKER_PORT' => (string) $application->internal_port] : []),
             // Loopback only: the site is reached through the panel's reverse
             // proxy, and binding wider would publish it on the server's own
             // address too, past whatever the vhost does.

@@ -147,6 +147,11 @@ abstract class AbstractSiteType implements SiteType
         return false;
     }
 
+    public function needsInternalPort(): bool
+    {
+        return false;
+    }
+
     /**
      * @return array<string, mixed>
      */

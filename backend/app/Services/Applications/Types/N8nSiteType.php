@@ -89,6 +89,15 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
+     * The task-runner broker, which n8n binds on 127.0.0.1:5679 unless told
+     * otherwise. A second n8n found it taken and exited on start (FS-C22 #8).
+     */
+    public function needsInternalPort(): bool
+    {
+        return true;
+    }
+
+    /**
      * Encrypts every saved credential. See N8nInstaller's class note.
      */
     public function lockedEnvironmentKeys(): array
@@ -98,13 +107,14 @@ class N8nSiteType extends AbstractSiteType
 
     /**
      * Written by N8nInstaller from the site's own record: the vhost proxies to
-     * `app_port`, the data lives in the site folder, and loopback keeps n8n
+     * `app_port`, the task broker has the site's `internal_port`, the data
+     * lives in the site folder, and loopback keeps n8n
      * behind its vhost. Edited here, each one broke the site at the next
      * restart instead of on save.
      */
     public function panelManagedEnvironmentKeys(): array
     {
-        return ['N8N_PORT', 'N8N_USER_FOLDER', 'N8N_LISTEN_ADDRESS'];
+        return ['N8N_PORT', 'N8N_USER_FOLDER', 'N8N_LISTEN_ADDRESS', 'N8N_RUNNERS_BROKER_PORT'];
     }
 
     /**

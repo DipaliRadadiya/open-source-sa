@@ -25,14 +25,20 @@ class PortAllocator
     /**
      * The lowest free port in the configured range.
      *
+     * `$also` is ports this caller has picked and not yet saved — the second
+     * port of a site being created, which would otherwise be handed the very
+     * port its first one just got.
+     *
+     * @param  list<int>  $also
+     *
      * @throws NoPortAvailableException
      */
-    public function allocate(): int
+    public function allocate(array $also = []): int
     {
         $from = (int) config('server.applications.port_range.from', 3000);
         $to = (int) config('server.applications.port_range.to', 3999);
 
-        $taken = Application::query()->whereNotNull('app_port')->pluck('app_port')->all();
+        $taken = [...$this->appPorts(), ...$also];
 
         // Containerised databases draw from the same range. Asked here rather
         // than trusted to `listening()`, which only sees what is bound right
@@ -93,7 +99,11 @@ class PortAllocator
             ->pluck('app_port')
             ->all();
 
-        if (in_array($port, $taken, true)) {
+        // Every site's second port, this one's included: its own process
+        // already listens there, so it cannot be its `app_port` too.
+        $internal = Application::query()->whereNotNull('internal_port')->pluck('internal_port')->all();
+
+        if (in_array($port, [...$taken, ...$internal], true)) {
             return 'in_use_by_app';
         }
 
@@ -126,6 +136,21 @@ class PortAllocator
             // Only when the answer is no — offering an alternative to someone
             // whose choice was fine would just be noise.
             'suggested_port' => $conflict === null ? null : $this->suggest(),
+        ];
+    }
+
+    /**
+     * Every port the panel has handed to a site: its `app_port`, and the
+     * second port a site like n8n listens on (FS-C22 #8). A stopped n8n binds
+     * neither, so asking only `listening()` would hand them out again.
+     *
+     * @return list<int>
+     */
+    private function appPorts(): array
+    {
+        return [
+            ...Application::query()->whereNotNull('app_port')->pluck('app_port')->all(),
+            ...Application::query()->whereNotNull('internal_port')->pluck('internal_port')->all(),
         ];
     }
 

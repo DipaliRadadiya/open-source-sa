@@ -1010,6 +1010,7 @@ They are equal for fifteen of the seventeen site types, because most application
   "system_user": {"id": 1, "username": "siteowner"},
 
   "php_version": "8.4", "node_version": null, "node_version_change": null, "app_port": null,
+  "internal_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
 
   "has_process": false,
@@ -1031,6 +1032,16 @@ They are equal for fifteen of the seventeen site types, because most application
   "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }}
 ```
+
+**`internal_port`** (FS-C22 #8, 2026-10-23): a second loopback port the site's
+own process listens on, allocated at create time from the same range as
+`app_port` and never equal to any site's `app_port` or `internal_port`. Today
+only n8n has one: its task-runner broker, written to the site's `.env` as
+`N8N_RUNNERS_BROKER_PORT` (a key the Environment screen will not let you edit).
+Without it every n8n used n8n's default 5679, and a second n8n on the server
+exited on start. `null` for every other site, and for an n8n created before
+this change, which keeps 5679. A custom `app_port` equal to another site's
+`internal_port` is refused with `validation.port_in_use_by_app`.
 
 **`failed_reason` is usually `null`, and that is not an omission.** For most
 failures `failed_step` says where it broke and `reference` points at the
