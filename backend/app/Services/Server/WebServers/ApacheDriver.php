@@ -81,6 +81,15 @@ class ApacheDriver extends AbstractWebServerDriver
         }
 
         $this->serverOps->run(['systemctl', 'daemon-reload'], $context, 30);
+
+        // Tested first, like every reload. A restart is not a reload: on a
+        // config Apache refuses, a reload keeps serving the old one, but a
+        // restart stops Apache and cannot start it again — every site and the
+        // panel down. The drop-in stays; the next call retries the restart.
+        if ($this->test()->failed()) {
+            return;
+        }
+
         $this->homeWritable = $this->serverOps->run(['systemctl', 'restart', 'apache2'], $context, 60)->ok;
     }
 

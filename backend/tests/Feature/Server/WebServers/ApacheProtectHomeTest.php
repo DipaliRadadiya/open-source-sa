@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Process;
  */
 beforeEach(function () {
     $this->protectHome = 'read-only';
+    $this->configValid = true;
     $this->ran = new ArrayObject;
 
     Process::fake(function ($process) {
@@ -21,6 +22,14 @@ beforeEach(function () {
 
         if ($args === ['systemctl', 'show', 'apache2', '-p', 'ProtectHome', '--value']) {
             return Process::result(output: test()->protectHome."\n");
+        }
+
+        // As apachectl answers (measured): "Syntax OK" on stderr and 0, or the
+        // error on stderr and 1.
+        if ($args === ['apachectl', 'configtest']) {
+            return test()->configValid
+                ? Process::result(errorOutput: "Syntax OK\n")
+                : Process::result(errorOutput: "AH00526: Syntax error on line 3 of /etc/apache2/sites-enabled/shop.conf:\nInvalid command 'Bogus'\n", exitCode: 1);
         }
 
         if ($args === ['systemctl', 'restart', 'apache2']) {
@@ -51,9 +60,30 @@ it('lifts a read-only /home with a drop-in and restarts Apache before a site is 
 
     expect($tee)->not->toBeFalse()
         ->and(apacheRan(['systemctl', 'daemon-reload']))->toBeTrue()
-        ->and(apacheRan(['systemctl', 'restart', 'apache2']))->toBeTrue();
+        ->and(apacheRan(['systemctl', 'restart', 'apache2']))->toBeTrue()
+        // The config is tested before the restart, never after.
+        ->and(collect($this->ran)->search(['apachectl', 'configtest']))->toBeLessThan(collect($this->ran)->search(['systemctl', 'restart', 'apache2']));
 
     Process::assertRan(fn ($p) => in_array('tee', $p->command, true) && $p->input === "[Service]\nProtectHome=no\n");
+});
+
+it('does not restart Apache onto a config it would refuse', function () {
+    // A restart with a broken config stops Apache and leaves it stopped. The
+    // drop-in is written either way; the restart waits for a config that passes.
+    $this->configValid = false;
+    $driver = app(ApacheDriver::class);
+
+    $driver->ensureDirectories($this->site);
+
+    expect(apacheRan(['apachectl', 'configtest']))->toBeTrue()
+        ->and(apacheRan(['systemctl', 'restart', 'apache2']))->toBeFalse()
+        ->and(collect($this->ran)->contains(fn ($a) => ($a[0] ?? '') === 'tee' && str_contains($a[1] ?? '', 'apache2.service.d')))->toBeTrue();
+
+    // Fixed later: the next site retries, and now restarts.
+    $this->configValid = true;
+    $driver->ensureDirectories($this->site);
+
+    expect(apacheRan(['systemctl', 'restart', 'apache2']))->toBeTrue();
 });
 
 it('does nothing on a unit that already lets Apache write under /home', function () {
