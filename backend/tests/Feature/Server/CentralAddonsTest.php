@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * The paid-addon routes Central calls (routes/api/server/central-addons.php).
@@ -33,7 +34,7 @@ beforeEach(function () {
 
     $dir = sys_get_temp_dir().'/sv-addons-'.getmypid();
     @mkdir($dir);
-    foreach (['wp-toolkit', 'insighthub-toolkit'] as $bin) {
+    foreach (['wp-toolkit', 'log-monitoring-suite'] as $bin) {
         file_put_contents("{$dir}/{$bin}", "#!/bin/sh\n");
         chmod("{$dir}/{$bin}", 0755);
     }
@@ -41,8 +42,8 @@ beforeEach(function () {
 
     config([
         'server.addons.wp_toolkit.binary' => "{$dir}/wp-toolkit",
-        'server.addons.insighthub.binary' => "{$dir}/insighthub-toolkit",
-        'server.addons.insighthub.workdir' => '/etc/insighthub-toolkit',
+        'server.addons.log_monitoring_suite.binary' => "{$dir}/log-monitoring-suite",
+        'server.addons.log_monitoring_suite.workdir' => '/etc/log-monitoring-suite',
         'server.site_rules_root' => '/etc/panel-site-rules',
     ]);
 
@@ -59,7 +60,7 @@ beforeEach(function () {
 
 afterEach(function () {
     @unlink("{$this->binDir}/wp-toolkit");
-    @unlink("{$this->binDir}/insighthub-toolkit");
+    @unlink("{$this->binDir}/log-monitoring-suite");
     @rmdir($this->binDir);
 });
 
@@ -117,7 +118,7 @@ it('is reachable with the central token', function () {
         ->assertJsonPath('addons.0.name', 'wp-toolkit')
         ->assertJsonPath('addons.0.installed', true)
         ->assertJsonPath('addons.0.version', 'wp-toolkit version 1.2')
-        // Its current product name; it launched as InsightHub.
+        ->assertJsonPath('addons.1.name', 'log-monitoring-suite')
         ->assertJsonPath('addons.1.label', 'Log Monitoring Suite');
 });
 
@@ -282,7 +283,7 @@ it('logs what changed a site and nothing that only read it', function () {
         ->toMatchArray(['command' => 'cache.flush', 'addon' => 'WP Toolkit']);
 });
 
-// ── InsightHub ───────────────────────────────────────────────────────────────
+// ── Log Monitoring Suite ─────────────────────────────────────────────────────
 
 it('asks for registration before any report', function () {
     fakeAddon(fn () => ['{"status":"success"}']);
@@ -302,8 +303,8 @@ it('registers a site under the panel key, from its own working directory', funct
         ->assertOk();
 
     $call = end($GLOBALS['addonRan']);
-    expect($this->site->fresh()->insighthub_id)->toBe(7)
-        ->and($call['cwd'])->toBe('/etc/insighthub-toolkit')
+    expect($this->site->fresh()->log_monitoring_suite_id)->toBe(7)
+        ->and($call['cwd'])->toBe('/etc/log-monitoring-suite')
         ->and($call['command'])->toContain('applications:add', '--name=blog', '--system-user=siteowner', "--key=v8-{$this->site->id}");
 });
 
@@ -314,7 +315,7 @@ it('adopts its own earlier registration instead of failing on a retry', function
         ->postJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/register")
         ->assertOk();
 
-    expect($this->site->fresh()->insighthub_id)->toBe(9);
+    expect($this->site->fresh()->log_monitoring_suite_id)->toBe(9);
 });
 
 it('reports a name held by another site as a conflict', function () {
@@ -325,12 +326,12 @@ it('reports a name held by another site as a conflict', function () {
         ->assertUnprocessable()
         ->assertJsonPath('addon.field', 'domain');
 
-    expect($this->site->fresh()->insighthub_id)->toBeNull();
+    expect($this->site->fresh()->log_monitoring_suite_id)->toBeNull();
 });
 
 it('answers a repeated report from the cache', function () {
     Cache::flush();
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
     fakeAddon(fn () => ['{"status":"success","data":{"total_bandwidth":10}}']);
 
     $url = "/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/top-ips?limit=5";
@@ -338,12 +339,12 @@ it('answers a repeated report from the cache', function () {
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertOk();
 
     expect($GLOBALS['addonRan'])->toHaveCount(1)
-        ->and($GLOBALS['addonRan'][0]['command'])->toBe(["{$this->binDir}/insighthub-toolkit", 'bandwidth:top-ips', '--application=7', '--limit=5']);
+        ->and($GLOBALS['addonRan'][0]['command'])->toBe(["{$this->binDir}/log-monitoring-suite", 'bandwidth:top-ips', '--application=7', '--limit=5']);
 });
 
 it('does not cache a failure', function () {
     Cache::flush();
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
     fakeAddon(fn () => ['', '{"status":"error","code":"licence_required","message":"no"}', 1]);
 
     $url = "/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/summary";
@@ -354,15 +355,15 @@ it('does not cache a failure', function () {
 });
 
 it('knows only the reports the toolkit has', function () {
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
 
     $this->withHeaders(addonHeaders($this->token))
         ->getJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/everything")
         ->assertNotFound();
 });
 
-it('unregisters a site from InsightHub when the site is deleted', function () {
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+it('unregisters a site from Log Monitoring Suite when the site is deleted', function () {
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
     fakeAddon(fn () => ['{"status":"success"}']);
 
     app(ApplicationArtifacts::class)->remove($this->site);
@@ -371,16 +372,37 @@ it('unregisters a site from InsightHub when the site is deleted', function () {
         && in_array("--key=v8-{$this->site->id}", $c['command'], true)))->toBeTrue();
 });
 
+it('may run the addon binary through sudo under its new name', function () {
+    expect(config('server.privilege.binaries'))->toContain('log-monitoring-suite')->not->toContain('insighthub-toolkit')
+        ->and(config('server.privilege.paths.log-monitoring-suite'))->toBe(['/usr/local/bin/log-monitoring-suite'])
+        ->and(config('server.privilege.paths'))->not->toHaveKey('insighthub-toolkit');
+});
+
+it('renames the addon id column and can rename it back', function () {
+    $migration = require database_path('migrations/2026_10_23_130000_rename_insighthub_id_on_applications.php');
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
+
+    $migration->down();
+    expect(Schema::hasColumn('applications', 'insighthub_id'))->toBeTrue()
+        ->and(Schema::hasColumn('applications', 'log_monitoring_suite_id'))->toBeFalse()
+        ->and(DB::table('applications')->where('id', $this->site->id)->value('insighthub_id'))->toBe(7);
+
+    $migration->up();
+    expect(Schema::hasColumn('applications', 'log_monitoring_suite_id'))->toBeTrue()
+        ->and(Schema::hasColumn('applications', 'insighthub_id'))->toBeFalse()
+        ->and($this->site->fresh()->log_monitoring_suite_id)->toBe(7);
+});
+
 it('serves every report group the toolkit has, on the paths v7 used', function () {
     Cache::flush();
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
     fakeAddon(fn () => ['{"status":"success","data":{}}']);
 
     $base = "/api/central/addons/applications/{$this->site->id}/log-monitoring";
     foreach (['dashboard/stats' => 'dashboard:stats', 'traffic/summary' => 'traffic:summary', 'errors/status-summary' => 'errors:status-summary',
         'bots/bot-traffic-trends' => 'bots:traffic-trends', 'user-agents/os-pie-chart' => 'user-agents:os-pie-chart'] as $path => $command) {
         $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/{$path}")->assertOk();
-        expect(lastAddonCommand())->toBe(["{$this->binDir}/insighthub-toolkit", $command, '--application=7']);
+        expect(lastAddonCommand())->toBe(["{$this->binDir}/log-monitoring-suite", $command, '--application=7']);
     }
 
     expect(collect(InsightsAddonController::REPORTS)->flatten()->count())->toBe(49);
@@ -388,7 +410,7 @@ it('serves every report group the toolkit has, on the paths v7 used', function (
 
 it('requires and checks the extra option two reports take', function () {
     Cache::flush();
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
     fakeAddon(fn () => ['{"status":"success","data":[]}']);
     $base = "/api/central/addons/applications/{$this->site->id}/log-monitoring";
 
@@ -398,7 +420,7 @@ it('requires and checks the extra option two reports take', function () {
     expect($GLOBALS['addonRan'])->toBe([]);
 
     $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/traffic/url-and-field-count?field=method&limit=5")->assertOk();
-    expect(lastAddonCommand())->toBe(["{$this->binDir}/insighthub-toolkit", 'traffic:url-and-field-count', '--application=7', '--limit=5', '--field=method']);
+    expect(lastAddonCommand())->toBe(["{$this->binDir}/log-monitoring-suite", 'traffic:url-and-field-count', '--application=7', '--limit=5', '--field=method']);
 
     $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/errors/status-code-data?status_code=5xx")->assertOk();
     expect(lastAddonCommand())->toContain('--status-code=5xx');
@@ -406,7 +428,7 @@ it('requires and checks the extra option two reports take', function () {
 
 it('passes a limit only to reports that are lists', function () {
     Cache::flush();
-    $this->site->forceFill(['insighthub_id' => 7])->save();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
     fakeAddon(fn () => ['{"status":"success","data":{}}']);
     $base = "/api/central/addons/applications/{$this->site->id}/log-monitoring";
 

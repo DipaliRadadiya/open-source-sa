@@ -7188,7 +7188,7 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 
 ## Central — Paid Addons (WP Toolkit, Log Monitoring Suite)
 
-**Central only.** Every route below answers **404 to anyone but Central** (administrators included) and is reached with `Authorization: Bearer <central token>`. The OSS panel does not offer these features itself. The addon binaries (`/usr/local/bin/wp-toolkit`, `/usr/local/bin/insighthub-toolkit`) are installed by Central and check their own licence against ServerAvatar on every run — the panel holds no licence logic.
+**Central only.** Every route below answers **404 to anyone but Central** (administrators included) and is reached with `Authorization: Bearer <central token>`. The OSS panel does not offer these features itself. The addon binaries (`/usr/local/bin/wp-toolkit`, `/usr/local/bin/log-monitoring-suite`) are installed by Central and check their own licence against ServerAvatar on every run — the panel holds no licence logic.
 
 **Answers.** A synchronous route returns the addon's own JSON **unchanged** (`{"status":"success","message":…, …}`, same keys as the v7 agent routes). A route marked *queued* returns **`202`** with a run: `{"data":{"id","application_id","addon","command","status":"queued|running|succeeded|failed","http_status","result","created_at","started_at","finished_at"}}`; poll `GET /central/addons/runs/{id}` until `status` is `succeeded` or `failed`. `result` then holds what the synchronous call would have returned, and `http_status` its status.
 
@@ -7206,7 +7206,7 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 Plain `422` with `errors` is ordinary request validation. WordPress routes on a non-WordPress or not-yet-active site answer `404`.
 
 ### GET `/central/addons`
-`{"addons":[{"name":"wp-toolkit","label":"WP Toolkit","installed":true,"version":"…"},{"name":"insighthub-toolkit","label":"Log Monitoring Suite","installed":false,"version":null}]}`
+`{"addons":[{"name":"wp-toolkit","label":"WP Toolkit","installed":true,"version":"…"},{"name":"log-monitoring-suite","label":"Log Monitoring Suite","installed":false,"version":null}]}`
 
 ### GET `/central/addons/runs/{run}`
 A queued run (shape above).
@@ -7269,7 +7269,7 @@ The Redis connection is **not** taken from the caller: the panel gives each site
 
 ### Log Monitoring Suite — access-log analytics
 
-The product launched as InsightHub; the binary, its repository and its database keep that name (`insighthub-toolkit`).
+Binary `/usr/local/bin/log-monitoring-suite` (addon `name`: `log-monitoring-suite`), started in `/etc/log-monitoring-suite`, whose `.env` says where its database is. The panel stores the addon's id for each registered site in `applications.log_monitoring_suite_id`.
 
 | Method | Path | Notes |
 |---|---|---|

@@ -12,7 +12,7 @@ use RuntimeException;
  *
  *   addon_not_installed      404  the binary is not on this server
  *   addon_licence_required   403  the addon says this server has not bought it
- *   addon_site_not_registered 409 InsightHub has no record of this site yet
+ *   addon_site_not_registered 409 Log Monitoring Suite has no record of this site yet
  *   addon_command_failed     422  the addon ran and refused (its own message)
  *   addon_bad_output         502  it answered something that is not its JSON
  *   addon_timed_out          504  it did not answer in time

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\API\Server\Addons;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AddonRunResource;
 use App\Models\AddonRun;
-use App\Services\Addons\InsightHubToolkit;
+use App\Services\Addons\LogMonitoringSuite;
 use App\Services\Addons\WpToolkit;
 use Illuminate\Http\JsonResponse;
 
@@ -15,11 +15,11 @@ use Illuminate\Http\JsonResponse;
  */
 class AddonController extends Controller
 {
-    public function index(WpToolkit $wp, InsightHubToolkit $insighthub): JsonResponse
+    public function index(WpToolkit $wp, LogMonitoringSuite $logMonitoring): JsonResponse
     {
         $addons = [];
 
-        foreach ([$wp, $insighthub] as $addon) {
+        foreach ([$wp, $logMonitoring] as $addon) {
             $addons[] = [
                 'name' => $addon->name(),
                 'label' => $addon->label(),

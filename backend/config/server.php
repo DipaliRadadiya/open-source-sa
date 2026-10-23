@@ -235,10 +235,10 @@ return [
             'tar', 'git', 'fnm', 'wp',
             // The paid addons Central installs (docs: sv-wp-toolkit and
             // sv-insighthub-toolkit, docs/INTEGRATION.md). wp-toolkit sudoes
-            // to the site user itself and writes web server rules; the
-            // insighthub one reads every site's access log. Both are called
-            // only from the central-only addon endpoints.
-            'wp-toolkit', 'insighthub-toolkit',
+            // to the site user itself and writes web server rules;
+            // log-monitoring-suite reads every site's access log. Both are
+            // called only from the central-only addon endpoints.
+            'wp-toolkit', 'log-monitoring-suite',
             // Docker. Granted to the panel rather than by adding the site user
             // to the `docker` group, and the distinction is the whole security
             // model: group membership is root equivalence -- a member can bind
@@ -285,7 +285,7 @@ return [
             'fnm' => ['/usr/local/bin/fnm'],
             'wp' => ['/usr/local/bin/wp'],
             'wp-toolkit' => ['/usr/local/bin/wp-toolkit'],
-            'insighthub-toolkit' => ['/usr/local/bin/insighthub-toolkit'],
+            'log-monitoring-suite' => ['/usr/local/bin/log-monitoring-suite'],
         ],
 
         // Granted as patterns rather than names, and so absent from `binaries`.
@@ -804,9 +804,10 @@ return [
     | server may use one is decided by the binary itself, against the vendor's
     | licence API — never here. A binary that is absent is "not installed".
     |
-    | InsightHub reads its database location from a `.env` in its working
-    | directory, so it is always started from `workdir`: run from the panel's
-    | own directory it would read the panel's .env and the panel's database.
+    | Log Monitoring Suite reads its database location from a `.env` in its
+    | working directory, so it is always started from `workdir`: run from the
+    | panel's own directory it would read the panel's .env and the panel's
+    | database.
     |
     */
 
@@ -814,12 +815,12 @@ return [
         'wp_toolkit' => [
             'binary' => env('ADDON_WP_TOOLKIT_BINARY', '/usr/local/bin/wp-toolkit'),
         ],
-        'insighthub' => [
-            'binary' => env('ADDON_INSIGHTHUB_BINARY', '/usr/local/bin/insighthub-toolkit'),
-            'workdir' => env('ADDON_INSIGHTHUB_WORKDIR', '/etc/insighthub-toolkit'),
+        'log_monitoring_suite' => [
+            'binary' => env('ADDON_LOG_MONITORING_SUITE_BINARY', '/usr/local/bin/log-monitoring-suite'),
+            'workdir' => env('ADDON_LOG_MONITORING_SUITE_WORKDIR', '/etc/log-monitoring-suite'),
             // Every report starts the binary and opens its database, so the
             // same chart asked for twice within this window is answered once.
-            'cache_seconds' => (int) env('ADDON_INSIGHTHUB_CACHE_SECONDS', 300),
+            'cache_seconds' => (int) env('ADDON_LOG_MONITORING_SUITE_CACHE_SECONDS', 300),
         ],
         // A request waits this long for a command; anything that can take
         // longer is queued and polled instead (AddonRun).
