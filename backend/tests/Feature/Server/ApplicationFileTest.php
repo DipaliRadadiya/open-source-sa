@@ -1,7 +1,11 @@
 <?php
 
+use App\Enums\FileArchiveStatus;
+use App\Exceptions\Server\Application\FileOperationException;
+use App\Jobs\RunFileArchive;
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\FileArchiveJob;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -12,6 +16,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 use Tests\Support\FakeCommandPipe;
 
 /**
@@ -406,6 +411,9 @@ class FileBrowserFake
     /** Makes the recursive `-type f` walk behind the type breakdown fail. */
     public static bool $breakdownFails = false;
 
+    /** Stderr for `unzip -o`, which then exits 1 — a warning unzip printed. */
+    public static ?string $unzipStderr = null;
+
     // The cwd every command ran with, index-aligned with $ran.
     /** @var array<int, string> */
     public static array $cwds = [];
@@ -416,6 +424,7 @@ class FileBrowserFake
         self::$ran = [];
         self::$archives = [];
         self::$breakdownFails = false;
+        self::$unzipStderr = null;
         self::$cwds = [];
     }
 }
@@ -774,9 +783,20 @@ function fakeFileBrowserServer(): void
             // ['unzip', '-o', '-d', $target, $archive]
             $targetRel = $relative($inner[3]);
             $archiveRel = $relative($inner[4]);
+            $converted = false;
 
             foreach (FileBrowserFake::$archives[$archiveRel] ?? [] as $e) {
-                $name = rtrim($e['name'], '/');
+                $name = $e['name'];
+
+                // As unzip 6.0 does it (measured, FS-C22 #7): `\` becomes `/`
+                // only in an entry made on FAT whose name has no `/`, and then
+                // the whole run exits 1 with one warning on stderr.
+                if (($e['os'] ?? 'unx') === 'fat' && str_contains($name, '\\') && ! str_contains($name, '/')) {
+                    $name = str_replace('\\', '/', $name);
+                    $converted = true;
+                }
+
+                $name = rtrim($name, '/');
 
                 if ($name === '') {
                     continue;
@@ -786,7 +806,9 @@ function fakeFileBrowserServer(): void
                 FileBrowserFake::$fs[$entryRel] = ['type' => $e['type'] === 'd' ? 'd' : 'f', 'size' => $e['size'], 'content' => 'extracted'];
             }
 
-            return Process::result(exitCode: 0);
+            $warning = FileBrowserFake::$unzipStderr ?? ($converted ? "warning:  {$inner[4]} appears to use backslashes as path separators\n" : null);
+
+            return $warning === null ? Process::result(exitCode: 0) : Process::result(exitCode: 1, errorOutput: $warning);
         }
 
         if ($binary === 'tar' && ($inner[1] ?? null) === '-tvzf') {
@@ -1716,6 +1738,110 @@ describe('extracting', function () {
             ['type' => '?', 'perm' => '?rw-------', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
         ]],
     ]);
+
+    /*
+     * Bug #7 (FS-C22): a zip made on Windows can name its entries
+     * `folder\file.txt`. Every one was refused as an "unsafe entry". unzip
+     * already treats `\` as a folder there — it then exits 1 with a warning,
+     * which must not fail the job.
+     */
+    it('extracts a Windows zip that uses backslashes as folder separators', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => 'd', 'perm' => 'drwx---', 'os' => 'fat', 'size' => 0, 'name' => 'my-plugin\\'],
+            ['type' => '-', 'perm' => '-rw-a--', 'os' => 'fat', 'size' => 12, 'name' => 'my-plugin\\plugin.php'],
+            ['type' => '?', 'perm' => '?rw-------', 'os' => 'fat', 'size' => 3, 'name' => 'my-plugin\\inc\\deep.php'],
+        ];
+
+        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertAccepted();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/my-plugin/plugin.php')
+            ->toHaveKey('wp-content/plugins/my-plugin/inc/deep.php')
+            ->and(FileArchiveJob::latest('id')->first()->status)->toBe(FileArchiveStatus::Completed);
+    });
+
+    it('still fails the job on any other unzip warning', function () {
+        // Exit 1 also means "skipped some entries" (an encrypted one, say).
+        // Only the backslash warning, alone, is a success.
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'perm' => '-rw-a--', 'os' => 'fat', 'size' => 12, 'name' => 'my-plugin\\plugin.php'],
+        ];
+        FileBrowserFake::$unzipStderr = "warning:  thing.zip appears to use backslashes as path separators\n"
+            ."skipping: my-plugin/secret.php       unable to get password\n";
+
+        Queue::fake();
+        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertAccepted();
+        $job = FileArchiveJob::latest('id')->first();
+
+        expect(fn () => app()->call([new RunFileArchive($job->id), 'handle']))->toThrow(FileOperationException::class)
+            ->and($job->fresh()->status)->toBe(FileArchiveStatus::Failed);
+    });
+
+    it('refuses a backslash path that still climbs out once it is a path', function (string $name, string $key) {
+        // Normalised first, then checked: `..\..\x` is `../../x`, and a
+        // drive or UNC path is absolute however it is spelt.
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'perm' => '-rw-a--', 'os' => 'fat', 'size' => 12, 'name' => 'my-plugin\\plugin.php'],
+            ['type' => '-', 'perm' => '-rw-a--', 'os' => 'fat', 'size' => 4, 'name' => $name],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422)
+            ->assertJsonPath('message', __($key));
+
+        expect(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- unzip -o')))->toBeFalse()
+            ->and(FileArchiveJob::count())->toBe(0);
+    })->with([
+        'traversal' => ['..\\..\\etc\\passwd', 'errors/application.archive_unsafe_entry'],
+        'traversal mid-path' => ['my-plugin\\..\\..\\..\\x.php', 'errors/application.archive_unsafe_entry'],
+        'leading backslash' => ['\\etc\\passwd', 'errors/application.archive_unsafe_entry'],
+        'UNC path' => ['\\\\server\\share\\x.txt', 'errors/application.archive_unsafe_entry'],
+        'drive letter' => ['C:\\x.txt', 'errors/application.archive_windows_drive'],
+        'bare drive' => ['d:\\', 'errors/application.archive_windows_drive'],
+    ]);
+
+    it('refuses a backslash unzip would keep as part of a file name', function (array $entry) {
+        // Not from FAT, or a name that already has `/`: unzip writes the
+        // backslash literally, one file called `folder\file.txt`. Said so
+        // plainly rather than called "unsafe".
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [$entry];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('errors/application.archive_backslash_name'));
+
+        expect(FileArchiveJob::count())->toBe(0);
+    })->with([
+        'made on Linux' => [['type' => '-', 'os' => 'unx', 'size' => 4, 'name' => 'folder\\file.txt']],
+        'made on NTFS' => [['type' => '-', 'perm' => '-rw----', 'os' => 'ntf', 'size' => 4, 'name' => 'folder\\file.txt']],
+        'mixed separators' => [['type' => '-', 'perm' => '-rw-a--', 'os' => 'fat', 'size' => 4, 'name' => 'a/b\\c.txt']],
+    ]);
+
+    it('refuses a backslash in a .tar.gz with the same message', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/thing.tgz'] = ['type' => 'f', 'size' => 100];
+        FileBrowserFake::$archives['wp-content/plugins/thing.tgz'] = [
+            ['type' => '-', 'size' => 4, 'name' => '..\\..\\evil.txt'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload('wp-content/plugins/thing.tgz'))
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('errors/application.archive_backslash_name'));
+    });
+
+    it('has the archive messages translated in every locale', function () {
+        foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+            foreach (['archive_backslash_name', 'archive_windows_drive'] as $key) {
+                expect(__("errors/application.{$key}", [], $locale))->not->toBe("errors/application.{$key}");
+            }
+        }
+    });
 
     it('refuses an entry that is neither a file nor a directory', function () {
         fakeFileBrowserServer();

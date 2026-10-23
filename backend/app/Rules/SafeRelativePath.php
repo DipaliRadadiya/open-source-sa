@@ -39,9 +39,11 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *  - invalid UTF-8, which cannot survive the JSON response anyway
  *  - a segment over 255 bytes, which the filesystem refuses itself — better
  *    a clear message here than ENAMETOOLONG from a command
- *  - a backslash, which stays refused: a zip written on Windows uses it as a
- *    directory separator, and nothing here can tell that apart from a Linux
- *    filename that merely contains one
+ *  - a backslash, which stays refused: in a request it can only be part of
+ *    a Linux filename. A zip written on Windows uses it as a directory
+ *    separator, and `FileBrowser::extractedName()` turns those into `/`
+ *    before an entry reaches this rule — the one place the archive says
+ *    which system made it
  *
  * `isSafe()` is exposed as a static method because it is also the check
  * applied to archive entry names during extraction (`FileBrowser::extract()`)

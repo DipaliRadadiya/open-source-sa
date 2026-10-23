@@ -109,6 +109,8 @@ return [
     'archive_too_large' => 'Dieses Archiv wäre entpackt zu groß.',
     'archive_has_symlink' => 'Dieses Archiv enthält einen symbolischen Link, der nicht zulässig ist.',
     'archive_unsafe_entry' => 'Dieses Archiv enthält einen Dateipfad, der nicht zulässig ist.',
+    'archive_backslash_name' => 'Dieses Archiv enthält einen Dateinamen mit einem Backslash (\\), der kein Ordnertrenner ist, und kann daher hier nicht entpackt werden. Erstellen Sie das Archiv mit einem anderen Programm neu, z. B. 7-Zip.',
+    'archive_windows_drive' => 'Dieses Archiv enthält einen Windows-Laufwerkspfad (z. B. C:\\…), der nicht in eine Website entpackt werden kann.',
 
     'upload_exists' => '„:name“ ist hier bereits vorhanden. Löschen Sie die Datei zuerst, wenn Sie sie ersetzen möchten – ein Upload überschreibt keine Datei.',
 

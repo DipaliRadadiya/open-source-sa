@@ -2444,6 +2444,18 @@ Extract a **`.zip`, `.tar.gz` or `.tgz`** archive already in the site. Guarded
 against zip bombs: refused above 250 MB uncompressed or 10,000 entries, and
 any entry that is a symlink or escapes the destination.
 
+**Zips made on Windows** (FS-C22 #7) may use `\` as the folder separator. An
+entry made on FAT (`unzip -Z` lists `fat`) whose name has no `/` is extracted
+into folders, exactly as `unzip` does it, and the traversal checks run on the
+converted path, so `..\..\etc\passwd` is still refused. Any other backslash is
+one `422` with its own `message`:
+
+| `message` key | When |
+|---|---|
+| `errors/application.archive_windows_drive` | a drive path such as `C:\x.txt` |
+| `errors/application.archive_backslash_name` | a `\` that unzip would keep inside a file name (zip not made on FAT, a name that mixes `/` and `\`, or a `.tar.gz`) |
+| `errors/application.archive_unsafe_entry` | unchanged: traversal, a leading `/` or `\`, a UNC path |
+
 **Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}` — `target` must already exist (`422`, `reason: destination_missing`, otherwise).
 
 **Response `202`:** `{"job": {"id": 5, "operation": "extract", "target": "wp-content/plugins", "status": "queued", …}}` — runs in the background; follow it on `GET …/files/archive-jobs` (`status`: `queued` → `running` → `completed` / `failed`, with `message` and `reference` on failure). Corrected 2026-09-29: this said `200 {"extracted": true}`.

@@ -109,6 +109,8 @@ return [
     'archive_too_large' => 'Cette archive serait trop volumineuse une fois extraite.',
     'archive_has_symlink' => 'Cette archive contient un lien symbolique, ce qui n\'est pas autorisé.',
     'archive_unsafe_entry' => 'Cette archive contient un chemin de fichier qui n\'est pas autorisé.',
+    'archive_backslash_name' => 'Cette archive contient un nom de fichier avec une barre oblique inverse (\\) qui ne sépare pas des dossiers : elle ne peut donc pas être extraite ici. Recréez l\'archive avec un autre outil, par exemple 7-Zip.',
+    'archive_windows_drive' => 'Cette archive contient un chemin de lecteur Windows (comme C:\\…), qui ne peut pas être extrait dans un site.',
 
     'upload_exists' => '« :name » existe déjà ici. Supprimez-le d’abord pour le remplacer : un envoi n’écrase jamais un fichier.',
 

@@ -110,6 +110,8 @@ return [
     'archive_too_large' => 'Ese archivo sería demasiado grande una vez extraído.',
     'archive_has_symlink' => 'Ese archivo contiene un enlace simbólico, lo cual no está permitido.',
     'archive_unsafe_entry' => 'Ese archivo contiene una ruta de archivo que no está permitida.',
+    'archive_backslash_name' => 'Ese archivo contiene un nombre con una barra invertida (\\) que no separa carpetas, así que no se puede extraer aquí. Vuelve a crear el archivo con otra herramienta, como 7-Zip.',
+    'archive_windows_drive' => 'Ese archivo contiene una ruta de unidad de Windows (como C:\\…), que no se puede extraer en un sitio.',
 
     'upload_exists' => '«:name» ya existe aquí. Elimínalo primero si quieres reemplazarlo: una subida no sobrescribe un archivo.',
 

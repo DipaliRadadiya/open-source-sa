@@ -110,6 +110,8 @@ return [
     'archive_too_large' => 'That archive would be too large once extracted.',
     'archive_has_symlink' => 'That archive contains a symbolic link, which is not allowed.',
     'archive_unsafe_entry' => 'That archive contains a file path that is not allowed.',
+    'archive_backslash_name' => 'That archive has a file name containing a backslash (\\) that is not a folder separator, so it cannot be extracted here. Re-create the archive with a different tool, such as 7-Zip.',
+    'archive_windows_drive' => 'That archive contains a Windows drive path (such as C:\\…), which cannot be extracted into a site.',
 
     'upload_exists' => '‘:name’ already exists here. Delete it first if you mean to replace it — an upload will not overwrite a file.',
 

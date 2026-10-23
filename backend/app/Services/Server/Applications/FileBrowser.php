@@ -1704,14 +1704,14 @@ class FileBrowser
 
         if ($job->operation === 'extract') {
             $archive = $this->resolve($application, $sources[0] ?? '');
+            $zip = $this->archiveFormat($sources[0] ?? '') === 'zip';
 
             $this->run(
                 $application,
-                $this->archiveFormat($sources[0] ?? '') === 'zip'
-                    ? ['unzip', '-o', '-d', $target, $archive]
-                    : ['tar', '-xzf', $archive, '-C', $target],
+                $zip ? ['unzip', '-o', '-d', $target, $archive] : ['tar', '-xzf', $archive, '-C', $target],
                 'extract',
                 timeout: $timeout,
+                tolerated: $zip ? self::onlyBackslashWarning(...) : null,
             );
 
             $this->sizeChanged($application);
@@ -1817,7 +1817,7 @@ class FileBrowser
      * The zip-slip/zip-bomb checks, shared by both archive formats so the
      * safety rules can't quietly drift apart between them.
      *
-     * @param  array<int, array{name: string, type: string, size: int}>  $entries
+     * @param  array<int, array{name: string, type: string, size: int, host?: string}>  $entries
      */
     private function validateArchiveEntries(Application $application, array $entries, string $target): void
     {
@@ -1834,7 +1834,7 @@ class FileBrowser
             // link when the entry says it is one.
             abort_unless(in_array($entry['type'], ['-', 'd', '?'], true), 422, __('errors/application.archive_unsafe_entry'));
 
-            $name = rtrim($entry['name'], '/');
+            $name = rtrim($this->extractedName($entry), '/');
 
             if ($name === '') {
                 continue;
@@ -1856,12 +1856,54 @@ class FileBrowser
     }
 
     /**
+     * An entry's name as it will be written, so the checks above judge the
+     * path that actually lands on disk.
+     *
+     * A zip made on Windows can use `\` as its folder separator (bug #7: it
+     * was refused outright as unsafe). unzip turns `\` into `/` itself, but
+     * only for an entry made on FAT — MS-DOS or Windows — whose name has no
+     * `/` in it; any other name it writes literally, as one file called
+     * `folder\file.txt` (measured on unzip 6.0-28ubuntu4.1). So this converts
+     * exactly when unzip will, and every check after it — `..`, a leading
+     * `/`, staying inside the site — sees `..\..\etc\passwd` as
+     * `../../etc/passwd` and refuses it.
+     *
+     * @param  array{name: string, type: string, size: int, host?: string}  $entry
+     */
+    private function extractedName(array $entry): string
+    {
+        $name = $entry['name'];
+
+        if (! str_contains($name, '\\')) {
+            return $name;
+        }
+
+        abort_unless(
+            ($entry['host'] ?? null) === 'fat' && ! str_contains($name, '/'),
+            422,
+            __('errors/application.archive_backslash_name'),
+        );
+
+        $name = str_replace('\\', '/', $name);
+
+        // `C:\x.txt`: a Windows absolute path. unzip would make a folder named
+        // `C:`, which is not what the archive meant.
+        abort_if(preg_match('/^[A-Za-z]:(\/|$)/', $name) === 1, 422, __('errors/application.archive_windows_drive'));
+
+        return $name;
+    }
+
+    /**
      * One line per zip entry: permission string (first character is the
      * type — `d`/`l`/`-`), size, and name. A single `unzip -Z` pass gives
      * name+type+size together, so listing and the size total come from the
      * same read rather than two commands that could disagree.
      *
-     * @return array<int, array{name: string, type: string, size: int}>
+     * The third column is the system the entry was made on (`unx`, `fat`,
+     * `ntf`…), which decides how unzip treats a `\` in its name — see
+     * {@see extractedName()}.
+     *
+     * @return array<int, array{name: string, type: string, size: int, host: string}>
      */
     private function listZipEntries(Application $application, string $archive): array
     {
@@ -1884,11 +1926,11 @@ class FileBrowser
         // the first character, and validateArchiveEntries() admits files and
         // directories only.
         foreach (explode("\n", $result->output()) as $line) {
-            if (preg_match('/^(\S)\S{5,9}\s+\d+\.\d+\s+\S+\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(.*)$/', $line, $m) !== 1) {
+            if (preg_match('/^(\S)\S{5,9}\s+\d+\.\d+\s+(\S+)\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(.*)$/', $line, $m) !== 1) {
                 continue;
             }
 
-            $entries[] = ['type' => $m[1], 'size' => (int) $m[2], 'name' => $m[3]];
+            $entries[] = ['type' => $m[1], 'host' => $m[2], 'size' => (int) $m[3], 'name' => $m[4]];
         }
 
         // Every entry unzip will extract has to have been read here — a line
@@ -2073,7 +2115,10 @@ class FileBrowser
     /**
      * @param  array<int, string>  $command
      */
-    private function run(Application $application, array $command, string $op, ?string $input = null, ?string $cwd = null, ?int $timeout = null): ServerOpsResult
+    /**
+     * @param  (callable(ServerOpsResult): bool)|null  $tolerated  a failure the caller knows is not one
+     */
+    private function run(Application $application, array $command, string $op, ?string $input = null, ?string $cwd = null, ?int $timeout = null, ?callable $tolerated = null): ServerOpsResult
     {
         $result = $this->serverOps->run(
             $this->asUser($application, $command),
@@ -2087,11 +2132,34 @@ class FileBrowser
             cwd: $cwd,
         );
 
-        if ($result->failed()) {
+        if ($result->failed() && ! ($tolerated !== null && $tolerated($result))) {
             throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied, timedOut: $result->timedOut);
         }
 
         return $result;
+    }
+
+    /**
+     * unzip's exit 1 after it turned a Windows zip's `\` into folders.
+     *
+     * Exit 1 is unzip's "warnings, but processing completed", and converting
+     * backslashes is one of them: every file is written and the run still
+     * "fails" (measured on unzip 6.0-28ubuntu4.1, FS-C22 #7). Accepted only
+     * when that warning is the whole of stderr — exit 1 also covers entries
+     * unzip skipped, and those must still fail the job.
+     */
+    private static function onlyBackslashWarning(ServerOpsResult $result): bool
+    {
+        if ($result->exitCode() !== 1 || $result->timedOut || $result->denied || $result->busy) {
+            return false;
+        }
+
+        $lines = array_filter(array_map('trim', explode("\n", $result->errorOutput())), fn (string $line): bool => $line !== '');
+
+        return $lines !== [] && array_filter(
+            $lines,
+            fn (string $line): bool => preg_match('/^warning:\s+.+ appears to use backslashes as path separators$/', $line) !== 1,
+        ) === [];
     }
 
     /**
