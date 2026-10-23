@@ -6,6 +6,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { formatBytes } from "@/lib/format/bytes";
 import { parseApiDate } from "@/lib/format/api-date";
 import { Button } from "@/components/ui/button";
+import { Caution } from "@/components/ui/caution";
 import { FormModal } from "@/components/ui/form-modal";
 import { Progress } from "@/components/ui/progress";
 
@@ -31,7 +32,9 @@ export function PrepareDownloadDialog({ backup, initial, open, onOpenChange }) {
     setBusyFor(null);
     try {
       const { data } = await prepareBackupDownload(backup.id);
-      setPrep(data?.download_preparation ?? null);
+      // No preparation in the answer would leave "Preparing" with nothing to poll.
+      if (data?.download_preparation) setPrep(data.download_preparation);
+      else setRefusal(t("startFailed"));
     } catch (error) {
       setPrep(null);
       setRefusal(apiMessage(error, t("startFailed")));
@@ -167,26 +170,28 @@ export function PrepareDownloadDialog({ backup, initial, open, onOpenChange }) {
             </p>
           ) : null}
           {busyFor ? (
-            <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm">
-              {t("busy", { seconds: busyFor })}
-            </p>
+            <div role="alert">
+              <Caution size="md">{t("busy", { seconds: busyFor })}</Caution>
+            </div>
           ) : null}
         </div>
       ) : null}
 
       {status === "failed" ? (
-        <div role="alert" className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
-          <p>{prep?.message || t("failedBody")}</p>
-          {prep?.reference ? <p className="font-mono text-xs text-muted-foreground">{prep.reference}</p> : null}
+        <div role="alert">
+          <Caution tone="destructive" size="md">
+            <p>{prep?.message || t("failedBody")}</p>
+            {prep?.reference ? <p className="font-mono text-xs text-muted-foreground">{prep.reference}</p> : null}
+          </Caution>
         </div>
       ) : null}
 
       {status === "expired" ? <p className="text-sm">{prep?.message || t("expiredBody")}</p> : null}
 
       {status === "refused" ? (
-        <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
-          {refusal}
-        </p>
+        <div role="alert">
+          <Caution tone="destructive" size="md">{refusal}</Caution>
+        </div>
       ) : null}
     </FormModal>
   );

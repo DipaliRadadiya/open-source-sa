@@ -25,3 +25,11 @@ test("the availability check never counts as a download", () => {
   // Polled only while a copy is being made.
   assert.match(dialog, /if \(!open \|\| !preparing\) return undefined;/);
 });
+
+test("the preparation dialog uses the panel's notice, and an empty answer is a refusal", () => {
+  const dialog = read("components/backups/prepare-download-dialog.jsx");
+  assert.doesNotMatch(dialog, /border-destructive\/30 bg-destructive\/5|border-warning\/30 bg-warning\/5/);
+  assert.match(dialog, /<Caution tone="destructive" size="md">\{refusal\}<\/Caution>/);
+  assert.match(dialog, /else setRefusal\(t\("startFailed"\)\);/);
+  assert.match(read("components/backups/download-backup-button.jsx"), /: \{ refusal: t\("prepare\.startFailed"\) \}/);
+});

@@ -51,7 +51,11 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       if (error?.response?.status === 409 && error.response.data?.reason === "prepare_required") {
         try {
           const { data } = await prepareBackupDownload(backup.id);
-          setPreparing({ prep: data?.download_preparation ?? null });
+          setPreparing(
+            data?.download_preparation
+              ? { prep: data.download_preparation }
+              : { refusal: t("prepare.startFailed") },
+          );
         } catch (prepareError) {
           setPreparing({ refusal: apiMessage(prepareError, t("prepare.startFailed")) });
         }
