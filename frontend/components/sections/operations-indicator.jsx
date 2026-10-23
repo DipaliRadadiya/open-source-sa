@@ -20,7 +20,7 @@ import {
   XCircle,
   Clock,
 } from "lucide-react";
-import { listOperations } from "@/lib/api/operations";
+import { apiStampUtc, listOperations } from "@/lib/api/operations";
 import { isActive, operationsResponseSchema } from "@/lib/schemas/operation";
 import { operationHref } from "@/lib/operations/href";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const POLL_MS = 5000;
+// Taken off the browser's clock before it is sent, for a few seconds of skew against the server.
+const CLOCK_MARGIN_MS = 15000;
 
 const ICONS = {
   backup: DatabaseBackup,
@@ -55,6 +57,10 @@ export function OperationsIndicator({ canOpenApplications = false }) {
   const [all, setAll] = useState(null);
   const [open, setOpen] = useState(false);
   const known = useRef(null);
+  // Finished jobs already announced (or already finished when the panel opened), so the
+  // overlap the margin creates never says the same thing twice.
+  const announced = useRef(new Set());
+  const lastPoll = useRef(null);
 
   const label = useCallback(
     (operation) => {
@@ -64,11 +70,25 @@ export function OperationsIndicator({ canOpenApplications = false }) {
     [t],
   );
 
-  const fetchList = useCallback(async (onlyActive) => {
-    const { data } = await listOperations({ active: onlyActive });
+  const fetchList = useCallback(async (onlyActive, finishedAfter = null) => {
+    const { data } = await listOperations({ active: onlyActive, finishedAfter });
     const parsed = operationsResponseSchema.safeParse(data);
     return parsed.success ? parsed.data.operations : null;
   }, []);
+
+  const say = useCallback(
+    (operation) => {
+      const key = `${operation.kind}:${operation.id}`;
+      if (announced.current.has(key)) return;
+      announced.current.add(key);
+      // Already on the job's own page: that page says how it ended; one message, not two.
+      const href = operationHref(operation, { canOpenApplications });
+      if (href && window.location.pathname === href) return;
+      if (operation.state === "failed") toast.error(t("toast.failed", { job: label(operation) }));
+      else toast.success(t("toast.done", { job: label(operation) }));
+    },
+    [label, t, canOpenApplications],
+  );
 
   // A job that left the running list finished while you were elsewhere: say how.
   const announce = useCallback(
@@ -79,14 +99,10 @@ export function OperationsIndicator({ canOpenApplications = false }) {
       for (const previous of gone) {
         const now = recent.find((row) => row.kind === previous.kind && String(row.id) === String(previous.id));
         if (!now || isActive(now)) continue;
-        // Already on the job's own page: that page says how it ended; one message, not two.
-        const href = operationHref(now, { canOpenApplications });
-        if (href && window.location.pathname === href) continue;
-        if (now.state === "failed") toast.error(t("toast.failed", { job: label(now) }));
-        else toast.success(t("toast.done", { job: label(now) }));
+        say(now);
       }
     },
-    [fetchList, label, t, canOpenApplications],
+    [fetchList, say],
   );
 
   useEffect(() => {
@@ -94,20 +110,29 @@ export function OperationsIndicator({ canOpenApplications = false }) {
 
     async function tick() {
       if (document.hidden) return;
+      const sentAt = apiStampUtc(new Date(Date.now() - CLOCK_MARGIN_MS));
+      const since = lastPoll.current;
       try {
-        const rows = await fetchList(true);
+        const rows = await fetchList(true, since);
         if (stopped || !rows) return;
+        lastPoll.current = sentAt;
         const running = rows.filter(isActive);
+        const finished = rows.filter((row) => !isActive(row));
         const key = (row) => `${row.kind}:${row.id}`;
         // The first answer is the starting point, not news.
         if (known.current) {
-          const ids = new Set(running.map(key));
+          finished.forEach(say);
+          const ids = new Set([...running, ...finished].map(key));
           const gone = known.current.filter((row) => !ids.has(key(row)));
           if (gone.length) announce(gone);
+        } else {
+          finished.forEach((row) => announced.current.add(key(row)));
         }
         known.current = running;
         setActive(running);
-      } catch {
+      } catch (error) {
+        // 422: more than a day back (a tab hidden overnight); the next poll starts afresh.
+        if (since && error?.response?.status === 422) lastPoll.current = null;
         // A failed poll keeps the last known state; the next tick tries again.
       }
     }
@@ -120,7 +145,7 @@ export function OperationsIndicator({ canOpenApplications = false }) {
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [fetchList, announce]);
+  }, [fetchList, announce, say]);
 
   // The full list only while the panel is open.
   useEffect(() => {

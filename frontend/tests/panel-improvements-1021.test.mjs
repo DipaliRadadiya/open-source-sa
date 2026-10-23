@@ -44,7 +44,13 @@ test("a finished job is announced once, from the change in the running list", ()
   assert.match(indicator, /The first answer is the starting point, not news\./);
   assert.match(indicator, /if \(document\.hidden\) return;/);
   // On the job's own page that page announces it; no second toast.
-  assert.match(indicator, /if \(href && window\.location\.pathname === href\) continue;/);
+  assert.match(indicator, /if \(href && window\.location\.pathname === href\) return;/);
+  // RC-36: a job that starts and ends between two polls comes back in the active poll, and
+  // each finished job is said once even when the clock margin repeats it.
+  assert.match(indicator, /const since = lastPoll\.current;/);
+  assert.match(indicator, /if \(announced\.current\.has\(key\)\) return;/);
+  assert.match(indicator, /finished\.forEach\(\(row\) => announced\.current\.add\(key\(row\)\)\);/);
+  assert.match(read("lib/api/operations.js"), /finished_after: finishedAfter/);
 });
 
 // The sidebar showed PHP, Staging and Deployments for a Docker app while it loaded.
