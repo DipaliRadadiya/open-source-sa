@@ -9,7 +9,7 @@ use App\Services\Server\WebServers\WebServerManager;
 
 /**
  * Log Monitoring Suite (the `log-monitoring-suite` binary, built from
- * sv-insighthub-toolkit): access-log analytics read from its own SQLite
+ * srvrsoorg/log-monitoring-suite): access-log analytics read from its own SQLite
  * database.
  *
  * Sites are known to it by its own id, which `register()` stores on the

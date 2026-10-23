@@ -234,7 +234,7 @@ return [
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
             'tar', 'git', 'fnm', 'wp',
             // The paid addons Central installs (docs: sv-wp-toolkit and
-            // sv-insighthub-toolkit, docs/INTEGRATION.md). wp-toolkit sudoes
+            // srvrsoorg/log-monitoring-suite, docs/INTEGRATION.md). wp-toolkit sudoes
             // to the site user itself and writes web server rules;
             // log-monitoring-suite reads every site's access log. Both are
             // called only from the central-only addon endpoints.
