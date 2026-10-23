@@ -1645,3 +1645,65 @@ it('does not discard program ownership when deletion fails', function (string $f
     $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())
         ->assertUnprocessable()->assertJsonValidationErrors('name');
 })->with(['stop', 'remove', 'reload']);
+
+/*
+ * A program supervisord never loaded (a new worker whose command exits before
+ * its first reload) answers `status name:*` with "no such group", exit 4, and
+ * `stop name:*` with the same and exit 1 — measured on supervisor 4.2,
+ * 2026-10-23. Only "no such process" was accepted: adding such a worker gave a
+ * 500 and left its row behind, and deleting that row then failed for good.
+ */
+it('refuses a new worker that never loaded with a 422 and keeps no row', function () {
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if ($args[0] === 'supervisorctl' && ($args[1] ?? '') === 'status' && isset($args[2])) {
+            return Process::result(output: explode(':', $args[2])[0].': ERROR (no such group)', exitCode: 4);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload())
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'worker_did_not_start');
+
+    expect(Worker::count())->toBe(0);
+});
+
+it('deletes a worker whose program supervisord does not have loaded', function () {
+    $worker = Worker::create(workerPayload() + ['application_id' => $this->application->id])->refresh();
+    $worker->forceFill(['program' => 'queue-worker'])->save();
+    Process::fake(function ($process) {
+        $args = (array) $process->command;
+        if ($args[0] === 'supervisorctl' && in_array($args[1] ?? '', ['stop', 'status'], true) && isset($args[2])) {
+            return Process::result(output: explode(':', $args[2])[0].': ERROR (no such group)', exitCode: $args[1] === 'stop' ? 1 : 4);
+        }
+
+        return Process::result();
+    });
+
+    $this->actingAs($this->admin)->deleteJson(workerUrl('/'.$worker->id))->assertNoContent();
+
+    expect(Worker::query()->whereKey($worker->id)->exists())->toBeFalse();
+});
+
+it('still refuses to delete a worker whose program supervisord reports as running', function () {
+    $worker = Worker::create(workerPayload() + ['application_id' => $this->application->id])->refresh();
+    $worker->forceFill(['program' => 'queue-worker'])->save();
+    Process::fake(function ($process) {
+        $args = (array) $process->command;
+        if ($args[0] === 'supervisorctl' && ($args[1] ?? '') === 'stop') {
+            return Process::result(exitCode: 1);
+        }
+        if ($args[0] === 'supervisorctl' && ($args[1] ?? '') === 'status') {
+            return Process::result(output: 'queue-worker:queue-worker_00 RUNNING pid 123', exitCode: 0);
+        }
+
+        return Process::result();
+    });
+
+    $this->actingAs($this->admin)->deleteJson(workerUrl('/'.$worker->id))->assertStatus(500);
+    expect(Worker::query()->whereKey($worker->id)->exists())->toBeTrue();
+});

@@ -319,7 +319,7 @@ class WorkerSupervisor
                             throw new WorkerControlException($stopped->reference);
                         }
                     } elseif ($state !== null && ! ($state->exitCode() === 3 && str_contains($state->output(), 'STOPPED'))
-                        && ! ($state->exitCode() === 4 && str_contains($state->output(), 'no such process'))) {
+                        && ! $this->notLoaded($state)) {
                         throw new WorkerControlException($state->reference);
                     }
                     $removed = $this->files->delete($this->configPath($worker), $this->context($worker, 'worker_new_cleanup_remove'));
@@ -355,6 +355,20 @@ class WorkerSupervisor
                 throw $e;
             }
         });
+    }
+
+    /**
+     * supervisord has nothing loaded under this name, so there is nothing to
+     * stop. `status name:*` answers "no such group" when the program was never
+     * loaded at all (a new worker that died before its first reload) and "no
+     * such process" for a group without that member; both exit 4 (measured on
+     * supervisor 4.2, 2026-10-23). Accepting only the second left a new
+     * worker's row behind with a 500, and then made it undeletable.
+     */
+    private function notLoaded(ServerOpsResult $state): bool
+    {
+        return $state->exitCode() === 4
+            && (str_contains($state->output(), 'no such process') || str_contains($state->output(), 'no such group'));
     }
 
     /** A host-local mutex without an expiring lease while commands run. */
@@ -534,7 +548,7 @@ class WorkerSupervisor
         $stopped = $this->supervisorctl(['stop', $this->group($worker)], $worker, 'worker_stop');
         if ($stopped->failed()) {
             $state = $this->supervisorctl(['status', $this->group($worker)], $worker, 'worker_remove_status');
-            if ($state->exitCode() === 4 && str_contains($state->output(), 'no such process')) {
+            if ($this->notLoaded($state)) {
                 $loaded = false;
             } elseif ($state->exitCode() === 3 && trim($state->output()) !== '') {
                 // Already stopped/fatal is safe, but BACKOFF/STARTING/EXITED
