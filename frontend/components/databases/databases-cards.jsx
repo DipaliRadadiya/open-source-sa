@@ -140,9 +140,9 @@ export function DatabasesCards({
 
             {/* mt-auto keeps the action row at the bottom of stretched cards. */}
             <div className="mt-auto border-t pt-3">
-              {/* Cards wrap: three controls do not fit on one line at 390px. */}
+              {/* Keep every footer to one row, even with both database clients available. */}
               <DatabaseRowActions
-                className="flex flex-wrap items-center justify-end gap-2"
+                menu
                 database={database}
                 onDelete={onDelete}
                 canManage={canManage}

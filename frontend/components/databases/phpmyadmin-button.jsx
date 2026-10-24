@@ -14,12 +14,17 @@ import { phpmyadminState, userCount } from "@/lib/databases/phpmyadmin-state";
 import { openUrlInNewTab } from "@/lib/browser/new-tab";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
 // The token lives 60s and is single-use, so the browser goes straight there, never a link.
@@ -28,6 +33,8 @@ export function PhpmyadminButton({
   database,
   canManage,
   compact = false,
+  // Cards use the same action inside their overflow menu; table/header buttons stay unchanged.
+  menuItem = false,
   // The page header passes the filled, full-size look; rows keep the small outline.
   variant = "outline",
   size = "sm",
@@ -50,21 +57,34 @@ export function PhpmyadminButton({
   // `database` manage. A view-only role gets no button.
   if (state === "hidden" || !canManage) return null;
 
+  const Action = menuItem ? DropdownMenuItem : Button;
+  const actionProps = menuItem ? {} : { variant, size };
+
   // Nothing to open: link to the create-application flow with the type chosen,
   // so the domain and confirmation stay the user's.
   if (state === "install") {
     return (
-      <Button asChild variant={variant} size={size}>
+      <Action asChild {...actionProps}>
         <Link href="/applications/create?type=phpmyadmin">
           <Download className="size-4" />
           {t("install")}
         </Link>
-      </Button>
+      </Action>
     );
   }
 
   // phpMyAdmin authenticates as a database user; without one there is no login.
   if (state === "needs-user") {
+    if (menuItem) {
+      return (
+        <MenuItemHint hint={t("needsUser")}>
+          <DropdownMenuItem disabled>
+            <TableProperties className="size-4" />
+            {t("open")}
+          </DropdownMenuItem>
+        </MenuItemHint>
+      );
+    }
     return (
       <ReasonTooltip reason={t("needsUser")}>
         <Button type="button" variant={variant} size={size} disabled>
@@ -101,10 +121,41 @@ export function PhpmyadminButton({
 
   // Labelled everywhere: a bare external-link icon reads as a link to the
   // database page, and a tooltip needs hover.
-  const label = opening ? t("signingShort") : compact ? "phpMyAdmin" : t("open");
+  const label = opening ? t("signingShort") : compact && !menuItem ? "phpMyAdmin" : t("open");
+
+  // Keep the item mounted while signing in, so pending state prevents duplicate requests.
+  const select = (event, siteId) => {
+    event.preventDefault();
+    open(siteId);
+  };
 
   // Several installations: ask which. `onSelect` is the click the new tab rides on.
   if (sites !== null && sites.length > 1) {
+    if (menuItem) {
+      return (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger disabled={opening}>
+            {icon}
+            {label}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent className="max-w-[min(20rem,90vw)]">
+              <DropdownMenuLabel>{t("choose")}</DropdownMenuLabel>
+              {sites.map((site) => (
+                <DropdownMenuItem
+                  key={site.id}
+                  disabled={opening}
+                  onSelect={(event) => select(event, site.id)}
+                  className="font-mono text-xs wrap-anywhere"
+                >
+                  {site.domain}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+      );
+    }
     return (
       <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
         <DropdownMenu>
@@ -135,6 +186,15 @@ export function PhpmyadminButton({
           </DropdownMenuContent>
         </DropdownMenu>
       </DisabledReasonProvider>
+    );
+  }
+
+  if (menuItem) {
+    return (
+      <DropdownMenuItem disabled={opening} onSelect={select}>
+        {icon}
+        {label}
+      </DropdownMenuItem>
     );
   }
 

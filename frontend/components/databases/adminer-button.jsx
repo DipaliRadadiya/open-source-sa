@@ -15,12 +15,17 @@ import { userCount } from "@/lib/databases/phpmyadmin-state";
 import { openUrlInNewTab } from "@/lib/browser/new-tab";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
 // Adminer's one-click sign-in, the sibling of PhpmyadminButton and the same flow:
@@ -29,6 +34,8 @@ export function AdminerButton({
   database,
   canManage,
   compact = false,
+  // Card overflow menus reuse the same installation and sign-in flow.
+  menuItem = false,
   variant = "outline",
   size = "sm",
   // Null when the lookup failed (NOT "none").
@@ -48,18 +55,31 @@ export function AdminerButton({
   // The session it opens is the database user's and can write: `database` manage.
   if (state === "hidden" || !canManage) return null;
 
+  const Action = menuItem ? DropdownMenuItem : Button;
+  const actionProps = menuItem ? {} : { variant, size };
+
   if (state === "install") {
     return (
-      <Button asChild variant={variant} size={size}>
+      <Action asChild {...actionProps}>
         <Link href="/applications/create?type=adminer">
           <Download className="size-4" />
           {t("install")}
         </Link>
-      </Button>
+      </Action>
     );
   }
 
   if (state === "needs-user") {
+    if (menuItem) {
+      return (
+        <MenuItemHint hint={t("needsUser")}>
+          <DropdownMenuItem disabled>
+            <PanelsTopLeft className="size-4" />
+            {t("open")}
+          </DropdownMenuItem>
+        </MenuItemHint>
+      );
+    }
     return (
       <ReasonTooltip reason={t("needsUser")}>
         <Button type="button" variant={variant} size={size} disabled>
@@ -91,9 +111,40 @@ export function AdminerButton({
   ) : (
     <PanelsTopLeft className="size-4" />
   );
-  const label = opening ? t("signingShort") : compact ? "Adminer" : t("open");
+  const label = opening ? t("signingShort") : compact && !menuItem ? "Adminer" : t("open");
+
+  // Leave the menu open while signing in so the pending item blocks repeat requests.
+  const select = (event, siteId) => {
+    event.preventDefault();
+    open(siteId);
+  };
 
   if (sites !== null && sites.length > 1) {
+    if (menuItem) {
+      return (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger disabled={opening}>
+            {icon}
+            {label}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent className="max-w-[min(20rem,90vw)]">
+              <DropdownMenuLabel>{t("choose")}</DropdownMenuLabel>
+              {sites.map((site) => (
+                <DropdownMenuItem
+                  key={site.id}
+                  disabled={opening}
+                  onSelect={(event) => select(event, site.id)}
+                  className="font-mono text-xs wrap-anywhere"
+                >
+                  {site.domain}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+      );
+    }
     return (
       <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
         <DropdownMenu>
@@ -123,6 +174,15 @@ export function AdminerButton({
           </DropdownMenuContent>
         </DropdownMenu>
       </DisabledReasonProvider>
+    );
+  }
+
+  if (menuItem) {
+    return (
+      <DropdownMenuItem disabled={opening} onSelect={select}>
+        {icon}
+        {label}
+      </DropdownMenuItem>
     );
   }
 
