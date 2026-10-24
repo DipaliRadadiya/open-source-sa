@@ -54,7 +54,7 @@ function factColumns(count) {
   return FACT_COLUMNS[4];
 }
 
-function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false, wide = false }) {
+function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false, wide = false }) {
   const noteNode = note ? (
     // Not truncated: a filename or refusal is the content.
     <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
@@ -64,7 +64,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
   const controls = (
     <>
       {/* Outlined, like every other button: as bare icons they read as decoration (7 Oct). */}
-      {copy ? <CopyButton value={String(value)} outlined className="border border-border/80 bg-card shadow-xs" /> : null}
+      {copy ? <CopyButton value={String(copyValue)} outlined className="border border-border/80 bg-card shadow-xs" /> : null}
       {/* One menu when the tile has several actions (probe, set type by hand). */}
       {menu?.length ? (
         <DropdownMenu>
@@ -413,7 +413,9 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       label: t("facts.webRoot"),
       value: container ? null : application.web_root,
       mono: true,
-      copy: true,
+      // Copy the resolved server path, not the relative setting that the form edits.
+      copy: Boolean(application.document_root),
+      copyValue: application.document_root,
       // The one fact on this card that is a setting rather than a record.
       onEdit: canManage ? () => setEditingWebRoot(true) : null,
     },
