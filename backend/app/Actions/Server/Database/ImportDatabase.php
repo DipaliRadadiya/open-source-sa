@@ -27,8 +27,8 @@ use Throwable;
  *     database's own user can load ({@see ImportSanitizer}). A file refused
  *     here has changed nothing.
  *  2. **Back up** the database as it is now — an ordinary export, marked
- *     `import_safety`, kept a week (`exports:prune-import-safety`) or until
- *     the user deletes it. Skipped when the user unticks it (Dipali,
+ *     `import_safety`, kept until the user deletes it (Dipali, 2026-10-26:
+ *     nothing deletes it on a schedule; it replaced RC-14's one week). Skipped when the user unticks it (Dipali,
  *     2026-10-26): faster and no extra disk, but a failed load then has
  *     nothing to put back.
  *  3. **Replace**: drop, recreate, give the users back, load the file as the

@@ -129,9 +129,3 @@ Schedule::command('applications:close-stranded')->everyFiveMinutes()->withoutOve
 // copied to the panel's disk, promised to the user for an hour and no longer.
 // Every five minutes so "an hour" means about that, not "until tomorrow".
 Schedule::command('backups:prune-downloads')->everyFiveMinutes()->withoutOverlapping(10);
-
-// The copy a database import takes before replacing anything (`import_safety`
-// exports). Each is a full dump on the database's own disk and nothing removed
-// them. Kept a week, then removed — never the copy of an import that failed
-// and was not put back (PruneImportSafetyExports).
-Schedule::command('exports:prune-import-safety')->daily()->withoutOverlapping(120);

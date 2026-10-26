@@ -83,12 +83,12 @@ describe('an export is the user\'s to delete', function () {
         expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();
     });
 
-    it('has no scheduled job that deletes exports', function () {
+    it('has no scheduled job that deletes exports, safety copies included', function () {
+        // Dipali, 2026-10-26: an import's safety copy is the user's to delete
+        // too; RC-14's week-long removal was taken back.
         $commands = collect(app(Schedule::class)->events())->map(fn ($e) => (string) $e->command);
 
-        expect($commands->filter(fn (string $c) => str_contains($c, 'exports:prune-expired')))->toBeEmpty()
-            // The import's own safety copy keeps its week (RC-14) — that one is the panel's, not the user's.
-            ->and($commands->contains(fn (string $c) => str_contains($c, 'exports:prune-import-safety')))->toBeTrue();
+        expect($commands->filter(fn (string $c) => str_contains($c, 'exports:prune')))->toBeEmpty();
     });
 });
 
