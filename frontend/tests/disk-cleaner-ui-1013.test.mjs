@@ -92,3 +92,8 @@ test("schedule form: a threshold list, capitalised options, hidden settings whil
     assert.deepEqual(Object.keys(s.frequencyOption), ["hourly", "daily", "weekly", "monthly"], locale);
   }
 });
+
+test("the Freed note keeps a gap below the header band", () => {
+  // Krishna 26 Oct: with only mx-4 mb-4 it sat flush against the header's border.
+  assert.match(panel, /\{result \? \(\s*<div className="m-4 flex items-start/);
+});
