@@ -33,7 +33,8 @@ const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
 
 // Radix Select cannot hold "", which is how the form spells "every time".
 const ANY = "any";
-const THRESHOLDS = ["50", "60", "70", "80", "90"];
+// 85 is the one the Delete all tip offers; it must be on the list before it is chosen.
+const THRESHOLDS = ["50", "60", "70", "80", "85", "90"];
 // Suggested beside Delete all: clear every log only when the disk is actually filling up.
 const DELETE_ALL_THRESHOLD = "85";
 
@@ -264,7 +265,8 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                   </Label>
                   <Select
                     value={threshold === "" ? ANY : threshold}
-                    onValueChange={(value) => setThreshold(value === ANY ? "" : value)}
+                    // Radix reports "" when the value has no matching item yet; that is not a choice.
+                    onValueChange={(value) => value && setThreshold(value === ANY ? "" : value)}
                   >
                     <SelectTrigger id="cleaner-threshold" className="w-full">
                       <SelectValue />

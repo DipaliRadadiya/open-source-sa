@@ -60,4 +60,8 @@ test("the schedule sends its choice and suggests 85% beside Delete all", () => {
   assert.match(schedule, /allowDefault=\{schedule != null && schedule\.keep_days == null\}/);
   assert.match(schedule, /keep === 0 && threshold !== DELETE_ALL_THRESHOLD/);
   assert.match(schedule, /const DELETE_ALL_THRESHOLD = "85";/);
+  // On .34 "Use 85%" did nothing: 85 was not on the list yet, so Radix reported "" and the
+  // threshold snapped back to "Any". It is on the list now, and "" is ignored.
+  assert.match(schedule, /const THRESHOLDS = \["50", "60", "70", "80", "85", "90"\];/);
+  assert.match(schedule, /onValueChange=\{\(value\) => value && setThreshold\(value === ANY \? "" : value\)\}/);
 });
