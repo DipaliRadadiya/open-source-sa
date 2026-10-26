@@ -10,6 +10,7 @@ import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
 import { measuredSize } from "@/lib/files/folder-sizes";
+import { FileSize } from "@/components/applications/files/file-size";
 
 // `folderSizes` is the table's too, so phones show the same folder sizes.
 export function FilesCards({
@@ -103,9 +104,9 @@ export function FilesCards({
                     `·`-joined line split `-rw-r--r--` when wrapping). */}
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {file.type !== "dir" ? (
-                    <span className="whitespace-nowrap tabular-nums">{file.size_human}</span>
+                    <FileSize bytes={file.size} className="whitespace-nowrap tabular-nums" />
                   ) : measured ? (
-                    <span className="whitespace-nowrap tabular-nums">{measured.size_human}</span>
+                    <FileSize bytes={measured.size} className="whitespace-nowrap tabular-nums" />
                   ) : folderSizes?.loading ? (
                     // A span, not <Skeleton> (a div), inside this <p>.
                     <span className="inline-block h-3 w-10 animate-pulse rounded-md bg-muted align-middle" />

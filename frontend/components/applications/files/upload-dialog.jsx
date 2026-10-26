@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
-import { formatBytes } from "@/lib/format/bytes";
+import { formatFileSize } from "@/lib/format/bytes";
 import { UploadCloud, X, Loader2, CircleCheck, CircleAlert, Square, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadAnySize, uploadSpace } from "@/lib/api/files";
@@ -336,7 +336,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
               />
             </div>
             <p className="text-xs text-muted-foreground tabular-nums">
-              {formatBytes(sentBytes, format)} / {formatBytes(totalBytes, format)}
+              {formatFileSize(sentBytes, format)} / {formatFileSize(totalBytes, format)}
             </p>
           </div>
         ) : null}
@@ -382,15 +382,15 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                     {/* Bytes as well as percent, so a large chunked upload does not look stalled. */}
                     <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
                       <span>
-                        {formatBytes(item.file.size * (item.progress || 0), format)} /{" "}
-                        {formatBytes(item.file.size, format)}
+                        {formatFileSize(item.file.size * (item.progress || 0), format)} /{" "}
+                        {formatFileSize(item.file.size, format)}
                       </span>
                       <span>{Math.round(item.progress * 100)}%</span>
                     </div>
                   </>
                 ) : (
                   <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                    {formatBytes(item.file.size, format)}
+                    {formatFileSize(item.file.size, format)}
                   </p>
                 )}
                 {item.status === "waiting" ? (

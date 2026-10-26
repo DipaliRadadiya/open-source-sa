@@ -90,12 +90,14 @@ test("an upload in progress can be stopped", () => {
 
 test("a folder never shows the size of its own directory entry", () => {
   /*
-   * The listing's `size_human` for a directory is the 4 KB of the entry itself.
+   * The listing's `size` for a directory is the 4 KB of the entry itself.
    * A folder shows a measured size from /files/sizes, or a dash.
    */
   const sizeCell = tableSrc.slice(tableSrc.indexOf("function SizeCell"), tableSrc.indexOf("function ModifiedCell"));
-  assert.match(sizeCell, /if \(file\.type !== "dir"\) \{\s*return <span[^>]*>\{file\.size_human \?\? "—"\}/);
-  assert.doesNotMatch(sizeCell, /file\.size_human[^}]*dir/);
+  const fileBranch = sizeCell.slice(sizeCell.indexOf('if (file.type !== "dir")'), sizeCell.indexOf("const measured"));
+  assert.match(fileBranch, /<FileSize bytes=\{file\.size\}/);
+  assert.equal(sizeCell.match(/file\.size\b/g).length, 2, "file.size is read only in the file branch");
+  assert.match(sizeCell, /<FileSize bytes=\{measured\.size\}/);
   assert.match(cards, /measuredSize\(file, folderSizes\)/);
 });
 

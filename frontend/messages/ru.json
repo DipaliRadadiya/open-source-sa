@@ -4952,6 +4952,7 @@
         "tryAgain": "Повторить",
         "notMeasured": "Не измерено"
       },
+      "exactBytes": "{bytes, plural, one {# байт} few {# байта} many {# байт} other {# байта}}",
       "dockerNote": "Редактируйте <code>compose.yml</code> на странице <link>Файл compose</link>: изменение, сделанное здесь, заменяется при следующем обновлении контейнера. Данные контейнера хранятся в томах Docker, а не в этой папке."
     },
     "workers": {

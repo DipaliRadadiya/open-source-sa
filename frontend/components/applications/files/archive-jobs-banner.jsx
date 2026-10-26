@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { getArchiveJobs } from "@/lib/api/files";
 import { ARCHIVE_IN_FLIGHT, archiveJobsResponseSchema } from "@/lib/schemas/file-archive-job";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatBytes } from "@/lib/format/bytes";
+import { formatFileSize } from "@/lib/format/bytes";
 
 // Two rates: this must poll even when idle (jobs started in another tab or before
 // page load), so the idle rate is kept slow.
@@ -97,7 +97,7 @@ export function ArchiveJobsBanner({ appId }) {
           <Loader2 className="size-4 animate-spin" />
           <AlertDescription>
             {t(`running.${job.operation}`, { target: job.target })}
-            {job.size_bytes > 0 ? ` — ${formatBytes(job.size_bytes, format)}` : null}
+            {job.size_bytes > 0 ? ` — ${formatFileSize(job.size_bytes, format)}` : null}
           </AlertDescription>
         </Alert>
       ))}

@@ -4952,6 +4952,7 @@
         "tryAgain": "Réessayer",
         "notMeasured": "Non mesuré"
       },
+      "exactBytes": "{bytes, plural, one {# octet} other {# octets}}",
       "dockerNote": "Modifiez <code>compose.yml</code> sur la page <link>Fichier compose</link> : une modification faite ici est remplacée à la prochaine mise à jour du conteneur. Les données du conteneur sont dans des volumes Docker, pas dans ce dossier."
     },
     "workers": {

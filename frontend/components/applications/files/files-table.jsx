@@ -19,6 +19,7 @@ import { useModeSentence } from "@/components/applications/files/use-mode-senten
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { SORT_COOKIE, serializeSort, writePref } from "@/lib/files/view-prefs";
 import { measuredSize, sizeSortKey } from "@/lib/files/folder-sizes";
+import { FileSize } from "@/components/applications/files/file-size";
 
 // Cells are module-level so flexRender's identity stays stable across re-renders
 // (see workers-table.jsx).
@@ -170,7 +171,11 @@ function SizeCell({ row, table }) {
   const { folderSizes } = table.options.meta;
 
   if (file.type !== "dir") {
-    return <span className="tabular-nums text-muted-foreground">{file.size_human ?? "—"}</span>;
+    return file.size == null ? (
+      <span className="text-muted-foreground">—</span>
+    ) : (
+      <FileSize bytes={file.size} className="tabular-nums text-muted-foreground" />
+    );
   }
   const measured = measuredSize(file, folderSizes);
   if (!measured) {
@@ -181,7 +186,7 @@ function SizeCell({ row, table }) {
       <span className="text-muted-foreground" title={t("sizes.notMeasured")}>—</span>
     );
   }
-  return <span className="tabular-nums text-muted-foreground">{measured.size_human}</span>;
+  return <FileSize bytes={measured.size} className="tabular-nums text-muted-foreground" />;
 }
 
 function ModifiedCell({ row }) {

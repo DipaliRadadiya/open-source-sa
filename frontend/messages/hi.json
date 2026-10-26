@@ -4952,6 +4952,7 @@
         "tryAgain": "फिर से कोशिश करें",
         "notMeasured": "मापा नहीं गया"
       },
+      "exactBytes": "{bytes, plural, one {# बाइट} other {# बाइट}}",
       "dockerNote": "<code>compose.yml</code> को <link>compose फ़ाइल</link> पेज पर संपादित करें: यहाँ किया गया बदलाव अगली बार कंटेनर अपडेट होने पर बदल दिया जाता है। कंटेनर का डेटा Docker वॉल्यूम में रहता है, इस फ़ोल्डर में नहीं।"
     },
     "workers": {

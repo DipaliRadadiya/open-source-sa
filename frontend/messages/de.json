@@ -4952,6 +4952,7 @@
         "tryAgain": "Erneut versuchen",
         "notMeasured": "Nicht gemessen"
       },
+      "exactBytes": "{bytes, plural, one {# Byte} other {# Byte}}",
       "dockerNote": "Bearbeiten Sie <code>compose.yml</code> auf der Seite <link>Compose-Datei</link>: Eine Änderung hier wird bei der nächsten Aktualisierung des Containers ersetzt. Die Daten des Containers liegen in Docker-Volumes, nicht in diesem Ordner."
     },
     "workers": {

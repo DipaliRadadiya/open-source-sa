@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
 import Link from "@/components/ui/app-link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeft, File as FileIcon, RotateCcw, Trash2, TriangleAlert, Undo2 } from "lucide-react";
 import { emptyTrash, restoreTrashed } from "@/lib/api/files";
@@ -18,6 +18,8 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { useRefresh } from "@/hooks/use-refresh";
+import { formatFileSize } from "@/lib/format/bytes";
+import { FileSize } from "@/components/applications/files/file-size";
 
 // No "restore all": the API restores one `{batch, path}` per call against a 30/min throttle.
 export function TrashPanel({
@@ -33,6 +35,7 @@ export function TrashPanel({
   backHref,
 }) {
   const t = useTranslations("applications.files.trash");
+  const format = useFormatter();
   const { pending: refreshing, refresh, refreshThen } = useRefresh();
   // Emptying runs in a dialog that stays open until done; per-row restores can
   // overlap, so they are tracked separately.
@@ -95,14 +98,14 @@ export function TrashPanel({
             <CardTitle className="text-base font-semibold">{t("title")}</CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
             {/* The retention window is per-install and must never be hardcoded. */}
-            {trash.length > 0 && (totalSize || retentionDays) ? (
+            {trash.length > 0 && (totalSize != null || retentionDays) ? (
               <p className="text-sm text-muted-foreground">
-                {totalSize ? (
+                {totalSize != null ? (
                   <span className="font-medium text-foreground">
-                    {t("holding", { size: totalSize })}
+                    {t("holding", { size: formatFileSize(totalSize, format) })}
                   </span>
                 ) : null}
-                {totalSize && retentionDays ? " · " : null}
+                {totalSize != null && retentionDays ? " · " : null}
                 {retentionDays ? t("retention", { days: retentionDays }) : null}
               </p>
             ) : null}
@@ -187,11 +190,7 @@ export function TrashPanel({
                           <p className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-medium break-all">{basename(entry.path)}</span>
                             {/* Size helps decide which batch to empty. */}
-                            {entry.size_human ? (
-                              <span className="text-xs tabular-nums text-muted-foreground">
-                                {entry.size_human}
-                              </span>
-                            ) : null}
+                            <FileSize bytes={entry.size} className="text-xs tabular-nums text-muted-foreground" />
                           </p>
                           <p className="font-mono text-xs break-all text-muted-foreground">
                             {dirname(entry.path) || t("siteRoot")}

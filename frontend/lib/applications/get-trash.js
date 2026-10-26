@@ -10,7 +10,7 @@ export async function getTrash(appId) {
 
   return {
     trash: data?.trash ?? [],
-    totalSize: data?.total_size_human ?? null,
+    totalSize: data?.total_size ?? null,
     retentionDays: data?.retention_days ?? null,
     failed,
     status,

@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { PieChart } from "lucide-react";
 import { OTHER_TOKEN, SERIES_TOKENS, foldCategories } from "@/lib/charts/breakdown-option";
+import { formatFileSize } from "@/lib/format/bytes";
+import { FileSize } from "@/components/applications/files/file-size";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +26,7 @@ const SizeBreakdownDonut = dynamic(
 // Measured for the directory on screen, so the walk's cost is bounded.
 export function SizeBreakdownSheet({ breakdown }) {
   const t = useTranslations("applications.files.breakdown");
+  const format = useFormatter();
 
   // Memoised so a null breakdown does not create a fresh [] each render.
   const categories = useMemo(() => breakdown?.categories ?? [], [breakdown]);
@@ -66,7 +69,7 @@ export function SizeBreakdownSheet({ breakdown }) {
               : empty
                 ? t("empty")
                 : t("subtitle", {
-                    total: breakdown?.total_bytes_human ?? "",
+                    total: formatFileSize(breakdown?.total_bytes ?? 0, format),
                     files: breakdown?.file_count ?? 0,
                   })}
           </SheetDescription>
@@ -84,7 +87,7 @@ export function SizeBreakdownSheet({ breakdown }) {
                 columns: [t("columnType"), t("columnSize"), t("columnFiles")],
                 rows: categories.map((category) => [
                   label(category.key),
-                  category.bytes_human,
+                  formatFileSize(category.bytes, format),
                   String(category.count),
                 ]),
               }}
@@ -116,7 +119,7 @@ export function SizeBreakdownSheet({ breakdown }) {
                     </td>
                     <td className="py-1.5 ps-2">{label(category.key)}</td>
                     <td className="py-1.5 text-end tabular-nums">
-                      {category.bytes_human}
+                      <FileSize bytes={category.bytes} />
                     </td>
                     <td className="py-1.5 text-end tabular-nums text-muted-foreground">
                       {category.count}

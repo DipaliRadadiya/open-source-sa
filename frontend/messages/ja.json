@@ -4952,6 +4952,7 @@
         "tryAgain": "再試行",
         "notMeasured": "未計測"
       },
+      "exactBytes": "{bytes, plural, other {# バイト}}",
       "dockerNote": "<code>compose.yml</code> は <link>compose ファイル</link> ページで編集してください。ここでの編集は、次にコンテナが更新されたときに置き換えられます。コンテナのデータはこのフォルダーではなく Docker ボリュームにあります。"
     },
     "workers": {
