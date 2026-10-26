@@ -159,7 +159,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                 recommended={recommended}
                 className="h-9 w-auto min-w-52"
               />
-              <span className="min-w-48 flex-1 text-xs text-muted-foreground">{t("keep.hint")}</span>
+              <span className="min-w-48 flex-1 text-xs text-muted-foreground">{t(keep === 0 ? "keep.hintDeleteAll" : "keep.hint")}</span>
             </div>
 
             {result ? (

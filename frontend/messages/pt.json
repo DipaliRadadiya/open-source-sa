@@ -2818,6 +2818,7 @@
     "keep": {
       "label": "Quanto manter",
       "hint": "Vale para todos os itens. Tudo o que for mais recente é mantido.",
+      "hintDeleteAll": "Vale para todos os itens. Nada é mantido.",
       "deleteAll": "Excluir tudo",
       "days": "{count, plural, one {Manter # dia} other {Manter # dias}}",
       "recommended": "{label} (recomendado)",

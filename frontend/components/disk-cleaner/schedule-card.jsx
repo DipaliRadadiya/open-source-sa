@@ -284,7 +284,7 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cleaner-keep" hint={t("keep.hint")}>
+                <Label htmlFor="cleaner-keep" hint={t(keep === 0 ? "keep.hintDeleteAll" : "keep.hint")}>
                   {t("keep.label")}
                 </Label>
                 <KeepSelect

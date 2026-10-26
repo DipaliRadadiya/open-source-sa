@@ -2818,6 +2818,7 @@
     "keep": {
       "label": "How much to keep",
       "hint": "Applies to every item. Anything newer than this is kept.",
+      "hintDeleteAll": "Applies to every item. Nothing is kept.",
       "deleteAll": "Delete all",
       "days": "{count, plural, one {Keep # day} other {Keep # days}}",
       "recommended": "{label} (recommended)",

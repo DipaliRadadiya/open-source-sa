@@ -2818,6 +2818,7 @@
     "keep": {
       "label": "Wie viel behalten",
       "hint": "Gilt für jeden Eintrag. Alles Neuere bleibt erhalten.",
+      "hintDeleteAll": "Gilt für jeden Eintrag. Es wird nichts behalten.",
       "deleteAll": "Alles löschen",
       "days": "{count, plural, one {# Tag behalten} other {# Tage behalten}}",
       "recommended": "{label} (empfohlen)",

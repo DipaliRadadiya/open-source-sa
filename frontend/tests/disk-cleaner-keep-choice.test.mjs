@@ -65,3 +65,9 @@ test("the schedule sends its choice and suggests 85% beside Delete all", () => {
   assert.match(schedule, /const THRESHOLDS = \["50", "60", "70", "80", "85", "90"\];/);
   assert.match(schedule, /onValueChange=\{\(value\) => value && setThreshold\(value === ANY \? "" : value\)\}/);
 });
+
+test("with Delete all the hint does not promise to keep anything", () => {
+  for (const file of ["components/disk-cleaner/cleanup-panel.jsx", "components/disk-cleaner/schedule-card.jsx"]) {
+    assert.match(read(file), /keep === 0 \? "keep\.hintDeleteAll" : "keep\.hint"/, file);
+  }
+});

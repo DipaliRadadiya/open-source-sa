@@ -2818,6 +2818,7 @@
     "keep": {
       "label": "保持する期間",
       "hint": "すべての項目に適用されます。これより新しいものは保持されます。",
+      "hintDeleteAll": "すべての項目に適用されます。何も保持されません。",
       "deleteAll": "すべて削除",
       "days": "{count, plural, one {# 日分を保持} other {# 日分を保持}}",
       "recommended": "{label}（推奨）",

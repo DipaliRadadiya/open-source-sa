@@ -2818,6 +2818,7 @@
     "keep": {
       "label": "Cuánto conservar",
       "hint": "Se aplica a todos los elementos. Se conserva todo lo más reciente.",
+      "hintDeleteAll": "Se aplica a todos los elementos. No se conserva nada.",
       "deleteAll": "Eliminar todo",
       "days": "{count, plural, one {Conservar # día} other {Conservar # días}}",
       "recommended": "{label} (recomendado)",
