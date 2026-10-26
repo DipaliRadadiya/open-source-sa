@@ -20,6 +20,7 @@ import { InfoHint } from "@/components/ui/info-hint";
 import { MeasuredAt } from "@/components/disk-cleaner/measured-at";
 import { KeepSelect, useKeepLabel } from "@/components/disk-cleaner/keep-select";
 import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
 import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -38,7 +39,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const keepLabel = useKeepLabel();
   const { choices, recommended } = keepOptions(keepDays);
   // One choice for the whole clean; every size, the split and the total follow it.
-  const [keep, setKeep] = useState(recommended);
+  const [keep, setKeep] = useKeepChoice();
   const { refreshAndWait } = useRefresh();
   const [selected, setSelected] = useState(() => new Set());
   const [confirming, setConfirming] = useState(false);

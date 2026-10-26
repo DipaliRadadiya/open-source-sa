@@ -71,3 +71,12 @@ test("with Delete all the hint does not promise to keep anything", () => {
     assert.match(read(file), /keep === 0 \? "keep\.hintDeleteAll" : "keep\.hint"/, file);
   }
 });
+
+test("the Can be freed tile prices the same choice as the list", () => {
+  const page = read("app/(app)/disk-cleaner/page.jsx");
+  assert.match(page, /<KeepProvider initial=\{recommended\}>/);
+  assert.match(read("components/disk-cleaner/cleanup-panel.jsx"), /const \[keep, setKeep\] = useKeepChoice\(\);/);
+  const tile = read("components/disk-cleaner/disk-summary.jsx");
+  assert.match(tile, /const \[keep\] = useKeepChoice\(\);/);
+  assert.match(tile, /sizeFor\(c, keep\)/);
+});

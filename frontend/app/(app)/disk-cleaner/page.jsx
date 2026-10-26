@@ -13,7 +13,8 @@ import { RunsCard } from "@/components/disk-cleaner/runs-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
-import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { keepOptions } from "@/lib/disk-cleaner/keep-days";
+import { KeepProvider } from "@/components/disk-cleaner/keep-context";
 
 export const dynamic = "force-dynamic";
 
@@ -47,10 +48,8 @@ export default async function DiskCleanerPage({ searchParams }) {
   if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const categories = data.categories ?? [];
-  // Priced at the recommended keep, the choice the list below opens on.
+  // The list opens on the recommended keep; the "Can be freed" tile follows whatever is chosen.
   const { recommended } = keepOptions(data.keep_days);
-  const cleanable = categories.filter((category) => category.available && sizeFor(category, recommended).bytes > 0);
-  const reclaimable = cleanable.reduce((total, category) => total + sizeFor(category, recommended).bytes, 0);
 
   return (
     <div className="space-y-6">
@@ -59,36 +58,25 @@ export default async function DiskCleanerPage({ searchParams }) {
       {/* Three compact tiles across the top (one per row until the page is wide enough);
           the schedule tile gets the most room, "Can be freed" the least (a short number).
           The list gets full width below. */}
-      <div className="space-y-4">
-        <div className="@container/tiles">
-          <div className="grid gap-3 sm:gap-4 @min-[52rem]/tiles:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)]">
-            <DiskSummary
-              disk={data.disk}
-              reclaimableHuman={humanBytes(reclaimable)}
-              reclaimableCount={cleanable.length}
-            />
-            <ScheduleCard schedule={schedule} categories={categories} keepDays={data.keep_days} canManage={canManage} />
+      <KeepProvider initial={recommended}>
+        <div className="space-y-4">
+          <div className="@container/tiles">
+            <div className="grid gap-3 sm:gap-4 @min-[52rem]/tiles:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)]">
+              <DiskSummary disk={data.disk} categories={categories} />
+              <ScheduleCard schedule={schedule} categories={categories} keepDays={data.keep_days} canManage={canManage} />
+            </div>
           </div>
+
+          <CleanupPanel
+            categories={categories}
+            keepDays={data.keep_days}
+            canManage={canManage}
+            measuredAt={new Date().toISOString()}
+          />
+
+          <RunsCard runs={runs} meta={meta} categories={categories} />
         </div>
-
-        <CleanupPanel
-          categories={categories}
-          keepDays={data.keep_days}
-          canManage={canManage}
-          measuredAt={new Date().toISOString()}
-        />
-
-        <RunsCard runs={runs} meta={meta} categories={categories} />
-      </div>
+      </KeepProvider>
     </div>
   );
-}
-
-// Only this page-level total is formatted locally: the API never sends the sum.
-function humanBytes(bytes) {
-  if (!bytes) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  const value = bytes / 1024 ** i;
-  return `${value >= 10 || i === 0 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
 }
