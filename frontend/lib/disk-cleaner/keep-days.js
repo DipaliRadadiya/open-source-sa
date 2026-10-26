@@ -21,3 +21,9 @@ export function sizeFor(category, keep) {
   }
   return { bytes: 0, human: null };
 }
+
+/** The "Can be freed" total under `keep`: available categories with something to free, `{bytes, count}`. */
+export function reclaimableFor(categories, keep) {
+  const sizes = (categories ?? []).filter((c) => c.available).map((c) => sizeFor(c, keep).bytes).filter((bytes) => bytes > 0);
+  return { bytes: sizes.reduce((total, bytes) => total + bytes, 0), count: sizes.length };
+}

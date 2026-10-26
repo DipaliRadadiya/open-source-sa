@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { HardDrive, Sparkles } from "lucide-react";
 import { usageStatus } from "@/lib/metrics/usage-level";
 import { Tile } from "@/components/applications/app-status-tiles";
-import { sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { reclaimableFor } from "@/lib/disk-cleaner/keep-days";
 import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
 
 // Client-side because the icon component cannot cross the server boundary as a prop.
@@ -15,9 +15,8 @@ export function DiskSummary({ disk, categories }) {
   const t = useTranslations("diskCleaner");
   // Priced for the Clean panel's current choice, so the tile and the list never disagree.
   const [keep] = useKeepChoice();
-  const sizes = categories.filter((c) => c.available).map((c) => sizeFor(c, keep).bytes).filter((bytes) => bytes > 0);
-  const reclaimableCount = sizes.length;
-  const reclaimableHuman = humanBytes(sizes.reduce((total, bytes) => total + bytes, 0));
+  const { bytes, count: reclaimableCount } = reclaimableFor(categories, keep);
+  const reclaimableHuman = humanBytes(bytes);
 
   return (
     <>
