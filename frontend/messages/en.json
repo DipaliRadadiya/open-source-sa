@@ -2826,7 +2826,8 @@
       "confirmLine": "Choice: {choice}",
       "deleteAllWarning": "Delete all removes every server and site log, including login and error history. This cannot be undone.",
       "scheduleDeleteAllHint": "Delete all clears every log. Consider running it only when disk usage is above {percent}%.",
-      "useThreshold": "Use {percent}%"
+      "useThreshold": "Use {percent}%",
+      "nothingAtChoice": "Nothing to clean with this choice. A shorter one may free more."
     }
   },
   "rebootBanner": {

@@ -2826,7 +2826,8 @@
       "confirmLine": "Escolha: {choice}",
       "deleteAllWarning": "Excluir tudo remove todos os logs do servidor e dos sites, incluindo o histórico de logins e de erros. Isso não pode ser desfeito.",
       "scheduleDeleteAllHint": "Excluir tudo esvazia todos os logs. Considere executá-lo só quando o uso do disco passar de {percent}%.",
-      "useThreshold": "Usar {percent}%"
+      "useThreshold": "Usar {percent}%",
+      "nothingAtChoice": "Nada a limpar com esta escolha. Uma mais curta pode liberar mais."
     }
   },
   "rebootBanner": {

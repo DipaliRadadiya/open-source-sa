@@ -2826,7 +2826,8 @@
       "confirmLine": "選択: {choice}",
       "deleteAllWarning": "すべて削除すると、ログインやエラーの履歴を含む、サーバーとサイトのすべてのログが削除されます。元に戻せません。",
       "scheduleDeleteAllHint": "すべて削除はすべてのログを空にします。ディスク使用率が {percent}% を超えたときだけ実行することを検討してください。",
-      "useThreshold": "{percent}% を使用"
+      "useThreshold": "{percent}% を使用",
+      "nothingAtChoice": "この選択では削除するものがありません。より短い期間を選ぶと空きが増える場合があります。"
     }
   },
   "rebootBanner": {

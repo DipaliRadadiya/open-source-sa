@@ -184,7 +184,13 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
             {nothingToClean ? (
               <div className="border-t">
-                <EmptyState compact icon={Sparkles} badge={null} title={t("list.allClean")} />
+                {/* Under a keep choice, "all tidy" is not true: a shorter one may still free space. */}
+                <EmptyState
+                  compact
+                  icon={Sparkles}
+                  badge={null}
+                  title={keep ? t("keep.nothingAtChoice") : t("list.allClean")}
+                />
               </div>
             ) : (
               <div className="border-t">
