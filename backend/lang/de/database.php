@@ -46,6 +46,7 @@ return [
         'restored' => 'Die Datenbank wurde aus der automatischen Sicherung wiederhergestellt, es ging nichts verloren.',
         'untouched' => 'Die Datenbank wurde nicht verändert.',
         'not_restored' => 'Die automatische Sicherung konnte nicht von selbst zurückgespielt werden. Sie steht in der Export-Liste: Laden Sie sie herunter und importieren Sie sie, um die Datenbank wiederherzustellen.',
+        'no_copy' => 'Es wurde keine Sicherheitskopie erstellt (für diesen Import ausgeschaltet), daher konnte nichts zurückgespielt werden: Die Datenbank ist jetzt möglicherweise leer oder nur teilweise geladen.',
     ],
 
 ];

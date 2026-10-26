@@ -4657,9 +4657,13 @@ Dump a database to a file. Queued.
 
 `manage`, not the read tier: this copies an entire database off the server, which is the most data-revealing thing this feature does.
 
-**Response `202`:** `{"export": {"id": 1, "status": "queued", "file": null}}`
+**Request (optional, 2026-10-26):** `{"keep_days": 7}` — delete the export by itself after `1 | 3 | 7 | 14 | 30` days. **Absent or `null` = kept until the user deletes it** (the default, and what every earlier export does). Anything else: `422` on `keep_days`. The date is counted from the request and returned as `expires_at`; the hourly `exports:prune-expired` removes the file and the row (activity `database.export_expired`, no actor) — never one still queued or running.
+
+**Response `202`:** `{"export": {"id": 1, "status": "queued", "file": null, "expires_at": "02-11-2026 10:00:00", …}}`
 
 Poll `GET /databases/exports`.
+
+**MySQL, MariaDB and PostgreSQL exports are gzipped** (2026-10-26): the file is `….sql.gz`, typically 5–10× smaller, and `POST /databases/{database}/imports` takes it as it is. MongoDB's `.archive.gz` was already compressed. An import's own safety copy (`purpose: "import_safety"`) stays plain `.sql`, because it is loaded straight back if the import fails. If compressing fails (e.g. no disk left for the `.gz`), the plain `.sql` is kept and the export still completes.
 
 **One export per database at a time.** A second request while one is queued or running is a **`422`** naming that, rather than a second `mysqldump` writing another full copy to the same disk. A run whose worker was killed is closed out automatically before the check, so a stranded row cannot block a database permanently — it gets `status: failed`, `reason: worker`.
 
@@ -4680,9 +4684,9 @@ Poll `GET /databases/exports`.
 
 **What a run does, in order — nothing is dropped before step 3:**
 1. **Checks** the file. SQL is decompressed and cleaned into what the database's own user can load: `CREATE DATABASE`/`USE`, definers, GTID lines (MySQL) and ownership/grants/role switches (PostgreSQL) are removed, the same things the panel's own exports leave out. A PostgreSQL file containing a **psql client command** (`\!`, `\connect`, `\copy`… outside strings, comments and data) is **refused**: psql runs those itself, and `\!` is a shell command.
-2. **Backs up** the database — an ordinary export, listed in `GET /databases/exports` with **`purpose: "import_safety"`** (label it *"Automatic backup before import"*), kept **7 days** (2026-10-20, RC-14) or until the user deletes it.
+2. **Backs up** the database — an ordinary export, listed in `GET /databases/exports` with **`purpose: "import_safety"`** (label it *"Automatic backup before import"*), kept **7 days** (2026-10-20, RC-14) or until the user deletes it. **Skipped when `start` sends `safety_copy: false`** (2026-10-26): faster and no extra disk, but step 4 then has nothing to put back.
 3. **Replaces**: drop, recreate, give the users back, load the file **as the database's own user** (never the admin account — a dump's `USE other_db` reaches nothing). PostgreSQL loads in one transaction.
-4. If the load fails, **puts the backup back** automatically.
+4. If the load fails, **puts the backup back** automatically (when one was taken).
 
 The import needs a user of this database whose password the panel knows and who connects from this server (`connection_preference` `localhost` or `anywhere`). A database with none — e.g. only users adopted from v7 — is refused **before** the upload, with a message saying to add one or set a new password.
 
@@ -4699,7 +4703,7 @@ The import needs a user of this database whose password the panel knows and who 
 **Raw body** (not multipart), appended in order. **Throttle:** 1200/min (per chunk; the global API throttle does not apply). **Response `200`:** `{"received": 4194304}` — bytes stored so far, also the resume point after a dropped connection. A body that would go past `size_bytes` is cut off and refused (`422`). `409` once the import is no longer uploading.
 
 #### POST `/databases/{database}/imports/{import}/start` — run it
-**Throttle:** 6/min. **Request:** `{"confirm_replace": true}` — **required**; without it `422` on `confirm_replace`.
+**Throttle:** 6/min. **Request:** `{"confirm_replace": true, "safety_copy": true}` — `confirm_replace` **required**; without it `422` on `confirm_replace`. `safety_copy` optional boolean, **default `true`** (2026-10-26): `false` skips the copy taken before the database is replaced. Show it as a checkbox ticked by default, and when unticked warn that a failed import can leave the database empty.
 
 **Response `202`:** `{"import": {"status": "queued", …}}`. **`422`:** the file has not fully arrived (`file`); an export of this database is running (`database`). **`409`:** not uploading any more.
 
@@ -4711,13 +4715,13 @@ The import needs a user of this database whose password the panel knows and who 
   "size_bytes": 10485760, "size_human": "10 MB", "received_bytes": 10485760,
   "status": "running", "step": "importing",
   "reason": null, "message": null, "line": null, "reference": null,
-  "restored": false, "safety_export_id": 41, "requested_by": {"id": 1, "username": "admin"},
+  "restored": false, "safety_export_id": 41, "safety_copy": true, "requested_by": {"id": 1, "username": "admin"},
   "created_at": "14-10-2026 11:02:10", "finished_at": null
 }]}
 ```
 - `status`: `uploading` → `queued` → `running` → `completed` | `failed`.
 - `step` while running: `checking`, `backing_up`, `importing`, `rolling_back`.
-- On `failed`, **`message` always ends by saying what happened to the data**: *not changed* (failed before step 3), *put back from the automatic backup* (`restored: true`), or *could not be put back by itself — the backup is in Exports*. `reason` codes: `wrong_format`, `client_command` (with `line`), `truncated`, `unreadable`, `backup_failed`, `load_failed` (with `reference`), `no_account`, `database_missing`, `worker`, `abandoned` (upload not finished within a day — closed out automatically).
+- On `failed`, **`message` always ends by saying what happened to the data**: *not changed* (failed before step 3), *put back from the automatic backup* (`restored: true`), *could not be put back by itself — the backup is in Exports*, or — when `safety_copy` was `false` — *no safety copy was taken, so the database may be empty or partly loaded*. `reason` codes: `wrong_format`, `client_command` (with `line`), `truncated`, `unreadable`, `backup_failed`, `load_failed` (with `reference`), `no_account`, `database_missing`, `worker`, `abandoned` (upload not finished within a day — closed out automatically).
 
 #### DELETE `/databases/{database}/imports/{import}`
 Cancel an upload or clear a finished row; removes the uploaded file. **`409`** while queued or running.
@@ -4741,11 +4745,14 @@ All exports, newest first. Includes in-flight rows.
   "download_url": "https://panel.example.com/api/databases/exports/shop_db-2026-07-28-100000.sql.gz",
   "requested_by": {"id": 1, "username": "admin"},
   "created_at": "28-07-2026 10:00:00", "created_at_human": "Yesterday",
-  "finished_at": "28-07-2026 10:00:12", "finished_at_human": "Yesterday"
+  "finished_at": "28-07-2026 10:00:12", "finished_at_human": "Yesterday",
+  "expires_at": null, "expires_at_human": null
 }]}
 ```
 
 The database name is `database`, not `database_name`.
+
+`expires_at` (2026-10-26): when the export deletes itself; `null` = kept until the user deletes it. Show it as *"Deletes on …"*. Import safety copies keep their own 7-day rule above and have `expires_at: null`.
 
 **`available` is not the same as `status: "completed"`** — it also checks the file is still on disk. A retention sweep or a manual delete leaves a completed row whose file is gone; render the download button off `available`, and `download_url` is null in exactly that case.
 

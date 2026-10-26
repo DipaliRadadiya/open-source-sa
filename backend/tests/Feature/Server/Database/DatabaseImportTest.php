@@ -396,3 +396,70 @@ it('reaps an upload abandoned for a day, so the database can be imported into ag
 
     $this->postJson("/api/databases/{$this->database->id}/imports", ['file_name' => 'b.sql', 'size_bytes' => 10])->assertCreated();
 });
+
+/*
+ * The safety copy is the user's choice (Dipali, 2026-10-26). Ticked by default;
+ * skipped, the import is faster and takes no extra disk, and a failed load has
+ * nothing to put back — which the message must then say, not point at an
+ * export that was never made.
+ */
+describe('without a safety copy', function () {
+
+    beforeEach(function () {
+        $this->import = DatabaseImport::create([
+            'database_id' => $this->database->id, 'database_name' => 'shop_db', 'engine' => 'mariadb',
+            'original_name' => 'a.sql', 'size_bytes' => 9, 'status' => ImportStatus::Uploading, 'user_id' => $this->user->id,
+        ]);
+        File::ensureDirectoryExists(config('server.databases.import_dir'));
+        file_put_contents(config('server.databases.import_dir')."/{$this->import->id}.upload", 'SELECT 1;');
+        Queue::fake();
+    });
+
+    it('takes the copy unless told not to', function () {
+        $this->postJson("/api/databases/{$this->database->id}/imports/{$this->import->id}/start", ['confirm_replace' => true])
+            ->assertStatus(202)
+            ->assertJsonPath('import.safety_copy', true);
+    });
+
+    it('records the choice to skip it', function () {
+        $this->postJson("/api/databases/{$this->database->id}/imports/{$this->import->id}/start", ['confirm_replace' => true, 'safety_copy' => false])
+            ->assertStatus(202)
+            ->assertJsonPath('import.safety_copy', false);
+
+        expect($this->import->refresh()->safety_copy)->toBeFalse();
+    });
+
+    it('refuses a choice that is not a yes or no', function () {
+        $this->postJson("/api/databases/{$this->database->id}/imports/{$this->import->id}/start", ['confirm_replace' => true, 'safety_copy' => 'maybe'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('safety_copy');
+    });
+
+    it('replaces the database without dumping it first', function () {
+        $import = uploadedImport($this->database, "CREATE TABLE t (id int);\n");
+        $import->update(['safety_copy' => false]);
+
+        $import = runImport($import);
+
+        expect($import->status)->toBe(ImportStatus::Completed)
+            ->and(importRunIndex('mariadb-dump'))->toBeNull()
+            ->and(importRunIndex('DROP DATABASE'))->not->toBeNull()
+            ->and($import->safety_export_id)->toBeNull()
+            ->and(DatabaseExport::count())->toBe(0);
+    });
+
+    it('says there was nothing to put back when the load fails', function () {
+        $this->failOn = '--binary-mode';
+        $import = uploadedImport($this->database, "CREATE TABLE t (id int);\n");
+        $import->update(['safety_copy' => false]);
+
+        $import = runImport($import);
+
+        expect($import->reason)->toBe('load_failed')
+            ->and($import->restored)->toBeFalse()
+            // No attempt to restore from a copy that does not exist.
+            ->and(importRunIndex('-e source '))->toBeNull()
+            ->and($import->message())->toContain(__('database.import_failed.no_copy'))
+            ->and($import->message())->not->toContain(__('database.import_failed.not_restored'));
+    });
+});

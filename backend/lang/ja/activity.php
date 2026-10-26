@@ -87,6 +87,7 @@ return [
     'database.import_completed' => ':file を :name にインポートし、内容を置き換えました',
     'database.import_failed' => ':file の :name へのインポートに失敗しました',
     'database.export_deleted' => ':name のエクスポートを削除しました',
+    'database.export_expired' => ':name の期限切れのエクスポートを削除しました',
     'role.created' => 'ロール :name を作成しました',
     'role.updated' => 'ロール :name を更新しました',
     'role.deleted' => 'ロール :name を削除しました',

@@ -49,6 +49,9 @@ class DatabaseExportResource extends JsonResource
             'created_at_human' => $this->created_at?->diffForHumans(),
             'finished_at' => $this->finished_at?->format('d-m-Y H:i:s'),
             'finished_at_human' => $this->finished_at?->diffForHumans(),
+            // When it deletes itself; null = kept until the user deletes it.
+            'expires_at' => $this->expires_at?->format('d-m-Y H:i:s'),
+            'expires_at_human' => $this->expires_at?->diffForHumans(),
         ];
     }
 }

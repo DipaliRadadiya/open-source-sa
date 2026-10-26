@@ -11,6 +11,7 @@ use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\DatabaseEngineRequest;
+use App\Http\Requests\Server\Database\ExportDatabaseRequest;
 use App\Http\Requests\Server\Database\IndexDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
 use App\Http\Requests\Server\Database\UpdateDatabaseApplicationRequest;
@@ -350,7 +351,7 @@ class DatabaseController extends Controller
      * it up where the export exists and nothing can see it — which is the
      * blindness this table exists to remove.
      */
-    public function export(Database $database): JsonResponse
+    public function export(ExportDatabaseRequest $request, Database $database): JsonResponse
     {
         // Close out anything stranded first. `RunDatabaseExport::failed()`
         // handles a job that dies politely; a worker killed outright reaches
@@ -405,12 +406,17 @@ class DatabaseController extends Controller
             ]);
         }
 
+        $keepDays = $request->validated('keep_days');
+
         $export = DatabaseExport::create([
             'database_id' => $database->id,
             'database_name' => $database->name,
             'engine' => $database->engine,
             'status' => ExportStatus::Queued,
             'user_id' => Auth::id(),
+            // Counted from the request, so the date shown at once is the date
+            // it goes — a slow queue does not quietly extend it.
+            'expires_at' => $keepDays === null ? null : now()->addDays((int) $keepDays),
         ]);
 
         RunDatabaseExport::dispatch($export->id, $database->id);

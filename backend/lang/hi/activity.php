@@ -87,6 +87,7 @@ return [
     'database.import_completed' => ':file को :name में इम्पोर्ट किया, उसकी सामग्री बदल दी',
     'database.import_failed' => ':file को :name में इम्पोर्ट करना विफल रहा',
     'database.export_deleted' => ':name का एक निर्यात हटाया',
+    'database.export_expired' => ':name का एक समय-सीमा समाप्त निर्यात हटाया',
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',
