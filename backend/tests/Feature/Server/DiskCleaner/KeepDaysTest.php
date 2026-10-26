@@ -409,3 +409,24 @@ it('adds and removes the keep columns cleanly', function () {
     expect(Schema::hasColumn('disk_cleaner_schedules', 'keep_days'))->toBeTrue()
         ->and(Schema::hasColumn('disk_cleaner_runs', 'keep_days'))->toBeTrue();
 });
+
+it('describes each category in its own words, in every language', function (string $locale) {
+    // 2026-10-26: a scripted edit put the application-logs note under
+    // Temporary files in two languages, and nothing noticed. This catches the
+    // same note landing on two categories; the English wording test below
+    // catches a note that no longer matches its category's behaviour.
+    $lines = require lang_path("{$locale}/disk-cleaner.php");
+    $notes = collect($lines)->except('keep_days')->pluck('note');
+
+    expect($notes->duplicates()->all())->toBe([])
+        ->and($notes->count())->toBe(7);
+})->with(['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru']);
+
+it('words the cleaned categories for the keep choice, not a fixed window', function () {
+    $lines = require lang_path('en/disk-cleaner.php');
+
+    foreach (['apt_cache', 'journal', 'rotated_logs', 'service_logs', 'site_logs', 'tmp'] as $key) {
+        expect($lines[$key]['note'])->toContain('Delete all')
+            ->and($lines[$key]['description'].$lines[$key]['note'])->not->toContain('retention window');
+    }
+});
