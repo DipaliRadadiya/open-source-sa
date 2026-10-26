@@ -50,7 +50,19 @@ class AptOrphansTarget extends AbstractCleanupTarget
         return ['apt: unused packages & old kernels'];
     }
 
-    public function estimate(): int
+    /** A package has no age to keep by: this category always removes all. */
+    public function keepsDays(): bool
+    {
+        return false;
+    }
+
+    /** One simulation, the same answer for every choice. */
+    public function estimates(array $choices): array
+    {
+        return array_fill_keys($choices, $this->estimate());
+    }
+
+    public function estimate(?int $keepDays = null): int
     {
         // `run()`, not `apt()`, and deliberately: this is a simulation that
         // runs when the disk-cleaner screen is opened. apt()'s wait is sized
@@ -71,7 +83,7 @@ class AptOrphansTarget extends AbstractCleanupTarget
         return 0;
     }
 
-    public function clean(): ServerOpsResult
+    public function clean(?int $keepDays = null): ServerOpsResult
     {
         return $this->serverOps->apt(
             ['apt-get', '-y', 'autoremove', '--purge'],

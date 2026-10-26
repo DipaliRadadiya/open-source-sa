@@ -3,9 +3,10 @@
 namespace App\Services\Server\DiskCleaner\Targets;
 
 use App\Services\Server\DiskCleaner\AbstractCleanupTarget;
+use App\Services\Server\DiskCleaner\KeepDays;
 use App\Services\Server\ServerOpsResult;
 
-/** systemd journal entries older than the retention window (`journalctl --vacuum-time`). */
+/** systemd journal entries older than the keep choice, or all of them (`journalctl --vacuum-*`). */
 class JournalTarget extends AbstractCleanupTarget
 {
     public function key(): string
@@ -30,52 +31,86 @@ class JournalTarget extends AbstractCleanupTarget
 
     public function paths(): array
     {
-        return ['systemd journal (/var/log/journal), archived entries older than '.$this->days().' days'];
+        return ['systemd journal (/var/log/journal)'];
     }
 
     /**
-     * What a vacuum would actually reclaim — not the size of the journal.
+     * What the clean would actually reclaim — not the size of the journal.
      *
      * This used to report `journalctl --disk-usage`, which is *"archived and
-     * active journals"*: everything. But `clean()` runs `--vacuum-time`, which
-     * removes only **archived** files whose entries are older than the window.
-     * So the screen offered "Journal — 120 MB", the button freed nothing, and
-     * from outside that is indistinguishable from a cleaner that is broken. It
-     * is the shape of estimate this class exists to avoid: a number that
-     * promises what the action cannot deliver.
+     * active journals"*: everything. But a time vacuum removes only
+     * **archived** files whose entries are older than the window. So the screen
+     * offered "Journal — 120 MB", the button freed nothing, and from outside
+     * that is indistinguishable from a cleaner that is broken. It is the shape
+     * of estimate this class exists to avoid: a number that promises what the
+     * action cannot deliver.
      *
      * Archived files are the ones with `@` in the name — `system.journal` is
-     * the open one and is never removed, `system@2cfa…-000657….journal` is
-     * sealed. The trailing glob catches `.journal~`, which is a file journald
-     * gave up on and which a vacuum also collects.
+     * the open one and a time vacuum never removes it, `system@2cfa…-000657….journal`
+     * is sealed. The trailing glob catches `.journal~`, which is a file journald
+     * gave up on and which a vacuum also collects. Delete all rotates first, so
+     * the open files are sealed and go too: its estimate is every file.
      *
-     * `-mtime` is not an approximation here: an archived journal's mtime is
-     * when it was last written, which is the same "newest entry" timestamp
-     * `--vacuum-time` compares against.
+     * The modification time is not an approximation here: an archived
+     * journal's mtime is when it was last written, which is the same "newest
+     * entry" timestamp `--vacuum-time` compares against.
      */
-    public function estimate(): int
+    public function estimate(?int $keepDays = null): int
     {
-        return $this->sumSizes([
-            'find', '/var/log/journal',
-            '-type', 'f',
-            '-name', '*@*.journal*',
-            '-mtime', '+'.$this->days(),
-            '-printf', '%s\n',
-        ]);
+        $days = $this->days($keepDays);
+
+        return $this->estimates([$days])[$days];
     }
 
-    public function clean(): ServerOpsResult
+    public function estimates(array $choices): array
     {
+        $all = in_array(KeepDays::DELETE_ALL, $choices, true)
+            ? $this->scan(['find', '/var/log/journal', '-type', 'f', '-name', '*.journal*'])
+            : [];
+        $archived = array_diff($choices, [KeepDays::DELETE_ALL]) !== []
+            ? $this->scan(['find', '/var/log/journal', '-type', 'f', '-name', '*@*.journal*'])
+            : [];
+
+        $estimates = [];
+
+        foreach ($choices as $choice) {
+            $estimates[$choice] = $choice === KeepDays::DELETE_ALL
+                ? $this->sumOlderThan($all, null)
+                : $this->sumOlderThan($archived, KeepDays::cutoff($choice));
+        }
+
+        return $estimates;
+    }
+
+    /**
+     * Delete all is a rotate then a size vacuum to one byte, in one call.
+     *
+     * `--vacuum-time=1s` would race: the files the rotate has just sealed hold
+     * entries written a moment ago, so a one-second window can keep them. A
+     * size vacuum ignores time and removes archived files until the journal is
+     * under the limit, which one byte never is — so every archived file goes,
+     * and only the new, empty, open files remain.
+     */
+    public function clean(?int $keepDays = null): ServerOpsResult
+    {
+        $days = $this->days($keepDays);
+
         return $this->serverOps->run(
-            ['journalctl', '--vacuum-time='.$this->days().'d'],
+            $days === KeepDays::DELETE_ALL
+                ? ['journalctl', '--rotate', '--vacuum-size=1']
+                : ['journalctl', '--vacuum-time='.$days.'d'],
             ['feature' => 'disk_cleaner', 'op' => 'clean', 'target' => $this->key()],
             120,
         );
     }
 
-    /** The retention window, read once so the estimate and the clean cannot disagree. */
-    private function days(): int
+    /**
+     * The keep choice, with the week this category always kept standing in
+     * for a request or schedule from before the choice existed. Read once per
+     * call so the estimate and the clean cannot disagree.
+     */
+    private function days(?int $keepDays): int
     {
-        return max(1, (int) config('server.disk_cleaner.journal_days', 7));
+        return $keepDays ?? KeepDays::RECOMMENDED;
     }
 }

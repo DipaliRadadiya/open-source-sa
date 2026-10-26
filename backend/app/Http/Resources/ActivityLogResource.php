@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Services\ActivityKinds;
 use App\Services\ActivityScopes;
+use App\Services\Server\DiskCleaner\KeepDays;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Lang;
@@ -119,6 +120,13 @@ class ActivityLogResource extends JsonResource
 
         if (is_string($reason) && Lang::has('activity_values.adopted_left_'.$reason)) {
             $replacements['left_reason'] = __('activity_values.adopted_left_'.$reason);
+        }
+
+        // The keep choice a disk clean ran with, in the viewer's language.
+        // Set for every disk-cleaner row, so one written before the choice
+        // existed reads "default" rather than a bare `:kept`.
+        if ($this->type === 'disk_cleaner') {
+            $replacements['kept'] = KeepDays::label($properties['keep_days'] ?? null);
         }
 
         return $replacements;

@@ -24,6 +24,9 @@ class DiskCleanerController extends Controller
      */
     public function clean(CleanDiskRequest $request, RunCleanupAction $action): JsonResponse
     {
-        return response()->json($action->execute($request->validated('categories')));
+        return response()->json($action->execute(
+            $request->validated('categories'),
+            keepDays: $request->validated('keep_days'),
+        ));
     }
 }

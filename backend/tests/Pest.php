@@ -324,7 +324,7 @@ function systemctlShowOutput(array $command, array $units = [], ?array $default 
 
 /**
  * Answer a disk-cleaner `find <dir> -maxdepth 1 -type f -name <pattern>
- * -printf "%s\t%p\n"` from the real filesystem, the way the command would.
+ * -printf "%s\t%T@\t%p\n"` from the real filesystem, the way the command would.
  *
  * The log cleaners list files through the server rather than with PHP's
  * glob() (the directories that matter are root-only), so a test that puts
@@ -341,7 +341,7 @@ function answerFind($process): ?ProcessResult
 
     // Only the log cleaners' listing — the journal target runs its own
     // recursive find, which its tests fake themselves.
-    if (($cmd[0] ?? null) !== 'find' || ! in_array("%s\t%p\n", $cmd, true)) {
+    if (($cmd[0] ?? null) !== 'find' || ! in_array("%s\t%T@\t%p\n", $cmd, true)) {
         return null;
     }
 
@@ -356,7 +356,7 @@ function answerFind($process): ?ProcessResult
 
     foreach (glob(rtrim($directory, '/').'/'.$pattern) ?: [] as $path) {
         if (is_file($path) && ! is_link($path)) {
-            $lines[] = filesize($path)."\t".$path;
+            $lines[] = filesize($path)."\t".filemtime($path)."\t".$path;
         }
     }
 

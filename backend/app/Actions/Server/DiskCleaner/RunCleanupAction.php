@@ -6,6 +6,7 @@ use App\Exceptions\Server\DiskCleaner\DiskCleanerException;
 use App\Models\DiskCleanerRun;
 use App\Services\ActivityLogger;
 use App\Services\Server\DiskCleaner\DiskCleaner;
+use App\Services\Server\DiskCleaner\KeepDays;
 use App\Support\Bytes;
 
 class RunCleanupAction
@@ -23,9 +24,11 @@ class RunCleanupAction
      * @param  array<int, string>  $keys
      * @param  string  $trigger  `manual` (default) or `scheduled` — recorded
      *                           on the run-history row.
+     * @param  int|null  $keepDays  the one keep choice for every category
+     *                              ({@see KeepDays}); null = pre-choice behaviour
      * @return array<string, mixed>
      */
-    public function execute(array $keys, string $trigger = 'manual'): array
+    public function execute(array $keys, string $trigger = 'manual', ?int $keepDays = null): array
     {
         $cleaned = [];
         $freedTotal = 0;
@@ -39,8 +42,10 @@ class RunCleanupAction
                 abort(404, __('errors/disk-cleaner.not_found'));
             }
 
-            $before = $target->estimate();
-            $result = $target->clean();
+            // Measured with the same choice it cleans with, or the freed
+            // number compares two different selections.
+            $before = $target->estimate($keepDays);
+            $result = $target->clean($keepDays);
 
             if ($result->failed()) {
                 // Recorded before throwing. A scheduled clean swallows the
@@ -51,6 +56,7 @@ class RunCleanupAction
                 DiskCleanerRun::create([
                     'trigger' => $trigger,
                     'categories' => $keys,
+                    'keep_days' => $keepDays,
                     'freed' => collect($cleaned)->pluck('freed', 'key')->all(),
                     'freed_total' => $freedTotal,
                     'status' => 'failed',
@@ -60,12 +66,13 @@ class RunCleanupAction
                 $this->activityLogger->log($this->verb($trigger, failed: true), null, [
                     'categories' => implode(', ', $keys),
                     'category' => $key,
+                    'keep_days' => $keepDays ?? KeepDays::UNCHOSEN,
                 ]);
 
                 throw new DiskCleanerException($result->reference);
             }
 
-            $freed = max(0, $before - $target->estimate());
+            $freed = max(0, $before - $target->estimate($keepDays));
             $freedTotal += $freed;
 
             $cleaned[] = [
@@ -80,6 +87,7 @@ class RunCleanupAction
         $run = DiskCleanerRun::create([
             'trigger' => $trigger,
             'categories' => $keys,
+            'keep_days' => $keepDays,
             'freed' => collect($cleaned)->pluck('freed', 'key')->all(),
             'freed_total' => $freedTotal,
             'status' => 'completed',
@@ -89,6 +97,7 @@ class RunCleanupAction
         $this->activityLogger->log($this->verb($trigger), null, [
             'categories' => implode(', ', $keys),
             'freed' => Bytes::human($freedTotal),
+            'keep_days' => $keepDays ?? KeepDays::UNCHOSEN,
         ]);
 
         return [

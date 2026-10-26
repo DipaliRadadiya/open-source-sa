@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * A single disk-cleaner execution (manual or scheduled) — the run history.
  */
-#[Fillable(['trigger', 'categories', 'freed', 'freed_total', 'status', 'disk_percent'])]
+#[Fillable(['trigger', 'categories', 'keep_days', 'freed', 'freed_total', 'status', 'disk_percent'])]
 class DiskCleanerRun extends Model
 {
     /**
@@ -18,6 +18,7 @@ class DiskCleanerRun extends Model
     {
         return [
             'categories' => 'array',
+            'keep_days' => 'integer',
             'freed' => 'array',
             'freed_total' => 'integer',
             'disk_percent' => 'integer',

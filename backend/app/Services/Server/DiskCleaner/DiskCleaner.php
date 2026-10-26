@@ -50,6 +50,11 @@ class DiskCleaner
     {
         return [
             'disk' => $this->disk(),
+            // The one keep choice a clean takes, shared by every category.
+            'keep_days' => [
+                'choices' => KeepDays::CHOICES,
+                'recommended' => KeepDays::RECOMMENDED,
+            ],
             'categories' => array_values(array_filter(array_map(
                 fn (CleanupTarget $target) => $target->available() ? $this->describe($target) : null,
                 $this->targets(),
@@ -63,6 +68,7 @@ class DiskCleaner
     public function describe(CleanupTarget $target): array
     {
         $reclaimable = $target->estimate();
+        $byChoice = $target->estimates(KeepDays::CHOICES);
 
         return [
             'key' => $target->key(),
@@ -77,6 +83,20 @@ class DiskCleaner
             'available' => true,
             'reclaimable' => $reclaimable,
             'reclaimable_human' => Bytes::human($reclaimable),
+            // False only where there is no age to keep by (unused packages):
+            // the choice is ignored and the category always removes all.
+            'keeps_days' => $target->keepsDays(),
+            // What each keep choice would free, so the screen can show it
+            // before anything runs. `reclaimable` above is the clean without
+            // a choice — what this category did before the choice existed.
+            'reclaimable_by_keep_days' => array_map(
+                fn (int $days) => [
+                    'keep_days' => $days,
+                    'reclaimable' => $byChoice[$days],
+                    'reclaimable_human' => Bytes::human($byChoice[$days]),
+                ],
+                KeepDays::CHOICES,
+            ),
         ];
     }
 

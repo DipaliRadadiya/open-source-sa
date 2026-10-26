@@ -3,6 +3,7 @@
 namespace App\Services\Server\DiskCleaner\Targets;
 
 use App\Services\Server\DiskCleaner\AbstractCleanupTarget;
+use App\Services\Server\DiskCleaner\KeepDays;
 use App\Services\Server\ServerOpsResult;
 
 /** Old rotated/compressed log archives under /var/log (safe to delete). */
@@ -34,26 +35,44 @@ class RotatedLogsTarget extends AbstractCleanupTarget
         return ['/var/log/**/*.gz', '/var/log/**/*.[0-9]', '/var/log/**/*.old', 'excluding /var/log/mysql'];
     }
 
-    public function estimate(): int
+    public function estimate(?int $keepDays = null): int
     {
-        return $this->sumSizes($this->findArgs(delete: false));
+        $days = $keepDays ?? KeepDays::DELETE_ALL;
+
+        return $this->estimates([$days])[$days];
     }
 
-    public function clean(): ServerOpsResult
+    /** One listing prices every choice: an archive's mtime is when it was rotated out. */
+    public function estimates(array $choices): array
+    {
+        $files = $this->scan($this->findArgs());
+
+        return collect($choices)
+            ->mapWithKeys(fn (int $days) => [$days => $this->sumOlderThan($files, KeepDays::cutoff($days))])
+            ->all();
+    }
+
+    /** Before the choice existed this deleted every archive, so `null` still does. */
+    public function clean(?int $keepDays = null): ServerOpsResult
     {
         return $this->serverOps->run(
-            $this->findArgs(delete: true),
+            [...$this->findArgs(), ...KeepDays::findAge($keepDays ?? KeepDays::DELETE_ALL), '-delete'],
             ['feature' => 'disk_cleaner', 'op' => 'clean', 'target' => $this->key()],
             120,
         );
     }
 
     /**
+     * The selection, without an action: the clean appends its age test and
+     * `-delete`, the estimate its `-printf`.
+     *
      * @return array<int, string>
      */
-    private function findArgs(bool $delete): array
+    private function findArgs(): array
     {
-        $base = [
+        // `-delete` implies `-depth`, and `-prune` is silently ignored under
+        // `-depth` — hence the `! -path` exclusion below rather than a prune.
+        return [
             'find', '/var/log',
             // Never leave the filesystem /var/log is on. A separate volume or a
             // bind mount underneath it is somebody else's data, and this
@@ -80,9 +99,5 @@ class RotatedLogsTarget extends AbstractCleanupTarget
             '-o', '-name', '*.old',
             ')',
         ];
-
-        // `-delete` implies `-depth`, and `-prune` is silently ignored under
-        // `-depth` — hence the `! -path` exclusion above rather than a prune.
-        return [...$base, ...($delete ? ['-delete'] : ['-printf', "%s\n"])];
     }
 }

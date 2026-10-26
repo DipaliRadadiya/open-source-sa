@@ -23,6 +23,9 @@ class DiskCleanerScheduleResource extends JsonResource
             'frequency' => $this->frequency,
             'categories' => $this->categories ?? [],
             'threshold_percent' => $this->threshold_percent,
+            // Null = saved before the keep choice existed: each category does
+            // what it always did (journal and temp keep 7 days, the rest all).
+            'keep_days' => $this->keep_days,
             'last_run_at' => $this->last_run_at?->format('d-m-Y H:i:s'),
             'last_run_at_human' => $this->last_run_at?->diffForHumans(),
             // When it will next run, and in which clock. This screen carried

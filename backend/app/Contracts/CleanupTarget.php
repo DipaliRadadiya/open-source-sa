@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Services\Server\DiskCleaner\KeepDays;
 use App\Services\Server\ServerOpsResult;
 
 /**
@@ -36,9 +37,27 @@ interface CleanupTarget
      */
     public function paths(): array;
 
-    /** Reclaimable bytes, estimated live. */
-    public function estimate(): int;
+    /**
+     * Whether this category can keep recent data. One that cannot (unused
+     * packages have no age) ignores the keep choice and always removes all.
+     */
+    public function keepsDays(): bool;
+
+    /**
+     * Reclaimable bytes, estimated live, for one keep choice
+     * ({@see KeepDays}). `null` = the behaviour from before the choice existed.
+     */
+    public function estimate(?int $keepDays = null): int;
+
+    /**
+     * Reclaimable bytes for every choice in one pass, keyed by choice — what
+     * the preview shows beside each option.
+     *
+     * @param  array<int, int>  $choices
+     * @return array<int, int>
+     */
+    public function estimates(array $choices): array;
 
     /** Perform the cleanup. Never throws — caller inspects the result. */
-    public function clean(): ServerOpsResult;
+    public function clean(?int $keepDays = null): ServerOpsResult;
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\DiskCleaner;
 
 use App\Services\Server\DiskCleaner\DiskCleaner;
+use App\Services\Server\DiskCleaner\KeepDays;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,6 +30,9 @@ class CleanDiskRequest extends FormRequest
         return [
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => [Rule::in($available)],
+            // One choice for the whole clean. Absent = each category does what
+            // it did before the choice existed, so older clients are unchanged.
+            'keep_days' => ['nullable', 'integer', Rule::in(KeepDays::CHOICES)],
         ];
     }
 }

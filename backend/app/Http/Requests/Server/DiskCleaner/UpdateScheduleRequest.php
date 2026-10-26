@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\DiskCleaner;
 
 use App\Models\DiskCleanerSchedule;
 use App\Services\Server\DiskCleaner\DiskCleaner;
+use App\Services\Server\DiskCleaner\KeepDays;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -50,6 +51,10 @@ class UpdateScheduleRequest extends FormRequest
             // 99, not 100: a disk is never more than full, so a threshold of 100
             // never fires and the schedule never runs (bug #25).
             'threshold_percent' => ['nullable', 'integer', 'min:1', 'max:99'],
+            // Delete all (0) is allowed unattended — servers whose disks fill
+            // up asked for it (Dipali, 2026-10-26); pairing it with a threshold
+            // is the screen's advice, not a rule. Null = the pre-choice behaviour.
+            'keep_days' => ['nullable', 'integer', Rule::in(KeepDays::CHOICES)],
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services\Server\DiskCleaner\Targets;
 
 use App\Models\Application;
+use App\Services\Server\Applications\ApplicationLogRotation;
 use App\Services\Server\DiskCleaner\TruncateLogsTarget;
 
 /**
@@ -13,9 +14,15 @@ use App\Services\Server\DiskCleaner\TruncateLogsTarget;
  * where they have not lived since the 2026-09-22 move to one logs directory
  * per site — so no site's logs were ever cleaned, on any stack.
  *
- * Not `safe`: emptying a site's access and error logs removes its visitor and
- * error history, which is the site owner's record, not housekeeping. So it is
- * offered for a deliberate manual clean and never runs on a schedule.
+ * Schedulable since 2026-10-26 (Dipali, for servers whose disks fill up). It
+ * was manual-only because emptying a site's logs removes its visitor and error
+ * history; the keep choice is what makes a schedule acceptable — "keep 7 days"
+ * leaves every file still being written and only drops the rotated copies
+ * older than a week.
+ *
+ * The rotated copies are its own: {@see ApplicationLogRotation} keeps 14 days
+ * of up to 50 MB each beside the current files, and nothing else cleans them —
+ * `rotated_logs` only looks under /var/log.
  */
 class SiteLogsTarget extends TruncateLogsTarget
 {
@@ -24,9 +31,10 @@ class SiteLogsTarget extends TruncateLogsTarget
         return 'site_logs';
     }
 
-    public function safe(): bool
+    /** `access.log.1`, `error.log.3.gz`, and OpenLiteSpeed's dated copies. */
+    protected function archivePattern(): ?string
     {
-        return false;
+        return '*.log.*';
     }
 
     protected function locations(): array

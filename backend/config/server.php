@@ -2667,17 +2667,15 @@ return [
     |
     | Server-level disk-cleanup. `disk_path` is the filesystem reported by df.
     | `targets` are the pluggable CleanupTarget strategies (each detect-gated;
-    | only those whose dependency is present surface). Retention windows and
-    | the service-log glob set are config so they can be tuned per box.
+    | only those whose dependency is present surface). How much to keep is the
+    | user's choice per clean (KeepDays), not config; the service-log glob set
+    | is config so it can be tuned per box.
     |
     */
 
     'disk_path' => env('SERVER_DISK_PATH', '/'),
 
     'disk_cleaner' => [
-        'journal_days' => (int) env('SERVER_DISK_JOURNAL_DAYS', 7),
-        'tmp_days' => (int) env('SERVER_DISK_TMP_DAYS', 7),
-
         'targets' => [
             AptCacheTarget::class,
             AptOrphansTarget::class,

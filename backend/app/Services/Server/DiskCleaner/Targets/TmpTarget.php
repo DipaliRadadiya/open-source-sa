@@ -3,11 +3,26 @@
 namespace App\Services\Server\DiskCleaner\Targets;
 
 use App\Services\Server\DiskCleaner\AbstractCleanupTarget;
+use App\Services\Server\DiskCleaner\KeepDays;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Date;
 
-/** Old files in /tmp and /var/tmp (older than the configured age). */
+/**
+ * Old files in /tmp and /var/tmp: older than the keep choice, or — for delete
+ * all — every file nothing has written to in the last hour.
+ *
+ * Delete all is the one choice that does not mean "everything" here, because
+ * /tmp is not a store, it is where running work lives: the panel's own
+ * installers, staging and clone dumps write there (`installer_work_dir`,
+ * `WordPressStagingStrategy`, `DatabaseCopy`), and so do uploads and package
+ * builds in progress. An hour without a write is the line between a file in
+ * use and one that was left behind.
+ */
 class TmpTarget extends AbstractCleanupTarget
 {
+    /** How recently a file may have been written and still be treated as in use. */
+    private const IN_USE_MINUTES = 60;
+
     public function key(): string
     {
         return 'tmp';
@@ -30,23 +45,49 @@ class TmpTarget extends AbstractCleanupTarget
 
     public function paths(): array
     {
-        $days = (int) config('server.disk_cleaner.tmp_days', 7);
-
-        return array_map(fn (string $dir) => "{$dir}/* (older than {$days}d)", $this->dirs());
+        return array_map(fn (string $dir) => "{$dir}/*", $this->dirs());
     }
 
-    public function estimate(): int
+    public function estimate(?int $keepDays = null): int
     {
-        return $this->sumSizes($this->findArgs(delete: false));
+        $days = $keepDays ?? KeepDays::RECOMMENDED;
+
+        return $this->estimates([$days])[$days];
     }
 
-    public function clean(): ServerOpsResult
+    public function estimates(array $choices): array
     {
+        $files = $this->scan($this->findArgs());
+
+        return collect($choices)
+            ->mapWithKeys(fn (int $days) => [$days => $this->sumOlderThan($files, $this->cutoff($days))])
+            ->all();
+    }
+
+    /**
+     * `null` is the request from before the choice: the exact test it always
+     * ran (`-mtime +7`, which find reads as eight days or more), so a schedule
+     * nobody has touched since does not start deleting a day earlier.
+     */
+    public function clean(?int $keepDays = null): ServerOpsResult
+    {
+        $age = match ($keepDays) {
+            null => ['-mtime', '+'.KeepDays::RECOMMENDED],
+            KeepDays::DELETE_ALL => ['-mmin', '+'.self::IN_USE_MINUTES],
+            default => KeepDays::findAge($keepDays),
+        };
+
         return $this->serverOps->run(
-            $this->findArgs(delete: true),
+            [...$this->findArgs(), ...$age, '-delete'],
             ['feature' => 'disk_cleaner', 'op' => 'clean', 'target' => $this->key()],
             120,
         );
+    }
+
+    /** The estimate's side of the same line the clean draws. */
+    private function cutoff(int $days): int
+    {
+        return KeepDays::cutoff($days) ?? Date::now()->getTimestamp() - self::IN_USE_MINUTES * 60;
     }
 
     /**
@@ -65,13 +106,12 @@ class TmpTarget extends AbstractCleanupTarget
     /**
      * @return array<int, string>
      */
-    private function findArgs(bool $delete): array
+    private function findArgs(): array
     {
-        $days = (int) config('server.disk_cleaner.tmp_days', 7);
         // `-xdev` for the same reason as the rotated logs: /tmp is a common
         // mount point, and anything mounted under it belongs to something else.
-        $base = [
-            'find', ...$this->dirs(), '-xdev', '-type', 'f', '-mtime', "+{$days}",
+        return [
+            'find', ...$this->dirs(), '-xdev', '-type', 'f',
             // OpenLiteSpeed's runtime directory. Its pid file is written at
             // start and never touched again, so on a server up for more than a
             // week it is "old"; without it `lswsctrl restart` takes its "not
@@ -82,7 +122,5 @@ class TmpTarget extends AbstractCleanupTarget
             // OpenLiteSpeed runs.
             '!', '-path', $this->olsRuntimeDir().'/*',
         ];
-
-        return [...$base, ...($delete ? ['-delete'] : ['-printf', "%s\n"])];
     }
 }

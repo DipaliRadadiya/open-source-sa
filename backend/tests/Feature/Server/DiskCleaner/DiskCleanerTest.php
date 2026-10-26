@@ -232,69 +232,93 @@ it('still offers the package removal for a manual clean', function () {
 });
 
 describe('the journal estimate', function () {
-    it('counts only what a vacuum would actually remove', function () {
-        $ran = [];
+    /**
+     * Fake whose journal directory holds one open file and two archived ones,
+     * a fresh one and one 10 days old, answered per -name pattern the way
+     * find would.
+     */
+    function dcFakeJournal(ArrayObject $ran): void
+    {
+        $now = now()->getTimestamp();
+        $files = [
+            'system.journal' => [8192, $now],
+            'system@aa-01.journal' => [1024, $now - 3600],
+            'system@aa-02.journal' => [2048, $now - 10 * 86400],
+        ];
 
-        Process::fake(function ($process) use (&$ran) {
+        Process::fake(function ($process) use ($ran, $files) {
             if ($found = answerFind($process)) {
                 return $found;
             }
 
-            $args = ($process->command[0] ?? '') === 'sudo'
-                ? array_slice($process->command, 2)
-                : $process->command;
+            $args = ($process->command[0] ?? '') === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $ran->append($args);
 
-            $ran[] = $args;
+            if (($args[0] ?? '') === 'find' && ($args[1] ?? '') === '/var/log/journal') {
+                $pattern = $args[array_search('-name', $args, true) + 1];
 
+                return Process::result(output: collect($files)
+                    ->filter(fn ($file, string $name) => fnmatch($pattern, $name))
+                    ->map(fn (array $file) => "{$file[0]}\t{$file[1]}\n")
+                    ->implode(''));
+            }
+
+            // Deliberately large: if the estimate still asked journalctl,
+            // this is the number that would come back.
             return match ($args[0] ?? '') {
-                // Deliberately large: if the estimate still asked journalctl,
-                // this is the number that would come back and the assertion
-                // below would catch it.
                 'journalctl' => Process::result(output: 'Archived and active journals take up 200.0M in the file system.'),
-                'find' => Process::result(output: "1024\n2048\n"),
                 default => Process::result(exitCode: 0),
             };
         });
+    }
 
-        expect(app(JournalTarget::class)->estimate())->toBe(3072);
+    it('counts only what a vacuum would actually remove', function () {
+        $ran = new ArrayObject;
+        dcFakeJournal($ran);
 
-        $find = collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'find');
-
-        // Archived files only — `system.journal` is the open one and a vacuum
-        // never removes it — and only those past the retention window. The
-        // old estimate reported the whole journal, so the screen offered
-        // 200 MB and the button freed nothing.
-        expect($find)->not->toBeNull()
-            ->and($find)->toContain('/var/log/journal')
-            ->and($find)->toContain('*@*.journal*')
-            ->and($find)->toContain('+7');
+        // No choice = the week it always kept: only the archived file past 7
+        // days. `system.journal` is the open one and a time vacuum never
+        // removes it. The old estimate reported the whole journal, so the
+        // screen offered 200 MB and the button freed nothing.
+        expect(app(JournalTarget::class)->estimate())->toBe(2048);
     });
 
-    it('estimates against the same window it cleans with', function () {
-        config(['server.disk_cleaner.journal_days' => 30]);
+    it('prices every keep choice from what each would remove', function () {
+        $ran = new ArrayObject;
+        dcFakeJournal($ran);
 
-        $ran = [];
+        expect(app(JournalTarget::class)->estimates([0, 1, 7, 14]))->toBe([
+            0 => 8192 + 1024 + 2048,   // delete all rotates first: the open file goes too
+            1 => 2048,
+            7 => 2048,
+            14 => 0,
+        ]);
+    });
 
-        Process::fake(function ($process) use (&$ran) {
-            if ($found = answerFind($process)) {
-                return $found;
-            }
-
-            $ran[] = ($process->command[0] ?? '') === 'sudo'
-                ? array_slice($process->command, 2)
-                : $process->command;
-
-            return Process::result(output: "1024\n");
-        });
+    it('vacuums by the same window it estimated with', function () {
+        $ran = new ArrayObject;
+        dcFakeJournal($ran);
 
         $target = app(JournalTarget::class);
-        $target->estimate();
         $target->clean();
+        $target->clean(30);
 
-        // One number, two commands. Reading the config twice is how they drift.
-        expect(collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'find'))->toContain('+30')
-            ->and(collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'journalctl'))
-            ->toContain('--vacuum-time=30d');
+        $vacuums = collect($ran)->filter(fn (array $c) => $c[0] === 'journalctl')->values();
+
+        expect($vacuums[0])->toBe(['journalctl', '--vacuum-time=7d'])
+            ->and($vacuums[1])->toBe(['journalctl', '--vacuum-time=30d']);
+    });
+
+    it('deletes all by rotating and vacuuming to one byte, not by a time window', function () {
+        // `--vacuum-time=1s` races the rotate: the files it just sealed hold
+        // entries from a moment ago and can survive a one-second window.
+        $ran = new ArrayObject;
+        dcFakeJournal($ran);
+
+        app(JournalTarget::class)->clean(0);
+
+        expect(collect($ran)->first(fn (array $c) => $c[0] === 'journalctl'))
+            ->toBe(['journalctl', '--rotate', '--vacuum-size=1']);
     });
 });
 
@@ -311,8 +335,16 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             $ran?->append($process->command);
             $cmd = $process->command;
 
+            // Answered like find would: only the lines whose name matches the
+            // -name pattern, so a listing of current logs is not also handed
+            // back as their rotated copies.
             if ($cmd[0] === 'find' && isset($listings[$cmd[1]])) {
-                return Process::result(output: $listings[$cmd[1]]);
+                $pattern = $cmd[array_search('-name', $cmd, true) + 1];
+
+                return Process::result(output: collect(explode("\n", $listings[$cmd[1]]))
+                    ->filter(fn (string $line) => $line !== '' && fnmatch($pattern, basename($line)))
+                    ->map(fn (string $line) => $line."\n")
+                    ->implode(''));
             }
 
             if ($found = answerFind($process)) {
@@ -329,7 +361,7 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
         // /usr/local/lsws/logs is root:nogroup 0750. With glob() the scan
         // offered Redis and UFW and none of OpenLiteSpeed's 4 MB.
         config(['server.disk_cleaner.service_log_globs' => ['/usr/local/lsws/logs/*.log']]);
-        fakeRootOnly(['/usr/local/lsws/logs' => "1088468\t/usr/local/lsws/logs/error.log\n3082438\t/usr/local/lsws/logs/access.log\n"]);
+        fakeRootOnly(['/usr/local/lsws/logs' => "1088468\t1761400000\t/usr/local/lsws/logs/error.log\n3082438\t1761400000\t/usr/local/lsws/logs/access.log\n"]);
 
         $service = collect($this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/disk-cleaner')->assertOk()->json('categories'))->firstWhere('key', 'service_logs');
@@ -338,7 +370,7 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             ->and($service['reclaimable'])->toBe(1088468 + 3082438);
     });
 
-    it("cleans every site's own logs, as its own category, only when asked", function () {
+    it("cleans every site's own logs, as its own category", function () {
         // The cleaner looked in /usr/local/lsws/conf/vhosts/*/logs, where no
         // site's logs have lived since they moved into {home}/{slug}/logs.
         $user = SystemUser::create(['username' => 'shopuser', 'home_path' => '/home/shopuser', 'shell' => '/bin/bash']);
@@ -347,13 +379,12 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             'site_type' => 'wordpress', 'serving_profile' => 'php', 'php_version' => '8.4', 'status' => 'active', 'web_root' => '/',
         ]);
         $ran = new ArrayObject;
-        fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t/home/shopuser/shop/logs/access.log\n"], $ran);
+        fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t1761400000\t/home/shopuser/shop/logs/access.log\n"], $ran);
 
         $site = collect($this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/disk-cleaner')->assertOk()->json('categories'))->firstWhere('key', 'site_logs');
 
-        expect($site['paths'])->toBe(['/home/shopuser/shop/logs/access.log'])
-            ->and($site['safe'])->toBeFalse();
+        expect($site['paths'])->toBe(['/home/shopuser/shop/logs/access.log']);
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->postJson('/api/disk-cleaner/clean', ['categories' => ['site_logs']])->assertOk();
@@ -362,17 +393,21 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             ->toContain('truncate --no-create -s 0 /home/shopuser/shop/logs/access.log');
     });
 
-    it('never puts site logs on a schedule — that is visitor history', function () {
+    it('lets site logs go on a schedule (Dipali, 2026-10-26: servers whose disks fill up)', function () {
         $user = SystemUser::create(['username' => 'shopuser', 'home_path' => '/home/shopuser', 'shell' => '/bin/bash']);
         Application::forceCreate([
             'system_user_id' => $user->id, 'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
             'site_type' => 'wordpress', 'serving_profile' => 'php', 'php_version' => '8.4', 'status' => 'active', 'web_root' => '/',
         ]);
-        fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t/home/shopuser/shop/logs/access.log\n"]);
+        fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t1761400000\t/home/shopuser/shop/logs/access.log\n"]);
 
+        // It was manual-only because emptying a site's logs is its visitor
+        // history. The keep choice is what makes it acceptable unattended.
         $this->withHeader('Authorization', "Bearer {$this->token}")
-            ->putJson('/api/disk-cleaner/schedule', ['enabled' => true, 'frequency' => 'weekly', 'categories' => ['site_logs']])
-            ->assertUnprocessable();
+            ->putJson('/api/disk-cleaner/schedule', ['enabled' => true, 'frequency' => 'weekly', 'categories' => ['site_logs'], 'keep_days' => 7])
+            ->assertOk()
+            ->assertJsonPath('schedule.categories', ['site_logs'])
+            ->assertJsonPath('schedule.keep_days', 7);
     });
 });
 

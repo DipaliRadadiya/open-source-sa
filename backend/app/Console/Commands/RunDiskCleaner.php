@@ -46,7 +46,7 @@ class RunDiskCleaner extends Command
 
         if ($keys !== []) {
             try {
-                $action->execute($keys, 'scheduled');
+                $action->execute($keys, 'scheduled', $schedule->keep_days);
             } catch (Throwable $e) {
                 report($e);
             }

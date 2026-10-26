@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * and decides whether to run. There is intentionally NO cron file, so it can
  * never drift with the user-managed Cronjobs feature.
  */
-#[Fillable(['enabled', 'frequency', 'categories', 'threshold_percent', 'last_run_at'])]
+#[Fillable(['enabled', 'frequency', 'categories', 'threshold_percent', 'keep_days', 'last_run_at'])]
 class DiskCleanerSchedule extends Model
 {
     /** @var array<int, string> */
@@ -36,6 +36,7 @@ class DiskCleanerSchedule extends Model
             'enabled' => 'boolean',
             'categories' => 'array',
             'threshold_percent' => 'integer',
+            'keep_days' => 'integer',
             'last_run_at' => 'datetime',
         ];
     }
@@ -50,6 +51,7 @@ class DiskCleanerSchedule extends Model
             'frequency' => 'weekly',
             'categories' => [],
             'threshold_percent' => null,
+            'keep_days' => null,
         ]);
     }
 

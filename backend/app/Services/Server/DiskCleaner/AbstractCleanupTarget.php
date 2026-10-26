@@ -7,7 +7,7 @@ use App\Services\Server\ServerOps;
 
 /**
  * Shared plumbing for cleanup targets: holds ServerOps and provides estimate
- * helpers (sum `find -printf` sizes, `du`, and unit parsing). Concrete targets
+ * helpers (a sized and dated `find` scan, `du`, and unit parsing). Concrete targets
  * declare their key/group/method/commands.
  */
 abstract class AbstractCleanupTarget implements CleanupTarget
@@ -19,27 +19,68 @@ abstract class AbstractCleanupTarget implements CleanupTarget
         return true;
     }
 
+    public function keepsDays(): bool
+    {
+        return true;
+    }
+
     /**
-     * Sum the byte sizes emitted by a `find … -printf '%s\n'` command.
-     *
-     * @param  array<int, string>  $command
+     * One estimate per choice. Targets that can price every choice from a
+     * single listing override this; the default simply asks each time.
      */
-    protected function sumSizes(array $command): int
+    public function estimates(array $choices): array
+    {
+        $estimates = [];
+
+        foreach ($choices as $choice) {
+            $estimates[$choice] = $this->estimate($choice);
+        }
+
+        return $estimates;
+    }
+
+    /**
+     * Size and modification time of every file a `find` selects, in one run.
+     *
+     * @param  array<int, string>  $command  a `find` command without an action
+     * @param  string  $time  `%T@` (modified) or `%C@` (changed)
+     * @return array<int, array{0: int, 1: int}> [size, time] pairs
+     */
+    protected function scan(array $command, string $time = '%T@'): array
     {
         $output = $this->serverOps->run(
-            $command,
+            [...$command, '-printf', "%s\t{$time}\n"],
             ['feature' => 'disk_cleaner', 'op' => 'estimate', 'target' => $this->key()],
+            timeout: 60,
+            // A directory that is absent on this box is an empty answer.
+            expectedExitCodes: [1],
         )->output();
 
-        $sum = 0;
+        $files = [];
+
         foreach (preg_split('/\r?\n/', trim($output)) ?: [] as $line) {
-            $line = trim($line);
-            if (is_numeric($line)) {
-                $sum += (int) $line;
+            [$size, $stamp] = array_pad(explode("\t", trim($line), 2), 2, null);
+
+            if (is_numeric($size) && is_numeric($stamp)) {
+                $files[] = [(int) $size, (int) $stamp];
             }
         }
 
-        return $sum;
+        return $files;
+    }
+
+    /**
+     * Bytes in a scan that a keep choice removes: everything for delete all,
+     * otherwise what is older than the cutoff.
+     *
+     * @param  array<int, array{0: int, 1: int}>  $files
+     */
+    protected function sumOlderThan(array $files, ?int $cutoff): int
+    {
+        return array_sum(array_map(
+            fn (array $file) => $cutoff === null || $file[1] < $cutoff ? $file[0] : 0,
+            $files,
+        ));
     }
 
     protected function du(string $path): int

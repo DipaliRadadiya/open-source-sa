@@ -17,6 +17,7 @@ class DiskCleanerRunResource extends JsonResource
             'id' => $this->id,
             'trigger' => $this->trigger,
             'categories' => $this->categories ?? [],
+            'keep_days' => $this->keep_days,
             'freed' => $this->freed ?? [],
             'freed_total' => $this->freed_total,
             'freed_total_human' => Bytes::human((int) $this->freed_total),

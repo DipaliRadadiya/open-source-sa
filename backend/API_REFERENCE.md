@@ -5958,28 +5958,50 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 **Permission:** `disk_cleaner` (view)
 
 ```json
-{"disk": {"path": "/", "total": 107374182400, "used": 64424509440, "free": 42949672960, "percent": 60, "total_human": "100 GB", "used_human": "60 GB", "free_human": "40 GB"}, "categories": [{
+{"disk": {"path": "/", "total": 107374182400, "used": 64424509440, "free": 42949672960, "percent": 60, "total_human": "100 GB", "used_human": "60 GB", "free_human": "40 GB"},
+ "keep_days": {"choices": [0, 1, 3, 7, 14, 30], "recommended": 7},
+ "categories": [{
   "key": "apt_cache", "label": "APT Cache", "description": "Cached apt packages", "group": "package", "method": "command",
-  "paths": ["Cached apt packages"], "safe": true, "available": true, "reclaimable": 104857600, "reclaimable_human": "100 MB"
+  "paths": ["Cached apt packages"], "safe": true, "available": true, "reclaimable": 104857600, "reclaimable_human": "100 MB",
+  "keeps_days": true,
+  "reclaimable_by_keep_days": [{"keep_days": 0, "reclaimable": 104857600, "reclaimable_human": "100 MB"}, {"keep_days": 7, "reclaimable": 20971520, "reclaimable_human": "20 MB"}]
 }]}
 ```
 
 `method`: `delete | truncate | command`. `note` (localised) explains what each category does and what it keeps.
 
-**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is `apt_orphans` and `site_logs`: everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
+**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is only `apt_orphans` (`site_logs` became schedulable on 2026-10-26, see the keep choice below): everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
 
 `paths` is display-only and may include an exclusion note rather than a pattern — `rotated_logs` lists `"excluding /var/log/mysql"`, because database binary logs live there and are removed with `PURGE BINARY LOGS`, never by deleting files.
 
 ---
 
-**`site_logs`** (2026-09-23) empties every hosted site's current `*.log` files in `{home}/{slug}/logs`, on every web server — truncated, never deleted. It is its own category, not part of `service_logs`, because it removes the site owner's visitor and error history, so it is `safe: false`. Before this, the cleaner looked for site logs under `/usr/local/lsws/conf/vhosts/*/logs`, where they no longer live, and cleaned none. **Both log categories now list their files through the server**, so root-only directories such as `/usr/local/lsws/logs` are included — with PHP's own `glob()` they were silently missing.
+**`site_logs`** (2026-09-23) empties every hosted site's current `*.log` files in `{home}/{slug}/logs`, on every web server — truncated, never deleted. It is its own category, not part of `service_logs`, because it removes the site owner's visitor and error history. With a keep choice it also removes the site's **rotated copies** (`*.log.*` — the site's logrotate keeps 14 days of up to 50 MB each, and nothing cleaned them before). It was `safe: false` until 2026-10-26. Before this, the cleaner looked for site logs under `/usr/local/lsws/conf/vhosts/*/logs`, where they no longer live, and cleaned none. **Both log categories now list their files through the server**, so root-only directories such as `/usr/local/lsws/logs` are included — with PHP's own `glob()` they were silently missing.
+
+#### The keep choice (2026-10-26)
+
+One `keep_days` for the whole clean, the same on every category, on `POST /disk-cleaner/clean` and on the schedule: `0` = **delete all**, `1 | 3 | 7 | 14 | 30` = keep that many days. Any other value is a `422` on `keep_days`. `reclaimable_by_keep_days` prices every choice before anything runs — show it beside each option; `reclaimable` stays the clean **without** a choice.
+
+| Category | Delete all (`0`) | Keep N days | No choice (`null`, unchanged) |
+|---|---|---|---|
+| `journal` | rotate, then every archived file (`--rotate --vacuum-size=1`) | `--vacuum-time=Nd` | 7 days |
+| `rotated_logs` | every archive | archives older than N days | every archive |
+| `service_logs` | empty every current log | empty only logs not written to for N days | empty every current log |
+| `site_logs` | empty every current log **and** delete every rotated copy | rotated copies older than N days; current logs not written to for N days | empty current logs only |
+| `tmp` | every file **not written to in the last hour** (running installs/uploads live there) | files older than N days | 7 days |
+| `apt_cache` | `apt-get clean` | packages downloaded more than N days ago (by arrival, not apt's date stamp) | `apt-get clean` |
+| `apt_orphans` | — `keeps_days: false`: the choice is ignored, it always removes all | | |
+
+A log that is still being written keeps all its lines under "keep N days": its older days are in the rotated copies, and there is no safe way to cut lines out of a file a web server is appending to.
+
+**`null` (an older client, or a schedule saved before the choice) does exactly what each category did before**, so no existing server changes behaviour until somebody picks a value. Delete all **is** allowed on the schedule; pairing it with `threshold_percent` is the advice to give, not a rule.
 
 **A new schedule first runs at its first slot after being saved** (2026-09-23). It used to run within a minute of saving, whatever slot was chosen, while `next_run_at` said otherwise.
 
 ### POST `/disk-cleaner/clean`
 **Permission:** `disk_cleaner` (manage)
 
-**Request:** `{"categories": ["apt_cache", "journal"]}`
+**Request:** `{"categories": ["apt_cache", "journal"], "keep_days": 7}` — `keep_days` optional, see the keep choice above.
 
 **Response `200`:** `{"run_id": 12, "disk": {…refreshed…}, "cleaned": [{"key": "apt_cache", "freed": 104857600, "freed_human": "100 MB"}], "freed_total": 524288000, "freed_total_human": "500 MB"}`
 
@@ -5991,7 +6013,7 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 **Permission:** `disk_cleaner` (view)
 
 ```json
-{"schedule": {"enabled": true, "frequency": "daily", "categories": ["apt_cache", "journal"], "threshold_percent": 80, "last_run_at": "27-07-2026 03:00:00", "last_run_at_human": "2 days ago", "next_run_at": "30-07-2026 03:00:00", "next_run_at_human": "in 15 hours", "timezone": "UTC"}}
+{"schedule": {"enabled": true, "frequency": "daily", "categories": ["apt_cache", "journal"], "threshold_percent": 80, "keep_days": 7, "last_run_at": "27-07-2026 03:00:00", "last_run_at_human": "2 days ago", "next_run_at": "30-07-2026 03:00:00", "next_run_at_human": "in 15 hours", "timezone": "UTC"}}
 ```
 
 `null` if no schedule is set.
@@ -6003,7 +6025,7 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 ### PUT `/disk-cleaner/schedule`
 **Permission:** `disk_cleaner` (manage)
 
-**Request:** `{"enabled": true, "frequency": "daily", "categories": ["apt_cache"], "threshold_percent": 80}`
+**Request:** `{"enabled": true, "frequency": "daily", "categories": ["apt_cache"], "threshold_percent": 80, "keep_days": 0}` — `keep_days` optional (`null` = each category's old behaviour), `0` = delete all.
 
 **Response `200`:** `{"schedule": {...}}`
 
@@ -6032,7 +6054,7 @@ Manual + scheduled run history, paginated.
 ```json
 {"runs": [{
   "id": 1, "trigger": "scheduled",
-  "categories": ["apt_cache", "journal"],
+  "categories": ["apt_cache", "journal"], "keep_days": 7,
   "freed": {"apt_cache": 83886080, "journal": 20971520},
   "freed_total": 104857600, "freed_total_human": "100 MB",
   "status": "success",
