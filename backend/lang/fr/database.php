@@ -46,6 +46,7 @@ return [
         'restored' => 'La base de données a été restaurée depuis la sauvegarde automatique : rien n’a été perdu.',
         'untouched' => 'La base de données n’a pas été modifiée.',
         'not_restored' => 'La sauvegarde automatique n’a pas pu être restaurée d’elle-même. Elle se trouve dans la liste des exports : téléchargez-la et importez-la pour restaurer la base de données.',
+        'no_copy' => 'Aucune copie de sécurité n’a été faite (elle était désactivée pour cet import), donc rien n’a pu être restauré : la base de données peut maintenant être vide ou partiellement chargée.',
     ],
 
 ];

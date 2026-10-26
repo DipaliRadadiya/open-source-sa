@@ -28,7 +28,9 @@ use Throwable;
  *     here has changed nothing.
  *  2. **Back up** the database as it is now — an ordinary export, marked
  *     `import_safety`, kept a week (`exports:prune-import-safety`) or until
- *     the user deletes it.
+ *     the user deletes it. Skipped when the user unticks it (Dipali,
+ *     2026-10-26): faster and no extra disk, but a failed load then has
+ *     nothing to put back.
  *  3. **Replace**: drop, recreate, give the users back, load the file as the
  *     database's own user.
  *  4. On a failed load, **put the backup back** the same way, as the panel —
@@ -96,11 +98,15 @@ class ImportDatabase
             return;
         }
 
-        $import->update(['step' => 'backing_up']);
-        $safety = $this->backUp($import, $database);
+        $safety = null;
 
-        if ($safety === null) {
-            return;
+        if ($import->safety_copy) {
+            $import->update(['step' => 'backing_up']);
+            $safety = $this->backUp($import, $database);
+
+            if ($safety === null) {
+                return;
+            }
         }
 
         $import->update(['step' => 'importing']);
@@ -114,7 +120,7 @@ class ImportDatabase
             $reference = $e instanceof DatabaseOperationException ? $e->reference : null;
             $import->update(['step' => 'rolling_back']);
 
-            $restored = $this->putBack($database, $users, $safety);
+            $restored = $safety !== null && $this->putBack($database, $users, $safety);
 
             $this->fail($import, 'load_failed', $reference, $restored);
 

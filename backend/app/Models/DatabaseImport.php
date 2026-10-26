@@ -16,11 +16,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'database_id', 'database_name', 'engine', 'original_name', 'size_bytes', 'received_bytes',
-    'status', 'step', 'reason', 'reference', 'line', 'safety_export_id', 'restored', 'user_id',
+    'status', 'step', 'reason', 'reference', 'line', 'safety_export_id', 'safety_copy', 'restored', 'user_id',
     'started_at', 'finished_at',
 ])]
 class DatabaseImport extends Model
 {
+    /**
+     * Mirrors the column default, so a row made in code before it is saved and
+     * re-read says what the database will: an import takes its safety copy
+     * unless told not to.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['safety_copy' => true];
+
     protected function casts(): array
     {
         return [
@@ -29,6 +38,7 @@ class DatabaseImport extends Model
             'received_bytes' => 'integer',
             'line' => 'integer',
             'restored' => 'boolean',
+            'safety_copy' => 'boolean',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];
@@ -116,6 +126,9 @@ class DatabaseImport extends Model
         $outcome = match (true) {
             $this->restored => 'restored',
             in_array($this->step, [null, 'checking', 'backing_up'], true) => 'untouched',
+            // The user chose to skip the copy: there was nothing to put back,
+            // and pointing them at an export that does not exist would be worse.
+            ! $this->safety_copy => 'no_copy',
             default => 'not_restored',
         };
 

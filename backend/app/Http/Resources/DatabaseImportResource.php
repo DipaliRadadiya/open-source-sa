@@ -38,6 +38,7 @@ class DatabaseImportResource extends JsonResource
             // The automatic backup taken before anything was replaced; it is
             // also in the Exports list, as `purpose: import_safety`.
             'safety_export_id' => $this->safety_export_id,
+            'safety_copy' => (bool) $this->safety_copy,
             'requested_by' => $this->whenLoaded('user', fn () => $this->user ? [
                 'id' => $this->user->id,
                 'username' => $this->user->username,

@@ -46,6 +46,7 @@ return [
         'restored' => 'The database was put back from the automatic backup, so nothing was lost.',
         'untouched' => 'The database was not changed.',
         'not_restored' => 'The automatic backup could not be put back by itself. It is in the Exports list: download it and import it to restore the database.',
+        'no_copy' => 'No safety copy was taken (it was switched off for this import), so there was nothing to put back: the database may now be empty or partly loaded.',
     ],
 
 ];

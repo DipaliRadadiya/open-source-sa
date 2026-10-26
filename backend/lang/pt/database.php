@@ -46,6 +46,7 @@ return [
         'restored' => 'O banco de dados foi restaurado a partir do backup automático, então nada foi perdido.',
         'untouched' => 'O banco de dados não foi alterado.',
         'not_restored' => 'O backup automático não pôde ser restaurado sozinho. Ele está na lista de exportações: baixe-o e importe-o para recuperar o banco de dados.',
+        'no_copy' => 'Nenhuma cópia de segurança foi feita (estava desativada para esta importação), por isso não havia nada para restaurar: o banco de dados pode estar vazio ou carregado pela metade.',
     ],
 
 ];

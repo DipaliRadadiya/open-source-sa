@@ -23,6 +23,9 @@ class StartDatabaseImportRequest extends FormRequest
     {
         return [
             'confirm_replace' => ['accepted'],
+            // Copy the database first so a failed import can be put back.
+            // Absent = yes, as every import did before it could be skipped.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 

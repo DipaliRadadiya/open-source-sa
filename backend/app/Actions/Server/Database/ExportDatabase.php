@@ -9,6 +9,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Read-only export (dump) of a database to a managed exports dir. Non-
@@ -41,6 +42,10 @@ class ExportDatabase
         // and records the reason, so this stays a straight line.
         $this->manager->engine($database->engine)->dump($database->name, $path);
 
+        if ($this->compresses($export, $extension)) {
+            [$file, $path] = $this->compress($file, $path);
+        }
+
         $export->update([
             'file' => $file,
             'status' => ExportStatus::Completed,
@@ -59,5 +64,73 @@ class ExportDatabase
         );
 
         return $export->refresh();
+    }
+
+    /**
+     * A user's SQL export is handed over gzipped (Dipali, 2026-10-26):
+     * typically 5–10× smaller, and the import takes `.sql.gz` as it is.
+     *
+     * Not an import's safety copy. That one is loaded straight back with the
+     * engine's `restore()`, which reads plain SQL — compressed, the very copy
+     * meant to undo a failed import could not be put back. Mongo's archive is
+     * already gzipped by mongodump.
+     */
+    private function compresses(DatabaseExport $export, string $extension): bool
+    {
+        return $extension === 'sql' && $export->purpose !== DatabaseExport::PURPOSE_IMPORT_SAFETY;
+    }
+
+    /**
+     * Gzip the dump beside itself and drop the plain one, streamed so a dump
+     * larger than PHP's memory limit costs one buffer.
+     *
+     * A compression that fails keeps the plain dump: it is a complete export,
+     * and failing the whole export over its packaging would throw it away.
+     *
+     * @return array{0: string, 1: string} the file name and path to record
+     */
+    private function compress(string $file, string $path): array
+    {
+        $target = $path.'.gz';
+        $in = @fopen($path, 'rb');
+        $out = @gzopen($target, 'wb6');
+
+        try {
+            if ($in === false || $out === false) {
+                throw new RuntimeException('cannot open');
+            }
+
+            while (! feof($in)) {
+                $chunk = fread($in, 1024 * 1024);
+
+                // gzwrite reports a failed write (a full disk) as 0 or false.
+                if ($chunk === false || ($chunk !== '' && ! gzwrite($out, $chunk))) {
+                    throw new RuntimeException('cannot write');
+                }
+            }
+
+            $closed = gzclose($out);
+            $out = false;
+
+            if (! $closed) {
+                throw new RuntimeException('cannot finish');
+            }
+        } catch (RuntimeException) {
+            if ($out !== false) {
+                gzclose($out);
+            }
+
+            @unlink($target);
+
+            return [$file, $path];
+        } finally {
+            if (is_resource($in)) {
+                fclose($in);
+            }
+        }
+
+        @unlink($path);
+
+        return [$file.'.gz', $target];
     }
 }

@@ -87,6 +87,7 @@ return [
     'database.import_completed' => ':file importé dans :name, contenu remplacé',
     'database.import_failed' => 'Échec de l’importation de :file dans :name',
     'database.export_deleted' => 'A supprimé un export de :name',
+    'database.export_expired' => 'A supprimé un export expiré de :name',
     'role.created' => 'Rôle :name créé',
     'role.updated' => 'Rôle :name mis à jour',
     'role.deleted' => 'Rôle :name supprimé',

@@ -153,7 +153,11 @@ class DatabaseImportController extends Controller
             ]);
         }
 
-        $import->update(['status' => ImportStatus::Queued, 'received_bytes' => $import->size_bytes]);
+        $import->update([
+            'status' => ImportStatus::Queued,
+            'received_bytes' => $import->size_bytes,
+            'safety_copy' => $request->boolean('safety_copy', true),
+        ]);
 
         RunDatabaseImport::dispatch($import->id, $database->id);
 
