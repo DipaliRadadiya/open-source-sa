@@ -288,7 +288,9 @@ describe('the journal estimate', function () {
         dcFakeJournal($ran);
 
         expect(app(JournalTarget::class)->estimates([0, 1, 7, 14]))->toBe([
-            0 => 8192 + 1024 + 2048,   // delete all rotates first: the open file goes too
+            // Delete all: every archived file. The open one is rotated away
+            // too, but journald preallocates its replacement to the same size.
+            0 => 1024 + 2048,
             1 => 2048,
             7 => 2048,
             14 => 0,

@@ -48,8 +48,15 @@ class JournalTarget extends AbstractCleanupTarget
      * Archived files are the ones with `@` in the name — `system.journal` is
      * the open one and a time vacuum never removes it, `system@2cfa…-000657….journal`
      * is sealed. The trailing glob catches `.journal~`, which is a file journald
-     * gave up on and which a vacuum also collects. Delete all rotates first, so
-     * the open files are sealed and go too: its estimate is every file.
+     * gave up on and which a vacuum also collects.
+     *
+     * Delete all is priced as every archived file, whatever its age — not the
+     * open ones too. The rotate seals and removes them, but journald replaces
+     * each with a new file preallocated to the same 8 MB, so they free nothing
+     * net. Measured on a fresh box (2026-10-26): pricing every file offered
+     * 56 MB and the clean freed 24 MB, the size of the archived files. Open
+     * files left behind by an earlier machine id are not archived and no
+     * vacuum removes them either.
      *
      * The modification time is not an approximation here: an archived
      * journal's mtime is when it was last written, which is the same "newest
@@ -64,22 +71,11 @@ class JournalTarget extends AbstractCleanupTarget
 
     public function estimates(array $choices): array
     {
-        $all = in_array(KeepDays::DELETE_ALL, $choices, true)
-            ? $this->scan(['find', '/var/log/journal', '-type', 'f', '-name', '*.journal*'])
-            : [];
-        $archived = array_diff($choices, [KeepDays::DELETE_ALL]) !== []
-            ? $this->scan(['find', '/var/log/journal', '-type', 'f', '-name', '*@*.journal*'])
-            : [];
+        $archived = $this->scan(['find', '/var/log/journal', '-type', 'f', '-name', '*@*.journal*']);
 
-        $estimates = [];
-
-        foreach ($choices as $choice) {
-            $estimates[$choice] = $choice === KeepDays::DELETE_ALL
-                ? $this->sumOlderThan($all, null)
-                : $this->sumOlderThan($archived, KeepDays::cutoff($choice));
-        }
-
-        return $estimates;
+        return collect($choices)
+            ->mapWithKeys(fn (int $days) => [$days => $this->sumOlderThan($archived, KeepDays::cutoff($days))])
+            ->all();
     }
 
     /**
