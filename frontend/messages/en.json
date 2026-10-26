@@ -2814,6 +2814,21 @@
         "schedule": "Automatic"
       },
       "failed": "Failed"
+    },
+    "keep": {
+      "label": "How much to keep",
+      "hint": "Applies to every item. Anything newer than this is kept.",
+      "hintDeleteAll": "Applies to every item. Nothing is kept.",
+      "deleteAll": "Delete all",
+      "days": "{count, plural, one {Keep # day} other {Keep # days}}",
+      "recommended": "{label} (recommended)",
+      "defaultAsBefore": "Default (as before)",
+      "alwaysAll": "always removes all",
+      "confirmLine": "Choice: {choice}",
+      "deleteAllWarning": "Delete all removes every server and site log, including login and error history. This cannot be undone.",
+      "scheduleDeleteAllHint": "Delete all clears every log. Consider running it only when disk usage is above {percent}%.",
+      "useThreshold": "Use {percent}%",
+      "nothingAtChoice": "Nothing to clean with this choice. A shorter one may free more."
     }
   },
   "rebootBanner": {

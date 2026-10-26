@@ -18,6 +18,11 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InfoHint } from "@/components/ui/info-hint";
 import { MeasuredAt } from "@/components/disk-cleaner/measured-at";
+import { KeepSelect, useKeepLabel } from "@/components/disk-cleaner/keep-select";
+import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
+import { Caution } from "@/components/ui/caution";
+import { Label } from "@/components/ui/label";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import {
   Card,
@@ -29,8 +34,12 @@ import {
 } from "@/components/ui/card";
 
 // Nothing is pre-selected: a destructive action must be deliberate.
-export function CleanupPanel({ categories, canManage, measuredAt }) {
+export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const t = useTranslations("diskCleaner");
+  const keepLabel = useKeepLabel();
+  const { choices, recommended } = keepOptions(keepDays);
+  // One choice for the whole clean; every size, the split and the total follow it.
+  const [keep, setKeep] = useKeepChoice();
   const { refreshAndWait } = useRefresh();
   const [selected, setSelected] = useState(() => new Set());
   const [confirming, setConfirming] = useState(false);
@@ -39,24 +48,29 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
   const [showPaths, setShowPaths] = useState(false);
   const [error, setError] = useState(null);
 
-  // Rows with nothing to reclaim are listed but cannot be selected.
-  const cleanable = useMemo(
-    () => categories.filter((c) => c.available && c.reclaimable > 0),
-    [categories],
+  // Each row priced for the chosen keep. The no-choice `reclaimable` would hide real work:
+  // a journal at 0 B for "keep 7 days" can hold 24 MB for "delete all".
+  const priced = useMemo(
+    () =>
+      categories
+        .filter((c) => c.available)
+        .map((c) => {
+          const size = sizeFor(c, keep);
+          return { ...c, bytes: size.bytes, human: size.human };
+        }),
+    [categories, keep],
   );
+
+  // Rows with nothing to reclaim under this choice are listed but cannot be selected.
+  const cleanable = useMemo(() => priced.filter((c) => c.bytes > 0), [priced]);
 
   // By measured size, not the API's category grouping.
-  const cleanableRows = useMemo(
-    () => [...cleanable].sort((a, b) => b.reclaimable - a.reclaimable),
-    [cleanable],
-  );
-  const cleanRows = useMemo(
-    () => categories.filter((c) => c.available && !(c.reclaimable > 0)),
-    [categories],
-  );
+  const cleanableRows = useMemo(() => [...cleanable].sort((a, b) => b.bytes - a.bytes), [cleanable]);
+  const cleanRows = useMemo(() => priced.filter((c) => !(c.bytes > 0)), [priced]);
 
+  // A ticked row that has nothing to free under a new choice drops out of the selection.
   const chosen = cleanable.filter((c) => selected.has(c.key));
-  const chosenBytes = chosen.reduce((total, c) => total + c.reclaimable, 0);
+  const chosenBytes = chosen.reduce((total, c) => total + c.bytes, 0);
   const riskyChosen = chosen.filter((c) => !c.safe);
 
   function toggle(key) {
@@ -80,7 +94,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
     setPending(true);
     setError(null);
     try {
-      const response = await cleanDisk(chosen.map((c) => c.key));
+      const response = await cleanDisk(chosen.map((c) => c.key), keep);
       const parsed = cleanResultSchema.safeParse(response.data);
       // What the disk actually freed; sizes are re-read first so the result never sits beside stale ones.
       await refreshAndWait();
@@ -130,6 +144,25 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
 
           {/* No gap between list and footer: space-y left an empty strip above the footer band. */}
           <CardContent className="px-0 pb-0">
+            {/* Always shown: when nothing is left at "keep 7 days", Delete all may still free space. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3">
+              <Label htmlFor="clean-keep" className="text-sm font-medium">
+                {t("keep.label")}
+              </Label>
+              <KeepSelect
+                id="clean-keep"
+                value={keep}
+                onChange={(next) => {
+                  setKeep(next);
+                  setResult(null);
+                }}
+                choices={choices}
+                recommended={recommended}
+                className="h-9 w-auto min-w-52"
+              />
+              <span className="min-w-48 flex-1 text-xs text-muted-foreground">{t(keep === 0 ? "keep.hintDeleteAll" : "keep.hint")}</span>
+            </div>
+
             {result ? (
               // m-4, not mb-4: the header is a bordered band, so without a top margin the note
               // sat flush against it.
@@ -153,7 +186,15 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
             ) : null}
 
             {nothingToClean ? (
-              <EmptyState compact icon={Sparkles} badge={null} title={t("list.allClean")} />
+              <div className="border-t">
+                {/* Under a keep choice, "all tidy" is not true: a shorter one may still free space. */}
+                <EmptyState
+                  compact
+                  icon={Sparkles}
+                  badge={null}
+                  title={keep ? t("keep.nothingAtChoice") : t("list.allClean")}
+                />
+              </div>
             ) : (
               <div className="border-t">
                 {/* One control, both directions; half-ticked while only some are chosen. */}
@@ -222,8 +263,14 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                   ) : null}
                                 </div>
 
-                                <span className="shrink-0 text-sm font-semibold tabular-nums">
-                                  {category.reclaimable_human ?? "0 B"}
+                                <span className="flex shrink-0 flex-col items-end">
+                                  <span className="text-sm font-semibold tabular-nums">
+                                    {category.human ?? humanBytes(category.bytes)}
+                                  </span>
+                                  {/* The choice does not apply here: unused packages go whole. */}
+                                  {category.keeps_days === false && keep !== 0 ? (
+                                    <span className="text-xs text-muted-foreground">{t("keep.alwaysAll")}</span>
+                                  ) : null}
                                 </span>
                               </div>
 
@@ -327,7 +374,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-sm font-medium">{category.label}</span>
                     <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                      {category.reclaimable_human}
+                      {category.human ?? humanBytes(category.bytes)}
                     </span>
                   </div>
                   {/* One path per line, wrapping: a truncated path misleads. */}
@@ -350,6 +397,17 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
               <span className="tabular-nums">{humanBytes(chosenBytes)}</span>
             </div>
           </div>
+
+          <p className="text-sm">
+            {t("keep.confirmLine", { choice: keepLabel(keep, recommended) })}
+          </p>
+
+          {/* Delete all also removes the login and error history people go back to after an incident. */}
+          {keep === 0 ? (
+            <Caution tone="destructive" size="md">
+              <p>{t("keep.deleteAllWarning")}</p>
+            </Caution>
+          ) : null}
   
           {/* Named, not counted. */}
           {riskyChosen.length ? (

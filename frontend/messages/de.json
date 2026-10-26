@@ -2814,6 +2814,21 @@
         "schedule": "Automatisch"
       },
       "failed": "Fehlgeschlagen"
+    },
+    "keep": {
+      "label": "Wie viel behalten",
+      "hint": "Gilt für jeden Eintrag. Alles Neuere bleibt erhalten.",
+      "hintDeleteAll": "Gilt für jeden Eintrag. Es wird nichts behalten.",
+      "deleteAll": "Alles löschen",
+      "days": "{count, plural, one {# Tag behalten} other {# Tage behalten}}",
+      "recommended": "{label} (empfohlen)",
+      "defaultAsBefore": "Standard (wie bisher)",
+      "alwaysAll": "entfernt immer alles",
+      "confirmLine": "Auswahl: {choice}",
+      "deleteAllWarning": "Alles löschen entfernt alle Server- und Website-Logs, einschließlich Anmelde- und Fehlerverlauf. Das kann nicht rückgängig gemacht werden.",
+      "scheduleDeleteAllHint": "Alles löschen leert alle Logs. Erwägen Sie, es nur auszuführen, wenn die Festplattennutzung über {percent} % liegt.",
+      "useThreshold": "{percent} % verwenden",
+      "nothingAtChoice": "Mit dieser Auswahl gibt es nichts zu bereinigen. Eine kürzere kann mehr freigeben."
     }
   },
   "rebootBanner": {

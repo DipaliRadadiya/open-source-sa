@@ -2814,6 +2814,21 @@
         "schedule": "Automático"
       },
       "failed": "Falhou"
+    },
+    "keep": {
+      "label": "Quanto manter",
+      "hint": "Vale para todos os itens. Tudo o que for mais recente é mantido.",
+      "hintDeleteAll": "Vale para todos os itens. Nada é mantido.",
+      "deleteAll": "Excluir tudo",
+      "days": "{count, plural, one {Manter # dia} other {Manter # dias}}",
+      "recommended": "{label} (recomendado)",
+      "defaultAsBefore": "Padrão (como antes)",
+      "alwaysAll": "sempre remove tudo",
+      "confirmLine": "Escolha: {choice}",
+      "deleteAllWarning": "Excluir tudo remove todos os logs do servidor e dos sites, incluindo o histórico de logins e de erros. Isso não pode ser desfeito.",
+      "scheduleDeleteAllHint": "Excluir tudo esvazia todos os logs. Considere executá-lo só quando o uso do disco passar de {percent}%.",
+      "useThreshold": "Usar {percent}%",
+      "nothingAtChoice": "Nada a limpar com esta escolha. Uma mais curta pode liberar mais."
     }
   },
   "rebootBanner": {
