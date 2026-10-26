@@ -135,7 +135,3 @@ Schedule::command('backups:prune-downloads')->everyFiveMinutes()->withoutOverlap
 // them. Kept a week, then removed — never the copy of an import that failed
 // and was not put back (PruneImportSafetyExports).
 Schedule::command('exports:prune-import-safety')->daily()->withoutOverlapping(120);
-
-// Exports the user asked to be deleted after 1–30 days. Hourly, so a file goes
-// within the hour it was promised to, not up to a day later.
-Schedule::command('exports:prune-expired')->hourly()->withoutOverlapping(60);

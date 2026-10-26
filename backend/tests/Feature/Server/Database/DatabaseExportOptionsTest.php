@@ -2,7 +2,6 @@
 
 use App\Actions\Server\Database\ExportDatabase;
 use App\Enums\ExportStatus;
-use App\Models\ActivityLog;
 use App\Models\Database;
 use App\Models\DatabaseExport;
 use App\Models\User;
@@ -16,9 +15,8 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Export options (Dipali, 2026-10-26): an export can delete itself after
- * 1–30 days (default: kept until the user deletes it), and a user's SQL export
- * is gzipped.
+ * Export options (Dipali, 2026-10-26): a user's SQL export is gzipped, and an
+ * export stays until the user deletes it — nothing deletes one on a schedule.
  */
 
 uses(RefreshDatabase::class);
@@ -68,71 +66,29 @@ function optionsExport(array $attributes = []): DatabaseExport
     ]);
 }
 
-describe('how long an export is kept', function () {
+describe('an export is the user\'s to delete', function () {
 
     beforeEach(fn () => Queue::fake());
 
-    it('keeps an export until the user deletes it unless asked otherwise', function () {
-        $this->postJson("/api/databases/{$this->db->id}/export")
+    /*
+     * Dipali, 2026-10-26: exports are not deleted on a schedule. A choice of
+     * days was built and taken back the same day; an old client still sending
+     * one gets an ordinary export that stays until the user deletes it.
+     */
+    it('keeps every export until the user deletes it, whatever a client sends', function () {
+        $this->postJson("/api/databases/{$this->db->id}/export", ['keep_days' => 1])
             ->assertStatus(202)
-            ->assertJsonPath('export.expires_at', null);
+            ->assertJsonMissingPath('export.expires_at');
+
+        expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();
     });
 
-    it('records when an export should delete itself', function () {
-        Carbon::setTestNow(Carbon::parse('2026-10-26 10:00:00'));
+    it('has no scheduled job that deletes exports', function () {
+        $commands = collect(app(Schedule::class)->events())->map(fn ($e) => (string) $e->command);
 
-        $this->postJson("/api/databases/{$this->db->id}/export", ['keep_days' => 7])
-            ->assertStatus(202)
-            ->assertJsonPath('export.expires_at', '02-11-2026 10:00:00');
-    });
-
-    it('accepts only the listed periods', function (mixed $keepDays) {
-        $this->postJson("/api/databases/{$this->db->id}/export", ['keep_days' => $keepDays])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('keep_days');
-
-        expect(DatabaseExport::count())->toBe(0);
-    })->with(['zero' => [0], 'not listed' => [5], 'too long' => [365], 'not a number' => ['week']]);
-
-    it('refuses a read-only user even with a period', function () {
-        $viewer = User::factory()->create();
-        grantPermission($viewer, 'database');
-        $this->actingAs($viewer);
-
-        $this->postJson("/api/databases/{$this->db->id}/export", ['keep_days' => 7])->assertForbidden();
-    });
-});
-
-describe('deleting expired exports', function () {
-
-    it('removes an export and its file once its date has passed, and logs it', function () {
-        File::ensureDirectoryExists(config('server.databases.export_dir'));
-        $expired = optionsExport(['status' => ExportStatus::Completed, 'file' => 'old.sql.gz', 'expires_at' => now()->subMinute()]);
-        file_put_contents(config('server.databases.export_dir').'/old.sql.gz', 'x');
-
-        $this->artisan('exports:prune-expired')->assertExitCode(0);
-
-        expect(DatabaseExport::find($expired->id))->toBeNull()
-            ->and(file_exists(config('server.databases.export_dir').'/old.sql.gz'))->toBeFalse()
-            ->and(ActivityLog::where('type', 'database')->where('action', 'export_expired')->exists())->toBeTrue();
-    });
-
-    it('leaves exports that are not due, kept forever, or still being written', function () {
-        $notDue = optionsExport(['status' => ExportStatus::Completed, 'expires_at' => now()->addHour()]);
-        $forever = optionsExport(['status' => ExportStatus::Completed, 'expires_at' => null]);
-        $running = optionsExport(['status' => ExportStatus::Running, 'expires_at' => now()->subDay()]);
-
-        $this->artisan('exports:prune-expired')->assertExitCode(0);
-
-        expect(DatabaseExport::pluck('id')->sort()->values()->all())
-            ->toBe(collect([$notDue->id, $forever->id, $running->id])->sort()->values()->all());
-    });
-
-    it('runs every hour, so a file goes within the hour it was promised to', function () {
-        $event = collect(app(Schedule::class)->events())
-            ->first(fn ($e) => str_contains((string) $e->command, 'exports:prune-expired'));
-
-        expect($event)->not->toBeNull()->and($event->expression)->toBe('0 * * * *');
+        expect($commands->filter(fn (string $c) => str_contains($c, 'exports:prune-expired')))->toBeEmpty()
+            // The import's own safety copy keeps its week (RC-14) — that one is the panel's, not the user's.
+            ->and($commands->contains(fn (string $c) => str_contains($c, 'exports:prune-import-safety')))->toBeTrue();
     });
 });
 
@@ -192,13 +148,21 @@ describe('compressed exports', function () {
 });
 
 it('adds and removes its columns cleanly', function () {
-    $migration = require database_path('migrations/2026_10_26_000002_add_export_expiry_and_import_safety_copy.php');
+    $add = require database_path('migrations/2026_10_26_000002_add_export_expiry_and_import_safety_copy.php');
+    $drop = require database_path('migrations/2026_10_26_000003_drop_expires_at_from_database_exports.php');
 
-    $migration->down();
-    expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse()
-        ->and(Schema::hasColumn('database_imports', 'safety_copy'))->toBeFalse();
+    $drop->down();
+    expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeTrue();
+    $drop->up();
+    expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();
 
-    $migration->up();
-    expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeTrue()
-        ->and(Schema::hasColumn('database_imports', 'safety_copy'))->toBeTrue();
+    // The earlier migration still runs in order on a fresh install: down
+    // with the column already dropped by its successor is re-added first.
+    $drop->down();
+    $add->down();
+    expect(Schema::hasColumn('database_imports', 'safety_copy'))->toBeFalse();
+    $add->up();
+    $drop->up();
+    expect(Schema::hasColumn('database_imports', 'safety_copy'))->toBeTrue()
+        ->and(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();
 });

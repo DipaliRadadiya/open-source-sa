@@ -87,7 +87,6 @@ return [
     'database.import_completed' => 'Importou :file em :name, substituindo o conteúdo',
     'database.import_failed' => 'A importação de :file em :name falhou',
     'database.export_deleted' => 'Eliminou uma exportação de :name',
-    'database.export_expired' => 'Eliminou uma exportação expirada de :name',
     'role.created' => 'Função :name criada',
     'role.updated' => 'Função :name atualizada',
     'role.deleted' => 'Função :name excluída',

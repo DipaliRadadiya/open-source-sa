@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'database_id', 'database_name', 'engine', 'purpose', 'file', 'status',
-    'reason', 'reference', 'size_bytes', 'user_id', 'started_at', 'finished_at', 'expires_at',
+    'reason', 'reference', 'size_bytes', 'user_id', 'started_at', 'finished_at',
 ])]
 class DatabaseExport extends Model
 {
@@ -23,7 +23,6 @@ class DatabaseExport extends Model
             'size_bytes' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
-            'expires_at' => 'datetime',
         ];
     }
 
@@ -34,14 +33,6 @@ class DatabaseExport extends Model
      */
     /** The copy an import takes before it replaces anything (DatabaseImport). */
     public const PURPOSE_IMPORT_SAFETY = 'import_safety';
-
-    /**
-     * How long a user may ask an export to be kept before it deletes itself
-     * (Dipali, 2026-10-26). Not asking keeps it until the user deletes it.
-     *
-     * @var array<int, int>
-     */
-    public const KEEP_DAYS = [1, 3, 7, 14, 30];
 
     public const IN_FLIGHT = [
         ExportStatus::Queued->value,

@@ -93,7 +93,6 @@ return [
     'database.import_completed' => 'Imported :file into :name, replacing its contents',
     'database.import_failed' => 'Importing :file into :name failed',
     'database.export_deleted' => 'Deleted an export of :name',
-    'database.export_expired' => 'Deleted an expired export of :name',
     'role.created' => 'Created role :name',
     'role.updated' => 'Updated role :name',
     'role.deleted' => 'Deleted role :name',

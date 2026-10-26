@@ -4657,9 +4657,9 @@ Dump a database to a file. Queued.
 
 `manage`, not the read tier: this copies an entire database off the server, which is the most data-revealing thing this feature does.
 
-**Request (optional, 2026-10-26):** `{"keep_days": 7}` — delete the export by itself after `1 | 3 | 7 | 14 | 30` days. **Absent or `null` = kept until the user deletes it** (the default, and what every earlier export does). Anything else: `422` on `keep_days`. The date is counted from the request and returned as `expires_at`; the hourly `exports:prune-expired` removes the file and the row (activity `database.export_expired`, no actor) — never one still queued or running.
+**No request body.** An export stays until the user deletes it (`DELETE /databases/exports/{export}`) — nothing deletes one on a schedule (Dipali, 2026-10-26; a `keep_days` option was added and removed the same day, and a client still sending it is ignored).
 
-**Response `202`:** `{"export": {"id": 1, "status": "queued", "file": null, "expires_at": "02-11-2026 10:00:00", …}}`
+**Response `202`:** `{"export": {"id": 1, "status": "queued", "file": null}}`
 
 Poll `GET /databases/exports`.
 
@@ -4745,14 +4745,11 @@ All exports, newest first. Includes in-flight rows.
   "download_url": "https://panel.example.com/api/databases/exports/shop_db-2026-07-28-100000.sql.gz",
   "requested_by": {"id": 1, "username": "admin"},
   "created_at": "28-07-2026 10:00:00", "created_at_human": "Yesterday",
-  "finished_at": "28-07-2026 10:00:12", "finished_at_human": "Yesterday",
-  "expires_at": null, "expires_at_human": null
+  "finished_at": "28-07-2026 10:00:12", "finished_at_human": "Yesterday"
 }]}
 ```
 
 The database name is `database`, not `database_name`.
-
-`expires_at` (2026-10-26): when the export deletes itself; `null` = kept until the user deletes it. Show it as *"Deletes on …"*. Import safety copies keep their own 7-day rule above and have `expires_at: null`.
 
 **`available` is not the same as `status: "completed"`** — it also checks the file is still on disk. A retention sweep or a manual delete leaves a completed row whose file is gone; render the download button off `available`, and `download_url` is null in exactly that case.
 

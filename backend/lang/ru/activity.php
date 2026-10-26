@@ -87,7 +87,6 @@ return [
     'database.import_completed' => ':file импортирован в :name, содержимое заменено',
     'database.import_failed' => 'Импорт :file в :name не удался',
     'database.export_deleted' => 'Удалил экспорт базы :name',
-    'database.export_expired' => 'Удалён истёкший экспорт базы :name',
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',
