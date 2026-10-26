@@ -131,7 +131,9 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
           {/* No gap between list and footer: space-y left an empty strip above the footer band. */}
           <CardContent className="px-0 pb-0">
             {result ? (
-              <div className="mx-4 mb-4 flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
+              // m-4, not mb-4: the header is a bordered band, so without a top margin the note
+              // sat flush against it.
+              <div className="m-4 flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                 <Check className="mt-0.5 size-4 shrink-0 text-success" />
                 <div className="space-y-1">
                   <p className="font-medium">

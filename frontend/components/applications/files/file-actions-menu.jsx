@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { fileDownloadUrl } from "@/lib/api/files";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
+import { useServerPath } from "@/components/applications/files/files-root-context";
 
 const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/i;
 
@@ -29,6 +30,7 @@ export function FileActionItems({
 }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
+  const { toServerPath } = useServerPath();
   const symlink = file.type === "symlink";
   const symlinkReason = symlink ? t("symlinkHint") : null;
   const canWrite = canManage;
@@ -39,7 +41,7 @@ export function FileActionItems({
 
   async function copyPath() {
     try {
-      await navigator.clipboard.writeText(file.path);
+      await navigator.clipboard.writeText(toServerPath(file.path));
       toast.success(t("actions.pathCopied"));
     } catch {
       toast.error(tc("copyFailed"));

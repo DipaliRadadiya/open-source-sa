@@ -12,11 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FileActionItems } from "@/components/applications/files/file-actions-menu";
+import { useServerPath } from "@/components/applications/files/files-root-context";
 
 
 export function FileRowActions({ file, appId, canManage, onAction }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
+  const { toServerPath } = useServerPath();
   // The API refuses every symlink action except delete, so the others are shown
   // disabled with the reason, not hidden.
   const symlink = file.type === "symlink";
@@ -27,7 +29,7 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
 
   async function copyPath() {
     try {
-      await navigator.clipboard.writeText(file.path);
+      await navigator.clipboard.writeText(toServerPath(file.path));
       toast.success(t("actions.pathCopied"));
     } catch {
       toast.error(tc("copyFailed"));
