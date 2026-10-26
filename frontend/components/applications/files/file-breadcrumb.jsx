@@ -2,6 +2,7 @@ import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Folder, ChevronRight } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
+import { useServerPath } from "@/components/applications/files/files-root-context";
 
 function href(appId, segments, upTo) {
   const path = segments.slice(0, upTo).join("/");
@@ -11,6 +12,7 @@ function href(appId, segments, upTo) {
 // In-page path navigator; collapses the middle once a path is deep enough to wrap.
 export function FileBreadcrumb({ appId, path }) {
   const t = useTranslations("applications.files");
+  const { root, toServerPath } = useServerPath();
   const segments = path ? path.split("/").filter(Boolean) : [];
   const collapsed = segments.length > 4;
   const visible = collapsed
@@ -57,8 +59,8 @@ export function FileBreadcrumb({ appId, path }) {
           </span>
         );
       })}
-      {/* Nothing to copy at the root: every relative path is relative to it. */}
-      {path ? <CopyButton value={path} label={t("actions.copyPath")} className="ml-0.5" /> : null}
+      {/* At the root a relative path would be empty, so it is copyable only as a server path. */}
+      {path || root ? <CopyButton value={toServerPath(path)} label={t("actions.copyPath")} className="ml-0.5" /> : null}
     </nav>
   );
 }

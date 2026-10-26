@@ -13,6 +13,8 @@ import { HIDDEN_COOKIE, SORT_COOKIE, parseSort, resolveShowHidden } from "@/lib/
 import { getTrash } from "@/lib/applications/get-trash";
 import { getBreakdown } from "@/lib/applications/get-breakdown";
 import { FilesPanel } from "@/components/applications/files/files-panel";
+import { FilesRootProvider } from "@/components/applications/files/files-root-context";
+import { filesRoot } from "@/lib/files/server-path";
 import { TrashPanel } from "@/components/applications/files/trash-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -158,7 +160,8 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : (
         /* Keyed on path so a folder change drops the old folder's selection and dialogs.
            `showHidden` deliberately does not remount, so a selection survives the toggle. */
-        <FilesPanel
+        <FilesRootProvider value={filesRoot(application)}>
+          <FilesPanel
             key={filesResult.path}
             appId={id}
             initialPath={filesResult.path}
@@ -172,6 +175,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             servingProfile={application.serving_profile}
             openName={openName}
           />
+        </FilesRootProvider>
       )}
     </div>
   );
