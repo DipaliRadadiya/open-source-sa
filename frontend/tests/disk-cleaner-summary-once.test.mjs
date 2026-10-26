@@ -36,5 +36,6 @@ test("with a schedule on, the tile still says when it fires", () => {
   // 13 Oct: the badge row became a compact tile (Krishna: too much empty space). The
   // tile keeps the half that answers "will it run": next run, and the disk threshold.
   assert.match(code, /nextRunLine \?\?/);
-  assert.match(code, /whenLine,\s*\]\s*\.filter\(Boolean\)/);
+  // 26 Oct: the keep choice follows the threshold ("Default (as before)" for old schedules).
+  assert.match(code, /whenLine,\s*schedule\?\.enabled \? keepLabel\(schedule\.keep_days \?\? null\) : null,\s*\]\s*\.filter\(Boolean\)/);
 });

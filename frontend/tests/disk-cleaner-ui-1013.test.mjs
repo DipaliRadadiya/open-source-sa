@@ -26,8 +26,9 @@ test("cleanable items are tiles, two across when there is room, size beside the 
   assert.match(panel, /grid grid-cols-1 gap-3 @2xl\/items:grid-cols-2/);
   const tile = panel.slice(panel.indexOf("cleanableRows.map"), panel.indexOf("cleanRows.length ?"));
   // The size sits in the same row as the name, inside the tile.
-  assert.ok(tile.indexOf("category.label") < tile.indexOf("reclaimable_human"));
-  assert.ok(tile.indexOf("reclaimable_human") < tile.indexOf("category.description"));
+  // The size is the one for the chosen keep (26 Oct), not the no-choice reclaimable_human.
+  assert.ok(tile.indexOf("category.label") < tile.indexOf("category.human"));
+  assert.ok(tile.indexOf("category.human") < tile.indexOf("category.description"));
 });
 
 test("the top row is three compact tiles, as on Services", () => {
@@ -85,7 +86,7 @@ test("schedule form: a threshold list, capitalised options, hidden settings whil
   assert.match(schedule, /\{!enabled \? \(\s*<p className="-mt-3 text-xs text-muted-foreground">/);
   // Whole row ticks, biggest first like the page.
   assert.match(schedule, /htmlFor=\{`schedule-\$\{category\.key\}`\}/);
-  assert.match(schedule, /\.sort\(\(a, b\) => \(b\.reclaimable \?\? 0\) - \(a\.reclaimable \?\? 0\)\)/);
+  assert.match(schedule, /\.sort\(\(a, b\) => b\.size\.bytes - a\.size\.bytes\)/);
   for (const locale of LOCALES) {
     const s = JSON.parse(read(`messages/${locale}.json`)).diskCleaner.schedule;
     assert.match(s.thresholdOver, /\{percent\}/, locale);

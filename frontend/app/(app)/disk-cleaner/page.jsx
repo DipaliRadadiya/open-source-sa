@@ -13,6 +13,7 @@ import { RunsCard } from "@/components/disk-cleaner/runs-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +47,10 @@ export default async function DiskCleanerPage({ searchParams }) {
   if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const categories = data.categories ?? [];
-  const cleanable = categories.filter((category) => category.available && category.reclaimable > 0);
-  const reclaimable = cleanable.reduce((total, category) => total + category.reclaimable, 0);
+  // Priced at the recommended keep, the choice the list below opens on.
+  const { recommended } = keepOptions(data.keep_days);
+  const cleanable = categories.filter((category) => category.available && sizeFor(category, recommended).bytes > 0);
+  const reclaimable = cleanable.reduce((total, category) => total + sizeFor(category, recommended).bytes, 0);
 
   return (
     <div className="space-y-6">
@@ -64,12 +67,13 @@ export default async function DiskCleanerPage({ searchParams }) {
               reclaimableHuman={humanBytes(reclaimable)}
               reclaimableCount={cleanable.length}
             />
-            <ScheduleCard schedule={schedule} categories={categories} canManage={canManage} />
+            <ScheduleCard schedule={schedule} categories={categories} keepDays={data.keep_days} canManage={canManage} />
           </div>
         </div>
 
         <CleanupPanel
           categories={categories}
+          keepDays={data.keep_days}
           canManage={canManage}
           measuredAt={new Date().toISOString()}
         />

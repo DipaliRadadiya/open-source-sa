@@ -2814,6 +2814,19 @@
         "schedule": "Automatique"
       },
       "failed": "Échec"
+    },
+    "keep": {
+      "label": "Ce qu'il faut conserver",
+      "hint": "S'applique à chaque élément. Tout ce qui est plus récent est conservé.",
+      "deleteAll": "Tout supprimer",
+      "days": "{count, plural, one {Conserver # jour} other {Conserver # jours}}",
+      "recommended": "{label} (recommandé)",
+      "defaultAsBefore": "Par défaut (comme avant)",
+      "alwaysAll": "supprime toujours tout",
+      "confirmLine": "Choix : {choice}",
+      "deleteAllWarning": "Tout supprimer efface tous les journaux du serveur et des sites, y compris l'historique des connexions et des erreurs. Action irréversible.",
+      "scheduleDeleteAllHint": "Tout supprimer vide tous les journaux. Envisagez de ne l'exécuter que lorsque l'utilisation du disque dépasse {percent} %.",
+      "useThreshold": "Utiliser {percent} %"
     }
   },
   "rebootBanner": {

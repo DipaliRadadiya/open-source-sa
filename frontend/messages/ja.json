@@ -2814,6 +2814,19 @@
         "schedule": "自動"
       },
       "failed": "失敗しました"
+    },
+    "keep": {
+      "label": "保持する期間",
+      "hint": "すべての項目に適用されます。これより新しいものは保持されます。",
+      "deleteAll": "すべて削除",
+      "days": "{count, plural, one {# 日分を保持} other {# 日分を保持}}",
+      "recommended": "{label}（推奨）",
+      "defaultAsBefore": "デフォルト（従来どおり）",
+      "alwaysAll": "常にすべて削除",
+      "confirmLine": "選択: {choice}",
+      "deleteAllWarning": "すべて削除すると、ログインやエラーの履歴を含む、サーバーとサイトのすべてのログが削除されます。元に戻せません。",
+      "scheduleDeleteAllHint": "すべて削除はすべてのログを空にします。ディスク使用率が {percent}% を超えたときだけ実行することを検討してください。",
+      "useThreshold": "{percent}% を使用"
     }
   },
   "rebootBanner": {

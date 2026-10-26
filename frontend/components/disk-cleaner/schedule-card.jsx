@@ -25,12 +25,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tile } from "@/components/applications/app-status-tiles";
+import { Caution } from "@/components/ui/caution";
+import { KeepSelect, useKeepLabel } from "@/components/disk-cleaner/keep-select";
+import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
 
 const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
 
 // Radix Select cannot hold "", which is how the form spells "every time".
 const ANY = "any";
 const THRESHOLDS = ["50", "60", "70", "80", "90"];
+// Suggested beside Delete all: clear every log only when the disk is actually filling up.
+const DELETE_ALL_THRESHOLD = "85";
 
 // A schedule saved with another number (the API takes 1–99) keeps it on offer.
 function thresholdOptions(current) {
@@ -40,8 +45,12 @@ function thresholdOptions(current) {
 }
 
 // Only `safe` categories are offered; the backend enforces the same.
-export function ScheduleCard({ schedule, categories, canManage }) {
+export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
   const t = useTranslations("diskCleaner");
+  const keepLabel = useKeepLabel();
+  const { choices, recommended } = keepOptions(keepDays);
+  // A schedule saved before the choice keeps `null` ("as before") until someone picks one.
+  const savedKeep = () => (schedule ? (schedule.keep_days ?? null) : recommended);
   // The hour uses the reader's clock convention (AM/PM vs 24h) but never their
   // timezone, same as a backup's schedule time.
   const format = useFormatter();
@@ -49,10 +58,12 @@ export function ScheduleCard({ schedule, categories, canManage }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
-  // Biggest first, the same order as the list on the page.
+  const [keep, setKeep] = useState(savedKeep);
+  // Biggest first under the chosen keep, the same order as the list on the page.
   const safeCategories = categories
     .filter((c) => c.available && c.safe)
-    .sort((a, b) => (b.reclaimable ?? 0) - (a.reclaimable ?? 0));
+    .map((c) => ({ ...c, size: sizeFor(c, keep) }))
+    .sort((a, b) => b.size.bytes - a.size.bytes);
   const [enabled, setEnabled] = useState(Boolean(schedule?.enabled));
   const [frequency, setFrequency] = useState(schedule?.frequency ?? "weekly");
   const [picked, setPicked] = useState(() => new Set(schedule?.categories ?? []));
@@ -66,6 +77,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
     setFrequency(schedule?.frequency ?? "weekly");
     setPicked(new Set(schedule?.categories ?? []));
     setThreshold(schedule?.threshold_percent != null ? String(schedule.threshold_percent) : "");
+    setKeep(savedKeep());
   }
 
   async function save() {
@@ -87,6 +99,8 @@ export function ScheduleCard({ schedule, categories, canManage }) {
         categories: [...picked],
         // Empty means "always", which the API expresses as null.
         threshold_percent: threshold === "" ? null : Number(threshold),
+        // null keeps the old per-category behaviour; 0 (delete all) is allowed here.
+        keep_days: keep,
         // `notify` is an unused column; sent back as stored so this form never
         // rewrites a field it does not own.
         notify: schedule?.notify ?? false,
@@ -162,6 +176,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
               ? t("schedule.lastRun", { when: schedule.last_run_at_human })
               : t("schedule.neverRun")),
           whenLine,
+          schedule?.enabled ? keepLabel(schedule.keep_days ?? null) : null,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -267,6 +282,34 @@ export function ScheduleCard({ schedule, categories, canManage }) {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="cleaner-keep" hint={t("keep.hint")}>
+                  {t("keep.label")}
+                </Label>
+                <KeepSelect
+                  id="cleaner-keep"
+                  value={keep}
+                  onChange={setKeep}
+                  choices={choices}
+                  recommended={recommended}
+                  allowDefault={schedule != null && schedule.keep_days == null}
+                  className="w-full"
+                />
+                {/* A suggestion, not a rule: the API accepts Delete all at any threshold. */}
+                {keep === 0 && threshold !== DELETE_ALL_THRESHOLD ? (
+                  <Caution
+                    size="md"
+                    action={
+                      <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => setThreshold(DELETE_ALL_THRESHOLD)}>
+                        {t("keep.useThreshold", { percent: Number(DELETE_ALL_THRESHOLD) })}
+                      </Button>
+                    }
+                  >
+                    <p>{t("keep.scheduleDeleteAllHint", { percent: Number(DELETE_ALL_THRESHOLD) })}</p>
+                  </Caution>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
                 <Label className="flex flex-wrap items-center justify-between gap-2">
                   <span>{t("schedule.whatToClean")}</span>
                   {/* Inline, not in a tooltip: Save stays disabled until something is ticked. */}
@@ -301,7 +344,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                           />
                           <span className="min-w-0 flex-1 text-sm">{category.label}</span>
                           <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                            {category.reclaimable_human ?? "0 B"}
+                            {category.size.human ?? "0 B"}
                           </span>
                         </label>
                       </li>
