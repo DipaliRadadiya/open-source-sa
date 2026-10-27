@@ -55,6 +55,15 @@ export function CronjobsPanel({
     const id = setTimeout(() => router.refresh(), wait);
     return () => clearTimeout(id);
   }, [cronjobs, router]);
+
+  // While a run is going (started by hand or by cron), re-read every 5 s so it turns into
+  // its result; stops by itself once no row says running.
+  const anyRunning = cronjobs.some((job) => job.running === true);
+  useEffect(() => {
+    if (!anyRunning) return undefined;
+    const id = setTimeout(() => router.refresh(), 5000);
+    return () => clearTimeout(id);
+  }, [anyRunning, cronjobs, router]);
   const [createOpen, setCreateOpen] = useState(false);
   const [seed, setSeed] = useState({ initialValues: undefined, starterKey: undefined });
 

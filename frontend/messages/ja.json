@@ -1275,6 +1275,52 @@
     "cronDown": {
       "title": "このサーバーで Cron が動作していません",
       "body": "再び起動するまで、パネル自身のタスクを含め、スケジュールされたジョブは一切実行されません。サーバーのターミナルで起動してください:"
+    },
+    "lastRun": {
+      "column": "最終実行",
+      "notYet": "まだ実行されていません",
+      "succeeded": "成功",
+      "failed": "失敗しました",
+      "failedExit": "失敗 · 終了コード {code}",
+      "running": "実行中",
+      "interrupted": "中断",
+      "interruptedHint": "開始しましたが終了していません。実行中にサーバーが再起動した場合などです。",
+      "manual": "手動実行",
+      "took": "所要 {duration}"
+    },
+    "duration": {
+      "seconds": "{s} 秒",
+      "minutes": "{m} 分 {s} 秒",
+      "hours": "{h} 時間 {m} 分"
+    },
+    "runNow": {
+      "action": "今すぐ実行",
+      "paused": "先にこのジョブをオンにしてください。一時停止中のジョブは実行できません。",
+      "title": "{name} を今すぐ実行しますか？",
+      "description": "cron と同じように {user} としてすぐに実行されます。結果は「前回実行」に表示されます。",
+      "confirm": "今すぐ実行",
+      "starting": "起動中…",
+      "started": "{name} を開始しました。",
+      "failed": "ジョブを開始できませんでした。"
+    },
+    "history": {
+      "action": "実行履歴",
+      "title": "実行履歴",
+      "description": "{name} の最近の実行（新しい順）。時刻はサーバーの時計（{timezone}）です。",
+      "descriptionNoZone": "{name} の最近の実行（新しい順）。",
+      "refresh": "更新",
+      "fullLog": "ログ全体を開く",
+      "retry": "再試行",
+      "failed": "実行履歴を読み込めませんでした。",
+      "empty": "このジョブはまだ実行されていません。",
+      "started": "開始 {at}",
+      "finished": "終了 {at}",
+      "overlapped": "別の実行と同時に動いたため、ここには両方の出力が混ざっています。",
+      "showOutput": "出力を表示",
+      "hideOutput": "出力を隠す",
+      "noOutput": "出力はありません。",
+      "truncated": "最後の 64 KB のみ表示しています。",
+      "copyOutput": "出力をコピー"
     }
   },
   "errors": {

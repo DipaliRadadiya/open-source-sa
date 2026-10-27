@@ -12,6 +12,8 @@ import {
 import { CronjobActiveSwitch } from "@/components/cron-jobs/cronjob-active-switch";
 import { CronjobRowActions } from "@/components/cron-jobs/cronjob-row-actions";
 import { CronjobsCards } from "@/components/cron-jobs/cronjobs-cards";
+import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
+import { hasRunHistory } from "@/lib/cron-jobs/run-duration";
 
 // Labels from the API's own preset list; deliberately not a cron-to-prose library.
 function scheduleLabel(expression, presets) {
@@ -109,6 +111,10 @@ function NextRunCell({ row }) {
   return <CronjobNextRun job={row.original} />;
 }
 
+function LastRunCell({ row }) {
+  return <CronjobLastRun job={row.original} />;
+}
+
 function RunAsCell({ row }) {
   return <CronjobRunAs job={row.original} />;
 }
@@ -137,7 +143,7 @@ function ActiveCell({ row, table }) {
 }
 
 function ActionsCell({ row, table }) {
-  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs, prevPage, canManage, canViewLogs } =
+  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs, prevPage, canManage, canViewLogs, historySupported } =
     table.options.meta;
   return (
     <CronjobRowActions
@@ -152,6 +158,7 @@ function ActionsCell({ row, table }) {
       prevPage={prevPage}
       canManage={canManage}
       canViewLogs={canViewLogs}
+      historySupported={historySupported}
     />
   );
 }
@@ -170,6 +177,7 @@ export function CronjobsTable({
   onDuplicate,
 }) {
   const t = useTranslations("cronJobs");
+  const historySupported = hasRunHistory(data);
 
   const columns = [
     { accessorKey: "name", header: () => <Head>{t("columns.name")}</Head>, cell: NameCell },
@@ -180,6 +188,7 @@ export function CronjobsTable({
       header: () => <Head>{timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}</Head>,
       cell: NextRunCell,
     },
+    ...(historySupported ? [{ id: "last_run", header: () => <Head>{t("lastRun.column")}</Head>, cell: LastRunCell }] : []),
     { accessorKey: "username", header: () => <Head>{t("columns.runAs")}</Head>, cell: RunAsCell },
     { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
     { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
@@ -191,10 +200,14 @@ export function CronjobsTable({
     },
   ];
 
+  // Cards until the table fits. Seven columns need ~950px, so xl did. Last run makes eight, whose narrowest is
+  // 1097px in Russian (981 en): more than xl's 958px beside the sidebar, so the switch reads the list's own width.
+  const cardsClass = historySupported ? "@min-[69rem]:hidden" : "xl:hidden";
+  const tableClass = historySupported ? "hidden @min-[69rem]:block" : "hidden xl:block";
+
   return (
-    <>
-      {/* Cards below xl: seven columns need ~950px, more than lg provides. */}
-      <div className="xl:hidden">
+    <div className="@container">
+      <div className={cardsClass}>
         <CronjobsCards
           jobs={data}
           canManage={canManage}
@@ -207,9 +220,10 @@ export function CronjobsTable({
           runAs={runAs}
           prevPage={prevPage}
           canViewLogs={canViewLogs}
+          historySupported={historySupported}
         />
       </div>
-      <div className="hidden xl:block">
+      <div className={tableClass}>
         <DataTable
           bare
           roomy
@@ -226,12 +240,13 @@ export function CronjobsTable({
             runAs,
             prevPage,
             canViewLogs,
+            historySupported,
           }}
           emptyMessage={t("empty.title")}
           // De-emphasise text, not controls: a paused job must stay operable.
           rowClassName={(job) => cn(!job.active && "[&_td]:text-muted-foreground")}
         />
       </div>
-    </>
+    </div>
   );
 }
