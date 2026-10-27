@@ -607,6 +607,36 @@ it('names the domains that are on the site but not on the certificate', function
     expect($response->json('certificate.missing_domains'))->toBe(['later.example.com']);
 });
 
+it('does not call a name missing when the wildcard covers it', function () {
+    // Support item #16: an uploaded *.example.com certificate covered
+    // shop.example.com, and the screen still warned it was missing.
+    $certificate = activeCertificate($this->application);
+    $certificate->update(['type' => CertificateType::Custom, 'domains' => ['*.example.com']]);
+
+    foreach (['blog.example.com', 'example.com', 'deep.blog.example.com', 'Other.Example.COM'] as $domain) {
+        $this->application->domains()->create(['domain' => $domain, 'type' => DomainType::Alias, 'dns_verified_at' => now()]);
+    }
+
+    $response = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/certificate")
+        ->assertOk();
+
+    // One label under the wildcard is covered, whatever its case; the bare
+    // domain and two labels deep are not — a wildcard does not reach them.
+    expect($response->json('certificate.missing_domains'))->toBe(['example.com', 'deep.blog.example.com']);
+});
+
+it('still names every domain when the certificate covers none of them', function () {
+    $certificate = activeCertificate($this->application);
+    $certificate->update(['type' => CertificateType::Custom, 'domains' => ['*.other.test']]);
+
+    $response = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/certificate")
+        ->assertOk();
+
+    expect($response->json('certificate.missing_domains'))->toBe(['shop.example.com']);
+});
+
 it('clears force HTTPS before rewriting the vhost when the certificate is removed', function () {
     $certificate = activeCertificate($this->application);
     $certificate->update(['force_https' => true]);

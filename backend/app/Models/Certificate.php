@@ -209,13 +209,23 @@ class Certificate extends Model
         return $this->served_expires_at->lt($this->expires_at->subMinute());
     }
 
+    /**
+     * The site's certifiable names this certificate does not cover.
+     *
+     * Asks {@see covers()} rather than comparing names: a wildcard
+     * `*.example.com` covers `shop.example.com` without naming it, and an
+     * exact-match list reported every such name missing on a certificate
+     * that serves them fine (support item #16, 2026-10-27). It still reports
+     * what a wildcard does not cover — the bare `example.com` and anything
+     * two labels deep.
+     *
+     * @return array<int, string>
+     */
     public function missingDomains(): array
     {
-        $covered = $this->domains ?? [];
-
-        return array_values(array_diff(
+        return array_values(array_filter(
             $this->application->certifiableDomains(),
-            $covered,
+            fn (string $domain) => ! $this->covers($domain),
         ));
     }
 
