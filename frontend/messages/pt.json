@@ -1620,7 +1620,8 @@
       "openDocker": "Abrir Docker",
       "unitFailedNoLog": "Instalado, mas parado. Tente iniciá-lo; se parar de novo, o erro está no journal do sistema do servidor."
     },
-    "moreActions": "Mais ações para {name}"
+    "moreActions": "Mais ações para {name}",
+    "packageVersion": "Pacote {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

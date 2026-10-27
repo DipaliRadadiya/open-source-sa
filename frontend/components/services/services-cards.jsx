@@ -6,6 +6,7 @@ import { ServiceActions } from "@/components/services/service-actions";
 import { installHome } from "@/lib/services/install-home";
 import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
+import { ServiceVersion } from "@/components/services/service-version";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 
 export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowBusy }) {
@@ -55,8 +56,9 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
                   </p>
                   ) : null
                 ) : (
-                  <p className="truncate font-mono text-xs text-muted-foreground">
+                  <p className="font-mono text-xs whitespace-normal wrap-anywhere text-muted-foreground">
                     {service.unit}
+                    <ServiceVersion version={service.version} packageVersion={service.package_version} />
                   </p>
                 )}
               </div>

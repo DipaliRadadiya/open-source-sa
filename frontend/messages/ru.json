@@ -1620,7 +1620,8 @@
       "openDocker": "Открыть Docker",
       "unitFailedNoLog": "Установлено, но не запущено. Попробуйте запустить; если снова остановится, ошибка будет в системном журнале сервера."
     },
-    "moreActions": "Другие действия для {name}"
+    "moreActions": "Другие действия для {name}",
+    "packageVersion": "Пакет {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

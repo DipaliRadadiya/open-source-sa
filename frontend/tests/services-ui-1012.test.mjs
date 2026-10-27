@@ -43,6 +43,8 @@ const { ServiceStatusBadge } = load("components/services/service-status-badge.js
 const html = (props) => renderToStaticMarkup(React.createElement(ServiceStatusBadge, props));
 const opening = (value) => value.slice(0, value.indexOf(">") + 1);
 
+const { ServiceVersion } = load("components/services/service-version.jsx", { "next-intl": { useTranslations: () => t } });
+
 let captured;
 const { ServicesTable } = load("components/services/services-table.jsx", {
   "@/components/ui/app-link": { __esModule: true, default: ({ children, ...props }) => React.createElement("a", props, children) },
@@ -52,6 +54,7 @@ const { ServicesTable } = load("components/services/services-table.jsx", {
   "@/components/services/service-actions": { ServiceActions: () => null },
   "@/components/services/service-boot-switch": { ServiceBootSwitch: () => null },
   "@/components/services/service-status-badge": { ServiceStatusBadge },
+  "@/components/services/service-version": { ServiceVersion },
   "@/lib/services/install-home": { installHome: () => ({ href: "/php", retryLabel: "retryPhp" }) },
 });
 function tableProps() {
@@ -135,8 +138,13 @@ test("long names can wrap while units and retry information remain intact", () =
   const installed = cell("label", { key: "php", label: name, unit: "php8.4-fpm", state: "installed" });
   assert.match(installed, /font-medium whitespace-normal wrap-anywhere/);
   assert.ok(installed.includes(name));
-  assert.match(installed, /truncate font-mono text-xs/);
+  // The unit line wraps before the version (27 Oct) rather than cutting "redis-server · 7.0.15" off.
+  assert.match(installed, /font-mono text-xs whitespace-normal wrap-anywhere/);
   assert.ok(installed.includes("php8.4-fpm"));
+  const versioned = cell("label", { key: "redis", label: "Redis", unit: "redis-server", state: "installed", version: "7.0.15", package_version: "5:7.0.15-1ubuntu0.24.04.5" });
+  // The space before the span is the break point; the version itself never splits.
+  assert.match(versioned, /redis-server <span class="whitespace-nowrap tabular-nums" title="[^"]+">· (<!-- -->)?7\.0\.15<\/span>/);
+  assert.ok(!cell("label", { key: "postfix", label: "Postfix", unit: "postfix", state: "installed", version: null }).includes("·"));
   const failed = cell("label", { key: "php", label: "PHP", state: "install_failed", install_reason: "package", install_message: "Package missing", retryable: true });
   assert.ok(failed.includes("Package missing"));
   assert.match(failed, /href="\/php"/);

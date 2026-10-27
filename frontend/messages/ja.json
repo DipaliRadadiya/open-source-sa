@@ -1620,7 +1620,8 @@
       "openDocker": "Docker を開く",
       "unitFailedNoLog": "インストール済みですが停止しています。起動してみてください。再び停止する場合、エラーはサーバーのシステムジャーナルに記録されています。"
     },
-    "moreActions": "{name} のその他の操作"
+    "moreActions": "{name} のその他の操作",
+    "packageVersion": "パッケージ {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

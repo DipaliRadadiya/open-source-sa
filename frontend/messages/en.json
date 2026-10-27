@@ -1620,7 +1620,8 @@
       "openDocker": "Open Docker",
       "unitFailedNoLog": "Installed but not running. Try starting it; if it stops again, its error is in the server's system journal."
     },
-    "moreActions": "More actions for {name}"
+    "moreActions": "More actions for {name}",
+    "packageVersion": "Package {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

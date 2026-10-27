@@ -1620,7 +1620,8 @@
       "openDocker": "Ouvrir Docker",
       "unitFailedNoLog": "Installé mais arrêté. Essayez de le démarrer ; s'il s'arrête à nouveau, l'erreur se trouve dans le journal système du serveur."
     },
-    "moreActions": "Plus d’actions pour {name}"
+    "moreActions": "Plus d’actions pour {name}",
+    "packageVersion": "Paquet {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

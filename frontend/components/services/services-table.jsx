@@ -6,6 +6,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { ServiceActions } from "@/components/services/service-actions";
 import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
+import { ServiceVersion } from "@/components/services/service-version";
 import { installHome } from "@/lib/services/install-home";
 
 // Cells are module-level on purpose: flexRender uses the function as the
@@ -21,6 +22,8 @@ function ServiceCell({ row }) {
     install_reason: installReason,
     install_message: installMessage,
     retryable,
+    version,
+    package_version: packageVersion,
   } = row.original;
   const home = installHome(key);
   const installed = state === "installed";
@@ -34,7 +37,12 @@ function ServiceCell({ row }) {
   let secondLine = null;
   if (installed) {
   // The unit name (what systemctl takes), quietly under the friendly name.
-    secondLine = <p className="truncate font-mono text-xs text-muted-foreground">{unit}</p>;
+    secondLine = (
+      <p className="font-mono text-xs whitespace-normal wrap-anywhere text-muted-foreground">
+        {unit}
+        <ServiceVersion version={version} packageVersion={packageVersion} />
+      </p>
+    );
   } else if (note || retryable) {
     secondLine = (
       <p className="text-xs whitespace-normal wrap-anywhere text-muted-foreground">
