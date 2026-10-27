@@ -129,7 +129,7 @@ const IMPORT_CHUNK_RETRIES = 3;
 // the replacement before this runs, so `confirm_replace` is sent with start.
 // Chunks are clamped like the file manager's: the server's `max_chunk` is PHP's
 // post_max_size, but nginx buffers less (lib/files/chunk-size.js).
-export async function uploadAndStartImport(databaseId, file, { onProgress, onBegun, signal } = {}) {
+export async function uploadAndStartImport(databaseId, file, { onProgress, onBegun, signal, safetyCopy = true } = {}) {
   const { data } = await api.post(
     `/databases/${databaseId}/imports`,
     { file_name: file.name, size_bytes: file.size },
@@ -178,12 +178,18 @@ export async function uploadAndStartImport(databaseId, file, { onProgress, onBeg
 
   // Not inside the cleanup above: a refused start (an export running) keeps the
   // uploaded file, and its row offers Start again.
-  return startImport(databaseId, importId);
+  return startImport(databaseId, importId, { safetyCopy });
 }
 
-/** Runs an uploaded import. `confirm_replace` is required by the API. */
-export function startImport(databaseId, importId) {
-  return api.post(`/databases/${databaseId}/imports/${importId}/start`, { confirm_replace: true });
+/**
+ * Runs an uploaded import. `confirm_replace` is required by the API. `safetyCopy`
+ * false skips the backup taken first, so a failed load has nothing to put back.
+ */
+export function startImport(databaseId, importId, { safetyCopy = true } = {}) {
+  return api.post(`/databases/${databaseId}/imports/${importId}/start`, {
+    confirm_replace: true,
+    safety_copy: safetyCopy,
+  });
 }
 
 export function getEngineStatus(engine, { signal } = {}) {

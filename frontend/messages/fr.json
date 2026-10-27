@@ -3309,8 +3309,12 @@
       "removed": "Importation supprimée.",
       "removeFailed": "Impossible de supprimer cette importation.",
       "uploadUnfinished": "L'envoi ne s'est pas terminé.",
-      "backupNote": "Chaque importation conserve une sauvegarde de la base de données dans Exports, sous le nom « Sauvegarde automatique avant importation ». Rien ne les supprime : retirez-y les anciennes pour libérer de l'espace disque.",
-      "backupDownload": "Télécharger la sauvegarde faite avant cette importation"
+      "backupNote": "Une importation avec sauvegarde la conserve dans Exports, sous le nom « Sauvegarde automatique avant importation ». Rien ne les supprime : retirez-y les anciennes pour libérer de l'espace disque.",
+      "backupDownload": "Télécharger la sauvegarde faite avant cette importation",
+      "safetyCopy": "Faire d'abord une sauvegarde (recommandé)",
+      "noSafetyCopyWarning": "Sans sauvegarde, une importation qui échoue ne peut pas être annulée. La base de données peut rester vide ou à moitié chargée.",
+      "withCopy": "Avec sauvegarde",
+      "withoutCopy": "Sans sauvegarde"
     },
     "manage": "Gérer",
     "monitor": {

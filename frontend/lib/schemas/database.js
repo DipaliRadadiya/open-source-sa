@@ -370,6 +370,8 @@ export const importSchema = z.object({
   reference: z.string().nullable().optional(),
   restored: z.boolean().nullable().optional(),
   safety_export_id: z.number().nullable().optional(),
+  // False when the user switched the safety copy off; absent from an older API, which always took one.
+  safety_copy: z.boolean().nullable().optional(),
   requested_by: z.object({ id: z.number(), username: z.string() }).nullable().optional(),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),

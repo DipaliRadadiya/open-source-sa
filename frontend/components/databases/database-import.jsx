@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Caution } from "@/components/ui/caution";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CardIcon } from "@/components/ui/card-icon";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
@@ -53,6 +55,10 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
   const [dragOver, setDragOver] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [chosen, setChosen] = useState(null);
+  // Ticked by default; reset for every file so a skipped copy is never carried over.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  // What this tab chose per import, so "Start again" repeats it; otherwise the API default (a copy).
+  const safetyChoiceRef = useRef(new Map());
   // { file, progress } while the browser is sending the file.
   const [upload, setUpload] = useState(null);
   const [busyRow, setBusyRow] = useState(null);
@@ -103,21 +109,25 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
   function choose(files) {
     const file = files?.[0];
     if (!file || blocked) return;
+    setSafetyCopy(true);
     setChosen(file);
   }
 
   async function run() {
     const file = chosen;
+    const withCopy = safetyCopy;
     setChosen(null);
     const controller = new AbortController();
     controllerRef.current = controller;
-    setUpload({ file, progress: 0 });
+    setUpload({ file, progress: 0, safetyCopy: withCopy });
     try {
       const { data } = await uploadAndStartImport(database.id, file, {
         signal: controller.signal,
-        onProgress: (progress) => setUpload({ file, progress }),
+        safetyCopy: withCopy,
+        onProgress: (progress) => setUpload({ file, progress, safetyCopy: withCopy }),
         onBegun: (id) => {
           watchingRef.current = id;
+          safetyChoiceRef.current.set(id, withCopy);
         },
       });
       const parsed = importSchema.safeParse(data?.import);
@@ -141,7 +151,7 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
   async function startAgain(row) {
     setBusyRow(row.id);
     try {
-      const { data } = await startImport(database.id, row.id);
+      const { data } = await startImport(database.id, row.id, { safetyCopy: safetyChoiceRef.current.get(row.id) ?? true });
       const parsed = importSchema.safeParse(data?.import);
       if (parsed.success) setPolled((current) => (current ?? initial).map((r) => (r.id === row.id ? parsed.data : r)));
       watchingRef.current = row.id;
@@ -170,6 +180,9 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
 
   // The stepper follows the browser while it uploads, then the server's row.
   const stage = upload ? "uploading" : importStage(running);
+  // No copy, no "Backing up" step: the run goes straight from checking to importing.
+  const skipsCopy = upload ? upload.safetyCopy === false : running?.safety_copy === false;
+  const steps = skipsCopy ? IMPORT_STEPS.filter((step) => step !== "backing_up") : IMPORT_STEPS;
   const activeFile = upload?.file.name ?? running?.file_name ?? "";
   const activeSize = upload ? formatBytes(upload.file.size, format) : (running?.size_human ?? "");
   const history = rows.filter((row) => row.id !== running?.id);
@@ -208,9 +221,9 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
                 ) : null}
               </div>
 
-              <ol className="grid gap-2 sm:grid-cols-4">
-                {IMPORT_STEPS.map((step, index) => {
-                  const current = IMPORT_STEPS.indexOf(stage);
+              <ol className={cn("grid gap-2", steps.length === 4 ? "sm:grid-cols-4" : "sm:grid-cols-3")}>
+                {steps.map((step, index) => {
+                  const current = steps.indexOf(stage);
                   const state = index < current ? "done" : index === current ? "current" : "next";
                   return (
                     <li key={step} className={cn("flex items-center gap-2 text-sm", state === "next" && "text-muted-foreground")}>
@@ -340,10 +353,29 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
                 {t("mismatch", { fileEngine: FAMILY_NAME[mismatch], engine: tDb(`engines.${database.engine}`) })}
               </p>
             ) : null}
-            <p className="flex items-start gap-2 text-sm text-muted-foreground">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-              {t("confirmSafety")}
-            </p>
+            {/* The whole row is the label, so a tap anywhere on it toggles. */}
+            <label htmlFor="import-safety-copy" className="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5">
+              <Checkbox
+                id="import-safety-copy"
+                className="mt-0.5"
+                checked={safetyCopy}
+                onCheckedChange={(value) => setSafetyCopy(value === true)}
+              />
+              <span className="min-w-0 space-y-0.5">
+                <span className="block text-sm font-medium">{t("safetyCopy")}</span>
+                {safetyCopy ? (
+                  <span className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                    <ShieldCheck className="mt-px size-3.5 shrink-0 text-success" aria-hidden />
+                    {t("confirmSafety")}
+                  </span>
+                ) : null}
+              </span>
+            </label>
+            {!safetyCopy ? (
+              <Caution tone="destructive" size="md">
+                <p>{t("noSafetyCopyWarning")}</p>
+              </Caution>
+            ) : null}
           </>
         ) : null}
       </ConfirmDialog>
@@ -380,7 +412,12 @@ function ImportRow({ row, canManage, busy, canStart, onStart, onRemove, backup =
           {row.size_human ? <span className="text-sm tabular-nums text-muted-foreground">{row.size_human}</span> : null}
         </div>
         <p className="text-xs text-muted-foreground">
-          {[row.requested_by ? t("by", { user: row.requested_by.username }) : null, row.finished_at_human ?? row.created_at_human]
+          {[
+            row.requested_by ? t("by", { user: row.requested_by.username }) : null,
+            row.finished_at_human ?? row.created_at_human,
+            // Only once it has run: an upload that never started took no copy either way.
+            row.status !== "uploading" && row.safety_copy != null ? t(row.safety_copy ? "withCopy" : "withoutCopy") : null,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </p>
