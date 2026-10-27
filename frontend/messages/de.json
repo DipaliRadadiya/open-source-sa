@@ -1275,6 +1275,52 @@
     "cronDown": {
       "title": "Cron läuft auf diesem Server nicht",
       "body": "Bis Cron wieder gestartet wird, läuft kein geplanter Job – auch nicht die Aufgaben des Panels selbst. Starten Sie Cron in einem Terminal auf dem Server:"
+    },
+    "lastRun": {
+      "column": "Letzter Lauf",
+      "notYet": "Noch nicht gelaufen",
+      "succeeded": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "failedExit": "Fehlgeschlagen · Code {code}",
+      "running": "Läuft jetzt",
+      "interrupted": "Unterbrochen",
+      "interruptedHint": "Sie hat begonnen, aber nie geendet – etwa weil der Server währenddessen neu gestartet wurde.",
+      "manual": "Von Hand gestartet",
+      "took": "Dauerte {duration}"
+    },
+    "duration": {
+      "seconds": "{s} s",
+      "minutes": "{m} min {s} s",
+      "hours": "{h} h {m} min"
+    },
+    "runNow": {
+      "action": "Jetzt ausführen",
+      "paused": "Schalten Sie diesen Job zuerst ein – ein pausierter Job lässt sich nicht ausführen.",
+      "title": "{name} jetzt ausführen?",
+      "description": "Er läuft sofort als {user}, genau wie cron ihn ausführt. Das Ergebnis erscheint unter Letzte Ausführung.",
+      "confirm": "Jetzt ausführen",
+      "starting": "Wird gestartet…",
+      "started": "{name} wurde gestartet.",
+      "failed": "Der Job konnte nicht gestartet werden."
+    },
+    "history": {
+      "action": "Ausführungsverlauf",
+      "title": "Ausführungsverlauf",
+      "description": "Die letzten Ausführungen von {name}, neueste zuerst. Zeiten in der Serverzeit ({timezone}).",
+      "descriptionNoZone": "Die letzten Ausführungen von {name}, neueste zuerst.",
+      "refresh": "Aktualisieren",
+      "fullLog": "Vollständiges Protokoll öffnen",
+      "retry": "Erneut versuchen",
+      "failed": "Der Ausführungsverlauf konnte nicht gelesen werden.",
+      "empty": "Dieser Job ist noch nicht gelaufen.",
+      "started": "Gestartet {at}",
+      "finished": "Beendet {at}",
+      "overlapped": "Lief gleichzeitig mit einer anderen Ausführung – die Ausgaben sind hier gemischt.",
+      "showOutput": "Ausgabe anzeigen",
+      "hideOutput": "Ausgabe ausblenden",
+      "noOutput": "Keine Ausgabe.",
+      "truncated": "Nur die letzten 64 KB werden angezeigt.",
+      "copyOutput": "Ausgabe kopieren"
     }
   },
   "errors": {

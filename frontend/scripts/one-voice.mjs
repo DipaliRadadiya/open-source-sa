@@ -44,6 +44,16 @@
  * lists short and the reasons specific instead.
  */
 export const MANY_MEANINGS = {
+  "Last run": {
+    locales: ["es"],
+    reason:
+      "A backup's last copy made (Última copia) and a cron job's last execution (Última ejecución) — different nouns in Spanish.",
+  },
+  "Running now": {
+    locales: ["hi"],
+    reason:
+      "One cron job running (अभी चल रहा है) and a count of database threads running (अभी चल रहे): Hindi agrees the verb with the number.",
+  },
   "Right now": {
     reason:
       "Three meanings: the current value (swap), the soonest option (reboot), and the live column of a traffic table.",

@@ -1275,6 +1275,52 @@
     "cronDown": {
       "title": "Cron no se está ejecutando en este servidor",
       "body": "Ninguna tarea programada se ejecuta hasta que se vuelva a iniciar, incluidas las tareas propias del panel. Inícielo desde una terminal en el servidor:"
+    },
+    "lastRun": {
+      "column": "Última ejecución",
+      "notYet": "Aún no se ha ejecutado",
+      "succeeded": "Correcto",
+      "failed": "Falló",
+      "failedExit": "Falló · código {code}",
+      "running": "En ejecución ahora",
+      "interrupted": "Interrumpida",
+      "interruptedHint": "Empezó pero no terminó; por ejemplo, el servidor se reinició mientras se ejecutaba.",
+      "manual": "Ejecutada a mano",
+      "took": "Duró {duration}"
+    },
+    "duration": {
+      "seconds": "{s} s",
+      "minutes": "{m} min {s} s",
+      "hours": "{h} h {m} min"
+    },
+    "runNow": {
+      "action": "Ejecutar ahora",
+      "paused": "Activa primero esta tarea: una tarea pausada no se puede ejecutar.",
+      "title": "¿Ejecutar {name} ahora?",
+      "description": "Se ejecuta de inmediato como {user}, igual que la ejecuta cron. El resultado aparece en Última ejecución.",
+      "confirm": "Ejecutar ahora",
+      "starting": "Iniciando…",
+      "started": "{name} se ha iniciado.",
+      "failed": "No se pudo iniciar la tarea."
+    },
+    "history": {
+      "action": "Historial de ejecuciones",
+      "title": "Historial de ejecuciones",
+      "description": "Las últimas ejecuciones de {name}, de la más reciente a la más antigua. Las horas son las del servidor ({timezone}).",
+      "descriptionNoZone": "Las últimas ejecuciones de {name}, de la más reciente a la más antigua.",
+      "refresh": "Actualizar",
+      "fullLog": "Abrir el registro completo",
+      "retry": "Reintentar",
+      "failed": "No se pudo leer el historial de ejecuciones.",
+      "empty": "Esta tarea aún no se ha ejecutado.",
+      "started": "Inicio {at}",
+      "finished": "Fin {at}",
+      "overlapped": "Coincidió con otra ejecución: su salida está mezclada aquí.",
+      "showOutput": "Mostrar la salida",
+      "hideOutput": "Ocultar la salida",
+      "noOutput": "No mostró nada.",
+      "truncated": "Solo se muestran los últimos 64 KB.",
+      "copyOutput": "Copiar la salida"
     }
   },
   "errors": {

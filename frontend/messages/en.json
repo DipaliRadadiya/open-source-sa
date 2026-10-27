@@ -1275,6 +1275,52 @@
     "cronDown": {
       "title": "Cron is not running on this server",
       "body": "No scheduled job runs until it is started again, including the panel's own tasks. Start it from a terminal on the server:"
+    },
+    "lastRun": {
+      "column": "Last run",
+      "notYet": "Not run yet",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "failedExit": "Failed · exit {code}",
+      "running": "Running now",
+      "interrupted": "Interrupted",
+      "interruptedHint": "It started but never finished — for example, the server restarted while it ran.",
+      "manual": "Run by hand",
+      "took": "Took {duration}"
+    },
+    "duration": {
+      "seconds": "{s} s",
+      "minutes": "{m} min {s} s",
+      "hours": "{h} h {m} min"
+    },
+    "runNow": {
+      "action": "Run now",
+      "paused": "Turn this job on first — a paused job can't be run.",
+      "title": "Run {name} now?",
+      "description": "It runs straight away as {user}, the same way cron runs it. Its result shows under Last run.",
+      "confirm": "Run now",
+      "starting": "Starting…",
+      "started": "{name} started.",
+      "failed": "The job could not be started."
+    },
+    "history": {
+      "action": "Run history",
+      "title": "Run history",
+      "description": "The latest runs of {name}, newest first. Times are the server's clock ({timezone}).",
+      "descriptionNoZone": "The latest runs of {name}, newest first.",
+      "refresh": "Refresh",
+      "fullLog": "Open the full log",
+      "retry": "Try again",
+      "failed": "The run history could not be read.",
+      "empty": "This job hasn't run yet.",
+      "started": "Started {at}",
+      "finished": "Finished {at}",
+      "overlapped": "Ran at the same time as another run — their output is mixed here.",
+      "showOutput": "Show output",
+      "hideOutput": "Hide output",
+      "noOutput": "It printed nothing.",
+      "truncated": "Only the last 64 KB is shown.",
+      "copyOutput": "Copy output"
     }
   },
   "errors": {

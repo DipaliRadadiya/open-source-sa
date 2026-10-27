@@ -1275,6 +1275,52 @@
     "cronDown": {
       "title": "O Cron não está em execução neste servidor",
       "body": "Nenhuma tarefa agendada é executada até que ele seja iniciado novamente, incluindo as tarefas do próprio painel. Inicie-o em um terminal no servidor:"
+    },
+    "lastRun": {
+      "column": "Última execução",
+      "notYet": "Ainda não executado",
+      "succeeded": "Concluído",
+      "failed": "Falhou",
+      "failedExit": "Falhou · código {code}",
+      "running": "Em execução agora",
+      "interrupted": "Interrompido",
+      "interruptedHint": "Começou, mas nunca terminou — por exemplo, o servidor reiniciou enquanto rodava.",
+      "manual": "Executado manualmente",
+      "took": "Levou {duration}"
+    },
+    "duration": {
+      "seconds": "{s} s",
+      "minutes": "{m} min {s} s",
+      "hours": "{h} h {m} min"
+    },
+    "runNow": {
+      "action": "Executar agora",
+      "paused": "Ative este job primeiro — um job em pausa não pode ser executado.",
+      "title": "Executar {name} agora?",
+      "description": "Ele roda na hora como {user}, do mesmo jeito que o cron. O resultado aparece em Última execução.",
+      "confirm": "Executar agora",
+      "starting": "Iniciando…",
+      "started": "{name} foi iniciado.",
+      "failed": "Não foi possível iniciar o job."
+    },
+    "history": {
+      "action": "Histórico de execuções",
+      "title": "Histórico de execuções",
+      "description": "As últimas execuções de {name}, da mais recente para a mais antiga. Horários no relógio do servidor ({timezone}).",
+      "descriptionNoZone": "As últimas execuções de {name}, da mais recente para a mais antiga.",
+      "refresh": "Atualizar",
+      "fullLog": "Abrir o log completo",
+      "retry": "Tentar novamente",
+      "failed": "Não foi possível ler o histórico de execuções.",
+      "empty": "Este job ainda não foi executado.",
+      "started": "Início {at}",
+      "finished": "Fim {at}",
+      "overlapped": "Rodou ao mesmo tempo que outra execução — as saídas estão misturadas aqui.",
+      "showOutput": "Mostrar saída",
+      "hideOutput": "Ocultar saída",
+      "noOutput": "Não imprimiu nada.",
+      "truncated": "Só os últimos 64 KB são mostrados.",
+      "copyOutput": "Copiar saída"
     }
   },
   "errors": {

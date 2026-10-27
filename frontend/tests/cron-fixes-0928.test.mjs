@@ -95,8 +95,9 @@ test("CJ-7: a per_page the list refuses shows as 10, not a blank box", () => {
 
 test("layout: table only from xl, where its seven columns fit", () => {
   const s = read("components/cron-jobs/cronjobs-table.jsx");
-  assert.match(s, /<div className="xl:hidden">/);
-  assert.match(s, /<div className="hidden xl:block">/);
+  // Without run history (seven columns) the switch is still xl.
+  assert.match(s, /const cardsClass = historySupported \? "@min-\[69rem\]:hidden" : "xl:hidden";/);
+  assert.match(s, /const tableClass = historySupported \? "hidden @min-\[69rem\]:block" : "hidden xl:block";/);
   assert.match(s, /max-w-40 truncate/);
 });
 

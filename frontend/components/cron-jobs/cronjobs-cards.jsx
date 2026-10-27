@@ -8,6 +8,7 @@ import {
   CronjobRunAs,
   CronjobSchedule,
 } from "@/components/cron-jobs/cronjobs-table";
+import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
 
 // Narrow-screen layout: the command gets the wide line under the name.
 export function CronjobsCards({
@@ -22,6 +23,7 @@ export function CronjobsCards({
   placeholder,
   timezone,
   onDuplicate,
+  historySupported = false,
 }) {
   const t = useTranslations("cronJobs");
 
@@ -51,6 +53,7 @@ export function CronjobsCards({
                 prevPage={prevPage}
                 canManage={canManage}
                 canViewLogs={canViewLogs}
+                historySupported={historySupported}
               />
             </div>
           </div>
@@ -65,6 +68,13 @@ export function CronjobsCards({
             >
               <CronjobNextRun job={job} />
             </CardFact>
+            {historySupported ? (
+              <CardFact label={t("lastRun.column")}>
+                <div className="flex justify-end">
+                  <CronjobLastRun job={job} />
+                </div>
+              </CardFact>
+            ) : null}
             <CardFact label={t("columns.runAs")}>
               {/* The value is a flex row, which text-align cannot move. */}
               <div className="flex justify-end">

@@ -122,6 +122,31 @@ export const updateCronjobSchema = createCronjobSchema;
 
 const systemUserRef = z.object({ id: z.number(), username: z.string() });
 
+// One run as the job's log records it (fb0819c9). started_at/duration are null for runs from
+// before the start line existed, and for a start older than the part of the log read.
+const runFields = {
+  // succeeded | failed | running | interrupted (started, never ended, no longer alive)
+  status: z.string(),
+  exit_code: z.number().nullable().optional(),
+  manual: z.boolean().optional().default(false),
+  overlapped: z.boolean().optional().default(false),
+  started_at: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+  duration_seconds: z.number().nullable().optional(),
+};
+
+export const cronjobRunSchema = z.object({
+  ...runFields,
+  // At most 64 KB, the end of it.
+  output: z.string().nullable().optional(),
+  output_truncated: z.boolean().optional().default(false),
+});
+
+export const cronjobRunsResponseSchema = z.object({
+  runs: z.array(cronjobRunSchema).default([]),
+  timezone: z.string().nullable().optional(),
+});
+
 export const cronjobSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -139,6 +164,9 @@ export const cronjobSchema = z.object({
   next_run_at_human: z.string().nullable().optional(),
   // Null until saved with output capture.
   log_key: z.string().nullable().optional(),
+  // Absent from an API without run history: the screen then shows none of it.
+  last_run: z.object(runFields).nullable().optional(),
+  running: z.boolean().optional(),
   created_at: z.string().optional(),
   created_at_human: z.string().optional(),
 });

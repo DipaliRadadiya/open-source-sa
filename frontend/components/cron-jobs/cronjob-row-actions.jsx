@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { useRef, useState } from "react";
-import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight } from "lucide-react";
+import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight, Play, History } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,8 @@ import {
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { EditCronjobDialog } from "@/components/cron-jobs/edit-cronjob-dialog";
 import { DeleteCronjobDialog } from "@/components/cron-jobs/delete-cronjob-dialog";
+import { RunNowDialog } from "@/components/cron-jobs/run-now-dialog";
+import { RunHistorySheet } from "@/components/cron-jobs/run-history-sheet";
 
 export function CronjobRowActions({
   job,
@@ -26,10 +28,15 @@ export function CronjobRowActions({
   prevPage = null,
   canManage = true,
   canViewLogs = true,
+  // The API records runs and can start one (fb0819c9); an older one gets the plain log link.
+  historySupported = false,
 }) {
   const t = useTranslations("cronJobs");
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
+  const [runOpen, setRunOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const runReason = !canManage ? t("noPermission") : !job.active ? t("runNow.paused") : null;
   // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog
   // takes it, then hands it back); Escape or a click away returns it there.
   const openingDialog = useRef(false);
@@ -52,8 +59,20 @@ export function CronjobRowActions({
             e.preventDefault();
           }}
         >
-          {/* Cron keeps no "last run" record; captured output is the only answer to "did it work?". */}
-          {!canViewLogs ? (
+          {historySupported ? (
+            <>
+              <MenuItemHint hint={runReason}>
+                <DropdownMenuItem disabled={Boolean(runReason)} onSelect={() => { openingDialog.current = true; setRunOpen(true); }}>
+                  <Play className="size-4" />
+                  {t("runNow.action")}
+                </DropdownMenuItem>
+              </MenuItemHint>
+              <DropdownMenuItem onSelect={() => { openingDialog.current = true; setHistoryOpen(true); }}>
+                <History className="size-4" />
+                {t("history.action")}
+              </DropdownMenuItem>
+            </>
+          ) : !canViewLogs ? (
             <MenuItemHint hint={t("actions.noLogsPermission")}>
               <DropdownMenuItem disabled>
                 <ScrollText className="size-4" />
@@ -117,6 +136,12 @@ export function CronjobRowActions({
         />
       ) : null}
       <DeleteCronjobDialog job={job} open={delOpen} onOpenChange={setDelOpen} prevPage={prevPage} />
+      {historySupported ? (
+        <>
+          <RunNowDialog job={job} open={runOpen} onOpenChange={setRunOpen} />
+          <RunHistorySheet job={job} open={historyOpen} onOpenChange={setHistoryOpen} canViewLogs={canViewLogs} />
+        </>
+      ) : null}
     </div>
   );
 }

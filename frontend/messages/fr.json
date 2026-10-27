@@ -1275,6 +1275,52 @@
     "cronDown": {
       "title": "Cron ne fonctionne pas sur ce serveur",
       "body": "Aucune tâche planifiée ne s'exécute tant qu'il n'est pas relancé, y compris les tâches du panneau lui-même. Démarrez-le depuis un terminal sur le serveur :"
+    },
+    "lastRun": {
+      "column": "Dernière exécution",
+      "notYet": "Pas encore exécutée",
+      "succeeded": "Réussie",
+      "failed": "Échec",
+      "failedExit": "Échec · code {code}",
+      "running": "En cours",
+      "interrupted": "Interrompue",
+      "interruptedHint": "Elle a démarré mais ne s'est jamais terminée — par exemple, le serveur a redémarré pendant l'exécution.",
+      "manual": "Lancée à la main",
+      "took": "A duré {duration}"
+    },
+    "duration": {
+      "seconds": "{s} s",
+      "minutes": "{m} min {s} s",
+      "hours": "{h} h {m} min"
+    },
+    "runNow": {
+      "action": "Exécuter maintenant",
+      "paused": "Activez d'abord cette tâche : une tâche en pause ne peut pas être exécutée.",
+      "title": "Exécuter {name} maintenant ?",
+      "description": "Elle s'exécute tout de suite en tant que {user}, comme cron l'exécute. Le résultat apparaît sous Dernière exécution.",
+      "confirm": "Exécuter maintenant",
+      "starting": "Démarrage…",
+      "started": "{name} a démarré.",
+      "failed": "Impossible de démarrer la tâche."
+    },
+    "history": {
+      "action": "Historique des exécutions",
+      "title": "Historique des exécutions",
+      "description": "Les dernières exécutions de {name}, de la plus récente à la plus ancienne. Heures du serveur ({timezone}).",
+      "descriptionNoZone": "Les dernières exécutions de {name}, de la plus récente à la plus ancienne.",
+      "refresh": "Actualiser",
+      "fullLog": "Ouvrir le journal complet",
+      "retry": "Réessayer",
+      "failed": "Impossible de lire l'historique des exécutions.",
+      "empty": "Cette tâche ne s'est pas encore exécutée.",
+      "started": "Début {at}",
+      "finished": "Fin {at}",
+      "overlapped": "S'est exécutée en même temps qu'une autre : leurs sorties sont mélangées ici.",
+      "showOutput": "Afficher la sortie",
+      "hideOutput": "Masquer la sortie",
+      "noOutput": "Aucune sortie.",
+      "truncated": "Seuls les 64 derniers Ko sont affichés.",
+      "copyOutput": "Copier la sortie"
     }
   },
   "errors": {
