@@ -87,6 +87,8 @@ return [
         'upload_artifact' => 'Das Archiv konnte nicht hochgeladen werden. Prüfen Sie, ob das Speicherziel weiterhin Schreibzugriffe annimmt.',
         'verify_artifact' => 'Der Upload stimmt nicht mit dem Gesendeten überein; dieser Sicherung ist nicht zu trauen. Es wurde nichts Altes gelöscht.',
         'upload_stalled' => 'Der Upload hat keine Daten mehr gesendet und wurde abgebrochen. Die Verbindung blieb offen, aber es wurde nichts übertragen — meist bedeutet das, dass der Speicheranbieter sie getrennt hat. Mit dem Ziel stimmt alles; der nächste geplante Lauf versucht es erneut.',
+        'not_enough_space' => 'Für dieses Backup war nicht genug Speicherplatz frei, daher wurde es nicht gespeichert und die Festplatte blieb unverändert. Geben Sie Speicherplatz frei oder behalten Sie weniger Backups.',
+        'check_local_space' => 'Der Backup-Ordner auf diesem Server konnte nicht verwendet werden. Prüfen Sie das Ziel mit „Verbindung testen“.',
         'download_not_supported' => 'Der Download ist für diesen Zieltyp nicht verfügbar. Das Panel kann Ihrem Browser nur dann einen Link geben, wenn der Speicheranbieter das unterstützt — Amazon S3 und Google Drive (Ihr eigenes Konto) tun das. Das Wiederherstellen dieser Sicherung funktioniert weiterhin normal.',
         'download_prepare_required' => 'Diese Sicherung liegt auf einem SFTP- oder FTP-Server, daher kopiert das Panel sie zuerst hierher. Bereiten Sie den Download vor und laden Sie die Datei herunter, sobald sie bereit ist.',
         'download_prepare_not_needed' => 'Diese Sicherung kann direkt heruntergeladen werden. Es gibt nichts vorzubereiten.',

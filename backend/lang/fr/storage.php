@@ -13,6 +13,7 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (votre propre compte)',
+        'local' => 'Ce serveur (dossier local)',
     ],
 
     'fields' => [
@@ -99,6 +100,14 @@ return [
         'drive_bad_key' => 'La clé du compte de service n’a pas pu être lue. Collez le fichier JSON entier.',
         'drive_quota' => 'Google a refusé l’envoi faute de quota de stockage, ce qui est le cas sur un Drive personnel.',
         'drive_incomplete' => 'Ajoutez la clé du compte de service et l’identifiant du dossier avant de tester.',
+        'local_path_invalid' => 'Le chemin du dossier n\'est pas valide.',
+        'local_path_not_allowed' => 'Ce dossier n\'est pas autorisé pour les sauvegardes.',
+        'local_path_link' => 'Le dossier, ou un dossier de son chemin, est un lien.',
+        'local_missing' => 'Le dossier de sauvegarde n\'existe plus. S\'il est sur un disque supplémentaire, vérifiez qu\'il est monté.',
+        'local_foreign' => 'Le dossier de sauvegarde n\'appartient plus au panneau.',
+        'local_not_writable' => 'Impossible d\'écrire dans le dossier de sauvegarde.',
+        'local_no_space' => 'Il n\'y a pas assez d\'espace disque libre pour cette sauvegarde.',
+        'local_success' => 'Le dossier est prêt. :free libres sur :total.',
     ],
 
     'delete' => [
@@ -142,5 +151,21 @@ return [
         'insufficient_scope' => 'La connexion a été approuvée mais n’autorise pas la création de fichiers. Vérifiez que l’écran de consentement OAuth comporte la portée Google Drive drive.file, puis reconnectez-vous.',
         'folder_failed' => 'Connecté, mais le dossier de sauvegarde n’a pas pu être créé dans votre Drive. La raison figure dans les journaux du panneau, sous « storage ». Reconnectez-vous une fois le problème résolu.',
         'wrong_provider' => 'Cette destination n’utilise pas la connexion Google.',
+    ],
+
+    // "This server" destinations (#14): the folder checks and the warning.
+    'local' => [
+        'path_invalid' => 'Saisissez le chemin complet d\'un dossier, par exemple /var/backups/panel.',
+        'path_not_allowed' => 'Les sauvegardes ne peuvent être conservées que dans un dossier sous :roots.',
+        'path_link' => 'Le dossier, ou un dossier de son chemin, est un lien. Choisissez un vrai dossier.',
+        'path_taken' => 'Une autre destination utilise déjà ce dossier.',
+        'parent_missing' => 'Le dossier :parent n\'existe pas. S\'il s\'agit d\'un disque supplémentaire, vérifiez qu\'il est monté.',
+        'folder_foreign' => 'Ce dossier appartient à un autre compte et n\'est pas vide. Choisissez un dossier vide ou nouveau.',
+        'not_folder' => 'Ce chemin est un fichier, pas un dossier.',
+        'unreadable' => 'Le dossier n\'a pas pu être vérifié. Réessayez ; si l\'erreur persiste, consultez les journaux du serveur.',
+        'prepare_failed' => 'Le dossier n\'a pas pu être créé ni rendu privé. Vérifiez qu\'il reste de l\'espace disque.',
+        'folder_created' => 'Dossier créé : :path',
+        'folder_existing' => 'Dossier trouvé et prêt : :path',
+        'warning' => 'Les sauvegardes sur ce serveur sont perdues si le serveur ou son disque tombe en panne. Utilisez-le avec une destination hors du serveur.',
     ],
 ];

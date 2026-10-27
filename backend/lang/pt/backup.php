@@ -85,6 +85,8 @@ return [
         'upload_artifact' => 'Não foi possível enviar o arquivo. Verifique se o destino de armazenamento ainda aceita escritas.',
         'verify_artifact' => 'O envio não corresponde ao que foi transmitido, por isso esta cópia não é fiável. Nada de antigo foi removido.',
         'upload_stalled' => 'O envio parou de transmitir dados e foi abandonado. A ligação permaneceu aberta mas nada foi transferido, o que normalmente significa que o fornecedor de armazenamento a interrompeu. Não há qualquer problema com o destino — a próxima execução agendada tentará novamente.',
+        'not_enough_space' => 'Não havia espaço livre suficiente para esta cópia, por isso não foi guardada e o disco ficou como estava. Liberte espaço ou mantenha menos cópias.',
+        'check_local_space' => 'Não foi possível usar a pasta de cópias deste servidor. Verifique o destino com Testar ligação.',
         'download_not_supported' => 'A transferência não está disponível para este tipo de destino. O painel só pode dar uma ligação ao seu navegador se o fornecedor de armazenamento o suportar — o Amazon S3 e o Google Drive (a sua própria conta) suportam. A restauração desta cópia de segurança continua a funcionar normalmente.',
         'download_prepare_required' => 'Esta cópia de segurança está guardada num servidor SFTP ou FTP, por isso o painel copia-a primeiro para aqui. Prepare a transferência e transfira-a quando estiver pronta.',
         'download_prepare_not_needed' => 'Esta cópia de segurança pode ser transferida diretamente. Não há nada a preparar.',

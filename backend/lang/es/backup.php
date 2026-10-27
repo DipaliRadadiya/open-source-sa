@@ -87,6 +87,8 @@ return [
         'upload_artifact' => 'No se pudo subir el archivo. Comprueba que el destino de almacenamiento sigue aceptando escrituras.',
         'verify_artifact' => 'La subida no coincide con lo enviado, así que no se puede confiar en esta copia. No se eliminó ninguna copia antigua.',
         'upload_stalled' => 'La subida dejó de enviar datos y se abandonó. La conexión siguió abierta pero no se transfirió nada, lo que suele significar que el proveedor de almacenamiento la cortó. El destino no tiene ningún problema: la próxima ejecución programada lo intentará de nuevo.',
+        'not_enough_space' => 'No había suficiente espacio libre para esta copia, así que no se guardó y el disco quedó como estaba. Libere espacio o conserve menos copias.',
+        'check_local_space' => 'No se pudo usar la carpeta de copias de este servidor. Compruebe el destino con Probar conexión.',
         'download_not_supported' => 'La descarga no está disponible para este tipo de destino. El panel solo puede darle un enlace a su navegador si el proveedor de almacenamiento lo admite: Amazon S3 y Google Drive (su propia cuenta) lo hacen. La restauración de esta copia de seguridad sigue funcionando con normalidad.',
         'download_prepare_required' => 'Esta copia de seguridad está en un servidor SFTP o FTP, así que el panel primero la copia aquí. Prepare la descarga y descárguela cuando esté lista.',
         'download_prepare_not_needed' => 'Esta copia de seguridad se puede descargar directamente. No hay nada que preparar.',

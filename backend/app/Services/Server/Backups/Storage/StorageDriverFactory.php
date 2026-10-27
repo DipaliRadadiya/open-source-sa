@@ -8,6 +8,7 @@ use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\Drivers\FtpDriver;
 use App\Services\Server\Backups\Storage\Drivers\GoogleDriveDriver;
 use App\Services\Server\Backups\Storage\Drivers\GoogleDriveOauthDriver;
+use App\Services\Server\Backups\Storage\Drivers\LocalDriver;
 use App\Services\Server\Backups\Storage\Drivers\S3Driver;
 use App\Services\Server\Backups\Storage\Drivers\SftpDriver;
 
@@ -28,6 +29,7 @@ class StorageDriverFactory
         StorageProvider::Sftp->value => SftpDriver::class,
         StorageProvider::GoogleDrive->value => GoogleDriveDriver::class,
         StorageProvider::GoogleDriveOauth->value => GoogleDriveOauthDriver::class,
+        StorageProvider::Local->value => LocalDriver::class,
     ];
 
     public function for(StorageDestination $destination): StorageDriver

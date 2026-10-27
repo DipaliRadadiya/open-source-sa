@@ -87,6 +87,8 @@ return [
         'upload_artifact' => 'The archive could not be uploaded. Check the storage destination still accepts writes.',
         'verify_artifact' => 'The upload did not match what was sent, so this backup cannot be trusted. Nothing old was removed.',
         'upload_stalled' => 'The upload stopped sending data and was abandoned. The connection stayed open but nothing transferred, which usually means the storage provider dropped it. Nothing is wrong with the destination — the next scheduled run will try again.',
+        'not_enough_space' => 'There was not enough free disk space for this backup, so it was not stored and the disk was left as it was. Free up some space, or keep fewer backups.',
+        'check_local_space' => 'The backup folder on this server could not be used. Check the destination with Test connection.',
         'download_not_supported' => 'Download is not available for this destination type. The panel can only hand your browser a link when the storage provider supports one — Amazon S3 and Google Drive (your own account) do. Restoring this backup still works normally.',
         'download_prepare_required' => 'This backup is stored on an SFTP or FTP server, so the panel first copies it here. Prepare the download, then download it when it is ready.',
         'download_prepare_not_needed' => 'This backup can be downloaded directly. There is nothing to prepare.',

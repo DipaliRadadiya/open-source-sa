@@ -3941,7 +3941,7 @@ Get a time-limited presigned download URL for the archive.
 
 `url` expires 5 minutes after issuance. `filename` is human-readable (`domain-YYYY-MM-DD-HHMMSS-type.tar.gz`).
 
-**S3 and Google Drive** answer as above (Drive's `expires_at` is `null`). **SFTP and FTP** have no link to hand over, and answer **`409`** instead — call the prepare endpoint below (2026-10-22):
+**S3 and Google Drive** answer as above (Drive's `expires_at` is `null`). **This server (`local`)** answers the same way, with a relative, signed panel link (`/api/storage-destinations/{id}/local-file?key=…&signature=…`, 5 minutes, `backup` manage) that streams the archive from the folder — no copy is made first. **SFTP and FTP** have no link to hand over, and answer **`409`** instead — call the prepare endpoint below (2026-10-22):
 
 ```json
 {"message": "This backup is stored on an SFTP or FTP server, so the panel first copies it here. Prepare the download, then download it when it is ready.",
@@ -6879,7 +6879,7 @@ Rows are ordered by `name` without case bias.
 }]}
 ```
 
-`provider` is one of `s3` · `ftp` · `sftp` · `google_drive` · `google_drive_oauth`. `provider_title` is the localized label — render that, don't map the code yourself. (There is **no** `webdav` provider — earlier versions of this document described one that was never built.)
+`provider` is one of `s3` · `ftp` · `sftp` · `google_drive` · `google_drive_oauth` · `local`. `provider_title` is the localized label — render that, don't map the code yourself. (There is **no** `webdav` provider — earlier versions of this document described one that was never built.)
 
 The list response also carries **`google_oauth_redirect_uri`** at the top level: the address to paste into the Google OAuth client *when creating it*, before any `google_drive_oauth` destination exists.
 
@@ -6912,6 +6912,38 @@ Required for every provider: `name` (unique, single-line, max 100) and **`provid
 | `config.access_key` / `config.secret_key` | yes | max 255 / 512 |
 | `config.endpoint` | no | `https` URL; omit for AWS itself and for anything carrying its region in the bucket host (R2, B2, Wasabi). Refused if it resolves to loopback or the cloud metadata range. |
 | `config.region` | no | `[A-Za-z0-9-]`, defaults to `us-east-1` |
+
+**This server (`local`, added 2026-10-27, #14)** — `{"name": "On this server", "provider": "local", "config": {"path": "/mnt/disk2/backups"}}`
+
+Backups kept in a folder on the panel's own server. **Show the warning** (`storage.local.warning`): they are lost if the server or its disk fails, so this belongs beside an off-server destination, not instead of one.
+
+| key | required | notes |
+|---|---|---|
+| `config.path` | yes | absolute, **strictly below** one of `server.backups.local.allowed_roots` (`/var/backups`, `/mnt`, `/media`; suggested `server.backups.local.default_path` = `/var/backups/panel`). Stored without a trailing slash. |
+
+**Saving prepares the folder** and says what it did, in an extra `folder` key on the `201` (and on `PATCH` when `config.path` changes):
+
+```json
+{"storage_destination": {…, "config": {"path": "/mnt/disk2/backups", "free_bytes": 41234567168, "total_bytes": 85899345920, "used_bytes": 0, "same_server": true}},
+ "folder": {"path": "/mnt/disk2/backups", "status": "created", "message": "Folder created: /mnt/disk2/backups"}}
+```
+
+| the folder | result |
+|---|---|
+| does not exist, its parent does | **created** (`status: created`), owned by the panel, `0700` |
+| exists and is the panel's, or is empty | used (`status: existing`), made the panel's and `0700` |
+| belongs to another account and has files in it | `422` `storage.local.folder_foreign` — never taken over |
+| its parent does not exist | `422` `storage.local.parent_missing` — the panel creates **one** level only, so a disk that is not mounted never gets its mount point invented on the system disk |
+| outside the roots, a root itself, relative, `..` | `422` `storage.local.path_not_allowed` / `path_invalid` |
+| a link anywhere on the path | `422` `storage.local.path_link` |
+| a file, not a folder | `422` `storage.local.not_folder` |
+| already another local destination's | `422` `storage.local.path_taken` — two would prune each other's backups |
+
+All on `config.path`, and nothing is created or changed when any of them fails. Archives inside are the panel's and `0600`: they hold every file of a site and its database dump, so no site user can read them.
+
+**Free space.** A backup is refused when it would leave less than **10% of the disk or 2 GB free, whichever is more** (`server.backups.local.min_free_percent` / `min_free_bytes`). Asked twice, because a backup has no fixed size: **before it starts**, against the last finished backup of the same target (none yet → not asked), and **before the archive is stored**, against its real size. A refused backup is `failed` with `reason: not_enough_space` and `error_class: local_no_space`; nothing is written. On the same disk as the panel's working folder the archive is **moved** in (no second copy); on another disk it is copied (`.part` until complete). `config.free_bytes` / `total_bytes` / `used_bytes` are there so the screen can show it filling.
+
+**A folder that disappears is not recreated** — it may be a disk that is no longer mounted. The test answers `local_missing`, and a backup fails at its first step (`reason: check_local_space`, `error_class: local_missing`) before anything is archived.
 
 **FTP** — `{"name": "NAS", "provider": "ftp", "config": {"host": "nas.example.com", "port": 21, "username": "backup", "password": "…", "root": "/backups", "ssl": true, "passive": true}}`
 
@@ -7013,6 +7045,8 @@ Probe credentials and reachability by uploading/reading/deleting a sentinel obje
 ```
 
 Always `200` — the request itself succeeded, `test.success` carries the verdict.
+
+For a **This server** (`local`) destination the success message gives the free space (*"The folder is ready. 38.4 GB free of 80 GB."*), and the failures are `local_missing` (gone — not recreated), `local_foreign` (no longer the panel's), `local_path_not_allowed`, `local_path_link`, `local_path_invalid`, `local_not_writable`, `local_no_space`.
 
 ---
 

@@ -13,6 +13,7 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (tu propia cuenta)',
+        'local' => 'Este servidor (carpeta local)',
     ],
 
     'fields' => [
@@ -99,6 +100,14 @@ return [
         'drive_bad_key' => 'No se pudo leer la clave de la cuenta de servicio. Pega el archivo JSON completo.',
         'drive_quota' => 'Google rechazó la subida por falta de cuota de almacenamiento, que es lo que ocurre en un Drive personal.',
         'drive_incomplete' => 'Añade la clave de la cuenta de servicio y el ID de la carpeta antes de probar.',
+        'local_path_invalid' => 'La ruta de la carpeta no es válida.',
+        'local_path_not_allowed' => 'Esta carpeta no está permitida para copias.',
+        'local_path_link' => 'La carpeta, o una carpeta de su ruta, es un enlace.',
+        'local_missing' => 'La carpeta de copias ya no existe. Si está en un disco adicional, compruebe que está montado.',
+        'local_foreign' => 'La carpeta de copias ya no pertenece al panel.',
+        'local_not_writable' => 'No se pudo escribir en la carpeta de copias.',
+        'local_no_space' => 'No hay suficiente espacio libre en el disco para esta copia.',
+        'local_success' => 'La carpeta está lista. :free libres de :total.',
     ],
 
     'delete' => [
@@ -142,5 +151,21 @@ return [
         'insufficient_scope' => 'La conexión se aprobó pero no permite crear archivos. Compruebe que la pantalla de consentimiento OAuth incluya el ámbito de Google Drive drive.file y conecte de nuevo.',
         'folder_failed' => 'Conectado, pero no se pudo crear la carpeta de copias en su Drive. El motivo está en los registros del panel, en «storage». Conecte de nuevo cuando se resuelva.',
         'wrong_provider' => 'Este destino no usa el acceso con Google.',
+    ],
+
+    // "This server" destinations (#14): the folder checks and the warning.
+    'local' => [
+        'path_invalid' => 'Introduzca la ruta completa de una carpeta, como /var/backups/panel.',
+        'path_not_allowed' => 'Las copias solo se pueden guardar en una carpeta dentro de :roots.',
+        'path_link' => 'La carpeta, o una carpeta de su ruta, es un enlace. Elija una carpeta real.',
+        'path_taken' => 'Otro destino ya usa esta carpeta.',
+        'parent_missing' => 'La carpeta :parent no existe. Si es un disco adicional, compruebe que está montado.',
+        'folder_foreign' => 'Esta carpeta pertenece a otra cuenta y no está vacía. Elija una carpeta vacía o nueva.',
+        'not_folder' => 'Esa ruta es un archivo, no una carpeta.',
+        'unreadable' => 'No se pudo comprobar la carpeta. Inténtelo de nuevo; si sigue fallando, revise los registros del servidor.',
+        'prepare_failed' => 'No se pudo crear la carpeta ni hacerla privada. Compruebe que hay espacio libre en el disco.',
+        'folder_created' => 'Carpeta creada: :path',
+        'folder_existing' => 'Carpeta encontrada y lista: :path',
+        'warning' => 'Las copias en este servidor se pierden si falla el servidor o su disco. Úselo junto con un destino fuera del servidor.',
     ],
 ];

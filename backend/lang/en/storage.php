@@ -17,6 +17,7 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (your own account)',
+        'local' => 'This server (local folder)',
     ],
 
     'fields' => [
@@ -103,6 +104,14 @@ return [
         'drive_bad_key' => 'The service account key could not be read. Paste the whole JSON file.',
         'drive_quota' => 'Google refused the upload for lack of storage quota, which is what happens on a personal Drive.',
         'drive_incomplete' => 'Add the service account key and the folder ID before testing.',
+        'local_path_invalid' => 'The folder path is not valid.',
+        'local_path_not_allowed' => 'This folder is not allowed for backups.',
+        'local_path_link' => 'The folder, or a folder on its path, is a link.',
+        'local_missing' => 'The backup folder no longer exists. If it is on an extra disk, check that the disk is mounted.',
+        'local_foreign' => 'The backup folder no longer belongs to the panel.',
+        'local_not_writable' => 'The backup folder could not be written to.',
+        'local_no_space' => 'There is not enough free disk space for this backup.',
+        'local_success' => 'The folder is ready. :free free of :total.',
     ],
 
     'delete' => [
@@ -149,5 +158,21 @@ return [
         'insufficient_scope' => 'The connection was approved but does not allow creating files. Check the OAuth consent screen lists the Google Drive scope drive.file, then connect again.',
         'folder_failed' => 'Connected, but the backup folder could not be created in your Drive. The reason is in the panel logs under storage. Connect again once it is resolved.',
         'wrong_provider' => 'This destination does not use Google sign-in.',
+    ],
+
+    // "This server" destinations (#14): the folder checks and the warning.
+    'local' => [
+        'path_invalid' => 'Enter a full folder path, such as /var/backups/panel.',
+        'path_not_allowed' => 'Backups can only be kept in a folder under :roots.',
+        'path_link' => 'The folder, or a folder on its path, is a link. Choose a real folder.',
+        'path_taken' => 'Another destination already uses this folder.',
+        'parent_missing' => 'The folder :parent does not exist. If it is an extra disk, check that it is mounted.',
+        'folder_foreign' => 'This folder belongs to another account and is not empty. Choose an empty or new folder.',
+        'not_folder' => 'That path is a file, not a folder.',
+        'unreadable' => 'The folder could not be checked. Try again; if it keeps failing, check the server logs.',
+        'prepare_failed' => 'The folder could not be created or made private. Check there is free disk space.',
+        'folder_created' => 'Folder created: :path',
+        'folder_existing' => 'Folder found and ready: :path',
+        'warning' => 'Backups on this server are lost if the server or its disk fails. Use it together with an off-server destination.',
     ],
 ];

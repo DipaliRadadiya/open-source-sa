@@ -13,6 +13,7 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (sua própria conta)',
+        'local' => 'Este servidor (pasta local)',
     ],
 
     'fields' => [
@@ -99,6 +100,14 @@ return [
         'drive_bad_key' => 'Não foi possível ler a chave da conta de serviço. Cole o arquivo JSON inteiro.',
         'drive_quota' => 'O Google recusou o envio por falta de cota de armazenamento, que é o que acontece em um Drive pessoal.',
         'drive_incomplete' => 'Adicione a chave da conta de serviço e o ID da pasta antes de testar.',
+        'local_path_invalid' => 'O caminho da pasta não é válido.',
+        'local_path_not_allowed' => 'Esta pasta não é permitida para cópias.',
+        'local_path_link' => 'A pasta, ou uma pasta do seu caminho, é uma ligação.',
+        'local_missing' => 'A pasta de cópias já não existe. Se estiver num disco adicional, verifique se está montado.',
+        'local_foreign' => 'A pasta de cópias já não pertence ao painel.',
+        'local_not_writable' => 'Não foi possível escrever na pasta de cópias.',
+        'local_no_space' => 'Não há espaço livre suficiente em disco para esta cópia.',
+        'local_success' => 'A pasta está pronta. :free livres de :total.',
     ],
 
     'delete' => [
@@ -142,5 +151,21 @@ return [
         'insufficient_scope' => 'A conexão foi aprovada, mas não permite criar arquivos. Verifique se a tela de consentimento OAuth inclui o escopo do Google Drive drive.file e conecte de novo.',
         'folder_failed' => 'Conectado, mas não foi possível criar a pasta de backups no seu Drive. O motivo está nos logs do painel, em "storage". Conecte de novo assim que resolver.',
         'wrong_provider' => 'Este destino não usa login do Google.',
+    ],
+
+    // "This server" destinations (#14): the folder checks and the warning.
+    'local' => [
+        'path_invalid' => 'Indique o caminho completo de uma pasta, como /var/backups/panel.',
+        'path_not_allowed' => 'As cópias só podem ser guardadas numa pasta dentro de :roots.',
+        'path_link' => 'A pasta, ou uma pasta do seu caminho, é uma ligação. Escolha uma pasta real.',
+        'path_taken' => 'Outro destino já usa esta pasta.',
+        'parent_missing' => 'A pasta :parent não existe. Se for um disco adicional, verifique se está montado.',
+        'folder_foreign' => 'Esta pasta pertence a outra conta e não está vazia. Escolha uma pasta vazia ou nova.',
+        'not_folder' => 'Esse caminho é um ficheiro, não uma pasta.',
+        'unreadable' => 'Não foi possível verificar a pasta. Tente novamente; se continuar a falhar, consulte os registos do servidor.',
+        'prepare_failed' => 'Não foi possível criar a pasta nem torná-la privada. Verifique se há espaço livre em disco.',
+        'folder_created' => 'Pasta criada: :path',
+        'folder_existing' => 'Pasta encontrada e pronta: :path',
+        'warning' => 'As cópias neste servidor perdem-se se o servidor ou o seu disco falhar. Use-o juntamente com um destino fora do servidor.',
     ],
 ];

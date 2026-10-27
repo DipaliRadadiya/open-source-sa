@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Server\BackupController;
 use App\Http\Controllers\API\Server\BackupDownloadController;
+use App\Http\Controllers\API\Server\LocalBackupDownloadController;
 use App\Http\Controllers\API\Server\RestoreController;
 use Illuminate\Support\Facades\Route;
 
@@ -70,6 +71,15 @@ Route::get('/backups/{backup}/download/prepare', [BackupDownloadController::clas
 Route::get('/backups/{backup}/download/file', [BackupDownloadController::class, 'file'])
     ->middleware(['permission:backup,manage', 'signed:relative', 'throttle:20,1'])
     ->name('backups.download.file');
+
+/*
+| Download for "This server" destinations (#14): the file is read where it
+| is. Handed out by the download endpoint above, so it carries the same
+| `manage` tier — and a signature, because the key is in the query string.
+*/
+Route::get('/storage-destinations/{storageDestination}/local-file', [LocalBackupDownloadController::class, 'show'])
+    ->middleware(['permission:backup,manage', 'signed:relative', 'throttle:20,1'])
+    ->name('storage.local.download');
 
 /*
 | Restore — the destructive half.

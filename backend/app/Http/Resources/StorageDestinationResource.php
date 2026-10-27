@@ -83,6 +83,11 @@ class StorageDestinationResource extends JsonResource
      */
     private function hasCredentials(array $keys): bool
     {
+        // A provider with no secrets at all ("This server") is never missing one.
+        if ($keys === []) {
+            return true;
+        }
+
         foreach ($keys as $key) {
             if (filled($this->resource->configValue($key))) {
                 return true;

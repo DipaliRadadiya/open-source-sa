@@ -39,6 +39,12 @@ enum StorageProvider: string
     case GoogleDriveOauth = 'google_drive_oauth';
 
     /**
+     * A folder on the panel's own server (#14). Not off-site: lost with the
+     * server or its disk, which the screen says.
+     */
+    case Local = 'local';
+
+    /**
      * The translated display name. Kept here rather than on the driver so a
      * Resource can label a destination without building a driver for it — a
      * row in a list has no business constructing a filesystem client.

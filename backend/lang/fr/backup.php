@@ -85,6 +85,8 @@ return [
         'upload_artifact' => 'L’archive n’a pas pu être envoyée. Vérifiez que la destination de stockage accepte toujours les écritures.',
         'verify_artifact' => 'L’envoi ne correspond pas à ce qui a été transmis ; cette sauvegarde n’est pas fiable. Aucune ancienne sauvegarde n’a été supprimée.',
         'upload_stalled' => "L'envoi a cessé de transmettre des données et a été abandonné. La connexion est restée ouverte mais rien n'a été transféré, ce qui signifie généralement que le fournisseur de stockage l'a interrompue. La destination n'a aucun problème — la prochaine exécution planifiée réessaiera.",
+        'not_enough_space' => 'Il n\'y avait pas assez d\'espace disque libre pour cette sauvegarde : elle n\'a pas été conservée et le disque est resté tel quel. Libérez de l\'espace ou gardez moins de sauvegardes.',
+        'check_local_space' => 'Le dossier de sauvegarde de ce serveur n\'a pas pu être utilisé. Vérifiez la destination avec Tester la connexion.',
         'download_not_supported' => "Le téléchargement n'est pas disponible pour ce type de destination. Le panneau ne peut fournir un lien à votre navigateur que si le fournisseur de stockage le permet — Amazon S3 et Google Drive (votre propre compte) le permettent. La restauration de cette sauvegarde fonctionne toujours normalement.",
         'download_prepare_required' => 'Cette sauvegarde est stockée sur un serveur SFTP ou FTP, le panneau la copie donc d\'abord ici. Préparez le téléchargement, puis téléchargez-la quand elle est prête.',
         'download_prepare_not_needed' => 'Cette sauvegarde peut être téléchargée directement. Il n\'y a rien à préparer.',

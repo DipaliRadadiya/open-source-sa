@@ -4,6 +4,7 @@ namespace App\Services\Server\Backups;
 
 use App\Contracts\BackupStep;
 use App\Enums\BackupStatus;
+use App\Exceptions\NotEnoughBackupSpace;
 use App\Exceptions\NoVolumesToBackUp;
 use App\Exceptions\UploadStalled;
 use App\Models\Backup;
@@ -143,6 +144,10 @@ class BackupRunner
                 'reason' => match (true) {
                     $e instanceof UploadStalled => UploadStalled::REASON,
                     $e instanceof NoVolumesToBackUp => NoVolumesToBackUp::REASON,
+                    // A backup to this server's own disk that would have left
+                    // it too full (#14). Wherever it was caught, this is the
+                    // reason that tells the user what to do.
+                    $e instanceof NotEnoughBackupSpace => NotEnoughBackupSpace::REASON,
                     default => $backup->reason,
                 },
                 'error_class' => $this->storageErrorClass($backup, $e),
@@ -170,7 +175,7 @@ class BackupRunner
      */
     private function storageErrorClass(Backup $backup, Throwable $e): ?string
     {
-        if (! in_array($backup->reason, ['upload_artifact', 'verify_artifact', 'prune_old_backups'], true) || $e instanceof UploadStalled) {
+        if (! in_array($backup->reason, ['check_local_space', 'upload_artifact', 'verify_artifact', 'prune_old_backups'], true) || $e instanceof UploadStalled) {
             return null;
         }
 

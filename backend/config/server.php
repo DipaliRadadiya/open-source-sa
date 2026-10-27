@@ -42,6 +42,7 @@ use App\Services\Server\Applications\Installers\UptimeKumaInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\Backups\Steps\ArchiveFiles;
 use App\Services\Server\Backups\Steps\ArchiveVolumes;
+use App\Services\Server\Backups\Steps\CheckLocalSpace;
 use App\Services\Server\Backups\Steps\DumpDatabase;
 use App\Services\Server\Backups\Steps\PruneOldBackups;
 use App\Services\Server\Backups\Steps\UploadArtifact;
@@ -357,6 +358,9 @@ return [
 
     'backups' => [
         'steps' => [
+            // Only for a "This server" destination (#14): is the folder there,
+            // and will the backup fit? First, so a refusal costs nothing.
+            CheckLocalSpace::class,
             DumpDatabase::class,
             // Before ArchiveFiles, which folds the per-volume tars this writes
             // into the one uploaded artefact — the same way it already folds in
@@ -391,6 +395,18 @@ return [
         // rather than /tmp: /tmp is cleared on reboot and is often a small
         // tmpfs, and a multi-gigabyte site archive would fill it.
         'working_dir' => env('BACKUP_WORKING_DIR', storage_path('app/backups')),
+
+        // "This server" destinations (#14). The folder must sit strictly below
+        // one of these roots — where an extra disk is usually mounted, or the
+        // system's own backup directory. A backup is refused when it would
+        // leave less than min_free_percent of the disk, or min_free_bytes,
+        // whichever is more: a full disk takes every site down with it.
+        'local' => [
+            'allowed_roots' => ['/var/backups', '/mnt', '/media'],
+            'default_path' => '/var/backups/panel',
+            'min_free_percent' => (float) env('BACKUP_LOCAL_MIN_FREE_PERCENT', 10),
+            'min_free_bytes' => (int) env('BACKUP_LOCAL_MIN_FREE_BYTES', 2 * 1024 * 1024 * 1024),
+        ],
 
         /*
          * Downloads of backups kept on SFTP or FTP (prepare, then download).

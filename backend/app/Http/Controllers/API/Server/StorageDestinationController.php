@@ -6,6 +6,8 @@ use App\Actions\Server\StorageDestination\ConnectGoogleDrive;
 use App\Actions\Server\StorageDestination\CreateStorageDestination;
 use App\Actions\Server\StorageDestination\DeleteStorageDestination;
 use App\Actions\Server\StorageDestination\UpdateStorageDestination;
+use App\Enums\StorageProvider;
+use App\Exceptions\Server\Storage\LocalBackupFolderException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\StorageDestination\OauthCallbackRequest;
 use App\Http\Requests\Server\StorageDestination\StoreStorageDestinationRequest;
@@ -13,9 +15,11 @@ use App\Http\Requests\Server\StorageDestination\UpdateStorageDestinationRequest;
 use App\Http\Resources\StorageDestinationResource;
 use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\GoogleOauthRedirect;
+use App\Services\Server\Backups\Storage\LocalBackupFolder;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class StorageDestinationController extends Controller
 {
@@ -82,11 +86,48 @@ class StorageDestinationController extends Controller
 
     public function store(StoreStorageDestinationRequest $request, CreateStorageDestination $action): JsonResponse
     {
-        $destination = $action->execute($request->validated());
+        $data = $request->validated();
+
+        // "This server" (#14): the folder is made before the row exists, so a
+        // folder that cannot be made leaves no destination pointing at it.
+        $folder = $data['provider'] === StorageProvider::Local->value
+            ? $this->prepareLocalFolder((string) $data['config']['path'])
+            : null;
+
+        if ($folder !== null) {
+            $data['config']['path'] = $folder['path'];
+        }
+
+        $destination = $action->execute($data);
 
         return response()->json([
             'storage_destination' => StorageDestinationResource::make($destination)->resolve(),
+            ...($folder !== null ? ['folder' => $folder] : []),
         ], 201);
+    }
+
+    /**
+     * Create the folder, or take over an empty one, and say which — "created"
+     * and "found" are different news to the person who typed the path.
+     *
+     * @return array{path: string, status: string, message: string}
+     */
+    private function prepareLocalFolder(string $path): array
+    {
+        $folders = app(LocalBackupFolder::class);
+        $path = (string) $folders->normalise($path);
+
+        try {
+            $status = $folders->prepare($path);
+        } catch (LocalBackupFolderException $e) {
+            throw ValidationException::withMessages(['config.path' => [$e->userMessage()]]);
+        }
+
+        return [
+            'path' => $path,
+            'status' => $status,
+            'message' => __('storage.local.folder_'.$status, ['path' => $path]),
+        ];
     }
 
     public function show(StorageDestination $storageDestination): JsonResponse
@@ -101,10 +142,22 @@ class StorageDestinationController extends Controller
         StorageDestination $storageDestination,
         UpdateStorageDestination $action,
     ): JsonResponse {
-        $destination = $action->execute($storageDestination, $request->validated());
+        $data = $request->validated();
+        $folder = null;
+
+        // A moved folder is prepared like a new one. Backups already in the
+        // old folder stay there; retention and restore of those read the
+        // destination as it is now, as with every other provider.
+        if ($storageDestination->provider === StorageProvider::Local && isset($data['config']['path'])) {
+            $folder = $this->prepareLocalFolder((string) $data['config']['path']);
+            $data['config']['path'] = $folder['path'];
+        }
+
+        $destination = $action->execute($storageDestination, $data);
 
         return response()->json([
             'storage_destination' => StorageDestinationResource::make($destination)->resolve(),
+            ...($folder !== null ? ['folder' => $folder] : []),
         ]);
     }
 

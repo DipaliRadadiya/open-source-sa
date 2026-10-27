@@ -13,6 +13,7 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (eigenes Konto)',
+        'local' => 'Dieser Server (lokaler Ordner)',
     ],
 
     'fields' => [
@@ -99,6 +100,14 @@ return [
         'drive_bad_key' => 'Der Dienstkonto-Schlüssel konnte nicht gelesen werden. Fügen Sie die vollständige JSON-Datei ein.',
         'drive_quota' => 'Google hat den Upload mangels Speicherkontingent abgelehnt — genau das passiert bei einem persönlichen Drive.',
         'drive_incomplete' => 'Fügen Sie vor dem Test den Dienstkonto-Schlüssel und die Ordner-ID hinzu.',
+        'local_path_invalid' => 'Der Ordnerpfad ist ungültig.',
+        'local_path_not_allowed' => 'Dieser Ordner ist für Backups nicht erlaubt.',
+        'local_path_link' => 'Der Ordner oder ein Ordner auf seinem Pfad ist ein Link.',
+        'local_missing' => 'Der Backup-Ordner existiert nicht mehr. Wenn er auf einer zusätzlichen Festplatte liegt, prüfen Sie, ob sie eingebunden ist.',
+        'local_foreign' => 'Der Backup-Ordner gehört nicht mehr dem Panel.',
+        'local_not_writable' => 'In den Backup-Ordner konnte nicht geschrieben werden.',
+        'local_no_space' => 'Für dieses Backup ist nicht genug Speicherplatz frei.',
+        'local_success' => 'Der Ordner ist bereit. :free von :total frei.',
     ],
 
     'delete' => [
@@ -142,5 +151,21 @@ return [
         'insufficient_scope' => 'Die Verbindung wurde bestätigt, erlaubt aber kein Anlegen von Dateien. Prüfen Sie, ob der OAuth-Zustimmungsbildschirm den Google-Drive-Bereich drive.file enthält, und verbinden Sie erneut.',
         'folder_failed' => 'Verbunden, aber der Backup-Ordner konnte in Ihrem Drive nicht angelegt werden. Der Grund steht in den Panel-Logs unter „storage“. Verbinden Sie erneut, sobald er behoben ist.',
         'wrong_provider' => 'Dieses Ziel verwendet keine Google-Anmeldung.',
+    ],
+
+    // "This server" destinations (#14): the folder checks and the warning.
+    'local' => [
+        'path_invalid' => 'Geben Sie einen vollständigen Ordnerpfad ein, z. B. /var/backups/panel.',
+        'path_not_allowed' => 'Backups können nur in einem Ordner unter :roots abgelegt werden.',
+        'path_link' => 'Der Ordner oder ein Ordner auf seinem Pfad ist ein Link. Wählen Sie einen echten Ordner.',
+        'path_taken' => 'Ein anderes Ziel verwendet diesen Ordner bereits.',
+        'parent_missing' => 'Der Ordner :parent existiert nicht. Wenn es eine zusätzliche Festplatte ist, prüfen Sie, ob sie eingebunden ist.',
+        'folder_foreign' => 'Dieser Ordner gehört einem anderen Konto und ist nicht leer. Wählen Sie einen leeren oder neuen Ordner.',
+        'not_folder' => 'Dieser Pfad ist eine Datei, kein Ordner.',
+        'unreadable' => 'Der Ordner konnte nicht geprüft werden. Versuchen Sie es erneut; wenn es weiter fehlschlägt, prüfen Sie die Server-Logs.',
+        'prepare_failed' => 'Der Ordner konnte nicht angelegt oder privat gemacht werden. Prüfen Sie, ob genug Speicherplatz frei ist.',
+        'folder_created' => 'Ordner angelegt: :path',
+        'folder_existing' => 'Ordner gefunden und bereit: :path',
+        'warning' => 'Backups auf diesem Server gehen verloren, wenn der Server oder seine Festplatte ausfällt. Verwenden Sie zusätzlich ein Ziel außerhalb des Servers.',
     ],
 ];

@@ -9,6 +9,7 @@ use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -148,7 +149,7 @@ class StorageConnectionProber
             return [
                 'success' => true,
                 'latency_ms' => $this->elapsed($start),
-                'message' => __('storage.test.success'),
+                'message' => $this->successMessage($destination),
                 'error_class' => null,
                 'detail' => null,
             ];
@@ -262,6 +263,23 @@ class StorageConnectionProber
             // generic user-facing wording.
             'detail' => $exception?->getMessage(),
         ];
+    }
+
+    /**
+     * "Connection succeeded", except for a folder on this server (#14), where
+     * the useful news is how much room is left on its disk.
+     */
+    private function successMessage(StorageDestination $destination): string
+    {
+        if ($destination->provider === StorageProvider::Local) {
+            ['free' => $free, 'total' => $total] = app(LocalBackupFolder::class)->space((string) $destination->configValue('path'));
+
+            if ($free !== null && $total !== null) {
+                return __('storage.test.local_success', ['free' => Number::fileSize($free, 1), 'total' => Number::fileSize($total, 1)]);
+            }
+        }
+
+        return __('storage.test.success');
     }
 
     private function elapsed(float $start): int
