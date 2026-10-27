@@ -27,4 +27,7 @@ return [
     'shell_comment' => 'Der Befehl enthält einen Shell-Kommentar (ein # am Anfang eines Wortes). Cron würde die Zeile dort abschneiden und der Job liefe nicht richtig. Entfernen Sie den Kommentar oder setzen Sie das # in Anführungszeichen.',
     'run_paused' => 'Dieser Cronjob ist pausiert. Aktivieren Sie ihn, bevor Sie ihn ausführen.',
     'run_already_running' => 'Dieser Cronjob läuft bereits über „Jetzt ausführen“. Warten Sie, bis diese Ausführung beendet ist.',
+    'switch_not_this_site' => 'Dieser Cronjob gehört nicht zu dieser Seite.',
+    'switch_unknown_php' => 'Cronjob :name nennt kein PHP, das das Panel umstellen kann. Bearbeiten Sie stattdessen seinen Befehl.',
+    'switch_too_long' => 'Cronjob :name wäre mit dem neuen PHP-Pfad länger als 1000 Zeichen. Bearbeiten Sie stattdessen seinen Befehl.',
 ];

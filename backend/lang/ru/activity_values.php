@@ -4,6 +4,8 @@ return [
     'none' => 'нет',
     'yes' => 'да',
     'no' => 'нет',
+    // The server default PHP, where a cron job switched off plain `php`.
+    'php_default' => 'по умолчанию',
     'adopted_left_unexpected_path' => 'записанное расположение не из тех, что панель удаляет',
     'adopted_left_other_site' => 'он принадлежит другому сайту или серверу',
     'adopted_left_not_this_site' => 'он обслуживает уже не только этот сайт',

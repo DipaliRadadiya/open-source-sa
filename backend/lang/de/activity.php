@@ -128,6 +128,7 @@ return [
     'cronjob.delete_failed' => 'Cronjob :name konnte nicht gelöscht werden (Schritt: :step)',
     'cronjob.ran' => 'Cronjob :name manuell ausgeführt',
     'cronjob.run_failed' => 'Cronjob :name konnte nicht manuell ausgeführt werden',
+    'cronjob.php_switched' => 'Cronjob :name von PHP :from auf :to umgestellt',
     'log.downloaded' => 'Protokoll :log heruntergeladen',
     'disk_cleaner.cleaned' => 'Festplatte bereinigt (:categories, :kept) — :freed freigegeben',
     'disk_cleaner.auto_cleaned' => 'Datenträger automatisch bereinigt (:categories, :kept) — :freed freigegeben',

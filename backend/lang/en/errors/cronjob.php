@@ -27,4 +27,7 @@ return [
     'shell_comment' => 'The command contains a shell comment (a # at the start of a word). Cron would cut the line there and the job would not run properly. Remove the comment, or put the # inside quotes.',
     'run_paused' => 'This cron job is paused. Turn it on before running it.',
     'run_already_running' => 'This cron job is already running from "Run now". Wait for that run to finish.',
+    'switch_not_this_site' => 'This cron job does not belong to this site.',
+    'switch_unknown_php' => 'Cron job :name does not name a PHP the panel can switch. Edit its command instead.',
+    'switch_too_long' => 'Cron job :name would be longer than 1000 characters with the new PHP path. Edit its command instead.',
 ];

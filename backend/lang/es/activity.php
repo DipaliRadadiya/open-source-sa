@@ -128,6 +128,7 @@ return [
     'cronjob.delete_failed' => 'No se pudo eliminar la tarea cron :name (paso: :step)',
     'cronjob.ran' => 'Tarea cron :name ejecutada manualmente',
     'cronjob.run_failed' => 'No se pudo ejecutar manualmente la tarea cron :name',
+    'cronjob.php_switched' => 'Tarea cron :name cambiada de PHP :from a :to',
     'log.downloaded' => 'Descargó el registro :log',
     'disk_cleaner.cleaned' => 'Limpió el disco (:categories, :kept) — liberó :freed',
     'disk_cleaner.auto_cleaned' => 'Limpió el disco automáticamente (:categories, :kept) — liberó :freed',

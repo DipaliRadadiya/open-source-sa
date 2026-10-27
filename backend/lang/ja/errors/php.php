@@ -17,6 +17,7 @@ return [
     'reload_failed' => '変更は適用されましたが、PHP :version を再読み込みできなかったため、まだ有効になっていません。サポートに参照番号をお伝えください。',
     'operation_failed' => 'PHP :version の設定を更新できませんでした。',
     'version_in_use' => 'PHP :version は :apps が使用しています。先にそれらのアプリケーションを変更してください。',
+    'version_used_by_cronjobs' => 'PHP :version は次のCronジョブで使われています: :cronjobs。先に別のバージョンへ切り替えるか削除してください。',
     'version_is_default' => 'これは既定のバージョンです。先に別のものを選んでください。',
     'version_runs_panel' => 'PHP :version を削除するとパネルが停止します。パネル自身がこのバージョンで動作しています。',
     'extension_builtin' => ':extension は PHP に組み込まれているため、無効にできません。',

@@ -18,7 +18,7 @@ class UpdateCronjob
     ) {}
 
     /**
-     * @param  array{name?: string, command?: string, expression?: string, system_user_id?: int|null, username?: string|null, active?: bool}  $data
+     * @param  array{name?: string, command?: string, expression?: string, system_user_id?: int|null, username?: string|null, active?: bool, application_owned?: bool}  $data
      */
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
@@ -49,8 +49,9 @@ class UpdateCronjob
 
         // A job the panel created for a site is removed with the site. Once
         // its command is edited it may do something the user wants kept, so
-        // it becomes theirs.
-        if (isset($data['command']) && $data['command'] !== $cronjob->command) {
+        // it becomes theirs. A caller that only swaps the PHP it runs on
+        // (SwitchCronjobsPhp) says so, and the job stays the site's.
+        if (isset($data['command']) && $data['command'] !== $cronjob->command && ! array_key_exists('application_owned', $data)) {
             $data['application_owned'] = false;
         }
 

@@ -17,6 +17,7 @@ return [
     'reload_failed' => 'La modification a été faite, mais PHP :version n\'a pas pu être rechargé : elle n\'est donc pas encore active. Communiquez la référence au support.',
     'operation_failed' => 'La configuration de PHP :version n\'a pas pu être mise à jour.',
     'version_in_use' => 'PHP :version est utilisé par :apps. Modifiez d\'abord ces applications.',
+    'version_used_by_cronjobs' => 'PHP :version est utilisé par des tâches cron : :cronjobs. Passez-les à une autre version ou supprimez-les d\'abord.',
     'version_is_default' => 'C\'est la version par défaut. Choisissez-en une autre d\'abord.',
     'version_runs_panel' => 'Supprimer PHP :version mettrait le panneau hors ligne : c\'est la version sur laquelle il fonctionne.',
     'extension_builtin' => 'L\'extension :extension est compilée dans PHP. Elle ne peut pas être désactivée.',

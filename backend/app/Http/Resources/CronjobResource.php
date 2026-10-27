@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Server\Cron\CronPhpBinary;
 use App\Support\ServerTimezone;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -28,6 +29,14 @@ class CronjobResource extends JsonResource
             // the frontend needs it to know which screen a job came from.
             'application_id' => $this->application_id,
             'command' => $this->command,
+            // Which PHP the command runs: "8.2", "default" (plain `php`, the
+            // server default) or null when it names none the panel knows.
+            'php_version' => app(CronPhpBinary::class)->version((string) $this->command),
+            // For a site's job: whether that is the site's PHP. Null for a
+            // server-level job, or when either side is unknown.
+            'matches_site_php' => $this->application_id
+                ? app(CronPhpBinary::class)->matchesSite($this->resource, $this->application)
+                : null,
             'expression' => $this->expression,
             'active' => (bool) $this->active,
             // Cron interprets schedules in the server's timezone, so these are

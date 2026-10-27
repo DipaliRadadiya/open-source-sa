@@ -16,6 +16,7 @@ use App\Jobs\RemovePhpVersion;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Cron\CronPhpBinary;
 use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpIniDirectives;
@@ -119,6 +120,17 @@ class PhpController extends Controller
             ], 422);
         }
 
+        // Same rule as the sites above, for the cron jobs that name this
+        // version: removing it would leave each failing on every tick,
+        // silently. Plain `php` is not counted — it follows the default.
+        $crons = app(CronPhpBinary::class)->namingVersion($version);
+
+        if ($crons !== []) {
+            return response()->json([
+                'message' => __('errors/php.version_used_by_cronjobs', ['version' => $version, 'cronjobs' => implode(', ', $crons)]),
+            ], 422);
+        }
+
         if ($php->default() === $version) {
             return response()->json(['message' => __('errors/php.version_is_default')], 422);
         }
@@ -156,7 +168,13 @@ class PhpController extends Controller
         $php->setDefault($version);
         $log->log('php.default_changed', null, ['version' => $version]);
 
-        return response()->json(['php' => $overview->read()]);
+        return response()->json([
+            'php' => $overview->read(),
+            // Plain `php` is the default, so these now run on `$version` —
+            // Linux moved them, not the panel. Said so the user can pin one
+            // to a version instead; nothing here changes them.
+            'cronjobs_on_default_php' => app(CronPhpBinary::class)->onServerDefault(),
+        ]);
     }
 
     /**

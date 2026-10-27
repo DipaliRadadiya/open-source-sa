@@ -128,6 +128,7 @@ return [
     'cronjob.delete_failed' => 'Cronジョブ :name の削除に失敗しました（ステップ: :step）',
     'cronjob.ran' => 'Cronジョブ :name を手動で実行しました',
     'cronjob.run_failed' => 'Cronジョブ :name の手動実行に失敗しました',
+    'cronjob.php_switched' => 'Cronジョブ :name をPHP :from から :to に切り替えました',
     'log.downloaded' => ':log ログをダウンロードしました',
     'disk_cleaner.cleaned' => 'ディスクをクリーンアップしました (:categories, :kept) — :freed 解放',
     'disk_cleaner.auto_cleaned' => 'ディスクを自動的にクリーンアップしました (:categories, :kept) — :freed を解放',

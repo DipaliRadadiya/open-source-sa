@@ -27,4 +27,7 @@ return [
     'shell_comment' => 'El comando contiene un comentario de shell (un # al principio de una palabra). Cron cortaría la línea ahí y la tarea no se ejecutaría bien. Quite el comentario o ponga el # entre comillas.',
     'run_paused' => 'Esta tarea cron está en pausa. Actívela antes de ejecutarla.',
     'run_already_running' => 'Esta tarea cron ya se está ejecutando desde «Ejecutar ahora». Espere a que termine esa ejecución.',
+    'switch_not_this_site' => 'Esta tarea cron no pertenece a este sitio.',
+    'switch_unknown_php' => 'La tarea cron :name no indica un PHP que el panel pueda cambiar. Edite su comando en su lugar.',
+    'switch_too_long' => 'La tarea cron :name superaría los 1000 caracteres con la nueva ruta de PHP. Edite su comando en su lugar.',
 ];

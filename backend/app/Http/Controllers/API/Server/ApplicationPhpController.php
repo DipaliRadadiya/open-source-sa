@@ -9,6 +9,7 @@ use App\Http\Resources\ApplicationPhpSettingsResource;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\ActivityLogger;
+use App\Services\Server\Cron\CronPhpBinary;
 use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Php\V7PhpExtraConf;
@@ -184,6 +185,12 @@ class ApplicationPhpController extends Controller
 
         return response()->json([
             'php' => ApplicationPhpSettingsResource::make($application->fresh(['phpSettings', 'systemUser']))->resolve(),
+            // The site's cron jobs that do not run on its PHP — offered, not
+            // changed: the user picks which to switch (#5). A job that names
+            // the old version stays on it until they do.
+            'cronjobs_to_review' => $application->php_version
+                ? app(CronPhpBinary::class)->review($application, (string) $application->php_version)
+                : [],
         ]);
     }
 

@@ -134,6 +134,7 @@ return [
     'cronjob.delete_failed' => 'Failed to delete cron job :name (step: :step)',
     'cronjob.ran' => 'Ran cron job :name manually',
     'cronjob.run_failed' => 'Failed to run cron job :name manually',
+    'cronjob.php_switched' => 'Switched cron job :name from PHP :from to :to',
     'log.downloaded' => 'Downloaded the :log log',
     'disk_cleaner.cleaned' => 'Cleaned disk (:categories, :kept) — freed :freed',
     'disk_cleaner.auto_cleaned' => 'Cleaned disk automatically (:categories, :kept) — freed :freed',

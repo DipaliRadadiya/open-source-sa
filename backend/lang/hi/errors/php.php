@@ -17,6 +17,7 @@ return [
     'reload_failed' => 'बदलाव कर दिया गया, लेकिन PHP :version रीलोड नहीं हो सका, इसलिए यह अभी सक्रिय नहीं है। सपोर्ट को रेफ़रेंस बताएं।',
     'operation_failed' => 'PHP :version की कॉन्फ़िगरेशन अपडेट नहीं हो सकी।',
     'version_in_use' => 'PHP :version का उपयोग :apps कर रहे हैं। पहले उन एप्लिकेशनों को बदलें।',
+    'version_used_by_cronjobs' => 'PHP :version इन क्रॉन जॉब्स द्वारा उपयोग किया जा रहा है: :cronjobs। पहले इन्हें किसी दूसरे वर्शन पर बदलें या हटाएँ।',
     'version_is_default' => 'यह डिफ़ॉल्ट संस्करण है। पहले कोई अन्य चुनें।',
     'version_runs_panel' => 'PHP :version हटाने से पैनल बंद हो जाएगा — पैनल स्वयं इसी संस्करण पर चलता है।',
     'extension_builtin' => ':extension PHP में अंतर्निहित है। इसे बंद नहीं किया जा सकता।',

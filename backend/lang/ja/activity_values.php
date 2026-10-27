@@ -4,6 +4,8 @@ return [
     'none' => 'なし',
     'yes' => 'はい',
     'no' => 'いいえ',
+    // The server default PHP, where a cron job switched off plain `php`.
+    'php_default' => '既定',
     'adopted_left_unexpected_path' => '記録された場所はパネルが削除する場所ではありません',
     'adopted_left_other_site' => '別のサイトまたはサーバーに属しています',
     'adopted_left_not_this_site' => 'このサイトだけを提供するものではなくなっています',

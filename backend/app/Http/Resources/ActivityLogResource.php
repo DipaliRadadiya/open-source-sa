@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Services\ActivityKinds;
 use App\Services\ActivityScopes;
+use App\Services\Server\Cron\CronPhpBinary;
 use App\Services\Server\DiskCleaner\KeepDays;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -125,6 +126,12 @@ class ActivityLogResource extends JsonResource
         // The keep choice a disk clean ran with, in the viewer's language.
         // Set for every disk-cleaner row, so one written before the choice
         // existed reads "default" rather than a bare `:kept`.
+        // A cron job switched off plain `php` came from the server default,
+        // stored as a code so it reads in the viewer's language.
+        if ($this->type === 'cronjob' && ($properties['from'] ?? null) === CronPhpBinary::DEFAULT) {
+            $replacements['from'] = __('activity_values.php_default');
+        }
+
         if ($this->type === 'disk_cleaner') {
             $replacements['kept'] = KeepDays::label($properties['keep_days'] ?? null);
         }

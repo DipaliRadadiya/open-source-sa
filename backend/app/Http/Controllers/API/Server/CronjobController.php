@@ -5,11 +5,14 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Cronjob\CreateCronjob;
 use App\Actions\Server\Cronjob\DeleteCronjob;
 use App\Actions\Server\Cronjob\RunCronjobNow;
+use App\Actions\Server\Cronjob\SwitchCronjobsPhp;
 use App\Actions\Server\Cronjob\UpdateCronjob;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Cronjob\StoreCronjobRequest;
+use App\Http\Requests\Server\Cronjob\SwitchCronjobsPhpRequest;
 use App\Http\Requests\Server\Cronjob\UpdateCronjobRequest;
 use App\Http\Resources\CronjobResource;
+use App\Models\Application;
 use App\Models\Cronjob;
 use App\Services\Server\CronjobHistory;
 use App\Services\Server\CrontabManager;
@@ -26,7 +29,7 @@ class CronjobController extends Controller
         // `id` breaks ties: created_at has one-second resolution, and jobs
         // made in the same second (a Sync adopting many at once) otherwise
         // come back in any order — one could appear on two pages or on none.
-        $query = Cronjob::query()->with('systemUser:id,username')->latest()->orderByDesc('id');
+        $query = Cronjob::query()->with('systemUser:id,username', 'application:id,php_version')->latest()->orderByDesc('id');
 
         if ($systemUserId = $request->input('filter.system_user_id')) {
             $query->where('system_user_id', $systemUserId);
@@ -112,6 +115,24 @@ class CronjobController extends Controller
 
         return response()->json([
             'cronjob' => CronjobResource::make($cronjob->load('systemUser'))->resolve(),
+        ]);
+    }
+
+    /**
+     * Point the cron jobs the user ticked at another PHP version (#5). Only
+     * the jobs named, only their interpreter; the request has already checked
+     * each is this site's and has a PHP the panel can swap.
+     */
+    public function switchPhp(SwitchCronjobsPhpRequest $request, Application $application, SwitchCronjobsPhp $action): JsonResponse
+    {
+        $ids = array_map('intval', $request->validated('cronjob_ids'));
+        $jobs = Cronjob::query()->whereIn('id', $ids)->orderBy('name')->get();
+
+        $result = $action->execute($jobs, (string) $request->validated('version'));
+
+        return response()->json([
+            'switched' => CronjobResource::collection(collect($result['switched'])->each->load('systemUser', 'application'))->resolve(),
+            'unchanged' => collect($result['unchanged'])->pluck('id')->values(),
         ]);
     }
 

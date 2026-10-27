@@ -4,6 +4,8 @@ return [
     'none' => 'कोई नहीं',
     'yes' => 'हाँ',
     'no' => 'नहीं',
+    // The server default PHP, where a cron job switched off plain `php`.
+    'php_default' => 'डिफ़ॉल्ट',
     'adopted_left_unexpected_path' => 'इसका दर्ज स्थान ऐसा नहीं है जिसे पैनल हटाए',
     'adopted_left_other_site' => 'यह किसी दूसरी साइट या सर्वर का है',
     'adopted_left_not_this_site' => 'यह अब केवल इस साइट को सर्व नहीं करता',

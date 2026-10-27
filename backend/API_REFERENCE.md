@@ -2806,6 +2806,15 @@ Update PHP version and/or pool settings.
 
 **Response `200`:** `{"php": {...updated...}}`
 
+**`cronjobs_to_review`** (added 2026-10-27, #5) lists the site's cron jobs that do **not** run on its PHP after this save — **nothing in it has been changed**. Each entry:
+
+```json
+{"id": 12, "name": "Shop background jobs #4", "command": "/usr/bin/php8.3 -f /home/shop/public_html/wp-cron.php",
+ "php_version": "8.3", "suggested": true, "new_command": "/usr/bin/php8.4 -f /home/shop/public_html/wp-cron.php"}
+```
+
+`suggested` is the default tick for the "switch these?" dialog: `true` for a job that names another version (it was written for the old PHP and stays there), `false` for plain `php` (it follows the server default, maybe on purpose). `new_command` is exactly what [`POST /applications/{application}/cronjobs/switch-php`](#post-applicationsapplicationcronjobsswitch-php) would write. Jobs whose PHP the panel cannot recognise, and jobs already on this version (plain `php` on a server whose default is this version included), are not listed. Always present; `[]` when there is nothing to review.
+
 **`php_version` is checked against the application's supported range (added 2026-09-11), not only against what is installed.** Until then the range was enforced when a site was *created* and never again, so a site correctly created on a version its application supports could be moved here to one it does not and simply break. A version outside the range is `422` on `php_version` naming the range. The range comes from the site type; types that declare none are unaffected.
 
 **`post_max_size` also sets the web server's request-body limit**, as of
@@ -5220,6 +5229,7 @@ Paginated, filterable. Filters: `filter[system_user_id]`, `filter[application_id
   "system_user": {"id": 1, "username": "siteowner"},
   "application_id": null,
   "command": "cd /home/siteowner/shop.example.com && php artisan schedule:run",
+  "php_version": "default", "matches_site_php": false,
   "expression": "*/5 * * * *",
   "active": true,
   "timezone": "Europe/Berlin",
@@ -5244,6 +5254,8 @@ The account is `username` (a plain string, always present), not `user`. `system_
 There is **no `human` field** (render the expression client-side or use the schedule presets endpoint). `next_run_at` is computed from the expression against `timezone`, which is the server's timezone and is returned on every row so the frontend never has to assume UTC.
 
 `slug` is the identity on disk (`/etc/cron.d/<slug>`); `log_key` addresses this job's captured output through the logs endpoints.
+
+**`php_version`** is the PHP the command runs: a version (`"8.2"`) when it names one, **`"default"`** for plain `php` (also `/usr/bin/php`, `/usr/local/bin/php`) — the server default — and `null` when it names none the panel recognises, or two different ones. Only the panel's own interpreter paths count: `/usr/bin/php8.x`, `php8.x`, `/usr/local/lsws/lsphpXY/bin/php|lsphp`, `/usr/bin/lsphp8.x`. Plain `php` counts only where a command starts (`echo php` is not PHP). **`matches_site_php`** is whether a site's job runs on that site's version (plain `php` compares the current server default); `null` for a server-level job or when either side is unknown. On every cron response.
 
 **`last_run`** is the job's latest run, read from its log (one read for the whole page): the same object as one entry of [`GET /cronjobs/{cronjob}/runs`](#get-cronjobscronjobruns) **without** `output`/`output_truncated`. `null` when the job has not run (or its log could not be read — the list still answers). **`running`** is `true` while that latest run has started and not ended. Both are on the list and on `GET /cronjobs/{cronjob}` only — not on the create/update responses.
 
@@ -5360,6 +5372,30 @@ It runs exactly as cron would run it: as the job's account, in its home director
 | `500` `code: cronjob_run_now` | the server would not start it (`reference` included); logged as `cronjob.run_failed` |
 
 **A run cron started does not block Run now**, and Run now does not stop cron: as with cron's own runs, two can overlap, and the history marks them `overlapped`. Recorded in the activity log as `cronjob.ran`.
+
+---
+
+### POST `/applications/{application}/cronjobs/switch-php`
+**Permission:** `cronjob` (manage), and `app_php` (view) — a site that serves no PHP answers `404`. Throttled 10/min.
+
+Switch the PHP that **the cron jobs the user ticked** run on (#5). Nothing is switched on its own: the list to choose from is `cronjobs_to_review` on the site's PHP save, or `php_version`/`matches_site_php` on the cron list.
+
+**Request:** `{"version": "8.4", "cronjob_ids": [12, 15]}`
+
+Only the PHP word in each command changes (`/usr/bin/php8.3` → `/usr/bin/php8.4`, or plain `php` → `/usr/bin/php8.4`, using this stack's own path for the version); every other character stays. Each job is saved like an edit — its `/etc/cron.d` file is rewritten with the same checks and put back if the write fails — and **stays the site's** (`application_owned` is kept, so it is still removed with the site). Cron reads the file by itself; nothing is restarted. Activity: `cronjob.php_switched` ("Switched cron job X from PHP 8.3 to 8.4").
+
+**Response `200`:** `{"switched": [{…cron job…}], "unchanged": [15]}` — `unchanged` are jobs already on that version (nothing written).
+
+**`422`, nothing switched**, when any of them fails:
+
+| field | when |
+|---|---|
+| `version` | not installed on this server (`errors/php.not_installed`) — a cron pointed at a missing PHP fails every tick |
+| `cronjob_ids.N` | not this site's job — another site's, a server-level one, or no such id (`errors/cronjob.switch_not_this_site`) |
+| `cronjob_ids.N` | the command names no PHP the panel can switch (`errors/cronjob.switch_unknown_php`) |
+| `cronjob_ids.N` | the new command would pass the 1000-character limit an edit has (`errors/cronjob.switch_too_long`) |
+
+A `500` on the write itself stops at that job: the ones before it are switched (each in the activity log), it and the rest are left as they were.
 
 ---
 
@@ -6421,7 +6457,9 @@ though they have no package.
 
 **Request:** `{"default": "8.3"}`
 
-**Response `200`:** `{"php": {"default": "8.3", …}}`
+**Response `200`:** `{"php": {"default": "8.3", …}, "cronjobs_on_default_php": [{"id": 3, "name": "Laravel scheduler", "command": "php artisan schedule:run", "application_id": 7}]}`
+
+**`cronjobs_on_default_php`** (added 2026-10-27, #5) lists every cron job that runs plain `php`. They follow the default, so **they now run on the new version** — Linux moved them, not the panel; nothing here changes them. It is there so the screen can say so; a site's job can be pinned to a version with [`POST /applications/{application}/cronjobs/switch-php`](#post-applicationsapplicationcronjobsswitch-php). Jobs that name a version are unaffected and not listed.
 
 The **CLI** default moves, and (since 2026-10-01) it is also the version **new** sites start on: the create form preselects it and a PHP site created without `php_version` gets it — unless it is outside that site type's PHP range, in which case the newest installed version in range is used. `server.default_php_version` (install.sh's value) is only the fallback for when the server has no default the panel recognises. Existing sites keep whatever version they store — this never migrates a running site.
 
@@ -6458,7 +6496,7 @@ The `phar` groups are **best-effort**: a box that has the interpreter without th
 ### DELETE `/php/versions/{version}`
 **Permission:** `php` (manage)
 
-`422` if the version is the panel's own, is currently the default, or is pinned by any site (site names returned in the message).
+`422` if the version is the panel's own, is currently the default, is pinned by any site (site names returned in the message), or **is named by any cron job** (added 2026-10-27: `errors/php.version_used_by_cronjobs`, job names in the message). Removing it would leave each of those jobs failing on every tick, silently. Plain `php` jobs do not count — they follow the default, which cannot be removed. Switch them first with [`POST /applications/{application}/cronjobs/switch-php`](#post-applicationsapplicationcronjobsswitch-php), or edit or delete them.
 
 **Response `204`:**
 
@@ -7425,7 +7463,7 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, imported |
 | `backup` | configured, run, completed, failed, downloaded |
 | `disk_cleaner` | cleaned, auto_cleaned, clean_failed, auto_clean_failed, schedule_updated |
-| `cronjob` | created, updated, deleted, create_failed, ran, run_failed |
+| `cronjob` | created, updated, deleted, create_failed, ran, run_failed, php_switched |
 | `service` | started, stopped, restarted, reloaded, enabled, disabled, config_test |
 | `fail2ban` | installed, updated, ban_added, ban_removed, all_bans_removed |
 | `firewall` | rule_added, rule_updated, rule_removed, rule_enabled, rule_disabled, enabled, disabled |

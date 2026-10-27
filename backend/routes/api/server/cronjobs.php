@@ -20,6 +20,11 @@ Route::post('/cronjobs', [CronjobController::class, 'store'])->middleware('permi
 Route::get('/cronjobs/{cronjob}', [CronjobController::class, 'show'])->middleware('permission:cronjob');
 Route::put('/cronjobs/{cronjob}', [CronjobController::class, 'update'])->middleware('permission:cronjob,manage');
 Route::delete('/cronjobs/{cronjob}', [CronjobController::class, 'destroy'])->middleware('permission:cronjob,manage');
+// Switch the PHP some of a site's cron jobs run on (#5): only the ones named.
+// `app_php` (view) as well, so a site that serves no PHP answers 404.
+Route::post('/applications/{application}/cronjobs/switch-php', [CronjobController::class, 'switchPhp'])
+    ->middleware(['permission:cronjob,manage', 'permission:app_php', 'throttle:10,1']);
+
 // Run history read from the job's log, and "Run now".
 Route::get('/cronjobs/{cronjob}/runs', [CronjobController::class, 'runs'])->middleware('permission:cronjob');
 Route::post('/cronjobs/{cronjob}/run', [CronjobController::class, 'run'])->middleware('permission:cronjob,manage');

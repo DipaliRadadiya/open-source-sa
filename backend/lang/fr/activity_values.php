@@ -4,6 +4,8 @@ return [
     'none' => 'aucun',
     'yes' => 'oui',
     'no' => 'non',
+    // The server default PHP, where a cron job switched off plain `php`.
+    'php_default' => 'par défaut',
     'adopted_left_unexpected_path' => 'son emplacement enregistré n\'est pas un emplacement que le panneau retirerait',
     'adopted_left_other_site' => 'il appartient à un autre site ou au serveur',
     'adopted_left_not_this_site' => 'il ne sert plus uniquement ce site',

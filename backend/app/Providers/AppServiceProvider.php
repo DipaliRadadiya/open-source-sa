@@ -17,6 +17,7 @@ use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Backups\Storage\GoogleHttpClient;
 use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Cron\CronPhpBinary;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\ServerDefaultPhp;
@@ -110,6 +111,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Asked once per type by the site-type catalog; one answer per request.
         $this->app->scoped(ServerDefaultPhp::class);
+
+        // A cron list asks every row which PHP it runs; the server default is
+        // read once per request, not once per row.
+        $this->app->scoped(CronPhpBinary::class);
 
         // One progress recorder per job, shared by the provisioner and the
         // installer it calls — they are recording steps of the same run, and

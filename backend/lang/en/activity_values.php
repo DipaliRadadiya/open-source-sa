@@ -19,6 +19,8 @@ return [
     'none' => 'none',
     'yes' => 'yes',
     'no' => 'no',
+    // The server default PHP, where a cron job switched off plain `php`.
+    'php_default' => 'default',
     // Why a deleted site's adopted config or worker was left in place
     // (`application.adopted_config_left`, FS-C22 #14).
     'adopted_left_unexpected_path' => 'its recorded location is not one the panel would remove',

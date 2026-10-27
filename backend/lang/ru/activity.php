@@ -128,6 +128,7 @@ return [
     'cronjob.delete_failed' => 'Не удалось удалить cron-задачу :name (шаг: :step)',
     'cronjob.ran' => 'Cron-задача :name запущена вручную',
     'cronjob.run_failed' => 'Не удалось вручную запустить cron-задачу :name',
+    'cronjob.php_switched' => 'Cron-задача :name переключена с PHP :from на :to',
     'log.downloaded' => 'Скачал журнал :log',
     'disk_cleaner.cleaned' => 'Очищен диск (:categories, :kept) — освобождено :freed',
     'disk_cleaner.auto_cleaned' => 'Диск очищен автоматически (:categories, :kept) — освобождено :freed',

@@ -17,6 +17,7 @@ return [
     'reload_failed' => 'Die Änderung wurde vorgenommen, aber PHP :version konnte nicht neu geladen werden und ist daher noch nicht aktiv. Nennen Sie dem Support die Referenz.',
     'operation_failed' => 'Die Konfiguration von PHP :version konnte nicht aktualisiert werden.',
     'version_in_use' => 'PHP :version wird von :apps verwendet. Ändern Sie zuerst diese Seiten.',
+    'version_used_by_cronjobs' => 'PHP :version wird von Cronjobs verwendet: :cronjobs. Stellen Sie diese zuerst auf eine andere Version um oder löschen Sie sie.',
     'version_is_default' => 'Dies ist die Standardversion. Wählen Sie zuerst eine andere.',
     'version_runs_panel' => 'PHP :version zu entfernen würde das Panel offline nehmen — es ist die Version, auf der das Panel selbst läuft.',
     'extension_builtin' => ':extension ist fest in PHP eingebaut und kann nicht deaktiviert werden.',
