@@ -12,10 +12,12 @@ use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\LocalSpaceGuard;
 use App\Services\Server\Backups\Storage\Drivers\LocalDriver;
 use App\Services\Server\Backups\Storage\LocalBackupFolder;
+use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Testing\TestResponse;
 use Symfony\Component\Process\Process as RealProcess;
 
 /*
@@ -73,7 +75,7 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->base));
 
-function lbSave(string $path, string $name = 'On this server'): Illuminate\Testing\TestResponse
+function lbSave(string $path, string $name = 'On this server'): TestResponse
 {
     return test()->postJson('/api/integrations/storage/destinations', [
         'name' => $name, 'provider' => 'local', 'config' => ['path' => $path],
@@ -277,7 +279,7 @@ describe('storing an archive', function () {
         File::ensureDirectoryExists(dirname($archive));
         file_put_contents($archive, str_repeat('b', 999));
 
-        $folder = Mockery::mock(LocalBackupFolder::class, [app(\App\Services\Server\ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+        $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
         $folder->shouldReceive('sameDisk')->andReturnFalse();
         app()->instance(LocalBackupFolder::class, $folder);
 
