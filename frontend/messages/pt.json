@@ -2826,10 +2826,12 @@
       "defaultAsBefore": "Padrão (como antes)",
       "alwaysAll": "sempre remove tudo",
       "confirmLine": "Escolha: {choice}",
-      "deleteAllWarning": "Excluir tudo remove todos os logs do servidor e dos sites, incluindo o histórico de logins e de erros. Isso não pode ser desfeito.",
       "scheduleDeleteAllHint": "Excluir tudo esvazia todos os logs. Considere executá-lo só quando o uso do disco passar de {percent}%.",
       "useThreshold": "Usar {percent}%",
-      "nothingAtChoice": "Nada a limpar com esta escolha. Uma mais curta pode liberar mais."
+      "nothingAtChoice": "Nada a limpar com esta escolha. Uma mais curta pode liberar mais.",
+      "deleteAllItems": "Tudo em {items} é removido, inclusive o de hoje. Isso não pode ser desfeito.",
+      "deleteAllSiteLogs": "As aplicações perdem o histórico de visitas e erros.",
+      "scheduleLegacy": "Salvo antes desta opção existir: até você salvar, ele mantém 7 dias do journal e dos arquivos temporários e remove todo o resto."
     }
   },
   "rebootBanner": {

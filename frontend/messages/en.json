@@ -2826,10 +2826,12 @@
       "defaultAsBefore": "Default (as before)",
       "alwaysAll": "always removes all",
       "confirmLine": "Choice: {choice}",
-      "deleteAllWarning": "Delete all removes every server and site log, including login and error history. This cannot be undone.",
       "scheduleDeleteAllHint": "Delete all clears every log. Consider running it only when disk usage is above {percent}%.",
       "useThreshold": "Use {percent}%",
-      "nothingAtChoice": "Nothing to clean with this choice. A shorter one may free more."
+      "nothingAtChoice": "Nothing to clean with this choice. A shorter one may free more.",
+      "deleteAllItems": "Everything in {items} is removed, including today's. This cannot be undone.",
+      "deleteAllSiteLogs": "Applications lose their visitor and error history.",
+      "scheduleLegacy": "Saved before this choice existed: until you save, it keeps 7 days of journal and temporary files and removes everything else."
     }
   },
   "rebootBanner": {

@@ -27,7 +27,7 @@ import {
 import { Tile } from "@/components/applications/app-status-tiles";
 import { Caution } from "@/components/ui/caution";
 import { KeepSelect, useKeepLabel } from "@/components/disk-cleaner/keep-select";
-import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { hasKeepChoice, keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
 
 const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
 
@@ -50,8 +50,12 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
   const t = useTranslations("diskCleaner");
   const keepLabel = useKeepLabel();
   const { choices, recommended } = keepOptions(keepDays);
-  // A schedule saved before the choice keeps `null` ("as before") until someone picks one.
-  const savedKeep = () => (schedule ? (schedule.keep_days ?? null) : recommended);
+  const keepSupported = hasKeepChoice(keepDays);
+  // Never null once the API has the choice. GET /schedule always answers (a fresh server gets
+  // defaults with keep_days null), and saving null with Application logs ticked empties every
+  // application's logs on each run. A schedule saved before the choice says so in a note instead.
+  const savedKeep = () => (keepSupported ? (schedule?.keep_days ?? recommended) : null);
+  const legacyKeep = keepSupported && schedule?.keep_days == null && (schedule?.categories?.length ?? 0) > 0;
   // The hour uses the reader's clock convention (AM/PM vs 24h) but never their
   // timezone, same as a backup's schedule time.
   const format = useFormatter();
@@ -100,8 +104,8 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
         categories: [...picked],
         // Empty means "always", which the API expresses as null.
         threshold_percent: threshold === "" ? null : Number(threshold),
-        // null keeps the old per-category behaviour; 0 (delete all) is allowed here.
-        keep_days: keep,
+        // Always a real choice (0 = delete all is allowed); an older API gets none.
+        ...(keepSupported ? { keep_days: keep ?? recommended } : {}),
         // `notify` is an unused column; sent back as stored so this form never
         // rewrites a field it does not own.
         notify: schedule?.notify ?? false,
@@ -177,7 +181,7 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
               ? t("schedule.lastRun", { when: schedule.last_run_at_human })
               : t("schedule.neverRun")),
           whenLine,
-          schedule?.enabled ? keepLabel(schedule.keep_days ?? null) : null,
+          schedule?.enabled && keepSupported ? keepLabel(schedule.keep_days ?? null) : null,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -283,6 +287,7 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                 </div>
               </div>
 
+              {keepSupported ? (
               <div className="space-y-2">
                 <Label htmlFor="cleaner-keep" hint={t(keep === 0 ? "keep.hintDeleteAll" : "keep.hint")}>
                   {t("keep.label")}
@@ -293,9 +298,9 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                   onChange={setKeep}
                   choices={choices}
                   recommended={recommended}
-                  allowDefault={schedule != null && schedule.keep_days == null}
                   className="w-full"
                 />
+                {legacyKeep ? <p className="text-xs text-muted-foreground">{t("keep.scheduleLegacy")}</p> : null}
                 {/* A suggestion, not a rule: the API accepts Delete all at any threshold. */}
                 {keep === 0 && threshold !== DELETE_ALL_THRESHOLD ? (
                   <Caution
@@ -310,6 +315,7 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                   </Caution>
                 ) : null}
               </div>
+              ) : null}
 
               <div className="space-y-2">
                 <Label className="flex flex-wrap items-center justify-between gap-2">

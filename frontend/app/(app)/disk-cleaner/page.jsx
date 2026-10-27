@@ -13,7 +13,7 @@ import { RunsCard } from "@/components/disk-cleaner/runs-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
-import { keepOptions } from "@/lib/disk-cleaner/keep-days";
+import { hasKeepChoice, keepOptions } from "@/lib/disk-cleaner/keep-days";
 import { KeepProvider } from "@/components/disk-cleaner/keep-context";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +50,8 @@ export default async function DiskCleanerPage({ searchParams }) {
   const categories = data.categories ?? [];
   // The list opens on the recommended keep; the "Can be freed" tile follows whatever is chosen.
   const { recommended } = keepOptions(data.keep_days);
+  // An older API has no choice: null keeps every size, request and label as before.
+  const keepSupported = hasKeepChoice(data.keep_days);
 
   return (
     <div className="space-y-6">
@@ -58,7 +60,7 @@ export default async function DiskCleanerPage({ searchParams }) {
       {/* Three compact tiles across the top (one per row until the page is wide enough);
           the schedule tile gets the most room, "Can be freed" the least (a short number).
           The list gets full width below. */}
-      <KeepProvider initial={recommended}>
+      <KeepProvider initial={keepSupported ? recommended : null}>
         <div className="space-y-4">
           <div className="@container/tiles">
             <div className="grid gap-3 sm:gap-4 @min-[52rem]/tiles:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)]">
@@ -74,7 +76,7 @@ export default async function DiskCleanerPage({ searchParams }) {
             measuredAt={new Date().toISOString()}
           />
 
-          <RunsCard runs={runs} meta={meta} categories={categories} />
+          <RunsCard runs={runs} meta={meta} categories={categories} keepSupported={keepSupported} />
         </div>
       </KeepProvider>
     </div>
