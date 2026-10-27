@@ -398,7 +398,12 @@ class CrontabManager
                 '--property=WorkingDirectory=~',
                 // A job stuck forever would refuse every later Run now.
                 '--property=RuntimeMaxSec='.(int) config('server.cronjob_run_now_max_seconds', 86400),
-                '/bin/sh', '-c', $this->shellLine($cronjob->command, $this->logPath($cronjob), manual: true),
+                // systemd expands `$VAR` in a unit's command itself and turns
+                // `$$` into `$` before the shell sees it — measured on 255:
+                // `pid=$$` arrived as `pid=$`, and `$PATH` as systemd's own.
+                // Doubling every `$` hands the shell the line unchanged. `%`
+                // is passed through as it is, so it is left alone.
+                '/bin/sh', '-c', str_replace('$', '$$', $this->shellLine($cronjob->command, $this->logPath($cronjob), manual: true)),
             ],
             ['feature' => 'cronjob', 'op' => 'run_now', 'cronjob' => $cronjob->id],
             timeout: 30,

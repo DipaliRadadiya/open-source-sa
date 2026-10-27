@@ -81,8 +81,10 @@ it('starts the job in the background as its own account, with cron\'s environmen
         ->and($started)->toContain('--unit=panel-cron-nightly-report', '--uid=deploy', '--setenv=PATH=/usr/bin:/bin', '--setenv=SHELL=/bin/sh', '--property=WorkingDirectory=~', '--collect')
         ->and(array_slice($started, -3, 2))->toBe(['/bin/sh', '-c'])
         // Not %-escaped: that is crontab syntax, and the shell would see the backslash.
-        ->and(end($started))->toContain('( echo "report $(date +%Y)" )')
-        ->and(end($started))->toContain('--- start pid=$$ manual at')
+        // Every `$` doubled: systemd expands `$VAR` and `$$` in a unit's
+        // command before the shell sees it.
+        ->and(end($started))->toContain('( echo "report $$(date +%Y)" )')
+        ->and(end($started))->toContain('--- start pid=$$$$ manual at')
         ->and(ActivityLog::where('type', 'cronjob')->where('action', 'ran')->exists())->toBeTrue();
 });
 
@@ -105,7 +107,8 @@ it('writes a run the history reads back as manual — the real shell line', func
     $this->postJson("/api/cronjobs/{$this->job->id}/run")->assertStatus(202);
 
     $started = runNowStarted($runs);
-    $line = end($started);
+    // What systemd hands the shell: each `$$` back to `$`.
+    $line = str_replace('$$', '$', end($started));
     (new RealProcess(['/bin/sh', '-c', $line]))->mustRun();
 
     $history = app(CronjobHistory::class)->parse(file_get_contents("{$this->base}/logs/nightly-report.log"));
@@ -113,6 +116,18 @@ it('writes a run the history reads back as manual — the real shell line', func
     expect($history)->toHaveCount(1)
         ->and($history[0])->toMatchArray(['status' => 'succeeded', 'manual' => true, 'exit_code' => 0, 'output' => 'report '.date('Y')])
         ->and($history[0]['started_at'])->not->toBeNull();
+});
+
+it("leaves the job's own variables for the shell, not for systemd", function () {
+    $runs = runNowFake(['systemctl' => [3, "inactive\n"]]);
+    $this->job->update(['command' => 'echo "$HOME ${USER:-x} $$"']);
+
+    $this->postJson("/api/cronjobs/{$this->job->id}/run")->assertStatus(202);
+
+    $started = runNowStarted($runs);
+
+    expect(end($started))->toContain('( echo "$$HOME $${USER:-x} $$$$" )')
+        ->and(preg_match('/(?<!\$)\$(?!\$)/', str_replace('$$', '', end($started))))->toBe(0);
 });
 
 it("writes cron's own runs so the history can read them, failures included", function () {
