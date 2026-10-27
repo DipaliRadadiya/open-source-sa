@@ -1620,7 +1620,8 @@
       "openDocker": "Abrir Docker",
       "unitFailedNoLog": "Instalado pero no en ejecución. Prueba a iniciarlo; si vuelve a detenerse, el error está en el registro del sistema del servidor."
     },
-    "moreActions": "Más acciones para {name}"
+    "moreActions": "Más acciones para {name}",
+    "packageVersion": "Paquete {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

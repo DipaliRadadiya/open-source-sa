@@ -1620,7 +1620,8 @@
       "openDocker": "Docker खोलें",
       "unitFailedNoLog": "इंस्टॉल है पर चल नहीं रही। इसे शुरू करके देखें; फिर से रुके तो त्रुटि सर्वर के सिस्टम जर्नल में होगी।"
     },
-    "moreActions": "{name} के लिए और कार्रवाइयाँ"
+    "moreActions": "{name} के लिए और कार्रवाइयाँ",
+    "packageVersion": "पैकेज {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

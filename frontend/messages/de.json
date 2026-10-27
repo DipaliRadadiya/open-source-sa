@@ -1620,7 +1620,8 @@
       "openDocker": "Docker öffnen",
       "unitFailedNoLog": "Installiert, aber nicht laufend. Versuchen Sie, den Dienst zu starten; stoppt er erneut, steht der Fehler im System-Journal des Servers."
     },
-    "moreActions": "Weitere Aktionen für {name}"
+    "moreActions": "Weitere Aktionen für {name}",
+    "packageVersion": "Paket {version}"
   },
   "fail2ban": {
     "title": "Fail2ban",

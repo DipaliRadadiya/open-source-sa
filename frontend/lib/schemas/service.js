@@ -50,6 +50,10 @@ export const serviceSchema = z.object({
   // Absent means no.
   testable: z.boolean().optional(),
   usage: usageSchema.nullable().optional(),
+  // Installed package version (2026-10-27): `version` beside the name, `package_version` as dpkg
+  // has it. Null when there is nothing to read; absent from an older API.
+  version: z.string().nullish(),
+  package_version: z.string().nullish(),
   // Keys into the Logs endpoints; empty means no logs button.
   log_keys: z.array(z.string()).default([]),
 });
