@@ -25,6 +25,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCronPhpReview } from "@/components/applications/php/cron-php-review";
 import { budgetWith, derivedSpareServers, MAX_CHILDREN, phpSettingsFormSchemaFor, phpSizeToBytes } from "@/lib/schemas/php-settings";
 import {
   isolateApplicationPhp,
@@ -114,7 +115,7 @@ const TAB_FIELDS = {
   ],
 };
 
-export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones = [], canManage }) {
+export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones = [], canManage, canManageCron = false }) {
   const t = useTranslations("applications.php");
   const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
@@ -161,6 +162,7 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
             applicationPath={applicationPath}
             timezones={timezones}
             canManage={canManage}
+            canManageCron={canManageCron}
             saving={saving}
             setSaving={setSaving}
           />
@@ -170,6 +172,7 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
             phpRange={phpRange}
             siteTypeTitle={siteTypeTitle}
             canManage={canManage}
+            canManageCron={canManageCron}
             busy={busy}
             onIsolate={isolate}
           />
@@ -181,11 +184,12 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
 
 // ─── Shared PHP mode ────────────────────────────────────────────────────────
 
-function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, busy, onIsolate }) {
+function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, canManageCron, busy, onIsolate }) {
   const t = useTranslations("applications.php");
   const tShared = useTranslations("applications.php.shared");
   const tIsolation = useTranslations("applications.php.isolation");
   const { refreshAndWait } = useRefresh();
+  const cronReview = useCronPhpReview({ appId: php.application_id, canManageCron });
   const settings = php.settings;
 
   // `picked` only overrides the server value until they match, so an external change is not a stale edit.
@@ -204,9 +208,11 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
     setSavingVersion(true);
     try {
       // Only the version: settings need a pool file, so sending them 422s.
-      await updateApplicationPhp(php.application_id, { php_version: version });
+      const saved = version;
+      const { data } = await updateApplicationPhp(php.application_id, { php_version: saved });
       await refreshAndWait();
       toast.success(t("saved"));
+      cronReview.offer(data, saved);
     } catch (error) {
       toast.error(apiMessage(error, t("saveFailed")));
     } finally {
@@ -216,6 +222,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
 
   return (
     <Card className="overflow-hidden">
+      {cronReview.dialog}
       <CardContent className="p-0">
         {!php.isolation_supported ? (
           <p className="flex items-start gap-2.5 border-b px-5 py-3 text-sm">
@@ -335,11 +342,12 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
 
 // ─── Dedicated PHP mode ──────────────────────────────────────────────────────
 
-function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones, canManage, saving, setSaving }) {
+function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones, canManage, canManageCron, saving, setSaving }) {
   const t = useTranslations("applications.php");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
+  const cronReview = useCronPhpReview({ appId, canManageCron });
   const [tab, setTab] = useState("basic");
   // The server's message when it refuses the whole save (`errors.settings`):
   // PHP-FPM rejected the config, or the pool has gone.
@@ -448,11 +456,14 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
       const payload = Object.fromEntries(
         Object.entries(values).filter(([key]) => key === "php_version" || dirtyFields[key]),
       );
-      await updateApplicationPhp(appId, payload);
+      const before = php.php_version;
+      const { data } = await updateApplicationPhp(appId, payload);
       form.reset(values);
       setResetKey((key) => key + 1);
       await refreshAndWait();
       toast.success(t("saved"));
+      // Only a version change: a limits-only save would re-offer jobs the user already left.
+      if (values.php_version && values.php_version !== before) cronReview.offer(data, values.php_version);
     } catch (error) {
       const refused = error.response?.data?.errors;
       // `settings` is the server refusing the whole save (usually PHP-FPM rejecting the config).
@@ -487,6 +498,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     <OverrideContext.Provider
       value={{ appId, overridden: php.overridden ?? {}, disabled: !canManage || saving, onReset }}
     >
+    {cronReview.dialog}
     <Form {...form}>
       <form
         noValidate

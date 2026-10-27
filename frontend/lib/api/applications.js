@@ -88,6 +88,12 @@ export function checkApplicationPort(port) {
   return api.get("/applications/port-check", { params: { port } });
 }
 
+// Moves the ticked cron jobs of a site onto `version` (#5). Only the PHP word in each command
+// changes; a 422 switches none of them.
+export function switchApplicationCronjobsPhp(id, { version, cronjobIds }) {
+  return api.post(`/applications/${id}/cronjobs/switch-php`, { version, cronjob_ids: cronjobIds });
+}
+
 // One call covers enable, credential change and disable; `enabled: false`
 // ignores username/password. The API always takes both credentials together.
 export function updateApplicationSecurity(id, payload) {

@@ -2390,7 +2390,9 @@
       "dismissFailed": "Couldn't clear the failed install.",
       "statusQueued": "Waiting for another install",
       "queuedTitle": "PHP {version} is waiting to install",
-      "queuedBody": "Another install is running. This one starts as soon as it finishes."
+      "queuedBody": "Another install is running. This one starts as soon as it finishes.",
+      "cronOnDefault": "{count, plural, one {# cron job follows the default, so it now runs on PHP {version}: {names}.} other {# cron jobs follow the default, so they now run on PHP {version}: {names}.}}",
+      "moreCronjobs": "{count, plural, one {# more} other {# more}}"
     },
     "extensions": {
       "title": "Extensions",
@@ -5653,7 +5655,17 @@
       "versionUnsupported": "{type} supports PHP {range}. Moving this application to another version is likely to break it.",
       "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards.",
       "fixErrors": "Some settings need fixing. The tab with the problem is marked.",
-      "autoValue": "Auto · {value}"
+      "autoValue": "Auto · {value}",
+      "cronReview": {
+        "title": "Move cron jobs to PHP {version} too?",
+        "description": "This application now runs PHP {version}, but these cron jobs still use another version. Nothing has changed yet. Tick the ones to move.",
+        "fromVersion": "PHP {from} → PHP {to}",
+        "fromDefault": "Server default → PHP {to}. Leave it unticked to keep following the default.",
+        "confirm": "{count, plural, =0 {Move cron jobs} one {Move # cron job} other {Move # cron jobs}}",
+        "notNow": "Not now",
+        "switched": "{count, plural, one {# cron job now runs on PHP {version}.} other {# cron jobs now run on PHP {version}.}}",
+        "failed": "The cron jobs could not be moved."
+      }
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",

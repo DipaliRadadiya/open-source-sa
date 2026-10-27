@@ -4,7 +4,7 @@ import { RuntimeStatusBadge, removeFailed, versionState } from "@/components/run
 import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { SupportCell, UsedByCell } from "@/components/runtime/versions-table";
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
+import { cronjobsOnDefaultSchema } from "@/lib/schemas/cronjob-php";
 
 // Long states ("Installation fehlgeschlagen") wrap instead of spilling.
 const WRAP = "h-auto text-left whitespace-normal";
@@ -35,6 +36,7 @@ export function VersionSummary({
   selectable = false,
 }) {
   const t = useTranslations("php");
+  const format = useFormatter();
   const { guardNavigation } = useUnsaved();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -90,9 +92,18 @@ export function VersionSummary({
   async function makeDefault() {
     setRunning("default");
     try {
-      await setDefaultPhpVersion(version.version);
+      const { data } = await setDefaultPhpVersion(version.version);
       await refreshAndWait();
-      toast.success(t("versions.defaultSet", { version: version.version }));
+      // Plain `php` cron jobs follow the default, so they already run the new version: say which.
+      const moved = cronjobsOnDefaultSchema.parse(data?.cronjobs_on_default_php ?? []);
+      const names = moved.slice(0, 3).map((job) => job.name);
+      if (moved.length > 3) names.push(t("versions.moreCronjobs", { count: moved.length - 3 }));
+      toast.success(
+        t("versions.defaultSet", { version: version.version }),
+        moved.length
+          ? { description: t("versions.cronOnDefault", { count: moved.length, version: version.version, names: format.list(names, { type: "conjunction" }) }), duration: 12000 }
+          : undefined,
+      );
     } catch (error) {
       toast.error(apiMessage(error, t("versions.defaultFailed")));
     } finally {

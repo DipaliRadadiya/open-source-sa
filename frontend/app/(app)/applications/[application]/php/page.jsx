@@ -86,6 +86,8 @@ export default async function ApplicationPhpPage({ params }) {
           applicationPath={(application.path ?? "").replace(/\/public_html\/?$/, "")}
           timezones={timezones}
           canManage={canManage}
+          // The cron jobs a version change leaves behind are switched with the server-level permission.
+          canManageCron={can(permissions, "cronjob", "manage")}
         />
       )}
     </div>
