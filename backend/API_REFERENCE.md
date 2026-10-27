@@ -5454,9 +5454,12 @@ Live status of every managed systemd service. Compatibility aliases are collapse
   "actions": ["start", "stop", "restart", "reload"],
   "testable": true,
   "install_reason": null, "install_message": null, "retryable": false,
-  "usage": {"memory_bytes": 5242880, "memory_human": "5 MB", "memory_percent": 0.06, "cpu_percent": null, "tasks": 4}
+  "usage": {"memory_bytes": 5242880, "memory_human": "5 MB", "memory_percent": 0.06, "cpu_percent": null, "tasks": 4},
+  "version": "1.24.0", "package_version": "1.24.0-2ubuntu7.5"
 }]}
 ```
+
+**`version` / `package_version`** (2026-10-27): the installed version of the service's package — `version` to show beside the name (`1.24.0`, `10.11.14`, `8.4.13`), `package_version` exactly as dpkg has it, for a tooltip. **`null` when there is nothing to read** — a service not installed from a package, a row still installing — so show nothing (or "–") rather than an error. Read with one `dpkg-query` for the whole list and cached until dpkg's status file changes, so an upgrade shows on the next poll. Packages per service are in `config/server.php` → `services.*.packages` (PHP-FPM rows: `php{v}-fpm`; PostgreSQL: the highest `postgresql-NN`, not the `postgresql` meta package).
 
 **Every row has the same shape, whatever kind of service it is** — a database engine, a PHP-FPM version, nginx. Two fields, two jobs:
 

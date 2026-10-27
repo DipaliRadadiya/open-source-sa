@@ -2457,10 +2457,16 @@ return [
         'openlitespeed' => ['/usr/local/lsws/bin/openlitespeed', '-t'],
     ],
 
+    /*
+    | `packages`: the dpkg package(s) whose installed version the Services
+    | screen shows next to the name, first installed one wins; a pattern takes
+    | the highest version it matches. A service with none, or whose package is
+    | not installed, shows no version (null). PHP-FPM rows use `php{v}-fpm`.
+    */
     'services' => [
-        ['key' => 'nginx', 'unit' => 'nginx', 'label' => 'Nginx'],
-        ['key' => 'apache', 'unit' => 'apache2', 'label' => 'Apache'],
-        ['key' => 'openlitespeed', 'unit' => 'lshttpd', 'label' => 'OpenLiteSpeed'],
+        ['key' => 'nginx', 'unit' => 'nginx', 'label' => 'Nginx', 'packages' => ['nginx', 'nginx-core', 'nginx-full', 'nginx-light']],
+        ['key' => 'apache', 'unit' => 'apache2', 'label' => 'Apache', 'packages' => ['apache2', 'apache2-bin']],
+        ['key' => 'openlitespeed', 'unit' => 'lshttpd', 'label' => 'OpenLiteSpeed', 'packages' => ['openlitespeed']],
         /*
         | `install` names the runtime_installs row this service's install is
         | tracked under, as [runtime, version]. Present it and the service list
@@ -2484,10 +2490,10 @@ return [
         | on a box where the daemon has failed to start, so reading it would
         | report a working Docker on a server that cannot run a container.
         */
-        ['key' => 'docker', 'unit' => 'docker', 'label' => 'Docker', 'install' => ['runtime', 'docker']],
-        ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql']],
-        ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb']],
-        ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb']],
+        ['key' => 'docker', 'unit' => 'docker', 'label' => 'Docker', 'install' => ['runtime', 'docker'], 'packages' => ['docker-ce', 'docker.io']],
+        ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql'], 'packages' => ['mysql-server-core-*', 'mysql-server']],
+        ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb'], 'packages' => ['mariadb-server', 'mariadb-server-core']],
+        ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb'], 'packages' => ['mongodb-org-server']],
         /*
         | PostgreSQL, and the one entry in this list whose status cannot come
         | from systemd.
@@ -2512,17 +2518,19 @@ return [
         */
         // `instances`: each cluster is enabled at boot on its own, so "Start
         // on boot" has to reach them too (bug #12) — see runService().
-        ['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'install' => ['database', 'postgresql'], 'instances' => 'postgresql@*',
+        // `postgresql` itself is a meta package versioned like `16+257`; the
+        // server is `postgresql-16`.
+        ['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'install' => ['database', 'postgresql'], 'instances' => 'postgresql@*', 'packages' => ['postgresql-[0-9]*'],
             'health' => ['pg_isready', '--quiet', '--host=127.0.0.1', '--port='.(int) env('SERVER_POSTGRES_PORT', 5432)]],
-        ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
-        ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
-        ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban', 'install' => ['fail2ban', 'latest']],
+        ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis', 'packages' => ['redis-server']],
+        ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor', 'packages' => ['supervisor']],
+        ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban', 'install' => ['fail2ban', 'latest'], 'packages' => ['fail2ban']],
         // The server's own mail relay; install.sh sets it up (configure_mail),
         // and v7 listed it here. Shown only where the unit exists. No
         // `instances`: 26.04 ships a postfix@ template next to the real
         // postfix.service, so the pattern matched a dead unit — the row lost
         // its figures, and "Start on boot" would have enabled a second master.
-        ['key' => 'postfix', 'unit' => 'postfix', 'label' => 'Postfix'],
+        ['key' => 'postfix', 'unit' => 'postfix', 'label' => 'Postfix', 'packages' => ['postfix']],
     ],
 
     'protected_services' => array_values(array_filter(explode(

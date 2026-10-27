@@ -29,6 +29,7 @@ class ServiceManager
         private LogManager $logs,
         private PhpStack $stack,
         private ServerCapabilities $capabilities,
+        private PackageVersions $packages,
     ) {}
 
     /**
@@ -45,10 +46,15 @@ class ServiceManager
         // states come back in catalog order, so they are consumed in it.
         $catalog = $this->catalog();
         $states = $this->inspectMany(array_column($catalog, 'unit'));
+        // One dpkg-query for every row's version, cached until dpkg changes.
+        $installed = $this->packages->installed(array_merge(...array_map(
+            fn (array $service) => $this->packagesOf($service),
+            $catalog,
+        )));
 
         foreach ($catalog as $index => $service) {
             $state = $states[$index];
-            $row = $this->describeState($service, $state);
+            $row = $this->describeState($service, $state, $installed);
 
             if ($row === null) {
                 continue;
@@ -117,11 +123,30 @@ class ServiceManager
     }
 
     /**
+     * The dpkg packages whose version a row shows (see `packages` in the
+     * services catalog). PHP-FPM rows are generated, so theirs is derived.
+     *
+     * @param  array<string, mixed>  $service
+     * @return array<int, string>
+     */
+    private function packagesOf(array $service): array
+    {
+        if (isset($service['packages'])) {
+            return array_values((array) $service['packages']);
+        }
+
+        return preg_match('/^php\d+\.\d+-fpm$/', $service['unit']) === 1 ? [$service['unit']] : [];
+    }
+
+    /**
      * @param  array{key: string, unit: string, label: string}  $service
      * @param  array{installed: bool, id: ?string, status: string, enabled: bool, can_reload: bool, properties: array<string, string|null>}  $state
      * @return array<string, mixed>|null
      */
-    private function describeState(array $service, array $state): ?array
+    /**
+     * @param  array<string, string>|null  $installed  package versions already read for the whole list
+     */
+    private function describeState(array $service, array $state, ?array $installed = null): ?array
     {
         if (! $state['installed']) {
             // Not on the box — but it may be on its way, or have tried and
@@ -158,7 +183,25 @@ class ServiceManager
             // rather than a second way to read a log. Only sources that exist
             // on the box appear, so the button is never a dead end.
             'log_keys' => $this->logKeys($service['key']),
+            // The installed package's version — `version` for display
+            // (`1.24.0`), `package_version` as dpkg has it
+            // (`1.24.0-2ubuntu7.5`). Null when the service has no package to
+            // ask about or it is not installed from one.
+            ...$this->versionOf($service, $installed),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $service
+     * @param  array<string, string>|null  $installed
+     * @return array{version: ?string, package_version: ?string}
+     */
+    private function versionOf(array $service, ?array $installed): array
+    {
+        $packages = $this->packagesOf($service);
+        $picked = $packages === [] ? null : $this->packages->pick($packages, $installed ?? $this->packages->installed($packages));
+
+        return ['version' => $picked['version'] ?? null, 'package_version' => $picked['package_version'] ?? null];
     }
 
     /**
@@ -241,6 +284,10 @@ class ServiceManager
             'testable' => false,
             'usage' => null,
             'log_keys' => [],
+            // Nothing installed yet, so no version — the same keys as an
+            // installed row, so the frontend reads one shape.
+            'version' => null,
+            'package_version' => null,
         ];
     }
 
