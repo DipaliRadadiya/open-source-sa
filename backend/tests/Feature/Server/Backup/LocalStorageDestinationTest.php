@@ -2,6 +2,7 @@
 
 use App\Enums\BackupStatus;
 use App\Exceptions\NotEnoughBackupSpace;
+use App\Exceptions\Server\Storage\LocalBackupFolderException;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
@@ -10,6 +11,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\LocalSpaceGuard;
+use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\Drivers\LocalDriver;
 use App\Services\Server\Backups\Storage\LocalBackupFolder;
 use App\Services\Server\ServerOps;
@@ -223,6 +225,15 @@ describe('testing a destination', function () {
 
         expect(is_dir("{$this->base}/mnt/disk2/gone"))->toBeFalse();
     });
+});
+
+it('never lets the disk recreate a folder that has gone, whatever opens it', function () {
+    // Laravel's local disk would `mkdir -p` its root on being built.
+    $destination = lbDestination("{$this->base}/mnt/disk2/away");
+    File::deleteDirectory("{$this->base}/mnt/disk2/away");
+
+    expect(fn () => app(DestinationDisk::class)->for($destination))->toThrow(LocalBackupFolderException::class)
+        ->and(is_dir("{$this->base}/mnt/disk2/away"))->toBeFalse();
 });
 
 describe('free space', function () {

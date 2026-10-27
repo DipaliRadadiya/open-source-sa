@@ -102,7 +102,23 @@ class LocalDriver implements StorageDriver
         return $this->folder->problem((string) $destination->configValue('path'));
     }
 
-    public function heal(StorageDestination $destination): void {}
+    /**
+     * Called before the disk is opened for anything — and it is what keeps a
+     * missing folder missing. Laravel's local disk runs `mkdir -p` on its root
+     * the moment it is built, so without this a retention pass or a delete
+     * could quietly recreate a folder that went away with an unmounted disk,
+     * and the next backup would land on the system disk.
+     *
+     * @throws LocalBackupFolderException
+     */
+    public function heal(StorageDestination $destination): void
+    {
+        $path = (string) $destination->configValue('path');
+
+        if ($path === '' || ! is_dir($path)) {
+            throw new LocalBackupFolderException('storage.test.local_missing');
+        }
+    }
 
     /**
      * For a restore: a hard link into the working folder when it is on the
