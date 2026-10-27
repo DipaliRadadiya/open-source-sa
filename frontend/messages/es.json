@@ -2436,7 +2436,9 @@
       "dismissFailed": "No se pudo borrar la instalación fallida.",
       "statusQueued": "Esperando a otra instalación",
       "queuedTitle": "PHP {version} está esperando para instalarse",
-      "queuedBody": "Hay otra instalación en curso. Esta empieza en cuanto termine."
+      "queuedBody": "Hay otra instalación en curso. Esta empieza en cuanto termine.",
+      "cronOnDefault": "{count, plural, one {# tarea cron sigue la predeterminada, así que ahora usa PHP {version}: {names}.} other {# tareas cron siguen la predeterminada, así que ahora usan PHP {version}: {names}.}}",
+      "moreCronjobs": "{count, plural, one {# más} other {# más}}"
     },
     "extensions": {
       "title": "Extensiones",
@@ -5699,7 +5701,17 @@
       "versionUnsupported": "{type} admite PHP {range}. Cambiar esta aplicación a otra versión probablemente la romperá.",
       "presetsLabelHint": "Configuraciones prediseñadas dimensionadas para aplicaciones pequeñas, medianas y grandes. Un punto de partida: aún puede cambiar cualquier valor después.",
       "fixErrors": "Hay ajustes que corregir. La pestaña con el problema está marcada.",
-      "autoValue": "Auto · {value}"
+      "autoValue": "Auto · {value}",
+      "cronReview": {
+        "title": "¿Pasar también las tareas cron a PHP {version}?",
+        "description": "Esta aplicación ahora usa PHP {version}, pero estas tareas cron siguen con otra versión. Todavía no se ha cambiado nada. Marca las que quieras pasar.",
+        "fromVersion": "PHP {from} → PHP {to}",
+        "fromDefault": "Predeterminada del servidor → PHP {to}. Déjala sin marcar para que siga la predeterminada.",
+        "confirm": "{count, plural, =0 {Pasar tareas cron} one {Pasar # tarea cron} other {Pasar # tareas cron}}",
+        "notNow": "Ahora no",
+        "switched": "{count, plural, one {# tarea cron ahora usa PHP {version}.} other {# tareas cron ahora usan PHP {version}.}}",
+        "failed": "No se pudieron pasar las tareas cron."
+      }
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",

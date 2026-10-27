@@ -2436,7 +2436,9 @@
       "dismissFailed": "Impossible d'effacer l'installation échouée.",
       "statusQueued": "En attente d'une autre installation",
       "queuedTitle": "PHP {version} attend d'être installé",
-      "queuedBody": "Une autre installation est en cours. Celle-ci démarre dès qu'elle est terminée."
+      "queuedBody": "Une autre installation est en cours. Celle-ci démarre dès qu'elle est terminée.",
+      "cronOnDefault": "{count, plural, one {# tâche cron suit la version par défaut et utilise donc maintenant PHP {version} : {names}.} other {# tâches cron suivent la version par défaut et utilisent donc maintenant PHP {version} : {names}.}}",
+      "moreCronjobs": "{count, plural, one {# autre} other {# autres}}"
     },
     "extensions": {
       "title": "Extensions",
@@ -5699,7 +5701,17 @@
       "versionUnsupported": "{type} prend en charge PHP {range}. Faire passer cette application à une autre version risque de la casser.",
       "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des applications petites, moyennes ou grandes. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite.",
       "fixErrors": "Certains paramètres sont à corriger. L'onglet concerné est signalé.",
-      "autoValue": "Auto · {value}"
+      "autoValue": "Auto · {value}",
+      "cronReview": {
+        "title": "Basculer aussi les tâches cron vers PHP {version} ?",
+        "description": "Cette application utilise maintenant PHP {version}, mais ces tâches cron utilisent encore une autre version. Rien n'a encore été modifié. Cochez celles à basculer.",
+        "fromVersion": "PHP {from} → PHP {to}",
+        "fromDefault": "Version par défaut du serveur → PHP {to}. Laissez-la décochée pour qu'elle continue de suivre la version par défaut.",
+        "confirm": "{count, plural, =0 {Basculer les tâches cron} one {Basculer # tâche cron} other {Basculer # tâches cron}}",
+        "notNow": "Pas maintenant",
+        "switched": "{count, plural, one {# tâche cron utilise maintenant PHP {version}.} other {# tâches cron utilisent maintenant PHP {version}.}}",
+        "failed": "Les tâches cron n'ont pas pu être basculées."
+      }
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",

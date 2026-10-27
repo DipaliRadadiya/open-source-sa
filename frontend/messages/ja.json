@@ -2436,7 +2436,9 @@
       "dismissFailed": "失敗したインストールを消去できませんでした。",
       "statusQueued": "他のインストールを待機中",
       "queuedTitle": "PHP {version} はインストール待ちです",
-      "queuedBody": "別のインストールが実行中です。それが終わるとすぐに開始します。"
+      "queuedBody": "別のインストールが実行中です。それが終わるとすぐに開始します。",
+      "cronOnDefault": "{count, plural, other {# 件のCronジョブはデフォルトに従うため、PHP {version} で動くようになりました: {names}。}}",
+      "moreCronjobs": "{count, plural, other {ほか # 件}}"
     },
     "extensions": {
       "title": "拡張機能",
@@ -5699,7 +5701,17 @@
       "versionUnsupported": "{type} は PHP {range} に対応しています。このアプリケーションを別のバージョンに移動すると動作しなくなる可能性があります。",
       "presetsLabelHint": "小・中・大のアプリケーションに合わせた設定です。出発点として利用し、その後も各値は変更できます。",
       "fixErrors": "修正が必要な設定があります。問題のあるタブに印が付いています。",
-      "autoValue": "自動 · {value}"
+      "autoValue": "自動 · {value}",
+      "cronReview": {
+        "title": "Cronジョブも PHP {version} に切り替えますか？",
+        "description": "このアプリケーションは PHP {version} で動くようになりましたが、これらのCronジョブはまだ別のバージョンを使っています。まだ何も変更していません。切り替えるものにチェックを入れてください。",
+        "fromVersion": "PHP {from} → PHP {to}",
+        "fromDefault": "サーバーのデフォルト → PHP {to}。デフォルトに合わせ続ける場合はチェックを外したままにします。",
+        "confirm": "{count, plural, =0 {Cronジョブを切り替え} other {# 件のCronジョブを切り替え}}",
+        "notNow": "今はしない",
+        "switched": "{count, plural, other {# 件のCronジョブが PHP {version} で動くようになりました。}}",
+        "failed": "Cronジョブを切り替えられませんでした。"
+      }
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",

@@ -2436,7 +2436,9 @@
       "dismissFailed": "Die fehlgeschlagene Installation konnte nicht entfernt werden.",
       "statusQueued": "Wartet auf eine andere Installation",
       "queuedTitle": "PHP {version} wartet auf die Installation",
-      "queuedBody": "Eine andere Installation läuft. Diese beginnt, sobald sie fertig ist."
+      "queuedBody": "Eine andere Installation läuft. Diese beginnt, sobald sie fertig ist.",
+      "cronOnDefault": "{count, plural, one {# Cronjob folgt dem Standard und läuft jetzt mit PHP {version}: {names}.} other {# Cronjobs folgen dem Standard und laufen jetzt mit PHP {version}: {names}.}}",
+      "moreCronjobs": "{count, plural, one {# weiterer} other {# weitere}}"
     },
     "extensions": {
       "title": "Erweiterungen",
@@ -5699,7 +5701,17 @@
       "versionUnsupported": "{type} unterstützt PHP {range}. Diese Anwendung auf eine andere Version zu bringen macht sie wahrscheinlich kaputt.",
       "presetsLabelHint": "Fertige Einstellungen, zugeschnitten auf kleine, mittlere und große Seiten. Ein Ausgangspunkt — Sie können danach jeden Wert weiterhin ändern.",
       "fixErrors": "Einige Einstellungen müssen korrigiert werden. Der betroffene Tab ist markiert.",
-      "autoValue": "Auto · {value}"
+      "autoValue": "Auto · {value}",
+      "cronReview": {
+        "title": "Cronjobs auch auf PHP {version} umstellen?",
+        "description": "Diese Anwendung läuft jetzt mit PHP {version}, diese Cronjobs aber noch mit einer anderen Version. Noch wurde nichts geändert. Haken Sie die an, die umgestellt werden sollen.",
+        "fromVersion": "PHP {from} → PHP {to}",
+        "fromDefault": "Server-Standard → PHP {to}. Lassen Sie ihn leer, damit er weiter dem Standard folgt.",
+        "confirm": "{count, plural, =0 {Cronjobs umstellen} one {# Cronjob umstellen} other {# Cronjobs umstellen}}",
+        "notNow": "Jetzt nicht",
+        "switched": "{count, plural, one {# Cronjob läuft jetzt mit PHP {version}.} other {# Cronjobs laufen jetzt mit PHP {version}.}}",
+        "failed": "Die Cronjobs konnten nicht umgestellt werden."
+      }
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
