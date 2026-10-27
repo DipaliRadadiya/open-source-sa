@@ -3,6 +3,11 @@
 
 export const DEFAULT_KEEP = { choices: [0, 1, 3, 7, 14, 30], recommended: 7 };
 
+/** Whether the API has the keep choice at all; an older one sends no `keep_days` in the preview. */
+export function hasKeepChoice(keepDays) {
+  return Array.isArray(keepDays?.choices) && keepDays.choices.length > 0;
+}
+
 export function keepOptions(keepDays) {
   const choices = keepDays?.choices?.length ? keepDays.choices : DEFAULT_KEEP.choices;
   const recommended = keepDays?.recommended ?? DEFAULT_KEEP.recommended;

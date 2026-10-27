@@ -2825,10 +2825,12 @@
       "defaultAsBefore": "Predeterminado (como antes)",
       "alwaysAll": "siempre elimina todo",
       "confirmLine": "Opción: {choice}",
-      "deleteAllWarning": "Eliminar todo borra todos los registros del servidor y de los sitios, incluido el historial de inicios de sesión y de errores. No se puede deshacer.",
       "scheduleDeleteAllHint": "Eliminar todo vacía todos los registros. Considera ejecutarlo solo cuando el uso del disco supere el {percent}%.",
       "useThreshold": "Usar {percent}%",
-      "nothingAtChoice": "No hay nada que limpiar con esta opción. Una más corta puede liberar más."
+      "nothingAtChoice": "No hay nada que limpiar con esta opción. Una más corta puede liberar más.",
+      "deleteAllItems": "Se elimina todo lo de {items}, incluido lo de hoy. No se puede deshacer.",
+      "deleteAllSiteLogs": "Las aplicaciones pierden su historial de visitas y errores.",
+      "scheduleLegacy": "Guardado antes de que existiera esta opción: hasta que guardes, conserva 7 días del diario y de los archivos temporales y elimina todo lo demás."
     }
   },
   "rebootBanner": {

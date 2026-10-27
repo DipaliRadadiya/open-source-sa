@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InfoHint } from "@/components/ui/info-hint";
 import { MeasuredAt } from "@/components/disk-cleaner/measured-at";
 import { KeepSelect, useKeepLabel } from "@/components/disk-cleaner/keep-select";
-import { keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { hasKeepChoice, keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
 import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
 import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const t = useTranslations("diskCleaner");
   const keepLabel = useKeepLabel();
   const { choices, recommended } = keepOptions(keepDays);
+  const keepSupported = hasKeepChoice(keepDays);
   // One choice for the whole clean; every size, the split and the total follow it.
   const [keep, setKeep] = useKeepChoice();
   const { refreshAndWait } = useRefresh();
@@ -144,7 +145,9 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
           {/* No gap between list and footer: space-y left an empty strip above the footer band. */}
           <CardContent className="px-0 pb-0">
-            {/* Always shown: when nothing is left at "keep 7 days", Delete all may still free space. */}
+            {/* Always shown when the API has the choice: when nothing is left at "keep 7 days",
+                Delete all may still free space. An older API ignores it, so it is not offered. */}
+            {keepSupported ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3">
               <Label htmlFor="clean-keep" className="text-sm font-medium">
                 {t("keep.label")}
@@ -162,6 +165,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
               />
               <span className="min-w-48 flex-1 text-xs text-muted-foreground">{t(keep === 0 ? "keep.hintDeleteAll" : "keep.hint")}</span>
             </div>
+            ) : null}
 
             {result ? (
               // m-4, not mb-4: the header is a bordered band, so without a top margin the note
@@ -398,14 +402,20 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             </div>
           </div>
 
-          <p className="text-sm">
-            {t("keep.confirmLine", { choice: keepLabel(keep, recommended) })}
-          </p>
+          {keep != null ? (
+            <p className="text-sm">
+              {t("keep.confirmLine", { choice: keepLabel(keep, recommended) })}
+            </p>
+          ) : null}
 
-          {/* Delete all also removes the login and error history people go back to after an incident. */}
+          {/* Names only what is ticked: the old sentence said every log goes even with only the journal
+              chosen. Application logs are the history people go back to after an incident. */}
           {keep === 0 ? (
             <Caution tone="destructive" size="md">
-              <p>{t("keep.deleteAllWarning")}</p>
+              <p>
+                {t("keep.deleteAllItems", { items: chosen.map((c) => c.label).join(", ") })}
+                {chosen.some((c) => c.key === "site_logs") ? ` ${t("keep.deleteAllSiteLogs")}` : null}
+              </p>
             </Caution>
           ) : null}
   

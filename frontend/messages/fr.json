@@ -2825,10 +2825,12 @@
       "defaultAsBefore": "Par défaut (comme avant)",
       "alwaysAll": "supprime toujours tout",
       "confirmLine": "Choix : {choice}",
-      "deleteAllWarning": "Tout supprimer efface tous les journaux du serveur et des sites, y compris l'historique des connexions et des erreurs. Action irréversible.",
       "scheduleDeleteAllHint": "Tout supprimer vide tous les journaux. Envisagez de ne l'exécuter que lorsque l'utilisation du disque dépasse {percent} %.",
       "useThreshold": "Utiliser {percent} %",
-      "nothingAtChoice": "Rien à nettoyer avec ce choix. Un choix plus court peut libérer davantage."
+      "nothingAtChoice": "Rien à nettoyer avec ce choix. Un choix plus court peut libérer davantage.",
+      "deleteAllItems": "Tout le contenu de {items} est supprimé, y compris celui d'aujourd'hui. Action irréversible.",
+      "deleteAllSiteLogs": "Les applications perdent leur historique de visites et d'erreurs.",
+      "scheduleLegacy": "Enregistré avant l'existence de ce choix : jusqu'à l'enregistrement, il conserve 7 jours du journal et des fichiers temporaires et supprime tout le reste."
     }
   },
   "rebootBanner": {

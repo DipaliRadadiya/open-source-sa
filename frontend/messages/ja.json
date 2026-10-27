@@ -2825,10 +2825,12 @@
       "defaultAsBefore": "デフォルト（従来どおり）",
       "alwaysAll": "常にすべて削除",
       "confirmLine": "選択: {choice}",
-      "deleteAllWarning": "すべて削除すると、ログインやエラーの履歴を含む、サーバーとサイトのすべてのログが削除されます。元に戻せません。",
       "scheduleDeleteAllHint": "すべて削除はすべてのログを空にします。ディスク使用率が {percent}% を超えたときだけ実行することを検討してください。",
       "useThreshold": "{percent}% を使用",
-      "nothingAtChoice": "この選択では削除するものがありません。より短い期間を選ぶと空きが増える場合があります。"
+      "nothingAtChoice": "この選択では削除するものがありません。より短い期間を選ぶと空きが増える場合があります。",
+      "deleteAllItems": "{items} の内容は今日の分も含めてすべて削除されます。元に戻せません。",
+      "deleteAllSiteLogs": "アプリケーションの訪問者とエラーの履歴が失われます。",
+      "scheduleLegacy": "この選択肢ができる前に保存されています。保存するまでは、ジャーナルと一時ファイルを 7 日分保持し、それ以外はすべて削除します。"
     }
   },
   "rebootBanner": {

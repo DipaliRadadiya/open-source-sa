@@ -20,14 +20,15 @@ function failed(status) {
 }
 
 /** Cleanup history, a page at a time; rendered only when there is history. */
-export async function RunsCard({ runs, meta, categories }) {
+export async function RunsCard({ runs, meta, categories, keepSupported = true }) {
   if (!runs?.length) return null;
   const [t, format] = await Promise.all([getTranslations("diskCleaner"), getFormatter()]);
   const labelFor = (key) => categories.find((c) => c.key === key)?.label ?? key;
   const triggerOf = (run) => (t.has(`runs.trigger.${run.trigger}`) ? t(`runs.trigger.${run.trigger}`) : run.trigger);
   // The keep choice the run used; runs from before it existed did each category's default.
+  // An older API records no choice: label nothing rather than call every run "as before".
   const keepOf = (run) =>
-    run.keep_days == null ? t("keep.defaultAsBefore") : run.keep_days === 0 ? t("keep.deleteAll") : t("keep.days", { count: run.keep_days });
+    !keepSupported ? null : run.keep_days == null ? t("keep.defaultAsBefore") : run.keep_days === 0 ? t("keep.deleteAll") : t("keep.days", { count: run.keep_days });
   const when = (at) => format.dateTime(at, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
 
   // Each item the run cleaned, with what it freed (`freed` is `[]` from PHP when empty).
@@ -74,7 +75,7 @@ export async function RunsCard({ runs, meta, categories }) {
                 <span className="inline-flex shrink-0 items-center gap-2">
                   {failed(run.status) ? <Badge variant="destructive" className="font-normal">{t("runs.failed")}</Badge> : null}
                   <Badge variant="outline" className="font-normal">{triggerOf(run)}</Badge>
-                  <span className="text-xs text-muted-foreground">{keepOf(run)}</span>
+                  {keepOf(run) ? <span className="text-xs text-muted-foreground">{keepOf(run)}</span> : null}
                   <span className="text-sm font-medium tabular-nums">{run.freed_total_human ?? "0 B"}</span>
                 </span>
               </div>
@@ -111,7 +112,7 @@ export async function RunsCard({ runs, meta, categories }) {
                   </TableCell>
                   <TableCell className="hidden align-top md:table-cell">
                     <Badge variant="outline" className="font-normal">{trigger}</Badge>
-                    <p className="mt-1 text-xs text-muted-foreground">{keepOf(run)}</p>
+                    {keepOf(run) ? <p className="mt-1 text-xs text-muted-foreground">{keepOf(run)}</p> : null}
                   </TableCell>
                   <TableCell className="hidden align-top tabular-nums text-muted-foreground lg:table-cell">
                     {run.disk_percent != null ? t("summary.percentUsed", { percent: Math.round(run.disk_percent) }) : "—"}

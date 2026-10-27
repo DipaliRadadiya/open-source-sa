@@ -56,8 +56,12 @@ test("Already clean, the order and the total follow the choice; Delete all warns
 
 test("the schedule sends its choice and suggests 85% beside Delete all", () => {
   const schedule = read("components/disk-cleaner/schedule-card.jsx");
-  assert.match(schedule, /keep_days: keep,/);
-  assert.match(schedule, /allowDefault=\{schedule != null && schedule\.keep_days == null\}/);
+  // Never null (27 Oct): GET /schedule always answers, so "as before" was the default on every server,
+  // and null with Application logs ticked empties every application's logs on each run.
+  assert.match(schedule, /\.\.\.\(keepSupported \? \{ keep_days: keep \?\? recommended \} : \{\}\)/);
+  assert.match(schedule, /const savedKeep = \(\) => \(keepSupported \? \(schedule\?\.keep_days \?\? recommended\) : null\);/);
+  assert.doesNotMatch(schedule, /allowDefault=/);
+  assert.match(schedule, /\{legacyKeep \? <p className="text-xs text-muted-foreground">\{t\("keep\.scheduleLegacy"\)\}<\/p> : null\}/);
   assert.match(schedule, /keep === 0 && threshold !== DELETE_ALL_THRESHOLD/);
   assert.match(schedule, /const DELETE_ALL_THRESHOLD = "85";/);
   // On .34 "Use 85%" did nothing: 85 was not on the list yet, so Radix reported "" and the
@@ -74,7 +78,7 @@ test("with Delete all the hint does not promise to keep anything", () => {
 
 test("the Can be freed tile prices the same choice as the list", () => {
   const page = read("app/(app)/disk-cleaner/page.jsx");
-  assert.match(page, /<KeepProvider initial=\{recommended\}>/);
+  assert.match(page, /<KeepProvider initial=\{keepSupported \? recommended : null\}>/);
   assert.match(read("components/disk-cleaner/cleanup-panel.jsx"), /const \[keep, setKeep\] = useKeepChoice\(\);/);
   const tile = read("components/disk-cleaner/disk-summary.jsx");
   assert.match(tile, /const \[keep\] = useKeepChoice\(\);/);
