@@ -91,6 +91,17 @@ function lbDestination(string $path): StorageDestination
     return StorageDestination::create(['name' => 'Local '.uniqid(), 'provider' => 'local', 'config' => ['path' => $path]]);
 }
 
+/**
+ * The backup disk as these numbers, not as this server's real disk — whose
+ * free space other processes change between two reads.
+ */
+function lbDisk(int $free, int $total): void
+{
+    $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+    $folder->shouldReceive('space')->andReturn(['free' => $free, 'total' => $total]);
+    app()->instance(LocalBackupFolder::class, $folder);
+}
+
 function lbMode(string $path): string
 {
     clearstatcache();
@@ -247,17 +258,14 @@ describe('free space', function () {
     });
 
     it('refuses exactly at the edge, not one byte past it', function () {
-        $path = "{$this->base}/backups/edge";
-        File::ensureDirectoryExists($path);
-        $free = (int) disk_free_space($path);
+        // Fixed numbers: this server's real free space moves while it runs.
+        lbDisk(free: 10 * 1024 ** 3, total: 100 * 1024 ** 3);
         config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1000]);
         $guard = app(LocalSpaceGuard::class);
 
-        // Free space moves while the suite runs; leave a margin that it
-        // cannot cross in between.
-        $guard->ensureRoomFor($path, $free - 1000 - 50 * 1024 ** 2);
+        $guard->ensureRoomFor($this->base, 10 * 1024 ** 3 - 1000);
 
-        expect(fn () => $guard->ensureRoomFor($path, $free))->toThrow(NotEnoughBackupSpace::class);
+        expect(fn () => $guard->ensureRoomFor($this->base, 10 * 1024 ** 3 - 999))->toThrow(NotEnoughBackupSpace::class);
     });
 });
 
@@ -380,7 +388,9 @@ describe('a whole backup to this server', function () {
 
     it('refuses before writing anything when the last backup would not fit again', function () {
         app(BackupRunner::class)->run($this->target);
-        config(['server.backups.local.min_free_bytes' => (int) disk_free_space("{$this->base}/backups/whole") - 1024]);
+        // The last backup was 4096 bytes; 4095 of headroom cannot take another.
+        lbDisk(free: 1024 ** 3, total: 100 * 1024 ** 3);
+        config(['server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
         $this->ran->exchangeArray([]);
 
         $failed = app(BackupRunner::class)->run($this->target);
