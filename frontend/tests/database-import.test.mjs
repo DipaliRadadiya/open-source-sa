@@ -46,7 +46,7 @@ test("the replacement is confirmed before the upload, and start always sends con
   assert.match(card, /setChosen\(file\)/);
   assert.match(card, /onConfirm=\{run\}/);
   const api = read("lib/api/databases.js");
-  assert.match(api, /\/start`, \{ confirm_replace: true \}/);
+  assert.match(api, /\/start`, \{\s*confirm_replace: true,/);
   // Chunks are clamped below nginx's body buffer, like the file manager's.
   assert.match(api, /Math\.min\(chunkSizeFor\(file\.size\), data\.max_chunk \|\| Infinity\)/);
 });
@@ -55,7 +55,7 @@ test("a refused start keeps the uploaded file, so its row can start again", () =
   const api = read("lib/api/databases.js");
   const fn = api.slice(api.indexOf("export async function uploadAndStartImport"));
   const cleanup = fn.indexOf("api.delete(base)");
-  const start = fn.indexOf("return startImport(databaseId, importId)");
+  const start = fn.indexOf("return startImport(databaseId, importId, { safetyCopy })");
   assert.ok(cleanup !== -1 && start > cleanup, "start must run after the upload's cleanup block, not inside it");
   assert.match(read("components/databases/database-import.jsx"), /row\.status === "uploading" && row\.received_bytes === row\.size_bytes/);
 });

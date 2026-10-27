@@ -3309,8 +3309,12 @@
       "removed": "Importación eliminada.",
       "removeFailed": "No se pudo eliminar esta importación.",
       "uploadUnfinished": "La subida no terminó.",
-      "backupNote": "Cada importación guarda una copia de seguridad de la base de datos en Exportaciones, como «Copia automática antes de importar». Nada las elimina, así que borra allí las antiguas para liberar espacio en disco.",
-      "backupDownload": "Descargar la copia de seguridad hecha antes de esta importación"
+      "backupNote": "Una importación con copia de seguridad la guarda en Exportaciones, como «Copia automática antes de importar». Nada las elimina, así que borra allí las antiguas para liberar espacio en disco.",
+      "backupDownload": "Descargar la copia de seguridad hecha antes de esta importación",
+      "safetyCopy": "Hacer antes una copia de seguridad (recomendado)",
+      "noSafetyCopyWarning": "Sin copia de seguridad, una importación fallida no se puede deshacer. La base de datos puede quedar vacía o a medio cargar.",
+      "withCopy": "Con copia de seguridad",
+      "withoutCopy": "Sin copia de seguridad"
     },
     "manage": "Gestionar",
     "monitor": {

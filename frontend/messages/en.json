@@ -3309,8 +3309,12 @@
       "removed": "Import deleted.",
       "removeFailed": "This import could not be deleted.",
       "uploadUnfinished": "The upload did not finish.",
-      "backupNote": "Each import keeps a backup of the database in Exports, as “Automatic backup before import”. Nothing deletes them, so remove old ones there to free disk space.",
-      "backupDownload": "Download the backup taken before this import"
+      "backupNote": "An import with a safety copy keeps it in Exports, as “Automatic backup before import”. Nothing deletes them, so remove old ones there to free disk space.",
+      "backupDownload": "Download the backup taken before this import",
+      "safetyCopy": "Take a safety copy first (recommended)",
+      "noSafetyCopyWarning": "Without a safety copy, a failed import can't be undone. The database may be left empty or half-loaded.",
+      "withCopy": "With safety copy",
+      "withoutCopy": "Without safety copy"
     },
     "manage": "Manage",
     "monitor": {

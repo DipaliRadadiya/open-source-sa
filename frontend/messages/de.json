@@ -3309,8 +3309,12 @@
       "removed": "Import gelöscht.",
       "removeFailed": "Dieser Import konnte nicht gelöscht werden.",
       "uploadUnfinished": "Der Upload wurde nicht abgeschlossen.",
-      "backupNote": "Jeder Import legt unter Exporte eine Sicherung der Datenbank an, als „Automatische Sicherung vor dem Import“. Nichts löscht sie, entfernen Sie alte dort, um Speicherplatz freizugeben.",
-      "backupDownload": "Sicherung von vor diesem Import herunterladen"
+      "backupNote": "Ein Import mit Sicherung legt sie unter Exporte ab, als „Automatische Sicherung vor dem Import“. Nichts löscht sie, entfernen Sie alte dort, um Speicherplatz freizugeben.",
+      "backupDownload": "Sicherung von vor diesem Import herunterladen",
+      "safetyCopy": "Vorher eine Sicherung erstellen (empfohlen)",
+      "noSafetyCopyWarning": "Ohne Sicherung lässt sich ein fehlgeschlagener Import nicht rückgängig machen. Die Datenbank kann leer oder nur teilweise geladen zurückbleiben.",
+      "withCopy": "Mit Sicherung",
+      "withoutCopy": "Ohne Sicherung"
     },
     "manage": "Verwalten",
     "monitor": {
