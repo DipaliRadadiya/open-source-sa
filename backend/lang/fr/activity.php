@@ -126,6 +126,8 @@ return [
     'cronjob.create_failed' => 'Échec de la création de la tâche cron :name',
     'cronjob.update_failed' => 'Échec de la mise à jour de la tâche cron :name (étape : :step)',
     'cronjob.delete_failed' => 'Échec de la suppression de la tâche cron :name (étape : :step)',
+    'cronjob.ran' => 'Tâche cron :name exécutée manuellement',
+    'cronjob.run_failed' => 'Échec de l\'exécution manuelle de la tâche cron :name',
     'log.downloaded' => 'A téléchargé le journal :log',
     'disk_cleaner.cleaned' => 'A nettoyé le disque (:categories, :kept) — :freed libéré',
     'disk_cleaner.auto_cleaned' => 'Disque nettoyé automatiquement (:categories, :kept) — :freed libérés',

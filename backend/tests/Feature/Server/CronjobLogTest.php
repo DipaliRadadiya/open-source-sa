@@ -100,7 +100,7 @@ it('records the exit status, so a silent failure is still visible', function () 
 
     // "Printed nothing" and "failed instantly" look identical in a bare
     // output log, and the second is the one you need to know about.
-    expect($written['input'])->toContain('echo "--- exit=$? at $(date -Is)"');
+    expect($written['input'])->toContain('echo "--- exit=$? pid=$$ at $(date -Is)"');
 });
 
 it('escapes a percent sign, which cron would otherwise treat as end-of-command', function () {

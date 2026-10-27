@@ -132,6 +132,8 @@ return [
     'cronjob.create_failed' => 'Failed to create cron job :name',
     'cronjob.update_failed' => 'Failed to update cron job :name (step: :step)',
     'cronjob.delete_failed' => 'Failed to delete cron job :name (step: :step)',
+    'cronjob.ran' => 'Ran cron job :name manually',
+    'cronjob.run_failed' => 'Failed to run cron job :name manually',
     'log.downloaded' => 'Downloaded the :log log',
     'disk_cleaner.cleaned' => 'Cleaned disk (:categories, :kept) — freed :freed',
     'disk_cleaner.auto_cleaned' => 'Cleaned disk automatically (:categories, :kept) — freed :freed',

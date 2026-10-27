@@ -374,8 +374,73 @@ class CrontabManager
     }
 
     /**
+     * Run the job once, now, in the background — "Run now".
+     *
+     * In a transient systemd unit of its own rather than in the request or a
+     * queue worker: a job can take an hour, and a worker held that long stops
+     * every queued install behind it. The unit runs as the job's account, in
+     * its home, with cron's PATH and shell, so a job that works here works
+     * from cron too. The command is not %-escaped: that is crontab syntax,
+     * and here it would reach the shell as a literal backslash.
+     *
+     * The unit name is the slug, so a second Run now while the first is
+     * still going fails to start instead of running the job twice.
+     */
+    public function startManualRun(Cronjob $cronjob): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            [
+                'systemd-run', '--quiet', '--collect',
+                '--unit='.$this->manualUnit($cronjob),
+                '--uid='.$cronjob->username,
+                '--setenv=PATH=/usr/bin:/bin',
+                '--setenv=SHELL=/bin/sh',
+                '--property=WorkingDirectory=~',
+                // A job stuck forever would refuse every later Run now.
+                '--property=RuntimeMaxSec='.(int) config('server.cronjob_run_now_max_seconds', 86400),
+                '/bin/sh', '-c', $this->shellLine($cronjob->command, $this->logPath($cronjob), manual: true),
+            ],
+            ['feature' => 'cronjob', 'op' => 'run_now', 'cronjob' => $cronjob->id],
+            timeout: 30,
+        );
+    }
+
+    /**
+     * Whether a Run now of this job is still going. Runs started by cron are
+     * not units and are not counted: overlapping cron is cron's business, and
+     * the history shows them as running from their log markers.
+     */
+    public function manualRunActive(Cronjob $cronjob): bool
+    {
+        $state = trim($this->serverOps->run(
+            ['systemctl', 'is-active', $this->manualUnit($cronjob).'.service'],
+            ['feature' => 'cronjob', 'op' => 'run_now_state', 'cronjob' => $cronjob->id],
+            timeout: 15,
+            expectedExitCodes: [3],
+        )->output());
+
+        return in_array($state, ['active', 'activating', 'reloading', 'deactivating'], true);
+    }
+
+    public function manualUnit(Cronjob $cronjob): string
+    {
+        return 'panel-cron-'.$cronjob->slug;
+    }
+
+    /**
+     * Create the job's log if it is missing, owned by its account — for a
+     * Run now of a job written before output capture existed.
+     *
+     * @throws CronjobOperationException
+     */
+    public function ensureLog(Cronjob $cronjob): void
+    {
+        $this->prepareLog($cronjob);
+    }
+
+    /**
      * The command as cron will run it: output redirected to the job's log,
-     * followed by its exit status.
+     * between a start line and its exit status.
      *
      * The command is wrapped in a subshell because cron entries are shell
      * lines and people write compound ones. In `a; b >> log`, the redirect
@@ -388,13 +453,22 @@ class CrontabManager
      * "failed instantly" look identical in a bare output log, and the second
      * is what you need to know. `$?` is expanded before the date substitution
      * runs, so it is the job's status and not `date`'s.
+     *
+     * The start line gives the run its duration, and `$$` — the shell running
+     * this line, alive until the job ends — ties the exit back to its start
+     * when two runs overlap. It also tells a run still going from one killed
+     * by a reboot. {@see CronjobHistory} reads all three.
      */
     private function runLine(Cronjob $cronjob): string
     {
-        $log = $this->logPath($cronjob);
+        return $this->shellLine($this->escapePercent($cronjob->command), $this->logPath($cronjob));
+    }
 
-        return '( '.$this->escapePercent($cronjob->command).' )'
-            ." >> {$log} 2>&1; echo \"--- exit=\$? at \$(date -Is)\" >> {$log}";
+    private function shellLine(string $command, string $log, bool $manual = false): string
+    {
+        return 'echo "--- start pid=$$'.($manual ? ' manual' : '').' at $(date -Is)" >> '.$log
+            .'; ( '.$command.' )'
+            ." >> {$log} 2>&1; echo \"--- exit=\$? pid=\$\$ at \$(date -Is)\" >> {$log}";
     }
 
     /**

@@ -38,6 +38,11 @@ class CronjobResource extends JsonResource
             // default, so jobs written before output capture existed have
             // nothing to show until they are next saved.
             'log_key' => $this->logKey(),
+            // The latest run, from the job's log (list and show only): when,
+            // how it ended, how long it took. Null when it has not run.
+            'last_run' => $this->when($this->resource->lastRunRead, fn () => $this->resource->lastRun),
+            // Its latest run has started and not ended.
+            'running' => $this->when($this->resource->lastRunRead, fn () => ($this->resource->lastRun['status'] ?? null) === 'running'),
             'next_run_at' => $this->nextRunAt()?->format('d-m-Y H:i:s'),
             'next_run_at_human' => $this->nextRunAt()?->diffForHumans(),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),

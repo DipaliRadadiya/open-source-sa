@@ -126,6 +126,8 @@ return [
     'cronjob.create_failed' => 'क्रॉन जॉब :name बनाने में विफल',
     'cronjob.update_failed' => ':name क्रॉन जॉब अपडेट नहीं हो सका (चरण: :step)',
     'cronjob.delete_failed' => ':name क्रॉन जॉब हटाया नहीं जा सका (चरण: :step)',
+    'cronjob.ran' => ':name क्रॉन जॉब मैन्युअल रूप से चलाया गया',
+    'cronjob.run_failed' => ':name क्रॉन जॉब मैन्युअल रूप से नहीं चलाया जा सका',
     'log.downloaded' => ':log लॉग डाउनलोड किया',
     'disk_cleaner.cleaned' => 'डिस्क साफ़ की (:categories, :kept) — :freed मुक्त किया',
     'disk_cleaner.auto_cleaned' => 'डिस्क स्वचालित रूप से साफ़ की (:categories, :kept) — :freed मुक्त किया',

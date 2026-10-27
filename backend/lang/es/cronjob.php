@@ -23,4 +23,5 @@ return [
         'php_script' => 'Script PHP',
         'custom' => 'Personalizado',
     ],
+    'run_started' => 'La tarea cron se ha iniciado. Su resultado aparecerá en el historial de ejecuciones.',
 ];

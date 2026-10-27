@@ -15,6 +15,8 @@ return [
         'remove' => 'No se pudo eliminar el archivo cron, así que la tarea sigue programada en el servidor.',
         'remove_stale' => 'No se pudo eliminar el archivo cron antiguo tras el cambio de nombre. No se cambió nada, así que la tarea no queda programada dos veces.',
         'detach_source' => 'No se pudo eliminar el archivo cron original del que se importó esta tarea. No se cambió nada, así que el comando no se ejecuta dos veces.',
+        'run_now' => 'No se pudo iniciar la tarea. Busque la referencia de abajo en el registro del sistema del servidor.',
+        'read_history' => 'No se pudo leer el registro de la tarea, así que no se pueden mostrar sus ejecuciones.',
     ],
     'invalid_expression' => 'La programación no es una expresión cron válida.',
     'invalid_user' => 'El usuario seleccionado no existe en el servidor.',
@@ -23,4 +25,6 @@ return [
     'no_newline' => 'Este valor no puede contener saltos de línea.',
     'reserved_name' => 'Este nombre está reservado y no se puede usar.',
     'shell_comment' => 'El comando contiene un comentario de shell (un # al principio de una palabra). Cron cortaría la línea ahí y la tarea no se ejecutaría bien. Quite el comentario o ponga el # entre comillas.',
+    'run_paused' => 'Esta tarea cron está en pausa. Actívela antes de ejecutarla.',
+    'run_already_running' => 'Esta tarea cron ya se está ejecutando desde «Ejecutar ahora». Espere a que termine esa ejecución.',
 ];

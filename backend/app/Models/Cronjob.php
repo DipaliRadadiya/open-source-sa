@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Server\CronjobHistory;
 use App\Support\ServerTimezone;
 use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -133,6 +134,28 @@ class Cronjob extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    /**
+     * The latest run, read from the log by {@see CronjobHistory}
+     * — set only where it was read, so the resource can tell "never ran"
+     * (null) from "not asked" (unset).
+     *
+     * @var array<string, mixed>|null
+     */
+    public ?array $lastRun = null;
+
+    public bool $lastRunRead = false;
+
+    /**
+     * @param  array<string, mixed>|null  $run
+     */
+    public function withLastRun(?array $run): static
+    {
+        $this->lastRun = $run;
+        $this->lastRunRead = true;
+
+        return $this;
     }
 
     /**

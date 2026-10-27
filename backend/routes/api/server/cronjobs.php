@@ -20,3 +20,6 @@ Route::post('/cronjobs', [CronjobController::class, 'store'])->middleware('permi
 Route::get('/cronjobs/{cronjob}', [CronjobController::class, 'show'])->middleware('permission:cronjob');
 Route::put('/cronjobs/{cronjob}', [CronjobController::class, 'update'])->middleware('permission:cronjob,manage');
 Route::delete('/cronjobs/{cronjob}', [CronjobController::class, 'destroy'])->middleware('permission:cronjob,manage');
+// Run history read from the job's log, and "Run now".
+Route::get('/cronjobs/{cronjob}/runs', [CronjobController::class, 'runs'])->middleware('permission:cronjob');
+Route::post('/cronjobs/{cronjob}/run', [CronjobController::class, 'run'])->middleware('permission:cronjob,manage');

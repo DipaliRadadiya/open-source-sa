@@ -15,6 +15,8 @@ return [
         'remove' => 'Die Cron-Datei konnte nicht entfernt werden, der Job ist auf dem Server weiterhin eingeplant.',
         'remove_stale' => 'Die alte Cron-Datei konnte nach der Umbenennung nicht entfernt werden. Es wurde nichts geändert, der Job ist also nicht doppelt eingeplant.',
         'detach_source' => 'Die ursprüngliche Cron-Datei, aus der dieser Job importiert wurde, konnte nicht entfernt werden. Es wurde nichts geändert, der Befehl läuft also nicht doppelt.',
+        'run_now' => 'Der Job konnte nicht gestartet werden. Suchen Sie die unten stehende Referenz im Systemprotokoll des Servers.',
+        'read_history' => 'Das Protokoll des Jobs konnte nicht gelesen werden, daher können seine Ausführungen nicht angezeigt werden.',
     ],
     'invalid_expression' => 'Der Zeitplan ist kein gültiger Cron-Ausdruck.',
     'invalid_user' => 'Der ausgewählte Benutzer existiert nicht auf dem Server.',
@@ -23,4 +25,6 @@ return [
     'no_newline' => 'Dieser Wert darf keine Zeilenumbrüche enthalten.',
     'reserved_name' => 'Dieser Name ist reserviert und kann nicht verwendet werden.',
     'shell_comment' => 'Der Befehl enthält einen Shell-Kommentar (ein # am Anfang eines Wortes). Cron würde die Zeile dort abschneiden und der Job liefe nicht richtig. Entfernen Sie den Kommentar oder setzen Sie das # in Anführungszeichen.',
+    'run_paused' => 'Dieser Cronjob ist pausiert. Aktivieren Sie ihn, bevor Sie ihn ausführen.',
+    'run_already_running' => 'Dieser Cronjob läuft bereits über „Jetzt ausführen“. Warten Sie, bis diese Ausführung beendet ist.',
 ];

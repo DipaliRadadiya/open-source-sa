@@ -4,21 +4,24 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Cronjob\CreateCronjob;
 use App\Actions\Server\Cronjob\DeleteCronjob;
+use App\Actions\Server\Cronjob\RunCronjobNow;
 use App\Actions\Server\Cronjob\UpdateCronjob;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Cronjob\StoreCronjobRequest;
 use App\Http\Requests\Server\Cronjob\UpdateCronjobRequest;
 use App\Http\Resources\CronjobResource;
 use App\Models\Cronjob;
+use App\Services\Server\CronjobHistory;
 use App\Services\Server\CrontabManager;
 use App\Support\CronCommandPresets;
 use App\Support\CronSchedulePresets;
+use App\Support\ServerTimezone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CronjobController extends Controller
 {
-    public function index(Request $request, CrontabManager $crontab): JsonResponse
+    public function index(Request $request, CrontabManager $crontab, CronjobHistory $history): JsonResponse
     {
         // `id` breaks ties: created_at has one-second resolution, and jobs
         // made in the same second (a Sync adopting many at once) otherwise
@@ -44,6 +47,13 @@ class CronjobController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 10;
         $paginator = $query->paginate($perPage);
+
+        // One read for the page, not one per job.
+        $latest = $history->latest($paginator->items());
+
+        foreach ($paginator->items() as $cronjob) {
+            $cronjob->withLastRun($latest[$cronjob->id] ?? null);
+        }
 
         return response()->json([
             'cronjobs' => CronjobResource::collection($paginator->items()),
@@ -96,11 +106,37 @@ class CronjobController extends Controller
         ], 201);
     }
 
-    public function show(Cronjob $cronjob): JsonResponse
+    public function show(Cronjob $cronjob, CronjobHistory $history): JsonResponse
     {
+        $cronjob->withLastRun($history->latest([$cronjob])[$cronjob->id] ?? null);
+
         return response()->json([
             'cronjob' => CronjobResource::make($cronjob->load('systemUser'))->resolve(),
         ]);
+    }
+
+    /**
+     * The job's latest runs, newest first, each with what it printed.
+     */
+    public function runs(Cronjob $cronjob, CronjobHistory $history): JsonResponse
+    {
+        return response()->json([
+            'runs' => $history->runs($cronjob),
+            'timezone' => ServerTimezone::get(),
+        ]);
+    }
+
+    /**
+     * Run the job once now, in the background. 202: it has started, not
+     * finished — its result appears in `runs`.
+     */
+    public function run(Cronjob $cronjob, RunCronjobNow $action): JsonResponse
+    {
+        $action->execute($cronjob);
+
+        return response()->json([
+            'message' => __('cronjob.run_started'),
+        ], 202);
     }
 
     public function update(UpdateCronjobRequest $request, Cronjob $cronjob, UpdateCronjob $action): JsonResponse

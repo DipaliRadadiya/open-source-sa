@@ -23,4 +23,5 @@ return [
         'php_script' => 'PHP-Skript',
         'custom' => 'Benutzerdefiniert',
     ],
+    'run_started' => 'Der Cronjob wurde gestartet. Das Ergebnis erscheint im Ausführungsverlauf.',
 ];

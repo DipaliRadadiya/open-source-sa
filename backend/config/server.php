@@ -853,6 +853,19 @@ return [
     'cronjob_log_max_size' => env('SERVER_CRONJOB_LOG_MAX_SIZE', '10M'),
 
     /*
+    | Run history is read out of the end of each job's log (CronjobHistory):
+    | this much of it for a job's history, this much per job for the list's
+    | "last run", at most this many runs, and at most this much output each.
+    | A Run now is stopped after the last value, or a hung one would refuse
+    | every later Run now.
+    */
+    'cronjob_history_window_bytes' => 1048576,
+    'cronjob_latest_window_bytes' => 16384,
+    'cronjob_history_runs' => 20,
+    'cronjob_run_output_bytes' => 65536,
+    'cronjob_run_now_max_seconds' => (int) env('SERVER_CRONJOB_RUN_NOW_MAX_SECONDS', 86400),
+
+    /*
     |--------------------------------------------------------------------------
     | Server timezone sources
     |--------------------------------------------------------------------------

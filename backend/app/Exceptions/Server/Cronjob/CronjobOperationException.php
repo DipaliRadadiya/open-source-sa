@@ -29,6 +29,8 @@ class CronjobOperationException extends ServerOperationException
         'remove',       // deleting the file for a job switched off
         'remove_stale', // deleting the old file after a rename
         'detach_source', // deleting the file an adopted job came from
+        'run_now',      // starting a Run now
+        'read_history', // reading the job's runs back out of its log
     ];
 
     public function __construct(

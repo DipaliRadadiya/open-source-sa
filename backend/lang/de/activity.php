@@ -126,6 +126,8 @@ return [
     'cronjob.create_failed' => 'Cronjob :name konnte nicht erstellt werden',
     'cronjob.update_failed' => 'Cronjob :name konnte nicht aktualisiert werden (Schritt: :step)',
     'cronjob.delete_failed' => 'Cronjob :name konnte nicht gelöscht werden (Schritt: :step)',
+    'cronjob.ran' => 'Cronjob :name manuell ausgeführt',
+    'cronjob.run_failed' => 'Cronjob :name konnte nicht manuell ausgeführt werden',
     'log.downloaded' => 'Protokoll :log heruntergeladen',
     'disk_cleaner.cleaned' => 'Festplatte bereinigt (:categories, :kept) — :freed freigegeben',
     'disk_cleaner.auto_cleaned' => 'Datenträger automatisch bereinigt (:categories, :kept) — :freed freigegeben',

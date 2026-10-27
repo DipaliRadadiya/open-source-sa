@@ -5224,6 +5224,9 @@ Paginated, filterable. Filters: `filter[system_user_id]`, `filter[application_id
   "active": true,
   "timezone": "Europe/Berlin",
   "log_key": "cron-laravel-scheduler",
+  "last_run": {"status": "failed", "exit_code": 1, "manual": false, "overlapped": false,
+    "started_at": "29-07-2026 09:55:00", "finished_at": "29-07-2026 09:55:03", "duration_seconds": 3},
+  "running": false,
   "next_run_at": "29-07-2026 10:00:00", "next_run_at_human": "in 4 minutes",
   "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }], "meta": {"current_page": 1, "per_page": 10, "total": 3, "last_page": 1,
@@ -5238,9 +5241,13 @@ Newest first; jobs created in the same second are ordered by `id` (newest first)
 
 The account is `username` (a plain string, always present), not `user`. `system_user` is the linked record and is **absent unless the endpoint loads it**, and null for a job whose account is not a panel-managed system user — a job adopted from an existing crontab is the normal case.
 
-There is **no `human` field** (render the expression client-side or use the schedule presets endpoint) and **no `last_run_at`** — cron does not record one. `next_run_at` is computed from the expression against `timezone`, which is the server's timezone and is returned on every row so the frontend never has to assume UTC.
+There is **no `human` field** (render the expression client-side or use the schedule presets endpoint). `next_run_at` is computed from the expression against `timezone`, which is the server's timezone and is returned on every row so the frontend never has to assume UTC.
 
 `slug` is the identity on disk (`/etc/cron.d/<slug>`); `log_key` addresses this job's captured output through the logs endpoints.
+
+**`last_run`** is the job's latest run, read from its log (one read for the whole page): the same object as one entry of [`GET /cronjobs/{cronjob}/runs`](#get-cronjobscronjobruns) **without** `output`/`output_truncated`. `null` when the job has not run (or its log could not be read — the list still answers). **`running`** is `true` while that latest run has started and not ended. Both are on the list and on `GET /cronjobs/{cronjob}` only — not on the create/update responses.
+
+For the list, only the **last 16 KB** of each log is read: a run that printed more than that has no `started_at`/`duration_seconds` here — the history endpoint reads further.
 
 ---
 
@@ -5303,6 +5310,56 @@ Same shape as one row of the list endpoint — there is no `user_id` on it.
 ```json
 {"cronjob": {"id": 1, "name": "Laravel scheduler", "slug": "laravel-scheduler", "username": "siteowner", "system_user": {"id": 1, "username": "siteowner"}, …}}
 ```
+
+---
+
+### GET `/cronjobs/{cronjob}/runs`
+**Permission:** `cronjob` (view)
+
+The job's latest runs, **newest first**, at most 20, each with what it printed.
+
+```json
+{"runs": [
+  {"status": "succeeded", "exit_code": 0, "manual": true, "overlapped": false,
+   "started_at": "29-07-2026 10:12:40", "finished_at": "29-07-2026 10:12:41", "duration_seconds": 1,
+   "output": "Running scheduled command…", "output_truncated": false},
+  {"status": "failed", "exit_code": 127, "manual": false, "overlapped": false,
+   "started_at": null, "finished_at": "29-07-2026 09:55:00", "duration_seconds": null,
+   "output": "sh: 1: php: not found", "output_truncated": false}
+], "timezone": "Europe/Berlin"}
+```
+
+| field | meaning |
+|---|---|
+| `status` | `succeeded` (exit 0), `failed` (any other exit), `running` (started, not ended, still alive), `interrupted` (started, never ended, no longer alive — a reboot or the OOM killer) |
+| `manual` | started by **Run now**, not by cron |
+| `overlapped` | another run was going at the same time. Both wrote into the same log, so their output is interleaved and is shown on the **newer** run |
+| `started_at` / `duration_seconds` | `null` for runs from before this feature (their log lines have no start), and for a run whose start is older than the part of the log read |
+| `output` | at most **64 KB**, the **end** of it (that is where the error is); `output_truncated` says when it was cut, or when the run began before the part of the log read |
+
+Times are on the **server's clock** (`timezone`, the one cron runs on), like `next_run_at`.
+
+**Where it comes from.** There is no table: cron runs a job as its own account, which cannot write to the panel's database, so the job's log is the record. Every run is framed by `--- start pid=… at …` and `--- exit=N pid=… at …`. History therefore reaches back as far as the **current** log file (the last 1 MB of it): logrotate moves older output aside daily or at 10 MB. Jobs saved before this feature only write the exit line until they are next saved — their runs show, without a start or duration.
+
+**Response `200`:** `{"runs": []}` for a job that has never run. **`500`** with `code: cronjob_read_history` and a `reference` when the log exists but could not be read — never an empty list in that case.
+
+---
+
+### POST `/cronjobs/{cronjob}/run`
+**Permission:** `cronjob` (manage)
+
+**Run now:** start the job once, immediately, in the background. **Response `202`** `{"message": "…"}` means it has *started*; its result appears in `/runs` (and as `last_run`) when it ends.
+
+It runs exactly as cron would run it: as the job's account, in its home directory, with cron's `PATH=/usr/bin:/bin` and `/bin/sh`, and its output into the job's log, marked `manual`. It runs in a systemd unit of its own (`panel-cron-<slug>`), so a long job does not hold up the panel, and it is stopped after **24 hours**.
+
+| response | when |
+|---|---|
+| `422` `errors.cronjob` = `errors/cronjob.run_paused` | the job is paused (`active: false`) — turn it on first |
+| `422` `errors/cronjob.invalid_user` | the account no longer exists on the server |
+| `422` `errors/cronjob.run_already_running` | an earlier **Run now** of this job is still going |
+| `500` `code: cronjob_run_now` | the server would not start it (`reference` included); logged as `cronjob.run_failed` |
+
+**A run cron started does not block Run now**, and Run now does not stop cron: as with cron's own runs, two can overlap, and the history marks them `overlapped`. Recorded in the activity log as `cronjob.ran`.
 
 ---
 
@@ -7368,7 +7425,7 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, imported |
 | `backup` | configured, run, completed, failed, downloaded |
 | `disk_cleaner` | cleaned, auto_cleaned, clean_failed, auto_clean_failed, schedule_updated |
-| `cronjob` | created, updated, deleted, create_failed |
+| `cronjob` | created, updated, deleted, create_failed, ran, run_failed |
 | `service` | started, stopped, restarted, reloaded, enabled, disabled, config_test |
 | `fail2ban` | installed, updated, ban_added, ban_removed, all_bans_removed |
 | `firewall` | rule_added, rule_updated, rule_removed, rule_enabled, rule_disabled, enabled, disabled |

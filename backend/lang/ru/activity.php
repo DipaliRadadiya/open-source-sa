@@ -126,6 +126,8 @@ return [
     'cronjob.create_failed' => 'Не удалось создать задание cron :name',
     'cronjob.update_failed' => 'Не удалось обновить cron-задачу :name (шаг: :step)',
     'cronjob.delete_failed' => 'Не удалось удалить cron-задачу :name (шаг: :step)',
+    'cronjob.ran' => 'Cron-задача :name запущена вручную',
+    'cronjob.run_failed' => 'Не удалось вручную запустить cron-задачу :name',
     'log.downloaded' => 'Скачал журнал :log',
     'disk_cleaner.cleaned' => 'Очищен диск (:categories, :kept) — освобождено :freed',
     'disk_cleaner.auto_cleaned' => 'Диск очищен автоматически (:categories, :kept) — освобождено :freed',

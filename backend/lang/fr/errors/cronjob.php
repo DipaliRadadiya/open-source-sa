@@ -15,6 +15,8 @@ return [
         'remove' => "Le fichier cron n'a pas pu être supprimé, la tâche reste planifiée sur le serveur.",
         'remove_stale' => "L'ancien fichier cron n'a pas pu être supprimé après le renommage. Rien n'a été modifié, la tâche n'est donc pas planifiée deux fois.",
         'detach_source' => "Le fichier cron d'origine dont cette tâche a été importée n'a pas pu être supprimé. Rien n'a été modifié, la commande ne s'exécute donc pas deux fois.",
+        'run_now' => 'La tâche n\'a pas pu être lancée. Recherchez la référence ci-dessous dans le journal système du serveur.',
+        'read_history' => 'Le journal de la tâche n\'a pas pu être lu, ses exécutions ne peuvent donc pas être affichées.',
     ],
     'invalid_expression' => "La planification n'est pas une expression cron valide.",
     'invalid_user' => "L'utilisateur sélectionné n'existe pas sur le serveur.",
@@ -23,4 +25,6 @@ return [
     'no_newline' => 'Cette valeur ne peut pas contenir de sauts de ligne.',
     'reserved_name' => 'Ce nom est réservé et ne peut pas être utilisé.',
     'shell_comment' => 'La commande contient un commentaire shell (un # au début d\'un mot). Cron couperait la ligne à cet endroit et la tâche ne s\'exécuterait pas correctement. Supprimez le commentaire ou placez le # entre guillemets.',
+    'run_paused' => 'Cette tâche cron est en pause. Activez-la avant de l\'exécuter.',
+    'run_already_running' => 'Cette tâche cron est déjà en cours via « Exécuter maintenant ». Attendez la fin de cette exécution.',
 ];

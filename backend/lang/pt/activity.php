@@ -126,6 +126,8 @@ return [
     'cronjob.create_failed' => 'Falha ao criar a tarefa cron :name',
     'cronjob.update_failed' => 'Falha ao atualizar a tarefa cron :name (passo: :step)',
     'cronjob.delete_failed' => 'Falha ao eliminar a tarefa cron :name (passo: :step)',
+    'cronjob.ran' => 'Tarefa cron :name executada manualmente',
+    'cronjob.run_failed' => 'Falha ao executar manualmente a tarefa cron :name',
     'log.downloaded' => 'Baixou o registro :log',
     'disk_cleaner.cleaned' => 'Limpou o disco (:categories, :kept) — liberou :freed',
     'disk_cleaner.auto_cleaned' => 'Limpou o disco automaticamente (:categories, :kept) — liberou :freed',

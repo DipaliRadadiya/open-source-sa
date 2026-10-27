@@ -23,4 +23,5 @@ return [
         'php_script' => 'PHP スクリプト',
         'custom' => 'カスタム',
     ],
+    'run_started' => 'Cronジョブを開始しました。結果は実行履歴に表示されます。',
 ];

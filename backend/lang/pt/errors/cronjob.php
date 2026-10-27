@@ -15,6 +15,8 @@ return [
         'remove' => 'Não foi possível remover o ficheiro cron, por isso a tarefa continua agendada no servidor.',
         'remove_stale' => 'Não foi possível remover o ficheiro cron antigo após a mudança de nome. Nada foi alterado, por isso a tarefa não fica agendada duas vezes.',
         'detach_source' => 'Não foi possível remover o ficheiro cron original de onde esta tarefa foi importada. Nada foi alterado, por isso o comando não corre duas vezes.',
+        'run_now' => 'Não foi possível iniciar a tarefa. Procure a referência abaixo no registo do sistema do servidor.',
+        'read_history' => 'Não foi possível ler o registo da tarefa, por isso as suas execuções não podem ser mostradas.',
     ],
     'invalid_expression' => 'O agendamento não é uma expressão cron válida.',
     'invalid_user' => 'O usuário selecionado não existe no servidor.',
@@ -23,4 +25,6 @@ return [
     'no_newline' => 'Este valor não pode conter quebras de linha.',
     'reserved_name' => 'Este nome é reservado e não pode ser usado.',
     'shell_comment' => 'O comando contém um comentário de shell (um # no início de uma palavra). O cron cortaria a linha aí e a tarefa não funcionaria corretamente. Remova o comentário ou coloque o # entre aspas.',
+    'run_paused' => 'Esta tarefa cron está em pausa. Ative-a antes de a executar.',
+    'run_already_running' => 'Esta tarefa cron já está a correr a partir de «Executar agora». Aguarde que essa execução termine.',
 ];

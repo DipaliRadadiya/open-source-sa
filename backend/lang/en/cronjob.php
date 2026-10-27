@@ -23,4 +23,5 @@ return [
         'php_script' => 'PHP script',
         'custom' => 'Custom',
     ],
+    'run_started' => 'The cron job has started. Its result will appear in the run history.',
 ];
