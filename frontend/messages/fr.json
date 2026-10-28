@@ -1517,7 +1517,12 @@
     "noPermission": "Votre rôle n'inclut pas les journaux système avec l'accès Manage. Demandez à un administrateur de l'accorder.",
     "liveOffLarge": "« En direct » est désactivé au-delà de 2 Mo — activez-le pour suivre",
     "notDownloadable": "Ce journal n'est pas un fichier, il ne peut donc pas être téléchargé.",
-    "notClearable": "Ce journal n'est pas un fichier, il ne peut donc pas être vidé."
+    "notClearable": "Ce journal n'est pas un fichier, il ne peut donc pas être vidé.",
+    "statusFilterLabel": "Filtrer par statut HTTP",
+    "statusFilter": {
+      "errors": "5xx",
+      "warnings": "4xx + 5xx"
+    }
   },
   "services": {
     "title": "Services",

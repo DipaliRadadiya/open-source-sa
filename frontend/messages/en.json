@@ -1517,7 +1517,12 @@
     "noPermission": "Your role does not include System Logs with Manage access. Ask an administrator to grant it.",
     "liveOffLarge": "Live is off for logs over 2 MB — turn it on to follow",
     "notDownloadable": "This log isn't a file, so it can't be downloaded.",
-    "notClearable": "This log isn't a file, so it can't be cleared."
+    "notClearable": "This log isn't a file, so it can't be cleared.",
+    "statusFilterLabel": "Filter by HTTP status",
+    "statusFilter": {
+      "errors": "5xx",
+      "warnings": "4xx + 5xx"
+    }
   },
   "services": {
     "title": "Services",

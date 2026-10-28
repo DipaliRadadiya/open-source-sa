@@ -1517,7 +1517,12 @@
     "noPermission": "Tu rol no incluye Registros del sistema con acceso de gestión. Pide a un administrador que te lo conceda.",
     "liveOffLarge": "«En vivo» está desactivado en registros de más de 2 MB: actívalo para seguirlo",
     "notDownloadable": "Este registro no es un archivo, así que no se puede descargar.",
-    "notClearable": "Este registro no es un archivo, así que no se puede vaciar."
+    "notClearable": "Este registro no es un archivo, así que no se puede vaciar.",
+    "statusFilterLabel": "Filtrar por estado HTTP",
+    "statusFilter": {
+      "errors": "5xx",
+      "warnings": "4xx + 5xx"
+    }
   },
   "services": {
     "title": "Servicios",

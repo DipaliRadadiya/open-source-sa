@@ -53,6 +53,8 @@ export function LogToolbar({
   onTermChange,
   severity,
   onSeverityChange,
+  // Access logs have no level: the same buckets are read from the HTTP status, so say that.
+  statusFilter = false,
   lines,
   onLinesChange,
   follow,
@@ -215,7 +217,7 @@ export function LogToolbar({
             beside its source list) wrapped Clear log onto a line of its own (Krishna, 13 Oct). */}
         <div className="contents">
           {/* Severity filters the loaded buffer, so it works while tailing (grep cannot). */}
-          <div role="group" aria-label={t("severityLabel")} className="flex items-center gap-1">
+          <div role="group" aria-label={t(statusFilter ? "statusFilterLabel" : "severityLabel")} className="flex items-center gap-1">
             {SEVERITY_FILTERS.map((key) => (
               <button
                 key={key}
@@ -229,7 +231,7 @@ export function LogToolbar({
                   filterToggleClass(severity === key),
                 )}
               >
-                {t(`severity.${key}`)}
+                {key !== "all" && statusFilter ? t(`statusFilter.${key}`) : t(`severity.${key}`)}
               </button>
             ))}
           </div>

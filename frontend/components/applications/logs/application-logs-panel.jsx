@@ -13,7 +13,7 @@ import {
 import { LINE_OPTIONS, MAX_LINES } from "@/lib/schemas/log";
 import { EMPTY_LOG_FILTERS } from "@/lib/schemas/application-log";
 import { ActiveLogFilters, LogFiltersButton, hasFieldFilters } from "@/components/applications/logs/log-filters";
-import { matchesSeverity } from "@/lib/logs/severity";
+import { matchesSeverity, isAccessLog } from "@/lib/logs/severity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { LogToolbar } from "@/components/logs/log-toolbar";
@@ -395,6 +395,7 @@ export function ApplicationLogsPanel({
           term={term}
           onTermChange={setTerm}
           severity={severity}
+          statusFilter={isAccessLog(source?.key)}
           onSeverityChange={setSeverity}
           lines={lineCount}
           onLinesChange={chooseLines}

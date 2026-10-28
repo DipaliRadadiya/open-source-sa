@@ -1517,7 +1517,12 @@
     "noPermission": "現在のロールには システムログ の管理権限が含まれていません。管理者に権限の付与を依頼してください。",
     "liveOffLarge": "2 MB を超えるログではライブはオフです。追跡するにはオンにしてください",
     "notDownloadable": "このログはファイルではないため、ダウンロードできません。",
-    "notClearable": "このログはファイルではないため、クリアできません。"
+    "notClearable": "このログはファイルではないため、クリアできません。",
+    "statusFilterLabel": "HTTP ステータスで絞り込み",
+    "statusFilter": {
+      "errors": "5xx",
+      "warnings": "4xx + 5xx"
+    }
   },
   "services": {
     "title": "サービス",

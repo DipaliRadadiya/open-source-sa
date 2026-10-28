@@ -1517,7 +1517,12 @@
     "noPermission": "Ihre Rolle enthält nicht „Systemprotokolle“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "liveOffLarge": "„Live“ ist bei Logs über 2 MB aus – zum Mitverfolgen einschalten",
     "notDownloadable": "Dieses Log ist keine Datei und kann daher nicht heruntergeladen werden.",
-    "notClearable": "Dieses Log ist keine Datei und kann daher nicht geleert werden."
+    "notClearable": "Dieses Log ist keine Datei und kann daher nicht geleert werden.",
+    "statusFilterLabel": "Nach HTTP-Status filtern",
+    "statusFilter": {
+      "errors": "5xx",
+      "warnings": "4xx + 5xx"
+    }
   },
   "services": {
     "title": "Dienste",

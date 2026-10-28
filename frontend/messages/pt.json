@@ -1517,7 +1517,12 @@
     "noPermission": "Seu papel não inclui Logs do sistema com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
     "liveOffLarge": "“Ao vivo” fica desligado em logs acima de 2 MB — ative para acompanhar",
     "notDownloadable": "Este log não é um arquivo, então não pode ser baixado.",
-    "notClearable": "Este log não é um arquivo, então não pode ser limpo."
+    "notClearable": "Este log não é um arquivo, então não pode ser limpo.",
+    "statusFilterLabel": "Filtrar por status HTTP",
+    "statusFilter": {
+      "errors": "5xx",
+      "warnings": "4xx + 5xx"
+    }
   },
   "services": {
     "title": "Serviços",

@@ -10,7 +10,7 @@ import {
   logDownloadUrl,
 } from "@/lib/api/logs";
 import { LINE_OPTIONS, logSourcesResponseSchema } from "@/lib/schemas/log";
-import { matchesSeverity } from "@/lib/logs/severity";
+import { matchesSeverity, isAccessLog } from "@/lib/logs/severity";
 import { LogSourceList } from "@/components/logs/log-source-list";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
@@ -384,6 +384,7 @@ export function LogsPanel({
           term={term}
           onTermChange={setTerm}
           severity={severity}
+          statusFilter={isAccessLog(source?.key)}
           onSeverityChange={setSeverity}
           lines={lineCount}
           onLinesChange={chooseLines}

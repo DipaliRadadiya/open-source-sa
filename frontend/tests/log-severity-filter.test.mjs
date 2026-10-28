@@ -28,7 +28,7 @@ const code = toolbar.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "
 // same toolbar is legitimately a joined tray — five view actions on one object
 // — and a file-wide search for that shape finds it and calls it the bug.
 const severityBlock = code.slice(
-  code.indexOf('aria-label={t("severityLabel")}'),
+  code.indexOf('aria-label={t(statusFilter ? "statusFilterLabel" : "severityLabel")}'),
   code.indexOf("{customLines ?"),
 );
 
