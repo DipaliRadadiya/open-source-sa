@@ -3697,7 +3697,8 @@
         "bitbucket_workspace": "Die Workspace-ID aus Ihrer Bitbucket-Adresse: bitbucket.org/workspace-id/repository."
       },
       "scopeNote_gitlab": "<strong>Warum api?</strong> Nur mit dieser GitLab-Berechtigung kann das Panel den Deploy-Webhook für Sie eintragen. Sie gewährt aber vollen Zugriff auf Ihr GitLab-Konto – erstellen Sie das Token also nur für das Panel und mit Ablaufdatum. Lieber weniger Zugriff? Kreuzen Sie stattdessen <scope>read_repository</scope> und <scope>read_api</scope> an und tragen Sie den Webhook selbst ein.",
-      "failed": "Das Konto konnte nicht verbunden werden."
+      "failed": "Das Konto konnte nicht verbunden werden.",
+      "alreadyConnected": "Dieses Git-Konto ist bereits als „{label}“ verbunden."
     },
     "edit": {
       "title": "Konto bearbeiten",
@@ -7000,7 +7001,8 @@
       "permissionsNoteRemote": "Das Konto muss in diesem Verzeichnis Dateien anlegen, lesen und löschen können — Sicherungen entfernen alte Archive beim Überschreiten des Aufbewahrungslimits, reiner Lesezugriff funktioniert also nicht.",
       "addedNeedsConnect": "Ziel hinzugefügt. Geben Sie zum Abschluss den Zugriff auf Ihr Google-Konto frei — über Verbinden in der Zeile unten.",
       "failed": "Das Ziel konnte nicht hinzugefügt werden.",
-      "testNotRun": "Gespeichert, aber der Verbindungstest wurde nicht ausgeführt. Klicken Sie beim Ziel auf Testen, um es erneut zu versuchen."
+      "testNotRun": "Gespeichert, aber der Verbindungstest wurde nicht ausgeführt. Klicken Sie beim Ziel auf Testen, um es erneut zu versuchen.",
+      "alreadyAdded": "Dieser Speicher ist bereits als „{name}“ hinzugefügt."
     },
     "edit": {
       "title": "Ziel bearbeiten",

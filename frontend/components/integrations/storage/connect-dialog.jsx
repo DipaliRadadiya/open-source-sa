@@ -53,6 +53,16 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
 
       const created = data?.storage_destination;
       await refreshAndWait();
+
+      // The same credential answers 200 with the destination that already holds it, unchanged (2220e0f4):
+      // nothing new to announce or test.
+      if (data?.existing) {
+        toast.info(data.message ?? t("alreadyAdded", { name: created?.name ?? "" }));
+        onOpenChange?.(false);
+        reset(DEFAULT_PRESET);
+        return;
+      }
+
       // "This server": the backend says whether it created the folder or found it, two different pieces of news.
       toast.success(t("added"), data?.folder?.message ? { description: data.folder.message } : undefined);
       onOpenChange?.(false);

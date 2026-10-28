@@ -3697,7 +3697,8 @@
         "bitbucket_workspace": "Bitbucket のアドレスに含まれるワークスペース ID: bitbucket.org/workspace-id/repository"
       },
       "scopeNote_gitlab": "<strong>なぜ api？</strong> パネルがデプロイ用ウェブフックを自動で追加できる GitLab の権限はこれだけです。ただし GitLab アカウントへのフルアクセスも与えるため、このトークンはパネル専用に作成し、有効期限を設定してください。権限を絞りたい場合は、代わりに <scope>read_repository</scope> と <scope>read_api</scope> を選び、ウェブフックはご自身で追加してください。",
-      "failed": "アカウントを接続できませんでした。"
+      "failed": "アカウントを接続できませんでした。",
+      "alreadyConnected": "この Git アカウントは「{label}」としてすでに接続されています。"
     },
     "edit": {
       "title": "アカウントを編集",
@@ -7000,7 +7001,8 @@
       "permissionsNoteRemote": "そのディレクトリでファイルを作成・読み取り・削除できる権限が必要です。バックアップは保持数を超えた古いアーカイブを削除するため、読み取り専用では機能しません。",
       "addedNeedsConnect": "保存先を追加しました。完了するには、下の行の「接続」から Google アカウントへのアクセスを承認してください。",
       "failed": "保存先を追加できませんでした。",
-      "testNotRun": "保存しましたが、接続テストは実行されませんでした。保存先の「テスト」を押してもう一度お試しください。"
+      "testNotRun": "保存しましたが、接続テストは実行されませんでした。保存先の「テスト」を押してもう一度お試しください。",
+      "alreadyAdded": "このストレージは「{name}」としてすでに追加されています。"
     },
     "edit": {
       "title": "送信先を編集",

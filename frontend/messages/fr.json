@@ -3697,7 +3697,8 @@
         "bitbucket_workspace": "L'identifiant d'espace de travail depuis votre adresse Bitbucket : bitbucket.org/identifiant-espace/depot."
       },
       "scopeNote_gitlab": "<strong>Pourquoi api ?</strong> C'est la seule permission GitLab qui permet au panneau d'ajouter le webhook de déploiement pour vous. Elle donne aussi un accès complet à votre compte GitLab : créez ce jeton uniquement pour le panneau, avec une date d'expiration. Vous préférez moins d'accès ? Cochez plutôt <scope>read_repository</scope> et <scope>read_api</scope> et ajoutez le webhook vous-même.",
-      "failed": "Impossible de connecter le compte."
+      "failed": "Impossible de connecter le compte.",
+      "alreadyConnected": "Ce compte git est déjà connecté sous le nom « {label} »."
     },
     "edit": {
       "title": "Modifier le compte",
@@ -7000,7 +7001,8 @@
       "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner.",
       "addedNeedsConnect": "Destination ajoutée. Autorisez l’accès à votre compte Google pour terminer : utilisez Connecter dans la ligne ci-dessous.",
       "failed": "Impossible d’ajouter la destination.",
-      "testNotRun": "Enregistré, mais le test de connexion n’a pas été lancé. Cliquez sur Tester sur la destination pour réessayer."
+      "testNotRun": "Enregistré, mais le test de connexion n’a pas été lancé. Cliquez sur Tester sur la destination pour réessayer.",
+      "alreadyAdded": "Ce stockage est déjà ajouté sous le nom « {name} »."
     },
     "edit": {
       "title": "Modifier la destination",

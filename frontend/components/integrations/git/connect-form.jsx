@@ -136,12 +136,15 @@ export function ConnectForm({
       const { data } = await connectAccount(payload);
       // Refresh before the toast so the account is already listed.
       await refreshAndWait();
-      toast.success(t("connected", { label: values.label }));
+      // The same token answers 200 with the account that already holds it, under its own label (2220e0f4).
+      const label = data?.git_account?.label ?? values.label;
+      if (data?.existing) toast.info(data.message ?? t("alreadyConnected", { label }));
+      else toast.success(t("connected", { label: values.label }));
       // Reported for every connect; the list's next-step prompt names the
       // account and links with its id (from the response).
       onAccountConnected?.({
         id: data?.git_account?.id ?? null,
-        label: values.label,
+        label,
         provider: provider.name,
       });
       onOpenChange?.(false);
