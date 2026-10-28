@@ -43,7 +43,8 @@ test("a failed test offers Replace credentials as a link on the red line", () =>
 test("edit destination: folder warning is a Caution box, the two notes share one Note", () => {
   assert.match(read("components/integrations/storage/destination-form-fields.jsx"), /<Caution size="md" className="mt-1">\s*<p className="leading-relaxed">\{t\("prefixChangeWarning"\)\}/);
   const edit = read("components/integrations/storage/edit-dialog.jsx");
-  assert.match(edit, /<Note>\s*<ul[^>]*>\s*<li>\{t\("credentialsUntouched"\)\}<\/li>\s*<li>\{t\("providerLocked"/);
+  // The credentials line is left out for a provider with none ("This server", #14).
+  assert.match(edit, /<Note>\s*<ul[^>]*>\s*\{hasCredentials\(provider\) \? <li>\{t\("credentialsUntouched"\)\}<\/li> : null\}\s*<li>\{t\("providerLocked"/);
 });
 
 test("bot traffic labels v7-list bots and the PHP hint mentions pool lines", () => {

@@ -949,7 +949,8 @@
     "noControlChars": "Pas de retours à la ligne ni de caractères de contrôle",
     "logFromInvalid": "Saisissez un numéro de ligne, 1 ou plus.",
     "logIpInvalid": "Saisissez une seule adresse IP, ex. 203.0.113.5.",
-    "logStatusInvalid": "Saisissez un code comme 404 ou un groupe comme 5xx."
+    "logStatusInvalid": "Saisissez un code comme 404 ou un groupe comme 5xx.",
+    "localPathAbsolute": "Saisissez le chemin complet d'un dossier commençant par /, par exemple /var/backups/panel."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -6839,7 +6840,7 @@
     "noPermission": "Votre rôle n'inclut pas le Stockage avec l'accès Gestion. Demandez à un administrateur de l'accorder.",
     "card": {
       "title": "Destinations de stockage",
-      "subtitle": "Où ce serveur peut envoyer ses sauvegardes : un bucket S3, un serveur FTP ou SFTP, ou Google Drive.",
+      "subtitle": "Où ce serveur peut envoyer ses sauvegardes : un bucket S3, un serveur FTP ou SFTP, Google Drive ou un dossier sur ce serveur.",
       "add": "Ajouter une destination",
       "whatTestDoes": "Que fait le test ?",
       "testExplained": "Il écrit un petit fichier dans la destination, le relit puis le supprime. Cela prouve que l'accès fonctionne ET qu'il peut écrire : un compte en lecture seule échouera toujours."
@@ -6887,7 +6888,14 @@
       "failedDriveQuota": "Le dernier test a échoué {when} — Google a refusé l’envoi faute de quota.",
       "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque.",
       "needsConnect": "Pas encore connecté : autorisez l’accès à votre compte Google.",
-      "testNotRun": "Le test n’a pas été lancé : cela ne dit rien de la connexion. Réessayez."
+      "testNotRun": "Le test n’a pas été lancé : cela ne dit rien de la connexion. Réessayez.",
+      "diskFree": "{free} libres sur {total}",
+      "failedLocalMissing": "Le dernier test a échoué {when} — le dossier n'existe plus. S'il est sur un disque supplémentaire, vérifiez qu'il est monté.",
+      "failedLocalForeign": "Le dernier test a échoué {when} — le dossier n'appartient plus au panneau.",
+      "failedLocalNotWritable": "Le dernier test a échoué {when} — impossible d'écrire dans le dossier.",
+      "failedLocalNoSpace": "Le dernier test a échoué {when} — il n'y a pas assez d'espace disque libre.",
+      "failedLocalPath": "Le dernier test a échoué {when} — ce dossier n'est pas autorisé pour les sauvegardes.",
+      "neverTestedFolder": "Jamais testé — personne n'a vérifié que le panneau peut écrire dans ce dossier."
     },
     "form": {
       "provider": "Fournisseur",
@@ -6902,7 +6910,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (compte de service, ancien)",
-        "google_drive_oauth": "Google Drive"
+        "google_drive_oauth": "Google Drive",
+        "local": "Ce serveur (dossier local)"
       },
       "name": "Nom",
       "namePlaceholder": "ex. Sauvegardes externes",
@@ -6932,7 +6941,8 @@
         "service_account_json": "Clé de compte de service (JSON)",
         "folder_id": "ID du dossier Drive partagé",
         "client_id": "ID client",
-        "client_secret": "Secret client"
+        "client_secret": "Secret client",
+        "path": "Dossier sur ce serveur"
       },
       "help": {
         "host": "Nom d’hôte ou adresse IP du serveur qui conservera les sauvegardes.",
@@ -6950,7 +6960,8 @@
         "access_key": "La partie publique des identifiants pour ce compte de stockage.",
         "secret_key": "La partie secrète des identifiants. Traitez-la comme un mot de passe — toute personne qui la détient peut lire vos sauvegardes.",
         "client_id": "Depuis Google Cloud Console → Identifiants. Se termine par .apps.googleusercontent.com.",
-        "client_secret": "Affiché à côté de l’ID client lors de sa création. À traiter comme un mot de passe."
+        "client_secret": "Affiché à côté de l’ID client lors de sa création. À traiter comme un mot de passe.",
+        "path": "Un dossier sous /var/backups, /mnt ou /media. S'il n'existe pas encore, le panneau le crée."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs applications.",
@@ -6968,8 +6979,11 @@
         "service_account_json": "'{' \"type\": \"service_account\", … '}'",
         "folder_id": "Par exemple 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
-        "passphrase": "Seulement si la clé en a une"
-      }
+        "passphrase": "Seulement si la clé en a une",
+        "path": "/var/backups/panel"
+      },
+      "localWarning": "Les sauvegardes sur ce serveur sont perdues si le serveur ou son disque tombe en panne. Utilisez-le avec une destination hors du serveur.",
+      "localPathChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà dans l'ancien dossier y restent et ne seront plus trouvées."
     },
     "connect": {
       "title": "Ajouter une destination de stockage",

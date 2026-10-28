@@ -949,7 +949,8 @@
     "noControlChars": "Keine Zeilenumbrüche oder Steuerzeichen",
     "logFromInvalid": "Gib eine Zeilennummer ab 1 ein.",
     "logIpInvalid": "Gib eine einzelne IP-Adresse ein, z. B. 203.0.113.5.",
-    "logStatusInvalid": "Gib einen Code wie 404 oder eine Gruppe wie 5xx ein."
+    "logStatusInvalid": "Gib einen Code wie 404 oder eine Gruppe wie 5xx ein.",
+    "localPathAbsolute": "Geben Sie einen vollständigen Ordnerpfad ein, der mit / beginnt, z. B. /var/backups/panel."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -6839,7 +6840,7 @@
     "noPermission": "Ihre Rolle enthält nicht „Speicher“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "card": {
       "title": "Speicherziele",
-      "subtitle": "Wohin dieser Server Backups senden kann: ein S3-Bucket, ein FTP- oder SFTP-Server oder Google Drive.",
+      "subtitle": "Wohin dieser Server Backups senden kann: ein S3-Bucket, ein FTP- oder SFTP-Server, Google Drive oder ein Ordner auf diesem Server.",
       "add": "Ziel hinzufügen",
       "whatTestDoes": "Was macht „Testen“?",
       "testExplained": "Es schreibt eine kleine Datei ins Ziel, liest sie zurück und löscht sie. Das beweist, dass der Zugang funktioniert UND schreiben darf — ein Konto nur mit Leserechten scheitert daran immer."
@@ -6887,7 +6888,14 @@
       "failedDriveQuota": "Der letzte Test ist {when} fehlgeschlagen — Google lehnte den Upload mangels Speicherkontingent ab.",
       "failedDriveIncomplete": "Der letzte Test ist {when} fehlgeschlagen — Schlüssel oder Ordner-ID fehlt.",
       "needsConnect": "Noch nicht verbunden — geben Sie den Zugriff auf Ihr Google-Konto frei.",
-      "testNotRun": "Der Test wurde nicht ausgeführt, über die Verbindung sagt das also nichts aus. Versuchen Sie es erneut."
+      "testNotRun": "Der Test wurde nicht ausgeführt, über die Verbindung sagt das also nichts aus. Versuchen Sie es erneut.",
+      "diskFree": "{free} frei von {total}",
+      "failedLocalMissing": "Der letzte Test ist {when} fehlgeschlagen — der Ordner existiert nicht mehr. Wenn er auf einer zusätzlichen Festplatte liegt, prüfen Sie, ob sie eingebunden ist.",
+      "failedLocalForeign": "Der letzte Test ist {when} fehlgeschlagen — der Ordner gehört nicht mehr dem Panel.",
+      "failedLocalNotWritable": "Der letzte Test ist {when} fehlgeschlagen — in den Ordner konnte nicht geschrieben werden.",
+      "failedLocalNoSpace": "Der letzte Test ist {when} fehlgeschlagen — es ist nicht genug Speicherplatz frei.",
+      "failedLocalPath": "Der letzte Test ist {when} fehlgeschlagen — dieser Ordner ist für Backups nicht erlaubt.",
+      "neverTestedFolder": "Nie getestet — niemand hat geprüft, ob das Panel in diesen Ordner schreiben kann."
     },
     "form": {
       "provider": "Anbieter",
@@ -6902,7 +6910,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Dienstkonto, veraltet)",
-        "google_drive_oauth": "Google Drive"
+        "google_drive_oauth": "Google Drive",
+        "local": "Dieser Server (lokaler Ordner)"
       },
       "name": "Name",
       "namePlaceholder": "z. B. Externe Backups",
@@ -6932,7 +6941,8 @@
         "service_account_json": "Dienstkonto-Schlüssel (JSON)",
         "folder_id": "Ordner-ID der geteilten Ablage",
         "client_id": "Client-ID",
-        "client_secret": "Client-Secret"
+        "client_secret": "Client-Secret",
+        "path": "Ordner auf diesem Server"
       },
       "help": {
         "host": "Hostname oder IP-Adresse des Servers, der die Sicherungen aufnimmt.",
@@ -6950,7 +6960,8 @@
         "access_key": "Die öffentliche Hälfte der Anmeldedaten für dieses Speicherkonto.",
         "secret_key": "Die geheime Hälfte der Anmeldedaten. Behandeln Sie sie wie ein Passwort — jeder, der sie besitzt, kann Ihre Sicherungen lesen.",
         "client_id": "Aus der Google Cloud Console → Anmeldedaten. Endet auf .apps.googleusercontent.com.",
-        "client_secret": "Wird beim Erstellen neben der Client-ID angezeigt. Wie ein Passwort behandeln."
+        "client_secret": "Wird beim Erstellen neben der Client-ID angezeigt. Wie ein Passwort behandeln.",
+        "path": "Ein Ordner unter /var/backups, /mnt oder /media. Wenn er noch nicht existiert, legt das Panel ihn an."
       },
       "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
       "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Anwendungen aufnehmen kann.",
@@ -6968,8 +6979,11 @@
         "service_account_json": "'{' \"type\": \"service_account\", … '}'",
         "folder_id": "Zum Beispiel 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
-        "passphrase": "Nur falls der Schlüssel eine hat"
-      }
+        "passphrase": "Nur falls der Schlüssel eine hat",
+        "path": "/var/backups/panel"
+      },
+      "localWarning": "Backups auf diesem Server gehen verloren, wenn der Server oder seine Festplatte ausfällt. Verwenden Sie zusätzlich ein Ziel außerhalb des Servers.",
+      "localPathChangeWarning": "Das zu ändern verschiebt nichts. Backups im alten Ordner bleiben dort und werden nicht mehr gefunden."
     },
     "connect": {
       "title": "Speicherziel hinzufügen",

@@ -949,7 +949,8 @@
     "noControlChars": "Sem quebras de linha nem caracteres de controle",
     "logFromInvalid": "Digite um número de linha, 1 ou mais.",
     "logIpInvalid": "Digite um único endereço IP, ex.: 203.0.113.5.",
-    "logStatusInvalid": "Digite um código como 404 ou um grupo como 5xx."
+    "logStatusInvalid": "Digite um código como 404 ou um grupo como 5xx.",
+    "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /, como /var/backups/panel."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -6839,7 +6840,7 @@
     "noPermission": "Seu papel não inclui Armazenamento com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
     "card": {
       "title": "Destinos de armazenamento",
-      "subtitle": "Para onde este servidor pode enviar backups: um bucket S3, um servidor FTP ou SFTP, ou o Google Drive.",
+      "subtitle": "Para onde este servidor pode enviar backups: um bucket S3, um servidor FTP ou SFTP, o Google Drive ou uma pasta neste servidor.",
       "add": "Adicionar destino",
       "whatTestDoes": "O que o Teste faz?",
       "testExplained": "Ele grava um arquivo pequeno no destino, lê de volta e apaga. Isso prova que o acesso funciona E pode gravar — uma conta somente leitura sempre falha."
@@ -6887,7 +6888,14 @@
       "failedDriveQuota": "O último teste falhou {when} — o Google recusou o envio por falta de cota.",
       "failedDriveIncomplete": "O último teste falhou {when} — falta a chave ou o ID da pasta.",
       "needsConnect": "Ainda não conectado — aprove o acesso à sua conta Google.",
-      "testNotRun": "O teste não foi executado, então isso não diz nada sobre a conexão. Tente de novo."
+      "testNotRun": "O teste não foi executado, então isso não diz nada sobre a conexão. Tente de novo.",
+      "diskFree": "{free} livres de {total}",
+      "failedLocalMissing": "O último teste falhou {when} — a pasta não existe mais. Se estiver num disco adicional, verifique se está montado.",
+      "failedLocalForeign": "O último teste falhou {when} — a pasta não pertence mais ao painel.",
+      "failedLocalNotWritable": "O último teste falhou {when} — não foi possível gravar na pasta.",
+      "failedLocalNoSpace": "O último teste falhou {when} — não há espaço livre suficiente em disco.",
+      "failedLocalPath": "O último teste falhou {when} — esta pasta não é permitida para backups.",
+      "neverTestedFolder": "Nunca testado — ninguém verificou se o painel consegue gravar nesta pasta."
     },
     "form": {
       "provider": "Provedor",
@@ -6902,7 +6910,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (conta de serviço, legado)",
-        "google_drive_oauth": "Google Drive"
+        "google_drive_oauth": "Google Drive",
+        "local": "Este servidor (pasta local)"
       },
       "name": "Nome",
       "namePlaceholder": "ex.: Backups offsite",
@@ -6932,7 +6941,8 @@
         "service_account_json": "Chave da conta de serviço (JSON)",
         "folder_id": "ID da pasta do Drive compartilhado",
         "client_id": "ID do cliente",
-        "client_secret": "Segredo do cliente"
+        "client_secret": "Segredo do cliente",
+        "path": "Pasta neste servidor"
       },
       "help": {
         "host": "Nome do host ou endereço IP do servidor que guardará os backups.",
@@ -6950,7 +6960,8 @@
         "access_key": "A parte pública das credenciais desta conta de armazenamento.",
         "secret_key": "A parte secreta das credenciais. Trate-a como uma senha — quem a tiver poderá ler suas cópias de segurança.",
         "client_id": "No Google Cloud Console → Credenciais. Termina em .apps.googleusercontent.com.",
-        "client_secret": "Aparece ao lado do ID do cliente quando você o cria. Trate como uma senha."
+        "client_secret": "Aparece ao lado do ID do cliente quando você o cria. Trate como uma senha.",
+        "path": "Uma pasta dentro de /var/backups, /mnt ou /media. Se ainda não existir, o painel a cria."
       },
       "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
       "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar várias aplicações.",
@@ -6968,8 +6979,11 @@
         "service_account_json": "'{' \"type\": \"service_account\", … '}'",
         "folder_id": "Por exemplo 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
-        "passphrase": "Só se a chave tiver uma"
-      }
+        "passphrase": "Só se a chave tiver uma",
+        "path": "/var/backups/panel"
+      },
+      "localWarning": "Os backups neste servidor se perdem se o servidor ou o seu disco falhar. Use-o junto com um destino fora do servidor.",
+      "localPathChangeWarning": "Alterar isto não move nada. Backups já na pasta antiga ficam lá e deixam de ser localizados."
     },
     "connect": {
       "title": "Adicionar um destino de armazenamento",

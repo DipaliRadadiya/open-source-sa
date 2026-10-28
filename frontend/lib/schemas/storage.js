@@ -116,6 +116,15 @@ const rootField = z
   ])
   .optional();
 
+// A folder on this server. Only the shape is checked here; which folders are allowed is the
+// backend's (its config), and its message names them.
+const localPathField = z
+  .string()
+  .trim()
+  .max(255, "max255")
+  .regex(/^\//, "localPathAbsolute")
+  .refine((v) => !/(^|\/)\.{1,2}(\/|$)/.test(v), "rootTraversal");
+
 /** Per-field validators, keyed by the config key they validate. */
 const CONFIG_FIELDS = {
   bucket: bucketField,
@@ -132,6 +141,7 @@ const CONFIG_FIELDS = {
   root: rootField,
   ssl: z.boolean(),
   passive: z.boolean(),
+  path: localPathField,
 };
 
 // Built from the declaration the form renders from, so shown and validated fields cannot drift.

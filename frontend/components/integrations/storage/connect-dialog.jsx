@@ -53,7 +53,8 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
 
       const created = data?.storage_destination;
       await refreshAndWait();
-      toast.success(t("added"));
+      // "This server": the backend says whether it created the folder or found it, two different pieces of news.
+      toast.success(t("added"), data?.folder?.message ? { description: data.folder.message } : undefined);
       onOpenChange?.(false);
       reset(DEFAULT_PRESET);
 
@@ -155,7 +156,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
 
         {/* The probe writes and deletes, and backups prune, so read-only credentials fail.
             Drive's scope is fixed by the panel. */}
-        {provider === "google_drive_oauth" ? null : (
+        {provider === "google_drive_oauth" || provider === "local" ? null : (
           <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
             {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
           </div>
@@ -176,7 +177,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
 
         {/* Credentials are stored encrypted and never returned; replacing is
             the only way to change them. */}
-        <p className="text-xs text-muted-foreground">{t("credentialsNote")}</p>
+        {provider === "local" ? null : <p className="text-xs text-muted-foreground">{t("credentialsNote")}</p>}
       </FormModal>
     </Form>
   );

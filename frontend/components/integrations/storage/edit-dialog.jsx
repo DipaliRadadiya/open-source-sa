@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil } from "lucide-react";
 import { editStorageDestinationSchema } from "@/lib/schemas/storage";
-import { fieldsFor, presetForProvider } from "@/lib/storage/providers";
+import { fieldsFor, hasCredentials, presetForProvider } from "@/lib/storage/providers";
 import { updateDestination } from "@/lib/api/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -53,15 +53,17 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
 
   async function onSubmit(formValues) {
     try {
-      await updateDestination(destination.id, {
+      const { data } = await updateDestination(destination.id, {
         name: formValues.name.trim(),
         // Empty string, not omitted: the backend treats an absent key as "keep
-        // what is stored", so clearing must be explicit.
-        prefix: formValues.prefix?.trim() ?? "",
+        // what is stored", so clearing must be explicit. "This server" has no prefix field, so it keeps its own.
+        ...(provider === "local" ? {} : { prefix: formValues.prefix?.trim() ?? "" }),
         config: submittableConfig(provider, formValues.config),
       });
       await refreshAndWait();
-      toast.success(t("saved"));
+      // Only a moved folder is news; the same path comes back as "found".
+      const moved = data?.folder?.message && formValues.config?.path !== destination?.config?.path;
+      toast.success(t("saved"), moved ? { description: data.folder.message } : undefined);
       onOpenChange?.(false);
     } catch (error) {
       handleValidationError(error, form, { fallback: t("failed") });
@@ -117,7 +119,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
             The provider line explains why there is no provider control. */}
         <Note>
           <ul className="list-disc space-y-1 ps-4">
-            <li>{t("credentialsUntouched")}</li>
+            {hasCredentials(provider) ? <li>{t("credentialsUntouched")}</li> : null}
             <li>{t("providerLocked", { provider: destination?.provider_title ?? provider })}</li>
           </ul>
         </Note>

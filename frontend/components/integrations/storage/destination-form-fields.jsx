@@ -105,6 +105,8 @@ export function DestinationFormFields({
         />
       ))}
 
+      {/* The folder path already is the folder: a second one inside it would only confuse. */}
+      {provider === "local" ? null : (
       <FormField
         control={form.control}
         name="prefix"
@@ -134,13 +136,14 @@ export function DestinationFormFields({
           </FormItem>
         )}
       />
+      )}
     </>
   );
 }
 
 // Labels and help text are looked up by field name; no per-provider branch.
 function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, t }) {
-  const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint } = definition;
+  const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint, changeWarning } = definition;
   // The S3 service of an existing destination is unknown, so endpoint and region follow
   // `editStorageDestinationSchema`, not a preset.
   const sharedS3Rule = existing && providerForPreset(preset) === "s3" && (name === "endpoint" || name === "region");
@@ -223,6 +226,11 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
               </p>
             ) : help ? (
               <p className="text-xs text-muted-foreground">{help}</p>
+            ) : null}
+            {existing && changeWarning ? (
+              <Caution size="md" className="mt-1">
+                <p className="leading-relaxed">{t(changeWarning)}</p>
+              </Caution>
             ) : null}
             <FormMessage />
           </FormItem>

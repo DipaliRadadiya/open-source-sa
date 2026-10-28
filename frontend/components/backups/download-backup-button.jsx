@@ -39,7 +39,8 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       // Not fetch(): our headers break the signature. Not `location.href`: an expired
       // link's S3 error page would replace the panel.
       const link = document.createElement("a");
-      link.href = url;
+      // "This server" sends a relative signed link (/api/…), which lives on the API's host, not the panel's.
+      link.href = new URL(url, process.env.NEXT_PUBLIC_API_URL).href;
       link.rel = "noopener";
       link.target = "_blank";
       link.download = "";

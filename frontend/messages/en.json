@@ -949,7 +949,8 @@
     "noControlChars": "No line breaks or control characters",
     "logFromInvalid": "Enter a line number, 1 or more.",
     "logIpInvalid": "Enter one IP address, e.g. 203.0.113.5.",
-    "logStatusInvalid": "Enter a code like 404, or a group like 5xx."
+    "logStatusInvalid": "Enter a code like 404, or a group like 5xx.",
+    "localPathAbsolute": "Enter a full folder path that starts with /, such as /var/backups/panel."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -6839,7 +6840,7 @@
     "noPermission": "Your role does not include Storage with Manage access. Ask an administrator to grant it.",
     "card": {
       "title": "Storage destinations",
-      "subtitle": "Where this server can send backups: an S3 bucket, an FTP or SFTP server, or Google Drive.",
+      "subtitle": "Where this server can send backups: an S3 bucket, an FTP or SFTP server, Google Drive, or a folder on this server.",
       "add": "Add destination",
       "whatTestDoes": "What does Test do?",
       "testExplained": "It writes a small file to the destination, reads it back and deletes it. That proves the login works AND that it can write — a read-only account will always fail this."
@@ -6887,7 +6888,14 @@
       "failedDriveQuota": "The last test failed {when} — Google refused the upload for lack of storage quota.",
       "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing.",
       "needsConnect": "Not connected yet — approve access to your Google account.",
-      "testNotRun": "The test did not run, so this says nothing about the connection. Try again."
+      "testNotRun": "The test did not run, so this says nothing about the connection. Try again.",
+      "diskFree": "{free} free of {total}",
+      "failedLocalMissing": "The last test failed {when} — the folder no longer exists. If it is on an extra disk, check that the disk is mounted.",
+      "failedLocalForeign": "The last test failed {when} — the folder no longer belongs to the panel.",
+      "failedLocalNotWritable": "The last test failed {when} — the folder could not be written to.",
+      "failedLocalNoSpace": "The last test failed {when} — there is not enough free disk space.",
+      "failedLocalPath": "The last test failed {when} — this folder is not allowed for backups.",
+      "neverTestedFolder": "Never tested — nobody has checked the panel can write to this folder."
     },
     "form": {
       "provider": "Provider",
@@ -6902,7 +6910,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (service account, legacy)",
-        "google_drive_oauth": "Google Drive"
+        "google_drive_oauth": "Google Drive",
+        "local": "This server (local folder)"
       },
       "name": "Name",
       "namePlaceholder": "e.g. Offsite backups",
@@ -6932,7 +6941,8 @@
         "service_account_json": "Service account key (JSON)",
         "folder_id": "Shared Drive folder ID",
         "client_id": "Client ID",
-        "client_secret": "Client secret"
+        "client_secret": "Client secret",
+        "path": "Folder on this server"
       },
       "help": {
         "host": "Hostname or IP address of the server that will hold the backups.",
@@ -6950,7 +6960,8 @@
         "access_key": "The public half of the credentials for this storage account.",
         "secret_key": "The secret half of the credentials. Treat it like a password — anyone holding it can read your backups.",
         "client_id": "From Google Cloud Console → Credentials. Ends in .apps.googleusercontent.com.",
-        "client_secret": "Shown beside the client ID when you create it. Treat it like a password."
+        "client_secret": "Shown beside the client ID when you create it. Treat it like a password.",
+        "path": "A folder under /var/backups, /mnt or /media. If it doesn't exist yet, the panel creates it."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several applications.",
@@ -6968,8 +6979,11 @@
         "service_account_json": "'{' \"type\": \"service_account\", … '}'",
         "folder_id": "For example 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
-        "passphrase": "Only if the key has one"
-      }
+        "passphrase": "Only if the key has one",
+        "path": "/var/backups/panel"
+      },
+      "localWarning": "Backups on this server are lost if the server or its disk fails. Use it together with an off-server destination.",
+      "localPathChangeWarning": "Changing this does not move anything. Backups already in the old folder stay there and stop being found."
     },
     "connect": {
       "title": "Add a storage destination",

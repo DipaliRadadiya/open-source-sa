@@ -23,6 +23,8 @@ export const PRESETS = [
   // Drive accessed as the user (OAuth): the only way a free Gmail account can
   // use Drive.
   { value: "google_drive_oauth", provider: "google_drive_oauth" },
+  // A folder on the panel's own server (#14): no credentials, nothing to sign in to.
+  { value: "local", provider: "local" },
 ];
 
 // Null where there is nowhere to send anyone ("Other", FTP).
@@ -88,6 +90,10 @@ export const FIELDS = {
     { name: "service_account_json", kind: TEXTAREA, required: true, mono: true },
     { name: "folder_id", kind: TEXT, required: true, mono: true },
   ],
+  // The backend creates the folder (one level) or takes over an empty one, and refuses any path
+  // outside its allowed roots with a message naming them. Its suggested folder is the default.
+  // Moving it strands what is in the old folder: restore and retention read only the new one.
+  local: [{ name: "path", kind: TEXT, required: true, mono: true, default: "/var/backups/panel", changeWarning: "localPathChangeWarning" }],
   sftp: [
     { name: "host", kind: TEXT, required: true, mono: true },
     { name: "port", kind: NUMBER, placeholder: "22" },
@@ -101,11 +107,17 @@ export const FIELDS = {
   ],
 };
 
-// Keyed by preset first, provider second. Empty at present; kept for the next provider that needs one.
+// Keyed by preset first, provider second.
 const WARNINGS = {
   presets: {},
-  providers: {},
+  // Lost with the server or its disk: it belongs beside an off-server destination, not instead of one.
+  providers: { local: "localWarning" },
 };
+
+/** Providers with nothing secret to store: no credentials badge, no "Replace credentials". */
+export function hasCredentials(provider) {
+  return provider !== "local";
+}
 
 export function warningFor(preset) {
   return WARNINGS.presets[preset] ?? WARNINGS.providers[providerForPreset(preset)] ?? null;
@@ -147,6 +159,10 @@ export function describeDestination(destination) {
       location: [config.drive_name || config.folder_id, prefix].filter(Boolean).join("/"),
       address: config.client_email || null,
     };
+  }
+
+  if (destination?.provider === "local") {
+    return { location: [config.path, prefix].filter(Boolean).join("/"), address: null };
   }
 
   if (destination?.provider === "s3") {

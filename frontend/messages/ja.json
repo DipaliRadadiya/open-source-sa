@@ -949,7 +949,8 @@
     "noControlChars": "改行や制御文字は使えません",
     "logFromInvalid": "1 以上の行番号を入力してください。",
     "logIpInvalid": "IP アドレスを 1 つ入力してください（例: 203.0.113.5）。",
-    "logStatusInvalid": "404 のようなコード、または 5xx のようなグループを入力してください。"
+    "logStatusInvalid": "404 のようなコード、または 5xx のようなグループを入力してください。",
+    "localPathAbsolute": "/var/backups/panel のように、/ で始まるフォルダーのフルパスを入力してください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -6839,7 +6840,7 @@
     "noPermission": "現在のロールには Storage の管理権限が含まれていません。管理者に付与を依頼してください。",
     "card": {
       "title": "ストレージ送信先",
-      "subtitle": "このサーバーがバックアップを送れる場所: S3 バケット、FTP / SFTP サーバー、Google Drive。",
+      "subtitle": "このサーバーがバックアップを送れる場所: S3 バケット、FTP / SFTP サーバー、Google Drive、またはこのサーバー上のフォルダー。",
       "add": "保存先を追加",
       "whatTestDoes": "テストは何をしますか？",
       "testExplained": "送信先に小さなファイルを書き込み、読み戻してから削除します。これでログインが有効で、書き込みもできることを確認します。読み取り専用のアカウントでは必ず失敗します。"
@@ -6887,7 +6888,14 @@
       "failedDriveQuota": "前回のテストは{when}に失敗しました — 保存容量の不足により Google がアップロードを拒否しました。",
       "failedDriveIncomplete": "前回のテストは{when}に失敗しました — キーまたはフォルダー ID がありません。",
       "needsConnect": "まだ接続されていません。Google アカウントへのアクセスを承認してください。",
-      "testNotRun": "テストは実行されなかったため、接続の状態はわかりません。もう一度お試しください。"
+      "testNotRun": "テストは実行されなかったため、接続の状態はわかりません。もう一度お試しください。",
+      "diskFree": "{total} 中 {free} 空き",
+      "failedLocalMissing": "前回のテストは{when}に失敗しました — フォルダーが存在しません。追加ディスク上にある場合は、マウントされているか確認してください。",
+      "failedLocalForeign": "前回のテストは{when}に失敗しました — フォルダーがパネルの所有ではなくなっています。",
+      "failedLocalNotWritable": "前回のテストは{when}に失敗しました — フォルダーに書き込めませんでした。",
+      "failedLocalNoSpace": "前回のテストは{when}に失敗しました — ディスクの空き容量が足りません。",
+      "failedLocalPath": "前回のテストは{when}に失敗しました — このフォルダーはバックアップに使用できません。",
+      "neverTestedFolder": "未テスト — パネルがこのフォルダーに書き込めるかは確認されていません。"
     },
     "form": {
       "provider": "プロバイダー",
@@ -6902,7 +6910,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google ドライブ（サービス アカウント・旧方式）",
-        "google_drive_oauth": "Google ドライブ"
+        "google_drive_oauth": "Google ドライブ",
+        "local": "このサーバー（ローカルフォルダー）"
       },
       "name": "名前",
       "namePlaceholder": "例: オフサイトバックアップ",
@@ -6932,7 +6941,8 @@
         "service_account_json": "サービスアカウントキー (JSON)",
         "folder_id": "共有ドライブのフォルダー ID",
         "client_id": "クライアント ID",
-        "client_secret": "クライアント シークレット"
+        "client_secret": "クライアント シークレット",
+        "path": "このサーバー上のフォルダー"
       },
       "help": {
         "host": "バックアップを保存するサーバーのホスト名または IP アドレス。",
@@ -6950,7 +6960,8 @@
         "access_key": "このストレージアカウントの認証情報の公開側の半分です。",
         "secret_key": "認証情報の秘密側の半分です。パスワードと同様に扱い、漏れた人は誰でもバックアップを読み取れます。",
         "client_id": "Google Cloud Console →「認証情報」から。末尾は .apps.googleusercontent.com です。",
-        "client_secret": "クライアント ID の作成時に併せて表示されます。パスワードと同様に扱ってください。"
+        "client_secret": "クライアント ID の作成時に併せて表示されます。パスワードと同様に扱ってください。",
+        "path": "/var/backups、/mnt、/media の下のフォルダー。まだ存在しない場合はパネルが作成します。"
       },
       "plainFtpWarning": "TLS が無効です。パスワードとすべてのバックアップが暗号化されずに送信されます。",
       "prefixHintRemote": "リモートディレクトリ内の任意のフォルダー。1 台のサーバーで複数アプリケーションを保存できます。",
@@ -6968,8 +6979,11 @@
         "service_account_json": "'{' \"type\": \"service_account\", … '}'",
         "folder_id": "例: 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
-        "passphrase": "鍵に設定されている場合のみ"
-      }
+        "passphrase": "鍵に設定されている場合のみ",
+        "path": "/var/backups/panel"
+      },
+      "localWarning": "このサーバー上のバックアップは、サーバーやそのディスクが故障すると失われます。サーバー外の保存先と併用してください。",
+      "localPathChangeWarning": "変更しても既存のバックアップは移動されません。古いフォルダーのバックアップはそのまま残り、検出されなくなります。"
     },
     "connect": {
       "title": "ストレージ送信先を追加",

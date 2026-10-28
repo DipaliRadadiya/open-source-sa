@@ -949,7 +949,8 @@
     "noControlChars": "Sin saltos de línea ni caracteres de control",
     "logFromInvalid": "Introduce un número de línea, 1 o más.",
     "logIpInvalid": "Introduce una sola dirección IP, p. ej. 203.0.113.5.",
-    "logStatusInvalid": "Introduce un código como 404 o un grupo como 5xx."
+    "logStatusInvalid": "Introduce un código como 404 o un grupo como 5xx.",
+    "localPathAbsolute": "Introduce la ruta completa de una carpeta que empiece por /, como /var/backups/panel."
   },
   "serverDashboard": {
     "title": "Panel",
@@ -6839,7 +6840,7 @@
     "noPermission": "Tu rol no incluye Almacenamiento con acceso de gestión. Pide a un administrador que te lo conceda.",
     "card": {
       "title": "Destinos de almacenamiento",
-      "subtitle": "Dónde puede enviar copias este servidor: un bucket S3, un servidor FTP o SFTP, o Google Drive.",
+      "subtitle": "Dónde puede enviar copias este servidor: un bucket S3, un servidor FTP o SFTP, Google Drive o una carpeta en este servidor.",
       "add": "Añadir destino",
       "whatTestDoes": "¿Qué hace Probar?",
       "testExplained": "Escribe un archivo pequeño en el destino, lo lee y lo borra. Así se comprueba que el acceso funciona Y que puede escribir: una cuenta de solo lectura siempre fallará."
@@ -6887,7 +6888,14 @@
       "failedDriveQuota": "La última prueba falló {when}: Google rechazó la subida por falta de cuota.",
       "failedDriveIncomplete": "La última prueba falló {when}: falta la clave o el ID de la carpeta.",
       "needsConnect": "Todavía sin conectar: aprueba el acceso a tu cuenta de Google.",
-      "testNotRun": "La prueba no se ejecutó, así que esto no dice nada sobre la conexión. Inténtalo de nuevo."
+      "testNotRun": "La prueba no se ejecutó, así que esto no dice nada sobre la conexión. Inténtalo de nuevo.",
+      "diskFree": "{free} libres de {total}",
+      "failedLocalMissing": "La última prueba falló {when}: la carpeta ya no existe. Si está en un disco adicional, comprueba que está montado.",
+      "failedLocalForeign": "La última prueba falló {when}: la carpeta ya no pertenece al panel.",
+      "failedLocalNotWritable": "La última prueba falló {when}: no se pudo escribir en la carpeta.",
+      "failedLocalNoSpace": "La última prueba falló {when}: no hay suficiente espacio libre en el disco.",
+      "failedLocalPath": "La última prueba falló {when}: esta carpeta no está permitida para copias.",
+      "neverTestedFolder": "Nunca probado: nadie ha comprobado que el panel pueda escribir en esta carpeta."
     },
     "form": {
       "provider": "Proveedor",
@@ -6902,7 +6910,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (cuenta de servicio, heredado)",
-        "google_drive_oauth": "Google Drive"
+        "google_drive_oauth": "Google Drive",
+        "local": "Este servidor (carpeta local)"
       },
       "name": "Nombre",
       "namePlaceholder": "p. ej. Copias externas",
@@ -6932,7 +6941,8 @@
         "service_account_json": "Clave de cuenta de servicio (JSON)",
         "folder_id": "ID de carpeta de la unidad compartida",
         "client_id": "ID de cliente",
-        "client_secret": "Secreto de cliente"
+        "client_secret": "Secreto de cliente",
+        "path": "Carpeta en este servidor"
       },
       "help": {
         "host": "Nombre de host o dirección IP del servidor que guardará las copias.",
@@ -6950,7 +6960,8 @@
         "access_key": "La parte pública de las credenciales para esta cuenta de almacenamiento.",
         "secret_key": "La parte secreta de las credenciales. Trátela como una contraseña: cualquiera que la tenga puede leer sus copias de seguridad.",
         "client_id": "Desde Google Cloud Console → Credenciales. Termina en .apps.googleusercontent.com.",
-        "client_secret": "Se muestra junto al ID de cliente al crearlo. Trátelo como una contraseña."
+        "client_secret": "Se muestra junto al ID de cliente al crearlo. Trátelo como una contraseña.",
+        "path": "Una carpeta dentro de /var/backups, /mnt o /media. Si todavía no existe, el panel la crea."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
       "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varias aplicaciones.",
@@ -6968,8 +6979,11 @@
         "service_account_json": "'{' \"type\": \"service_account\", … '}'",
         "folder_id": "Por ejemplo 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
-        "passphrase": "Solo si la clave tiene una"
-      }
+        "passphrase": "Solo si la clave tiene una",
+        "path": "/var/backups/panel"
+      },
+      "localWarning": "Las copias en este servidor se pierden si falla el servidor o su disco. Úselo junto con un destino fuera del servidor.",
+      "localPathChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior se quedan allí y dejan de encontrarse."
     },
     "connect": {
       "title": "Añadir un destino de almacenamiento",

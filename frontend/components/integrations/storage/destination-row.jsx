@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import {
@@ -14,7 +14,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { describeDestination } from "@/lib/storage/providers";
+import { describeDestination, hasCredentials } from "@/lib/storage/providers";
+import { formatBytes } from "@/lib/format/bytes";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ActionIcon } from "@/components/ui/action-icon";
@@ -40,6 +41,13 @@ const FAILURE_KEYS = {
   invalid_private_key: "failedPrivateKey",
   root_missing: "failedRootMissing",
   mismatch: "failedMismatch",
+  local_missing: "failedLocalMissing",
+  local_foreign: "failedLocalForeign",
+  local_not_writable: "failedLocalNotWritable",
+  local_no_space: "failedLocalNoSpace",
+  local_path_not_allowed: "failedLocalPath",
+  local_path_link: "failedLocalPath",
+  local_path_invalid: "failedLocalPath",
 };
 
 export function DestinationRow({
@@ -53,9 +61,14 @@ export function DestinationRow({
   onDelete,
 }) {
   const t = useTranslations("storage");
+  const format = useFormatter();
   // Per-provider: "bucket/prefix" is meaningless for an FTP host.
   const { location, address } = describeDestination(destination);
   const isS3 = destination.provider === "s3";
+  const secrets = hasCredentials(destination.provider);
+  // "This server": its disk, as measured when the list was read.
+  const free = destination.provider === "local" ? formatBytes(destination.config?.free_bytes, format) : null;
+  const total = destination.provider === "local" ? formatBytes(destination.config?.total_bytes, format) : null;
 
   // Read `config.connected`, not the failed-test category, which the backend reports incorrectly here.
   const needsConnect =
@@ -91,7 +104,7 @@ export function DestinationRow({
               ) : null}
               {/* Not "verified" — only that both secret columns are populated.
                   Whether they WORK is what Test answers. */}
-              {destination.has_credentials ? (
+              {!secrets ? null : destination.has_credentials ? (
                 <Badge variant="muted">{t("row.credentialsSet")}</Badge>
               ) : (
                 <>
@@ -119,6 +132,9 @@ export function DestinationRow({
               <p className="truncate font-mono text-xs text-muted-foreground">{address}</p>
             ) : isS3 ? (
               <p className="text-xs text-muted-foreground">{t("row.awsDefault")}</p>
+            ) : null}
+            {free && total ? (
+              <p className="text-xs text-muted-foreground tabular-nums">{t("row.diskFree", { free, total })}</p>
             ) : null}
   
             {/* Phone: region and age share the same indent as everything else. */}
@@ -163,7 +179,7 @@ export function DestinationRow({
                         : t("row.testPassed")
                       : result.message}
                     {/* Wrong keys are the common cause, so the fix is a link at the end of the line. */}
-                    {!result.ok && !result.notRun && canManage ? (
+                    {!result.ok && !result.notRun && canManage && secrets ? (
                       <ReplaceLink onClick={onReplace} />
                     ) : null}
                   </span>
@@ -214,10 +230,12 @@ export function DestinationRow({
                 <Pencil className="size-3.5" />
                 {t("row.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onReplace} disabled={!canManage}>
-                <KeyRound className="size-3.5" />
-                {t("row.replace")}
-              </DropdownMenuItem>
+              {secrets ? (
+                <DropdownMenuItem onSelect={onReplace} disabled={!canManage}>
+                  <KeyRound className="size-3.5" />
+                  {t("row.replace")}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onSelect={onDelete} disabled={!canManage} variant="destructive">
                 <Trash2 className="size-3.5" />
                 {t("row.delete")}
@@ -239,7 +257,8 @@ function StoredVerdict({ destination, canManage, onReplace }) {
     return (
       <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted-foreground">
         <CircleHelp className="size-3 shrink-0" />
-        {t("row.neverTested")}
+        {/* "This server" has no credentials to check, only a folder to write to. */}
+        {t(hasCredentials(destination.provider) ? "row.neverTested" : "row.neverTestedFolder")}
       </p>
     );
   }
