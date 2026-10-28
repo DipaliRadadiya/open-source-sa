@@ -118,7 +118,9 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $ss
             return Process::result(output: "Status: inactive\n");
         }
         if ($remembers && $bin === $redis && ($cmd[1] ?? '') === 'config' && ($cmd[2] ?? '') === 'set') {
-            $redisSet[$cmd[3]] = $cmd[4] ?? '';
+            // Redis answers a size in bytes, whatever unit it was given.
+            $value = (string) ($cmd[4] ?? '');
+            $redisSet[$cmd[3]] = preg_match('/^(\d+)mb$/i', $value, $mb) ? (string) ($mb[1] * 1048576) : $value;
 
             return Process::result(output: 'OK');
         }
@@ -1350,7 +1352,8 @@ describe('the activity log says what a save changed', function () {
             ->assertOk();
 
         expect($changes('redis'))->toBe([
-            ['field' => 'maxmemory', 'from' => 0, 'to' => '256mb'],
+            // Redis answers in bytes; 0 is "no limit".
+            ['field' => 'maxmemory', 'from' => null, 'to' => '256 MB'],
             ['field' => 'maxmemory_policy', 'from' => 'noeviction', 'to' => 'volatile-lru'],
         ]);
     });

@@ -29,6 +29,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Number;
 
 class SettingController extends Controller
 {
@@ -342,6 +343,24 @@ class SettingController extends Controller
         'redis' => ['maxmemory', 'maxmemory_policy'],
     ];
 
+    /**
+     * A group's values as a person reads them in the activity log: Redis
+     * reports its memory limit in bytes ("268435456"), shown as "256 MB",
+     * and 0 — no limit — as none.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function readable(string $key, array $values): array
+    {
+        if ($key === 'redis' && is_numeric($values['maxmemory'] ?? null)) {
+            $bytes = (int) $values['maxmemory'];
+            $values['maxmemory'] = $bytes > 0 ? Number::fileSize($bytes) : null;
+        }
+
+        return $values;
+    }
+
     private function save(string $key, FormRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         $group = $settings->find($key);
@@ -361,7 +380,7 @@ class SettingController extends Controller
         // What really changed, old → new (support list, 2026-10-28) — read
         // back from the server on both sides, so a field resent with its own
         // value is not a change.
-        $changes = ActivityChanges::between($before, $after, self::LOGGED_FIELDS[$key] ?? []);
+        $changes = ActivityChanges::between($this->readable($key, $before), $this->readable($key, $after), self::LOGGED_FIELDS[$key] ?? []);
 
         // A password is never logged, only that it changed or went.
         if ($key === 'redis' && filled($validated['password'] ?? null)) {
