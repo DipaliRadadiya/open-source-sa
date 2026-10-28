@@ -140,6 +140,14 @@ class ActivityLogResource extends JsonResource
             $replacements['from'] = __('activity_values.php_default');
         }
 
+        // The settings group is stored as its key (`security`), so the
+        // sentence read "Einstellungen security aktualisiert" in German.
+        $group = $properties['group'] ?? null;
+
+        if ($this->type === 'setting' && is_string($group) && Lang::has('activity_values.setting_groups.'.$group)) {
+            $replacements['group'] = __('activity_values.setting_groups.'.$group);
+        }
+
         if ($this->type === 'disk_cleaner') {
             $replacements['kept'] = KeepDays::label($properties['keep_days'] ?? null);
         }

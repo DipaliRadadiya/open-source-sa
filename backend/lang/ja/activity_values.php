@@ -27,4 +27,12 @@ return [
     'change' => ':field を :from から :to に変更',
     'change_secret' => ':fieldを変更',
     'change_secret_removed' => ':fieldを削除',
+    // The settings group in `setting.updated` ("Updated :group settings").
+    'setting_groups' => [
+        'general' => '一般',
+        'security' => 'セキュリティ',
+        'updates' => 'アップデート',
+        'swap' => 'スワップ',
+        'redis' => 'Redis',
+    ],
 ];

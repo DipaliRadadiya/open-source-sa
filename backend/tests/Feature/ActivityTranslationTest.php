@@ -171,6 +171,13 @@ describe('what the activity screen shows for a row', function () {
         expect($shown('application', 'deleted', ['name' => 'Shop'])['description'])->toBe('Deleted application Shop (—)');
     });
 
+    it('words the settings group in the reader\'s language', function () use ($shown) {
+        app()->setLocale('de');
+
+        expect($shown('setting', 'updated', ['group' => 'security'])['description'])->toBe('Einstellungen Sicherheit aktualisiert')
+            ->and($shown('setting', 'updated', ['group' => 'something_new'])['description'])->toBe('Einstellungen something_new aktualisiert');
+    });
+
     it('leaves a row with no change list exactly as before', function () use ($shown) {
         $row = $shown('application', 'deleted', ['name' => 'Shop', 'site_type' => 'php']);
 

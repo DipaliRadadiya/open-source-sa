@@ -27,4 +27,12 @@ return [
     'change' => ':field :from से :to में बदला गया',
     'change_secret' => ':field बदला गया',
     'change_secret_removed' => ':field हटाया गया',
+    // The settings group in `setting.updated` ("Updated :group settings").
+    'setting_groups' => [
+        'general' => 'सामान्य',
+        'security' => 'सुरक्षा',
+        'updates' => 'अपडेट',
+        'swap' => 'स्वैप',
+        'redis' => 'Redis',
+    ],
 ];

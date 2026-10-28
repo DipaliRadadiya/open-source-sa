@@ -27,4 +27,12 @@ return [
     'change' => ':field von :from auf :to geändert',
     'change_secret' => ':field geändert',
     'change_secret_removed' => ':field entfernt',
+    // The settings group in `setting.updated` ("Updated :group settings").
+    'setting_groups' => [
+        'general' => 'Allgemein',
+        'security' => 'Sicherheit',
+        'updates' => 'Updates',
+        'swap' => 'Swap',
+        'redis' => 'Redis',
+    ],
 ];
