@@ -24,7 +24,7 @@ return [
     'off' => 'выкл.',
     'with_changes' => ':sentence: :changes',
     'unchanged' => ':sentence (ничего не изменено)',
-    'change' => ':field :from → :to',
+    'change' => ':field изменено с :from на :to',
     'change_secret' => ':field изменён',
     'change_secret_removed' => ':field удалён',
 ];

@@ -24,7 +24,7 @@ return [
     'off' => 'बंद',
     'with_changes' => ':sentence: :changes',
     'unchanged' => ':sentence (कुछ नहीं बदला)',
-    'change' => ':field :from → :to',
+    'change' => ':field :from से :to में बदला गया',
     'change_secret' => ':field बदला गया',
     'change_secret_removed' => ':field हटाया गया',
 ];

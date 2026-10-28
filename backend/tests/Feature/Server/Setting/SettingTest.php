@@ -1326,8 +1326,8 @@ describe('the activity log says what a save changed', function () {
             ->getJson('/api/activity-log?filter[type]=setting')
             ->assertOk()
             ->assertJsonPath('activity_log.0.changes.0.label', 'SSH port')
-            ->assertJsonPath('activity_log.0.changes.0.text', 'SSH port 22 → 2222')
-            ->assertJsonPath('activity_log.0.description', fn (string $d) => str_contains($d, 'SSH port 22 → 2222'));
+            ->assertJsonPath('activity_log.0.changes.0.text', 'SSH port changed from 22 to 2222')
+            ->assertJsonPath('activity_log.0.description', fn (string $d) => str_contains($d, 'SSH port changed from 22 to 2222'));
     });
 
     it('says nothing changed when the same values are saved again', function () use ($changes) {

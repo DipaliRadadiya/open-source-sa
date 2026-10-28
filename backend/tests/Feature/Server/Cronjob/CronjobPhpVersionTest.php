@@ -366,6 +366,6 @@ it('records the PHP version and each PHP setting a save changed', function () {
         ->and(collect($changes)->firstWhere('field', 'memory_limit'))->toBe(['field' => 'memory_limit', 'from' => '256M', 'to' => '512M']);
 
     $line = collect($this->getJson('/api/activity-log?filter[type]=application')->json('activity_log'))->firstWhere('action', 'php_settings_updated');
-    expect($line['changes'][0]['text'])->toBe('PHP version 8.3 → 8.4')
+    expect($line['changes'][0]['text'])->toBe('PHP version changed from 8.3 to 8.4')
         ->and(collect($line['changes'])->firstWhere('field', 'memory_limit')['label'])->toBe('memory_limit');
 });

@@ -1172,5 +1172,5 @@ it('records the old and new port of an edited rule', function () {
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/activity-log?filter[type]=firewall')
-        ->assertJsonPath('activity_log.0.changes.0.text', 'Port 8080 → 8081');
+        ->assertJsonPath('activity_log.0.changes.0.text', 'Port changed from 8080 to 8081');
 });

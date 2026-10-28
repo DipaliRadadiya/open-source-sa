@@ -41,7 +41,7 @@ return [
     'off' => 'off',
     'with_changes' => ':sentence: :changes',
     'unchanged' => ':sentence (nothing changed)',
-    'change' => ':field :from → :to',
+    'change' => ':field changed from :from to :to',
     'change_secret' => ':field changed',
     'change_secret_removed' => ':field removed',
 ];

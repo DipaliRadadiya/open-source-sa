@@ -24,7 +24,7 @@ return [
     'off' => 'désactivé',
     'with_changes' => ':sentence : :changes',
     'unchanged' => ':sentence (aucun changement)',
-    'change' => ':field :from → :to',
+    'change' => ':field modifié de :from à :to',
     'change_secret' => ':field modifié',
     'change_secret_removed' => ':field supprimé',
 ];

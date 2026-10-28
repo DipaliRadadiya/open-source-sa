@@ -181,7 +181,7 @@ describe('what the activity screen shows for a row', function () {
     it('words a field it has no label for by its own name', function () use ($shown) {
         $row = $shown('setting', 'updated', ['group' => 'general', 'changes' => [['field' => 'brand_new_field', 'from' => '', 'to' => 'x']]]);
 
-        expect($row['changes'][0]['text'])->toBe('brand new field none → x');
+        expect($row['changes'][0]['text'])->toBe('brand new field changed from none to x');
     });
 });
 

@@ -24,7 +24,7 @@ return [
     'off' => 'オフ',
     'with_changes' => ':sentence: :changes',
     'unchanged' => ':sentence（変更なし）',
-    'change' => ':field :from → :to',
+    'change' => ':field を :from から :to に変更',
     'change_secret' => ':fieldを変更',
     'change_secret_removed' => ':fieldを削除',
 ];

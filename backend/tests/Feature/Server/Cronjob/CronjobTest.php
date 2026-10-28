@@ -783,7 +783,7 @@ it('records which fields of a cron job an edit changed', function () {
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/activity-log?filter[type]=cronjob')
-        ->assertJsonPath('activity_log.0.changes.1.text', 'Active on → off');
+        ->assertJsonPath('activity_log.0.changes.1.text', 'Active changed from on to off');
 });
 
 it('rejects a command with an unresolved {php} placeholder', function () {

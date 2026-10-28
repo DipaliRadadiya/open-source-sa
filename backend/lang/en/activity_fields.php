@@ -2,7 +2,7 @@
 
 /*
  * Field names for the activity log's "what changed" line (2026-10-28):
- * "SSH port 22 → 2222". By event type, then `common`; a field with no label
+ * "SSH port changed from 22 to 2222". By event type, then `common`; a field with no label
  * reads as its own name with spaces. PHP directives keep their real names.
  */
 

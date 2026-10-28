@@ -353,10 +353,10 @@ Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `
 **`changes`** (added 2026-10-28, **all three logs**) — what a save actually changed, old → new, on: server settings (`setting.updated` for general / security / updates / swap / redis, `setting.reboot_schedule_updated`), site PHP settings (`application.php_settings_updated`), `cronjob.updated`, `backup.updated`, `firewall.rule_updated`. Every other row has `changes: null` (and so does any row written before this date).
 
 ```json
-"description": "Updated security settings: SSH port 22 → 2222, Root login prohibit-password → no",
+"description": "Updated security settings: SSH port changed from 22 to 2222, Root login changed from prohibit-password to no",
 "changes": [
-  {"field": "port", "label": "SSH port", "from": "22", "to": "2222", "secret": false, "text": "SSH port 22 → 2222"},
-  {"field": "permit_root_login", "label": "Root login", "from": "prohibit-password", "to": "no", "secret": false, "text": "Root login prohibit-password → no"}
+  {"field": "port", "label": "SSH port", "from": "22", "to": "2222", "secret": false, "text": "SSH port changed from 22 to 2222"},
+  {"field": "permit_root_login", "label": "Root login", "from": "prohibit-password", "to": "no", "secret": false, "text": "Root login changed from prohibit-password to no"}
 ]
 ```
 

@@ -1200,8 +1200,8 @@ it('records what an edit changed, and nothing for the first save', function () {
     ]);
 
     $this->withHeaders(backupHeaders())->getJson('/api/activity-log?filter[type]=backup')
-        ->assertJsonPath('activity_log.1.changes.0.text', 'Frequency daily → weekly')
-        ->assertJsonPath('activity_log.1.changes.1.text', 'Backups kept 7 → 3');
+        ->assertJsonPath('activity_log.1.changes.0.text', 'Frequency changed from daily to weekly')
+        ->assertJsonPath('activity_log.1.changes.1.text', 'Backups kept changed from 7 to 3');
 });
 
 it('names the storage a target moved to, never its credentials', function () {
