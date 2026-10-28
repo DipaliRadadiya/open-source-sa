@@ -1282,7 +1282,7 @@
       "notYet": "Noch nicht gelaufen",
       "succeeded": "Erfolgreich",
       "failed": "Fehlgeschlagen",
-      "failedExit": "Fehlgeschlagen · Code {code}",
+      "exitCode": "Code {code}",
       "running": "Läuft jetzt",
       "interrupted": "Unterbrochen",
       "interruptedHint": "Sie hat begonnen, aber nie geendet – etwa weil der Server währenddessen neu gestartet wurde.",
@@ -1322,6 +1322,16 @@
       "noOutput": "Keine Ausgabe.",
       "truncated": "Nur die letzten 64 KB werden angezeigt.",
       "copyOutput": "Ausgabe kopieren"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, seine Anwendung nutzt {target}",
+      "fromDefault": "Server-Standard-PHP, seine Anwendung nutzt {target}",
+      "unknownTarget": "Nicht auf der PHP-Version seiner Anwendung",
+      "switchAction": "Auf PHP {version} umstellen",
+      "switchTitle": "{name} auf PHP {version} umstellen?",
+      "switchDescription": "Nur der PHP-Teil des Befehls ändert sich. Zeitplan und das Konto, unter dem er läuft, bleiben gleich.",
+      "switched": "{name} läuft jetzt mit PHP {version}.",
+      "failed": "Der Cronjob konnte nicht umgestellt werden."
     }
   },
   "errors": {

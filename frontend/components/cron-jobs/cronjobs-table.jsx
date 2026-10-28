@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CronjobActiveSwitch } from "@/components/cron-jobs/cronjob-active-switch";
 import { CronjobRowActions } from "@/components/cron-jobs/cronjob-row-actions";
+import { CronjobPhpNote } from "@/components/cron-jobs/cronjob-php-note";
 import { CronjobsCards } from "@/components/cron-jobs/cronjobs-cards";
 import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
 import { hasRunHistory } from "@/lib/cron-jobs/run-duration";
@@ -119,8 +120,9 @@ function RunAsCell({ row }) {
   return <CronjobRunAs job={row.original} />;
 }
 
-function CommandCell({ row }) {
+function CommandCell({ row, table }) {
   return (
+    <div className="max-w-40 space-y-1">
     <Tooltip>
       <TooltipTrigger asChild>
         {/* tabIndex: a truncated value must be reachable without a mouse. */}
@@ -135,6 +137,8 @@ function CommandCell({ row }) {
         {row.original.command}
       </TooltipContent>
     </Tooltip>
+      <CronjobPhpNote job={row.original} applications={table.options.meta.applications} />
+    </div>
   );
 }
 

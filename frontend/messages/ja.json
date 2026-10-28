@@ -1282,7 +1282,7 @@
       "notYet": "まだ実行されていません",
       "succeeded": "成功",
       "failed": "失敗しました",
-      "failedExit": "失敗 · 終了コード {code}",
+      "exitCode": "終了コード {code}",
       "running": "実行中",
       "interrupted": "中断",
       "interruptedHint": "開始しましたが終了していません。実行中にサーバーが再起動した場合などです。",
@@ -1322,6 +1322,16 @@
       "noOutput": "出力はありません。",
       "truncated": "最後の 64 KB のみ表示しています。",
       "copyOutput": "出力をコピー"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}、アプリケーションは {target}",
+      "fromDefault": "サーバーのデフォルト PHP、アプリケーションは {target}",
+      "unknownTarget": "アプリケーションの PHP バージョンと異なります",
+      "switchAction": "PHP {version} に切り替え",
+      "switchTitle": "{name} を PHP {version} に切り替えますか？",
+      "switchDescription": "コマンドの PHP 部分だけが変わります。スケジュールと実行アカウントはそのままです。",
+      "switched": "{name} は PHP {version} で動くようになりました。",
+      "failed": "Cronジョブを切り替えられませんでした。"
     }
   },
   "errors": {

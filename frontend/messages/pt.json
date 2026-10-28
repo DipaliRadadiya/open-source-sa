@@ -1282,7 +1282,7 @@
       "notYet": "Ainda não executado",
       "succeeded": "Concluído",
       "failed": "Falhou",
-      "failedExit": "Falhou · código {code}",
+      "exitCode": "código {code}",
       "running": "Em execução agora",
       "interrupted": "Interrompido",
       "interruptedHint": "Começou, mas nunca terminou — por exemplo, o servidor reiniciou enquanto rodava.",
@@ -1322,6 +1322,16 @@
       "noOutput": "Não imprimiu nada.",
       "truncated": "Só os últimos 64 KB são mostrados.",
       "copyOutput": "Copiar saída"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, sua aplicação usa {target}",
+      "fromDefault": "PHP padrão do servidor, sua aplicação usa {target}",
+      "unknownTarget": "Não está na versão de PHP da sua aplicação",
+      "switchAction": "Passar para PHP {version}",
+      "switchTitle": "Passar {name} para PHP {version}?",
+      "switchDescription": "Só a parte PHP do comando muda. O agendamento e a conta com que é executada continuam iguais.",
+      "switched": "{name} agora usa PHP {version}.",
+      "failed": "Não foi possível passar a tarefa cron."
     }
   },
   "errors": {

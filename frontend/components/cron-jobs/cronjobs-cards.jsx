@@ -1,7 +1,8 @@
 import { useTranslations } from "next-intl";
-import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
+import { CardFactGrid, CardFactStacked, CardList, CardListItem } from "@/components/data-table/card-list";
 import { CronjobActiveSwitch } from "@/components/cron-jobs/cronjob-active-switch";
 import { CronjobRowActions } from "@/components/cron-jobs/cronjob-row-actions";
+import { CronjobPhpNote } from "@/components/cron-jobs/cronjob-php-note";
 import {
   CronjobName,
   CronjobNextRun,
@@ -39,6 +40,7 @@ export function CronjobsCards({
               <p className="line-clamp-3 font-mono text-xs break-all text-muted-foreground">
                 {job.command}
               </p>
+              <CronjobPhpNote job={job} applications={applications} className="mt-1" />
             </div>
             <div className="-me-2 -mt-1 shrink-0">
               <CronjobRowActions
@@ -58,33 +60,27 @@ export function CronjobsCards({
             </div>
           </div>
 
-          <CardFacts>
-            <CardFact label={t("columns.schedule")}>
+          {/* Two columns, label on top: when and how it runs, then who and whether. */}
+          <CardFactGrid>
+            <CardFactStacked label={t("columns.schedule")}>
               <CronjobSchedule job={job} presets={schedulePresets} />
-            </CardFact>
+            </CardFactStacked>
             {/* The label carries the timezone, like the table's column header. */}
-            <CardFact
-              label={timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}
-            >
+            <CardFactStacked label={timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}>
               <CronjobNextRun job={job} />
-            </CardFact>
+            </CardFactStacked>
             {historySupported ? (
-              <CardFact label={t("lastRun.column")}>
-                <div className="flex justify-end">
-                  <CronjobLastRun job={job} />
-                </div>
-              </CardFact>
+              <CardFactStacked label={t("lastRun.column")}>
+                <CronjobLastRun job={job} />
+              </CardFactStacked>
             ) : null}
-            <CardFact label={t("columns.runAs")}>
-              {/* The value is a flex row, which text-align cannot move. */}
-              <div className="flex justify-end">
-                <CronjobRunAs job={job} />
-              </div>
-            </CardFact>
-            <CardFact label={t("columns.active")}>
+            <CardFactStacked label={t("columns.runAs")}>
+              <CronjobRunAs job={job} />
+            </CardFactStacked>
+            <CardFactStacked label={t("columns.active")}>
               <CronjobActiveSwitch job={job} canManage={canManage} prevPage={prevPage} />
-            </CardFact>
-          </CardFacts>
+            </CardFactStacked>
+          </CardFactGrid>
         </CardListItem>
       ))}
     </CardList>

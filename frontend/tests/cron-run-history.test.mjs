@@ -80,7 +80,7 @@ test("every new string exists in all 8 languages", () => {
   for (const locale of LOCALES) {
     const c = JSON.parse(read(`messages/${locale}.json`)).cronJobs;
     for (const [section, keys] of Object.entries({
-      lastRun: ["column", "notYet", "succeeded", "failed", "failedExit", "running", "interrupted", "interruptedHint", "manual", "took"],
+      lastRun: ["column", "notYet", "succeeded", "failed", "exitCode", "running", "interrupted", "interruptedHint", "manual", "took"],
       duration: ["seconds", "minutes", "hours"],
       runNow: ["action", "paused", "title", "description", "confirm", "starting", "started", "failed"],
       history: ["action", "title", "description", "descriptionNoZone", "refresh", "fullLog", "retry", "failed", "empty", "started", "finished", "overlapped", "showOutput", "hideOutput", "noOutput", "truncated", "copyOutput"],

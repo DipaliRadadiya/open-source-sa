@@ -1282,7 +1282,7 @@
       "notYet": "Aún no se ha ejecutado",
       "succeeded": "Correcto",
       "failed": "Falló",
-      "failedExit": "Falló · código {code}",
+      "exitCode": "código {code}",
       "running": "En ejecución ahora",
       "interrupted": "Interrumpida",
       "interruptedHint": "Empezó pero no terminó; por ejemplo, el servidor se reinició mientras se ejecutaba.",
@@ -1322,6 +1322,16 @@
       "noOutput": "No mostró nada.",
       "truncated": "Solo se muestran los últimos 64 KB.",
       "copyOutput": "Copiar la salida"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, su aplicación usa {target}",
+      "fromDefault": "PHP predeterminado del servidor, su aplicación usa {target}",
+      "unknownTarget": "No usa la versión de PHP de su aplicación",
+      "switchAction": "Cambiar a PHP {version}",
+      "switchTitle": "¿Cambiar {name} a PHP {version}?",
+      "switchDescription": "Solo cambia la parte PHP del comando. La programación y la cuenta con la que se ejecuta siguen igual.",
+      "switched": "{name} ahora se ejecuta con PHP {version}.",
+      "failed": "No se pudo cambiar la tarea cron."
     }
   },
   "errors": {

@@ -6,15 +6,22 @@ import { runDuration } from "@/lib/cron-jobs/run-duration";
 
 const VARIANT = { succeeded: "success", failed: "destructive", interrupted: "warning", running: "muted" };
 
-/** A run's outcome as a badge; a failure carries its exit code. */
+/** A run's outcome as a badge, and a failure's exit code after it. */
 export function RunStatusBadge({ status, exitCode = null }) {
   const t = useTranslations("cronJobs.lastRun");
   const known = Object.hasOwn(VARIANT, status);
+  // The exit code beside the badge, not in it: a badge never wraps, and "Fehlgeschlagen · Code 2"
+  // was wider than a phone card's column. Both sit in their parent's wrapping row.
   return (
-    <Badge variant={VARIANT[status] ?? "muted"} className="gap-1 font-normal">
-      {status === "running" ? <Loader2 className="size-3 animate-spin" aria-hidden /> : null}
-      {status === "failed" && exitCode != null ? t("failedExit", { code: exitCode }) : known ? t(status) : status}
-    </Badge>
+    <>
+      <Badge variant={VARIANT[status] ?? "muted"} className="gap-1 font-normal">
+        {status === "running" ? <Loader2 className="size-3 animate-spin" aria-hidden /> : null}
+        {known ? t(status) : status}
+      </Badge>
+      {status === "failed" && exitCode != null ? (
+        <span className="text-xs text-muted-foreground tabular-nums">{t("exitCode", { code: exitCode })}</span>
+      ) : null}
+    </>
   );
 }
 

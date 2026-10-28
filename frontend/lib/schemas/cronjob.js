@@ -155,6 +155,11 @@ export const cronjobSchema = z.object({
   username: z.string(),
   system_user: systemUserRef.nullable().optional(),
   command: z.string(),
+  // A site's job (null: server-level). Its PHP, as the command names it: "8.3", "default"
+  // (plain `php`) or null when unrecognised; and whether that is the site's (a338f771).
+  application_id: z.number().nullish(),
+  php_version: z.string().nullish(),
+  matches_site_php: z.boolean().nullish(),
   expression: z.string(),
   active: z.boolean(),
   // The server's zone, not the viewer's: cron runs on the OS clock.

@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { useRef, useState } from "react";
-import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight, Play, History } from "lucide-react";
+import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight, Play, History, ArrowRightLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,8 @@ import { EditCronjobDialog } from "@/components/cron-jobs/edit-cronjob-dialog";
 import { DeleteCronjobDialog } from "@/components/cron-jobs/delete-cronjob-dialog";
 import { RunNowDialog } from "@/components/cron-jobs/run-now-dialog";
 import { RunHistorySheet } from "@/components/cron-jobs/run-history-sheet";
+import { SwitchPhpDialog } from "@/components/cron-jobs/switch-php-dialog";
+import { phpMismatch } from "@/lib/cron-jobs/php-mismatch";
 
 export function CronjobRowActions({
   job,
@@ -36,6 +38,10 @@ export function CronjobRowActions({
   const [delOpen, setDelOpen] = useState(false);
   const [runOpen, setRunOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
+  // Offered only when both PHPs are known: the switch swaps one recognised interpreter for another.
+  const mismatch = phpMismatch(job, applications);
+  const switchTo = mismatch?.current && mismatch.target ? mismatch.target : null;
   const runReason = !canManage ? t("noPermission") : !job.active ? t("runNow.paused") : null;
   // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog
   // takes it, then hands it back); Escape or a click away returns it there.
@@ -98,6 +104,14 @@ export function CronjobRowActions({
               {t("actions.noOutput")}
             </DropdownMenuItem>
           )}
+          {switchTo ? (
+            <MenuItemHint hint={canManage ? null : t("noPermission")}>
+              <DropdownMenuItem disabled={!canManage} onSelect={() => { openingDialog.current = true; setSwitchOpen(true); }}>
+                <ArrowRightLeft className="size-4" />
+                {t("phpMismatch.switchAction", { version: switchTo })}
+              </DropdownMenuItem>
+            </MenuItemHint>
+          ) : null}
           <DropdownMenuSeparator />
           <MenuItemHint hint={canManage ? null : t("noPermission")}>
             <DropdownMenuItem disabled={!canManage} onSelect={() => { openingDialog.current = true; setEditOpen(true); }}>
@@ -136,6 +150,7 @@ export function CronjobRowActions({
         />
       ) : null}
       <DeleteCronjobDialog job={job} open={delOpen} onOpenChange={setDelOpen} prevPage={prevPage} />
+      {switchOpen && switchTo ? <SwitchPhpDialog job={job} version={switchTo} onOpenChange={setSwitchOpen} /> : null}
       {historySupported ? (
         <>
           <RunNowDialog job={job} open={runOpen} onOpenChange={setRunOpen} />

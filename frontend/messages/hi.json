@@ -1282,7 +1282,7 @@
       "notYet": "अभी तक नहीं चला",
       "succeeded": "सफल",
       "failed": "विफल",
-      "failedExit": "विफल · कोड {code}",
+      "exitCode": "कोड {code}",
       "running": "अभी चल रहा है",
       "interrupted": "बीच में रुका",
       "interruptedHint": "यह शुरू हुआ पर पूरा नहीं हुआ — जैसे चलते समय सर्वर रीस्टार्ट हो गया।",
@@ -1322,6 +1322,16 @@
       "noOutput": "इसने कुछ नहीं छापा।",
       "truncated": "सिर्फ़ आख़िरी 64 KB दिखाया गया है।",
       "copyOutput": "आउटपुट कॉपी करें"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, इसका ऐप्लिकेशन {target} इस्तेमाल करता है",
+      "fromDefault": "सर्वर का डिफ़ॉल्ट PHP, इसका ऐप्लिकेशन {target} इस्तेमाल करता है",
+      "unknownTarget": "अपने ऐप्लिकेशन के PHP वर्शन पर नहीं है",
+      "switchAction": "PHP {version} पर ले जाएँ",
+      "switchTitle": "{name} को PHP {version} पर ले जाएँ?",
+      "switchDescription": "कमांड का सिर्फ़ PHP वाला हिस्सा बदलता है। शेड्यूल और जिस अकाउंट से यह चलता है, वे वही रहते हैं।",
+      "switched": "{name} अब PHP {version} पर चलता है।",
+      "failed": "क्रॉन जॉब को नहीं बदला जा सका।"
     }
   },
   "errors": {

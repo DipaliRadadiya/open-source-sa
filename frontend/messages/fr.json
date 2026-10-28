@@ -1282,7 +1282,7 @@
       "notYet": "Pas encore exécutée",
       "succeeded": "Réussie",
       "failed": "Échec",
-      "failedExit": "Échec · code {code}",
+      "exitCode": "code {code}",
       "running": "En cours",
       "interrupted": "Interrompue",
       "interruptedHint": "Elle a démarré mais ne s'est jamais terminée — par exemple, le serveur a redémarré pendant l'exécution.",
@@ -1322,6 +1322,16 @@
       "noOutput": "Aucune sortie.",
       "truncated": "Seuls les 64 derniers Ko sont affichés.",
       "copyOutput": "Copier la sortie"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, son application utilise {target}",
+      "fromDefault": "PHP par défaut du serveur, son application utilise {target}",
+      "unknownTarget": "N'utilise pas la version PHP de son application",
+      "switchAction": "Basculer vers PHP {version}",
+      "switchTitle": "Basculer {name} vers PHP {version} ?",
+      "switchDescription": "Seule la partie PHP de la commande change. La planification et le compte d'exécution restent les mêmes.",
+      "switched": "{name} utilise maintenant PHP {version}.",
+      "failed": "La tâche cron n'a pas pu être basculée."
     }
   },
   "errors": {

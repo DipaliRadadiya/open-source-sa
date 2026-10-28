@@ -1282,7 +1282,7 @@
       "notYet": "Not run yet",
       "succeeded": "Succeeded",
       "failed": "Failed",
-      "failedExit": "Failed · exit {code}",
+      "exitCode": "exit {code}",
       "running": "Running now",
       "interrupted": "Interrupted",
       "interruptedHint": "It started but never finished — for example, the server restarted while it ran.",
@@ -1322,6 +1322,16 @@
       "noOutput": "It printed nothing.",
       "truncated": "Only the last 64 KB is shown.",
       "copyOutput": "Copy output"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, its application uses {target}",
+      "fromDefault": "Server default PHP, its application uses {target}",
+      "unknownTarget": "Not on its application's PHP version",
+      "switchAction": "Switch to PHP {version}",
+      "switchTitle": "Switch {name} to PHP {version}?",
+      "switchDescription": "Only the PHP part of the command changes. The schedule and the account it runs as stay the same.",
+      "switched": "{name} now runs on PHP {version}.",
+      "failed": "The cron job could not be switched."
     }
   },
   "errors": {

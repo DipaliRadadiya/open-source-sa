@@ -1282,7 +1282,7 @@
       "notYet": "Ещё не запускалось",
       "succeeded": "Успешно",
       "failed": "Ошибка",
-      "failedExit": "Ошибка · код {code}",
+      "exitCode": "код {code}",
       "running": "Выполняется",
       "interrupted": "Прервано",
       "interruptedHint": "Запуск начался, но не завершился — например, сервер перезагрузился во время работы.",
@@ -1322,6 +1322,16 @@
       "noOutput": "Ничего не выведено.",
       "truncated": "Показаны только последние 64 КБ.",
       "copyOutput": "Скопировать вывод"
+    },
+    "phpMismatch": {
+      "fromVersion": "PHP {current}, его приложение использует {target}",
+      "fromDefault": "PHP сервера по умолчанию, его приложение использует {target}",
+      "unknownTarget": "Не на версии PHP своего приложения",
+      "switchAction": "Перевести на PHP {version}",
+      "switchTitle": "Перевести {name} на PHP {version}?",
+      "switchDescription": "Меняется только часть команды с PHP. Расписание и учётная запись, от которой она выполняется, остаются прежними.",
+      "switched": "{name} теперь работает на PHP {version}.",
+      "failed": "Не удалось перевести cron-задачу."
     }
   },
   "errors": {
