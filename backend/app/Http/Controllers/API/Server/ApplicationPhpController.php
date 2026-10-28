@@ -13,6 +13,7 @@ use App\Services\Server\Cron\CronPhpBinary;
 use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Php\V7PhpExtraConf;
+use App\Support\ActivityChanges;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -112,6 +113,8 @@ class ApplicationPhpController extends Controller
         }
 
         $settings = $this->settingsFor($application);
+        // For the activity entry: the values as they were, field by field.
+        $before = ['php_version' => $application->php_version] + $settings->only(array_keys($data));
         $settings->fill($data);
 
         // The version is on the application rather than the settings row: the
@@ -181,7 +184,14 @@ class ApplicationPhpController extends Controller
             $isolator->republish($application);
         }
 
-        $activity->log('application.php_settings_updated', $application, ['name' => $application->name]);
+        $activity->log('application.php_settings_updated', $application, [
+            'name' => $application->name,
+            'changes' => ActivityChanges::between(
+                $before,
+                ['php_version' => $application->php_version] + $settings->only(array_keys($data)),
+                ['php_version', ...array_keys($data)],
+            ),
+        ]);
 
         return response()->json([
             'php' => ApplicationPhpSettingsResource::make($application->fresh(['phpSettings', 'systemUser']))->resolve(),

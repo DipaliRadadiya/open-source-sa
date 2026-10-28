@@ -1181,3 +1181,40 @@ it('does not count a paused or manual-only target as protected (OLD-9)', functio
     $this->withHeaders(backupHeaders())->getJson('/api/backup-targets?filter[protected]=0')
         ->assertJsonCount(2, 'backup_targets');
 });
+
+it('records what an edit changed, and nothing for the first save', function () {
+    $url = "/api/applications/{$this->application->id}/backup-target";
+
+    $this->withHeaders(backupHeaders())->putJson($url, targetPayload())->assertOk();
+    $this->travel(1)->seconds();
+    $this->withHeaders(backupHeaders())->putJson($url, targetPayload(['frequency' => 'weekly', 'retention_count' => 3]))->assertOk();
+    $this->travel(1)->seconds();
+    $this->withHeaders(backupHeaders())->putJson($url, targetPayload(['frequency' => 'weekly', 'retention_count' => 3]))->assertOk();
+
+    $logged = ActivityLog::where('type', 'backup')->oldest('id')->get()->map(fn ($row) => $row->properties['changes'] ?? null)->all();
+
+    expect($logged)->toBe([
+        null, // configured: everything is new, the sentence already says what
+        [['field' => 'frequency', 'from' => 'daily', 'to' => 'weekly'], ['field' => 'retention_count', 'from' => 7, 'to' => 3]],
+        [],
+    ]);
+
+    $this->withHeaders(backupHeaders())->getJson('/api/activity-log?filter[type]=backup')
+        ->assertJsonPath('activity_log.1.changes.0.text', 'Frequency daily → weekly')
+        ->assertJsonPath('activity_log.1.changes.1.text', 'Backups kept 7 → 3');
+});
+
+it('names the storage a target moved to, never its credentials', function () {
+    $url = "/api/applications/{$this->application->id}/backup-target";
+    $other = StorageDestination::create([
+        'name' => 'Second bucket', 'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'b2', 'access_key' => 'k2', 'secret_key' => 'very-secret-key'],
+    ]);
+
+    $this->withHeaders(backupHeaders())->putJson($url, targetPayload())->assertOk();
+    $this->withHeaders(backupHeaders())->putJson($url, targetPayload(['storage_destination_id' => $other->id]))->assertOk();
+
+    $row = ActivityLog::where('type', 'backup')->latest('id')->first();
+    expect($row->properties['changes'])->toBe([['field' => 'storage_destination', 'from' => 'Offsite', 'to' => 'Second bucket']])
+        ->and(json_encode($row->properties))->not->toContain('very-secret-key');
+});

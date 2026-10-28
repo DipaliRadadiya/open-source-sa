@@ -4,6 +4,7 @@ use App\Models\ActivityLog;
 use App\Models\FirewallRule;
 use App\Models\User;
 use App\Services\Server\Fail2ban\Fail2banManager;
+use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
 use App\Support\ServerTimezone;
 use App\Support\SshPort;
@@ -39,11 +40,15 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->dir));
 
-function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $sshSocket = false): void
+function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $sshSocket = false, bool $remembers = false): void
 {
     $redis = test()->redisCli;
     $swapFile = test()->swapFile;
-    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile, $sshSocket) {
+    $dir = test()->dir;
+    // `$remembers`: sshd and Redis answer with what was last written to them,
+    // as the real ones do, so a save has a before and an after that differ.
+    $redisSet = [];
+    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile, $sshSocket, $remembers, $dir, &$redisSet) {
         $cmd = $process->command;
         // ServerOps prefixes privileged operations with sudo in this test
         // environment; fakes assert the underlying command semantics.
@@ -103,15 +108,23 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $ss
         if ($cmd === ['systemctl', 'is-active', 'ssh.socket']) {
             return Process::result(output: $sshSocket ? "active\n" : "inactive\n", exitCode: $sshSocket ? 0 : 3);
         }
+        if ($bin === 'sshd' && ($cmd[1] ?? '') === '-T' && $remembers && is_file($dir.'/00-panel.conf')) {
+            return Process::result(output: strtolower((string) File::get($dir.'/00-panel.conf')));
+        }
         if ($bin === 'sshd' && ($cmd[1] ?? '') === '-T') {
             return Process::result(output: "port 22\npermitrootlogin prohibit-password\npasswordauthentication yes\n");
         }
         if ($bin === 'ufw') {
             return Process::result(output: "Status: inactive\n");
         }
+        if ($remembers && $bin === $redis && ($cmd[1] ?? '') === 'config' && ($cmd[2] ?? '') === 'set') {
+            $redisSet[$cmd[3]] = $cmd[4] ?? '';
+
+            return Process::result(output: 'OK');
+        }
         if ($bin === $redis && ($cmd[1] ?? '') === 'config' && ($cmd[2] ?? '') === 'get') {
             $key = $cmd[3] ?? '';
-            $value = match ($key) {
+            $value = $redisSet[$key] ?? match ($key) {
                 'maxmemory' => '0',
                 'maxmemory-policy' => 'noeviction',
                 default => '',
@@ -1287,4 +1300,68 @@ it('answers each language in its own words when the settings are cached', functi
     expect($pt)->toContain('há')
         ->and($ru)->not->toBe($pt)
         ->and($ru)->toContain('назад');
+});
+
+describe('the activity log says what a save changed', function () {
+    $changes = fn (string $group) => ActivityLog::where('type', 'setting')->where('action', 'updated')
+        ->where('properties->group', $group)->latest('id')->first()->properties['changes'];
+
+    it('records the SSH port and each other field that moved, old and new', function () use ($changes) {
+        fakeSettings(remembers: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk()
+            ->assertJsonPath('security.port', 2222);
+
+        // password_authentication was already on: sent, but not a change.
+        expect($changes('security'))->toBe([
+            ['field' => 'port', 'from' => 22, 'to' => 2222],
+            ['field' => 'permit_root_login', 'from' => 'prohibit-password', 'to' => 'no'],
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/activity-log?filter[type]=setting')
+            ->assertOk()
+            ->assertJsonPath('activity_log.0.changes.0.label', 'SSH port')
+            ->assertJsonPath('activity_log.0.changes.0.text', 'SSH port 22 → 2222')
+            ->assertJsonPath('activity_log.0.description', fn (string $d) => str_contains($d, 'SSH port 22 → 2222'));
+    });
+
+    it('says nothing changed when the same values are saved again', function () use ($changes) {
+        fakeSettings(remembers: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'prohibit-password', 'password_authentication' => true])
+            ->assertOk();
+
+        expect($changes('security'))->toBe([]);
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/activity-log?filter[type]=setting')
+            ->assertJsonPath('activity_log.0.changes', [])
+            ->assertJsonPath('activity_log.0.description', fn (string $d) => str_ends_with($d, '(nothing changed)'));
+    });
+
+    it('records the Redis memory limit and policy', function () use ($changes) {
+        fakeSettings(remembers: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/redis', ['maxmemory' => '256mb', 'maxmemory_policy' => 'volatile-lru'])
+            ->assertOk();
+
+        expect($changes('redis'))->toBe([
+            ['field' => 'maxmemory', 'from' => 0, 'to' => '256mb'],
+            ['field' => 'maxmemory_policy', 'from' => 'noeviction', 'to' => 'volatile-lru'],
+        ]);
+    });
+
+    it('keeps the setting history readable for its group', function () {
+        fakeSettings(remembers: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect(app(SettingChangeLog::class)->forGroups(['security']))->toHaveKey('security');
+    });
 });

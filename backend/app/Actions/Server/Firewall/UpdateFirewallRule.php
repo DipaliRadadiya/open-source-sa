@@ -9,6 +9,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Firewall\ProtectedRuleGuard;
 use App\Services\Server\Firewall\SshLockoutGuard;
 use App\Services\Server\ServerOpsResult;
+use App\Support\ActivityChanges;
 
 /**
  * Edit a rule, or switch it off without losing it.
@@ -26,6 +27,9 @@ class UpdateFirewallRule
 {
     /** Fields that describe the rule to UFW; anything else is just a label. */
     private const SPEC = ['port_from', 'port_to', 'protocol', 'action', 'source_ip'];
+
+    /** What a rule's activity entry compares before and after. */
+    private const LOGGED = ['description', 'port_from', 'port_to', 'protocol', 'action', 'source_ip', 'enabled'];
 
     public function __construct(
         private Firewall $firewall,
@@ -85,7 +89,10 @@ class UpdateFirewallRule
                     ? ($enabled ? 'firewall.rule_enabled' : 'firewall.rule_disabled')
                     : 'firewall.rule_updated',
                 $rule,
-                ['ports' => $rule->summary()],
+                [
+                    'ports' => $rule->summary(),
+                    'changes' => ActivityChanges::between($before, $rule->only(self::LOGGED), self::LOGGED),
+                ],
             );
 
             return $rule;

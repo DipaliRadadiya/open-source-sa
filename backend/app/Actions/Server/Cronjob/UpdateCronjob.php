@@ -7,6 +7,7 @@ use App\Models\Cronjob;
 use App\Services\ActivityLogger;
 use App\Services\Server\CronRunAsUser;
 use App\Services\Server\CrontabManager;
+use App\Support\ActivityChanges;
 use Illuminate\Support\Facades\Log;
 
 class UpdateCronjob
@@ -126,7 +127,10 @@ class UpdateCronjob
             $cronjob->forceFill(['source_path' => null, 'source_line' => null])->save();
         }
 
-        $this->activityLogger->log('cronjob.updated', $cronjob, ['name' => $cronjob->name]);
+        $this->activityLogger->log('cronjob.updated', $cronjob, [
+            'name' => $cronjob->name,
+            'changes' => ActivityChanges::between($before, $cronjob->only(['name', 'username', 'command', 'expression', 'active']), ['name', 'username', 'command', 'expression', 'active']),
+        ]);
 
         return $cronjob;
     }

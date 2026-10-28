@@ -21,6 +21,7 @@ use App\Services\Server\Settings\SecurityUpdateRunner;
 use App\Services\Server\Settings\SecurityUpdateTracker;
 use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
+use App\Support\ActivityChanges;
 use App\Support\ProbeCache;
 use App\Support\ServerTimezone;
 use Carbon\CarbonInterface;
@@ -129,6 +130,7 @@ class SettingController extends Controller
     public function updateRebootSchedule(RebootScheduleRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         $group = $settings->find('reboot_schedule');
+        $before = $group->read();
         $group->apply($request->validated());
         ProbeCache::flush();
 
@@ -141,6 +143,7 @@ class SettingController extends Controller
             'enabled' => $values['enabled'] ? 'yes' : 'no',
             'frequency' => $values['frequency'],
             'hour' => sprintf('%02d:00', $values['hour']),
+            'changes' => ActivityChanges::between($before, $values, ['enabled', 'frequency', 'hour', 'day_of_week', 'day_of_month']),
         ]);
 
         return response()->json(['reboot_schedule' => $values]);
@@ -326,6 +329,19 @@ class SettingController extends Controller
         return response()->json(['reboot' => ['scheduled' => false, 'at' => null, 'seconds_remaining' => null]]);
     }
 
+    /**
+     * Per settings group, the values its activity entry compares before and
+     * after a save — as `read()` names them. Display values where `read()`
+     * has one (swap size in words, not bytes).
+     */
+    private const LOGGED_FIELDS = [
+        'general' => ['hostname', 'timezone', 'ntp'],
+        'security' => ['port', 'permit_root_login', 'password_authentication'],
+        'updates' => ['security_updates_enabled', 'auto_reboot', 'reboot_time', 'reboot_with_users'],
+        'swap' => ['enabled', 'size_human'],
+        'redis' => ['maxmemory', 'maxmemory_policy'],
+    ];
+
     private function save(string $key, FormRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         $group = $settings->find($key);
@@ -334,12 +350,29 @@ class SettingController extends Controller
             abort(404, __('errors/setting.group_unavailable'));
         }
 
-        $group->apply($request->validated());
+        $validated = $request->validated();
+        $before = $group->read();
+
+        $group->apply($validated);
         ProbeCache::flush();
 
-        $log->log('setting.updated', null, ['group' => $key]);
+        $after = $group->read();
 
-        return response()->json([$key => $group->read()]);
+        // What really changed, old → new (support list, 2026-10-28) — read
+        // back from the server on both sides, so a field resent with its own
+        // value is not a change.
+        $changes = ActivityChanges::between($before, $after, self::LOGGED_FIELDS[$key] ?? []);
+
+        // A password is never logged, only that it changed or went.
+        if ($key === 'redis' && filled($validated['password'] ?? null)) {
+            $changes[] = ActivityChanges::secret('password');
+        } elseif ($key === 'redis' && ($validated['remove_password'] ?? false)) {
+            $changes[] = ActivityChanges::secret('password', removed: true);
+        }
+
+        $log->log('setting.updated', null, ['group' => $key, 'changes' => $changes]);
+
+        return response()->json([$key => $after]);
     }
 
     /**

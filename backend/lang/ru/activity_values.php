@@ -19,4 +19,12 @@ return [
     'adopted_left_ols_shared' => 'он зарегистрирован в общей конфигурации OpenLiteSpeed, которую панель не изменяет',
     'adopted_left_worker_shared' => 'это воркер в общем файле программ, владение которым панель не может доказать, поэтому он продолжает работать',
     'adopted_left_worker_systemd' => 'это служба systemd, владение которой панель не может доказать, поэтому она продолжает работать',
+    // The activity log's "what changed" line (2026-10-28).
+    'on' => 'вкл.',
+    'off' => 'выкл.',
+    'with_changes' => ':sentence: :changes',
+    'unchanged' => ':sentence (ничего не изменено)',
+    'change' => ':field :from → :to',
+    'change_secret' => ':field изменён',
+    'change_secret_removed' => ':field удалён',
 ];

@@ -19,4 +19,12 @@ return [
     'adopted_left_ols_shared' => 'パネルが編集しない OpenLiteSpeed の共有設定に登録されています',
     'adopted_left_worker_shared' => 'パネルが所有を証明できない共有プログラムファイル内のワーカーのため、実行したままです',
     'adopted_left_worker_systemd' => 'パネルが所有を証明できない systemd サービスのため、実行したままです',
+    // The activity log's "what changed" line (2026-10-28).
+    'on' => 'オン',
+    'off' => 'オフ',
+    'with_changes' => ':sentence: :changes',
+    'unchanged' => ':sentence（変更なし）',
+    'change' => ':field :from → :to',
+    'change_secret' => ':fieldを変更',
+    'change_secret_removed' => ':fieldを削除',
 ];

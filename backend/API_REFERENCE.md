@@ -350,6 +350,23 @@ Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `
 
 `description` is built at read time from `__('activity.'.$type.'.'.$action, $properties)` in the viewer's locale — not stored. **The `properties` bag itself is not returned** on any activity endpoint: it is the input to that sentence, not a field to read values out of.
 
+**`changes`** (added 2026-10-28, **all three logs**) — what a save actually changed, old → new, on: server settings (`setting.updated` for general / security / updates / swap / redis, `setting.reboot_schedule_updated`), site PHP settings (`application.php_settings_updated`), `cronjob.updated`, `backup.updated`, `firewall.rule_updated`. Every other row has `changes: null` (and so does any row written before this date).
+
+```json
+"description": "Updated security settings: SSH port 22 → 2222, Root login prohibit-password → no",
+"changes": [
+  {"field": "port", "label": "SSH port", "from": "22", "to": "2222", "secret": false, "text": "SSH port 22 → 2222"},
+  {"field": "permit_root_login", "label": "Root login", "from": "prohibit-password", "to": "no", "secret": false, "text": "Root login prohibit-password → no"}
+]
+```
+
+- Only fields whose value really changed — a field sent with the value it already had is not listed. A save that changed nothing has `changes: []` and the description ends "(nothing changed)".
+- `label`, `from`, `to` and `text` are in the viewer's language; `from`/`to` are strings (`on`/`off` for switches, `none` for empty). `field` is the stable name to key on.
+- **A secret is never logged**, in either direction: `{"field": "password", "secret": true, "from": null, "to": null, "text": "Redis password changed"}` (or "… removed").
+- The description already contains the change list, so a screen that shows only `description` needs nothing else.
+
+**No raw keys** (2026-10-28): an event with no sentence reads as words built from it ("Mystery box: did a thing") and logs a warning, instead of `activity.mystery_box.did_a_thing`; a placeholder the row has no value for reads "—" instead of `:name`.
+
 **`filter[kind]`** (added 2026-10-08, FS-C15, **all three logs**) ∈ `created | changed | removed | failed`; anything else is `422`. Each row carries `kind` too, and every `…/filters` answer carries `kinds: [{value, label}]` (labels translated). The kind is read from the action name (`…_failed` → failed, `deleted`/`removed`/`uninstalled`/`detached`/`disconnected` → removed, `created`/`added`/`installed`/`connected`/… → created, the rest → changed).
 
 **`filter[security]=1`** (added 2026-10-08, OLD-18, all three logs) — security events only: sign-ins and failed sign-ins, password and role changes, impersonation, firewall and fail2ban settings, SSH keys / sudo / SSH access of system users, phpMyAdmin and WordPress magic sign-ins, viewed credentials. The list is `config/activity.php` `security`. Each row carries `is_security`.

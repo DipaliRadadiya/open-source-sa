@@ -1158,3 +1158,19 @@ it('refuses a port range with both protocols, which ufw cannot express', functio
 
     Process::assertNotRan(fn ($p) => in_array('45160:45161', $p->command, true));
 });
+
+it('records the old and new port of an edited rule', function () {
+    fakeUfw('active');
+    $rule = FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['port_from' => 8081])
+        ->assertOk();
+
+    expect(ActivityLog::where('type', 'firewall')->latest('id')->value('properties')['changes'])
+        ->toBe([['field' => 'port_from', 'from' => 8080, 'to' => 8081]]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/activity-log?filter[type]=firewall')
+        ->assertJsonPath('activity_log.0.changes.0.text', 'Port 8080 → 8081');
+});

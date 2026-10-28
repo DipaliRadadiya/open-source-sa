@@ -19,4 +19,12 @@ return [
     'adopted_left_ols_shared' => 'es ist in der gemeinsamen OpenLiteSpeed-Konfiguration eingetragen, die das Panel nicht bearbeitet',
     'adopted_left_worker_shared' => 'es ist ein Worker in einer gemeinsamen Programmdatei, deren Besitz das Panel nicht nachweisen kann, daher läuft er weiter',
     'adopted_left_worker_systemd' => 'es ist ein systemd-Dienst, dessen Besitz das Panel nicht nachweisen kann, daher läuft er weiter',
+    // The activity log's "what changed" line (2026-10-28).
+    'on' => 'an',
+    'off' => 'aus',
+    'with_changes' => ':sentence: :changes',
+    'unchanged' => ':sentence (nichts geändert)',
+    'change' => ':field :from → :to',
+    'change_secret' => ':field geändert',
+    'change_secret_removed' => ':field entfernt',
 ];

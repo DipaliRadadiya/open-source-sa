@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\Server\Settings\SettingsManager;
 use App\Support\ServerTimezone;
@@ -359,4 +360,13 @@ it('restarts at the hour picked, not ten minutes after it', function () {
 
     expect(cronLine())->toStartWith('0 4 * * * root')
         ->and(cronLine())->not->toContain('+1');
+});
+
+it('records what a new reboot schedule changed', function () {
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 5])->assertOk();
+
+    $changes = ActivityLog::where('action', 'reboot_schedule_updated')->latest('id')->value('properties')['changes'];
+
+    expect($changes)->toBe([['field' => 'hour', 'from' => 3, 'to' => 5]]);
 });

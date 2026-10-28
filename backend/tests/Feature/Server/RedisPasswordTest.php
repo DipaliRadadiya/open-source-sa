@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\Server\EnvFile;
 use Database\Seeders\PermissionSeeder;
@@ -518,4 +519,25 @@ it('does not report memory settings as saved when Redis refused them', function 
     fakeRedis(rejected: ['config set maxmemory']);
 
     saveRedisAndApply(['maxmemory' => '256mb'])->assertStatus(500)->assertJsonStructure(['message', 'reference']);
+});
+
+it('records a password change in the activity log without the password', function () {
+    fakeRedis();
+    chmod($this->envPath, 0664);
+
+    saveRedisAndApply(['password' => 'sup3r-secret-value'])->assertStatus(202);
+    $this->travel(1)->seconds(); // the log lists newest first, by the second
+    saveRedisAndApply(['remove_password' => true])->assertStatus(202);
+
+    $rows = ActivityLog::where('properties->group', 'redis')->oldest('id')->get();
+    expect($rows->pluck('properties.changes')->all())->toBe([
+        [['field' => 'password', 'secret' => true]],
+        [['field' => 'password', 'secret' => true, 'removed' => true]],
+    ])->and($rows->toJson())->not->toContain('sup3r-secret-value');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/activity-log?filter[type]=setting')
+        ->assertDontSee('sup3r-secret-value')
+        ->assertJsonPath('activity_log.0.changes.0.text', 'Redis password removed')
+        ->assertJsonPath('activity_log.1.changes.0.text', 'Redis password changed');
 });

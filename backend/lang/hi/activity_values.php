@@ -19,4 +19,12 @@ return [
     'adopted_left_ols_shared' => 'यह OpenLiteSpeed के साझा कॉन्फ़िगरेशन में दर्ज है, जिसे पैनल संपादित नहीं करता',
     'adopted_left_worker_shared' => 'यह एक साझा प्रोग्राम फ़ाइल का वर्कर है जिसका स्वामित्व पैनल साबित नहीं कर सकता, इसलिए यह चलता रहा',
     'adopted_left_worker_systemd' => 'यह एक systemd सेवा है जिसका स्वामित्व पैनल साबित नहीं कर सकता, इसलिए यह चलती रही',
+    // The activity log's "what changed" line (2026-10-28).
+    'on' => 'चालू',
+    'off' => 'बंद',
+    'with_changes' => ':sentence: :changes',
+    'unchanged' => ':sentence (कुछ नहीं बदला)',
+    'change' => ':field :from → :to',
+    'change_secret' => ':field बदला गया',
+    'change_secret_removed' => ':field हटाया गया',
 ];

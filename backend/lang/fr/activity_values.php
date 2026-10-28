@@ -19,4 +19,12 @@ return [
     'adopted_left_ols_shared' => 'il est déclaré dans la configuration partagée d\'OpenLiteSpeed, que le panneau ne modifie pas',
     'adopted_left_worker_shared' => 'c\'est un worker d\'un fichier de programmes partagé dont le panneau ne peut pas prouver la propriété, il continue donc de tourner',
     'adopted_left_worker_systemd' => 'c\'est un service systemd dont le panneau ne peut pas prouver la propriété, il continue donc de tourner',
+    // The activity log's "what changed" line (2026-10-28).
+    'on' => 'activé',
+    'off' => 'désactivé',
+    'with_changes' => ':sentence : :changes',
+    'unchanged' => ':sentence (aucun changement)',
+    'change' => ':field :from → :to',
+    'change_secret' => ':field modifié',
+    'change_secret_removed' => ':field supprimé',
 ];

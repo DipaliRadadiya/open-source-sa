@@ -36,4 +36,12 @@ return [
     'adopted_left_ols_shared' => 'it is registered in OpenLiteSpeed\'s shared configuration, which the panel does not edit',
     'adopted_left_worker_shared' => 'it is a worker in a shared program file the panel cannot prove it owns, so it was left running',
     'adopted_left_worker_systemd' => 'it is a systemd service the panel cannot prove it owns, so it was left running',
+    // The activity log's "what changed" line (2026-10-28).
+    'on' => 'on',
+    'off' => 'off',
+    'with_changes' => ':sentence: :changes',
+    'unchanged' => ':sentence (nothing changed)',
+    'change' => ':field :from → :to',
+    'change_secret' => ':field changed',
+    'change_secret_removed' => ':field removed',
 ];

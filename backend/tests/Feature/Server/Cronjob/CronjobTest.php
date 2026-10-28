@@ -760,3 +760,21 @@ describe('who a cron job may run as', function () {
         expect($job->fresh()->username)->toBe('deploy');
     });
 });
+
+it('records which fields of a cron job an edit changed', function () {
+    Process::fake();
+    $job = Cronjob::create(['name' => 'Nightly', 'slug' => 'nightly', 'system_user_id' => $this->su->id, 'username' => 'deploy', 'command' => '/home/deploy/a.sh', 'expression' => '0 0 * * *', 'active' => true]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$job->id}", ['expression' => '30 2 * * *', 'active' => false])
+        ->assertOk();
+
+    expect(ActivityLog::where('type', 'cronjob')->where('action', 'updated')->value('properties')['changes'])->toBe([
+        ['field' => 'expression', 'from' => '0 0 * * *', 'to' => '30 2 * * *'],
+        ['field' => 'active', 'from' => true, 'to' => false],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/activity-log?filter[type]=cronjob')
+        ->assertJsonPath('activity_log.0.changes.1.text', 'Active on → off');
+});
