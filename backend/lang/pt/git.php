@@ -42,4 +42,6 @@ return [
         'gitlab' => ['host' => 'Apenas para GitLab auto-hospedado — o URL base da sua instância, por exemplo https://git.example.com. Deixe vazio para gitlab.com.'],
         'bitbucket' => ['workspace' => 'O ID do espaço de trabalho no seu URL do Bitbucket: bitbucket.org/<workspace>/<repositório>. Não é o seu nome de exibição.'],
     ],
+    // Answered instead of a second account for the same credential (2026-10-28).
+    'already_connected' => 'Esta conta git já está ligada como «:label».',
 ];

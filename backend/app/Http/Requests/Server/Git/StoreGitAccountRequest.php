@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Server\Git;
 
+use App\Models\GitAccount;
 use App\Rules\SafeProviderHost;
 use App\Services\Git\GitProviderManager;
+use App\Services\Integrations\DuplicateIntegration;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -21,7 +23,9 @@ class StoreGitAccountRequest extends FormRequest
     {
         return [
             'provider' => ['required', Rule::in(app(GitProviderManager::class)->providerNames())],
-            'label' => ['required', 'string', 'max:100', Rule::unique('git_accounts', 'label')],
+            // Not unique when the credential is already here: that request is
+            // answered with the account that holds it, whatever it is called.
+            'label' => ['required', 'string', 'max:100', ...($this->existingRecord() === null ? [Rule::unique('git_accounts', 'label')] : [])],
             'token' => ['required', 'string', 'max:500'],
 
             // Self-hosted GitLab only.
@@ -38,4 +42,22 @@ class StoreGitAccountRequest extends FormRequest
             ],
         ];
     }
+
+    /**
+     * The account already holding exactly this credential, if any — returned
+     * instead of a second one (Dipali, 2026-10-28).
+     */
+    public function existingRecord(): ?GitAccount
+    {
+        if (! $this->duplicateChecked) {
+            $this->duplicateAccount = app(DuplicateIntegration::class)->gitAccount($this->all());
+            $this->duplicateChecked = true;
+        }
+
+        return $this->duplicateAccount;
+    }
+
+    private bool $duplicateChecked = false;
+
+    private ?GitAccount $duplicateAccount = null;
 }

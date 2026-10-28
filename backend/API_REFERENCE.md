@@ -6792,7 +6792,9 @@ Live token health — checked on demand, never cached (tokens can be revoked at 
 {"label": "Work", "provider": "bitbucket", "username": "devuser", "token": "APP_PASSWORD"}
 ```
 
-**Response `201`:** `{"git_account": {"id": 2, "label": "Work", "provider": "github", "status": "valid"}}`
+**Response `201`:** `{"git_account": {"id": 2, "label": "Work", "provider": "github", "status": "valid"}, "existing": false}`
+
+**Already connected (added 2026-10-28).** When an account with **exactly this credential** exists — same `provider`, same host (gitlab.com written as nothing, `gitlab.com` or `https://gitlab.com/` is one), same `workspace`, same `token` — nothing is created and the provider is not asked again: the answer is **`200`** with that account, **unchanged** (its own `label`, whatever this request sent), `"existing": true` and a `message` (*"This git account is already connected as 'Work'."*). The `label` uniqueness check does not apply then, so sending the same request twice — a retry from the central panel — always gets the same account. **A different token is a different account**: it is created as usual, and the existing one is not touched. The same `label` with a different credential is still `422`. The token is never in the response.
 
 ---
 
@@ -6902,7 +6904,7 @@ The list response also carries **`google_oauth_redirect_uri`** at the top level:
 ### POST `/integrations/storage/destinations`
 **Permission:** `storage` (manage) | **Throttle:** 20/min
 
-Required for every provider: `name` (unique, single-line, max 100) and **`provider`**. Optional: `prefix` (`[A-Za-z0-9._/-]`, max 255). There is **no default provider** — a request that omits it is a `422`, not an implicit S3 destination.
+Required for every provider: `name` (unique, single-line, max 100) and **`provider`**. **Already added (2026-10-28):** when a destination with **exactly this credential** exists, nothing is created — the answer is **`200`** with that destination, **unchanged** (its own `name` and settings), `"existing": true` and a `message` (*"This storage is already added as 'Daily backups'."*). A new one is `201` with `"existing": false`. "Exactly" means the same `provider`, the same `prefix` (with or without its slashes), and every `config` field the provider's form takes equal — for S3 endpoint, region (blank = `us-east-1`), bucket, access key **and secret key**; for FTP/SFTP host, port, user, folder and password/key; for `local` the folder (with or without a trailing slash). **Any difference is a new destination** and the existing one is not touched; the same `name` with a different credential is still `422`. Secrets are never in the response. Meant for the central panel, whose retries then always resolve to one destination, and it applies to the panel's own form the same way. Optional: `prefix` (`[A-Za-z0-9._/-]`, max 255). There is **no default provider** — a request that omits it is a `422`, not an implicit S3 destination.
 
 **S3** — `{"name": "S3 Backup", "provider": "s3", "prefix": "backups/", "config": {"endpoint": "https://s3.amazonaws.com", "region": "eu-west-1", "bucket": "my-backups", "access_key": "AKIA…", "secret_key": "…"}}`
 
@@ -6937,7 +6939,7 @@ Backups kept in a folder on the panel's own server. **Show the warning** (`stora
 | outside the roots, a root itself, relative, `..` | `422` `storage.local.path_not_allowed` / `path_invalid` |
 | a link anywhere on the path | `422` `storage.local.path_link` |
 | a file, not a folder | `422` `storage.local.not_folder` |
-| already another local destination's | `422` `storage.local.path_taken` — two would prune each other's backups |
+| already another local destination's | that destination is returned (`200`, `existing: true`, see above) — never a second one, which would prune the first one's backups. `storage.local.path_taken` is left for a folder written so differently that it is not recognised as the same |
 
 All on `config.path`, and nothing is created or changed when any of them fails. Archives inside are the panel's and `0600`: they hold every file of a site and its database dump, so no site user can read them.
 

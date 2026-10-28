@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'フォルダーが見つかり、使用できます: :path',
         'warning' => 'このサーバー上のバックアップは、サーバーやそのディスクが故障すると失われます。サーバー外の保存先と併用してください。',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'このストレージは「:name」としてすでに追加されています。',
 ];

@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Server\StorageDestination;
 
 use App\Enums\StorageProvider;
+use App\Models\StorageDestination;
 use App\Rules\SingleLine;
+use App\Services\Integrations\DuplicateIntegration;
 use App\Services\Server\Backups\Storage\SshPrivateKeyCheck;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Foundation\Http\FormRequest;
@@ -28,6 +30,17 @@ class StoreStorageDestinationRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Exactly this credential is already a destination: the request is
+        // answered with that one (Dipali, 2026-10-28), so neither its name nor
+        // the provider's own checks — a local folder "already in use", for one
+        // — may refuse it first.
+        if ($this->existingRecord() !== null) {
+            return [
+                'name' => ['required', 'string', 'max:100', new SingleLine],
+                'provider' => ['required', Rule::enum(StorageProvider::class)],
+            ];
+        }
+
         return array_merge([
             'name' => ['required', 'string', 'max:100', Rule::unique('storage_destinations', 'name'), new SingleLine],
 
@@ -65,6 +78,10 @@ class StoreStorageDestinationRequest extends FormRequest
     public function withValidator(mixed $validator): void
     {
         $validator->after(function ($validator): void {
+            if ($this->existingRecord() !== null) {
+                return;
+            }
+
             $this->validateSftpHasOneAuthMethod($validator);
             $this->validateSftpPrivateKey($validator);
         });
@@ -130,4 +147,24 @@ class StoreStorageDestinationRequest extends FormRequest
 
         $this->merge(['config' => $config]);
     }
+
+    /**
+     * The destination already holding exactly this credential, if any —
+     * returned instead of a second one (Dipali, 2026-10-28). Asked after
+     * prepareForValidation, so an S3 region left blank compares as the
+     * us-east-1 it is saved as.
+     */
+    public function existingRecord(): ?StorageDestination
+    {
+        if (! $this->duplicateChecked) {
+            $this->duplicateDestination = app(DuplicateIntegration::class)->storageDestination($this->all());
+            $this->duplicateChecked = true;
+        }
+
+        return $this->duplicateDestination;
+    }
+
+    private bool $duplicateChecked = false;
+
+    private ?StorageDestination $duplicateDestination = null;
 }

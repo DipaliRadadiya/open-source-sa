@@ -86,6 +86,17 @@ class StorageDestinationController extends Controller
 
     public function store(StoreStorageDestinationRequest $request, CreateStorageDestination $action): JsonResponse
     {
+        // Exactly this credential is a destination already: that one, not a
+        // second, and nothing about it changes — not its name, not its folder
+        // (Dipali, 2026-10-28). The central panel uses the id either way.
+        if (($existing = $request->existingRecord()) !== null) {
+            return response()->json([
+                'storage_destination' => StorageDestinationResource::make($existing)->resolve(),
+                'existing' => true,
+                'message' => __('storage.already_added', ['name' => $existing->name]),
+            ]);
+        }
+
         $data = $request->validated();
 
         // "This server" (#14): the folder is made before the row exists, so a
@@ -102,6 +113,7 @@ class StorageDestinationController extends Controller
 
         return response()->json([
             'storage_destination' => StorageDestinationResource::make($destination)->resolve(),
+            'existing' => false,
             ...($folder !== null ? ['folder' => $folder] : []),
         ], 201);
     }

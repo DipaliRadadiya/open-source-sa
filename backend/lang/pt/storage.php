@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'Pasta encontrada e pronta: :path',
         'warning' => 'As cópias neste servidor perdem-se se o servidor ou o seu disco falhar. Use-o juntamente com um destino fora do servidor.',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'Este armazenamento já está adicionado como «:name».',
 ];

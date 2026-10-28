@@ -42,4 +42,6 @@ return [
         'gitlab' => ['host' => 'केवल सेल्फ-होस्टेड GitLab के लिए — आपके इंस्टेंस का बेस URL, उदाहरण के लिए https://git.example.com। gitlab.com के लिए खाली छोड़ें।'],
         'bitbucket' => ['workspace' => 'आपके Bitbucket URL से वर्कस्पेस ID: bitbucket.org/<workspace>/<repository>। यह आपका प्रदर्शित नाम नहीं है।'],
     ],
+    // Answered instead of a second account for the same credential (2026-10-28).
+    'already_connected' => 'यह git अकाउंट पहले से \':label\' नाम से जुड़ा है।',
 ];

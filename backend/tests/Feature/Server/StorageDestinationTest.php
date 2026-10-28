@@ -208,7 +208,9 @@ it('rejects a duplicate name', function () {
     makeDestination(['name' => 'Work S3']);
 
     $this->withHeaders(storageAdminAuthHeader())
-        ->postJson('/api/integrations/storage/destinations', s3Payload(['name' => 'Work S3']))
+        // A different credential: the same one is answered with the existing
+        // destination instead (IntegrationDuplicateTest).
+        ->postJson('/api/integrations/storage/destinations', s3Payload(['name' => 'Work S3', 'config' => ['secret_key' => 'a-different-secret']]))
         ->assertUnprocessable()->assertJsonValidationErrors('name');
 });
 

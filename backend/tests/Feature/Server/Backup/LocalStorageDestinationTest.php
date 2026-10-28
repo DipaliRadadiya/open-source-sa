@@ -194,13 +194,16 @@ describe('saving a destination: the folder', function () {
             ->assertJsonFragment(['config.path' => ['The folder, or a folder on its path, is a link. Choose a real folder.']]);
     });
 
-    it('refuses a folder another destination already uses', function () {
+    it('answers a folder another destination already uses with that destination, never a second one', function () {
         $path = "{$this->base}/backups/shared";
-        lbSave($path, 'First')->assertCreated();
+        $first = lbSave($path, 'First')->assertCreated()->json('storage_destination.id');
 
         lbSave($path.'/', 'Second')
-            ->assertStatus(422)
-            ->assertJsonFragment(['config.path' => ['Another destination already uses this folder.']]);
+            ->assertOk()
+            ->assertJsonPath('existing', true)
+            ->assertJsonPath('storage_destination.id', $first);
+
+        expect(StorageDestination::count())->toBe(1);
     });
 
     it('refuses a user who can only view storage', function () {

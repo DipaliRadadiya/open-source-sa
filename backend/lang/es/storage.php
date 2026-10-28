@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'Carpeta encontrada y lista: :path',
         'warning' => 'Las copias en este servidor se pierden si falla el servidor o su disco. Úselo junto con un destino fuera del servidor.',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'Este almacenamiento ya está añadido como «:name».',
 ];

@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'Ordner gefunden und bereit: :path',
         'warning' => 'Backups auf diesem Server gehen verloren, wenn der Server oder seine Festplatte ausfällt. Verwenden Sie zusätzlich ein Ziel außerhalb des Servers.',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'Dieser Speicher ist bereits als „:name“ hinzugefügt.',
 ];

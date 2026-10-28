@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'Dossier trouvé et prêt : :path',
         'warning' => 'Les sauvegardes sur ce serveur sont perdues si le serveur ou son disque tombe en panne. Utilisez-le avec une destination hors du serveur.',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'Ce stockage est déjà ajouté sous le nom « :name ».',
 ];

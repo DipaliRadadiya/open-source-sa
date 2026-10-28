@@ -42,4 +42,6 @@ return [
         'gitlab' => ['host' => 'Только для self-hosted GitLab — базовый URL вашего экземпляра, например https://git.example.com. Для gitlab.com оставьте пустым.'],
         'bitbucket' => ['workspace' => 'Идентификатор рабочего пространства из вашего URL Bitbucket: bitbucket.org/<workspace>/<repository>. Это не отображаемое имя.'],
     ],
+    // Answered instead of a second account for the same credential (2026-10-28).
+    'already_connected' => 'Этот git-аккаунт уже подключён как «:label».',
 ];

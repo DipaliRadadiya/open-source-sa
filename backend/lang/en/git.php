@@ -50,4 +50,6 @@ return [
         'gitlab' => ['host' => 'Only for self-hosted GitLab — the base URL of your instance, for example https://git.example.com. Leave empty for gitlab.com.'],
         'bitbucket' => ['workspace' => 'The workspace ID from your Bitbucket URL: bitbucket.org/<workspace>/<repository>. Not your display name.'],
     ],
+    // Answered instead of a second account for the same credential (2026-10-28).
+    'already_connected' => 'This git account is already connected as \':label\'.',
 ];

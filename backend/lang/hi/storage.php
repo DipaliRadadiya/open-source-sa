@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'फ़ोल्डर मिला और तैयार है: :path',
         'warning' => 'अगर सर्वर या उसकी डिस्क खराब हो जाए, तो इस सर्वर पर रखे बैकअप खो जाते हैं। इसे सर्वर से बाहर के किसी डेस्टिनेशन के साथ इस्तेमाल करें।',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'यह स्टोरेज पहले से \':name\' नाम से जोड़ा गया है।',
 ];

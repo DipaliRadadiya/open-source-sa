@@ -168,4 +168,6 @@ return [
         'folder_existing' => 'Папка найдена и готова: :path',
         'warning' => 'Резервные копии на этом сервере будут потеряны, если сервер или его диск выйдет из строя. Используйте вместе с хранилищем вне сервера.',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'Это хранилище уже добавлено как «:name».',
 ];

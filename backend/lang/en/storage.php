@@ -175,4 +175,6 @@ return [
         'folder_existing' => 'Folder found and ready: :path',
         'warning' => 'Backups on this server are lost if the server or its disk fails. Use it together with an off-server destination.',
     ],
+    // Answered instead of a second destination for the same credential (2026-10-28).
+    'already_added' => 'This storage is already added as \':name\'.',
 ];

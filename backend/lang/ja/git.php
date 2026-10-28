@@ -42,4 +42,6 @@ return [
         'gitlab' => ['host' => 'セルフホスト版GitLabの場合のみ — インスタンスのベースURL（例: https://git.example.com）。gitlab.com の場合は空のままにしてください。'],
         'bitbucket' => ['workspace' => 'BitbucketのURLに含まれるワークスペースID: bitbucket.org/<workspace>/<repository>。表示名ではありません。'],
     ],
+    // Answered instead of a second account for the same credential (2026-10-28).
+    'already_connected' => 'この Git アカウントは「:label」としてすでに接続されています。',
 ];
