@@ -12,6 +12,7 @@ use App\Services\Recipes\ApplicationOrigin;
 use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -188,6 +189,13 @@ class ApplicationResource extends JsonResource
             ] : null),
 
             'php_version' => $this->php_version,
+            // The binary this site's PHP version runs from on this server's
+            // stack (`/usr/bin/php8.3`, `/usr/local/lsws/lsphp83/bin/php`), so
+            // a cron job made for the site runs the site's PHP and not the
+            // server default. Null for a site that serves no PHP.
+            'php_binary' => $this->serving_profile === 'php' && filled($this->php_version)
+                ? app(PhpRuntime::class)->binaryPath((string) $this->php_version)
+                : null,
             'node_version' => $this->node_version,
             // A switch under way (`status: switching`) or the last one that
             // did not work (`failed`, with the reason the site was put back on

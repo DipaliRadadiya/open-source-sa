@@ -21,7 +21,7 @@ return [
     'invalid_expression' => 'O agendamento não é uma expressão cron válida.',
     'invalid_user' => 'O usuário selecionado não existe no servidor.',
     'user_not_allowed' => 'Apenas o administrador do painel pode executar uma tarefa cron com uma conta que não seja um dos utilizadores de sistema do painel.',
-    'unresolved_placeholder' => 'O comando ainda contém o marcador {path} — substitua-o pelo diretório da aplicação.',
+    'unresolved_placeholder' => 'O comando ainda contém o marcador {path} ou {php} — substitua-o pelo diretório da aplicação e pelo seu binário PHP.',
     'no_newline' => 'Este valor não pode conter quebras de linha.',
     'reserved_name' => 'Este nome é reservado e não pode ser usado.',
     'shell_comment' => 'O comando contém um comentário de shell (um # no início de uma palavra). O cron cortaria a linha aí e a tarefa não funcionaria corretamente. Remova o comentário ou coloque o # entre aspas.',

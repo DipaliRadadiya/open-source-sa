@@ -97,6 +97,9 @@ class CronjobController extends Controller
             // The token in preset commands the frontend must substitute with the
             // target application's absolute directory before submitting.
             'placeholder' => CronCommandPresets::PLACEHOLDER,
+            // …and the one to substitute with that application's `php_binary`
+            // (plain `php` when no application is chosen).
+            'php_placeholder' => CronCommandPresets::PHP_PLACEHOLDER,
         ]);
     }
 

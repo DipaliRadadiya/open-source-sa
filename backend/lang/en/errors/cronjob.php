@@ -21,7 +21,7 @@ return [
     'invalid_expression' => 'The schedule is not a valid cron expression.',
     'invalid_user' => 'The selected user does not exist on the server.',
     'user_not_allowed' => 'Only the panel administrator can run a cron job as an account that is not one of the panel\'s System Users.',
-    'unresolved_placeholder' => 'The command still contains the {path} placeholder — replace it with the application directory.',
+    'unresolved_placeholder' => 'The command still contains the {path} or {php} placeholder — replace it with the application directory and its PHP binary.',
     'no_newline' => 'This value may not contain line breaks.',
     'reserved_name' => 'This name is reserved and cannot be used.',
     'shell_comment' => 'The command contains a shell comment (a # at the start of a word). Cron would cut the line there and the job would not run properly. Remove the comment, or put the # inside quotes.',

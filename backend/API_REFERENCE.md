@@ -1026,7 +1026,7 @@ They are equal for fifteen of the seventeen site types, because most application
 
   "system_user": {"id": 1, "username": "siteowner"},
 
-  "php_version": "8.4", "node_version": null, "node_version_change": null, "app_port": null,
+  "php_version": "8.4", "php_binary": "/usr/bin/php8.4", "node_version": null, "node_version_change": null, "app_port": null,
   "internal_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
 
@@ -5219,16 +5219,18 @@ Framework shortcuts for the command field.
 
 ```json
 {"presets": [
-  {"key": "laravel", "label": "Laravel Scheduler", "command": "php {path}/artisan schedule:run", "expression": "* * * * *"},
-  {"key": "wordpress", "label": "WP Cron", "command": "php {path}/wp-cron.php", "expression": "*/5 * * * *"},
-  {"key": "craftcms", "label": "Craft CMS queue", "command": "php {path}/craft queue/run", "expression": "* * * * *"},
+  {"key": "laravel", "label": "Laravel Scheduler", "command": "{php} {path}/artisan schedule:run", "expression": "* * * * *"},
+  {"key": "wordpress", "label": "WP Cron", "command": "{php} {path}/wp-cron.php", "expression": "*/5 * * * *"},
+  {"key": "craftcms", "label": "Craft CMS queue", "command": "{php} {path}/craft queue/run", "expression": "* * * * *"},
   {"key": "custom", "label": "Custom", "command": null, "expression": null}
-], "placeholder": "{path}"}
+], "placeholder": "{path}", "php_placeholder": "{php}"}
 ```
 
 Each preset carries a **`command` and a separate `expression`** — the schedule is not embedded in the command string. `custom` has both `null`; it is the "let me write my own" entry, not a preset with a missing command. `label` is localized, `key` is not — render the label, key off the key.
 
 **Substitute `{path}` with the application's `path` field** (see `GET /applications/{id}`), *not* `document_root`. They are the same directory for most site types and different for Craft and Statamic, where the binary these presets invoke sits above the served directory. A cron job pointed at a file that is not there does not error — it runs, finds nothing, and reports success.
+
+**Substitute `{php}` with the application's `php_binary`** (added 2026-10-28) — that site's own PHP version on this server's stack (`/usr/bin/php8.3`; on OpenLiteSpeed `/usr/local/lsws/lsphp83/bin/php`), so the job runs the PHP the site runs, not the server default. With no application picked (a typed path), use plain `php` — the server default. `php_binary` is `null` for a site that serves no PHP. As with `{path}`, `POST`/`PUT /cronjobs` answer `422` on `command` while `{php}` is still in it.
 
 ---
 

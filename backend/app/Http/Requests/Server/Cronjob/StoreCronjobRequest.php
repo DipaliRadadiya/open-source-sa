@@ -37,7 +37,7 @@ class StoreCronjobRequest extends FormRequest
             // before this rule did, so that filter could only ever answer with
             // an empty list.
             'application_id' => ['sometimes', 'nullable', 'exists:applications,id'],
-            'command' => ['required', 'string', 'max:1000', new SingleLine, new NoShellComment, 'not_regex:/\{path\}/'],
+            'command' => ['required', 'string', 'max:1000', new SingleLine, new NoShellComment, 'not_regex:/\{(path|php)\}/'],
             'expression' => ['required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
         ];

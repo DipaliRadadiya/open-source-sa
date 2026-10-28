@@ -327,11 +327,18 @@ it('returns framework command presets for the dropdown', function () {
 
     $response->assertOk()
         ->assertJsonPath('presets.0.key', 'laravel')
-        ->assertJsonPath('presets.0.command', 'php {path}/artisan schedule:run')
+        ->assertJsonPath('presets.0.command', '{php} {path}/artisan schedule:run')
         ->assertJsonPath('presets.0.expression', '* * * * *');
 
     // self-describing: the response tells the frontend which token to substitute
-    $response->assertJsonPath('placeholder', '{path}');
+    $response->assertJsonPath('placeholder', '{path}')
+        ->assertJsonPath('php_placeholder', '{php}');
+
+    // Every PHP template runs the chosen site's PHP, never a bare `php`
+    // (the server default) that the site may not be on.
+    foreach (array_filter(array_column($response->json('presets'), 'command')) as $command) {
+        expect($command)->toStartWith('{php} ');
+    }
 
     $presets = $response->json('presets');
     expect(collect($presets)->pluck('key'))->toContain('wordpress', 'moodle', 'joomla', 'nextcloud', 'craftcms', 'php_script');
@@ -777,4 +784,24 @@ it('records which fields of a cron job an edit changed', function () {
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/activity-log?filter[type]=cronjob')
         ->assertJsonPath('activity_log.0.changes.1.text', 'Active on → off');
+});
+
+it('rejects a command with an unresolved {php} placeholder', function () {
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'Unresolved php',
+            'username' => 'deploy',
+            'command' => '{php} /home/deploy/app/artisan schedule:run',
+            'expression' => '* * * * *',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('command');
+
+    $job = Cronjob::create(['name' => 'Job', 'slug' => 'job', 'username' => 'deploy', 'command' => 'echo hi', 'expression' => '* * * * *']);
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$job->id}", ['command' => '{php} /home/deploy/x.php'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('command');
 });
