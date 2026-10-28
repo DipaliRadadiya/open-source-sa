@@ -950,7 +950,8 @@
     "logFromInvalid": "1 以上の行番号を入力してください。",
     "logIpInvalid": "IP アドレスを 1 つ入力してください（例: 203.0.113.5）。",
     "logStatusInvalid": "404 のようなコード、または 5xx のようなグループを入力してください。",
-    "localPathAbsolute": "/var/backups/panel のように、/ で始まるフォルダーのフルパスを入力してください。"
+    "localPathAbsolute": "/var/backups/panel のように、/ で始まるフォルダーのフルパスを入力してください。",
+    "unresolvedPhp": "PHP のプレースホルダーを php や /usr/bin/php8.3 などの PHP バイナリに置き換えてください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -1234,7 +1235,8 @@
       "serverTimeNote": "サーバー時刻 ({timezone}) で実行されます",
       "runAsUnavailable": "アカウント一覧を読み込めませんでした。「その他の OS ユーザー…」を選択してユーザー名を入力してください。",
       "runAsHint": "コマンドを実行するLinuxアカウントです。ジョブが読み書きできるファイルが決まります。",
-      "scheduleHint": "実行する頻度です。よくあるタイミングから選ぶか、「カスタム」を選んで自分でスケジュールを記述してください。"
+      "scheduleHint": "実行する頻度です。よくあるタイミングから選ぶか、「カスタム」を選んで自分でスケジュールを記述してください。",
+      "phpFromSite": "このアプリケーションの PHP {version} で実行されます（{binary}）。"
     },
     "toast": {
       "created": "cron ジョブを作成しました",

@@ -950,7 +950,8 @@
     "logFromInvalid": "Enter a line number, 1 or more.",
     "logIpInvalid": "Enter one IP address, e.g. 203.0.113.5.",
     "logStatusInvalid": "Enter a code like 404, or a group like 5xx.",
-    "localPathAbsolute": "Enter a full folder path that starts with /, such as /var/backups/panel."
+    "localPathAbsolute": "Enter a full folder path that starts with /, such as /var/backups/panel.",
+    "unresolvedPhp": "Replace the PHP placeholder with a PHP binary, such as php or /usr/bin/php8.3."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1234,7 +1235,8 @@
       "serverTimeNote": "Runs in server time ({timezone})",
       "runAsUnavailable": "The account list could not be loaded. Choose \"Other system user…\" and type the username.",
       "runAsHint": "The system user the command runs under. It decides which files the job can read and write.",
-      "scheduleHint": "How often to run it. Pick one of the common timings, or choose Custom to write the schedule yourself."
+      "scheduleHint": "How often to run it. Pick one of the common timings, or choose Custom to write the schedule yourself.",
+      "phpFromSite": "Runs with this application's PHP {version} ({binary})."
     },
     "toast": {
       "created": "Cron job created",

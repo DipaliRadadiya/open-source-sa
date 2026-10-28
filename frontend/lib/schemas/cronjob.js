@@ -4,6 +4,7 @@ import { z } from "zod";
 export const OTHER_USER = "__other__";
 
 const PATH_TOKEN = "{path}";
+const PHP_TOKEN = "{php}";
 
 // Linux account name, same rule the backend applies via getent passwd.
 const linuxUsername = z
@@ -38,6 +39,8 @@ const commandField = z
   .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
   // Preset commands ship with a {path} placeholder; the API 422s if it survives.
   .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath")
+  // The form always fills `{php}`; this catches one typed by hand, which the API also refuses.
+  .refine((v) => !v.includes(PHP_TOKEN), "unresolvedPhp")
   // The panel appends its own logging, which a trailing `# note` would comment out.
   .refine((v) => !hasShellComment(v), "cronTrailingComment");
 

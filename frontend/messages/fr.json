@@ -950,7 +950,8 @@
     "logFromInvalid": "Saisissez un numéro de ligne, 1 ou plus.",
     "logIpInvalid": "Saisissez une seule adresse IP, ex. 203.0.113.5.",
     "logStatusInvalid": "Saisissez un code comme 404 ou un groupe comme 5xx.",
-    "localPathAbsolute": "Saisissez le chemin complet d'un dossier commençant par /, par exemple /var/backups/panel."
+    "localPathAbsolute": "Saisissez le chemin complet d'un dossier commençant par /, par exemple /var/backups/panel.",
+    "unresolvedPhp": "Remplacez l'espace réservé PHP par un binaire PHP, comme php ou /usr/bin/php8.3."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -1234,7 +1235,8 @@
       "serverTimeNote": "S'exécute à l'heure du serveur ({timezone})",
       "runAsUnavailable": "La liste des comptes n'a pas pu être chargée. Choisissez « Autre utilisateur OS… » et saisissez le nom d'utilisateur.",
       "runAsHint": "Le compte Linux sous lequel la commande s'exécute. Il détermine les fichiers que la tâche peut lire et écrire.",
-      "scheduleHint": "La fréquence d'exécution. Choisissez l'une des cadences courantes, ou choisissez Personnalisé pour rédiger vous-même la planification."
+      "scheduleHint": "La fréquence d'exécution. Choisissez l'une des cadences courantes, ou choisissez Personnalisé pour rédiger vous-même la planification.",
+      "phpFromSite": "S'exécute avec PHP {version}, la version de cette application ({binary})."
     },
     "toast": {
       "created": "Tâche cron créée",

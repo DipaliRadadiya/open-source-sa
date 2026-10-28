@@ -950,7 +950,8 @@
     "logFromInvalid": "Digite um número de linha, 1 ou mais.",
     "logIpInvalid": "Digite um único endereço IP, ex.: 203.0.113.5.",
     "logStatusInvalid": "Digite um código como 404 ou um grupo como 5xx.",
-    "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /, como /var/backups/panel."
+    "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /, como /var/backups/panel.",
+    "unresolvedPhp": "Substitua o marcador de PHP por um binário PHP, como php ou /usr/bin/php8.3."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -1234,7 +1235,8 @@
       "serverTimeNote": "Executa no horário do servidor ({timezone})",
       "runAsUnavailable": "A lista de contas não pôde ser carregada. Escolha \"Outro usuário do SO…\" e digite o nome de usuário.",
       "runAsHint": "A conta do Linux sob a qual o comando será executado. Ela define quais arquivos o job pode ler e gravar.",
-      "scheduleHint": "Com que frequência executar. Escolha uma das opções comuns ou selecione Personalizado para escrever a agenda você mesmo."
+      "scheduleHint": "Com que frequência executar. Escolha uma das opções comuns ou selecione Personalizado para escrever a agenda você mesmo.",
+      "phpFromSite": "É executada com o PHP {version} desta aplicação ({binary})."
     },
     "toast": {
       "created": "Cron job criado",

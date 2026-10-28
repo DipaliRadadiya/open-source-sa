@@ -197,6 +197,9 @@ export const applicationSchema = z.object({
   deployed: z.boolean().default(false),
   system_user: systemUserOptionSchema.nullish(),
   php_version: z.string().nullish(),
+  // That version's binary on this stack (/usr/bin/php8.3, or lsphp on OpenLiteSpeed): what a cron
+  // template's `{php}` becomes. Null for a site that serves no PHP; absent on older APIs.
+  php_binary: z.string().nullish(),
   node_version: z.string().nullish(),
   // A switch under way (`switching`) or the last one that did not work (`failed`;
   // the site was put back on `node_version`). Null when neither.

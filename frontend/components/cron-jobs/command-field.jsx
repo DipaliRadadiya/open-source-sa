@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, FolderPen, Wand2 } from "lucide-react";
 import { presetFits } from "@/lib/cron-jobs/preset-fit";
+import { resolveTemplate } from "@/lib/cron-jobs/resolve-template";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,10 +38,12 @@ const CUSTOM_PATH = "__custom_path__";
 
 // A template fills BOTH command and expression (the API pairs them: WordPress wants 5 min, Laravel 1).
 // Its {path} placeholder must be resolved before submit, so picking one reveals the path input.
+// Its {php} becomes the picked site's own PHP binary, or plain `php` (the server default) without one.
 export function CommandField({
   form,
   presets,
   placeholder = "{path}",
+  phpPlaceholder = "{php}",
   starterKey,
   applications = [],
 }) {
@@ -62,11 +65,8 @@ export function CommandField({
   );
   const selectedSite = sites.find((application) => String(application.id) === source);
 
-  function applyTemplate(tpl, dir) {
-    // The placeholder stays until a path is typed; Zod blocks submitting it unresolved.
-    const resolved = dir.trim()
-      ? tpl.replaceAll(placeholder, dir.trim().replace(/\/+$/, ""))
-      : tpl;
+  function applyTemplate(tpl, dir, site = null) {
+    const resolved = resolveTemplate(tpl, { dir, site, placeholder, phpPlaceholder });
     // Every change here is a user edit to the command, so mark dirty.
     form.setValue("command", resolved, {
       shouldValidate: Boolean(dir.trim()),
@@ -94,7 +94,7 @@ export function CommandField({
       setPath("");
       applyTemplate(preset.command, "");
     } else {
-      applyTemplate(preset.command, path);
+      applyTemplate(preset.command, path, picked ?? null);
     }
     if (preset.expression) {
       form.setValue("expression", preset.expression, {
@@ -104,9 +104,10 @@ export function CommandField({
     }
   }
 
-  function onPath(value) {
+  // `site` is null for a typed path: that runs the server default `php`.
+  function onPath(value, site = null) {
     setPath(value);
-    if (template) applyTemplate(template, value);
+    if (template) applyTemplate(template, value, site);
   }
 
   function onPickSite(value) {
@@ -119,7 +120,7 @@ export function CommandField({
     const site = sites.find((application) => String(application.id) === value);
     if (!site) return;
 
-    onPath(site.path);
+    onPath(site.path, site);
 
     // Fill "Run as" only while empty: root-owned files break deploys, but an existing choice stands.
     if (!form.getValues("run_as") && site.system_user?.id) {
@@ -133,7 +134,7 @@ export function CommandField({
   // A quick-start template fills the form on mount; no `shouldDirty`, so the leave-guard stays quiet.
   useEffect(() => {
     if (!starter) return;
-    form.setValue("command", starter.command, { shouldValidate: false });
+    form.setValue("command", resolveTemplate(starter.command, { placeholder, phpPlaceholder }), { shouldValidate: false });
     if (starter.expression) {
       form.setValue("expression", starter.expression, { shouldValidate: true });
     }
@@ -256,6 +257,13 @@ export function CommandField({
                 </SelectGroup>
               </SelectContent>
             </Select>
+          ) : null}
+
+          {/* Which PHP the job will run: the site's own, not the server default. */}
+          {selectedSite?.php_binary && template?.includes(phpPlaceholder) ? (
+            <p className="text-xs text-muted-foreground">
+              {t("form.phpFromSite", { version: selectedSite.php_version ?? "", binary: selectedSite.php_binary })}
+            </p>
           ) : null}
 
           {/* Shown once "Enter a path myself" is chosen, or when there are no sites. */}

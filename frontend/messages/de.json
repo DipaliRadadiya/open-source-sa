@@ -950,7 +950,8 @@
     "logFromInvalid": "Gib eine Zeilennummer ab 1 ein.",
     "logIpInvalid": "Gib eine einzelne IP-Adresse ein, z. B. 203.0.113.5.",
     "logStatusInvalid": "Gib einen Code wie 404 oder eine Gruppe wie 5xx ein.",
-    "localPathAbsolute": "Geben Sie einen vollständigen Ordnerpfad ein, der mit / beginnt, z. B. /var/backups/panel."
+    "localPathAbsolute": "Geben Sie einen vollständigen Ordnerpfad ein, der mit / beginnt, z. B. /var/backups/panel.",
+    "unresolvedPhp": "Ersetzen Sie den PHP-Platzhalter durch eine PHP-Binärdatei, z. B. php oder /usr/bin/php8.3."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1234,7 +1235,8 @@
       "serverTimeNote": "Läuft in Serverzeit ({timezone})",
       "runAsUnavailable": "Die Kontoliste konnte nicht geladen werden. Wählen Sie „Anderer OS-Benutzer…“ und geben Sie den Benutzernamen ein.",
       "runAsHint": "Das Linux-Konto, unter dem der Befehl ausgeführt wird. Es legt fest, welche Dateien der Cron-Job lesen und schreiben kann.",
-      "scheduleHint": "Wie oft er ausgeführt wird. Wählen Sie eine der üblichen Zeitpläne oder „Benutzerdefiniert“, um den Zeitplan selbst festzulegen."
+      "scheduleHint": "Wie oft er ausgeführt wird. Wählen Sie eine der üblichen Zeitpläne oder „Benutzerdefiniert“, um den Zeitplan selbst festzulegen.",
+      "phpFromSite": "Läuft mit PHP {version} dieser Anwendung ({binary})."
     },
     "toast": {
       "created": "Cronjob erstellt",
