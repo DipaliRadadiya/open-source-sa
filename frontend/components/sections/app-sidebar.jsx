@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import {
   groupNavItems,
   COLLAPSED_GROUPS,
+  SIDEBAR_GROUPS_COOKIE,
   navTitle,
   isNavBuilt,
   findActiveNavItem,
@@ -98,7 +99,7 @@ function PendingNavIcon({ name }) {
   return pending ? <Loader2 className="size-4 animate-spin" /> : <NavIcon name={name} />;
 }
 
-export function AppSidebar({ items }) {
+export function AppSidebar({ items, initialGroups = {} }) {
   const pathname = usePathname();
   const params = useParams();
   const t = useTranslations("common");
@@ -132,8 +133,14 @@ export function AppSidebar({ items }) {
   // prefixes every sub-page, so pick the single deepest match.
   const activeItem = findActiveNavItem(visible, pathname);
 
-  // Only what the person toggled; everything else follows the default.
-  const [toggled, setToggled] = useState({});
+  // Only what the person toggled; everything else follows the default. Keyed by panel too:
+  // the server and an application both have a "security" group.
+  const [toggled, setToggled] = useState(initialGroups);
+  function toggle(key, open) {
+    const next = { ...toggled, [key]: open };
+    setToggled(next);
+    document.cookie = `${SIDEBAR_GROUPS_COOKIE}=${encodeURIComponent(JSON.stringify(next))}; path=/; max-age=31536000; samesite=lax`;
+  }
   const groupTitle = (group) =>
     group.named ? t(`navGroups.${group.key === "protection" ? "security" : group.key}`) : group.title;
 
@@ -248,7 +255,7 @@ export function AppSidebar({ items }) {
           const open =
             iconOnly ||
             !title ||
-            (toggled[group.key] ??
+            (toggled[`${currentPanel}:${group.key}`] ??
               (!COLLAPSED_GROUPS.has(group.key) || group.items.includes(activeItem)));
           return (
           <SidebarGroup key={group.key} className="py-1">
@@ -257,7 +264,7 @@ export function AppSidebar({ items }) {
                 <button
                   type="button"
                   aria-expanded={open}
-                  onClick={() => setToggled((current) => ({ ...current, [group.key]: !open }))}
+                  onClick={() => toggle(`${currentPanel}:${group.key}`, !open)}
                   className="w-full justify-between"
                 >
                   {title}

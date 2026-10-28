@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { SIDEBAR_GROUPS_COOKIE, parseSidebarGroups } from "@/lib/navigation";
 import { getCurrentUser, getImpersonator } from "@/lib/auth/get-current-user";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
 import { RememberPath } from "@/components/remember-path";
@@ -71,7 +73,7 @@ export default async function AppLayout({ children }) {
           <ApplicationNavProvider>
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
               <SidebarAutoCollapse />
-              <AppSidebar items={permissions} />
+              <AppSidebar items={permissions} initialGroups={parseSidebarGroups((await cookies()).get(SIDEBAR_GROUPS_COOKIE)?.value)} />
               {/* min-w-0: otherwise wide tables/charts push the page into horizontal overflow. */}
               <SidebarInset className="min-w-0">
                 {/* One sticky cluster so the impersonation banner never scrolls away. */}

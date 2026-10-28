@@ -150,6 +150,22 @@ const GROUP_OF = {
 // "server" (not alone at the bottom, which read as an orphan), so that group stays open.
 export const COLLAPSED_GROUPS = new Set(["software"]);
 
+// Which groups the person opened or closed, as `{ "server:software": true }`. A cookie, not
+// component state: a reload (the restart screen does one) put Software back to shut, and the
+// layout reads it server-side, so the sidebar renders open with no flash.
+export const SIDEBAR_GROUPS_COOKIE = "sidebar_groups";
+
+export function parseSidebarGroups(raw) {
+  if (!raw) return {};
+  try {
+    const value = JSON.parse(raw);
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.entries(value).filter(([key, open]) => typeof open === "boolean" && key.length <= 64));
+  } catch {
+    return {};
+  }
+}
+
 // Ordered by GROUP_ORDER, catalog order inside a group. Catalog groups keep
 // their own translated title; the raw `sub_level` is the fallback for older
 // catalogs. The caller names the rest from `common.navGroups`.
