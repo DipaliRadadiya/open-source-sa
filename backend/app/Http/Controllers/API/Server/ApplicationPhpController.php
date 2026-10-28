@@ -113,8 +113,12 @@ class ApplicationPhpController extends Controller
         }
 
         $settings = $this->settingsFor($application);
-        // For the activity entry: the values as they were, field by field.
-        $before = ['php_version' => $application->php_version] + $settings->only(array_keys($data));
+        // For the activity entry: the values in force, field by field — an
+        // unset limit is the default the pool really runs with, not "none".
+        $inForce = fn () => ['php_version' => $application->php_version]
+            + array_intersect_key($settings->effective(), $data)
+            + $settings->only(array_keys($data));
+        $before = $inForce();
         $settings->fill($data);
 
         // The version is on the application rather than the settings row: the
@@ -188,7 +192,7 @@ class ApplicationPhpController extends Controller
             'name' => $application->name,
             'changes' => ActivityChanges::between(
                 $before,
-                ['php_version' => $application->php_version] + $settings->only(array_keys($data)),
+                $inForce(),
                 ['php_version', ...array_keys($data)],
             ),
         ]);

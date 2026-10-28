@@ -362,7 +362,8 @@ it('records the PHP version and each PHP setting a save changed', function () {
     $changes = ActivityLog::where('type', 'application')->where('action', 'php_settings_updated')->latest('id')->value('properties')['changes'];
 
     expect($changes[0])->toBe(['field' => 'php_version', 'from' => '8.3', 'to' => '8.4'])
-        ->and(collect($changes)->firstWhere('field', 'memory_limit')['to'])->toBe('512M');
+        // Never set on this site: the default it ran with, not "none".
+        ->and(collect($changes)->firstWhere('field', 'memory_limit'))->toBe(['field' => 'memory_limit', 'from' => '256M', 'to' => '512M']);
 
     $line = collect($this->getJson('/api/activity-log?filter[type]=application')->json('activity_log'))->firstWhere('action', 'php_settings_updated');
     expect($line['changes'][0]['text'])->toBe('PHP version 8.3 → 8.4')
