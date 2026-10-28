@@ -352,3 +352,18 @@ it('writes the loader as the site user, never as root', function () {
     Process::assertNotRan(fn ($process) => $touchesLoader($process)
         && ((array) $process->command)[0] !== 'runuser');
 });
+
+it('runs wp-cli on the site\'s own PHP, not the server default', function () {
+    config(['server.php_binary_pattern' => '/usr/bin/php{version}']);
+    $this->application->forceFill(['php_version' => '7.4'])->save();
+    fakeWpCli(admins());
+
+    $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/magic-login")
+        ->assertOk();
+
+    Process::assertRan(fn ($p) => is_array($p->command) && in_array('user', $p->command, true)
+        && array_slice($p->command, array_search('--', $p->command, true) + 1, 2) === ['/usr/bin/php7.4', config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp')]);
+    Process::assertNotRan(fn ($p) => is_array($p->command) && in_array('user', $p->command, true)
+        && ($p->command[array_search('--', $p->command, true) + 1] ?? null) === config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'));
+});

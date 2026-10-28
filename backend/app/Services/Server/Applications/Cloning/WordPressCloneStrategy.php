@@ -12,6 +12,7 @@ use App\Services\Server\Applications\WordPressUrlVariants;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
+use App\Services\Server\WpCli\WpCli;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -87,7 +88,7 @@ class WordPressCloneStrategy implements CloneStrategy
             array_merge(
                 ['runuser', '-u', $application->systemUser->username, '--'],
                 [
-                    $this->wpCliBinary(),
+                    ...$this->wpCli($application),
                     'search-replace', $from, $to,
                     '--path='.$documentRoot,
                     '--all-tables', '--precise', '--recurse-objects',
@@ -105,9 +106,10 @@ class WordPressCloneStrategy implements CloneStrategy
         }
     }
 
-    private function wpCliBinary(): string
+    /** @return list<string> wp-cli on the site's own PHP. */
+    private function wpCli(Application $application): array
     {
-        return (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp');
+        return app(WpCli::class)->command($application);
     }
 
     private function writeSecretFile(Application $application, string $path, string $contents): void

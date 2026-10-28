@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\WpCli\WpCli;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use JsonException;
@@ -269,7 +270,8 @@ class WordPressMagicLogin
         return $this->serverOps->run(
             array_merge(
                 ['runuser', '-u', $application->systemUser->username, '--'],
-                [(string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp')],
+                // On the site's own PHP, not the shebang's server default.
+                app(WpCli::class)->command($application),
                 $arguments,
                 [
                     '--path='.$application->documentRoot(),

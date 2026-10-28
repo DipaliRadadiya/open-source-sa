@@ -1172,3 +1172,23 @@ describe('frontend QA 2026-09-26 (CL-B1, CL-B2, CL-B4, CL-B5)', function () {
             ->not->toContain("\$table_prefix = 'wp_';");
     });
 });
+
+it('rewrites the clone\'s addresses on the site\'s own PHP', function () {
+    config(['server.php_binary_pattern' => '/usr/bin/php{version}']);
+    fakeCloneServer();
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id, 'name' => 'Old Shop', 'slug' => 'oldshop', 'domain' => 'oldshop.test',
+        'site_type' => 'wordpress', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '7.4',
+    ]);
+    $database = Database::create(['name' => 'oldshop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
+    DatabaseUser::create(['database_id' => $database->id, 'username' => 'oldshop_user', 'password' => 'secret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    expect(runClone($source, 'oldshop-clone.test')->status->value)->toBe('completed');
+
+    Process::assertRan(function ($p) {
+        $i = array_search('search-replace', $p->command, true);
+
+        return $i !== false && $p->command[$i - 2] === '/usr/bin/php7.4';
+    });
+});

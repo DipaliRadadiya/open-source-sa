@@ -15,6 +15,7 @@ use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
+use App\Services\Server\WpCli\WpCli;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -319,7 +320,7 @@ class WordPressStagingStrategy implements StagingStrategy
     {
         $result = $this->serverOps->run(
             array_merge(['runuser', '-u', $application->systemUser->username, '--'], [
-                $this->wpCliBinary(), 'option', 'get', $option,
+                ...$this->wpCli($application), 'option', 'get', $option,
                 '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
             ]),
             $this->context($application, 'staging_option_get'),
@@ -338,7 +339,7 @@ class WordPressStagingStrategy implements StagingStrategy
     private function updateOption(Application $application, string $documentRoot, string $option, string $value): void
     {
         $this->runAsSiteUser($application, [
-            $this->wpCliBinary(), 'option', 'update', $option, $value,
+            ...$this->wpCli($application), 'option', 'update', $option, $value,
             '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
         ]);
     }
@@ -367,7 +368,7 @@ class WordPressStagingStrategy implements StagingStrategy
     private function flushRewrites(Application $application, string $documentRoot): void
     {
         $this->runAsSiteUser($application, [
-            $this->wpCliBinary(), 'rewrite', 'flush', '--hard',
+            ...$this->wpCli($application), 'rewrite', 'flush', '--hard',
             '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
         ]);
     }
@@ -476,7 +477,7 @@ class WordPressStagingStrategy implements StagingStrategy
     private function searchReplace(Application $application, string $documentRoot, string $from, string $to, bool $regex = false): void
     {
         $this->runAsSiteUser($application, [
-            $this->wpCliBinary(),
+            ...$this->wpCli($application),
             'search-replace', $from, $to,
             '--path='.$documentRoot,
             '--all-tables', '--precise', '--recurse-objects',
@@ -489,17 +490,18 @@ class WordPressStagingStrategy implements StagingStrategy
     private function flushCaches(Application $application, string $documentRoot): void
     {
         $this->runAsSiteUser($application, [
-            $this->wpCliBinary(), 'cache', 'flush', '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
+            ...$this->wpCli($application), 'cache', 'flush', '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
         ]);
 
         $this->runAsSiteUser($application, [
-            $this->wpCliBinary(), 'transient', 'delete', '--all', '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
+            ...$this->wpCli($application), 'transient', 'delete', '--all', '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
         ]);
     }
 
-    private function wpCliBinary(): string
+    /** @return list<string> wp-cli on the site's own PHP. */
+    private function wpCli(Application $application): array
     {
-        return (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp');
+        return app(WpCli::class)->command($application);
     }
 
     /**

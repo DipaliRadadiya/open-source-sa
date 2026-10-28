@@ -2,6 +2,8 @@
 
 namespace App\Services\Server\WpCli;
 
+use App\Models\Application;
+use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
 
 /**
@@ -21,6 +23,28 @@ class WpCli
     public function path(): string
     {
         return (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp');
+    }
+
+    /**
+     * wp-cli for one site, run by that site's own PHP: `/usr/bin/php7.4
+     * /usr/local/bin/wp`, or the LiteSpeed binary on OpenLiteSpeed.
+     *
+     * The phar's `#!/usr/bin/env php` shebang picks the server default, which
+     * need not be the version the site was given (measured 2026-10-28: a site
+     * on 7.4 had staging, clone and magic login run on 8.4). The installer
+     * already ran it this way; this is the same rule for everything else.
+     * A site with no version set keeps the shebang — the server default is
+     * what it runs on anyway.
+     *
+     * @return list<string>
+     */
+    public function command(Application $application): array
+    {
+        if (blank($application->php_version)) {
+            return [$this->path()];
+        }
+
+        return [app(PhpRuntime::class)->binaryPath((string) $application->php_version), $this->path()];
     }
 
     /** Read from the box every time: anyone with root can remove it. */

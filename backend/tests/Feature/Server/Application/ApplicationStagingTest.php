@@ -1889,3 +1889,18 @@ describe('push and update from live on the queue (RC-16)', function () {
             ->and(ActivityLog::where('action', 'staging_pushed_files')->sole()->user_id)->toBe($this->admin->id);
     });
 });
+
+it('runs every wp-cli step on the site\'s own PHP', function () {
+    config(['server.php_binary_pattern' => '/usr/bin/php{version}']);
+    $this->production->forceFill(['php_version' => '7.4'])->save();
+    fakeStagingServer();
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $wp = (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp');
+    $usesWp = fn ($p) => is_array($p->command) && in_array($wp, $p->command, true);
+    $onSitePhp = fn ($p) => $p->command[array_search($wp, $p->command, true) - 1] === '/usr/bin/php7.4';
+
+    Process::assertRan(fn ($p) => $usesWp($p) && in_array('search-replace', $p->command, true) && $onSitePhp($p));
+    Process::assertNotRan(fn ($p) => $usesWp($p) && ! $onSitePhp($p));
+});
