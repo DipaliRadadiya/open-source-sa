@@ -5176,7 +5176,7 @@ Enable/disable SSH login for this system user.
 **Permission:** `system_user` (view)
 
 ```json
-{"ssh_keys": [{"id": 1, "name": "MacBook Pro", "fingerprint": "SHA256:abc123…", "created_at": "23-07-2026 10:05:00"}]}
+{"ssh_keys": [{"id": 1, "name": "MacBook Pro", "fingerprint": "SHA256:abc123…", "type": "ssh-ed25519", "created_at": "23-07-2026 10:05:00"}]}
 ```
 
 ---
@@ -5186,7 +5186,11 @@ Enable/disable SSH login for this system user.
 
 **Request:** `{"name": "MacBook Pro", "public_key": "ssh-rsa AAAA…"}`
 
-**Response `201`:** `{"ssh_key": {"id": 1, "name": "MacBook Pro", "fingerprint": "SHA256:abc123…"}}`
+**Response `201`:** `{"ssh_key": {"id": 1, "name": "MacBook Pro", "fingerprint": "SHA256:abc123…", "type": "ssh-ed25519"}, "existing": false}`
+
+**The same key again returns the one already there** (since 2026-10-28; it was a `422`): **`200`** with `existing: true`, the stored key **unchanged** (its name is not replaced) and a `message` naming the user and the key's name. Same shape as git accounts and storage destinations.
+
+**Accepted key types** (since 2026-10-28; also on `POST /system-users` `public_key` and container login): `ssh-ed25519`, `ssh-rsa` of **at least 2048 bits**, `ecdsa-sha2-nistp256/384/521`, and hardware-token keys `sk-ssh-ed25519@openssh.com` / `sk-ecdsa-sha2-nistp256@openssh.com`. Refused with their own `422` message on `public_key`: **DSA** (`ssh-dss` — OpenSSH no longer logs in with it, so it used to be added and never work) and **RSA under 2048 bits**.
 
 **Keys added by hand on the server are kept (2026-10-06, SU-03).** The panel writes its keys between `# BEGIN panel-managed keys (edit outside this block)` and `# END panel-managed keys` in `~/.ssh/authorized_keys`, and leaves every other line alone. It used to write the whole file, so adding or removing a key here deleted any key put there by hand. On a file from before this change, the panel's own keys are moved into the block, and a key deleted here is removed wherever it is. If the file exists but cannot be read, nothing is written and the answer is a `500` with a `reference`.
 
@@ -5196,6 +5200,45 @@ Enable/disable SSH login for this system user.
 **Permission:** `system_user` (manage)
 
 **Response `204`:**
+
+---
+
+### SSH keys across all system users (for central, 2026-10-28)
+
+For a key list kept somewhere else (central), where a key is known by its **fingerprint**, not by this panel's id. Only keys added through the panel are listed or changed: keys put into `authorized_keys` by hand, and root's or the cloud provider's keys, are never touched. The private key never comes here — only public keys.
+
+#### GET `/ssh-keys`
+**Permission:** `system_user` (view). Filters: `fingerprint`, `system_user_id`.
+
+```json
+{"ssh_keys": [{"id": 4, "name": "Dipali laptop", "fingerprint": "SHA256:…", "type": "ssh-ed25519",
+  "system_user": {"id": 2, "username": "alice"}, "created_at": "28-10-2026 19:50:00", "created_at_human": "1 minute ago"}]}
+```
+
+#### POST `/ssh-keys/deploy`
+**Permission:** `system_user` (manage) | **Throttle:** 30/min
+
+**Request:** `{"name": "Dipali laptop", "public_key": "ssh-ed25519 AAAA…", "system_user_ids": [2, 3]}` (1–100 users, each must exist; the key is checked as for `POST /system-users/{id}/ssh-keys`, so a refused key adds nothing anywhere).
+
+**Response `200`**, one result per user — one failing does not stop the rest:
+
+```json
+{"results": [
+  {"system_user": {"id": 2, "username": "alice"}, "status": "added", "ssh_key_id": 4, "warnings": []},
+  {"system_user": {"id": 3, "username": "bob"}, "status": "existing", "ssh_key_id": 5, "warnings": ["ssh_access_off"]},
+  {"system_user": {"id": 7, "username": "carol"}, "status": "failed", "reference": "c784e1db-…", "warnings": []}
+], "warnings": ["ssh_port_closed"]}
+```
+
+- `status`: `added`, `existing` (the user already had this key; left unchanged) or `failed` (`reference` points at the server log line).
+- Warnings mean the key is on the server but **cannot be used to log in yet**: `ssh_access_off` (SSH login is switched off for that user — `PUT /system-users/{id}/ssh`) and, server-wide, `ssh_port_closed` (the firewall is on and no enabled allow rule covers the SSH port).
+
+#### DELETE `/ssh-keys`
+**Permission:** `system_user` (manage) | **Throttle:** 30/min
+
+**Request:** `{"fingerprint": "SHA256:…", "system_user_ids": [3]}` — `system_user_ids` optional; without it, from every user who has the key.
+
+**Response `200`:** `{"results": [{"system_user": {"id": 3, "username": "bob"}, "status": "removed"}]}` (`failed` + `reference` as above). A fingerprint nobody has returns `results: []`, not an error, so "remove everywhere" can be sent to every server.
 
 ---
 

@@ -24,8 +24,17 @@ class SshKeyController extends Controller
     {
         $key = $action->execute($systemUser, $request->validated());
 
+        if (! $key->wasRecentlyCreated) {
+            return response()->json([
+                'ssh_key' => SshKeyResource::make($key)->resolve(),
+                'existing' => true,
+                'message' => __('errors/system-user.ssh_key_exists', ['username' => $systemUser->username, 'name' => $key->name]),
+            ]);
+        }
+
         return response()->json([
             'ssh_key' => SshKeyResource::make($key)->resolve(),
+            'existing' => false,
         ], 201);
     }
 

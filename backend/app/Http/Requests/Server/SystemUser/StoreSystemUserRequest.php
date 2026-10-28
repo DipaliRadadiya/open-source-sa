@@ -4,10 +4,9 @@ namespace App\Http\Requests\Server\SystemUser;
 
 use App\Enums\LoginShell;
 use App\Rules\InstalledShell;
-use App\Services\Server\SshKeyManager;
+use App\Rules\SshPublicKey;
 use App\Services\Server\SystemUsers\ChpasswdLine;
 use App\Services\Server\SystemUsers\SystemUsernameGenerator;
-use Closure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -53,11 +52,7 @@ class StoreSystemUserRequest extends FormRequest
             ],
             'public_key' => [
                 'nullable', 'string',
-                function (string $attribute, mixed $value, Closure $fail) {
-                    if (! app(SshKeyManager::class)->isValidPublicKey((string) $value)) {
-                        $fail(__('errors/system-user.invalid_public_key'));
-                    }
-                },
+                new SshPublicKey,
             ],
             // All optional, defaulting to the same values CreateSystemUser
             // already used before these existed — the fast path (username

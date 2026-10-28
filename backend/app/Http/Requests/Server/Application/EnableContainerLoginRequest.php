@@ -3,11 +3,10 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Models\Application;
+use App\Rules\SshPublicKey;
 use App\Services\Server\AppShell\ContainerLoginInfo;
 use App\Services\Server\Settings\SecuritySettings;
-use App\Services\Server\SshKeyManager;
 use App\Services\Server\SystemUsers\ChpasswdLine;
-use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
@@ -51,11 +50,7 @@ class EnableContainerLoginRequest extends FormRequest
         return [
             'ssh_key' => [
                 'nullable', 'string', 'max:16384',
-                function (string $attribute, mixed $value, Closure $fail) {
-                    if (! app(SshKeyManager::class)->isValidPublicKey((string) $value)) {
-                        $fail(__('errors/system-user.invalid_public_key'));
-                    }
-                },
+                new SshPublicKey,
             ],
             'password' => ['nullable', 'string', Password::defaults(), 'not_regex:'.ChpasswdLine::FORBIDDEN],
             'confirm_container_only' => ['sometimes', 'boolean'],

@@ -66,6 +66,23 @@ class SshLockoutGuard
      * A source-restricted rule counts: it is still a way in, and refusing to
      * let someone tighten their own last rule would be its own kind of trap.
      */
+    /**
+     * Whether the SSH port is reachable through the firewall right now: the
+     * firewall is off, or an enabled allow rule covers the port. For warning
+     * that a key just added cannot be used yet, not for refusing anything.
+     */
+    public function sshPortOpen(): bool
+    {
+        if (! $this->firewall->status()['enabled']) {
+            return true;
+        }
+
+        $port = SshPort::current();
+
+        return FirewallRule::query()->where('action', 'allow')->where('enabled', true)->get()
+            ->contains(fn (FirewallRule $rule) => $this->covers($rule, $port));
+    }
+
     private function covers(FirewallRule $rule, int $port): bool
     {
         if ($rule->action !== 'allow' || ! $rule->enabled) {

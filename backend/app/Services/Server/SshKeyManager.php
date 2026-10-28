@@ -52,7 +52,9 @@ class SshKeyManager
             return false;
         }
 
-        if (! preg_match('/^(ssh-rsa|ssh-ed25519|ssh-dss|ecdsa-sha2-\S+)$/', $parts[0])) {
+        // `sk-…@openssh.com`: a key held on a hardware token (YubiKey and
+        // the like). sshd takes them like any other.
+        if (! preg_match('/^(ssh-rsa|ssh-ed25519|ssh-dss|ecdsa-sha2-\S+|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com)$/', $parts[0])) {
             return false;
         }
 
@@ -65,6 +67,62 @@ class SshKeyManager
         $length = unpack('N', substr($blob, 0, 4))[1];
 
         return substr($blob, 4, $length) === $parts[0];
+    }
+
+    /** RSA keys shorter than this are refused: OpenSSH itself refuses below 1024 and calls under 2048 weak. */
+    public const MIN_RSA_BITS = 2048;
+
+    /**
+     * Why a well-formed key will not be taken, or null when it will
+     * (2026-10-28).
+     *
+     * - `dsa`: OpenSSH turned DSA off by default in 7.0 and removed it in
+     *   9.8, so every Ubuntu the panel runs on refuses to log in with one.
+     *   It used to be accepted, written, and listed as working.
+     * - `weak_rsa`: an RSA modulus under {@see MIN_RSA_BITS} bits.
+     *
+     * Separate from {@see isValidPublicKey()}, which only asks "is this a key
+     * line": the file merge and the server sync still have to recognise a DSA
+     * line somebody put there by hand.
+     */
+    public function rejection(string $publicKey): ?string
+    {
+        $parts = preg_split('/[ \t]+/', trim($publicKey));
+
+        return match ($parts[0] ?? '') {
+            'ssh-dss' => 'dsa',
+            'ssh-rsa' => $this->rsaBits((string) ($parts[1] ?? '')) < self::MIN_RSA_BITS ? 'weak_rsa' : null,
+            default => null,
+        };
+    }
+
+    /**
+     * The modulus size of an `ssh-rsa` blob: string "ssh-rsa", mpint e,
+     * mpint n (RFC 4253 §6.6). 0 when it cannot be read.
+     */
+    public function rsaBits(string $base64): int
+    {
+        $blob = base64_decode($base64, true);
+        $offset = 0;
+        $fields = [];
+
+        for ($i = 0; $i < 3; $i++) {
+            if ($blob === false || strlen($blob) < $offset + 4) {
+                return 0;
+            }
+
+            $length = unpack('N', substr($blob, $offset, 4))[1];
+            $fields[] = substr($blob, $offset + 4, $length);
+            $offset += 4 + $length;
+        }
+
+        $modulus = ltrim($fields[2], "\0");
+
+        if ($modulus === '') {
+            return 0;
+        }
+
+        return (strlen($modulus) - 1) * 8 + strlen(decbin(ord($modulus[0])));
     }
 
     /**

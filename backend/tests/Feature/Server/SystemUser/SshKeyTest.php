@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Process;
 const TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXyz deploy@host';
 // Same valid base64 length as TEST_KEY, different content → different fingerprint.
 const TEST_KEY_2 = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXy0 backup@host';
+// Real keys from ssh-keygen (OpenSSH 9.6), public halves only.
+const RSA_1024 = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC4X0VLa/qlRhSETAvqoZRd/HIvXjTvMeJIzlqJmg6hZnKQMJqbuLQJ9nRKdmFiz9Lu2ZM5mpFDWTuuhqY40K608ZvNzmp/WtdC4ek72Py6fUPxkNCy9PE9+eq3PysX5v0rJHZEz64owSfirW2QhrMwtoRnfXRI1Kveul51mmoyWQ== fixture@host';
+const RSA_2048 = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQChjarT1779kt/06QZtxEGizi5L/kLXz7IIMVK5DH78Ch9er1XI3kcTAsDsdzffyx5rw+NeduHd5tG8YW1z2mooRDHAEwqWUnJqQUYRcUmAA2Al25whlzlgopmOpxnY91SOWtWCV4toq2FPhG6tPhIA/evjcOiFHzklmHfa9MilJ7Jc5x5T35mjM282pjIVPWZOzLBdNdg5CUmkjrXW74SjvLuTLrSybqZxALS7MnW6+Kwq9cvjCfUkog5u7AaZdtlLUqdVpIxSxVbd6d/AsfkrgwaM2eA2UzqqODg7D2bo3tw+6j35oX80NUb2cV4XGzYE5zgx7HPG3mBvg6/Kb6GR fixture@host';
+const DSA_KEY = 'ssh-dss AAAAB3NzaC1kc3MAAACBAK0vXYQ4r90njURwyzJD0fEWvsX4GP1T5GStM3vTY8Q2NJ7P4dbh43XOkdZ3ElCn03beTlsEtgIjnQfbmXqEX29co4Px+bs5gbzRCoJxcgxXnZqiXqeIITs7d3FlKeataLy29CCW1ncwJDEHbfnL48Z6dAEL2pPc1F1ltMpmEpMVAAAAFQD+5a/ZM48nyuCDhCKpm572M+UcWQAAAIABfJilen2pjKKWg8qvtCoiC0ACvC5YP6HQxDCcmz9Dn7V5FvXnuAux5hpxhh8JAsnrUqYqmFmJVMhx8WIl9rhCDUVd4ipf8FcjyYckS2r7K4K1hkQMhaaZMSfN7a3yiWFztRnk5ooWqA7zdzw6p2EVRKpgg0EoPVpQluPsDcn2CwAAAIBqTq1jj/zEhv1I5v4xQNKvfOMKXPZhbMNn5fbNizBFhMPgc+R572sYFsXrB/EZWMUzoFtGrz45w6inmNnOavK8K2XvsGfkZS53V1ROPcPzMgkM7gn2IeBMXUDHdXCveLsDJ766+VG+GZgRbudwaTlZtV/sRwewFdgUBd0Oie0WVw== fixture@host';
+const ECDSA_KEY = 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCguwu0p73gccVW/zfKg0igRqXlLABwpeBWUnd0MpLhvcQKA8u4goapFIztRdpI4TtuqAICJfhAKRLYql37MOqA= fixture@host';
 // A key put on the server by hand, never through the panel.
 const HAND_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QhandyBASE64keyForTestingPurposesXyz admin@laptop';
 
@@ -96,7 +101,7 @@ it('rejects an invalid public key', function () {
         ->assertJsonValidationErrors('public_key');
 });
 
-it('rejects a duplicate SSH key', function () {
+it('returns the key already there when the same key is added again, unchanged', function () {
     $this->su->sshKeys()->create([
         'name' => 'first',
         'public_key' => TEST_KEY,
@@ -108,8 +113,12 @@ it('rejects a duplicate SSH key', function () {
             'name' => 'dup',
             'public_key' => TEST_KEY,
         ])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('public_key');
+        ->assertOk()
+        ->assertJsonPath('existing', true)
+        ->assertJsonPath('ssh_key.name', 'first')
+        ->assertJsonPath('message', fn (string $m) => str_contains($m, 'deploy') && str_contains($m, 'first'));
+
+    expect($this->su->sshKeys()->count())->toBe(1);
 });
 
 it('lists SSH keys', function () {
@@ -293,4 +302,38 @@ it('does not write over a file it could not read', function () {
     expect(collect($this->ran)->contains(fn ($c) => in_array('tee', $c, true)))->toBeFalse()
         ->and(File::get($file))->toBe(HAND_KEY."\n")
         ->and($this->su->sshKeys()->count())->toBe(0);
+});
+
+/** A hardware-token key: string type, 32-byte key, string application. */
+function hardwareKey(): string
+{
+    $type = 'sk-ssh-ed25519@openssh.com';
+
+    return $type.' '.base64_encode(pack('N', strlen($type)).$type.pack('N', 32).str_repeat("\x07", 32).pack('N', 4).'ssh:').' yubikey';
+}
+
+it('takes the keys sshd logs in with', function (string $key) {
+    addKey('ok', $key === 'hardware' ? hardwareKey() : $key)->assertCreated();
+})->with([
+    'ed25519' => [TEST_KEY],
+    'rsa 2048' => [RSA_2048],
+    'ecdsa' => [ECDSA_KEY],
+    'hardware token' => ['hardware'],
+]);
+
+it('refuses a key sshd would refuse, saying why', function (string $key, string $message) {
+    addKey('bad', $key)->assertUnprocessable()
+        ->assertJsonPath('errors.public_key.0', __($message, ['bits' => SshKeyManager::MIN_RSA_BITS]));
+
+    expect($this->su->sshKeys()->count())->toBe(0);
+})->with([
+    'dsa' => [DSA_KEY, 'errors/system-user.dsa_public_key'],
+    'rsa 1024' => [RSA_1024, 'errors/system-user.weak_rsa_public_key'],
+]);
+
+it('refuses the same keys when a system user is created with one', function () {
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/system-users', ['username' => 'newuser', 'public_key' => DSA_KEY])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('public_key');
 });

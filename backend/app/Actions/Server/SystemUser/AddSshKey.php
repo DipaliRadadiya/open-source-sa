@@ -7,7 +7,6 @@ use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Server\SshKeyManager;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class AddSshKey
 {
@@ -23,10 +22,15 @@ class AddSshKey
     {
         $fingerprint = $this->keys->fingerprint($data['public_key']);
 
-        if ($systemUser->sshKeys()->where('fingerprint', $fingerprint)->exists()) {
-            throw ValidationException::withMessages([
-                'public_key' => [__('errors/system-user.duplicate_public_key')],
-            ]);
+        // The same key again is the key already there, returned unchanged —
+        // not a 422 (2026-10-28). Central sends a key to every user it should
+        // be on; "already there" is the answer it wants, the same one git
+        // accounts and storage give. `wasRecentlyCreated` stays false, which
+        // is how a caller tells the two apart.
+        $existing = $systemUser->sshKeys()->where('fingerprint', $fingerprint)->first();
+
+        if ($existing !== null) {
+            return $existing;
         }
 
         // One transaction around the row and the write: sync() renders the
