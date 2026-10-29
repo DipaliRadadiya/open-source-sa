@@ -17,6 +17,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
@@ -402,6 +403,41 @@ describe('saying where a dead run stopped and why', function () {
         stopClock(bootedAt: null, workerStartedAt: null);
 
         expect(app(BackupStopCause::class)->for(stuckRun(BackupStatus::Running, 60)))->toBeNull();
+    });
+
+    /*
+     * Found live: a killed run's tar kept writing a half archive into its
+     * working folder, and nothing ever removed it (464 MB from two runs).
+     */
+    it('removes the half-made archive a cleared run left on the disk', function () {
+        stopClock(bootedAt: '-30 days', workerStartedAt: '-1 hour');
+        config(['server.backups.working_dir' => $dir = sys_get_temp_dir().'/bk-stuck-'.uniqid()]);
+        $stale = runOnStep('archive_files', 24 * 60);
+        $left = "{$dir}/run-{$stale->id}";
+        mkdir($left, 0750, true);
+        file_put_contents($left.'/backup.tar.gz', str_repeat('x', 1024));
+        $other = "{$dir}/run-".($stale->id + 100);
+        mkdir($other, 0750, true);
+
+        $this->postJson("/api/backups/{$stale->id}/clear")->assertOk();
+
+        expect(is_dir($left))->toBeFalse()
+            ->and(is_dir($other))->toBeTrue('another run\'s folder is not touched');
+        File::deleteDirectory($dir);
+    });
+
+    it('removes the working folder of a job that died outright', function () {
+        stopClock(bootedAt: '-30 days', workerStartedAt: '-1 minute');
+        config(['server.backups.working_dir' => $dir = sys_get_temp_dir().'/bk-crash-'.uniqid()]);
+        $backup = runOnStep('dump_database', 10);
+        $left = "{$dir}/run-{$backup->id}";
+        mkdir($left, 0750, true);
+        file_put_contents($left.'/db-shop.sql', 'partial');
+
+        (new RunBackup($this->backupTarget->id))->failed(new RuntimeException('killed'));
+
+        expect(is_dir($left))->toBeFalse();
+        File::deleteDirectory($dir);
     });
 
     it('has every new sentence in every language', function () {

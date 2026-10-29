@@ -199,13 +199,18 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
             ->where('backup_target_id', $this->backupTargetId)
             ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
             ->get()
-            ->each(fn (Backup $backup) => $backup->update([
-                'status' => BackupStatus::Failed,
-                'reason' => 'crashed',
-                'stopped_step' => StaleBackupReaper::runningStep($backup),
-                'stopped_cause' => app(BackupStopCause::class)->for($backup, $e),
-                'finished_at' => now(),
-            ]));
+            ->each(function (Backup $backup) use ($e): void {
+                $backup->update([
+                    'status' => BackupStatus::Failed,
+                    'reason' => 'crashed',
+                    'stopped_step' => StaleBackupReaper::runningStep($backup),
+                    'stopped_cause' => app(BackupStopCause::class)->for($backup, $e),
+                    'finished_at' => now(),
+                ]);
+
+                // The runner's own clean-up never ran (2026-10-29).
+                StaleBackupReaper::discardWorkingDirectory($backup);
+            });
 
         // A crash is still an attempt. BackupRunner's catch block records one
         // for every handled failure, five lines from here, and says why: a

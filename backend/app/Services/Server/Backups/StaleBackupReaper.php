@@ -6,6 +6,7 @@ use App\Enums\BackupStatus;
 use App\Jobs\RunBackup;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -196,6 +197,32 @@ class StaleBackupReaper
             'stopped_cause' => app(BackupStopCause::class)->for($backup),
             'finished_at' => now(),
         ]);
+
+        self::discardWorkingDirectory($backup);
+    }
+
+    /**
+     * Remove what a dead run left on this server's disk.
+     *
+     * The runner deletes its working folder in a `finally`, which never
+     * runs when the worker is killed — and its `tar` and `pigz` carry on
+     * without it, writing a half archive nobody will upload. Found live
+     * on 2026-10-29: 464 MB in `storage/app/backups/run-N` from two killed
+     * runs, kept forever and counted against the server's disk (Dipali: no
+     * copy may stay on a user's server unasked). The run is over by now,
+     * so nothing still needs it.
+     */
+    public static function discardWorkingDirectory(Backup $backup): void
+    {
+        $path = BackupRunner::workingDirectoryFor($backup->id);
+
+        if (is_dir($path) && ! File::deleteDirectory($path)) {
+            Log::channel('server-ops')->warning('backup working folder left behind', [
+                'feature' => 'backup',
+                'backup' => $backup->id,
+                'path' => $path,
+            ]);
+        }
     }
 
     /**

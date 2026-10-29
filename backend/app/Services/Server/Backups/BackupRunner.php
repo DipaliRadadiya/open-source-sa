@@ -228,11 +228,17 @@ class BackupRunner
 
     private function workingDirectory(int $backupId): string
     {
-        $path = rtrim((string) config('server.backups.working_dir', storage_path('app/backups')), '/')
-            .'/run-'.$backupId;
+        $path = self::workingDirectoryFor($backupId);
 
         File::ensureDirectoryExists($path, 0750);
 
         return $path;
+    }
+
+    /** Where a run keeps its dump and archive until they are uploaded. */
+    public static function workingDirectoryFor(int $backupId): string
+    {
+        return rtrim((string) config('server.backups.working_dir', storage_path('app/backups')), '/')
+            .'/run-'.$backupId;
     }
 }
