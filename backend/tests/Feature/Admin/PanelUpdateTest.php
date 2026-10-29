@@ -134,6 +134,39 @@ describe('installed panel info', function () {
             ->and($info['commit_hash'])->toMatch('/^[0-9a-f]{40}$/')
             ->and($info['commit_short'])->toHaveLength(7);
     });
+
+    it('reads a linked worktree, whose .git is a file naming the real git directory', function () {
+        $root = storage_path('framework/testing/panel-worktree-'.uniqid());
+        $hash = str_repeat('ab', 20);
+
+        // git's own layout: the worktree keeps its HEAD; the branch is packed
+        // in the main repository, which `commondir` points back to.
+        File::ensureDirectoryExists("{$root}/main/.git/worktrees/wt");
+        File::ensureDirectoryExists("{$root}/wt");
+        File::put("{$root}/wt/.git", "gitdir: {$root}/main/.git/worktrees/wt\n");
+        File::put("{$root}/main/.git/worktrees/wt/HEAD", "ref: refs/heads/feature\n");
+        File::put("{$root}/main/.git/worktrees/wt/commondir", "../..\n");
+        File::put("{$root}/main/.git/packed-refs", "# pack-refs with: peeled fully-peeled sorted\n{$hash} refs/heads/feature\n");
+
+        Process::fake();
+
+        $info = new class("{$root}/wt") extends InstalledPanelInfo
+        {
+            public function __construct(private string $root) {}
+
+            public function repositoryPath(): string
+            {
+                return $this->root;
+            }
+        };
+
+        try {
+            expect($info->installed())
+                ->toMatchArray(['is_git_checkout' => true, 'commit_hash' => $hash, 'branch' => 'feature']);
+        } finally {
+            File::deleteDirectory($root);
+        }
+    });
 });
 
 describe('preflight', function () {

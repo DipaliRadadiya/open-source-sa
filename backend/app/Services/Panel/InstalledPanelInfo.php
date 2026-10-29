@@ -68,7 +68,7 @@ class InstalledPanelInfo
             'committed_at' => $this->committedAt(),
             // Whether an in-place update is even possible on this box. A
             // packaged install without .git cannot be moved by git checkout.
-            'is_git_checkout' => is_dir($this->repositoryPath().'/.git'),
+            'is_git_checkout' => $this->isGitCheckout(),
             'has_local_changes' => $this->hasLocalChanges(),
         ];
     }
@@ -101,7 +101,7 @@ class InstalledPanelInfo
     {
         $path = $this->repositoryPath();
 
-        if (! is_dir($path.'/.git') || preg_match('/^\d+(\.\d+){0,3}$/', $version) !== 1) {
+        if (! $this->isGitCheckout() || preg_match('/^\d+(\.\d+){0,3}$/', $version) !== 1) {
             return null;
         }
 
@@ -152,7 +152,7 @@ class InstalledPanelInfo
     {
         $path = $this->repositoryPath();
 
-        if (! is_dir($path.'/.git')) {
+        if (! $this->isGitCheckout()) {
             return null;
         }
 
@@ -177,7 +177,7 @@ class InstalledPanelInfo
     {
         $path = $this->repositoryPath();
 
-        if (! is_dir($path.'/.git')) {
+        if (! $this->isGitCheckout()) {
             return null;
         }
 
@@ -247,7 +247,7 @@ class InstalledPanelInfo
     {
         $path = $this->repositoryPath();
 
-        if (! is_dir($path.'/.git')) {
+        if (! $this->isGitCheckout()) {
             return null;
         }
 
@@ -275,7 +275,7 @@ class InstalledPanelInfo
     {
         $path = $this->repositoryPath();
 
-        if (! is_dir($path.'/.git')) {
+        if (! $this->isGitCheckout()) {
             return null;
         }
 
@@ -415,9 +415,78 @@ class InstalledPanelInfo
         return trim($matches[1]);
     }
 
+    /**
+     * Whether the panel runs from a git checkout at all — a clone, or a linked
+     * worktree of one.
+     */
+    public function isGitCheckout(): bool
+    {
+        return $this->gitDir() !== null;
+    }
+
+    /**
+     * The checkout's git directory.
+     *
+     * Usually `.git` itself. In a linked worktree (and a submodule) `.git` is
+     * a file, `gitdir: <path>`, naming the real one — git's own layout, and
+     * the one a test run in a worktree sees. Read as "not a checkout", the
+     * worktree reported no commit and could not be updated.
+     */
+    private function gitDir(): ?string
+    {
+        $dotGit = $this->repositoryPath().'/.git';
+
+        if (is_dir($dotGit)) {
+            return $dotGit;
+        }
+
+        if (! is_file($dotGit) || ! is_readable($dotGit)
+            || preg_match('/^gitdir:\s*(.+)$/m', (string) @file_get_contents($dotGit), $m) !== 1) {
+            return null;
+        }
+
+        $dir = trim($m[1]);
+        $dir = str_starts_with($dir, '/') ? $dir : $this->repositoryPath().'/'.$dir;
+
+        return is_dir($dir) ? $dir : null;
+    }
+
+    /**
+     * Where branches and `packed-refs` live. A worktree keeps only its own
+     * HEAD; `commondir` points back at the repository that holds the rest.
+     */
+    private function commonDir(): ?string
+    {
+        $gitDir = $this->gitDir();
+
+        if ($gitDir === null || ! is_file($gitDir.'/commondir')) {
+            return $gitDir;
+        }
+
+        $common = trim((string) @file_get_contents($gitDir.'/commondir'));
+
+        if ($common === '') {
+            return $gitDir;
+        }
+
+        $common = str_starts_with($common, '/') ? $common : $gitDir.'/'.$common;
+
+        return is_dir($common) ? $common : $gitDir;
+    }
+
+    /**
+     * A file under the git directory. HEAD is the checkout's own; refs and
+     * `packed-refs` are read from the common directory.
+     */
     private function readGitFile(string $relative): ?string
     {
-        $path = $this->repositoryPath().'/.git/'.ltrim($relative, '/');
+        $dir = $relative === 'HEAD' ? $this->gitDir() : $this->commonDir();
+
+        if ($dir === null) {
+            return null;
+        }
+
+        $path = $dir.'/'.ltrim($relative, '/');
 
         if (! is_file($path) || ! is_readable($path)) {
             return null;

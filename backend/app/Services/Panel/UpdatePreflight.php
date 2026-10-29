@@ -72,7 +72,7 @@ class UpdatePreflight
      */
     private function gitCheckout(): array
     {
-        $isGit = is_dir($this->installed->repositoryPath().'/.git');
+        $isGit = $this->installed->isGitCheckout();
 
         return [
             'key' => 'git_checkout',
