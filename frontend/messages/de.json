@@ -145,7 +145,8 @@
       "sshFailed": "Die SSH-Anmeldung konnte nicht geändert werden.",
       "shellFailed": "Die Anmelde-Shell konnte nicht geändert werden.",
       "keyAddFailed": "Der SSH-Schlüssel konnte nicht hinzugefügt werden.",
-      "keyRemoveFailed": "Der SSH-Schlüssel konnte nicht entfernt werden."
+      "keyRemoveFailed": "Der SSH-Schlüssel konnte nicht entfernt werden.",
+      "keyExists": "Dieser SSH-Schlüssel ist bereits hinzugefügt."
     },
     "create": {
       "title": "Systembenutzer hinzufügen",
@@ -240,7 +241,8 @@
     "sshNeedsLoginShell": "Die Shell ist auf „{shell}“ gesetzt, die die Anmeldung verweigert. Wählen Sie zuerst eine Shell, die die Anmeldung erlaubt.",
     "sshKeys": {
       "loadFailed": "Die Schlüssel für dieses Konto konnten nicht geladen werden. Das bedeutet nicht, dass keine vorhanden sind.",
-      "retryLoad": "Erneut versuchen"
+      "retryLoad": "Erneut versuchen",
+      "securityKey": "{algo}-Sicherheitsschlüssel"
     },
     "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
     "sshNotEnforced": {
@@ -951,7 +953,9 @@
     "logIpInvalid": "Gib eine einzelne IP-Adresse ein, z. B. 203.0.113.5.",
     "logStatusInvalid": "Gib einen Code wie 404 oder eine Gruppe wie 5xx ein.",
     "localPathAbsolute": "Geben Sie einen vollständigen Ordnerpfad ein, der mit / beginnt, z. B. /var/backups/panel.",
-    "unresolvedPhp": "Ersetzen Sie den PHP-Platzhalter durch eine PHP-Binärdatei, z. B. php oder /usr/bin/php8.3."
+    "unresolvedPhp": "Ersetzen Sie den PHP-Platzhalter durch eine PHP-Binärdatei, z. B. php oder /usr/bin/php8.3.",
+    "nameTaken": "Dieser Name ist bereits vergeben. Bitte wählen Sie einen anderen Namen.",
+    "localPathRoot": "Wählen Sie einen Ordner darin, z. B. /var/backups/panel, nicht /var/backups, /mnt oder /media selbst."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -6979,7 +6983,7 @@
         "secret_key": "Die geheime Hälfte der Anmeldedaten. Behandeln Sie sie wie ein Passwort — jeder, der sie besitzt, kann Ihre Sicherungen lesen.",
         "client_id": "Aus der Google Cloud Console → Anmeldedaten. Endet auf .apps.googleusercontent.com.",
         "client_secret": "Wird beim Erstellen neben der Client-ID angezeigt. Wie ein Passwort behandeln.",
-        "path": "Ein Ordner unter /var/backups, /mnt oder /media. Wenn er noch nicht existiert, legt das Panel ihn an."
+        "path": "Wählen Sie einen Ordner unter /var/backups, /mnt oder /media, z. B. /var/backups/panel. Fehlt der Ordner, wird er angelegt."
       },
       "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
       "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Anwendungen aufnehmen kann.",
@@ -7000,7 +7004,7 @@
         "passphrase": "Nur falls der Schlüssel eine hat",
         "path": "/var/backups/panel"
       },
-      "localWarning": "Backups auf diesem Server gehen verloren, wenn der Server oder seine Festplatte ausfällt. Verwenden Sie zusätzlich ein Ziel außerhalb des Servers.",
+      "localWarning": "Lokale Backups können verloren gehen, wenn der Server oder die Festplatte ausfällt. Nutzen Sie Cloud-Speicher oder einen entfernten Server für sicherere Backups.",
       "localPathChangeWarning": "Das zu ändern verschiebt nichts. Backups im alten Ordner bleiben dort und werden nicht mehr gefunden."
     },
     "connect": {
@@ -7428,7 +7432,7 @@
           "hint": "Lässt die aktuellen Dateien unberührt."
         }
       },
-      "safetyPromise": "Von der Anwendung wird vorher eine Kopie im jetzigen Zustand erstellt, das lässt sich also zurücknehmen.",
+      "safetyPromise": "Vor der Wiederherstellung wird eine Kopie erstellt, sodass Sie dies bei Bedarf später rückgängig machen können.",
       "cancel": "Abbrechen",
       "submit": "Anwendung wiederherstellen",
       "starting": "Wird gestartet…",
@@ -7444,7 +7448,7 @@
         "onDatabasePage": "Stellen Sie es über den Backups-Tab der Datenbank wieder her.",
         "siteDeleted": "Diese Anwendung wurde gelöscht, ihre Backups lassen sich nicht wiederherstellen. Laden Sie stattdessen eines herunter."
       },
-      "descriptionShort": "Das ersetzt die Anwendung durch die Kopie unten. Alles, was seither geändert wurde, ist verloren.",
+      "descriptionShort": "Dies ersetzt die aktuelle Anwendung durch das ausgewählte Backup. Alles, was seitdem geändert wurde, geht verloren.",
       "facts": {
         "taken": "Erstellt",
         "type": "Enthält",
@@ -7452,7 +7456,10 @@
         "sizeUnknown": "Unbekannt"
       },
       "copyDomain": "Domain kopieren",
-      "whatToRestoreHint": "Stellt die Dateien, die Datenbank oder beides wieder her. Das Wiederherstellen der Datenbank ersetzt alle aktuellen Inhalte der Seite."
+      "whatToRestoreHint": "Stellt die Dateien, die Datenbank oder beides wieder her. Das Wiederherstellen der Datenbank ersetzt alle aktuellen Inhalte der Seite.",
+      "overwriteWarning": "Dies überschreibt Ihre aktuelle Anwendung.",
+      "safetyCopyLabel": "Zuerst eine Kopie der aktuellen Anwendung erstellen",
+      "noCopyWarning": "Es wird keine Kopie erstellt, daher lässt sich dies nicht rückgängig machen."
     },
     "progress": {
       "running": "Die Anwendung wird wiederhergestellt",
@@ -7723,14 +7730,15 @@
         "description": "Der Zeitplan und seine Einstellungen werden entfernt, und für diese Datenbank laufen keine Backups mehr."
       },
       "restore": {
-        "descriptionShort": "Das ersetzt die Datenbank durch die Kopie unten. Alles, was seither geändert wurde, ist verloren.",
-        "safetyPromise": "Von der Datenbank wird vorher eine Kopie im jetzigen Zustand erstellt, das lässt sich also zurücknehmen.",
+        "descriptionShort": "Dies ersetzt die aktuelle Datenbank durch das ausgewählte Backup. Alles, was seitdem geändert wurde, geht verloren.",
+        "safetyPromise": "Vor der Wiederherstellung wird eine Kopie der Datenbank erstellt, sodass Sie dies bei Bedarf später rückgängig machen können.",
         "submit": "Datenbank wiederherstellen",
         "typeToUnlock": "Tippen Sie den Namen der Datenbank, um zu bestätigen.",
         "copyDomain": "Datenbanknamen kopieren",
         "facts": {
           "from": "Kopie von"
-        }
+        },
+        "overwriteWarning": "Dies überschreibt Ihre aktuelle Datenbank."
       },
       "progress": {
         "running": "Die Datenbank wird wiederhergestellt",

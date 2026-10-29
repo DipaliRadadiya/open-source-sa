@@ -9,6 +9,7 @@ import { editStorageDestinationSchema } from "@/lib/schemas/storage";
 import { fieldsFor, hasCredentials, presetForProvider } from "@/lib/storage/providers";
 import { updateDestination } from "@/lib/api/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { markTakenName } from "@/lib/storage/name-taken";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
@@ -19,7 +20,7 @@ import { GoogleDriveConnect } from "@/components/integrations/storage/google-dri
 import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
 // No credentials (the API reads their presence as "rotate") and no provider (immutable).
-export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri }) {
+export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri, existingNames = [] }) {
   const t = useTranslations("storage.edit");
   const { refreshAndWait } = useRefresh();
 
@@ -67,6 +68,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
       onOpenChange?.(false);
     } catch (error) {
       handleValidationError(error, form, { fallback: t("failed") });
+      markTakenName(error, form, formValues.name, existingNames);
     }
   }
 

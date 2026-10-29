@@ -145,7 +145,8 @@
       "sshFailed": "La connexion SSH n'a pas pu être modifiée.",
       "shellFailed": "Le shell de connexion n'a pas pu être modifié.",
       "keyAddFailed": "La clé SSH n'a pas pu être ajoutée.",
-      "keyRemoveFailed": "La clé SSH n'a pas pu être retirée."
+      "keyRemoveFailed": "La clé SSH n'a pas pu être retirée.",
+      "keyExists": "Cette clé SSH est déjà ajoutée."
     },
     "create": {
       "title": "Ajouter un utilisateur système",
@@ -240,7 +241,8 @@
     "sshNeedsLoginShell": "Le shell est défini sur « {shell} », qui refuse les connexions. Choisissez d'abord un shell autorisant les connexions.",
     "sshKeys": {
       "loadFailed": "Les clés de ce compte n'ont pas pu être chargées. Ce n'est pas la même chose que d'en avoir aucune.",
-      "retryLoad": "Réessayer"
+      "retryLoad": "Réessayer",
+      "securityKey": "Clé de sécurité {algo}"
     },
     "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
     "sshNotEnforced": {
@@ -951,7 +953,9 @@
     "logIpInvalid": "Saisissez une seule adresse IP, ex. 203.0.113.5.",
     "logStatusInvalid": "Saisissez un code comme 404 ou un groupe comme 5xx.",
     "localPathAbsolute": "Saisissez le chemin complet d'un dossier commençant par /, par exemple /var/backups/panel.",
-    "unresolvedPhp": "Remplacez l'espace réservé PHP par un binaire PHP, comme php ou /usr/bin/php8.3."
+    "unresolvedPhp": "Remplacez l'espace réservé PHP par un binaire PHP, comme php ou /usr/bin/php8.3.",
+    "nameTaken": "Ce nom est déjà pris. Veuillez choisir un autre nom.",
+    "localPathRoot": "Choisissez un dossier à l'intérieur, comme /var/backups/panel, pas /var/backups, /mnt ou /media eux-mêmes."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -6979,7 +6983,7 @@
         "secret_key": "La partie secrète des identifiants. Traitez-la comme un mot de passe — toute personne qui la détient peut lire vos sauvegardes.",
         "client_id": "Depuis Google Cloud Console → Identifiants. Se termine par .apps.googleusercontent.com.",
         "client_secret": "Affiché à côté de l’ID client lors de sa création. À traiter comme un mot de passe.",
-        "path": "Un dossier sous /var/backups, /mnt ou /media. S'il n'existe pas encore, le panneau le crée."
+        "path": "Choisissez un dossier sous /var/backups, /mnt ou /media, par exemple /var/backups/panel. Le dossier sera créé s'il n'existe pas."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs applications.",
@@ -7000,7 +7004,7 @@
         "passphrase": "Seulement si la clé en a une",
         "path": "/var/backups/panel"
       },
-      "localWarning": "Les sauvegardes sur ce serveur sont perdues si le serveur ou son disque tombe en panne. Utilisez-le avec une destination hors du serveur.",
+      "localWarning": "Les sauvegardes locales peuvent être perdues si le serveur ou le disque tombe en panne. Utilisez un stockage cloud ou un serveur distant pour des sauvegardes plus sûres.",
       "localPathChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà dans l'ancien dossier y restent et ne seront plus trouvées."
     },
     "connect": {
@@ -7428,7 +7432,7 @@
           "hint": "Laisse les fichiers actuels intacts."
         }
       },
-      "safetyPromise": "Une copie de l'application telle qu'elle est maintenant est prise d'abord, pour que cela soit annulable.",
+      "safetyPromise": "Une copie sera faite avant la restauration, vous pourrez donc annuler plus tard si besoin.",
       "cancel": "Annuler",
       "submit": "Restaurer l'application",
       "starting": "Démarrage…",
@@ -7444,7 +7448,7 @@
         "onDatabasePage": "Restaurez-la depuis l'onglet Sauvegardes de la base de données.",
         "siteDeleted": "Cette application a été supprimée, ses sauvegardes ne peuvent donc pas être restaurées. Téléchargez-en une à la place."
       },
-      "descriptionShort": "Cela remplace l'application par la copie ci-dessous. Tout ce qui a changé depuis est perdu.",
+      "descriptionShort": "Cela remplacera l'application actuelle par la sauvegarde sélectionnée. Tout ce qui a changé depuis sera perdu.",
       "facts": {
         "taken": "Prise",
         "type": "Contient",
@@ -7452,7 +7456,10 @@
         "sizeUnknown": "Inconnu"
       },
       "copyDomain": "Copier le domaine",
-      "whatToRestoreHint": "Restaurez les fichiers, la base de données, ou les deux. Restaurer la base de données remplace tout le contenu actuel de l'application."
+      "whatToRestoreHint": "Restaurez les fichiers, la base de données, ou les deux. Restaurer la base de données remplace tout le contenu actuel de l'application.",
+      "overwriteWarning": "Cela écrasera votre application actuelle.",
+      "safetyCopyLabel": "Créer d'abord une copie de l'application actuelle",
+      "noCopyWarning": "Aucune copie ne sera faite, cela ne pourra donc pas être annulé."
     },
     "progress": {
       "running": "Restauration de l'application",
@@ -7723,14 +7730,15 @@
         "description": "La planification et ses paramètres sont supprimés, et plus aucune sauvegarde ne sera faite pour cette base de données."
       },
       "restore": {
-        "descriptionShort": "Cela remplace la base de données par la copie ci-dessous. Tout ce qui a changé depuis est perdu.",
-        "safetyPromise": "Une copie de la base de données telle qu'elle est maintenant est prise d'abord, pour que cela soit annulable.",
+        "descriptionShort": "Cela remplacera la base de données actuelle par la sauvegarde sélectionnée. Tout ce qui a changé depuis sera perdu.",
+        "safetyPromise": "Une copie de la base de données sera faite avant la restauration, vous pourrez donc annuler plus tard si besoin.",
         "submit": "Restaurer la base de données",
         "typeToUnlock": "Tapez le nom de la base de données pour confirmer.",
         "copyDomain": "Copier le nom de la base",
         "facts": {
           "from": "Copie de"
-        }
+        },
+        "overwriteWarning": "Cela écrasera votre base de données actuelle."
       },
       "progress": {
         "running": "Restauration de la base de données",

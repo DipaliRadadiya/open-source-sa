@@ -145,7 +145,8 @@
       "sshFailed": "No se pudo cambiar el inicio de sesión SSH.",
       "shellFailed": "No se pudo cambiar el shell de inicio de sesión.",
       "keyAddFailed": "No se pudo añadir la clave SSH.",
-      "keyRemoveFailed": "No se pudo eliminar la clave SSH."
+      "keyRemoveFailed": "No se pudo eliminar la clave SSH.",
+      "keyExists": "Esta clave SSH ya está añadida."
     },
     "create": {
       "title": "Añadir usuario del sistema",
@@ -240,7 +241,8 @@
     "sshNeedsLoginShell": "El shell es «{shell}», que rechaza el inicio de sesión. Elige antes un shell que lo permita.",
     "sshKeys": {
       "loadFailed": "No se pudieron cargar las claves de esta cuenta. Eso no es lo mismo que no tener ninguna.",
-      "retryLoad": "Reintentar"
+      "retryLoad": "Reintentar",
+      "securityKey": "Llave de seguridad {algo}"
     },
     "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado.",
     "sshNotEnforced": {
@@ -951,7 +953,9 @@
     "logIpInvalid": "Introduce una sola dirección IP, p. ej. 203.0.113.5.",
     "logStatusInvalid": "Introduce un código como 404 o un grupo como 5xx.",
     "localPathAbsolute": "Introduce la ruta completa de una carpeta que empiece por /, como /var/backups/panel.",
-    "unresolvedPhp": "Sustituye el marcador de PHP por un binario de PHP, como php o /usr/bin/php8.3."
+    "unresolvedPhp": "Sustituye el marcador de PHP por un binario de PHP, como php o /usr/bin/php8.3.",
+    "nameTaken": "Este nombre ya está en uso. Elige otro nombre.",
+    "localPathRoot": "Elige una carpeta dentro, como /var/backups/panel, no /var/backups, /mnt o /media en sí."
   },
   "serverDashboard": {
     "title": "Panel",
@@ -6979,7 +6983,7 @@
         "secret_key": "La parte secreta de las credenciales. Trátela como una contraseña: cualquiera que la tenga puede leer sus copias de seguridad.",
         "client_id": "Desde Google Cloud Console → Credenciales. Termina en .apps.googleusercontent.com.",
         "client_secret": "Se muestra junto al ID de cliente al crearlo. Trátelo como una contraseña.",
-        "path": "Una carpeta dentro de /var/backups, /mnt o /media. Si todavía no existe, el panel la crea."
+        "path": "Elige una carpeta dentro de /var/backups, /mnt o /media, por ejemplo /var/backups/panel. Si no existe, se creará."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
       "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varias aplicaciones.",
@@ -7000,7 +7004,7 @@
         "passphrase": "Solo si la clave tiene una",
         "path": "/var/backups/panel"
       },
-      "localWarning": "Las copias en este servidor se pierden si falla el servidor o su disco. Úselo junto con un destino fuera del servidor.",
+      "localWarning": "Las copias locales pueden perderse si falla el servidor o el disco. Usa almacenamiento en la nube o un servidor remoto para copias más seguras.",
       "localPathChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior se quedan allí y dejan de encontrarse."
     },
     "connect": {
@@ -7428,7 +7432,7 @@
           "hint": "Deja intactos los archivos actuales."
         }
       },
-      "safetyPromise": "Primero se toma una copia de la aplicación tal y como está ahora, así que esto se puede deshacer.",
+      "safetyPromise": "Se hará una copia antes de restaurar, así que podrás deshacerlo más tarde si hace falta.",
       "cancel": "Cancelar",
       "submit": "Restaurar aplicación",
       "starting": "Iniciando…",
@@ -7444,7 +7448,7 @@
         "onDatabasePage": "Restáurala desde la pestaña de copias de la base de datos.",
         "siteDeleted": "Esta aplicación se eliminó, así que sus copias no se pueden restaurar. Descarga una en su lugar."
       },
-      "descriptionShort": "Esto reemplaza la aplicación por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
+      "descriptionShort": "Esto reemplazará la aplicación actual por la copia seleccionada. Todo lo que haya cambiado desde entonces se perderá.",
       "facts": {
         "taken": "Tomada",
         "type": "Contiene",
@@ -7452,7 +7456,10 @@
         "sizeUnknown": "Desconocido"
       },
       "copyDomain": "Copiar dominio",
-      "whatToRestoreHint": "Restaurar los archivos, la base de datos o ambos. Restaurar la base de datos reemplaza todo el contenido actual de la aplicación."
+      "whatToRestoreHint": "Restaurar los archivos, la base de datos o ambos. Restaurar la base de datos reemplaza todo el contenido actual de la aplicación.",
+      "overwriteWarning": "Esto sobrescribirá tu aplicación actual.",
+      "safetyCopyLabel": "Crear primero una copia de la aplicación actual",
+      "noCopyWarning": "No se hará ninguna copia, así que no se podrá deshacer."
     },
     "progress": {
       "running": "Restaurando la aplicación",
@@ -7723,14 +7730,15 @@
         "description": "Se eliminan la programación y sus ajustes, y no se harán más copias de seguridad de esta base de datos."
       },
       "restore": {
-        "descriptionShort": "Esto reemplaza la base de datos por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
-        "safetyPromise": "Primero se toma una copia de la base de datos tal y como está ahora, así que esto se puede deshacer.",
+        "descriptionShort": "Esto reemplazará la base de datos actual por la copia seleccionada. Todo lo que haya cambiado desde entonces se perderá.",
+        "safetyPromise": "Se hará una copia de la base de datos antes de restaurar, así que podrás deshacerlo más tarde si hace falta.",
         "submit": "Restaurar base de datos",
         "typeToUnlock": "Escribe el nombre de la base de datos para confirmar.",
         "copyDomain": "Copiar nombre de la base de datos",
         "facts": {
           "from": "Copia de"
-        }
+        },
+        "overwriteWarning": "Esto sobrescribirá tu base de datos actual."
       },
       "progress": {
         "running": "Restaurando la base de datos",

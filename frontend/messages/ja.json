@@ -145,7 +145,8 @@
       "sshFailed": "SSH ログインを変更できませんでした。",
       "shellFailed": "ログインシェルを変更できませんでした。",
       "keyAddFailed": "SSH 鍵を追加できませんでした。",
-      "keyRemoveFailed": "SSH 鍵を削除できませんでした。"
+      "keyRemoveFailed": "SSH 鍵を削除できませんでした。",
+      "keyExists": "この SSH 鍵はすでに追加されています。"
     },
     "create": {
       "title": "システムユーザーを追加",
@@ -240,7 +241,8 @@
     "sshNeedsLoginShell": "シェルが「{shell}」に設定されているため、ログインできません。先にログイン可能なシェルを選択してください。",
     "sshKeys": {
       "loadFailed": "このアカウントの鍵を読み込めませんでした。鍵がないのとは別の問題です。",
-      "retryLoad": "再試行"
+      "retryLoad": "再試行",
+      "securityKey": "{algo} セキュリティキー"
     },
     "loadFailed": "システムユーザーを読み込めませんでした。変更や削除は行われていません。",
     "sshNotEnforced": {
@@ -951,7 +953,9 @@
     "logIpInvalid": "IP アドレスを 1 つ入力してください（例: 203.0.113.5）。",
     "logStatusInvalid": "404 のようなコード、または 5xx のようなグループを入力してください。",
     "localPathAbsolute": "/var/backups/panel のように、/ で始まるフォルダーのフルパスを入力してください。",
-    "unresolvedPhp": "PHP のプレースホルダーを php や /usr/bin/php8.3 などの PHP バイナリに置き換えてください。"
+    "unresolvedPhp": "PHP のプレースホルダーを php や /usr/bin/php8.3 などの PHP バイナリに置き換えてください。",
+    "nameTaken": "この名前はすでに使われています。別の名前を選んでください。",
+    "localPathRoot": "/var/backups/panel のように、その中のフォルダーを指定してください。/var/backups、/mnt、/media そのものは使えません。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -6979,7 +6983,7 @@
         "secret_key": "認証情報の秘密側の半分です。パスワードと同様に扱い、漏れた人は誰でもバックアップを読み取れます。",
         "client_id": "Google Cloud Console →「認証情報」から。末尾は .apps.googleusercontent.com です。",
         "client_secret": "クライアント ID の作成時に併せて表示されます。パスワードと同様に扱ってください。",
-        "path": "/var/backups、/mnt、/media の下のフォルダー。まだ存在しない場合はパネルが作成します。"
+        "path": "/var/backups、/mnt、/media の下のフォルダーを指定してください（例: /var/backups/panel）。フォルダーがなければ作成されます。"
       },
       "plainFtpWarning": "TLS が無効です。パスワードとすべてのバックアップが暗号化されずに送信されます。",
       "prefixHintRemote": "リモートディレクトリ内の任意のフォルダー。1 台のサーバーで複数アプリケーションを保存できます。",
@@ -7000,7 +7004,7 @@
         "passphrase": "鍵に設定されている場合のみ",
         "path": "/var/backups/panel"
       },
-      "localWarning": "このサーバー上のバックアップは、サーバーやそのディスクが故障すると失われます。サーバー外の保存先と併用してください。",
+      "localWarning": "サーバーやディスクが故障すると、ローカルのバックアップは失われる可能性があります。より安全なバックアップには、クラウドストレージかリモートサーバーを使ってください。",
       "localPathChangeWarning": "変更しても既存のバックアップは移動されません。古いフォルダーのバックアップはそのまま残り、検出されなくなります。"
     },
     "connect": {
@@ -7428,7 +7432,7 @@
           "hint": "現在のファイルはそのまま残します。"
         }
       },
-      "safetyPromise": "復元前に現在のアプリケーションのコピーを取得するため、この操作は取り消せます。",
+      "safetyPromise": "復元前にコピーを取得するため、必要なら後で元に戻せます。",
       "cancel": "キャンセル",
       "submit": "アプリケーションを復元",
       "starting": "起動中…",
@@ -7444,7 +7448,7 @@
         "onDatabasePage": "データベースのバックアップタブから復元してください。",
         "siteDeleted": "このアプリケーションは削除されているため、バックアップは復元できません。代わりにダウンロードしてください。"
       },
-      "descriptionShort": "アプリケーションを以下のコピーと入れ替えます。それ以降の変更は失われます。",
+      "descriptionShort": "現在のアプリケーションを選択したバックアップで置き換えます。それ以降の変更は失われます。",
       "facts": {
         "taken": "取得日時",
         "type": "内容",
@@ -7452,7 +7456,10 @@
         "sizeUnknown": "不明"
       },
       "copyDomain": "ドメインをコピー",
-      "whatToRestoreHint": "ファイル、データベース、またはその両方を復元します。データベースを復元するとアプリケーションの現在のコンテンツはすべて置き換えられます。"
+      "whatToRestoreHint": "ファイル、データベース、またはその両方を復元します。データベースを復元するとアプリケーションの現在のコンテンツはすべて置き換えられます。",
+      "overwriteWarning": "現在のアプリケーションは上書きされます。",
+      "safetyCopyLabel": "先に現在のアプリケーションのコピーを作成する",
+      "noCopyWarning": "コピーは作成されないため、元に戻せません。"
     },
     "progress": {
       "running": "アプリケーションを復元しています",
@@ -7723,14 +7730,15 @@
         "description": "スケジュールとその設定が削除され、このデータベースのバックアップは今後実行されなくなります。"
       },
       "restore": {
-        "descriptionShort": "データベースを以下のコピーと入れ替えます。それ以降の変更は失われます。",
-        "safetyPromise": "復元前に現在のデータベースのコピーを取得するため、この操作は取り消せます。",
+        "descriptionShort": "現在のデータベースを選択したバックアップで置き換えます。それ以降の変更は失われます。",
+        "safetyPromise": "復元前にデータベースのコピーを取得するため、必要なら後で元に戻せます。",
         "submit": "データベースを復元",
         "typeToUnlock": "確認のためデータベース名を入力してください。",
         "copyDomain": "データベース名をコピー",
         "facts": {
           "from": "コピー元"
-        }
+        },
+        "overwriteWarning": "現在のデータベースは上書きされます。"
       },
       "progress": {
         "running": "データベースを復元しています",

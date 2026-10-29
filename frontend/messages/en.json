@@ -145,7 +145,8 @@
       "sshFailed": "SSH login could not be changed.",
       "shellFailed": "The login shell could not be changed.",
       "keyAddFailed": "The SSH key could not be added.",
-      "keyRemoveFailed": "The SSH key could not be removed."
+      "keyRemoveFailed": "The SSH key could not be removed.",
+      "keyExists": "This SSH key is already added."
     },
     "create": {
       "title": "Add system user",
@@ -240,7 +241,8 @@
     "sshNeedsLoginShell": "The shell is set to “{shell}”, which refuses login. Choose a shell that allows login first.",
     "sshKeys": {
       "loadFailed": "The keys for this account could not be loaded. This is not the same as having none.",
-      "retryLoad": "Try again"
+      "retryLoad": "Try again",
+      "securityKey": "{algo} security key"
     },
     "loadFailed": "Your system users could not be loaded. They have not been changed or removed.",
     "sshNotEnforced": {
@@ -951,7 +953,9 @@
     "logIpInvalid": "Enter one IP address, e.g. 203.0.113.5.",
     "logStatusInvalid": "Enter a code like 404, or a group like 5xx.",
     "localPathAbsolute": "Enter a full folder path that starts with /, such as /var/backups/panel.",
-    "unresolvedPhp": "Replace the PHP placeholder with a PHP binary, such as php or /usr/bin/php8.3."
+    "unresolvedPhp": "Replace the PHP placeholder with a PHP binary, such as php or /usr/bin/php8.3.",
+    "nameTaken": "This name is already taken. Please choose a different name.",
+    "localPathRoot": "Choose a folder inside it, such as /var/backups/panel, not /var/backups, /mnt or /media itself."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -6979,7 +6983,7 @@
         "secret_key": "The secret half of the credentials. Treat it like a password — anyone holding it can read your backups.",
         "client_id": "From Google Cloud Console → Credentials. Ends in .apps.googleusercontent.com.",
         "client_secret": "Shown beside the client ID when you create it. Treat it like a password.",
-        "path": "A folder under /var/backups, /mnt or /media. If it doesn't exist yet, the panel creates it."
+        "path": "Select a folder under /var/backups, /mnt or /media, for example /var/backups/panel. The folder will be created if it doesn't exist."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several applications.",
@@ -7000,7 +7004,7 @@
         "passphrase": "Only if the key has one",
         "path": "/var/backups/panel"
       },
-      "localWarning": "Backups on this server are lost if the server or its disk fails. Use it together with an off-server destination.",
+      "localWarning": "Local backups may be lost if the server or disk fails. Use cloud storage or a remote server for safer backups.",
       "localPathChangeWarning": "Changing this does not move anything. Backups already in the old folder stay there and stop being found."
     },
     "connect": {
@@ -7428,7 +7432,7 @@
           "hint": "Leaves the current files untouched."
         }
       },
-      "safetyPromise": "A copy of the application as it is right now is taken first, so this can be undone.",
+      "safetyPromise": "A copy will be taken before restoring, so you can undo this later if needed.",
       "cancel": "Cancel",
       "submit": "Restore application",
       "starting": "Starting…",
@@ -7444,7 +7448,7 @@
         "onDatabasePage": "Restore it from the database's Backups tab.",
         "siteDeleted": "This application was deleted, so its backups can't be restored. Download one instead."
       },
-      "descriptionShort": "This replaces the application with the copy below. Anything changed since then is lost.",
+      "descriptionShort": "This will replace the current application with the selected backup. Anything changed since then will be lost.",
       "facts": {
         "taken": "Taken",
         "type": "Contains",
@@ -7452,7 +7456,10 @@
         "sizeUnknown": "Unknown"
       },
       "copyDomain": "Copy domain",
-      "whatToRestoreHint": "Put back the files, the database, or both. Restoring the database replaces all of the application's current content."
+      "whatToRestoreHint": "Put back the files, the database, or both. Restoring the database replaces all of the application's current content.",
+      "overwriteWarning": "This will overwrite your current application.",
+      "safetyCopyLabel": "Create a copy of the current application first",
+      "noCopyWarning": "No copy will be taken, so this can't be undone."
     },
     "progress": {
       "running": "Restoring the application",
@@ -7723,14 +7730,15 @@
         "description": "The schedule and its settings are removed, and no more backups will run for this database."
       },
       "restore": {
-        "descriptionShort": "This replaces the database with the copy below. Anything changed since then is lost.",
-        "safetyPromise": "A copy of the database as it is right now is taken first, so this can be undone.",
+        "descriptionShort": "This will replace the current database with the selected backup. Anything changed since then will be lost.",
+        "safetyPromise": "A copy of the database will be taken before restoring, so you can undo this later if needed.",
         "submit": "Restore database",
         "typeToUnlock": "Type the database name to confirm.",
         "copyDomain": "Copy database name",
         "facts": {
           "from": "Copy of"
-        }
+        },
+        "overwriteWarning": "This will overwrite your current database."
       },
       "progress": {
         "running": "Restoring the database",

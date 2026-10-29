@@ -161,11 +161,13 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         open={connecting}
         onOpenChange={setConnecting}
         oauthRedirectUri={oauthRedirectUri}
+        existingNames={destinations.map((destination) => destination.name)}
       />
       {editing ? (
         <EditDestinationDialog
           oauthRedirectUri={oauthRedirectUri}
           destination={editing}
+          existingNames={destinations.filter((destination) => destination.id !== editing.id).map((destination) => destination.name)}
           open={Boolean(editing)}
           onOpenChange={(open) => !open && setEditing(null)}
         />

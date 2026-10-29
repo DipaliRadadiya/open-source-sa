@@ -49,5 +49,6 @@ test("a list row says Files only for a full backup with no database", async () =
 // A container backup's type (volumes_config…) is not one the restore request
 // accepts; sent, it was a 422 and the restore never started (20 Oct).
 test("a container backup is restored without naming a type", () => {
-  assert.match(read("components/backups/restore-dialog.jsx"), /allowed\.length \? \{ type, confirm: confirm\.trim\(\) \} : \{ confirm: confirm\.trim\(\) \}/);
+  // `type` only when there is a choice; the confirm (and the safety-copy choice) always.
+  assert.match(read("components/backups/restore-dialog.jsx"), /\.\.\.\(allowed\.length \? \{ type \} : \{\}\),\s*confirm: confirm\.trim\(\),/);
 });

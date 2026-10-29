@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
+import { keyType } from "@/lib/system-users/key-type";
 import { KeySquare, KeyRound, Plus, Trash2, Loader2 } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { sshKeySchema } from "@/lib/schemas/system-user";
@@ -110,8 +112,10 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
 
   async function onAdd(values) {
     try {
-      await addSystemUserSshKey(user.id, values);
-      toast.success(t("toast.keyAdded"));
+      const { data } = await addSystemUserSshKey(user.id, values);
+      // The same key again answers 200 with the one already there, unchanged (2083540c).
+      if (data?.existing) toast.info(data.message ?? t("toast.keyExists"));
+      else toast.success(t("toast.keyAdded"));
       // Stays open for the next key; the key appearing above and the form emptying
       // confirm it went through.
       form.reset();
@@ -212,8 +216,9 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
                       <div className="flex min-w-0 items-start gap-2.5">
                         <KeyRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            {key.name}
+                          <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                            <span className="truncate">{key.name}</span>
+                            <KeyTypeBadge type={key.type} />
                           </p>
                           <p className="truncate font-mono text-xs text-muted-foreground">
                             {key.fingerprint}
@@ -290,5 +295,16 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
               ) : null}
       </FormModal>
     </Form>
+  );
+}
+
+function KeyTypeBadge({ type }) {
+  const t = useTranslations("systemUsers.sshKeys");
+  const known = keyType(type);
+  if (!known) return null;
+  return (
+    <Badge variant="outline" className="shrink-0 font-normal">
+      {known.securityKey ? t("securityKey", { algo: known.algo }) : known.algo}
+    </Badge>
   );
 }

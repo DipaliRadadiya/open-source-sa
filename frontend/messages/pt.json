@@ -145,7 +145,8 @@
       "sshFailed": "Não foi possível alterar o login SSH.",
       "shellFailed": "Não foi possível alterar o shell de login.",
       "keyAddFailed": "Não foi possível adicionar a chave SSH.",
-      "keyRemoveFailed": "Não foi possível remover a chave SSH."
+      "keyRemoveFailed": "Não foi possível remover a chave SSH.",
+      "keyExists": "Esta chave SSH já está adicionada."
     },
     "create": {
       "title": "Adicionar usuário de sistema",
@@ -240,7 +241,8 @@
     "sshNeedsLoginShell": "O shell está definido como \"{shell}\", que recusa login. Escolha um shell que permita login primeiro.",
     "sshKeys": {
       "loadFailed": "As chaves desta conta não puderam ser carregadas. Isso não é o mesmo que não ter nenhuma.",
-      "retryLoad": "Tentar novamente"
+      "retryLoad": "Tentar novamente",
+      "securityKey": "Chave de segurança {algo}"
     },
     "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos.",
     "sshNotEnforced": {
@@ -951,7 +953,9 @@
     "logIpInvalid": "Digite um único endereço IP, ex.: 203.0.113.5.",
     "logStatusInvalid": "Digite um código como 404 ou um grupo como 5xx.",
     "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /, como /var/backups/panel.",
-    "unresolvedPhp": "Substitua o marcador de PHP por um binário PHP, como php ou /usr/bin/php8.3."
+    "unresolvedPhp": "Substitua o marcador de PHP por um binário PHP, como php ou /usr/bin/php8.3.",
+    "nameTaken": "Este nome já está em uso. Escolha outro nome.",
+    "localPathRoot": "Escolha uma pasta dentro dela, como /var/backups/panel, e não /var/backups, /mnt ou /media em si."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -6979,7 +6983,7 @@
         "secret_key": "A parte secreta das credenciais. Trate-a como uma senha — quem a tiver poderá ler suas cópias de segurança.",
         "client_id": "No Google Cloud Console → Credenciais. Termina em .apps.googleusercontent.com.",
         "client_secret": "Aparece ao lado do ID do cliente quando você o cria. Trate como uma senha.",
-        "path": "Uma pasta dentro de /var/backups, /mnt ou /media. Se ainda não existir, o painel a cria."
+        "path": "Escolha uma pasta em /var/backups, /mnt ou /media, por exemplo /var/backups/panel. Se a pasta não existir, ela será criada."
       },
       "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
       "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar várias aplicações.",
@@ -7000,7 +7004,7 @@
         "passphrase": "Só se a chave tiver uma",
         "path": "/var/backups/panel"
       },
-      "localWarning": "Os backups neste servidor se perdem se o servidor ou o seu disco falhar. Use-o junto com um destino fora do servidor.",
+      "localWarning": "Os backups locais podem se perder se o servidor ou o disco falhar. Use armazenamento em nuvem ou um servidor remoto para backups mais seguros.",
       "localPathChangeWarning": "Alterar isto não move nada. Backups já na pasta antiga ficam lá e deixam de ser localizados."
     },
     "connect": {
@@ -7428,7 +7432,7 @@
           "hint": "Mantém os arquivos atuais intactos."
         }
       },
-      "safetyPromise": "Uma cópia da aplicação como está agora é feita antes, para que isso possa ser desfeito.",
+      "safetyPromise": "Uma cópia será feita antes de restaurar, para que você possa desfazer depois, se precisar.",
       "cancel": "Cancelar",
       "submit": "Restaurar aplicação",
       "starting": "Iniciando…",
@@ -7444,7 +7448,7 @@
         "onDatabasePage": "Restaure-o pela aba de backups do banco de dados.",
         "siteDeleted": "Esta aplicação foi excluída, então os backups dela não podem ser restaurados. Baixe um em vez disso."
       },
-      "descriptionShort": "Isso substitui a aplicação pela cópia abaixo. Tudo que foi alterado desde então será perdido.",
+      "descriptionShort": "Isto vai substituir a aplicação atual pelo backup selecionado. Tudo o que mudou desde então será perdido.",
       "facts": {
         "taken": "Feito em",
         "type": "Contém",
@@ -7452,7 +7456,10 @@
         "sizeUnknown": "Desconhecido"
       },
       "copyDomain": "Copiar domínio",
-      "whatToRestoreHint": "Restaurar os arquivos, o banco de dados ou ambos. Restaurar o banco de dados substitui todo o conteúdo atual da aplicação."
+      "whatToRestoreHint": "Restaurar os arquivos, o banco de dados ou ambos. Restaurar o banco de dados substitui todo o conteúdo atual da aplicação.",
+      "overwriteWarning": "Isto vai sobrescrever sua aplicação atual.",
+      "safetyCopyLabel": "Criar antes uma cópia da aplicação atual",
+      "noCopyWarning": "Nenhuma cópia será feita, então isso não poderá ser desfeito."
     },
     "progress": {
       "running": "Restaurando a aplicação",
@@ -7723,14 +7730,15 @@
         "description": "O agendamento e as configurações são removidos, e nenhum outro backup será feito para este banco de dados."
       },
       "restore": {
-        "descriptionShort": "Isso substitui o banco de dados pela cópia abaixo. Tudo que foi alterado desde então será perdido.",
-        "safetyPromise": "Uma cópia do banco de dados como está agora é feita antes, para que isso possa ser desfeito.",
+        "descriptionShort": "Isto vai substituir o banco de dados atual pelo backup selecionado. Tudo o que mudou desde então será perdido.",
+        "safetyPromise": "Uma cópia do banco de dados será feita antes de restaurar, para que você possa desfazer depois, se precisar.",
         "submit": "Restaurar banco de dados",
         "typeToUnlock": "Digite o nome do banco de dados para confirmar.",
         "copyDomain": "Copiar nome do banco de dados",
         "facts": {
           "from": "Cópia de"
-        }
+        },
+        "overwriteWarning": "Isto vai sobrescrever seu banco de dados atual."
       },
       "progress": {
         "running": "Restaurando o banco de dados",

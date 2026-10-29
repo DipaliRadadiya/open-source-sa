@@ -123,6 +123,8 @@ const localPathField = z
   .trim()
   .max(255, "max255")
   .regex(/^\//, "localPathAbsolute")
+  // A root itself is refused by the backend with a message that names the very folder typed.
+  .refine((v) => !/^\/(var\/backups|mnt|media)\/*$/.test(v), "localPathRoot")
   .refine((v) => !/(^|\/)\.{1,2}(\/|$)/.test(v), "rootTraversal");
 
 /** Per-field validators, keyed by the config key they validate. */

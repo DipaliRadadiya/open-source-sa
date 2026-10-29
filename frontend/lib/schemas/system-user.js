@@ -33,7 +33,9 @@ export const usernameField = z
 const publicKeyField = z
   .string()
   .trim()
-  .regex(/^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+)\s+\S+/, "sshKey");
+  // Hardware-token keys too (sk-…@openssh.com, accepted since 2083540c). DSA still passes here
+  // so the backend's own message says why it is refused.
+  .regex(/^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh\.com)\s+\S+/, "sshKey");
 
 // Everything past `username` is optional and defaults to bash, no sudo, no SSH,
 // no password, matching the backend's `sometimes` rules.

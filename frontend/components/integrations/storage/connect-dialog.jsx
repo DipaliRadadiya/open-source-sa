@@ -10,6 +10,7 @@ import { defaultConfig, keyDocsUrl, providerForPreset } from "@/lib/storage/prov
 import { createDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { markTakenName } from "@/lib/storage/name-taken";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
@@ -20,7 +21,7 @@ import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive
 const DEFAULT_PRESET = "aws";
 
 // The test endpoint needs a saved id, so this saves first, then tests.
-export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri }) {
+export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri, existingNames = [] }) {
   const t = useTranslations("storage.connect");
   const { refreshAndWait } = useRefresh();
 
@@ -83,6 +84,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       }
     } catch (error) {
       handleValidationError(error, form, { fallback: t("failed") });
+      markTakenName(error, form, values.name, existingNames);
     }
   }
 
