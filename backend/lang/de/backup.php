@@ -127,6 +127,7 @@ return [
     ],
 
     'restore_errors' => [
+        'not_enough_space' => 'Auf dem Server ist nicht genug freier Speicherplatz für die Sicherheitskopie, daher wurde die Wiederherstellung abgebrochen. Es wurde nichts überschrieben. Geben Sie Speicherplatz frei oder stellen Sie ohne Sicherheitskopie wieder her.',
         'download_artifact' => 'Die Sicherung konnte nicht heruntergeladen werden. Auf dem Server wurde nichts geändert.',
         'verify_download' => 'Die heruntergeladene Sicherung ist unvollständig oder beschädigt und wurde nicht verwendet. Auf dem Server wurde nichts geändert.',
         'safety_backup' => 'Der aktuelle Stand konnte nicht gesichert werden, daher wurde die Wiederherstellung abgebrochen. Es wurde nichts überschrieben.',

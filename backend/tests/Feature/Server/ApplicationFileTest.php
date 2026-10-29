@@ -2,6 +2,7 @@
 
 use App\Enums\FileArchiveStatus;
 use App\Exceptions\Server\Application\FileOperationException;
+use App\Http\Resources\ActivityLogResource;
 use App\Jobs\RunFileArchive;
 use App\Models\ActivityLog;
 use App\Models\Application;
@@ -3163,5 +3164,59 @@ describe('the directory the browser is rooted at', function () {
 
         expect($application->panelPath())->not->toStartWith($application->publicHtmlPath().'/')
             ->and($application->publicHtmlPath())->toStartWith($application->rootPath().'/');
+    });
+});
+
+describe('the user may save a file without a copy (2026-10-29)', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'size' => 20, 'content' => 'v2'];
+        FileBrowserFake::$fs['.panel/backups'] = ['type' => 'd'];
+        FileBrowserFake::$fs['.panel/backups/index.php.bak-20260805-090000'] = ['type' => 'f', 'content' => 'v1'];
+    });
+
+    $newCopies = fn (): array => array_values(array_filter(
+        array_keys(FileBrowserFake::$fs),
+        fn (string $k): bool => str_starts_with($k, '/home/siteowner/shop/.panel/file-backups/index.php.bak-'),
+    ));
+
+    it('still keeps a copy when nothing is said', function () use ($newCopies) {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'v3'])->assertOk();
+
+        expect($newCopies())->toHaveCount(1);
+    });
+
+    it('saves without a copy when the user turns it off, and says so in the log', function () use ($newCopies) {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'v3', 'safety_copy' => false])
+            ->assertOk();
+
+        expect($newCopies())->toBe([])
+            ->and(FileBrowserFake::$fs['index.php']['content'])->toBe('v3')
+            ->and(ActivityLogResource::make(ActivityLog::where('action', 'file_edited')->latest('id')->first())->resolve()['description'])
+            ->toEndWith('(without a safety copy)');
+    });
+
+    it('puts a previous version back without a copy of the current one', function () use ($newCopies) {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/content/restore'), ['path' => 'index.php', 'backup' => 'index.php.bak-20260805-090000', 'safety_copy' => false])
+            ->assertOk();
+
+        expect($newCopies())->toBe([])
+            ->and(FileBrowserFake::$fs['index.php']['content'])->toBe("v1\n");
+    });
+
+    it('refuses a value that is not true or false', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'x', 'safety_copy' => 'maybe'])
+            ->assertJsonValidationErrors('safety_copy');
     });
 });

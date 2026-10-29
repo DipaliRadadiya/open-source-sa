@@ -47,6 +47,14 @@ class SaveEnvironmentRequest extends FormRequest
             // that one is a client bug, and treating it as "empty" would blank
             // someone's environment on a malformed request.
             'raw' => ['present', 'string', 'max:262144'],
+            // Keep a copy of what this replaces, so it can be put back. The
+            // user's choice since 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 }

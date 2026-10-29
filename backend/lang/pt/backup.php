@@ -125,6 +125,7 @@ return [
     ],
 
     'restore_errors' => [
+        'not_enough_space' => 'Não há espaço livre suficiente no disco do servidor para a cópia de segurança, por isso o restauro foi interrompido. Nada foi substituído. Liberte espaço ou restaure sem cópia de segurança.',
         'download_artifact' => 'Não foi possível descarregar a cópia. Nada foi alterado no servidor.',
         'verify_download' => 'A cópia descarregada está incompleta ou corrompida, por isso não foi usada. Nada foi alterado no servidor.',
         'safety_backup' => 'Não foi possível copiar o estado atual, por isso a restauração foi interrompida. Nada foi sobrescrito.',

@@ -819,9 +819,11 @@ class FileBrowser
      *
      * The backup comes first and its failure is fatal: this is the whole
      * safety story for "edit", and a save that silently skipped the copy
-     * would be the one time that promise mattered.
+     * would be the one time that promise mattered. Skipped only when the user
+     * turned the copy off (`$keepCopy`, 2026-10-29) — then there is no
+     * previous version to go back to, and the editor said so first.
      */
-    public function write(Application $application, string $path, string $content, ?string $expectedVersion = null): string
+    public function write(Application $application, string $path, string $content, ?string $expectedVersion = null, bool $keepCopy = true): string
     {
         $target = $this->resolve($application, $path);
         // Editing, not creating: a path that does not already resolve to a
@@ -836,7 +838,9 @@ class FileBrowser
             throw FileRefusedException::because('version', 'changed_on_disk', 'errors/application.file_changed_on_disk', status: 409);
         }
 
-        $this->backup($application, $target);
+        if ($keepCopy) {
+            $this->backup($application, $target);
+        }
 
         $this->run($application, ['tee', $target], 'write', input: $content);
 
@@ -872,7 +876,7 @@ class FileBrowser
     /**
      * @return array{content: string, version: string} what the file now holds (APP-5)
      */
-    public function restoreBackup(Application $application, string $path, string $name): array
+    public function restoreBackup(Application $application, string $path, string $name, bool $keepCopy = true): array
     {
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'f');
@@ -894,7 +898,7 @@ class FileBrowser
 
         $content = $this->run($application, ['cat', $source], 'read_backup')->output();
 
-        $version = $this->write($application, $path, $content);
+        $version = $this->write($application, $path, $content, keepCopy: $keepCopy);
 
         $this->sizeChanged($application);
 

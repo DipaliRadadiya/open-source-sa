@@ -4,6 +4,7 @@ use App\Actions\Server\Backup\DeleteBackup;
 use App\Contracts\DatabaseEngine;
 use App\Enums\BackupStatus;
 use App\Enums\RestoreStatus;
+use App\Http\Resources\RestoreResource;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
@@ -13,11 +14,14 @@ use App\Models\Restore;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\LocalBackupFolder;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\Restores\RestoreRunner;
 use App\Services\Server\Restores\Steps\RestoreDatabase;
+use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -699,5 +703,26 @@ describe('the user may restore without a safety copy (2026-10-29)', function () 
         $restore->update(['safety_copy' => false]);
 
         expect(app(RestoreRunner::class)->run($restore)->reason)->not->toBe('safety_backup');
+    });
+});
+
+describe('a safety copy that does not fit on the disk (2026-10-29)', function () {
+    it('stops before anything is overwritten, and says it was the disk', function () {
+        fakeRestoreCommands();
+        $backup = storedBackup(bytes: 4096);
+        // The safety copy is estimated from this target's last backup, 4096
+        // bytes; 4095 of headroom cannot take it.
+        $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+        $folder->shouldReceive('space')->andReturn(['free' => 1024 ** 3, 'total' => 100 * 1024 ** 3]);
+        app()->instance(LocalBackupFolder::class, $folder);
+        config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
+
+        $restore = app(RestoreRunner::class)->run(restoreFor($backup));
+
+        expect($restore->status)->toBe(RestoreStatus::Failed)
+            ->and($restore->reason)->toBe('not_enough_space')
+            ->and(RestoreResource::make($restore)->resolve()['reason_title'])->toBe(__('backup.restore_errors.not_enough_space'))
+            ->and(__('backup.restore_errors.not_enough_space'))->not->toBe('backup.restore_errors.not_enough_space')
+            ->and(File::get($this->siteRoot.'/index.php'))->toContain('live');
     });
 });

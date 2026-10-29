@@ -122,7 +122,7 @@ class ApplicationEnvironmentController extends Controller
             ]);
         }
 
-        $backup = $files->write($application, $raw);
+        $backup = $files->write($application, $raw, $request->safetyCopy());
 
         $applied = $this->apply($application, $framework, $detector);
         $restarted = $this->restart($application, $request->boolean('restart'));
@@ -137,6 +137,8 @@ class ApplicationEnvironmentController extends Controller
             // to match a log entry against a directory listing by timestamp.
             // Null on a first save, where there was nothing to keep.
             'backup' => $backup,
+            // Only when turned off, so the line says "(without a safety copy)".
+            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
         ]);
 
         return response()->json([
@@ -234,7 +236,7 @@ class ApplicationEnvironmentController extends Controller
         // A well-formed name that is not (or no longer) on disk is the user's
         // mistake — a stale list — not a server failure.
         try {
-            $safety = $files->restore($application, $name);
+            $safety = $files->restore($application, $name, $request->safetyCopy());
         } catch (RuntimeException) {
             throw ValidationException::withMessages(['backup' => [__('errors/application.unknown_backup')]]);
         }
@@ -249,6 +251,7 @@ class ApplicationEnvironmentController extends Controller
             // is what makes a restore undoable from its own history row.
             'restored_from' => $name,
             'backup' => $safety,
+            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
         ]);
 
         return response()->json([

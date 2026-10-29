@@ -6,6 +6,7 @@ use App\Actions\Server\Backup\DeleteBackup;
 use App\Contracts\RestoreStep;
 use App\Enums\BackupStatus;
 use App\Enums\RestoreStatus;
+use App\Exceptions\NotEnoughBackupSpace;
 use App\Models\Backup;
 use App\Models\Restore;
 use App\Services\Server\Backups\BackupRunner;
@@ -73,6 +74,13 @@ class SafetyBackup implements RestoreStep
         // safety backup recorded as an ordinary one — which strips it of the
         // retention exemption that exists to keep it. See BackupRunner::run().
         $safety = $this->backups->run($target, $context->restore->user_id, isSafety: true);
+
+        // Out of disk space is said as such (2026-10-29): it is the one
+        // failure here the user can fix on the spot, by freeing space or by
+        // restoring without a copy.
+        if ($safety->status !== BackupStatus::Verified && $safety->reason === NotEnoughBackupSpace::REASON) {
+            throw new NotEnoughBackupSpace('the safety backup did not fit on the disk, so nothing was restored');
+        }
 
         if ($safety->status !== BackupStatus::Verified) {
             throw new RuntimeException(

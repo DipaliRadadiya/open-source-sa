@@ -22,6 +22,9 @@ class RestoreEnvironmentRequest extends FormRequest
             // with an error logged (found live 2026-09-29).
             'backup' => ['required', 'string', 'max:64', 'regex:'.ApplicationEnvironment::BACKUP_NAME],
             'restart' => ['sometimes', 'boolean'],
+            // Keep a copy of what this replaces, so it can be put back. The
+            // user's choice since 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -30,5 +33,10 @@ class RestoreEnvironmentRequest extends FormRequest
         return [
             'backup.regex' => __('errors/application.unknown_backup'),
         ];
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 }

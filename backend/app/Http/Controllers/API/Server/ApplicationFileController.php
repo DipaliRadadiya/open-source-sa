@@ -125,11 +125,13 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $version = $files->write($application, $request->targetPath(), (string) $request->validated('content'), $request->expectedVersion());
+        $version = $files->write($application, $request->targetPath(), (string) $request->validated('content'), $request->expectedVersion(), $request->safetyCopy());
 
         $activity->log('application.file_edited', $application, [
             'name' => $application->name,
             'path' => $request->targetPath(),
+            // Only when turned off, so the line says "(without a safety copy)".
+            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
         ]);
 
         return response()->json(['saved' => true, 'version' => $version]);
@@ -141,11 +143,12 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $restored = $files->restoreBackup($application, $request->targetPath(), $request->backupName());
+        $restored = $files->restoreBackup($application, $request->targetPath(), $request->backupName(), $request->safetyCopy());
 
         $activity->log('application.file_restored', $application, [
             'name' => $application->name,
             'path' => $request->targetPath(),
+            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
         ]);
 
         // The content too (APP-5), so the editor shows what is now on disk

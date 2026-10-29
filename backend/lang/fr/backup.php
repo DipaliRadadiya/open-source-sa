@@ -125,6 +125,7 @@ return [
     ],
 
     'restore_errors' => [
+        'not_enough_space' => 'Il n’y a pas assez d’espace disque libre sur le serveur pour la copie de sécurité, la restauration a donc été arrêtée. Rien n’a été écrasé. Libérez de l’espace ou restaurez sans copie de sécurité.',
         'download_artifact' => 'La sauvegarde n\'a pas pu être téléchargée. Rien n\'a été modifié sur le serveur.',
         'verify_download' => 'La sauvegarde téléchargée est incomplète ou corrompue et n\'a pas été utilisée. Rien n\'a été modifié sur le serveur.',
         'safety_backup' => 'L\'état actuel n\'a pas pu être sauvegardé, la restauration a donc été arrêtée. Rien n\'a été écrasé.',

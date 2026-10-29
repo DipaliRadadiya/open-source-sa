@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\ServerCapability;
@@ -1005,5 +1006,46 @@ describe('the key an application encrypts its data with (bug #17)', function () 
         fakeSite();
 
         $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "APP_KEY=base64:xyz\n"])->assertOk();
+    });
+});
+
+describe('the user may save without a copy (2026-10-29)', function () {
+    it('still keeps a copy when nothing is said', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n"])->assertOk();
+
+        expect(ActivityLog::query()->latest('id')->first()->properties['backup'])->toMatch('/^\.env\.bak-\d{8}-\d{6}/');
+    });
+
+    it('saves without a copy when the user turns it off, and says so in the log', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n", 'safety_copy' => false])->assertOk();
+
+        $log = ActivityLog::query()->latest('id')->first();
+        expect($log->properties['backup'])->toBeNull()
+            ->and(collect($this->ran)->first(fn (array $c): bool => in_array('cp', $c, true) && str_contains(implode(' ', $c), '.env.bak-')))->toBeNull();
+
+        expect(ActivityLogResource::make($log)->resolve()['description'])->toEndWith('(without a safety copy)');
+    });
+
+    it('puts a previous version back without a copy of the current one', function () {
+        $this->backupNames = ['.env.bak-20260907-120000'];
+        $this->disk['/home/envowner/deployed-site/.env.bak-20260907-120000'] = "APP_ENV=local\n";
+        fakeSite();
+
+        $this->actingAs($this->admin)
+            ->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260907-120000', 'safety_copy' => false])
+            ->assertOk();
+
+        expect(ActivityLog::query()->latest('id')->first()->properties['backup'])->toBeNull();
+    });
+
+    it('refuses a value that is not true or false', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n", 'safety_copy' => 'maybe'])
+            ->assertJsonValidationErrors('safety_copy');
     });
 });

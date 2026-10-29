@@ -21,6 +21,9 @@ use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\StagingManager;
 use App\Services\Server\Backups\BackupRunner;
+use App\Services\Server\Backups\Storage\LocalBackupFolder;
+use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -1963,6 +1966,44 @@ describe('the safety copy switch on push and pull (2026-10-29)', function () {
         expect($safetyDumps($seen))->toBe(0);
     });
 
+    it('refuses the copy when the disk has no room for it, and replaces nothing', function () use ($safetyDumps) {
+        $seen = stagingCommandsSeen();
+        Database::where('application_id', $this->production->id)->update(['size_bytes' => 4096]);
+        // 4095 bytes of headroom on the disk the copy would go to.
+        $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+        $folder->shouldReceive('space')->andReturn(['free' => 1024 ** 3, 'total' => 100 * 1024 ** 3]);
+        app()->instance(LocalBackupFolder::class, $folder);
+        config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])
+            ->assertStatus(202)
+            ->assertJsonPath('run.status', 'failed')
+            ->assertJsonPath('run.error_status', 422)
+            ->assertJsonPath('run.error.errors.safety_copy.0', __('errors/application.staging_not_enough_space'));
+
+        expect($safetyDumps($seen))->toBe(0)
+            // Nothing was loaded into the live database either.
+            ->and(collect($seen)->first(fn (string $c) => str_contains($c, 'source ')))->toBeNull();
+    });
+
+    it('removes a copy that failed part-way', function () {
+        $seen = new ArrayObject;
+        Process::fake(function ($process) use ($seen) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $seen[] = implode(' ', $args);
+
+            if (str_contains(implode(' ', $args), '--result-file=') && str_contains(implode(' ', $args), 'pre-push-')) {
+                return Process::result(errorOutput: 'No space left on device', exitCode: 2);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])
+            ->assertJsonPath('run.status', 'failed');
+
+        expect(collect($seen)->first(fn (string $c) => str_starts_with($c, 'rm -f -- ') && str_contains($c, '/staging-backups/pre-push-')))->not->toBeNull();
+    });
     it('refuses a value that is not true or false', function () {
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full', 'safety_copy' => 'maybe'])
             ->assertJsonValidationErrors('safety_copy');

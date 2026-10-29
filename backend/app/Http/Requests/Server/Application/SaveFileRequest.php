@@ -28,6 +28,9 @@ class SaveFileRequest extends FormRequest
             // instead of silently overwriting their edit. Optional, so an
             // older client still saves.
             'version' => ['sometimes', 'nullable', 'string', 'size:40'],
+            // Keep a copy of what this replaces, so it can be put back. The
+            // user's choice since 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -41,5 +44,10 @@ class SaveFileRequest extends FormRequest
         $version = $this->validated('version');
 
         return is_string($version) && $version !== '' ? $version : null;
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 }

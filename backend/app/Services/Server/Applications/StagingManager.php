@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Contracts\StagingStrategy;
 use App\Enums\DomainType;
+use App\Exceptions\NotEnoughBackupSpace;
 use App\Exceptions\Server\Application\StagingOperationException;
 use App\Exceptions\Server\Application\StagingRollbackException;
 use App\Exceptions\Server\ServerOperationException;
@@ -12,7 +13,9 @@ use App\Models\ApplicationDomain;
 use App\Models\Database;
 use App\Models\Restore;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Backups\LocalSpaceGuard;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Databases\DatabaseSizes;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -36,6 +39,8 @@ class StagingManager
         private DatabaseManager $databases,
         private SiteTypeManager $siteTypes,
         private ServerOps $serverOps,
+        private LocalSpaceGuard $space,
+        private DatabaseSizes $sizes,
     ) {}
 
     public function create(Application $production, string $domain): Application
@@ -799,7 +804,32 @@ class StagingManager
             throw new StagingOperationException($created->reference, $created->busy, $created->staleLock);
         }
 
-        $this->databases->engine($database->engine)->dump($database->name, $path);
+        // Room for it first (2026-10-29): the dump goes to this server's disk,
+        // and a full disk takes every site down with it. Measured now rather
+        // than read from the stored size, which can be days old. Unknown size
+        // or an unmeasurable disk is let through, as for backups.
+        $bytes = (int) $this->sizes->refresh($database)->size_bytes;
+
+        try {
+            $this->space->ensureRoomFor($directory, $bytes);
+        } catch (NotEnoughBackupSpace) {
+            throw ValidationException::withMessages([
+                'safety_copy' => [__('errors/application.staging_not_enough_space')],
+            ]);
+        }
+
+        try {
+            $this->databases->engine($database->engine)->dump($database->name, $path);
+        } catch (Throwable $e) {
+            // A dump that died part-way — out of space, most likely — is not a
+            // copy anyone can restore from, and it is holding the space.
+            $this->serverOps->run(
+                ['rm', '-f', '--', $path],
+                ['feature' => 'application', 'op' => 'staging_safety_dump_cleanup', 'application' => $production->id],
+            );
+
+            throw $e;
+        }
 
         return ['database' => $database, 'path' => $path];
     }

@@ -127,6 +127,7 @@ return [
     ],
 
     'restore_errors' => [
+        'not_enough_space' => 'No hay suficiente espacio libre en el disco del servidor para la copia de seguridad previa, así que se detuvo la restauración. No se sobrescribió nada. Libere espacio o restaure sin copia de seguridad previa.',
         'download_artifact' => 'No se pudo descargar la copia. No se cambió nada en el servidor.',
         'verify_download' => 'La copia descargada está incompleta o dañada, así que no se usó. No se cambió nada en el servidor.',
         'safety_backup' => 'No se pudo copiar el estado actual, así que se detuvo la restauración. No se sobrescribió nada.',

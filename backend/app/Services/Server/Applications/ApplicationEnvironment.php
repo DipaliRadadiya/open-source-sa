@@ -223,9 +223,10 @@ class ApplicationEnvironment
     }
 
     /**
-     * `$keepPrevious` is false only for a clone (CLN-01): the file it replaces
-     * is the source's, copied, and kept it would be one more copy of the
-     * source's credentials that nothing uses.
+     * `$keepPrevious` is false for a clone (CLN-01): the file it replaces is
+     * the source's, copied, and kept it would be one more copy of the source's
+     * credentials that nothing uses. And, since 2026-10-29, when the user
+     * turned the copy off on save or restore: then nothing can be undone.
      */
     private function replace(Application $application, string $contents, bool $keepPrevious): ?string
     {
@@ -316,7 +317,7 @@ class ApplicationEnvironment
      * does: a restore is a change to the file like any other, and its history
      * row should be able to undo it.
      */
-    public function restore(Application $application, string $name): ?string
+    public function restore(Application $application, string $name, bool $keepCopy = true): ?string
     {
         if (preg_match(self::BACKUP_NAME, $name) !== 1) {
             // The name reaches a path. Anything not matching exactly what we
@@ -333,7 +334,7 @@ class ApplicationEnvironment
             throw new RuntimeException('that backup no longer exists');
         }
 
-        return $this->write($application, $this->readFile($application, $source));
+        return $this->write($application, $this->readFile($application, $source), $keepCopy);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Exceptions\Server\Storage\LocalBackupFolderException;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Database;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -425,4 +426,80 @@ it('is never touched by the disk cleaner', function () {
     foreach (['/var/backups', '/mnt', '/media', ...$roots] as $root) {
         expect($config)->not->toContain(str_replace('/', '\/', $root));
     }
+});
+
+describe('the space check before every backup (2026-10-29)', function () {
+
+    beforeEach(function () {
+        $this->home = "{$this->base}/home";
+        File::ensureDirectoryExists("{$this->home}/site/public_html");
+        $user = SystemUser::create(['username' => 'spsite', 'home_path' => $this->home]);
+        $this->site = Application::forceCreate([
+            'system_user_id' => $user->id, 'name' => 'Site', 'slug' => 'site', 'domain' => 'site.test',
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+        // The archive is built on this server before it goes anywhere, so a
+        // bucket does not make this server's disk any bigger.
+        $this->bucket = StorageDestination::create([
+            'name' => 'Bucket', 'provider' => 's3',
+            'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'b', 'access_key' => 'k', 'secret_key' => 's'],
+        ]);
+        $this->target = BackupTarget::create([
+            'application_id' => $this->site->id, 'storage_destination_id' => $this->bucket->id,
+            'type' => 'filesystem', 'retention_count' => 2, 'enabled' => true, 'frequency' => 'daily',
+        ]);
+        // 4095 bytes of headroom on every disk.
+        lbDisk(free: 1024 ** 3, total: 100 * 1024 ** 3);
+        config(['server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
+    });
+
+    it('refuses a backup to a bucket when the last one would not fit on this server', function () {
+        Backup::create([
+            'backup_target_id' => $this->target->id, 'application_id' => $this->site->id, 'type' => 'filesystem',
+            'status' => 'verified', 'size_bytes' => 4096, 'manifest' => ['key' => 'old.tar.gz'], 'verified_at' => now(),
+        ]);
+
+        $failed = app(BackupRunner::class)->run($this->target);
+
+        expect($failed->status)->toBe(BackupStatus::Failed)
+            ->and($failed->reason)->toBe('not_enough_space')
+            // This server's disk, not "the bucket is unreachable".
+            ->and($failed->error_class)->toBe('local_no_space')
+            ->and(collect($this->ran)->first(fn ($c) => $c[0] === 'tar'))->toBeNull();
+    });
+
+    it('estimates a first backup from the size of what it captures', function () {
+        $this->site->forceFill(['directory_size_bytes' => 4096])->save();
+
+        $failed = app(BackupRunner::class)->run($this->target);
+
+        expect($failed->status)->toBe(BackupStatus::Failed)
+            ->and($failed->reason)->toBe('not_enough_space')
+            ->and(collect($this->ran)->first(fn ($c) => $c[0] === 'tar'))->toBeNull();
+    });
+
+    it('estimates a first database backup from the database size', function () {
+        $database = Database::create(['name' => 'spdb', 'engine' => 'mysql', 'size_bytes' => 4096]);
+        $target = BackupTarget::create([
+            'database_id' => $database->id, 'storage_destination_id' => $this->bucket->id,
+            'type' => 'database', 'retention_count' => 2, 'enabled' => true, 'frequency' => 'daily',
+        ]);
+
+        expect(app(BackupRunner::class)->run($target)->reason)->toBe('not_enough_space');
+    });
+
+    it('lets a first backup through when nothing about its size is known', function () {
+        $backup = app(BackupRunner::class)->run($this->target);
+
+        // It gets past the check and fails later, at the upload this test
+        // cannot make — not for space.
+        expect($backup->reason)->not->toBe('not_enough_space')
+            ->and(collect($this->ran)->first(fn ($c) => $c[0] === 'tar'))->not->toBeNull();
+    });
+
+    it('lets it through when it fits', function () {
+        $this->site->forceFill(['directory_size_bytes' => 4095])->save();
+
+        expect(app(BackupRunner::class)->run($this->target)->reason)->not->toBe('not_enough_space');
+    });
 });

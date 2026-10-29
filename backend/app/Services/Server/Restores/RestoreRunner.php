@@ -4,6 +4,7 @@ namespace App\Services\Server\Restores;
 
 use App\Contracts\RestoreStep;
 use App\Enums\RestoreStatus;
+use App\Exceptions\NotEnoughBackupSpace;
 use App\Models\Restore;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\ServerOps;
@@ -90,7 +91,9 @@ class RestoreRunner
                 'status' => RestoreStatus::Failed,
                 // The step that failed, as a stable key. Raw stderr stays in
                 // the ops log — it names paths and sometimes credentials.
-                'reason' => $restore->current_step ?? 'unknown',
+                // Out of disk space for the safety copy is its own reason
+                // (2026-10-29): "free some space" is something the user can do.
+                'reason' => $e instanceof NotEnoughBackupSpace ? NotEnoughBackupSpace::REASON : ($restore->current_step ?? 'unknown'),
                 'rollback_path' => $context->rollbackPath,
                 'finished_at' => now(),
             ]);

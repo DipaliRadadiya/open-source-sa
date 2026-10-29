@@ -179,6 +179,13 @@ class BackupRunner
             return null;
         }
 
+        // This server's disk, whatever the destination (2026-10-29): a backup
+        // to S3 refused for space here is not "the bucket is unreachable",
+        // which is what that driver's classifier would call it.
+        if ($e instanceof NotEnoughBackupSpace) {
+            return 'local_no_space';
+        }
+
         $destination = $backup->destination();
 
         if ($destination === null) {

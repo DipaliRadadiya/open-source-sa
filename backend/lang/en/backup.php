@@ -142,6 +142,7 @@ return [
     'schedule_time' => 'Scheduled time',
 
     'restore_errors' => [
+        'not_enough_space' => 'Not enough free disk space on the server for the safety copy, so the restore was stopped. Nothing was overwritten. Free up space, or restore without a safety copy.',
         'download_artifact' => 'The backup could not be downloaded. Nothing on the server was changed.',
         'verify_download' => 'The downloaded backup is incomplete or corrupt, so it was not used. Nothing on the server was changed.',
         'safety_backup' => 'A backup of the current state could not be taken, so the restore was stopped. Nothing was overwritten.',

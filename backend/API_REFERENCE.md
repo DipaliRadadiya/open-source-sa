@@ -2135,6 +2135,8 @@ Replace the entire `.env` file. Optionally restart the app's process after save.
 
 Syntax errors return `422` with `errors.raw` listing the problem.
 
+**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): keep the file this save replaces as a `.env.bak-…` backup, so it can be put back. `false` skips it: nothing to go back to, and the activity row's `backup` is `null`; its line ends *"(without a safety copy)"*. Same on `POST …/environment/restore`, for the copy of the file being replaced. Anything but a boolean is a `422`.
+
 **Locked keys (2026-10-04, bug #17).** The key an application encrypts its stored data with cannot be changed or removed once it has a value: `N8N_ENCRYPTION_KEY` on n8n, `APP_KEY` on Akaunting and Statamic. Such a save is a `422` on `raw` naming the key; every other line can still be edited. A file with no value for the key yet may be given one. Git sites have no locked keys — the code, and rotating its key, are the owner's.
 
 **Panel-managed keys (2026-10-05, junior re-test #7).** n8n's `N8N_PORT`, `N8N_USER_FOLDER` and `N8N_LISTEN_ADDRESS` are refused the same way: the vhost proxies to the port the panel recorded, the data lives in the site folder, and n8n listens on loopback behind its vhost. Changing one answered `200` and broke the site at the next restart. The `422` message differs from the encryption-key one (`environment_key_managed` / `_backup`), so show `errors.raw[0]` (or `errors.backup[0]`) as it is.
@@ -2146,7 +2148,7 @@ Syntax errors return `422` with `errors.raw` listing the problem.
 
 Restore a previous snapshot.
 
-**Request:** `{"backup": ".env.bak-20260728-141530", "restart": true}`
+**Request:** `{"backup": ".env.bak-20260728-141530", "restart": true, "safety_copy": true}` — `safety_copy` as on `PUT …/environment`.
 
 `backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised — a `422` on `backup`, as is a well-formed name that is no longer on disk (both were `500`s until 2026-09-29). The current file is backed up first, so restoring the wrong snapshot is itself undoable.
 
@@ -2336,6 +2338,7 @@ Edit an **existing** file (`404` if there is none — create files with `POST �
 
 - `content` may be **empty** (`""`) to empty the file (refused until 2026-10-08, OLD-25).
 - `version` is optional: the `version` from `GET …/files/content`. When it is sent and the file has changed since (someone else saved), the save is refused with **`409`**, `reason: changed_on_disk`, and nothing is written. Reload and edit again.
+- `safety_copy` is optional, `true` by default (2026-10-29 — the user's choice): keep the previous version as a backup first. `false` skips it — no new entry in `backups`, nothing to go back to — and the activity line ends *"(without a safety copy)"*. Same on `POST …/files/content/restore`.
 
 **Response `200`:** `{"saved": true, "version": "…"}` — the new version, for the next save.
 
@@ -2346,7 +2349,7 @@ Edit an **existing** file (`404` if there is none — create files with `POST �
 
 Restore a file from an automatic backup.
 
-**Request:** `{"path": "wp-config.php", "backup": "wp-config.php.bak-20260728-141530"}` — `backup` is a `name` from the `backups` list, verbatim. The current content is backed up before restoring, so a restore is itself undoable.
+**Request:** `{"path": "wp-config.php", "backup": "wp-config.php.bak-20260728-141530"}` — `backup` is a `name` from the `backups` list, verbatim. The current content is backed up before restoring, so a restore is itself undoable — unless `safety_copy: false` is sent (optional, default `true`, as on `PUT …/files/content`).
 
 **Response `200`:** `{"restored": true, "content": "…", "version": "…"}` — what the file now holds (added 2026-10-08, APP-5), so the editor can show it without asking again.
 
@@ -7011,7 +7014,9 @@ Backups kept in a folder on the panel's own server. **Show the warning** (`stora
 
 All on `config.path`, and nothing is created or changed when any of them fails. Archives inside are the panel's and `0600`: they hold every file of a site and its database dump, so no site user can read them.
 
-**Free space.** A backup is refused when it would leave less than **10% of the disk or 2 GB free, whichever is more** (`server.backups.local.min_free_percent` / `min_free_bytes`). Asked twice, because a backup has no fixed size: **before it starts**, against the last finished backup of the same target (none yet → not asked), and **before the archive is stored**, against its real size. A refused backup is `failed` with `reason: not_enough_space` and `error_class: local_no_space`; nothing is written. On the same disk as the panel's working folder the archive is **moved** in (no second copy); on another disk it is copied (`.part` until complete). `config.free_bytes` / `total_bytes` / `used_bytes` are there so the screen can show it filling.
+**Free space.** A backup is refused when it would leave less than **10% of the disk or 2 GB free, whichever is more** (`server.backups.local.min_free_percent` / `min_free_bytes`). Asked twice, because a backup has no fixed size: **before it starts**, against the last finished backup of the same target (none yet → not asked), and **before the archive is stored**, against its real size. A refused backup is `failed` with `reason: not_enough_space` and `error_class: local_no_space`; nothing is written.
+
+**Every backup is asked, whatever its destination (2026-10-29).** The archive is always built in the panel's working folder (`server.backups.working_dir`) on this server first, so a backup to S3, Google Drive, SFTP or FTP is refused the same way — `reason: not_enough_space`, `error_class: local_no_space` — when it would leave that disk too full. A target with no finished backup yet is estimated from the current size of what it captures (the site's measured folder size, its database's size, its volumes), uncompressed and so on the safe side; when none of that is known, it is let through. A **restore** whose safety copy is refused this way fails with `reason: not_enough_space` (the title says to free space or restore without a safety copy), and nothing is overwritten. A **staging push/pull** checks room for its database copy the same way and fails with `422` on `safety_copy` (`errors/application.staging_not_enough_space`); a copy that fails part-way is deleted. On the same disk as the panel's working folder the archive is **moved** in (no second copy); on another disk it is copied (`.part` until complete). `config.free_bytes` / `total_bytes` / `used_bytes` are there so the screen can show it filling.
 
 **A folder that disappears is not recreated** — it may be a disk that is no longer mounted. The test answers `local_missing`, and a backup fails at its first step (`reason: check_local_space`, `error_class: local_missing`) before anything is archived.
 

@@ -164,6 +164,7 @@ return [
     'staging_backup_failed' => 'La sauvegarde avant l’envoi ne s’est pas terminée, rien n’a donc été envoyé. Ouvrez la sauvegarde pour voir pourquoi.',
     'staging_backup_not_permitted' => 'Vous pouvez envoyer, mais pas sauvegarder cette application. Demandez à un administrateur l’accès aux Sauvegardes, ou envoyez sans sauvegarde.',
     'staging_safety_copy_missing' => 'Cette copie de la base de données n’est plus sur le serveur. Rechargez la liste.',
+    'staging_not_enough_space' => 'Il n’y a pas assez d’espace disque libre sur le serveur pour la copie de sécurité de la base de données. Libérez de l’espace ou désactivez la copie de sécurité.',
     'staging_safety_copy_no_database' => 'Aucune base de données n’est liée à cette application, il n’y a donc rien où rétablir la copie.',
     'delete_files_adopted_worker' => 'Rien n\'a été supprimé. Les fichiers de ce site sont encore utilisés par :workers, que Server Sync a trouvé en cours d\'exécution depuis le site, mais le panneau ne peut pas prouver qu\'il lui appartient. Arrêtez-le sur le serveur et retirez-le des Workers de ce site, puis supprimez à nouveau — ou supprimez le site en conservant ses fichiers.',
 ];
