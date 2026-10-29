@@ -89,12 +89,25 @@ server {
          remove. --}}
     ssl_session_tickets off;
 @elseif (! $certificate)
-    {{-- Own this SNI name even without a certificate, so nginx rejects the
-         handshake instead of falling through to another application's first
-         SSL vhost. --}}
+    {{-- Keep this hostname owned on 443 after SSL uninstall. Without an exact
+         SNI match nginx serves the first SSL vhost on the box — another
+         customer's application. --}}
     listen 443 ssl;
     listen [::]:443 ssl;
+@if ($rejectHandshake)
+    {{-- nginx 1.19.4+ refuses the handshake before presenting a certificate. --}}
     ssl_reject_handshake on;
+@else
+    {{-- Older nginx (Ubuntu 22.04 ships 1.18) has no ssl_reject_handshake and
+         fails the config test on it. It presents the panel's reserved pair,
+         which names nothing real, as the catch-all does, and closes HTTPS for
+         this name until it has a certificate. Port 80 is unaffected. --}}
+    ssl_certificate     {{ $tlsFallback['certificate'] }};
+    ssl_certificate_key {{ $tlsFallback['private_key'] }};
+    if ($scheme = https) {
+        return 444;
+    }
+@endif
 @endif
 @if (! $forceHttps && $section !== 'ssl')
     listen 80;

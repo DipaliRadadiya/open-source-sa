@@ -26,10 +26,13 @@ beforeEach(function () {
     $this->site->domains()->create(['domain' => 'wpsite.example.com', 'type' => DomainType::Primary]);
 
     $this->ran = new ArrayObject;
+    $this->nginx = '1.24.0';
     Process::fake(function ($process) {
         $this->ran->append(($process->command[0] ?? '') === 'sudo' ? array_slice($process->command, 2) : $process->command);
 
-        return Process::result();
+        return array_slice($process->command, -2) === ['nginx', '-v']
+            ? Process::result(errorOutput: "nginx version: nginx/{$this->nginx}")
+            : Process::result();
     });
 });
 
@@ -96,6 +99,27 @@ it('has no HTTPS file without a certificate, and still owns 443 in the main one'
     'nginx' => ['nginx', 'ssl_reject_handshake on;'],
     'apache' => ['apache', '<VirtualHost *:443>'],
 ]);
+
+it('still owns 443 in the main file on nginx 1.18, with the reserved pair instead of a handshake reject', function () {
+    $this->nginx = '1.18.0';
+    $dir = availableDir('nginx');
+
+    $files = siteFiles($this->site, 'nginx');
+
+    expect($files["{$dir}/wpsite-le-ssl.conf"])->toBeNull()
+        ->and($files["{$dir}/wpsite.conf"])->not->toContain('ssl_reject_handshake')
+        ->toContain('listen 443 ssl;', '/etc/ssl/sv-oss/.panel-tls-reject.crt', 'return 444;', 'listen 80;');
+});
+
+it('needs no reserved pair on nginx 1.18 once the site has a certificate', function () {
+    $this->nginx = '1.18.0';
+    siteCertificate($this->site);
+    $dir = availableDir('nginx');
+
+    $files = siteFiles($this->site, 'nginx');
+
+    expect($files["{$dir}/wpsite.conf"].$files["{$dir}/wpsite-le-ssl.conf"])->not->toContain('.panel-tls-reject', 'ssl_reject_handshake', 'return 444;');
+});
 
 it('serves the site from the HTTPS file only, when HTTPS is forced', function () {
     siteCertificate($this->site)->forceFill(['force_https' => true])->save();
