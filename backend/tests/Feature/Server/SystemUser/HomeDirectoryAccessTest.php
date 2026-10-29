@@ -3,6 +3,7 @@
 use App\Contracts\WebServerDriver;
 use App\Models\Application;
 use App\Models\SystemUser;
+use App\Services\Panel\PanelDirectoryAccess;
 use App\Services\Server\Doctor\Checks\HomeAccessCheck;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use App\Services\Server\WebServers\WebServerManager;
@@ -149,7 +150,11 @@ it('closes every home on sites:resync, installing acl first', function () {
         ->assertSuccessful();
 
     // The panel's own checkout is closed by the same run (PanelDirectoryAccessTest).
-    expect(collect(setfaclRuns())->pluck(3)->filter(fn ($path) => str_starts_with($path, '/home/'))->values()->all())
+    // Left out by path, not by `/home/` alone: a checkout that lives under
+    // /home (a git worktree) would otherwise read as a third home.
+    $panelRoot = app(PanelDirectoryAccess::class)->root();
+
+    expect(collect(setfaclRuns())->pluck(3)->filter(fn ($path) => str_starts_with($path, '/home/') && $path !== $panelRoot)->values()->all())
         ->toBe(['/home/alice', '/home/bob']);
 });
 

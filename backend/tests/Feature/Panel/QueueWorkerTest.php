@@ -5,29 +5,6 @@ use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Process;
 use Tests\Support\QueueDrainUnit;
 
-/**
- * One worker, `high` before `default` (nginx QA #4: a certificate waited 22
- * minutes behind queued installs). The danger is the opposite mistake — a job
- * on a queue no worker reads is never run, silently — so a job goes to `high`
- * only when the running worker is seen to read it.
- */
-function fakeRunningWorker(?string $commandLine, string $pid = '4242'): void
-{
-    Process::fake(function ($process) use ($commandLine, $pid) {
-        $command = $process->command;
-
-        if (($command[0] ?? '') === 'systemctl' && in_array('MainPID', $command, true)) {
-            return Process::result(output: $commandLine === null ? "0\n" : "{$pid}\n");
-        }
-
-        if (($command[0] ?? '') === 'ps') {
-            return Process::result(output: (string) $commandLine."\n");
-        }
-
-        return Process::result(exitCode: 0);
-    });
-}
-
 describe('which queue a priority job goes to', function () {
     it('uses high when the running worker reads it', function () {
         fakeRunningWorker('/usr/bin/php8.4 /var/www/panel/backend/artisan queue:work --queue=high,default --sleep=3 --tries=1');

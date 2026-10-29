@@ -420,3 +420,30 @@ function certPathProbe($process): bool
     return ($command[0] ?? null) === 'test' && in_array('-e', $command, true)
         && str_starts_with((string) ($command[2] ?? ''), '/etc/ssl/');
 }
+
+/**
+ * One worker, `high` before `default` (nginx QA #4: a certificate waited 22
+ * minutes behind queued installs). The danger is the opposite mistake — a job
+ * on a queue no worker reads is never run, silently — so a job goes to `high`
+ * only when the running worker is seen to read it.
+ *
+ * Here rather than in QueueWorkerTest, its first user: AutoIssueCertificateTest
+ * calls it too, and a helper declared in another test file exists only when
+ * that file happens to load first.
+ */
+function fakeRunningWorker(?string $commandLine, string $pid = '4242'): void
+{
+    Process::fake(function ($process) use ($commandLine, $pid) {
+        $command = $process->command;
+
+        if (($command[0] ?? '') === 'systemctl' && in_array('MainPID', $command, true)) {
+            return Process::result(output: $commandLine === null ? "0\n" : "{$pid}\n");
+        }
+
+        if (($command[0] ?? '') === 'ps') {
+            return Process::result(output: (string) $commandLine."\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
