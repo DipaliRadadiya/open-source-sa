@@ -98,6 +98,8 @@ export default async function ApplicationsPage({ searchParams }) {
         canMagicLogin={can(appPermissions, "app_magic_login", "manage", "application")}
         // Deleting an application can also remove its Linux account; the API needs this grant.
         canRemoveSystemUser={can(permissions, "system_user", "manage")}
+        // Removing a Docker site's network, volumes and images needs `docker` manage.
+        canManageDocker={can(permissions, "docker", "manage")}
         gitProviders={gitProviders}
         backupStanding={backupStanding}
         missingDatabase={sitesMissingDatabase(

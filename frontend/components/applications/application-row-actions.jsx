@@ -41,6 +41,8 @@ export function ApplicationRowActions({
   // Only the list passes this; the app dashboard has its own Magic Login button.
   canMagicLogin = false,
   canRemoveSystemUser = false,
+  // Docker clean-up on delete needs `docker` manage; without it both boxes are hidden.
+  canManageDocker = false,
   // On the app's own dashboard, "Open dashboard" and "Visit" would be redundant.
   showNavigation = true,
   // Permission-filtered keys of app screens. Only the detail header passes these,
@@ -275,6 +277,7 @@ export function ApplicationRowActions({
         afterDelete={afterDelete}
         redirectTo={redirectTo}
         canRemoveSystemUser={canRemoveSystemUser}
+        canManageDocker={canManageDocker}
       />
     </div>
   );

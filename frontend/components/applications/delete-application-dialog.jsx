@@ -17,7 +17,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 // The domain is what must be typed: it is what stops being served.
 // `remove_files` also destroys this site's backup archives in storage. Unticked, the backup rows
 // still cascade with the application, leaving archives the panel can no longer list or delete.
-export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false, canRemoveSystemUser = false }) {
+// `canManageDocker`: the API refuses both Docker clean-ups (403) without `docker` manage, so the boxes are hidden.
+export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false, canRemoveSystemUser = false, canManageDocker = false }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
   const { refreshThen, pushAndWait } = useRefresh();
@@ -34,6 +35,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   // On by default, like files and databases: a volume holding a container site's
   // database is as unrecoverable as the database a LEMP site had.
   const [removeDockerResources, setRemoveDockerResources] = useState(true);
+  // On by default, as the API does for a docker manager: only images no other container uses go.
+  const [removeDockerImages, setRemoveDockerImages] = useState(true);
+  const isDocker = application?.serving_profile === "docker";
   // Only names databases on the checkbox; the API resolves the list itself.
   const [databases, setDatabases] = useState([]);
 
@@ -69,6 +73,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       setRemoveFiles(true);
       setRemoveDatabases(true);
       setRemoveSystemUser(false);
+      setRemoveDockerResources(true);
+      setRemoveDockerImages(true);
       setDatabases([]);
     }
     onOpenChange?.(next);
@@ -101,7 +107,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         removeFiles: removeFiles && !orphaned,
         removeDatabases: databases.length > 0 && removeDatabases,
         removeDockerResources:
-          dockerResourceNames.length > 0 && removeDockerResources,
+          canManageDocker && dockerResourceNames.length > 0 && removeDockerResources,
+        // Sent both ways for a docker manager; omitted otherwise so the API keeps them.
+        removeDockerImages: canManageDocker && isDocker ? removeDockerImages : null,
         removeSystemUser: canRemoveSystemUser && Boolean(systemUsername) && removeSystemUser,
       });
 
@@ -200,7 +208,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         )}
 
         {/* Only for a container site with something to remove, like the databases box. */}
-        {dockerResourceNames.length ? (
+        {canManageDocker && dockerResourceNames.length ? (
           <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
             <Checkbox
               id="delete-app-docker"
@@ -220,6 +228,23 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
                   names: dockerResourceNames.join(", "),
                 })}
               </p>
+            </div>
+          </div>
+        ) : null}
+
+        {canManageDocker && isDocker ? (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+            <Checkbox
+              id="delete-app-docker-images"
+              checked={removeDockerImages}
+              onCheckedChange={(value) => setRemoveDockerImages(value === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="delete-app-docker-images" className="text-sm font-medium">
+                {t("removeDockerImages")}
+              </Label>
+              <p className="text-xs leading-5 text-muted-foreground">{t("removeDockerImagesHint")}</p>
             </div>
           </div>
         ) : null}

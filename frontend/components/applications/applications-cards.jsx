@@ -20,6 +20,7 @@ export function ApplicationsCards({
   canManage = false,
   canMagicLogin = false,
   canRemoveSystemUser = false,
+  canManageDocker = false,
   gitProviders = new Map(),
   siteTypes = [],
 }) {
@@ -71,7 +72,7 @@ export function ApplicationsCards({
             </div>
             {/* shrink-0 keeps the menu in place however long the name is. */}
             <div className="-me-2 -mt-1 shrink-0">
-              <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} />
+              <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} />
             </div>
           </div>
 

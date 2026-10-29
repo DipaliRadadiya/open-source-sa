@@ -414,6 +414,7 @@ export default async function ApplicationDetailPage({ params }) {
                 application={application}
                 canManage={canManage}
                 canRemoveSystemUser={can(permissions, "system_user", "manage")}
+                canManageDocker={can(permissions, "docker", "manage")}
                 showNavigation={false}
                 redirectTo="/applications"
                 triggerVariant="outline"

@@ -4235,6 +4235,8 @@
       "removeDocker": "Eliminar también la red y los volúmenes de Docker de esta aplicación ({count})",
       "removeDockerOn": "Se eliminará {names}. Lo que otra aplicación siga usando se conserva: el servidor lo comprueba en el momento de eliminar, no ahora.",
       "removeDockerOff": "{names} permanece en el servidor. Sus datos se conservan y puedes eliminarlos más tarde desde la página de Docker.",
+      "removeDockerImages": "Eliminar también sus imágenes de Docker",
+      "removeDockerImagesHint": "Solo se eliminan las imágenes que no usa ninguna otra aplicación. Se vuelven a descargar si hacen falta.",
       "removeSystemUser": "Eliminar también el usuario del sistema {username}",
       "removeSystemUserOn": "Solo se elimina si ninguna otra aplicación lo usa y nadie tiene la sesión iniciada con él. Se te avisará si se conserva."
     },

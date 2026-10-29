@@ -4235,6 +4235,8 @@
       "removeDocker": "Auch Docker-Netzwerk und -Volumes dieser Anwendung löschen ({count})",
       "removeDockerOn": "{names} wird gelöscht. Was eine andere Anwendung noch verwendet, bleibt erhalten — der Server prüft das beim Löschen, nicht jetzt.",
       "removeDockerOff": "{names} bleibt auf dem Server. Die Daten bleiben erhalten und können später auf der Docker-Seite entfernt werden.",
+      "removeDockerImages": "Auch die Docker-Images entfernen",
+      "removeDockerImagesHint": "Es werden nur Images entfernt, die keine andere Anwendung verwendet. Bei Bedarf werden sie erneut heruntergeladen.",
       "removeSystemUser": "Auch den Systembenutzer {username} entfernen",
       "removeSystemUserOn": "Er wird nur entfernt, wenn keine andere Anwendung ihn nutzt und niemand mit ihm angemeldet ist. Sie erfahren es, falls er behalten wird."
     },

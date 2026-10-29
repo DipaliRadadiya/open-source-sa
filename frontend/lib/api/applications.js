@@ -63,7 +63,9 @@ export function retryProvisioning(id) {
 }
 
 // Files are kept unless `remove_files` is sent; removing them is always the user's choice.
-export function deleteApplication(id, { removeFiles = false, removeDatabases = false, removeDockerResources = false, removeSystemUser = false } = {}) {
+// `removeDockerImages`: true/false for a Docker site and a `docker` manager; null leaves it to the API
+// (on for docker managers, off for everyone else).
+export function deleteApplication(id, { removeFiles = false, removeDatabases = false, removeDockerResources = false, removeDockerImages = null, removeSystemUser = false } = {}) {
   // Flags are omitted when false; the API resolves the site's databases itself.
   const params = {};
   if (removeFiles) params.remove_files = true;
@@ -72,6 +74,7 @@ export function deleteApplication(id, { removeFiles = false, removeDatabases = f
   // volumes it mounts — and only the ones nothing else uses, which the server
   // decides at the moment it deletes, not this call.
   if (removeDockerResources) params.remove_docker_resources = true;
+  if (removeDockerImages !== null) params.remove_docker_images = removeDockerImages;
   // Kept by the server when another application still uses it, or it is signed in.
   if (removeSystemUser) params.remove_system_user = true;
 

@@ -4235,6 +4235,8 @@
       "removeDocker": "このアプリケーションの Docker ネットワークとボリュームも削除する ({count})",
       "removeDockerOn": "{names} を削除します。他のアプリケーションがまだ使用しているものは保持されます。サーバーは削除時に確認します。",
       "removeDockerOff": "{names} はサーバーに残ります。データは保持され、あとで Docker ページから削除できます。",
+      "removeDockerImages": "Docker イメージも削除する",
+      "removeDockerImagesHint": "他のアプリケーションが使っていないイメージだけを削除します。必要になれば再ダウンロードされます。",
       "removeSystemUser": "システムユーザー {username} も削除する",
       "removeSystemUserOn": "他のアプリケーションが使っておらず、誰もサインインしていない場合にのみ削除されます。残された場合はお知らせします。"
     },
