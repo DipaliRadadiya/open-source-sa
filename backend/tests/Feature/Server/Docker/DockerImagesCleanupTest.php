@@ -83,6 +83,17 @@ describe('deleting a Docker site', function () {
             ->toContain('image:ghost:5')->not->toContain('volumes');
     });
 
+    it('says in the activity line which images it kept, and why', function () {
+        $ran = [];
+        fakeDockerWithImages($this->site, $ran);
+
+        $this->actingAs($this->admin)->deleteJson('/api/applications/'.$this->site->id)->assertSuccessful();
+
+        $row = \App\Models\ActivityLog::where('action', 'docker_resources_removed')->latest('id')->first();
+        expect(\App\Http\Resources\ActivityLogResource::make($row)->resolve()['description'])
+            ->toContain('image:mysql:8.0:used-by-sv-app-999-db-1');
+    });
+
     it('keeps them when the user turns it off', function () {
         $ran = [];
         fakeDockerWithImages($this->site, $ran);

@@ -148,7 +148,7 @@ return [
     'application.updated' => 'Updated application :name',
     'application.container_updated' => 'Updated container settings for :name',
     'application.container_secrets_viewed' => 'Viewed the container credentials for :name',
-    'application.docker_resources_removed' => 'Removed Docker resources of :name: :removed',
+    'application.docker_resources_removed' => 'Removed Docker resources of :name: :removed. Kept: :kept',
     'application.deleted' => 'Deleted application :name (:site_type)',
     'application.adopted_config_left' => 'Could not safely remove :path while deleting :name: :left_reason',
     'application.process_start' => 'Started :name',

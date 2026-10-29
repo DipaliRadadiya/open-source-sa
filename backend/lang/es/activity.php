@@ -142,7 +142,7 @@ return [
     'application.updated' => 'Actualizó la aplicación :name',
     'application.container_updated' => 'Actualizó los ajustes del contenedor de :name',
     'application.container_secrets_viewed' => 'Consultó las credenciales del contenedor de :name',
-    'application.docker_resources_removed' => 'Eliminó recursos de Docker de :name: :removed',
+    'application.docker_resources_removed' => 'Eliminó recursos de Docker de :name: :removed. Conservados: :kept',
     'application.deleted' => 'Eliminó la aplicación :name (:site_type)',
     'application.adopted_config_left' => 'No se pudo quitar :path de forma segura al eliminar :name: :left_reason',
     'application.process_start' => 'Se inició :name',

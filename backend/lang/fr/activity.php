@@ -142,7 +142,7 @@ return [
     'application.updated' => 'A mis à jour l\'application :name',
     'application.container_updated' => 'A mis à jour les paramètres du conteneur de :name',
     'application.container_secrets_viewed' => 'A consulté les identifiants du conteneur de :name',
-    'application.docker_resources_removed' => 'A supprimé des ressources Docker de :name : :removed',
+    'application.docker_resources_removed' => 'A supprimé des ressources Docker de :name : :removed. Conservées : :kept',
     'application.deleted' => 'A supprimé l\'application :name (:site_type)',
     'application.adopted_config_left' => 'Impossible de retirer :path en toute sécurité lors de la suppression de :name : :left_reason',
     'application.process_start' => ':name démarrée',
