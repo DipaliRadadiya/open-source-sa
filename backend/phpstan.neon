@@ -1,11 +1,12 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    # Errors that were already there when the analysis first ran (S-14): new
+    # code is checked, old code is fixed as it is touched. Regenerate with
+    # `vendor/bin/phpstan analyse --generate-baseline` only to remove entries.
+    - phpstan-baseline.neon
 
 parameters:
     paths:
         - app
 
     level: 5
-
-    excludePaths:
-        - app/Console/Kernel.php
