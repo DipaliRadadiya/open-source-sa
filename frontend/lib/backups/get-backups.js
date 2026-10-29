@@ -260,6 +260,13 @@ export const getBackupStanding = cache(async function getBackupStanding() {
   return byId;
 });
 
+// Each site's newest backup however it ended, for Retry on the mixed history list: the list
+// itself is paged and filtered, so it cannot say which failed row is a site's newest.
+export const getApplicationNewestBackups = cache(async function getApplicationNewestBackups() {
+  const result = await read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } });
+  return result.failed ? [] : (result.data?.backup_targets ?? []);
+});
+
 // `null` when unreadable: the form offers a retry, never a hard-coded list.
 export const getBackupTargetOptions = cache(async function getBackupTargetOptions() {
   const result = await read("/backup-targets/options", backupTargetOptionsSchema);

@@ -30,6 +30,7 @@ import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
 import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
+import { isRetryable } from "@/lib/backups/retry-eligibility";
 import { runDatabaseBackupNow } from "@/lib/api/database-backups";
 import { useSubjectTranslations } from "@/hooks/use-subject-translations";
 import { apiMessage } from "@/lib/api/error-message";
@@ -638,6 +639,8 @@ function RecentBackups({
     canClear: canManage,
     busyId,
     retryBlockedFor: retryBlockedReason ? () => retryBlockedReason : null,
+    // One target, newest first, unfiltered: the newest row is the only one worth retrying.
+    retryable: (backup) => isRetryable(backup, backups),
     restoreInFlight,
     showSite: false,
     subject,

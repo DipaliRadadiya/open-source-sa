@@ -15,6 +15,7 @@ import {
   RESTORE_IN_FLIGHT,
 } from "@/lib/schemas/backup";
 import { clearStuckBackup, retryBackup } from "@/lib/api/backups";
+import { isRetryable } from "@/lib/backups/retry-eligibility";
 import { newestBackupId, queuedApplications } from "@/lib/backups/queued";
 import { apiMessage } from "@/lib/api/error-message";
 import { formatBytes } from "@/lib/format/bytes";
@@ -42,6 +43,8 @@ export function BackupsHistory({
   database = null,
   databases = [],
   pager = null,
+  // Target key → its newest backup id, read without the list's filters and pages.
+  newest = null,
 }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
@@ -149,6 +152,8 @@ export function BackupsHistory({
     restoreInFlight,
     // Per site: a run for THIS site blocks its rows only. The endpoint refuses
     // a second run per target with a 422, so refuse it first and say why.
+    // Only a target's newest backup: the list is paged and filtered, so `newest` decides.
+    retryable: (backup) => isRetryable(backup, backups, newest),
     retryBlockedFor: (backup) => {
       // A running restore blocks Retry: its safety backup competes for the
       // same disk and target.

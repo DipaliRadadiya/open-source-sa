@@ -27,6 +27,8 @@ export function BackupsCards({
   onClear,
   busyId,
   retryBlockedFor = null,
+  // `(backup) => boolean`, as on the table.
+  retryable = null,
   canClear = false,
   showSite = true,
   restoreInFlight = false,
@@ -142,7 +144,7 @@ export function BackupsCards({
                     </Button>
                   ) : null
                 ) : backup.status === "failed" ? (
-                  canRun ? (
+                  canRun && (retryable?.(backup) ?? true) ? (
                     <Button
                       size="sm"
                       variant="outline"

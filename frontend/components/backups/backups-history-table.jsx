@@ -220,6 +220,7 @@ function ActionsCell({ row, table }) {
     busyId,
     restoreInFlight,
     retryBlockedFor,
+    retryable,
     canDownload = canRestore,
     showRestore = true,
   } = table.options.meta;
@@ -254,7 +255,8 @@ function ActionsCell({ row, table }) {
     return (
       <div className="flex items-center justify-end gap-2">
         {download}
-        {canRun ? (
+        {/* Only a target's newest backup: an older failed row is history (see retry-eligibility). */}
+        {canRun && (retryable?.(backup) ?? true) ? (
           <Button
             size="sm"
             variant="outline"
@@ -335,6 +337,8 @@ export function BackupsHistoryTable({
   // `(backup) => reason | null`. Per row because the server-wide list spans
   // every site: one site's run must not disable Retry on another's rows.
   retryBlockedFor = null,
+  // `(backup) => boolean`: whether a failed row still offers Retry. Absent, every failed row does.
+  retryable = null,
   // Hides the Site column on a site's own page.
   showSite = true,
   // Its header; "Database" when the list is filtered to one.
@@ -463,6 +467,7 @@ export function BackupsHistoryTable({
           busyId,
           restoreInFlight,
           retryBlockedFor,
+          retryable,
           showSite,
           subject,
           canDownload: canDownload ?? canRestore,
