@@ -82,6 +82,7 @@ export function CronjobsPanel({
         command: job.command,
         expression: job.expression,
         active: job.active,
+        application_id: job.application_id ?? null,
       },
     });
   }

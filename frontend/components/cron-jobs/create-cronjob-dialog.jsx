@@ -33,6 +33,7 @@ const DEFAULTS = {
   command: "",
   expression: "",
   active: true,
+  application_id: null,
 };
 
 export function CreateCronjobDialog({
@@ -73,6 +74,8 @@ export function CreateCronjobDialog({
       command: values.command.trim(),
       expression: values.expression.trim(),
       active: values.active,
+      // Links the job to its site: listed under it, offered on its PHP switch, removed with it.
+      ...(values.application_id ? { application_id: values.application_id } : {}),
       ...(values.run_as === OTHER_USER
         ? { username: values.username.trim() }
         : { system_user_id: Number(values.run_as) }),

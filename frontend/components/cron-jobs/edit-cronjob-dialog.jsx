@@ -37,6 +37,7 @@ function valuesOf(job) {
     command: job.command,
     expression: job.expression,
     active: job.active,
+    application_id: job.application_id ?? null,
   };
 }
 
@@ -83,6 +84,8 @@ export function EditCronjobDialog({
         command: values.command.trim(),
         expression: values.expression.trim(),
         active: values.active,
+        // Sent when the picked site changed; null unlinks the job (Custom path).
+        ...((values.application_id ?? null) !== before.application_id ? { application_id: values.application_id ?? null } : {}),
         ...(runAsChanged
           ? values.run_as === OTHER_USER
             ? { system_user_id: null, username: values.username.trim() }

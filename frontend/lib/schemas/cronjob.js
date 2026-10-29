@@ -108,6 +108,8 @@ export const createCronjobSchema = z
     command: commandField,
     expression: expressionField,
     active: z.boolean(),
+    // The site the command runs in, picked in the command field; null for a server-level job.
+    application_id: z.number().int().positive().nullable().optional(),
   })
   // "Other OS user" turns the free-text username into the required field.
   .refine(

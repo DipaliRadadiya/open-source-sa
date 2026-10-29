@@ -81,6 +81,7 @@ export function CommandField({
       setPath("");
       // Reset `source` too, or the next template resolves {path} against a stale site.
       setSource("");
+      linkSite(null);
       // Clearing is an edit too: it takes a template off an existing job, and Save must be reachable.
       form.setValue("command", "", { shouldValidate: false, shouldDirty: true });
       return;
@@ -91,6 +92,7 @@ export function CommandField({
     const picked = applications.find((application) => String(application.id) === source);
     if (picked && !presetFits(preset.key, picked)) {
       setSource("");
+      linkSite(null);
       setPath("");
       applyTemplate(preset.command, "");
     } else {
@@ -110,9 +112,15 @@ export function CommandField({
     if (template) applyTemplate(template, value, site);
   }
 
+  // The job belongs to the site it runs in; a typed path is a server-level job.
+  function linkSite(id) {
+    form.setValue("application_id", id, { shouldDirty: true });
+  }
+
   function onPickSite(value) {
     setSource(value);
     if (value === CUSTOM_PATH) {
+      linkSite(null);
       onPath("");
       return;
     }
@@ -120,10 +128,12 @@ export function CommandField({
     const site = sites.find((application) => String(application.id) === value);
     if (!site) return;
 
+    linkSite(site.id);
     onPath(site.path, site);
 
-    // Fill "Run as" only while empty: root-owned files break deploys, but an existing choice stands.
-    if (!form.getValues("run_as") && site.system_user?.id) {
+    // "Run as" follows the site: its files belong to its own user, and another site's user cannot
+    // open them ("Could not open input file"). It can still be changed afterwards.
+    if (site.system_user?.id) {
       form.setValue("run_as", String(site.system_user.id), {
         shouldValidate: true,
         shouldDirty: true,
