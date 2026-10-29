@@ -13,6 +13,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\StrandedProvisioning;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
@@ -119,6 +120,123 @@ it('removes the config and does not reload when the config test fails', function
     expect($app->reference)->not->toBeEmpty();
 
     // Our config is taken back out, and nothing is reloaded.
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/nginx/sites-enabled/shop.conf']);
+    Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
+});
+
+/**
+ * sites-available and sites-enabled as the fake commands leave them, and an
+ * `nginx -t` that fails while any enabled file holds $broken — what one bad
+ * site does to the box.
+ */
+function provisionDisk(string $broken, array $failCommands = []): ArrayObject
+{
+    $disk = new ArrayObject(['files' => [], 'links' => [], 'tests' => 0]);
+
+    Process::fake(function ($process) use ($disk, $broken, $failCommands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $files = $disk['files'];
+        $links = $disk['links'];
+
+        foreach ($failCommands as $prefix) {
+            if (array_slice($args, 0, count($prefix)) === $prefix) {
+                return Process::result(errorOutput: 'refused', exitCode: 1);
+            }
+        }
+
+        switch ($args[0] ?? '') {
+            case 'tee':
+                $files[$args[1]] = (string) $process->input;
+                break;
+            case 'ln':
+                $links[end($args)] = $args[count($args) - 2];
+                break;
+            case 'rm':
+                unset($files[end($args)], $links[end($args)]);
+                break;
+            case 'nginx':
+                if (($args[1] ?? '') === '-t') {
+                    $disk['tests']++;
+                    foreach ($links as $target) {
+                        if (str_contains($files[$target] ?? '', $broken)) {
+                            return Process::result(errorOutput: 'nginx: [emerg] unknown directive', exitCode: 1);
+                        }
+                    }
+                }
+                break;
+        }
+
+        $disk['files'] = $files;
+        $disk['links'] = $links;
+
+        return Process::result();
+    });
+
+    return $disk;
+}
+
+function runProvision(Application $app): Application
+{
+    (new ProvisionApplication($app->id))->handle(app(ApplicationProvisioner::class), app(ActivityLogger::class));
+
+    return $app->fresh();
+}
+
+it('takes a failed site out of sites-enabled, so the next site still passes its config test', function () {
+    // Ubuntu 22.04, 28 Oct: one site whose config nginx refused, and every
+    // site created after it failed at test_config as well.
+    $disk = provisionDisk('server_name broken.example.com');
+
+    $broken = runProvision(makeApp(['name' => 'Broken', 'slug' => 'broken', 'domain' => 'broken.example.com']));
+
+    expect($broken->status->value)->toBe('failed')
+        ->and($broken->failed_step)->toBe('test_config')
+        ->and($broken->reference)->not->toBeEmpty()
+        ->and($disk['links'])->not->toHaveKey('/etc/nginx/sites-enabled/broken.conf')
+        ->and($disk['files'])->not->toHaveKey('/etc/nginx/sites-available/broken.conf');
+
+    $next = runProvision(makeApp(['name' => 'Next', 'slug' => 'next', 'domain' => 'next.example.com']));
+
+    expect($next->status->value)->toBe('active')
+        ->and($disk['links'])->toHaveKey('/etc/nginx/sites-enabled/next.conf');
+});
+
+it('tests the config again after taking a failed site out', function () {
+    $disk = provisionDisk('server_name shop.example.com');
+
+    runProvision(makeApp());
+
+    // Once for the site, once to prove the server is healthy without it.
+    expect($disk['tests'])->toBe(2);
+});
+
+it('logs it when the config still fails after the failed site came out', function () {
+    // Broken before this site: nothing it did, and nothing it can undo.
+    Process::fake(fn ($process) => $process->command === ['nginx', '-t']
+        ? Process::result(errorOutput: 'invalid directive', exitCode: 1)
+        : Process::result());
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('warning')->once()->with('web server config still failing after removing a failed site', Mockery::on(
+        fn (array $context) => $context['test_reference'] !== '' && array_key_exists('remove_reference', $context),
+    ));
+    Log::shouldReceive('info', 'debug', 'error', 'notice')->andReturnNull();
+    Log::shouldReceive('warning')->andReturnNull();
+
+    $app = runProvision(makeApp());
+
+    expect($app->failed_step)->toBe('test_config');
+});
+
+it('takes the config back out when writing it stops halfway', function () {
+    // The file is written, then enabling it is refused: what landed was left
+    // behind for the next write, resync or person to trip over.
+    $disk = provisionDisk('nothing-is-broken', [['ln']]);
+
+    $app = runProvision(makeApp());
+
+    expect($app->status->value)->toBe('failed')
+        ->and($app->failed_step)->toBe('write_config')
+        ->and($disk['files'])->not->toHaveKey('/etc/nginx/sites-available/shop.conf');
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/nginx/sites-enabled/shop.conf']);
     Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
 });
