@@ -1030,6 +1030,30 @@ describe('the user may save without a copy (2026-10-29)', function () {
         expect(ActivityLogResource::make($log)->resolve()['description'])->toEndWith('(without a safety copy)');
     });
 
+    it('says in the history which saves kept no copy, so they are not taken for a first save', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n"])->assertOk();
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=2\n", 'safety_copy' => false])->assertOk();
+
+        $rows = $this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history');
+
+        expect($rows[0]['safety_copy'])->toBeFalse()
+            ->and($rows[0]['backup'])->toBeNull()
+            ->and($rows[1]['safety_copy'])->toBeTrue();
+    });
+
+    it('treats a row from before the switch as one that kept its copy', function () {
+        fakeSite();
+        ActivityLog::create([
+            'user_id' => $this->admin->id, 'type' => 'application', 'action' => 'environment_updated',
+            'subject_type' => $this->application->getMorphClass(), 'subject_id' => $this->application->id,
+            'properties' => ['backup' => null],
+        ]);
+
+        expect($this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history.0.safety_copy'))->toBeTrue();
+    });
+
     it('puts a previous version back without a copy of the current one', function () {
         $this->backupNames = ['.env.bak-20260907-120000'];
         $this->disk['/home/envowner/deployed-site/.env.bak-20260907-120000'] = "APP_ENV=local\n";

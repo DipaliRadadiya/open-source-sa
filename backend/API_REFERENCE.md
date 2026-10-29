@@ -2135,7 +2135,7 @@ Replace the entire `.env` file. Optionally restart the app's process after save.
 
 Syntax errors return `422` with `errors.raw` listing the problem.
 
-**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): keep the file this save replaces as a `.env.bak-…` backup, so it can be put back. `false` skips it: nothing to go back to, and the activity row's `backup` is `null`; its line ends *"(without a safety copy)"*. Same on `POST …/environment/restore`, for the copy of the file being replaced. Anything but a boolean is a `422`.
+**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): keep the file this save replaces as a `.env.bak-…` backup, so it can be put back. `false` skips it: nothing to go back to, and the activity row's `backup` is `null`; its line ends *"(without a safety copy)"*. Each `GET …/environment/history` row carries `safety_copy` (`false` for such a save), so the screen can say "saved without a copy" rather than "first save" — both have `backup: null`. Same on `POST …/environment/restore`, for the copy of the file being replaced. Anything but a boolean is a `422`.
 
 **Locked keys (2026-10-04, bug #17).** The key an application encrypts its stored data with cannot be changed or removed once it has a value: `N8N_ENCRYPTION_KEY` on n8n, `APP_KEY` on Akaunting and Statamic. Such a save is a `422` on `raw` naming the key; every other line can still be edited. A file with no value for the key yet may be given one. Git sites have no locked keys — the code, and rotating its key, are the owner's.
 
