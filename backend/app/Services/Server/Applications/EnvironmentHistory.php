@@ -103,6 +103,10 @@ class EnvironmentHistory
             // "it was kept and has since been pruned".
             'backup' => $backup,
             'restorable' => $backup !== null && isset($available[$backup]),
+            // False when the user saved without a copy (2026-10-29): then a
+            // null `backup` is not a first save, it is a copy never taken.
+            // Rows from before the switch existed always kept one.
+            'safety_copy' => ($properties['safety_copy'] ?? true) !== false,
         ];
     }
 

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Resources\ActivityLogResource;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -348,5 +350,85 @@ describe('the common php.ini settings as fields', function () {
 
     it('answers 404 for a version that is not installed', function () {
         $this->withHeaders(phpHeaders())->getJson('/api/php/versions/5.6/settings')->assertNotFound();
+    });
+});
+
+describe('the user may save php.ini without a copy (2026-10-29)', function () {
+    it('writes no copy, and puts the old text back from memory when php rejects the new one', function () {
+        $old = "memory_limit = 128M\n";
+        Process::fake(fn ($process) => match (true) {
+            ($process->command[0] ?? '') === 'cat' => Process::result(output: $old),
+            in_array('-t', $process->command, true) => Process::result(errorOutput: 'Failed to parse', exitCode: 1),
+            default => Process::result(),
+        });
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+            'contents' => "this is not valid\n", 'acknowledged' => true, 'safety_copy' => false,
+        ])->assertStatus(422);
+
+        $ini = "{$this->phpDir}/8.4/fpm/php.ini";
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'cp');
+        Process::assertRan(fn ($p) => $p->command === ['tee', $ini] && $p->input === $old);
+        Process::assertNotRan(fn ($p) => $p->command[0] === 'systemctl');
+    });
+
+    it('saves without a copy and says so in the log', function () {
+        Process::fake(['*' => Process::result(exitCode: 0)]);
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+            'contents' => "memory_limit = 512M\n", 'acknowledged' => true, 'safety_copy' => false,
+        ])->assertOk();
+
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'cp');
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'php8.4-fpm']);
+        $log = ActivityLog::where('action', 'ini_updated')->latest('id')->first();
+        expect(ActivityLogResource::make($log)->resolve()['description'])->toEndWith('(without a safety copy)');
+    });
+
+    it('still keeps the copy when nothing is said', function () {
+        Process::fake(['*' => Process::result(exitCode: 0)]);
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+            'contents' => "memory_limit = 512M\n", 'acknowledged' => true,
+        ])->assertOk();
+
+        $ini = "{$this->phpDir}/8.4/fpm/php.ini";
+        Process::assertRan(fn ($p) => $p->command === ['cp', '-f', $ini, $ini.'.panel-bak']);
+    });
+
+    it('saves the settings form without a copy, and never writes safety_copy into the file', function () {
+        $written = new ArrayObject;
+        Process::fake(function ($process) use ($written) {
+            if (($process->command[0] ?? '') === 'cat') {
+                return Process::result(output: "[PHP]\nmemory_limit = 128M\n");
+            }
+            if (($process->command[0] ?? '') === 'tee') {
+                $written[] = (string) $process->input;
+            }
+
+            return Process::result();
+        });
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/settings', ['memory_limit' => '256M', 'safety_copy' => false])
+            ->assertOk();
+
+        expect($written[0])->toContain('memory_limit = 256M')->not->toContain('safety_copy');
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'cp');
+    });
+
+    it('does not rewrite or reload when only the switch is sent', function () {
+        Process::fake(fn ($process) => ($process->command[0] ?? '') === 'cat'
+            ? Process::result(output: "[PHP]\nmemory_limit = 128M\n")
+            : Process::result());
+
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/settings', ['safety_copy' => false])->assertOk();
+
+        Process::assertNotRan(fn ($p) => in_array($p->command[0] ?? '', ['tee', 'systemctl'], true));
+    });
+
+    it('refuses a value that is not true or false', function () {
+        $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+            'contents' => "memory_limit = 512M\n", 'acknowledged' => true, 'safety_copy' => 'maybe',
+        ])->assertJsonValidationErrors('safety_copy');
     });
 });

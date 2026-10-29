@@ -476,6 +476,18 @@ describe('the shared httpd_config.conf', function () {
             ->and($commands)->toContain(['cp', '-f', '/usr/local/lsws/conf/httpd_config.conf.panel-bak', '/usr/local/lsws/conf/httpd_config.conf']);
     });
 
+    it('removes its copy once the new file passed its test, and keeps it on a failure (2026-10-29)', function () {
+        $runs = fakeOls(olsConfig());
+
+        expect(app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test')->failed())->toBeFalse()
+            ->and(collect($runs)->pluck('command'))->toContain(['rm', '-f', '--', sharedPath().'.panel-bak']);
+
+        $runs = fakeOls(olsConfig(), testPasses: false);
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect(collect($runs)->pluck('command'))->not->toContain(['rm', '-f', '--', sharedPath().'.panel-bak']);
+    });
+
     it('does not write at all when nothing would change', function () {
         $runs = fakeOls(olsConfig());
         $shared = app(OlsSharedConfig::class);
@@ -917,7 +929,9 @@ describe('the driver', function () {
 
         app(OlsDriver::class)->remove($this->app_);
 
-        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm');
+        // Nothing but the panel's own copy of the shared config, discarded
+        // once it is no longer needed (2026-10-29).
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm' && ! str_ends_with((string) last((array) $p->command), '.panel-bak'));
     });
 
     it('refuses to rm -rf anything that is not inside the vhost root', function () {
@@ -932,7 +946,9 @@ describe('the driver', function () {
         expect(fn () => app(OlsDriver::class)->remove($this->app_))
             ->toThrow(HttpException::class);
 
-        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm');
+        // Nothing but the panel's own copy of the shared config, discarded
+        // once it is no longer needed (2026-10-29).
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm' && ! str_ends_with((string) last((array) $p->command), '.panel-bak'));
     });
 
     it('renders a vhost pointing at the site, its user and its lsphp', function () {

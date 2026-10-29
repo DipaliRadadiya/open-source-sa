@@ -78,17 +78,27 @@ class PhpVersionManager
      * taking every site on that version down with no obvious cause. So the old
      * file is kept and restored the moment the test fails, and the reload only
      * happens on a configuration that has already proven valid.
+     *
+     * `$keepCopy` false (2026-10-29, the user's choice): no `.panel-bak` is
+     * written. The old text is held here instead, for the few seconds of the
+     * test, and written back from memory if PHP refuses the new one — so a
+     * broken ini still never survives, but nothing is left on the disk.
      */
-    public function writeIni(string $version, string $contents): void
+    public function writeIni(string $version, string $contents, bool $keepCopy = true): void
     {
         $path = $this->iniPath($version);
         $this->assertExtensionsStayHome($version, $contents);
         $backup = $path.'.panel-bak';
+        $original = null;
 
-        $this->must('backup', $this->serverOps->run(
-            ['cp', '-f', $path, $backup],
-            ['feature' => 'php', 'op' => 'backup_ini', 'version' => $version],
-        ), $version);
+        if ($keepCopy) {
+            $this->must('backup', $this->serverOps->run(
+                ['cp', '-f', $path, $backup],
+                ['feature' => 'php', 'op' => 'backup_ini', 'version' => $version],
+            ), $version);
+        } else {
+            $original = $this->readIni($version);
+        }
 
         $this->must('write', $this->serverOps->run(
             ['tee', $path],
@@ -102,8 +112,9 @@ class PhpVersionManager
             // Put the working file back before the next reload — by us or by
             // anything else — can pick up the broken one.
             $this->serverOps->run(
-                ['cp', '-f', $backup, $path],
+                $original === null ? ['cp', '-f', $backup, $path] : ['tee', $path],
                 ['feature' => 'php', 'op' => 'restore_ini', 'version' => $version],
+                input: $original,
             );
 
             throw PhpConfigException::invalid($version, $this->complaints($test));

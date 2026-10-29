@@ -2051,6 +2051,8 @@ Each issue is `{type, severity, message, meta}` (corrected 2026-09-29 — this s
 ### GET `/applications/{application}/environment`
 **Permission:** `app_environment` (**manage**) — was view until 2026-09-29. The `.env` screen is shown only to who may edit it: a view-only grant no longer opens it, and neither the sidebar nor `GET /permissions` reports `view: true` for `app_environment` (or `app_magic_login`, whose routes were always manage-only) unless `manage` is granted too. `GET …/environment/history` is manage as well.
 
+Each `GET …/environment/history` row carries **`safety_copy`** (since 2026-10-29): `false` when that save or restore was made without a copy, so a `null` `backup` there means "no copy was taken", not "first save". Rows from before the switch read `true`.
+
 `GET …/environment/history/{log}/diff` (manage) returns `{"diff": {"available": true, "changes": [{"key": "DB_PASSWORD", "before": null, "after": null, "status": "changed", "secret": true}, {"key": "APP_DEBUG", "before": "true", "after": "false", "status": "changed", "secret": false}]}}`. `status` is `added | changed | removed`. **A secret key (`PASSWORD`, `SECRET`, `TOKEN`, `_KEY`, … — the same rule that hides values in the variables view) never carries its values**: show it as "changed (hidden)".
 
 **`404`**, not `403`, for site types that don't use a `.env` (e.g. WordPress — it uses `wp-config.php`). The screen does not exist there, which is a different statement from "you may not have it"; `403` is reserved for a caller who lacks the permission on a site that does have the screen.
@@ -6595,6 +6597,8 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
 
 `422` on invalid ini — including a **syntax error**, which PHP itself only warns about (exit 0) while ignoring every line after it.
 
+**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): keep the current file as `php.ini.panel-bak` before writing. `false` writes no copy at all: the old text is held in memory for the config test and written back from there if PHP refuses the new file, so a broken ini still never stays — but if the panel itself dies during those seconds there is nothing on disk to recover from. The activity line ends *"(without a safety copy)"*. Same on `PUT …/settings`, where sending only `safety_copy` changes nothing.
+
 ---
 ### GET / PUT `/php/versions/{version}/settings`
 **Permission:** `php` (view to read, manage to save) — added 2026-10-20 (RC-8)
@@ -6603,7 +6607,7 @@ The common php.ini settings of one version **as fields**, so the PHP page does n
 
 **GET `200`:** `{"version": "8.4", "settings": {"memory_limit": "128M", "upload_max_filesize": "2M", "post_max_size": "8M", "max_execution_time": null, "max_input_time": null, "max_input_vars": null}}` — `null` where the file sets nothing and PHP's built-in default applies.
 
-**PUT:** any subset, e.g. `{"memory_limit": "512M", "max_execution_time": 120}`. Only those directives' lines change — every active line for a key is rewritten, a key the file does not set is added right after `[PHP]`, comments and everything else stay as they were. Saved through the raw editor's path: backed up, checked by PHP, put back if PHP refuses it (the same errors as `PUT …/ini`). `422` on `post_max_size` when it would end up below `upload_max_filesize` (judged against what the file already says for the one you did not send). Answers the new settings.
+**PUT:** any subset, e.g. `{"memory_limit": "512M", "max_execution_time": 120}`. Only those directives' lines change — every active line for a key is rewritten, a key the file does not set is added right after `[PHP]`, comments and everything else stay as they were. Saved through the raw editor's path: backed up (unless `safety_copy: false`, as on `PUT …/ini`), checked by PHP, put back if PHP refuses it (the same errors as `PUT …/ini`). `422` on `post_max_size` when it would end up below `upload_max_filesize` (judged against what the file already says for the one you did not send). Answers the new settings.
 
 ---
 

@@ -32,6 +32,9 @@ class SavePhpIniSettingsRequest extends FormRequest
             'max_execution_time' => ['sometimes', 'integer', 'min:0', 'max:3600'],
             'max_input_time' => ['sometimes', 'integer', 'min:-1', 'max:3600'],
             'max_input_vars' => ['sometimes', 'integer', 'min:100', 'max:100000'],
+            // Keep the current php.ini as php.ini.panel-bak. The user's choice
+            // since 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -83,6 +86,13 @@ class SavePhpIniSettingsRequest extends FormRequest
     /** @return array<string, string|int> */
     public function changes(): array
     {
-        return array_map(fn ($value) => is_string($value) ? strtoupper($value) : $value, $this->validated());
+        // Only the ini's own settings: `safety_copy` is how to save, not a line
+        // to write into the file.
+        return array_map(fn ($value) => is_string($value) ? strtoupper($value) : $value, $this->safe()->except('safety_copy'));
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 }

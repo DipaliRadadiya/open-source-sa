@@ -192,9 +192,9 @@ class PhpController extends Controller
      */
     public function updateIni(string $version, UpdatePhpIniRequest $request, PhpVersionManager $php, ActivityLogger $log): JsonResponse
     {
-        $php->writeIni($version, $request->string('contents')->toString());
+        $php->writeIni($version, $request->string('contents')->toString(), $request->safetyCopy());
 
-        $log->log('php.ini_updated', properties: ['version' => $version]);
+        $log->log('php.ini_updated', properties: ['version' => $version, 'safety_copy' => $request->safetyCopy()]);
 
         return response()->json(['php_ini' => $this->ini($version, $php)]);
     }
@@ -221,8 +221,8 @@ class PhpController extends Controller
         $changes = $request->changes();
 
         if ($changes !== []) {
-            $php->writeIni($version, $directives->apply($php->readIni($version), $changes));
-            $log->log('php.ini_updated', properties: ['version' => $version]);
+            $php->writeIni($version, $directives->apply($php->readIni($version), $changes), $request->safetyCopy());
+            $log->log('php.ini_updated', properties: ['version' => $version, 'safety_copy' => $request->safetyCopy()]);
         }
 
         return response()->json([

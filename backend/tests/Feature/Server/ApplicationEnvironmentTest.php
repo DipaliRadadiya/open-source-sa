@@ -1042,6 +1042,19 @@ describe('the user may save without a copy (2026-10-29)', function () {
         expect(ActivityLog::query()->latest('id')->first()->properties['backup'])->toBeNull();
     });
 
+    it('says in the history which saves kept no copy', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n", 'safety_copy' => false])->assertOk();
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=2\n"])->assertOk();
+
+        $history = $this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history');
+
+        expect($history[0]['safety_copy'])->toBeTrue()
+            ->and($history[1]['safety_copy'])->toBeFalse()
+            ->and($history[1]['backup'])->toBeNull();
+    });
+
     it('refuses a value that is not true or false', function () {
         fakeSite();
 

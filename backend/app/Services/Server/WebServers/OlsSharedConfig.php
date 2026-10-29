@@ -408,7 +408,11 @@ class OlsSharedConfig
             // own test must never survive to the next reload, and this one is
             // shared with every site on the box.
             $this->serverOps->run(['cp', '-f', $backup, $path], $context);
+
+            return $test;
         }
+
+        $this->discardBackup($backup, $context);
 
         return $test;
     }
@@ -871,7 +875,21 @@ class OlsSharedConfig
             return ['status' => 'failed', 'reference' => $test->reference];
         }
 
+        $this->discardBackup($backup, $context);
+
         return ['status' => 'updated', 'reference' => null];
+    }
+
+    /**
+     * The copy has done its job once the new file passed its test (2026-10-29,
+     * Dipali: no copy stays on the user's server unasked). Kept only while
+     * the change is in flight; a failure to remove it fails nothing.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function discardBackup(string $backup, array $context): void
+    {
+        $this->serverOps->run(['rm', '-f', '--', $backup], $context + ['op' => 'ols_discard_backup']);
     }
 
     /**
