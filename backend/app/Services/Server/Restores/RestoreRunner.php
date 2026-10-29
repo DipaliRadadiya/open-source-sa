@@ -72,6 +72,7 @@ class RestoreRunner
             ]);
 
             $this->pruneOlderRollbacks($restore, $context);
+            $this->removeOwnRollback($restore, $context);
 
             return $restore->refresh();
         } catch (Throwable $e) {
@@ -160,9 +161,9 @@ class RestoreRunner
      * Every file restore moves the live site to `.rollback-{id}` beside it and
      * nothing ever removed one, so each restore cost a full copy of the site on
      * disk, for good: five restores of a 117 MB site left 585 MB (measured on
-     * a real server, 2026-09-24). The newest copy is the one worth having, as
-     * "the restore worked but the site is wrong" is asked about the restore
-     * just run; the older ones are also in the safety backups.
+     * a real server, 2026-09-24). Since 2026-10-29 a successful restore removes
+     * its own copy too ({@see removeOwnRollback()}); this still clears copies
+     * left by earlier restores, from before that or where the removal failed.
      *
      * Only paths the panel itself recorded, on earlier *successful* restores of
      * the same site, and only where the path is exactly `.rollback-{that id}`
@@ -206,6 +207,39 @@ class RestoreRunner
                     'detail' => $e->getMessage(),
                 ]);
             }
+        }
+    }
+
+    /**
+     * This restore's own copy of the old site, once the restore has worked
+     * (2026-10-29, Dipali: the support team reads a server full of copies the
+     * user never asked for as a full server). The copy exists so that a
+     * restore failing part-way can put the site back, and that moment has
+     * passed. Going back now is the safety backup's job — the Undo — and with
+     * the safety copy turned off the user chose to have no way back.
+     *
+     * Kept when the removal fails, with its path still recorded, so the next
+     * restore of the site removes it ({@see pruneOlderRollbacks()}). Never
+     * fails the restore.
+     */
+    private function removeOwnRollback(Restore $restore, RestoreContext $context): void
+    {
+        if ($context->rollbackPath === null || $context->application === null) {
+            return;
+        }
+
+        try {
+            $removed = $this->rollbacks->remove($restore->refresh(), $context->application);
+        } catch (Throwable $e) {
+            $removed = false;
+        }
+
+        if (! $removed) {
+            Log::channel('server-ops')->warning('restore copy not removed', [
+                'feature' => 'backup',
+                'op' => 'restore_remove_rollback',
+                'restore' => $restore->id,
+            ]);
         }
     }
 

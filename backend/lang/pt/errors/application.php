@@ -166,6 +166,7 @@ return [
     'staging_backup_not_permitted' => 'Pode enviar, mas não fazer uma cópia de segurança desta aplicação. Peça a um administrador acesso a Cópias de segurança, ou envie sem cópia.',
     'staging_safety_copy_missing' => 'Essa cópia da base de dados já não está no servidor. Recarregue a lista.',
     'staging_not_enough_space' => 'Não há espaço livre suficiente no disco do servidor para a cópia de segurança da base de dados. Liberte espaço ou desative a cópia de segurança.',
+    'staging_files_not_enough_space' => 'Não há espaço livre suficiente no disco do servidor para guardar os ficheiros atuais enquanto são substituídos. Liberte espaço e tente novamente.',
     'staging_safety_copy_no_database' => 'Esta aplicação não tem nenhuma base de dados associada, por isso não há onde repor a cópia.',
     'delete_files_adopted_worker' => 'Nada foi excluído. Os arquivos deste site ainda são usados por :workers, que o Server Sync encontrou em execução a partir do site, mas o painel não consegue provar que é dele. Pare-o no servidor e remova-o dos Workers deste site, depois exclua novamente — ou exclua o site mantendo os arquivos.',
 ];

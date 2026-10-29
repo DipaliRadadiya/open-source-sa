@@ -1986,6 +1986,30 @@ describe('the safety copy switch on push and pull (2026-10-29)', function () {
             ->and(collect($seen)->first(fn (string $c) => str_contains($c, 'source ')))->toBeNull();
     });
 
+    it('refuses to set the files aside when the disk has no room for them, and replaces nothing', function () {
+        $seen = new ArrayObject;
+        Process::fake(function ($process) use ($seen) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $seen[] = implode(' ', $args);
+
+            return ($args[0] ?? '') === 'du'
+                ? Process::result(output: "4096\t".end($args)."\n")
+                : Process::result(exitCode: 0);
+        });
+        $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+        $folder->shouldReceive('space')->andReturn(['free' => 1024 ** 3, 'total' => 100 * 1024 ** 3]);
+        app()->instance(LocalBackupFolder::class, $folder);
+        config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files', 'safety_copy' => false])
+            ->assertStatus(202)
+            ->assertJsonPath('run.status', 'failed')
+            ->assertJsonPath('run.error_status', 422)
+            ->assertJsonPath('run.error.errors.mode.0', __('errors/application.staging_files_not_enough_space'));
+
+        expect(collect($seen)->first(fn (string $c) => str_starts_with($c, 'rsync ')))->toBeNull();
+    });
+
     it('removes a copy that failed part-way', function () {
         $seen = new ArrayObject;
         Process::fake(function ($process) use ($seen) {

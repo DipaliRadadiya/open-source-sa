@@ -187,20 +187,22 @@ function fakeSafetyBackupTar(): void
     });
 }
 
-it('restores the files and leaves the previous ones recoverable', function () {
+it('restores the files, and removes the old site it moved aside once it worked', function () {
     fakeSafetyBackupTar();
+    $restore = restoreFor(storedBackup());
+    $copy = dirname($this->siteRoot).'/.rollback-'.$restore->id;
 
-    $restore = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+    $restore = app(RestoreRunner::class)->run($restore);
 
     expect($restore->status)->toBe(RestoreStatus::Succeeded)
         ->and($restore->reason)->toBeNull()
         ->and(File::get($this->siteRoot.'/index.php'))->toContain('restored');
 
-    // The previous directory is moved, never deleted — "the restore worked but
-    // the site is wrong" has to stay recoverable.
-    expect($restore->rollback_path)->not->toBeNull()
-        ->and(is_dir($restore->rollback_path))->toBeTrue()
-        ->and(File::get($restore->rollback_path.'/index.php'))->toContain('live');
+    // 2026-10-29 (Dipali): no copy the user never asked for stays on the
+    // server. The way back after a restore is its safety backup.
+    Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($copy, $p->command, true));
+    expect($restore->rollback_path)->toBeNull()
+        ->and($restore->safety_backup_id)->not->toBeNull();
 });
 
 it('takes a safety backup before it overwrites anything', function () {
@@ -330,7 +332,7 @@ it('puts the site back when the swap fails half way', function () {
 /*
  * Every file restore moves the live site aside to `.rollback-{id}`, and nothing
  * ever removed one: five restores of a 117 MB site left 585 MB on a real server
- * (2026-09-24). Only the newest is kept now.
+ * (2026-09-24). Only the newest was kept after that; since 2026-10-29 none is.
  */
 describe('old copies of the site', function () {
     /**
@@ -384,7 +386,7 @@ describe('old copies of the site', function () {
         ));
     }
 
-    it('keeps only the newest copy after several restores', function () {
+    it('leaves no copy after several restores', function () {
         fakeRestoreThatRemoves(collect());
 
         $restores = [];
@@ -392,13 +394,57 @@ describe('old copies of the site', function () {
             $restores[] = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
         }
 
-        $newest = end($restores);
-
         expect(collect($restores)->map(fn ($r) => $r->status->value)->unique()->values()->all())->toBe(['succeeded'])
-            ->and(rollbackCopies())->toBe(['.rollback-'.$newest->id])
-            ->and(is_dir($newest->rollback_path))->toBeTrue()
-            // The older rows stop pointing at a directory that is gone.
-            ->and(Restore::whereNotNull('rollback_path')->pluck('id')->all())->toBe([$newest->id]);
+            ->and(rollbackCopies())->toBe([])
+            // No row points at a directory that is gone.
+            ->and(Restore::whereNotNull('rollback_path')->count())->toBe(0);
+    });
+
+    it('still clears a copy an earlier restore left, from before this rule', function () {
+        fakeRestoreThatRemoves(collect());
+        $earlier = restoreFor(storedBackup());
+        $earlierCopy = dirname($this->siteRoot).'/.rollback-'.$earlier->id;
+        File::ensureDirectoryExists($earlierCopy);
+        $earlier->update(['status' => RestoreStatus::Succeeded, 'rollback_path' => $earlierCopy]);
+
+        app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+
+        expect(rollbackCopies())->toBe([]);
+    });
+
+    it('keeps the copy and its path, and still succeeds, when it cannot be removed', function () {
+        fakeRestoreThatRemoves(collect());
+        $restore = restoreFor(storedBackup());
+        $copy = dirname($this->siteRoot).'/.rollback-'.$restore->id;
+        Process::fake(function ($process) use ($copy) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            if (($args[0] ?? '') === 'rm' && end($args) === $copy) {
+                return Process::result(exitCode: 1, errorOutput: 'Operation not permitted');
+            }
+
+            foreach (['-czf', '-cf'] as $flag) {
+                $at = array_search($flag, $args, true);
+                if (($args[0] ?? '') === 'tar' && $at !== false) {
+                    file_put_contents($args[$at + 1], str_repeat('s', 4096));
+                }
+            }
+            if (($args[0] ?? '') === 'tar' && in_array('-xzf', $args, true)) {
+                $site = $args[4].'/'.basename(test()->siteRoot);
+                File::ensureDirectoryExists($site);
+                File::put($site.'/index.php', '<?php echo "restored";');
+            }
+            if (($args[0] ?? '') === 'mv') {
+                @rename($args[1], $args[2]);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $restore = app(RestoreRunner::class)->run($restore);
+
+        expect($restore->status)->toBe(RestoreStatus::Succeeded)
+            ->and($restore->rollback_path)->toBe($copy)
+            ->and(is_dir($copy))->toBeTrue();
     });
 
     it('never removes the copy a failed restore left behind', function () {
@@ -669,7 +715,7 @@ describe('restoring a database', function () {
 });
 
 describe('the user may restore without a safety copy (2026-10-29)', function () {
-    it('skips the copy, still restores, and keeps the files moved aside', function () {
+    it('skips the copy, still restores, and leaves no copy of the old site behind', function () {
         fakeRestoreCommands();
         $restore = restoreFor(storedBackup());
         $restore->update(['safety_copy' => false]);
@@ -681,8 +727,9 @@ describe('the user may restore without a safety copy (2026-10-29)', function () 
             ->and($restore->safety_backup_id)->toBeNull()
             ->and(Backup::where('is_safety', true)->count())->toBe($before)
             ->and(File::get($this->siteRoot.'/index.php'))->toContain('restored')
-            // Files are still put back from here if anything goes wrong.
-            ->and(is_dir((string) $restore->rollback_path))->toBeTrue();
+            // The old site was moved aside while the restore ran, and is gone
+            // now that it worked: nothing stays that the user did not ask for.
+            ->and($restore->rollback_path)->toBeNull();
     });
 
     it('does not fail on a copy it was told not to take', function () {

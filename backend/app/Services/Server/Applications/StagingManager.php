@@ -712,8 +712,30 @@ class StagingManager
             throw new StagingOperationException($directory->reference, $directory->busy, $directory->staleLock);
         }
 
+        $source = rtrim($this->provisioner->documentRoot($production), '/');
+
+        // Room for it first (2026-10-29): the snapshot is a whole copy of the
+        // site's files on this server's disk for as long as the push runs,
+        // and a full disk takes every site down with it. Measured now with
+        // `du`, which still prints a usable total when it cannot read a few
+        // entries; no total at all is let through, as for backups.
+        $measured = $this->serverOps->run(
+            ['du', '-sb', '--', $source],
+            ['feature' => 'application', 'op' => 'staging_snapshot_size', 'application' => $production->id],
+            timeout: 120,
+        );
+        $bytes = (int) strtok(trim($measured->output()), "\t");
+
+        try {
+            $this->space->ensureRoomFor($destination, $bytes);
+        } catch (NotEnoughBackupSpace) {
+            throw ValidationException::withMessages([
+                'mode' => [__('errors/application.staging_files_not_enough_space')],
+            ]);
+        }
+
         $snapshot = $this->serverOps->run(
-            ['rsync', '-a', '--delete', rtrim($this->provisioner->documentRoot($production), '/').'/', rtrim($destination, '/').'/'],
+            ['rsync', '-a', '--delete', $source.'/', rtrim($destination, '/').'/'],
             ['feature' => 'application', 'op' => 'staging_snapshot', 'application' => $production->id],
             timeout: 300,
         );
