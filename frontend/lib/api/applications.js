@@ -150,13 +150,14 @@ export function createApplicationStaging(id, domain) {
 }
 
 // `backup`: back the live application up first; the push only runs if that backup verifies.
-export function pushApplicationStaging(id, mode, { backup = false } = {}) {
-  return api.post(`/applications/${id}/staging/push`, { mode, ...(backup ? { backup: true } : {}) });
+// `safetyCopy: false` skips the dump of the database being replaced (database/full only).
+export function pushApplicationStaging(id, mode, { backup = false, safetyCopy = true } = {}) {
+  return api.post(`/applications/${id}/staging/push`, { mode, safety_copy: safetyCopy, ...(backup ? { backup: true } : {}) });
 }
 
 // Called on the live application; synchronous, like a push. Live is only read.
-export function pullApplicationStaging(id, mode) {
-  return api.post(`/applications/${id}/staging/pull`, { mode });
+export function pullApplicationStaging(id, mode, { safetyCopy = true } = {}) {
+  return api.post(`/applications/${id}/staging/pull`, { mode, safety_copy: safetyCopy });
 }
 
 // Puts a pre-push database copy back; the current database is saved first.

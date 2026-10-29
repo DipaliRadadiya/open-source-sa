@@ -26,15 +26,15 @@ test("application and database each have their own wording in all 8 languages", 
 });
 
 // 36b72a4a (Dipali, 29 Oct): POST /backups/{backup}/restore takes safety_copy (default true).
-test("an application restore has the copy switch, on by default and on again after closing; off says no undo", () => {
+// 57926891 (Dipali, 29 Oct): a database restore has the same switch.
+test("an application or database restore has the copy switch, on by default and on again after closing; off says no undo", () => {
   const dialog = read("components/backups/restore-dialog.jsx");
   assert.match(dialog, /const \[safetyCopy, setSafetyCopy\] = useState\(true\);/);
   assert.match(dialog, /if \(!next\) setSafetyCopy\(true\);/);
   assert.match(dialog, /safety_copy: safetyCopy,/);
-  assert.match(dialog, /\{offersSafetyChoice && !safetyCopy \? ` \$\{t\("noCopyWarning"\)\}` : null\}/);
-  assert.match(dialog, /<Switch id="restore-safety-copy" checked=\{safetyCopy\}/);
-  // A database restore always takes a copy: it keeps the promise, no switch.
-  assert.match(dialog, /const offersSafetyChoice = !isDatabase;/);
+  assert.match(dialog, /\{!safetyCopy \? ` \$\{t\("noCopyWarning"\)\}` : null\}/);
+  assert.match(dialog, /<SafetyCopySwitch\s+id="restore-safety-copy"\s+checked=\{safetyCopy\}/);
+  assert.doesNotMatch(dialog, /offersSafetyChoice/);
   for (const locale of LOCALES) {
     const r = JSON.parse(read(`messages/${locale}.json`)).backups.restore;
     assert.ok(r.safetyCopyLabel && r.noCopyWarning, locale);

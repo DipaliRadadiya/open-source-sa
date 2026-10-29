@@ -21,6 +21,7 @@ export function runDatabaseBackupNow(databaseId) {
 
 // Its own backup, or an archived one of the same engine. `confirm` is the
 // database name. Needs this database's own schedule (for the safety backup).
-export function restoreDatabaseBackup(databaseId, backupId, confirm) {
-  return api.post(`/databases/${databaseId}/backups/${backupId}/restore`, { confirm });
+// `safetyCopy: false` skips the copy taken first, so there is no Undo.
+export function restoreDatabaseBackup(databaseId, backupId, confirm, safetyCopy = true) {
+  return api.post(`/databases/${databaseId}/backups/${backupId}/restore`, { confirm, safety_copy: safetyCopy });
 }

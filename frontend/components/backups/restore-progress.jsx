@@ -169,7 +169,7 @@ export function RestoreProgress({
                     ? t("succeededBody", { when: finishedAgo })
                     : t("succeededBodyPlain")}
               </p>
-              {restore.safety_backup_id && !wasUndo ? (
+              {restore.safety_backup_id && restore.safety_copy !== false && !wasUndo ? (
                 <p className="text-xs text-muted-foreground">{t("undoHint")}</p>
               ) : null}
             </div>
@@ -177,7 +177,7 @@ export function RestoreProgress({
 
           {/* Undo and Dismiss share one size and style. */}
           <div className="ms-14 flex shrink-0 flex-wrap gap-2 sm:ms-0">
-            {restore.safety_backup_id && !wasUndo ? (
+            {restore.safety_backup_id && restore.safety_copy !== false && !wasUndo ? (
               <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
                 {loadingUndo ? (
                   <Loader2 className="size-4 animate-spin" />

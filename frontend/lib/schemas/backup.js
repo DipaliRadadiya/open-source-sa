@@ -267,6 +267,8 @@ export const restoreSchema = z
     reason_title: z.string().nullish(),
     // The way back out of a restore that put the wrong thing live.
     safety_backup_id: z.number().nullish(),
+    // False when the user skipped the copy: there is nothing to undo from.
+    safety_copy: z.boolean().nullish(),
     rollback_path: z.string().nullish(),
     reference: z.string().nullish(),
     started_at: z.string().nullish(),

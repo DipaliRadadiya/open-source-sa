@@ -22,6 +22,8 @@ import { apiMessage, mayStillBeRunning } from "@/lib/api/error-message";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
@@ -46,6 +48,9 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
   const [pending, setPending] = useState(false);
   // On by default when it is possible: the push cannot be undone otherwise.
   const [backup, setBackup] = useState(canBackUp);
+  // Only a push that replaces the database takes the copy; files are always saved for the swap.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const replacesDatabase = mode === "database" || mode === "full";
 
   const domain = production?.domain ?? "";
   const matches = confirm.trim() === domain && domain !== "";
@@ -56,7 +61,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
     try {
       // 202 with a run (RC-16): it has only started. The page shows its progress
       // and the result; saying "pushed" here was a guess that could be wrong.
-      await pushApplicationStaging(appId, mode, { backup: canBackUp && backup });
+      await pushApplicationStaging(appId, mode, { backup: canBackUp && backup, safetyCopy: !replacesDatabase || safetyCopy });
       await refreshAndWait();
       onOpenChange(false);
       toast.info(t("started", { domain }));
@@ -157,7 +162,26 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
             </p>
           ) : null}
 
-          <p className="text-xs leading-5 text-muted-foreground">{t("whileRunning")}</p>
+          {replacesDatabase ? (
+            <SafetyCopySwitch
+              id="staging-push-safety-copy"
+              checked={safetyCopy}
+              onCheckedChange={setSafetyCopy}
+              disabled={pending}
+              label={t("safetyCopyLabel")}
+              hint={t("safetyCopyHint")}
+            />
+          ) : null}
+          {replacesDatabase && !safetyCopy ? (
+            <Caution tone="destructive" size="md">
+              <p>{t("noCopyWarning")}</p>
+            </Caution>
+          ) : null}
+
+          {/* Without the copy only the files are put back on a failure. */}
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t(replacesDatabase && !safetyCopy ? "whileRunningNoCopy" : "whileRunning")}
+          </p>
 
           <TypeToConfirm
             id="staging-push-confirm"

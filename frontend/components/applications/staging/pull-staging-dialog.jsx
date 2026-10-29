@@ -18,6 +18,8 @@ import { PUSH_MODES } from "@/lib/schemas/application-staging";
 import { pullApplicationStaging } from "@/lib/api/applications";
 import { apiMessage, mayStillBeRunning } from "@/lib/api/error-message";
 import { ChoiceField } from "@/components/ui/choice-field";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { Label } from "@/components/ui/label";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
@@ -42,12 +44,15 @@ export function PullStagingDialog({ appId, production, staging, open, onOpenChan
   const { refreshAndWait } = useRefresh();
   const [mode, setMode] = useState(null);
   const [pending, setPending] = useState(false);
+  // Only an update that replaces staging's database takes the copy; files are always saved for the swap.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const replacesDatabase = mode === "database" || mode === "full";
 
   async function pull() {
     setPending(true);
     try {
       // 202 with a run (RC-16): it has only started; the page shows how it ends.
-      await pullApplicationStaging(appId, mode);
+      await pullApplicationStaging(appId, mode, { safetyCopy: !replacesDatabase || safetyCopy });
       await refreshAndWait();
       onOpenChange(false);
       toast.info(t("started", { domain: staging?.domain ?? "" }));
@@ -106,11 +111,29 @@ export function PullStagingDialog({ appId, production, staging, open, onOpenChan
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
                 <span>{t(`modes.${mode}.consequence`)}</span>
               </p>
-              {/* Only the database is kept after a successful update; the file snapshot is not. */}
-              <p className="flex items-start gap-2.5 rounded-lg border border-success/40 bg-success/10 p-3 text-sm">
-                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-                <span>{t(mode === "files" ? "safetyFiles" : "safetyDatabase")}</span>
-              </p>
+              {/* Files are always put back on a failure; the database copy is the user's choice. */}
+              {replacesDatabase ? (
+                <>
+                  <SafetyCopySwitch
+                    id="staging-pull-safety-copy"
+                    checked={safetyCopy}
+                    onCheckedChange={setSafetyCopy}
+                    disabled={pending}
+                    label={t("safetyCopyLabel")}
+                    hint={t("safetyCopyHint")}
+                  />
+                  {!safetyCopy ? (
+                    <Caution tone="destructive" size="md">
+                      <p>{t("noCopyWarning")}</p>
+                    </Caution>
+                  ) : null}
+                </>
+              ) : (
+                <p className="flex items-start gap-2.5 rounded-lg border border-success/40 bg-success/10 p-3 text-sm">
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                  <span>{t("safetyFiles")}</span>
+                </p>
+              )}
             </>
           ) : null}
 

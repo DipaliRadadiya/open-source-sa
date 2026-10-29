@@ -13,6 +13,8 @@ export const stagingRunSchema = z.object({
   kind: z.string(),
   mode: z.string().nullish(),
   backup: z.boolean().nullish(),
+  // False when the user skipped the database copy (57926891); absent from an older API, which always took one.
+  safety_copy: z.boolean().nullish(),
   status: z.string(),
   // What the endpoint used to answer when it failed: message, code/reason, reference.
   error: z

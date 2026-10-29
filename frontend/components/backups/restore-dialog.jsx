@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useFormatter } from "next-intl";
-import { History, Loader2, ShieldCheck } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { restorableTypes } from "@/lib/schemas/backup";
 import { startRestore } from "@/lib/api/backups";
@@ -11,7 +11,7 @@ import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { Label } from "@/components/ui/label";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { Caution } from "@/components/ui/caution";
-import { Switch } from "@/components/ui/switch";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   AlertDialog,
@@ -45,10 +45,9 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
         : (allowed[0] ?? backup?.type ?? "full"),
   );
   const [confirm, setConfirm] = useState("");
-  // Application restores only (36b72a4a): off skips the copy, and with it the Undo. On by default,
+  // Off skips the copy, and with it the Undo (application 36b72a4a, database 57926891). On by default,
   // and on again every time the dialog closes, so a choice made once is never carried over.
   const [safetyCopy, setSafetyCopy] = useState(true);
-  const offersSafetyChoice = !isDatabase;
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState(null);
 
@@ -59,7 +58,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
     setFailure(null);
     try {
       const response = isDatabase
-        ? await restoreDatabaseBackup(database.id, backup.id, confirm.trim())
+        ? await restoreDatabaseBackup(database.id, backup.id, confirm.trim(), safetyCopy)
         : // A container backup (volumes, config) has no choice to make, and the
           // API only names the PHP-site types: sent, it is a 422. Absent, the
           // server restores what the backup holds.
@@ -156,29 +155,19 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
           <Caution tone="destructive" size="md">
             <p>
               {t("overwriteWarning")}
-              {offersSafetyChoice && !safetyCopy ? ` ${t("noCopyWarning")}` : null}
+              {!safetyCopy ? ` ${t("noCopyWarning")}` : null}
             </p>
           </Caution>
 
-          {/* The safety copy belongs before the commitment: a switch for an application, a promise for
-              a database, whose restore always takes one. */}
-          {offersSafetyChoice ? (
-            <label
-              htmlFor="restore-safety-copy"
-              className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border p-3"
-            >
-              <span className="space-y-1">
-                <span className="block text-sm font-medium">{t("safetyCopyLabel")}</span>
-                <span className="block text-xs text-muted-foreground">{t("safetyPromise")}</span>
-              </span>
-              <Switch id="restore-safety-copy" checked={safetyCopy} onCheckedChange={setSafetyCopy} disabled={pending} />
-            </label>
-          ) : (
-            <div className="flex items-start gap-2.5 rounded-lg border border-success/40 bg-success/10 p-3 text-sm">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
-              <p>{t("safetyPromise")}</p>
-            </div>
-          )}
+          {/* The safety copy belongs before the commitment. */}
+          <SafetyCopySwitch
+            id="restore-safety-copy"
+            checked={safetyCopy}
+            onCheckedChange={setSafetyCopy}
+            disabled={pending}
+            label={t("safetyCopyLabel")}
+            hint={t("safetyPromise")}
+          />
 
           <TypeToConfirm
             id="restore-confirm"

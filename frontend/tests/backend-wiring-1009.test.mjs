@@ -18,7 +18,7 @@ test("B7: deleting a system user can end its sessions first", () => {
 test("B9: a staging push can back the live application up first, and its database copies can be put back", async () => {
   const { stagingSafetyCopiesSchema } = await import("../lib/schemas/application-staging.js");
   assert.equal(stagingSafetyCopiesSchema.parse({ safety_copies: [{ name: "pre-push-x.sql", size_bytes: 1, created_at: "2026-10-09T06:33:34+00:00" }], kept: 3 }).safety_copies.length, 1);
-  assert.match(read("lib/api/applications.js"), /\{ mode, \.\.\.\(backup \? \{ backup: true \} : \{\}\) \}/);
+  assert.match(read("lib/api/applications.js"), /\{ mode, safety_copy: safetyCopy, \.\.\.\(backup \? \{ backup: true \} : \{\}\) \}/);
   assert.match(read("components/applications/staging/push-staging-dialog.jsx"), /useState\(canBackUp\)/);
 });
 
