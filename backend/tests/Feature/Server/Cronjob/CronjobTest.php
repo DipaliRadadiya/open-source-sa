@@ -805,3 +805,54 @@ it('rejects a command with an unresolved {php} placeholder', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors('command');
 });
+
+describe('moving a job to another site on edit (2026-10-29)', function () {
+    beforeEach(function () {
+        $make = fn (string $slug) => Application::forceCreate([
+            'system_user_id' => $this->su->id, 'name' => $slug, 'slug' => $slug, 'domain' => "{$slug}.test",
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+        $this->siteA = $make('sitea');
+        $this->siteB = $make('siteb');
+        $this->job = Cronjob::create([
+            'name' => 'Job', 'slug' => 'job', 'username' => 'deploy', 'command' => 'echo hi',
+            'expression' => '* * * * *', 'active' => true,
+            'application_id' => $this->siteA->id, 'application_owned' => true,
+        ]);
+        Process::fake();
+    });
+
+    it('links the job to the site picked in the form', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/cronjobs/{$this->job->id}", ['application_id' => $this->siteB->id])
+            ->assertOk();
+
+        $job = $this->job->fresh();
+        expect($job->application_id)->toBe($this->siteB->id)
+            // Moved by the user, so neither site deletes it on its own.
+            ->and($job->application_owned)->toBeFalse();
+    });
+
+    it('makes it a server-level job when the site is cleared', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/cronjobs/{$this->job->id}", ['application_id' => null])
+            ->assertOk();
+
+        expect($this->job->fresh()->application_id)->toBeNull();
+    });
+
+    it('leaves the site alone when the edit does not mention it', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/cronjobs/{$this->job->id}", ['expression' => '5 * * * *'])
+            ->assertOk();
+
+        $job = $this->job->fresh();
+        expect($job->application_id)->toBe($this->siteA->id)->and($job->application_owned)->toBeTrue();
+    });
+
+    it('refuses a site that does not exist', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/cronjobs/{$this->job->id}", ['application_id' => 999999])
+            ->assertJsonValidationErrors('application_id');
+    });
+});

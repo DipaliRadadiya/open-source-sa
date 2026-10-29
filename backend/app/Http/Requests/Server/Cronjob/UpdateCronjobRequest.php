@@ -33,6 +33,11 @@ class UpdateCronjobRequest extends FormRequest
             // a panel System User, or a raw OS account.
             'system_user_id' => ['sometimes', 'nullable', 'exists:system_users,id'],
             'username' => ['sometimes', 'nullable', 'string', 'regex:/^[a-z_][a-z0-9_-]{0,31}$/'],
+            // The site the job belongs to, as on create (2026-10-29). It was
+            // dropped here, so a job moved to another site in the form stayed
+            // linked to the old one: offered on the wrong site's PHP switch,
+            // and deleted with the wrong site. Null makes it server-level.
+            'application_id' => ['sometimes', 'nullable', 'exists:applications,id'],
             'command' => ['sometimes', 'required', 'string', 'max:1000', new SingleLine, new NoShellComment, 'not_regex:/\{(path|php)\}/'],
             'expression' => ['sometimes', 'required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],

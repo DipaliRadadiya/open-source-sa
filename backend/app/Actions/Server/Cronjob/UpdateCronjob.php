@@ -56,6 +56,12 @@ class UpdateCronjob
             $data['application_owned'] = false;
         }
 
+        // Moved to another site (or to none): the user's from now on, so it is
+        // not deleted with either site behind their back (2026-10-29).
+        if (array_key_exists('application_id', $data) && (int) $data['application_id'] !== (int) $cronjob->application_id && ! array_key_exists('application_owned', $data)) {
+            $data['application_owned'] = false;
+        }
+
         $cronjob->update($data);
 
         // Re-materialise from the new state: active → (over)write the file,
