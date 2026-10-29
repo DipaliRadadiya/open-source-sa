@@ -89,8 +89,8 @@ describe('deleting a Docker site', function () {
 
         $this->actingAs($this->admin)->deleteJson('/api/applications/'.$this->site->id)->assertSuccessful();
 
-        $row = \App\Models\ActivityLog::where('action', 'docker_resources_removed')->latest('id')->first();
-        expect(\App\Http\Resources\ActivityLogResource::make($row)->resolve()['description'])
+        $row = ActivityLog::where('action', 'docker_resources_removed')->latest('id')->first();
+        expect(ActivityLogResource::make($row)->resolve()['description'])
             ->toContain('image:mysql:8.0:used-by-sv-app-999-db-1');
     });
 
