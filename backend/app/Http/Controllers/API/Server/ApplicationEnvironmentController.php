@@ -137,8 +137,8 @@ class ApplicationEnvironmentController extends Controller
             // to match a log entry against a directory listing by timestamp.
             // Null on a first save, where there was nothing to keep.
             'backup' => $backup,
-            // Only when turned off, so the line says "(without a safety copy)".
-            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
+            // False when turned off, so the line says "(without a safety copy)".
+            'safety_copy' => $request->safetyCopy(),
         ]);
 
         return response()->json([
@@ -251,7 +251,7 @@ class ApplicationEnvironmentController extends Controller
             // is what makes a restore undoable from its own history row.
             'restored_from' => $name,
             'backup' => $safety,
-            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
+            'safety_copy' => $request->safetyCopy(),
         ]);
 
         return response()->json([

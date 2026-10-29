@@ -130,8 +130,8 @@ class ApplicationFileController extends Controller
         $activity->log('application.file_edited', $application, [
             'name' => $application->name,
             'path' => $request->targetPath(),
-            // Only when turned off, so the line says "(without a safety copy)".
-            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
+            // False when turned off, so the line says "(without a safety copy)".
+            'safety_copy' => $request->safetyCopy(),
         ]);
 
         return response()->json(['saved' => true, 'version' => $version]);
@@ -148,7 +148,7 @@ class ApplicationFileController extends Controller
         $activity->log('application.file_restored', $application, [
             'name' => $application->name,
             'path' => $request->targetPath(),
-            ...($request->safetyCopy() ? [] : ['safety_copy' => false]),
+            'safety_copy' => $request->safetyCopy(),
         ]);
 
         // The content too (APP-5), so the editor shows what is now on disk
