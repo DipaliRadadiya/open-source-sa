@@ -126,6 +126,9 @@ test("a staging run refused for space shows the field's sentence", async () => {
   const sentence = "Not enough free disk space on the server for the safety copy of the database. Free up space, or turn off the safety copy.";
   assert.equal(runErrorText({ message: "The given data was invalid.", errors: { safety_copy: [sentence] } }), sentence);
   assert.equal(runErrorText({ message: "Backup failed" }), "Backup failed");
+  // feat/no-hidden-copies: no room for the site's files is a 422 on `mode`, shown the same way.
+  const files = "There is not enough free disk space on the server to copy this application's files.";
+  assert.equal(runErrorText({ message: "The given data was invalid.", errors: { mode: [files] } }), files);
   assert.equal(runErrorText(null), null);
   assert.match(read("components/applications/staging/staging-run-status.jsx"), /runErrorText\(run\.error\)/);
 });
