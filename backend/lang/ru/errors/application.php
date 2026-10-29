@@ -74,6 +74,7 @@ return [
     'waf_unsupported' => 'Веб-брандмауэр пока недоступен на :server.',
     'waf_failed' => 'Не удалось изменить настройки брандмауэра на сервере.',
     'staging_failed' => 'Операция staging завершилась ошибкой на сервере.',
+    'staging_create_failed' => 'Создание staging-сайта прервалось на шаге «:step» (ссылка :reference).',
     'staging_exists' => 'У этого приложения уже есть staging-копия. Сначала опубликуйте или удалите её.',
     'staging_of_staging' => 'Это staging-копия. Создавайте staging-копии с рабочего приложения.',
     'staging_missing' => 'У этого приложения нет staging-копии для публикации.',

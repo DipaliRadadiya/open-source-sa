@@ -74,6 +74,7 @@ return [
     'waf_unsupported' => 'Le pare-feu web n\'est pas encore disponible sur :server.',
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
+    'staging_create_failed' => 'La création du site de staging a échoué à l’étape « :step » (référence :reference).',
     'staging_exists' => 'Cette application a déjà une copie de staging. Publiez-la ou supprimez-la d’abord.',
     'staging_of_staging' => 'Ceci est une copie de staging. Créez les copies de staging à partir de l’application en production.',
     'staging_missing' => 'Cette application n’a pas de copie de staging à publier.',

@@ -75,6 +75,7 @@ return [
     'waf_unsupported' => 'El firewall web aún no está disponible en :server.',
     'waf_failed' => 'No se pudo cambiar la configuración del firewall en el servidor.',
     'staging_failed' => 'La operación de staging falló en el servidor.',
+    'staging_create_failed' => 'La creación del sitio de staging falló en el paso «:step» (referencia :reference).',
     'staging_exists' => 'Esta aplicación ya tiene una copia de staging. Publícala o elimínala primero.',
     'staging_of_staging' => 'Esta es una copia de staging. Crea las copias de staging desde la aplicación en vivo.',
     'staging_missing' => 'Esta aplicación no tiene una copia de staging que publicar.',

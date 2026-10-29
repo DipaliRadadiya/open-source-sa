@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Application\CreateStaging;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\CreateStagingRequest;
 use App\Http\Requests\Server\Application\PullStagingRequest;
@@ -38,7 +39,23 @@ class ApplicationStagingController extends Controller
 
     public function store(CreateStagingRequest $request, Application $application, CreateStaging $action): JsonResponse
     {
-        $staging = $action->execute($application, $request->domain());
+        try {
+            $staging = $action->execute($application, $request->domain());
+        } catch (ProvisioningFailedException $e) {
+            // Answered here, not left to the exception handler: that renders
+            // a plain exception as "Server Error" whenever APP_DEBUG is off —
+            // every real panel — so the step and the reference that ties it to
+            // the server-ops log never reached the user. Still reported, so the
+            // API error log keeps the failure.
+            report($e);
+
+            return response()->json([
+                'message' => __('errors/application.staging_create_failed', ['step' => $e->step, 'reference' => $e->reference]),
+                'step' => $e->step,
+                'reason' => $e->reason,
+                'reference' => $e->reference,
+            ], 500);
+        }
 
         return response()->json([
             'staging' => ApplicationResource::make($staging->load('systemUser'))->resolve(),

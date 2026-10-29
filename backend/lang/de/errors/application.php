@@ -74,6 +74,7 @@ return [
     'waf_unsupported' => 'Die Web-Firewall ist auf :server noch nicht verfügbar.',
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
     'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
+    'staging_create_failed' => 'Das Erstellen der Staging-Website ist im Schritt „:step" fehlgeschlagen (Referenz :reference).',
     'staging_exists' => 'Diese Anwendung hat bereits eine Staging-Kopie. Übertragen oder löschen Sie sie zuerst.',
     'staging_of_staging' => 'Dies ist eine Staging-Kopie. Erstellen Sie Staging-Kopien von der Live-Anwendung aus.',
     'staging_missing' => 'Diese Website hat keine Staging-Kopie, die übertragen werden kann.',
