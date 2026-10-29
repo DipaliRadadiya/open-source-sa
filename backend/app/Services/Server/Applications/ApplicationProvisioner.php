@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Actions\Server\SystemUser\CreateSystemUser;
+use App\Contracts\WebServerDriver;
 use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\MeasureApplicationSize;
@@ -409,22 +410,7 @@ class ApplicationProvisioner
             });
         }
 
-        $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
-
-        // Test before reload — and if the test fails, take our config back out
-        // so the next reload (ours or anyone else's) is not poisoned by it.
-        $test = $driver->test();
-
-        if ($test->failed()) {
-            // The driver's own removal, not `rm -f`: on a web server whose
-            // site lives partly in a shared file, deleting the per-site file
-            // would leave the shared one pointing at something gone — a config
-            // that is still broken, and now broken in a harder way.
-            $driver->remove($application);
-
-            throw new ProvisioningFailedException('test_config', $test->reference);
-        }
-
+        $this->writeTestedConfig($driver, $application, $documentRoot);
         $this->progress->record('test_config');
 
         $this->step('reload', fn () => $driver->reload());
@@ -457,15 +443,7 @@ class ApplicationProvisioner
             if ($port !== $allocatedPort) {
                 $application->app_port = $port;
 
-                $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
-
-                $test = $driver->test();
-
-                if ($test->failed()) {
-                    $driver->remove($application);
-
-                    throw new ProvisioningFailedException('test_config', $test->reference);
-                }
+                $this->writeTestedConfig($driver, $application, $documentRoot);
 
                 $this->step('reload', fn () => $driver->reload());
             }
@@ -495,6 +473,60 @@ class ApplicationProvisioner
             ->delay(now()->addSeconds(MeasureApplicationSize::DEBOUNCE_SECONDS));
 
         return $this->progress->steps();
+    }
+
+    /**
+     * Write the site's config and test the server's, before anything reloads.
+     *
+     * On a failure — the test, or a write that stopped after the first file
+     * was already linked — the site's config comes back out, so the next
+     * reload (ours or anyone else's) and the next site's test are not
+     * poisoned by it: left enabled, one broken site failed `test_config` for
+     * every site created after it. The error stays on this site.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function writeTestedConfig(WebServerDriver $driver, Application $application, string $documentRoot): void
+    {
+        try {
+            $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
+        } catch (ProvisioningFailedException $exception) {
+            $this->removeFailedConfig($driver, $application);
+
+            throw $exception;
+        }
+
+        $test = $driver->test();
+
+        if ($test->failed()) {
+            $this->removeFailedConfig($driver, $application);
+
+            throw new ProvisioningFailedException('test_config', $test->reference);
+        }
+    }
+
+    /**
+     * The driver's own removal, not `rm -f`: on a web server whose site lives
+     * partly in a shared file, deleting the per-site file would leave the
+     * shared one pointing at something gone — a config that is still broken,
+     * and now broken in a harder way.
+     *
+     * Then the test again, so a removal that did not take, or a config that
+     * was broken before this site, is in the log rather than discovered by
+     * the next site to fail.
+     */
+    private function removeFailedConfig(WebServerDriver $driver, Application $application): void
+    {
+        $removed = $driver->remove($application);
+        $retest = $driver->test();
+
+        if ($removed->failed() || $retest->failed()) {
+            Log::channel('server-ops')->warning('web server config still failing after removing a failed site', [
+                'application' => $application->id,
+                'remove_reference' => $removed->reference,
+                'test_reference' => $retest->reference,
+            ]);
+        }
     }
 
     /**

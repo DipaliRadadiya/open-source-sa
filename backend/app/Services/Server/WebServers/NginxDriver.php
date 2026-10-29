@@ -23,7 +23,35 @@ class NginxDriver extends AbstractWebServerDriver
      */
     protected function viewData(Application $application, string $documentRoot): array
     {
-        return parent::viewData($application, $documentRoot) + ['http2On' => $this->supportsHttp2Directive()];
+        return parent::viewData($application, $documentRoot) + [
+            'http2On' => $this->supportsHttp2Directive(),
+            'rejectHandshake' => $this->rejectsHandshake(),
+        ];
+    }
+
+    /**
+     * `ssl_reject_handshake` arrived in 1.19.4; Ubuntu 22.04 ships 1.18, where
+     * it is an unknown directive: `nginx -t` failed and every new site on the
+     * box stopped at `test_config`. False when the version cannot be read, as
+     * the reserved-pair form works on every nginx.
+     */
+    public function rejectsHandshake(): bool
+    {
+        return $this->versionAtLeast('1.19.4');
+    }
+
+    /**
+     * A site without a certificate on an nginx that cannot refuse the
+     * handshake presents the panel's reserved pair instead, so the pair has to
+     * be on disk before its config names it.
+     */
+    protected function ensureTlsFallback(Application $application): ServerOpsResult
+    {
+        if ($application->certificate?->servable() || $this->rejectsHandshake()) {
+            return new ServerOpsResult(true, 'tls-fallback-not-required');
+        }
+
+        return $this->certificateFiles->ensureFallback();
     }
 
     /**
@@ -59,13 +87,13 @@ class NginxDriver extends AbstractWebServerDriver
     }
 
     /**
-     * `ssl_reject_handshake` arrived in 1.19.4; Ubuntu 22.04 ships 1.18.
+     * The catch-all chooses the same way as a site ({@see rejectsHandshake()}).
      *
      * @return array<string, mixed>
      */
     protected function catchAllViewData(): array
     {
-        return parent::catchAllViewData() + ['rejectHandshake' => $this->versionAtLeast('1.19.4')];
+        return parent::catchAllViewData() + ['rejectHandshake' => $this->rejectsHandshake()];
     }
 
     public function test(): ServerOpsResult

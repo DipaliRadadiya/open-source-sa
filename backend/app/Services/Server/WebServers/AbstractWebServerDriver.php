@@ -179,11 +179,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      * retain HSTS and HTTPS-first state after uninstall; without a reject
      * vhost, that request falls through to another application's first/default
      * TLS vhost. Apache and OpenLiteSpeed need a harmless shared key pair to
-     * reject it without serving another tenant.
+     * reject it without serving another tenant; so does an nginx too old to
+     * refuse the handshake ({@see NginxDriver::ensureTlsFallback()}).
      */
     protected function ensureTlsFallback(Application $application): ServerOpsResult
     {
-        if ($application->certificate?->servable() || $this->name() === 'nginx') {
+        if ($application->certificate?->servable()) {
             return new ServerOpsResult(true, 'tls-fallback-not-required');
         }
 

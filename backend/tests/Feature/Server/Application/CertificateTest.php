@@ -384,6 +384,7 @@ it('rejects TLS without pointing at certificate files while issuance is pending'
         'status' => CertificateStatus::Pending,
         'domains' => ['shop.example.com'],
     ]);
+    certTestNginx('1.24.0');
 
     $config = renderedCertVhost($this->application->fresh());
 
@@ -394,6 +395,50 @@ it('rejects TLS without pointing at certificate files while issuance is pending'
         ->and($config)->toContain('ssl_reject_handshake on')
         ->and($config)->not->toContain('/etc/letsencrypt/live/shop.example.com');
 });
+
+it('owns 443 with the reserved pair on an nginx too old to reject a handshake (Ubuntu 22.04)', function (string $version) {
+    Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+    certTestNginx($version);
+
+    $config = renderedCertVhost($this->application->fresh());
+
+    // nginx 1.18 does not know `ssl_reject_handshake`: `nginx -t` failed and
+    // every new site on the box stopped at test_config. Still the hostname's
+    // own 443 block, still no certbot path, HTTPS closed, port 80 serving.
+    expect($config)->not->toContain('ssl_reject_handshake')
+        ->toContain('listen 443 ssl;', 'listen 80;')
+        ->toContain('ssl_certificate     /etc/ssl/sv-oss/.panel-tls-reject.crt;')
+        ->toContain('ssl_certificate_key /etc/ssl/sv-oss/.panel-tls-reject.key;')
+        ->toContain("if (\$scheme = https) {\n        return 444;\n    }")
+        ->toContain('fastcgi_pass')
+        ->not->toContain('/etc/letsencrypt/live/shop.example.com');
+})->with(['1.18.0', '1.19.3']);
+
+it('rejects the handshake from the first nginx that has it', function () {
+    certTestNginx('1.19.4');
+
+    expect(renderedCertVhost($this->application->fresh()))->toContain('ssl_reject_handshake on;')
+        ->not->toContain('.panel-tls-reject');
+});
+
+it('generates the reserved pair before writing a config that names it, on an old nginx only', function (string $version, bool $generated) {
+    certTestNginx($version);
+    $driver = app((string) config('server.web_server_drivers.nginx.driver'));
+
+    $driver->apply($this->application->fresh(['domains', 'certificate', 'systemUser']), app(ApplicationProvisioner::class)->documentRoot($this->application));
+
+    // Checked for, and generated when missing, under the same lock as Apache's.
+    $namesPair = fn ($process) => str_contains(implode(' ', (array) $process->command), '.panel-tls-reject.crt');
+    $generated ? Process::assertRan($namesPair) : Process::assertNotRan($namesPair);
+})->with([
+    'nginx 1.18' => ['1.18.0', true],
+    'nginx 1.24' => ['1.24.0', false],
+]);
 
 it('refuses to force HTTPS without a working certificate', function () {
     Certificate::create([
@@ -818,6 +863,7 @@ it('rolls a partial application URL downgrade back when synchronization fails', 
 
 it('renders an isolated no-certificate TLS sink for every web server', function (string $driver) {
     config(['server.web_server' => $driver]);
+    certTestNginx('1.24.0');
 
     $config = renderedCertVhost($this->application->fresh(), $driver);
 
@@ -864,6 +910,7 @@ it('never serves an SSL-enabled Craft site for a certificate-less Mautic hostnam
         'private_key_path' => '/etc/letsencrypt/live/craft.example.com/privkey.pem',
     ]);
 
+    certTestNginx('1.24.0');
     $mauticConfig = renderedCertVhost($this->application->fresh(), $driver);
     $craftConfig = renderedCertVhost($craft->fresh(), $driver);
 
@@ -1099,6 +1146,17 @@ function renderedCertVhost(Application $application, ?string $driverName = null)
         $application->fresh(['domains', 'certificate', 'systemUser']),
         app(ApplicationProvisioner::class)->documentRoot($application),
     );
+}
+
+/**
+ * The beforeEach fake, answering `nginx -v` with this version. The no-certificate
+ * reject on 443 is chosen by it ({@see NginxDriver::rejectsHandshake()}).
+ */
+function certTestNginx(string $version): void
+{
+    Process::fake(fn ($process) => array_slice($process->command, -2) === ['nginx', '-v']
+        ? Process::result(errorOutput: "nginx version: nginx/{$version}")
+        : Process::result(exitCode: certPathProbe($process) ? 1 : 0));
 }
 
 /**

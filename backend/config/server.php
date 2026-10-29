@@ -2858,6 +2858,9 @@ return [
     ],
 
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
+    // The file install.sh appends its Redis settings to; read (as root) by
+    // `redis:repair-installer-policy` to find the installer's own lines.
+    'redis_conf' => env('SERVER_REDIS_CONF', '/etc/redis/redis.conf'),
 
     /*
     |--------------------------------------------------------------------------
