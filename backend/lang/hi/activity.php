@@ -142,7 +142,7 @@ return [
     'application.updated' => 'एप्लिकेशन :name अपडेट किया',
     'application.container_updated' => ':name की कंटेनर सेटिंग अपडेट की',
     'application.container_secrets_viewed' => ':name की कंटेनर क्रेडेंशियल देखीं',
-    'application.docker_resources_removed' => ':name के Docker नेटवर्क और वॉल्यूम हटाए',
+    'application.docker_resources_removed' => ':name के Docker संसाधन हटाए: :removed',
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
     'application.adopted_config_left' => ':name को हटाते समय :path को सुरक्षित रूप से नहीं हटाया जा सका: :left_reason',
     'application.process_start' => ':name शुरू किया',

@@ -142,7 +142,7 @@ return [
     'application.updated' => 'アプリケーション :name を更新しました',
     'application.container_updated' => ':name のコンテナ設定を更新しました',
     'application.container_secrets_viewed' => ':name のコンテナ資格情報を表示しました',
-    'application.docker_resources_removed' => ':name の Docker ネットワークとボリュームを削除しました',
+    'application.docker_resources_removed' => ':name の Docker リソースを削除しました: :removed',
     'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
     'application.adopted_config_left' => ':name の削除中に :path を安全に削除できませんでした: :left_reason',
     'application.process_start' => ':name を開始しました',

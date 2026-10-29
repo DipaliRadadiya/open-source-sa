@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Resources\ActivityLogResource;
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -74,6 +76,11 @@ describe('deleting a Docker site', function () {
             ->and(collect($ran)->contains('docker image rm -- mysql:8.0'))->toBeFalse()
             ->and($down)->not->toBeFalse()
             ->and(collect($ran)->search('docker image rm -- ghost:5'))->toBeGreaterThan($down);
+
+        // The activity line says what went, not "network and volumes".
+        $row = ActivityLog::where('action', 'docker_resources_removed')->latest('id')->first();
+        expect(ActivityLogResource::make($row)->resolve()['description'])
+            ->toContain('image:ghost:5')->not->toContain('volumes');
     });
 
     it('keeps them when the user turns it off', function () {

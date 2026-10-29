@@ -142,7 +142,7 @@ return [
     'application.updated' => 'Обновлено приложение :name',
     'application.container_updated' => 'Обновлены настройки контейнера для :name',
     'application.container_secrets_viewed' => 'Просмотрены учётные данные контейнера для :name',
-    'application.docker_resources_removed' => 'Удалены сеть и тома Docker для :name',
+    'application.docker_resources_removed' => 'Удалены ресурсы Docker для :name: :removed',
     'application.deleted' => 'Удалено приложение :name (:site_type)',
     'application.adopted_config_left' => 'Не удалось безопасно удалить :path при удалении :name: :left_reason',
     'application.process_start' => ':name запущено',
