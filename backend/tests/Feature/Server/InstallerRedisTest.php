@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Server\Settings\RedisSettings;
+
 /*
  * install.sh's configure_redis(), run for real against a redis-cli that
  * answers the way Redis 7 does for whatever redis.conf says.
@@ -196,6 +198,26 @@ describe('configure_redis', function () {
             ->and($r['password'])->toBe('Live-Panel-Password-1')
             ->and($r['cache'])->toBe('redis')
             ->and($r['conf'])->toBe($conf);
+    });
+
+    it('caps memory at 256 MB with a policy the Redis screen accepts while the queue is on Redis', function () {
+        // allkeys-lru, as it wrote before, can evict queued jobs, and the Redis
+        // screen refuses it: the screen could not be saved on a fresh install.
+        config(['queue.default' => 'redis', 'queue.connections.redis.driver' => 'redis']);
+
+        $r = runConfigureRedis("port 6379\n");
+
+        expect($r['conf'])->toContain("\n# Added by the Control panel installer\nmaxmemory 256mb\nmaxmemory-policy volatile-lru\n")
+            ->not->toContain('allkeys-')
+            ->and(RedisSettings::unsafePolicies())->toContain('allkeys-lru')->not->toContain('volatile-lru')
+            ->and($r['out'])->toContain('ok: Redis memory capped at 256 MB (volatile-lru)');
+    });
+
+    it('leaves a memory cap the operator already set', function () {
+        $r = runConfigureRedis("port 6379\nmaxmemory 1gb\nmaxmemory-policy allkeys-lfu\n");
+
+        expect($r['conf'])->toContain("maxmemory 1gb\nmaxmemory-policy allkeys-lfu\n")
+            ->not->toContain('maxmemory 256mb');
     });
 
     it('generates one for a Redis with no password rules at all', function () {

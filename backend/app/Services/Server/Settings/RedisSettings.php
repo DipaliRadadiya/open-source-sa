@@ -5,6 +5,7 @@ namespace App\Services\Server\Settings;
 use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\EnvFile;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\App;
@@ -75,6 +76,7 @@ class RedisSettings implements SettingGroup
         private ServerOps $serverOps,
         private EnvFile $env,
         private PanelCredentialRefresh $refresh,
+        private ManagedFile $files,
     ) {}
 
     /**
@@ -160,6 +162,63 @@ class RedisSettings implements SettingGroup
             (array) config('server.redis_maxmemory_policies', []),
             fn (string $policy) => str_starts_with($policy, 'allkeys-'),
         ));
+    }
+
+    /**
+     * Move the eviction policy install.sh used to write to one the panel
+     * accepts: its own `maxmemory-policy allkeys-lru`, directly under its
+     * marker, becomes volatile-lru in redis.conf and then live. The Redis
+     * screen refuses every allkeys-* policy while the queue is on Redis
+     * ({@see unsafePolicies()}), so it could not be saved on a fresh install.
+     *
+     * Only that exact line, and only while it is the policy Redis reads (the
+     * last one in the file). A policy the operator set — anywhere else, or by
+     * editing that line — is theirs and is left alone.
+     *
+     * @return 'changed'|'unchanged'|'unavailable'
+     *
+     * @throws SettingOperationException when the file or Redis refused the change
+     */
+    public function repairInstallerPolicy(): string
+    {
+        if (! $this->available()) {
+            return 'unavailable';
+        }
+
+        $path = (string) config('server.redis_conf', '/etc/redis/redis.conf');
+        $context = ['feature' => 'setting', 'group' => 'redis', 'op' => 'repair_installer_policy'];
+        $read = $this->files->get($path, $context);
+
+        if ($read->failed()) {
+            return 'unavailable';
+        }
+
+        $contents = $read->output();
+        $installer = '/^# Added by the Control panel installer\R(?:maxmemory [^\r\n]*\R)?\K(maxmemory-policy[ \t]+allkeys-lru)[ \t]*$/m';
+
+        if (preg_match($installer, $contents, $match, PREG_OFFSET_CAPTURE) !== 1) {
+            return 'unchanged';
+        }
+
+        preg_match_all('/^[ \t]*maxmemory-policy[ \t]/m', $contents, $all, PREG_OFFSET_CAPTURE);
+
+        if (end($all[0])[1] !== $match[1][1]) {
+            return 'unchanged';
+        }
+
+        $repaired = substr_replace($contents, 'maxmemory-policy volatile-lru', $match[1][1], strlen($match[1][0]));
+
+        // The file first: if Redis then refuses the live change, the next
+        // restart still comes up on the new policy.
+        $written = $this->files->put($path, $repaired, $context);
+
+        if ($written->failed()) {
+            throw new SettingOperationException($written->reference);
+        }
+
+        $this->must($this->cli(['config', 'set', 'maxmemory-policy', 'volatile-lru']));
+
+        return 'changed';
     }
 
     /**

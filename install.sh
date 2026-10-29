@@ -2316,13 +2316,17 @@ configure_redis() {
     fi
     REDACT+=("${candidates[@]}")
 
-    # Bounded like v7 (operator, 2026-10-07): 256 MB, least-recently-used
-    # keys go first. Without it Redis grows until the kernel kills something,
-    # and with `noeviction` a full cache makes every write fail. Left alone
-    # when the operator already set one.
+    # Bounded like v7 (operator, 2026-10-07): 256 MB. Without it Redis grows
+    # until the kernel kills something, and with `noeviction` a full cache
+    # makes every write fail. Left alone when the operator already set one.
+    # volatile-lru, not allkeys-lru: the panel's queue is on this Redis, and a
+    # queued job has no TTL, so only volatile-* can never evict one. The Redis
+    # screen refuses allkeys-* for that reason, and could not be saved on a
+    # fresh install while this wrote it. The panel's update moves servers that
+    # still have the old line (`redis:repair-installer-policy`).
     if ! grep -qE '^maxmemory ' "$conf"; then
-        printf '\n# Added by the Control panel installer\nmaxmemory 256mb\nmaxmemory-policy allkeys-lru\n' >>"$conf"
-        ok "Redis memory capped at 256 MB (allkeys-lru)"
+        printf '\n# Added by the Control panel installer\nmaxmemory 256mb\nmaxmemory-policy volatile-lru\n' >>"$conf"
+        ok "Redis memory capped at 256 MB (volatile-lru)"
     fi
 
     run systemctl enable --now redis-server

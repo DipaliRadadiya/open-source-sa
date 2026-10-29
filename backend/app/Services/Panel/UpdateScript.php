@@ -45,6 +45,7 @@ class UpdateScript
         'refresh_npm_catalogue',
         'refresh_lifecycle_catalogue',
         'repair_node_runtime',
+        'repair_redis_policy',
         'optimize',
         'frontend_build',
         'configure_frontend_unit',
@@ -463,6 +464,15 @@ class UpdateScript
         # not a reason to fail a panel update.
         note repair_node_runtime
         {$asUser}{$php} {$backend}/artisan runtimes:repair-node || echo "WARNING: Node runtime not repaired; run php artisan runtimes:repair-node"
+
+        # install.sh used to write `maxmemory-policy allkeys-lru`, which the
+        # Redis screen refuses while the queue is on Redis (an `allkeys-*`
+        # policy can evict queued jobs), so the screen could not be saved on a
+        # fresh install. This moves the installer's own line to volatile-lru;
+        # a policy the operator chose is left alone. Non-fatal: the old policy
+        # is what the server already had.
+        note repair_redis_policy
+        {$asUser}{$php} {$backend}/artisan redis:repair-installer-policy || echo "WARNING: Redis eviction policy not switched; run 'artisan redis:repair-installer-policy'"
 
         note optimize
         {$asUser}{$php} {$backend}/artisan optimize:clear
