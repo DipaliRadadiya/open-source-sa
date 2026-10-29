@@ -195,6 +195,8 @@ return [
     'backup.downloaded' => ':application का एक बैकअप डाउनलोड किया',
     'backup.restored' => ':application को बैकअप से पुनर्स्थापित किया',
     'backup.restore_failed' => ':application की पुनर्स्थापना विफल रही (:reason)',
+    'backup.restored_without_copy' => ":application को बैकअप से पुनर्स्थापित किया, सुरक्षा कॉपी के बिना",
+    'backup.restore_without_copy_failed' => ":application को पुनर्स्थापित करना विफल रहा (:reason), और कोई सुरक्षा कॉपी नहीं ली गई",
     'backup.undone' => ':application की पुनर्स्थापना पूर्ववत की',
     'backup.undo_failed' => ':application की पुनर्स्थापना पूर्ववत करना विफल रहा (:reason)',
     'application.environment_updated' => ':name का एनवायरनमेंट अद्यतन किया (:keys)',

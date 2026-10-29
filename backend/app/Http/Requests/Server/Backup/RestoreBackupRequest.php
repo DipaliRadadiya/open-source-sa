@@ -31,6 +31,10 @@ class RestoreBackupRequest extends FormRequest
             // against the system going wrong; this is the guard against the
             // person going wrong, and it is the more common failure.
             'confirm' => ['required', 'string'],
+            // Take a copy of the application first, so the restore can be
+            // undone. The user's choice (support list, 2026-10-29); on unless
+            // they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -112,6 +116,11 @@ class RestoreBackupRequest extends FormRequest
      * database-only backup would restore an empty site directory over a
      * working one.
      */
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
+    }
+
     public function requestedType(): string
     {
         /** @var Backup $backup */

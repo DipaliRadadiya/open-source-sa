@@ -195,6 +195,8 @@ return [
     'backup.downloaded' => 'Скачал резервную копию :application',
     'backup.restored' => 'Восстановил :application из резервной копии',
     'backup.restore_failed' => 'Восстановление :application не удалось (:reason)',
+    'backup.restored_without_copy' => "Восстановил :application из резервной копии без страховочной копии",
+    'backup.restore_without_copy_failed' => "Восстановление :application не удалось (:reason), страховочная копия не создавалась",
     'backup.undone' => 'Отменил восстановление :application',
     'backup.undo_failed' => 'Отменить восстановление :application не удалось (:reason)',
     'application.environment_updated' => 'Обновил окружение :name (:keys)',

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'backup_id', 'application_id', 'database_id', 'user_id', 'type', 'status', 'current_step',
-    'reason', 'reference', 'safety_backup_id', 'rollback_path',
+    'reason', 'reference', 'safety_backup_id', 'safety_copy', 'rollback_path',
     'started_at', 'finished_at',
 ])]
 class Restore extends Model
@@ -23,6 +23,7 @@ class Restore extends Model
         return [
             'type' => BackupType::class,
             'status' => RestoreStatus::class,
+            'safety_copy' => 'boolean',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

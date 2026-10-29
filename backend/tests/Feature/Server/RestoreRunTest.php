@@ -663,3 +663,41 @@ describe('restoring a database', function () {
         expect($calls)->toBe(['drop:shop', 'create:shop', 'reattach:shop:shop_one,shop_two', 'restore:shop']);
     });
 });
+
+describe('the user may restore without a safety copy (2026-10-29)', function () {
+    it('skips the copy, still restores, and keeps the files moved aside', function () {
+        fakeRestoreCommands();
+        $restore = restoreFor(storedBackup());
+        $restore->update(['safety_copy' => false]);
+        $before = Backup::where('is_safety', true)->count();
+
+        $restore = app(RestoreRunner::class)->run($restore);
+
+        expect($restore->status)->toBe(RestoreStatus::Succeeded)
+            ->and($restore->safety_backup_id)->toBeNull()
+            ->and(Backup::where('is_safety', true)->count())->toBe($before)
+            ->and(File::get($this->siteRoot.'/index.php'))->toContain('restored')
+            // Files are still put back from here if anything goes wrong.
+            ->and(is_dir((string) $restore->rollback_path))->toBeTrue();
+    });
+
+    it('does not fail on a copy it was told not to take', function () {
+        // The same failure that stops a restore with a copy at its first
+        // step ("stops when the safety backup cannot be taken"): without the
+        // copy, that step is not what stops it.
+        Process::fake(function ($process) {
+            $command = $process->command;
+            $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
+
+            if (($args[0] ?? '') === 'tar' && ($args[1] ?? '') === '-tzf') {
+                return Process::result(exitCode: 0);
+            }
+
+            return Process::result(errorOutput: 'no space left on device', exitCode: 2);
+        });
+        $restore = restoreFor(storedBackup());
+        $restore->update(['safety_copy' => false]);
+
+        expect(app(RestoreRunner::class)->run($restore)->reason)->not->toBe('safety_backup');
+    });
+});

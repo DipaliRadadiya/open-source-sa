@@ -254,3 +254,35 @@ describe('permissions', function () {
         $this->actingAs($user)->getJson('/api/restores')->assertOk();
     });
 });
+
+describe('the safety copy switch (2026-10-29)', function () {
+    it('takes a copy unless told not to', function () {
+        $backup = endpointBackup();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
+            ->assertStatus(202)
+            ->assertJsonPath('restore.safety_copy', true);
+
+        expect(Restore::latest('id')->first()->safety_copy)->toBeTrue();
+    });
+
+    it('records the choice and counts one step fewer when the copy is off', function () {
+        $backup = endpointBackup();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test', 'safety_copy' => false])
+            ->assertStatus(202)
+            ->assertJsonPath('restore.safety_copy', false);
+
+        expect(Restore::latest('id')->first()->safety_copy)->toBeFalse()
+            ->and($response->json('restore.total_steps'))->toBe(count((array) config('server.backups.restore_steps')) - 1);
+    });
+
+    it('refuses a value that is not true or false', function () {
+        $this->actingAs($this->admin)
+            ->postJson('/api/backups/'.endpointBackup()->id.'/restore', ['confirm' => 'endpoint.test', 'safety_copy' => 'maybe'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('safety_copy');
+    });
+});

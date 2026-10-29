@@ -18,6 +18,12 @@ class RestoreResource extends JsonResource
     {
         $steps = (array) config('server.backups.restore_steps', []);
         $keys = array_map(fn (string $class): string => app($class)->key(), $steps);
+
+        // A restore told not to take a copy has one step fewer; "Step 2 of 6"
+        // must not count a step that never runs.
+        if ($this->resource->safety_copy === false) {
+            $keys = array_values(array_diff($keys, ['safety_backup']));
+        }
         $index = $this->resource->current_step === null
             ? false
             : array_search($this->resource->current_step, $keys, true);
@@ -60,6 +66,8 @@ class RestoreResource extends JsonResource
             // The way back. Worth surfacing prominently after a restore, not
             // buried — it is the answer to "that was the wrong one".
             'safety_backup_id' => $this->resource->safety_backup_id,
+            // Whether a copy was asked for. False: no Undo for this restore.
+            'safety_copy' => $this->resource->safety_copy !== false,
             'rollback_path' => $this->resource->rollback_path,
             'reference' => $this->resource->reference,
             // When it was asked for (OLD-8): a restore still queued has no

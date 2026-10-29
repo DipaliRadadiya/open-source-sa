@@ -4226,12 +4226,14 @@ Restore an application from this backup. **Destructive** — overwrites live dat
 
 **Request:**
 ```json
-{"type": "full", "confirm": "shop.example.com"}
+{"type": "full", "confirm": "shop.example.com", "safety_copy": true}
 ```
 
 `confirm` is **required** and must match the application's domain exactly (trimmed, case-sensitive). Everything else in this feature guards against the system going wrong; this guards against the person going wrong, which is the more common failure — so it is typed, not clicked.
 
 `type` is **optional** and is one of **`filesystem` · `database` · `full`** — the same vocabulary as everywhere else in this feature. There is no `files`; sending it is a `422`. Omit it and the restore uses whatever the backup itself holds, which is the right default.
+
+**`safety_copy`** (since 2026-10-29) is **optional**, `true` by default: take a copy of the application before replacing it, so the restore can be undone. Send `false` to skip it — the user's choice, for every `type`. Then: no copy, no Undo (`safety_backup_id` stays `null`), and a database import that fails part-way leaves the database as far as it got; files are still put back from the copy moved aside (`rollback_path`). The restore carries `safety_copy` in its response, `total_steps` is one fewer, and the activity log reads *"…without a safety copy"* (`backup.restored_without_copy` / `backup.restore_without_copy_failed`). Anything but a boolean is a `422`.
 
 **What it holds, not what its type says (2026-10-18).** A site with no database still gets `full` backups when its target says `full`, and they contain no dump. Each backup carries **`has_database`**: when `false`, the default restore is `filesystem`, and `database`/`full` are refused with `422 errors.type` (*"This backup does not contain a database"*) before anything is touched. Offer "Files and database" / "Database" only when `has_database` is `true`. (Until this fix such a restore took a safety backup, put the files back and then failed at "Restoring the database".)
 

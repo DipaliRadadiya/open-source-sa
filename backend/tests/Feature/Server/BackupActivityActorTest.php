@@ -84,9 +84,10 @@ function fakeRestoreRunner(RestoreStatus $status): void
     app()->instance(RestoreRunner::class, $runner);
 }
 
-function runRestoreOf(Backup $backup, ?User $user): void
+function runRestoreOf(Backup $backup, ?User $user, bool $safetyCopy = true): void
 {
     $restore = Restore::create([
+        'safety_copy' => $safetyCopy,
         'backup_id' => $backup->id,
         'application_id' => $backup->application_id,
         'user_id' => $user?->id,
@@ -139,6 +140,20 @@ it('records an Undo as an undo, not as another restore', function (RestoreStatus
 })->with([
     'succeeded' => [RestoreStatus::Succeeded, 'undone'],
     'failed' => [RestoreStatus::Failed, 'undo_failed'],
+]);
+
+it('says in the log when a restore ran without a safety copy', function (RestoreStatus $status, string $action) {
+    fakeRestoreRunner($status);
+
+    runRestoreOf(($this->backupOf)(), $this->user, safetyCopy: false);
+
+    $entry = ActivityLog::where('type', 'backup')->sole();
+
+    expect($entry->action)->toBe($action)
+        ->and(__("activity.backup.{$action}", $entry->properties))->toContain('Shop')->toContain('safety copy');
+})->with([
+    'succeeded' => [RestoreStatus::Succeeded, 'restored_without_copy'],
+    'failed' => [RestoreStatus::Failed, 'restore_without_copy_failed'],
 ]);
 
 describe('a backup that a restore got in front of (bug #80)', function () {

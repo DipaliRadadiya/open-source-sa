@@ -195,6 +195,8 @@ return [
     'backup.downloaded' => 'A téléchargé une sauvegarde de :application',
     'backup.restored' => 'A restauré :application depuis une sauvegarde',
     'backup.restore_failed' => 'Échec de la restauration de :application (:reason)',
+    'backup.restored_without_copy' => "A restauré :application depuis une sauvegarde, sans copie de sécurité",
+    'backup.restore_without_copy_failed' => "La restauration de :application a échoué (:reason), et aucune copie de sécurité n'a été prise",
     'backup.undone' => 'A annulé la restauration de :application',
     'backup.undo_failed' => 'Échec de l\'annulation de la restauration de :application (:reason)',
     'application.environment_updated' => 'A mis à jour l\'environnement de :name (:keys)',

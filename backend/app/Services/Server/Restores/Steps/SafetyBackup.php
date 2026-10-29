@@ -22,9 +22,11 @@ use Throwable;
  * timestamps and the state you were in is gone with no way to describe what
  * was lost. With it, the wrong choice costs a few minutes.
  *
- * It is **not** optional and **not** a checkbox. A user who unticks it is
- * making a decision they cannot evaluate — they do not yet know the restore
- * will be wrong — so the panel makes it for them.
+ * On by default, and the user's choice since 2026-10-29 (support list,
+ * Dipali): a restore with `safety_copy` off skips it. Then there is no Undo,
+ * and a database import that fails part-way leaves the database as far as it
+ * got — files are still put back from the copy SwapFiles moved aside. The
+ * restore dialog says so before the user turns it off.
  *
  * If the safety backup fails, the restore stops. That will occasionally annoy
  * someone whose bucket is full; it is the correct trade against silently
@@ -47,7 +49,7 @@ class SafetyBackup implements RestoreStep
 
     public function appliesTo(RestoreContext $context): bool
     {
-        return true;
+        return $context->restore->safety_copy !== false;
     }
 
     public function run(RestoreContext $context): void

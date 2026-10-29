@@ -195,6 +195,8 @@ return [
     'backup.downloaded' => 'Eine Sicherung von :application heruntergeladen',
     'backup.restored' => ':application aus einer Sicherung wiederhergestellt',
     'backup.restore_failed' => 'Wiederherstellung von :application fehlgeschlagen (:reason)',
+    'backup.restored_without_copy' => ":application aus einer Sicherung wiederhergestellt, ohne Sicherheitskopie",
+    'backup.restore_without_copy_failed' => "Wiederherstellung von :application fehlgeschlagen (:reason), und es wurde keine Sicherheitskopie erstellt",
     'backup.undone' => 'Wiederherstellung von :application rückgängig gemacht',
     'backup.undo_failed' => 'Rückgängigmachen der Wiederherstellung von :application fehlgeschlagen (:reason)',
     'application.environment_updated' => 'Umgebung für :name aktualisiert (:keys)',

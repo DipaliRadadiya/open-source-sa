@@ -42,6 +42,7 @@ class RestoreController extends Controller
             'application_id' => $backup->application_id,
             'user_id' => $request->user()?->id,
             'type' => $request->requestedType(),
+            'safety_copy' => $request->safetyCopy(),
             'status' => RestoreStatus::Pending,
             'reference' => (string) Str::uuid(),
         ]);

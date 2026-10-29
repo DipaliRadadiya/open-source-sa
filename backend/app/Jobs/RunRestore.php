@@ -94,7 +94,9 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
         $activity->log(
             $restore->backup->is_safety
                 ? ($succeeded ? 'backup.undone' : 'backup.undo_failed')
-                : ($succeeded ? 'backup.restored' : 'backup.restore_failed'),
+                : ($restore->safety_copy === false
+                    ? ($succeeded ? 'backup.restored_without_copy' : 'backup.restore_without_copy_failed')
+                    : ($succeeded ? 'backup.restored' : 'backup.restore_failed')),
             $restore,
             [
                 'application' => $restore->application?->name ?? $restore->database?->name ?? '',
