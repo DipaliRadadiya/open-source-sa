@@ -15,3 +15,8 @@ export function getMyActivityByType(type, { page = 1, perPage = 20, signal } = {
     signal,
   });
 }
+
+// `months` must be present: a number from `choices`, or null to keep everything.
+export function updateActivityRetention(months) {
+  return api.put("/admin/activity-log/retention", { months });
+}

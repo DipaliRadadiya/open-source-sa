@@ -751,7 +751,24 @@
       "registry": "Registry",
       "wp_cli": "WP-CLI"
     },
-    "searchOwn": "Ihre Aktivität durchsuchen…"
+    "searchOwn": "Ihre Aktivität durchsuchen…",
+    "retention": {
+      "title": "Wie lange das Aktivitätsprotokoll aufbewahrt wird",
+      "description": "Gilt für den Verlauf aller Benutzer. Ältere Einträge werden endgültig gelöscht.",
+      "label": "Einträge im Aktivitätsprotokoll löschen, die älter sind als",
+      "months": "{count, plural, one {# Monat} other {# Monate}}",
+      "recommended": "{label} (empfohlen)",
+      "never": "Nie",
+      "hint": "Wird einmal täglich geprüft. Einträge der letzten 30 Tage bleiben immer erhalten.",
+      "now": "Aktuell im Protokoll",
+      "entries": "{count, plural, one {{entries} Eintrag} other {{entries} Einträge}}",
+      "entriesSince": "{count, plural, one {{entries} Eintrag, ältester vom {date}} other {{entries} Einträge, ältester vom {date}}}",
+      "entriesUnknown": "Nicht bekannt",
+      "save": "Aufbewahrung speichern",
+      "saved": "Aufbewahrung des Aktivitätsprotokolls gespeichert.",
+      "saveFailed": "Die Aufbewahrungsdauer des Aktivitätsprotokolls konnte nicht gespeichert werden.",
+      "loadFailed": "Die Aufbewahrungsdauer des Aktivitätsprotokolls konnte nicht geladen werden."
+    }
   },
   "pagination": {
     "perPage": "Pro Seite",

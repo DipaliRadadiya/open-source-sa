@@ -49,3 +49,13 @@ export const activityFiltersSchema = z.object({
     .optional()
     .default([]),
 });
+
+// GET/PUT /admin/activity-log/retention. `months: null` keeps everything (the default).
+export const activityRetentionSchema = z.object({
+  retention: z.object({
+    months: z.number().int().positive().nullable(),
+    choices: z.array(z.number().int().positive()).default([3, 6, 12, 24]),
+    entries: z.number().int().nonnegative().nullish(),
+    oldest_at: z.string().nullish(),
+  }),
+});

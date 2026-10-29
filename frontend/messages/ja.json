@@ -751,7 +751,24 @@
       "registry": "レジストリ",
       "wp_cli": "WP-CLI"
     },
-    "searchOwn": "自分のアクティビティを検索…"
+    "searchOwn": "自分のアクティビティを検索…",
+    "retention": {
+      "title": "アクティビティログの保存期間",
+      "description": "すべてのユーザーの履歴に適用されます。古いエントリーは完全に削除されます。",
+      "label": "次の期間より古いアクティビティログのエントリーを削除",
+      "months": "{count, plural, other {#か月}}",
+      "recommended": "{label}（推奨）",
+      "never": "なし",
+      "hint": "1日1回確認されます。直近30日間のエントリーは常に保持されます。",
+      "now": "現在のログ",
+      "entries": "{count, plural, other {{entries}件}}",
+      "entriesSince": "{count, plural, other {{entries}件、最も古いものは{date}}}",
+      "entriesUnknown": "不明",
+      "save": "保存期間を保存",
+      "saved": "アクティビティログの保存期間を保存しました。",
+      "saveFailed": "アクティビティログの保存期間を保存できませんでした。",
+      "loadFailed": "アクティビティログの保存期間を読み込めませんでした。"
+    }
   },
   "pagination": {
     "perPage": "表示件数",

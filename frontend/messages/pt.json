@@ -751,7 +751,24 @@
       "registry": "Registo",
       "wp_cli": "WP-CLI"
     },
-    "searchOwn": "Buscar na sua atividade…"
+    "searchOwn": "Buscar na sua atividade…",
+    "retention": {
+      "title": "Por quanto tempo o registro de atividade é mantido",
+      "description": "Vale para o histórico de todos os usuários. Entradas mais antigas são excluídas para sempre.",
+      "label": "Excluir entradas do registro de atividade com mais de",
+      "months": "{count, plural, one {# mês} other {# meses}}",
+      "recommended": "{label} (recomendado)",
+      "never": "Nunca",
+      "hint": "Verificado uma vez por dia. As entradas dos últimos 30 dias são sempre mantidas.",
+      "now": "No registro agora",
+      "entries": "{count, plural, one {{entries} entrada} other {{entries} entradas}}",
+      "entriesSince": "{count, plural, one {{entries} entrada, a mais antiga de {date}} other {{entries} entradas, a mais antiga de {date}}}",
+      "entriesUnknown": "Desconhecido",
+      "save": "Salvar retenção",
+      "saved": "Retenção do registro de atividade salva.",
+      "saveFailed": "Não foi possível salvar por quanto tempo o registro de atividade é mantido.",
+      "loadFailed": "Não foi possível carregar por quanto tempo o registro de atividade é mantido."
+    }
   },
   "pagination": {
     "perPage": "Por página",

@@ -751,7 +751,24 @@
       "registry": "Registro",
       "wp_cli": "WP-CLI"
     },
-    "searchOwn": "Buscar en tu actividad…"
+    "searchOwn": "Buscar en tu actividad…",
+    "retention": {
+      "title": "Cuánto tiempo se guarda el registro de actividad",
+      "description": "Se aplica al historial de todos los usuarios. Las entradas más antiguas se eliminan para siempre.",
+      "label": "Eliminar las entradas del registro de actividad con más de",
+      "months": "{count, plural, one {# mes} other {# meses}}",
+      "recommended": "{label} (recomendado)",
+      "never": "Nunca",
+      "hint": "Se comprueba una vez al día. Las entradas de los últimos 30 días siempre se conservan.",
+      "now": "Ahora en el registro",
+      "entries": "{count, plural, one {{entries} entrada} other {{entries} entradas}}",
+      "entriesSince": "{count, plural, one {{entries} entrada, la más antigua del {date}} other {{entries} entradas, la más antigua del {date}}}",
+      "entriesUnknown": "No se sabe",
+      "save": "Guardar conservación",
+      "saved": "Se guardó la conservación del registro de actividad.",
+      "saveFailed": "No se pudo guardar cuánto tiempo se guarda el registro de actividad.",
+      "loadFailed": "No se pudo cargar cuánto tiempo se guarda el registro de actividad."
+    }
   },
   "pagination": {
     "perPage": "Por página",

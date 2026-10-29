@@ -751,7 +751,24 @@
       "registry": "Registre",
       "wp_cli": "WP-CLI"
     },
-    "searchOwn": "Rechercher dans votre activité…"
+    "searchOwn": "Rechercher dans votre activité…",
+    "retention": {
+      "title": "Durée de conservation du journal d'activité",
+      "description": "S'applique à l'historique de tous les utilisateurs. Les entrées plus anciennes sont supprimées définitivement.",
+      "label": "Supprimer les entrées du journal d'activité de plus de",
+      "months": "{count, plural, one {# mois} other {# mois}}",
+      "recommended": "{label} (recommandé)",
+      "never": "Jamais",
+      "hint": "Vérifié une fois par jour. Les entrées des 30 derniers jours sont toujours conservées.",
+      "now": "Dans le journal actuellement",
+      "entries": "{count, plural, one {{entries} entrée} other {{entries} entrées}}",
+      "entriesSince": "{count, plural, one {{entries} entrée, la plus ancienne du {date}} other {{entries} entrées, la plus ancienne du {date}}}",
+      "entriesUnknown": "Inconnu",
+      "save": "Enregistrer la conservation",
+      "saved": "Durée de conservation du journal d'activité enregistrée.",
+      "saveFailed": "Impossible d'enregistrer la durée de conservation du journal d'activité.",
+      "loadFailed": "Impossible de charger la durée de conservation du journal d'activité."
+    }
   },
   "pagination": {
     "perPage": "Par page",

@@ -751,7 +751,24 @@
       "registry": "Registry",
       "wp_cli": "WP-CLI"
     },
-    "searchOwn": "Search your activity…"
+    "searchOwn": "Search your activity…",
+    "retention": {
+      "title": "How long the activity log is kept",
+      "description": "Applies to every user's history. Older entries are deleted for good.",
+      "label": "Delete activity log entries older than",
+      "months": "{count, plural, one {# month} other {# months}}",
+      "recommended": "{label} (recommended)",
+      "never": "Never",
+      "hint": "Checked once a day. Entries from the last 30 days are always kept.",
+      "now": "In the log now",
+      "entries": "{count, plural, one {{entries} entry} other {{entries} entries}}",
+      "entriesSince": "{count, plural, one {{entries} entry, oldest from {date}} other {{entries} entries, oldest from {date}}}",
+      "entriesUnknown": "Not known",
+      "save": "Save retention",
+      "saved": "Activity log retention saved.",
+      "saveFailed": "Couldn't save how long the activity log is kept.",
+      "loadFailed": "How long the activity log is kept couldn't be loaded."
+    }
   },
   "pagination": {
     "perPage": "Per page",
