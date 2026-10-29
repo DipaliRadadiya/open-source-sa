@@ -345,8 +345,40 @@ describe('last run in the list and on a job', function () {
         config(['server.cronjob_latest_window_bytes' => 120]);
         $job = histJob('Chatty', "--- start pid=1 at 2026-10-27T01:00:00+00:00\n".str_repeat("noise\n", 200)."--- exit=0 pid=1 at 2026-10-27T01:00:09+00:00\n");
 
+        $reads = [];
+        Process::fake(function ($process) use (&$reads) {
+            $reads[] = $process->command;
+            $real = new RealProcess((array) $process->command);
+            $real->run();
+
+            return Process::result(output: $real->getOutput(), exitCode: $real->getExitCode());
+        });
+
+        // The start is outside the window and is read back on its own (RC-38):
+        // start lines only, never the 200 lines of output.
         expect(app(CronjobHistory::class)->latest([$job])[$job->id])
-            ->toMatchArray(['status' => 'succeeded', 'started_at' => null]);
+            ->toMatchArray(['status' => 'succeeded', 'started_at' => '27-10-2026 01:00:00', 'duration_seconds' => 9, 'manual' => false])
+            ->and($reads)->toHaveCount(2)
+            ->and($reads[0])->toContain('120');
+    });
+
+    it('keeps a Run now whose output is longer than the window as manual (RC-38)', function () {
+        // Default window, 16 KB: the start line is long gone from the tail.
+        $manual = histJob('Long manual', "--- start pid=7 at 2026-10-27T00:00:00+00:00\n--- exit=0 pid=7 at 2026-10-27T00:00:01+00:00\n"
+            ."--- start pid=7 manual at 2026-10-27T01:00:00+00:00\n".str_repeat(str_repeat('x', 99)."\n", 200)
+            ."--- exit=0 pid=7 at 2026-10-27T01:00:30+00:00\n");
+        $cron = histJob('Long cron', "--- start pid=8 at 2026-10-27T01:00:00+00:00\n".str_repeat(str_repeat('y', 99)."\n", 200)
+            ."--- exit=1 pid=8 at 2026-10-27T01:00:05+00:00\n");
+
+        expect(filesize("{$this->base}/logs/{$manual->slug}.log"))->toBeGreaterThan(16384);
+
+        $jobs = collect($this->getJson('/api/cronjobs?per_page=10')->assertOk()->json('cronjobs'))->keyBy('id');
+
+        // The pid's earlier cron run, also in the log, is not mistaken for it.
+        expect($jobs[$manual->id]['last_run'])->toMatchArray(['manual' => true, 'started_at' => '27-10-2026 01:00:00', 'duration_seconds' => 30])
+            ->and($jobs[$cron->id]['last_run'])->toMatchArray(['manual' => false, 'started_at' => '27-10-2026 01:00:00', 'exit_code' => 1])
+            // The list and the history agree.
+            ->and($this->getJson("/api/cronjobs/{$manual->id}/runs")->assertOk()->json('runs.0.manual'))->toBeTrue();
     });
 
     it('knows a log was cut even when it is the last one read', function (string $where) {

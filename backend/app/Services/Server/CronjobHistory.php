@@ -116,6 +116,8 @@ class CronjobHistory
         }
 
         $sections = preg_split('/^'.preg_quote($boundary, '/').' /m', $result->output()) ?: [];
+        /** @var array<string, array<string, mixed>> path => its last run, before finish() */
+        $last = [];
 
         foreach (array_slice($sections, 1) as $section) {
             [$header, $content] = array_pad(explode("\n", $section, 2), 2, '');
@@ -124,12 +126,91 @@ class CronjobHistory
             if (isset($paths[$path])) {
                 // The file's size, not the length read: the last section has
                 // no separator after it, so the two cannot be compared alike.
-                $runs = $this->parse($content, (int) $size > (int) $bytes);
-                $latest[$paths[$path]] = $runs === [] ? null : $this->withoutOutput(end($runs));
+                $runs = $this->scan($content, (int) $size > (int) $bytes);
+
+                if ($runs !== []) {
+                    $last[$path] = end($runs);
+                }
             }
         }
 
+        foreach ($this->withStarts($last) as $path => $run) {
+            $latest[$paths[$path]] = $this->withoutOutput($this->finish($run));
+        }
+
         return $latest;
+    }
+
+    /**
+     * Fill in the start of a last run whose start line is outside the list's
+     * window (RC-38).
+     *
+     * A run that printed more than the window shows only its exit there, and
+     * was listed as started by cron — `manual: false`, no start time — while
+     * its history, read from a wider window, said Run now. The start lines are
+     * read again for just those logs, from the history's window, so the list
+     * and the history agree. Only start lines come back, so the second read
+     * stays small, and it only happens when a run needs it.
+     *
+     * @param  array<string, array<string, mixed>>  $runs  path => run
+     * @return array<string, array<string, mixed>>
+     */
+    private function withStarts(array $runs): array
+    {
+        $missing = array_filter($runs, fn (array $run) => $run['started_at'] === null && $run['pid'] !== null && $run['finished_at'] !== null);
+
+        if ($missing === []) {
+            return $runs;
+        }
+
+        $boundary = '--- panel-'.Str::random(32);
+        $window = (string) (int) config('server.cronjob_history_window_bytes', 1048576);
+        $pairs = [];
+
+        foreach ($missing as $path => $run) {
+            array_push($pairs, (string) $run['pid'], $path);
+        }
+
+        // The window's first line is dropped when the file is longer than the
+        // window, as parse() drops it: it may be the end of a line the job
+        // printed, `xx--- start …`, cut to look like a marker.
+        $result = $this->serverOps->run(
+            [
+                'sh', '-c',
+                'b=$1; w=$2; shift 2; while [ $# -gt 1 ]; do p=$1; f=$2; shift 2; printf "\n%s %s\n" "$b" "$f"; s=$(stat -c %s -- "$f" 2>/dev/null || echo 0); tail -c "$w" -- "$f" 2>/dev/null | if [ "$s" -gt "$w" ]; then sed 1d; else cat; fi | grep -a "^--- start pid=$p " | tail -n 5; done; true',
+                'sh', $boundary, $window, ...$pairs,
+            ],
+            ['feature' => 'cronjob', 'op' => 'read_latest_start'],
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            return $runs;
+        }
+
+        foreach (array_slice(preg_split('/^'.preg_quote($boundary, '/').' /m', $result->output()) ?: [], 1) as $section) {
+            [$path, $content] = array_pad(explode("\n", $section, 2), 2, '');
+
+            if (! isset($missing[$path])) {
+                continue;
+            }
+
+            $run = $missing[$path];
+            $finished = Carbon::parse($run['finished_at']);
+
+            // The newest start for this pid that is not after the exit: a pid
+            // that came round again later belongs to a different run.
+            foreach (array_reverse(preg_split('/\r?\n/', $content) ?: []) as $line) {
+                if (preg_match(self::START, $line, $m) && (int) $m[1] === $run['pid'] && Carbon::parse($m[3])->lte($finished)) {
+                    $runs[$path]['manual'] = $m[2] !== '';
+                    $runs[$path]['started_at'] = $m[3];
+
+                    break;
+                }
+            }
+        }
+
+        return $runs;
     }
 
     /**
@@ -146,6 +227,17 @@ class CronjobHistory
      * @return array<int, array<string, mixed>>
      */
     public function parse(string $log, bool $clipped = false): array
+    {
+        return array_map(fn (array $run) => $this->finish($run), $this->scan($log, $clipped));
+    }
+
+    /**
+     * {@see parse()}, before the runs are put in the API's shape: with their
+     * pids and raw times.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function scan(string $log, bool $clipped): array
     {
         $lines = preg_split('/\r?\n/', $log) ?: [];
 
@@ -211,7 +303,7 @@ class CronjobHistory
             }
         }
 
-        return array_map(fn (array $run) => $this->finish($run), $runs);
+        return $runs;
     }
 
     /**
