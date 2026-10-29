@@ -24,8 +24,12 @@ class CopyFileRequest extends FormRequest
             // A full target path when one file is named, a destination
             // directory when a selection is: twelve sources cannot share one
             // new name.
-            'target' => ['required_without:target_directory', 'string', 'max:1024', new SafeRelativePath],
-            'target_directory' => ['required_with:paths', 'string', 'max:1024', new SafeRelativePath],
+            // Keyed on `paths`, not on each other (2026-10-29): the application's
+            // own folder is the empty path, which arrives as null, so
+            // `required_with`/`required_without` read "move these into the top
+            // folder" as "no destination given" and refused it.
+            'target' => ['required_without:paths', 'string', 'max:1024', new SafeRelativePath],
+            'target_directory' => ['present_with:paths', 'nullable', 'string', 'max:1024', new SafeRelativePath],
         ]);
     }
 

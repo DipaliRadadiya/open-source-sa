@@ -2481,6 +2481,8 @@ Extract a **`.zip`, `.tar.gz` or `.tgz`** archive already in the site. Guarded
 against zip bombs: refused above 250 MB uncompressed or 10,000 entries, and
 any entry that is a symlink or escapes the destination.
 
+**`target` `""` is the application's own folder** (2026-10-29) — what "Application folder" sends. It was refused as *"The target field is required."* until then. Leaving `target` out altogether is still a `422`. The same holds for `target_directory: ""` on a bulk `PUT …/files/rename` (move) and `POST …/files/copy`.
+
 **Zips made on Windows** (FS-C22 #7) may use `\` as the folder separator. An
 entry made on FAT (`unzip -Z` lists `fat`) whose name has no `/` is extracted
 into folders, exactly as `unzip` does it, and the traversal checks run on the

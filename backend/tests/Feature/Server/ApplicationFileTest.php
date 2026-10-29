@@ -3283,3 +3283,75 @@ describe('room on the disk first (2026-10-29)', function () {
         expect(FileBrowserFake::$fs)->not->toHaveKey('wp-content/plugins/my-plugin/plugin.php');
     });
 });
+
+describe('the application\'s own folder as a destination (2026-10-29)', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['thing.zip'] = ['type' => 'f', 'size' => 100];
+        FileBrowserFake::$fs['docs'] = ['type' => 'd'];
+        FileBrowserFake::$fs['docs/a.txt'] = ['type' => 'f', 'content' => 'a'];
+    });
+
+    it('extracts into it when the target is empty, as "Application folder" sends', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['thing.zip'] = [
+            ['type' => 'd', 'size' => 0, 'name' => 'my-plugin/'],
+            ['type' => '-', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), ['path' => 'thing.zip', 'target' => ''])
+            ->assertAccepted();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('my-plugin/plugin.php');
+    });
+
+    it('still refuses a request with no target at all', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), ['path' => 'thing.zip'])
+            ->assertJsonValidationErrors('target');
+    });
+
+    it('still refuses an archive that would climb out of it', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['thing.zip'] = [['type' => '-', 'size' => 1, 'name' => '../escape.php']];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), ['path' => 'thing.zip', 'target' => ''])
+            ->assertStatus(422);
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('../escape.php');
+    });
+
+    it('moves several files into it', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['paths' => ['docs/a.txt'], 'target_directory' => '']);
+
+        expect($response->status())->toBeLessThan(300, (string) $response->getContent())
+            ->and(FileBrowserFake::$fs)->toHaveKey('a.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('docs/a.txt');
+    });
+
+    it('still refuses a bulk move with no destination at all', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['paths' => ['docs/a.txt']])
+            ->assertJsonValidationErrors('target_directory');
+    });
+
+    it('copies several files into it', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['paths' => ['docs/a.txt'], 'target_directory' => '']);
+
+        expect($response->status())->toBeLessThan(300, (string) $response->getContent())
+            ->and(FileBrowserFake::$fs)->toHaveKey('a.txt')
+            ->and(FileBrowserFake::$fs)->toHaveKey('docs/a.txt');
+    });
+});
