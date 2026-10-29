@@ -5485,6 +5485,8 @@ A `500` on the write itself stops at that job: the ones before it are switched (
 
 Every field is `sometimes` — send only what changed. Accepts `name`, `command`, `expression`, `active`, and the run-as account.
 
+**`application_id`** (since 2026-10-29) moves the job to another site, as on create; `null` makes it a server-level job, and leaving it out keeps the current link. Until then it was dropped on edit, so a job moved to another site stayed linked to the old one (wrong PHP-switch offer, removed with the wrong site). An application that does not exist is a `422` on `application_id`.
+
 **The account can be changed here.** Send `system_user_id` or `username`, exactly as on create. An account that does not exist on the server is a **`422` on `username`** — cron accepts a file naming an unknown user and then silently fails to run it every tick, so it is refused up front. (This used to be accepted and ignored: the request answered `200` and the job kept running as its old account.)
 
 **Request:** `{"expression": "*/10 * * * *", "active": false}`

@@ -19,7 +19,7 @@ class UpdateCronjob
     ) {}
 
     /**
-     * @param  array{name?: string, command?: string, expression?: string, system_user_id?: int|null, username?: string|null, active?: bool, application_owned?: bool}  $data
+     * @param  array{name?: string, command?: string, expression?: string, system_user_id?: int|null, username?: string|null, application_id?: int|null, active?: bool, application_owned?: bool}  $data
      */
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
