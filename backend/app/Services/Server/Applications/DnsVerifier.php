@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Models\ApplicationDomain;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerPublicIp;
 use App\Support\IpRange;
 use Illuminate\Support\Facades\Cache;
 
@@ -35,11 +36,15 @@ class DnsVerifier
     public function verify(ApplicationDomain $domain): ApplicationDomain
     {
         // A panel-issued nip.io name encodes the address it resolves to, so it
-        // is correct by construction and there is nothing to look up.
+        // is correct by construction and there is nothing to look up. The
+        // address is read from the name, not from `serverIp()`: behind NAT
+        // (AWS, GCP, Azure) that is null, and the certificate check answered
+        // "does not resolve at all" for a name that resolves by definition.
         if ($domain->is_test) {
             return tap($domain)->update([
                 'dns_verified_at' => now(),
-                'dns_resolved_ip' => $this->serverIp(),
+                'dns_resolved_ip' => self::encodedIp($domain->domain)
+                    ?? app(ServerPublicIp::class)->detect(fn (): ?string => $this->serverIp()),
                 'behind_proxy' => false,
             ]);
         }
@@ -58,6 +63,36 @@ class DnsVerifier
         ]);
 
         return $domain->refresh();
+    }
+
+    /**
+     * The IPv4 address a wildcard-DNS name answers with — `shop.1-2-3-4.nip.io`,
+     * `shop.1.2.3.4.nip.io` or `shop-1-2-3-4.nip.io` — or null when the name
+     * carries none, or is not under one of those services.
+     */
+    public static function encodedIp(string $domain): ?string
+    {
+        $domain = strtolower(rtrim(trim($domain), '.'));
+
+        foreach ((array) config('server.temporary_domain_suffixes', ['nip.io', 'sslip.io']) as $suffix) {
+            $suffix = '.'.strtolower((string) $suffix);
+
+            if (! str_ends_with($domain, $suffix)) {
+                continue;
+            }
+
+            $name = substr($domain, 0, -strlen($suffix));
+
+            if (preg_match('/(?:^|[.-])(\d{1,3})[.-](\d{1,3})[.-](\d{1,3})[.-](\d{1,3})$/', $name, $m) !== 1) {
+                return null;
+            }
+
+            $ip = "{$m[1]}.{$m[2]}.{$m[3]}.{$m[4]}";
+
+            return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false ? null : $ip;
+        }
+
+        return null;
     }
 
     /**

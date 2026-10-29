@@ -384,3 +384,57 @@ describe('a server behind NAT', function () {
         Http::assertNothingSent();
     });
 });
+
+describe('test hostnames behind NAT', function () {
+    /*
+     * Ubuntu 22.04 check, 28 Oct: on a box whose interface address is private
+     * (AWS, GCP, Azure, LXD), `serverIp()` is null, and a nip.io name was
+     * answered "does not resolve at all" — a name that resolves by definition.
+     */
+    beforeEach(function () {
+        $this->primary->update(['domain' => 'shop.203-0-113-10.nip.io', 'is_test' => true]);
+        $this->application->forceFill(['domain' => 'shop.203-0-113-10.nip.io'])->save();
+        Cache::forget('server.public_ip');
+        Cache::forget('server.public_ip.resolved');
+
+        Process::fake(fn ($process) => array_slice($process->command, -5) === ['ip', '-4', 'route', 'get', '1.1.1.1']
+            ? Process::result(output: "1.1.1.1 via 10.0.0.1 dev eth0 src 10.0.0.5 uid 0\n")
+            : Process::result(exitCode: certPathProbe($process) ? 1 : 0));
+    });
+
+    it('takes the address from the name, and the certificate goes ahead', function () {
+        Http::fake(fn ($request) => Http::response(basename(parse_url($request->url(), PHP_URL_PATH))."\n", 200));
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+            ->assertStatus(202);
+
+        Queue::assertPushed(IssueCertificate::class);
+        expect($this->primary->fresh()->dns_resolved_ip)->toBe('203.0.113.10');
+    });
+
+    it('falls back to the public address the metadata service gives, for a name with none in it', function () {
+        $this->primary->update(['domain' => 'shop.nip.io']);
+        Http::fake(['169.254.169.254/latest/meta-data/public-ipv4' => Http::response('198.51.100.7')]);
+
+        app(DnsVerifier::class)->verify($this->primary->fresh());
+
+        expect($this->primary->fresh()->dns_resolved_ip)->toBe('198.51.100.7')
+            ->and($this->primary->fresh()->dns_verified_at)->not->toBeNull();
+    });
+});
+
+it('reads the address a wildcard-DNS name encodes', function (string $domain, ?string $ip) {
+    expect(DnsVerifier::encodedIp($domain))->toBe($ip);
+})->with([
+    'dashes, as the panel issues them' => ['shop.203-0-113-10.nip.io', '203.0.113.10'],
+    'dots' => ['shop.203.0.113.10.nip.io', '203.0.113.10'],
+    'joined to the label by a dash' => ['shop-203-0-113-10.nip.io', '203.0.113.10'],
+    'the address alone' => ['203-0-113-10.nip.io', '203.0.113.10'],
+    'deeper names' => ['a.b.198.51.100.7.sslip.io', '198.51.100.7'],
+    'any case, trailing dot' => ['SHOP.203-0-113-10.NIP.IO.', '203.0.113.10'],
+    'not an address' => ['shop.999-0-113-10.nip.io', null],
+    'no address at all' => ['shop.nip.io', null],
+    'digits that are only part of the label' => ['shop2024.nip.io', null],
+    'not a wildcard-DNS service' => ['shop.203-0-113-10.example.com', null],
+]);
