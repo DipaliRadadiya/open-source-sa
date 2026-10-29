@@ -28,10 +28,16 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
         <env name="SERVER_BINARY_SEARCH_PATH" value=""/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
+        <!-- force="true" sets getenv() and $_ENV only, and Laravel reads $_SERVER
+             first, where a shell variable already sits. Both, so no shell can
+             point a run at a real database (S-12; tests/Support/TestDatabaseGuard). -->
+        <server name="DB_CONNECTION" value="sqlite"/>
+        <server name="DB_DATABASE" value=":memory:"/>
+        <server name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <!-- Feature tests assert on the exact command a feature runs. A sudo
