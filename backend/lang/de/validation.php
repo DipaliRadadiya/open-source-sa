@@ -140,7 +140,7 @@ return [
     'starts_with' => 'Das Feld :attribute muss mit einem der folgenden beginnen: :values.',
     'string' => 'Das Feld :attribute muss eine Zeichenkette sein.',
     'timezone' => 'Das Feld :attribute muss eine gültige Zeitzone sein.',
-    'unique' => 'Das Feld :attribute ist bereits vergeben.',
+    'unique' => ':attribute ist bereits vergeben. Bitte wählen Sie einen anderen Wert.',
     'uploaded' => 'Das Feld :attribute konnte nicht hochgeladen werden.',
     'uppercase' => 'Das Feld :attribute muss in Großbuchstaben sein.',
     'url' => 'Das Feld :attribute muss eine gültige URL sein.',

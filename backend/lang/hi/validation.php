@@ -140,7 +140,7 @@ return [
     'starts_with' => ':attribute निम्न में से किसी के साथ शुरू होना चाहिए: :values।',
     'string' => ':attribute एक स्ट्रिंग होनी चाहिए।',
     'timezone' => ':attribute एक मान्य समय क्षेत्र होना चाहिए।',
-    'unique' => ':attribute पहले ही लिया जा चुका है।',
+    'unique' => ':attribute पहले ही लिया जा चुका है। कृपया कोई दूसरा चुनें।',
     'uploaded' => ':attribute अपलोड होने में विफल रहा।',
     'uppercase' => ':attribute अपरकेस में होना चाहिए।',
     'url' => ':attribute एक मान्य URL होना चाहिए।',

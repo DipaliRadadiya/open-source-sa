@@ -148,7 +148,9 @@ describe('storage destinations', function () {
     it('still refuses a name that is taken by a different credential', function () {
         dupS3()->assertCreated();
 
-        dupS3(['secret_key' => 'secret-new'])->assertStatus(422)->assertJsonValidationErrors('name');
+        dupS3(['secret_key' => 'secret-new'])->assertStatus(422)->assertJsonValidationErrors('name')
+            // Support's wording (2026-10-29): says what to do, not only what is wrong.
+            ->assertJsonPath('errors.name.0', 'This name is already taken. Please choose a different name.');
     });
 
     it('matches FTP by host, port, user, folder and password', function () {
