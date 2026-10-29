@@ -73,10 +73,16 @@ class DiskSpaceCheck
 
         throw ValidationException::withMessages([
             $field => [__('errors/server.not_enough_disk_space', [
-                'needed' => Number::fileSize($bytes, 1),
-                'free' => Number::fileSize($usable, 1),
+                'needed' => self::size($bytes),
+                'free' => self::size($usable),
             ])],
         ]);
+    }
+
+    /** "15.2 GB", but "0 B" rather than "0.0 B" for a disk with nothing left. */
+    private static function size(int $bytes): string
+    {
+        return Number::fileSize($bytes, $bytes >= 1024 ? 1 : 0);
     }
 
     /**
