@@ -25,6 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // CodeMirror is large and only needed here and in the file editor, so it is loaded on demand.
@@ -69,6 +71,9 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Copy the jail and filter aside while the reload is checked. On again after each save or turn-off.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const tc = useTranslations("common");
   // The config test's output, kept until the next attempt.
   const [testError, setTestError] = useState(null);
   const [fullOutput, setFullOutput] = useState(false);
@@ -121,7 +126,9 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
     setSaving(true);
     setTestError(null);
     try {
-      await saveApplicationFail2ban(appId, draft);
+      // A first setup replaces no files, so it keeps the default.
+      await saveApplicationFail2ban(appId, draft, { safetyCopy: isSetup || safetyCopy });
+      setSafetyCopy(true);
       // The server accepted it, so this is the saved state (whatever it trimmed).
       setSavedBaseline({ ...draft });
       if (!config) {
@@ -148,7 +155,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   async function remove() {
     setRemoving(true);
     try {
-      await deleteApplicationFail2ban(appId);
+      await deleteApplicationFail2ban(appId, { safetyCopy });
       removed();
     } catch (error) {
       // 422 means "already disabled" (removed elsewhere), which is the goal.
@@ -161,6 +168,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
   function removed() {
     setConfirmRemove(false);
+    setSafetyCopy(true);
     setTestError(null);
     // Otherwise the setup form opens with the deleted text; return to the
     // empty state instead.
@@ -336,6 +344,25 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             </div>
           ) : null}
 
+          {/* Asked only once a saved jail would be replaced. */}
+          {canManage && !isSetup && changed ? (
+            <div className="space-y-2 border-b px-5 py-3">
+              <SafetyCopySwitch
+                id="fail2ban-safety-copy"
+                compact
+                checked={safetyCopy}
+                onCheckedChange={setSafetyCopy}
+                disabled={saving}
+                label={tc("keepSettingsCopy")}
+              />
+              {!safetyCopy ? (
+                <Caution tone="destructive">
+                  <p>{tc("keepSettingsCopyOff")}</p>
+                </Caution>
+              ) : null}
+            </div>
+          ) : null}
+
           <CardSaveFooter
             saving={saving}
             dirty={dirty}
@@ -366,7 +393,10 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
       <ConfirmDialog
         open={confirmRemove}
-        onOpenChange={setConfirmRemove}
+        onOpenChange={(next) => {
+          setConfirmRemove(next);
+          if (!next) setSafetyCopy(true);
+        }}
         icon={TriangleAlert}
         tone="destructive"
         title={t("removeTitle")}
@@ -377,7 +407,20 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
         confirmLabel={t("removeConfirm")}
         pending={removing}
         onConfirm={remove}
-      />
+      >
+        <SafetyCopySwitch
+          id="fail2ban-remove-safety-copy"
+          checked={safetyCopy}
+          onCheckedChange={setSafetyCopy}
+          disabled={removing}
+          label={tc("keepSettingsCopy")}
+        />
+        {!safetyCopy ? (
+          <Caution tone="destructive" size="md">
+            <p>{tc("keepSettingsCopyOff")}</p>
+          </Caution>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

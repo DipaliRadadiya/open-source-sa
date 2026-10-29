@@ -17,6 +17,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { apiMessage } from "@/lib/api/error-message";
 import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Shared with the Settings tab (php-common-settings.jsx); a literal here keeps this file
 // free of that component's imports.
@@ -46,6 +47,9 @@ export function IniEditor({ version, canManage }) {
   const [file, setFile] = useState(null);
   const [contents, setContents] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  // Keep php.ini.panel-bak. On again after every save or discard, like the acknowledgement.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const tc = useTranslations("common");
   const [phpError, setPhpError] = useState(null);
 
   // State only changes once the answer is in, so the first read can run from an effect.
@@ -99,11 +103,12 @@ export function IniEditor({ version, canManage }) {
     setSaving(true);
     setPhpError(null);
     try {
-      await savePhpIni(version, contents);
+      await savePhpIni(version, contents, { safetyCopy });
       toast.success(t("phpIni.saved", { version }));
       // What is on disk now; a second save needs a fresh acknowledgement.
       setFile((current) => ({ ...current, contents }));
       setAcknowledged(false);
+      setSafetyCopy(true);
       setStale(false);
       window.dispatchEvent(new CustomEvent(PHP_INI_CHANGED, { detail: { version, source: "ini" } }));
     } catch (error) {
@@ -122,6 +127,7 @@ export function IniEditor({ version, canManage }) {
     setContents(file?.contents ?? "");
     setPhpError(null);
     setAcknowledged(false);
+    setSafetyCopy(true);
   }
 
   // "Nothing changed" first: ticking the box would not help then.
@@ -136,7 +142,7 @@ export function IniEditor({ version, canManage }) {
       <CardHeader>
         <CardTitle as="h3">{t("phpIni.title", { version })}</CardTitle>
         <CardDescription>
-          {readOnly ? t("phpIni.readOnlyDescription") : tPhp("ini.description")}
+          {readOnly ? t("phpIni.readOnlyDescription") : tPhp(safetyCopy ? "ini.description" : "ini.descriptionNoCopy")}
         </CardDescription>
       </CardHeader>
 
@@ -233,6 +239,24 @@ export function IniEditor({ version, canManage }) {
               {t("phpIni.acknowledge", { version })}
             </Label>
           </div>
+        ) : null}
+
+        {!readOnly && dirty ? (
+          <>
+            <SafetyCopySwitch
+              id={`ini-safety-copy-${version}`}
+              compact
+              checked={safetyCopy}
+              onCheckedChange={setSafetyCopy}
+              disabled={saving}
+              label={tc("keepSettingsCopy")}
+            />
+            {!safetyCopy ? (
+              <Caution tone="destructive">
+                <p>{tc("keepSettingsCopyOff")}</p>
+              </Caution>
+            ) : null}
+          </>
         ) : null}
       </CardContent>
 

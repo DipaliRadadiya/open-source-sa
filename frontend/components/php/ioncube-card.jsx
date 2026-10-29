@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Not an extensions row: a vendor `zend_extension`, not an apt package. No
 // loader exists for PHP 8.0, so `unsupported` is stated instead of a 422.
@@ -24,6 +26,9 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Recovery copies of the loader and ini files the change replaces. On again after each action.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const tc = useTranslations("common");
 
   if (failed || !ioncube) {
     return (
@@ -46,8 +51,9 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   async function install() {
     setBusy(true);
     try {
-      await installIonCube(version);
+      await installIonCube(version, { safetyCopy });
       await refreshAndWait();
+      setSafetyCopy(true);
       // Always 202 (the archive is ~29 MB), so the message says it has started.
       toast.success(t("installStarted", { version }));
     } catch (error) {
@@ -60,10 +66,11 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   async function remove() {
     setBusy(true);
     try {
-      await removeIonCube(version);
+      await removeIonCube(version, { safetyCopy });
       await refreshAndWait();
       toast.success(t("removed", { version }));
       setConfirmOpen(false);
+      setSafetyCopy(true);
     } catch (error) {
       toast.error(apiMessage(error, t("removeFailed")));
     } finally {
@@ -128,6 +135,25 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           ) : (
             <p className="text-xs leading-relaxed text-muted-foreground">{t("hint", { version })}</p>
           )}
+
+          {/* Install has no confirmation, so its choice sits on the card. */}
+          {canAct && canManage && !installed && !installing ? (
+            <div className="space-y-2 pt-2">
+              <SafetyCopySwitch
+                id={`ioncube-safety-copy-${version}`}
+                compact
+                checked={safetyCopy}
+                onCheckedChange={setSafetyCopy}
+                disabled={busy}
+                label={tc("keepSettingsCopy")}
+              />
+              {!safetyCopy ? (
+                <Caution tone="destructive">
+                  <p>{tc("keepSettingsCopyOff")}</p>
+                </Caution>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {canAct ? (
@@ -156,7 +182,10 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
 
       <ConfirmDialog
         open={confirmOpen}
-        onOpenChange={setConfirmOpen}
+        onOpenChange={(next) => {
+          setConfirmOpen(next);
+          if (!next) setSafetyCopy(true);
+        }}
         icon={TriangleAlert}
         tone="destructive"
         title={t("removeConfirmTitle")}
@@ -166,7 +195,20 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
         confirmVariant="destructive"
         pending={busy}
         onConfirm={remove}
-      />
+      >
+        <SafetyCopySwitch
+          id={`ioncube-remove-safety-copy-${version}`}
+          checked={safetyCopy}
+          onCheckedChange={setSafetyCopy}
+          disabled={busy}
+          label={tc("keepSettingsCopy")}
+        />
+        {!safetyCopy ? (
+          <Caution tone="destructive" size="md">
+            <p>{tc("keepSettingsCopyOff")}</p>
+          </Caution>
+        ) : null}
+      </ConfirmDialog>
     </Card>
   );
 }

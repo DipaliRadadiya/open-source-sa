@@ -87,7 +87,9 @@
     },
     "serverOnline": "En línea",
     "keepFileCopy": "Guardar una copia del archivo actual",
-    "keepFileCopyOff": "Sin una copia, no podrás volver a la versión actual."
+    "keepFileCopyOff": "Sin una copia, no podrás volver a la versión actual.",
+    "keepSettingsCopy": "Guardar una copia de la configuración actual",
+    "keepSettingsCopyOff": "Sin una copia, la configuración anterior solo se guarda en memoria mientras se comprueba la nueva. Si el panel se detiene durante el guardado, no se podrá recuperar."
   },
   "systemUsers": {
     "title": "Usuarios del sistema",
@@ -2393,6 +2395,7 @@
     },
     "ini": {
       "description": "El archivo completo, tal como lo lee PHP. Al guardar se hace una copia del anterior y PHP comprueba el nuevo. Si PHP lo rechaza, se restaura el anterior y no cambia nada.",
+      "descriptionNoCopy": "El archivo completo, tal como lo lee PHP. Al guardar, PHP comprueba el nuevo. Si PHP lo rechaza, se restaura el anterior y no cambia nada.",
       "perApp": "Para cambiar el tamaño de subida, la memoria o los límites de tiempo de una sola aplicación, usa los ajustes de PHP de esa aplicación.",
       "perAppLink": "Ir a Aplicaciones",
       "retry": "Reintentar",

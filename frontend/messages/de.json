@@ -87,7 +87,9 @@
     },
     "serverOnline": "Online",
     "keepFileCopy": "Eine Kopie der aktuellen Datei behalten",
-    "keepFileCopyOff": "Ohne Kopie können Sie nicht zur aktuellen Version zurückkehren."
+    "keepFileCopyOff": "Ohne Kopie können Sie nicht zur aktuellen Version zurückkehren.",
+    "keepSettingsCopy": "Eine Kopie der aktuellen Einstellungen behalten",
+    "keepSettingsCopyOff": "Ohne Kopie werden die alten Einstellungen nur im Speicher gehalten, während die neuen geprüft werden. Stoppt das Panel während des Speicherns, können sie nicht zurückgespielt werden."
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -2393,6 +2395,7 @@
     },
     "ini": {
       "description": "Die gesamte Datei, so wie PHP sie liest. Beim Speichern wird die alte Datei gesichert und PHP prüft die neue. Lehnt PHP sie ab, wird die alte Datei zurückgelegt und nichts ändert sich.",
+      "descriptionNoCopy": "Die gesamte Datei, so wie PHP sie liest. Beim Speichern prüft PHP die neue. Lehnt PHP sie ab, wird die alte Datei zurückgelegt und nichts ändert sich.",
       "perApp": "Um Upload-Größe, Speicher oder Zeitlimits nur für eine Anwendung zu ändern, nutzen Sie stattdessen die PHP-Einstellungen dieser Anwendung.",
       "perAppLink": "Zu den Anwendungen",
       "retry": "Erneut versuchen",

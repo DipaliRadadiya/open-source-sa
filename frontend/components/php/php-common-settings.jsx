@@ -17,6 +17,8 @@ import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { SettingsCardSkeleton } from "@/components/settings/settings-skeleton";
 import { Row, Section, SectionActions } from "@/components/settings/setting-row";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Told to the php.ini tab (and back) so neither saves over the other's change.
 export const PHP_INI_CHANGED = "php-ini-changed";
@@ -98,6 +100,9 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
   const tPhp = useTranslations("php");
   const defaults = toForm(settings);
   const [pending, setPending] = useState(false);
+  // Keep php.ini.panel-bak; on again after each save or discard.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const tc = useTranslations("common");
 
   const form = useForm({
     resolver: zodResolver(phpCommonSettingsFormSchema),
@@ -125,9 +130,10 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
 
     setPending(true);
     try {
-      const { data } = await savePhpSettings(version, payload);
+      const { data } = await savePhpSettings(version, payload, { safetyCopy });
       const parsed = phpCommonSettingsSchema.safeParse(data);
       toast.success(t("saved", { version }));
+      setSafetyCopy(true);
       window.dispatchEvent(new CustomEvent(PHP_INI_CHANGED, { detail: { version, source: "settings" } }));
       onSaved(parsed.success ? parsed.data.settings : { ...settings, ...payload });
     } catch (error) {
@@ -157,7 +163,10 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
               label={t("saveAction")}
               isDirty={form.formState.isDirty}
               pending={pending}
-              onDiscard={() => form.reset(defaults)}
+              onDiscard={() => {
+                form.reset(defaults);
+                setSafetyCopy(true);
+              }}
               canManage={canManage}
             />
           }
@@ -220,6 +229,24 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
               </Row>
             )}
           />
+          {/* Asked only once there is something to save. */}
+          {canManage && form.formState.isDirty ? (
+            <div className="space-y-2">
+              <SafetyCopySwitch
+                id={`settings-safety-copy-${version}`}
+                compact
+                checked={safetyCopy}
+                onCheckedChange={setSafetyCopy}
+                disabled={pending}
+                label={tc("keepSettingsCopy")}
+              />
+              {!safetyCopy ? (
+                <Caution tone="destructive">
+                  <p>{tc("keepSettingsCopyOff")}</p>
+                </Caution>
+              ) : null}
+            </div>
+          ) : null}
         </Section>
       </form>
     </Form>
