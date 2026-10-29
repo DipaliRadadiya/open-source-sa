@@ -2,6 +2,7 @@
 
 return [
     'steps' => [
+        'check_local_space' => 'Vérification de l’espace libre',
         'dump_database' => 'Export de la base de données',
         'archive_files' => 'Création de l’archive',
         'archive_volumes' => 'Archivage des volumes',
@@ -100,6 +101,15 @@ return [
         'unknown' => 'La sauvegarde a échoué pour une raison inconnue.',
         'crashed' => "La sauvegarde s'est arrêtée brutalement — le processus a été tué avant de finir. En général le serveur a manqué de mémoire, ou le worker a redémarré en cours de route.",
         'abandoned' => "Cette sauvegarde n'a jamais donné de nouvelles et a été clôturée. Son worker a disparu, rien n'a été téléversé.",
+        'stopped_at' => 'Cette sauvegarde s’est arrêtée avant la fin, pendant : :step.',
+        'stopped_before_steps' => 'Elle s’est arrêtée avant sa première étape.',
+        'stopped_cause' => [
+            'timed_out' => 'Elle a dépassé la durée maximale d’une sauvegarde et a été arrêtée.',
+            'server_restarted' => 'Le serveur a redémarré pendant qu’elle tournait.',
+            'worker_restarted' => 'Le worker d’arrière-plan du panneau a redémarré pendant qu’elle tournait, par exemple lors d’une mise à jour du panneau.',
+        ],
+        'stopped_unknown' => 'La cause n’a pas pu être trouvée. Les causes habituelles sont un redémarrage du serveur, un redémarrage du worker d’arrière-plan du panneau ou un manque de mémoire.',
+        'stopped_retry' => 'Rien de cette exécution n’est utilisable. Cliquez sur Réessayer pour faire une nouvelle sauvegarde.',
         'restore_in_progress' => 'Non effectuée : une restauration de cette application a commencé avant que cette sauvegarde puisse s’exécuter. Relancez-la une fois la restauration terminée.',
         'clear_not_running' => "Cette sauvegarde n'est pas en cours, il n'y a rien à effacer.",
         'clear_too_soon' => "Cette sauvegarde est peut-être encore en cours. Elle se clôture d'elle-même :minutes minutes après son démarrage si le worker ne répond pas.",

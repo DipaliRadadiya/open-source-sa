@@ -2,6 +2,7 @@
 
 return [
     'steps' => [
+        'check_local_space' => 'A verificar o espaço livre',
         'dump_database' => 'A exportar a base de dados',
         'archive_files' => 'A criar o arquivo',
         'archive_volumes' => 'A arquivar os volumes',
@@ -100,6 +101,15 @@ return [
         'unknown' => 'A cópia de segurança falhou por um motivo desconhecido.',
         'crashed' => 'A cópia de segurança parou inesperadamente — o processo foi encerrado antes de terminar. Normalmente o servidor ficou sem memória, ou o worker reiniciou no meio.',
         'abandoned' => 'Esta cópia de segurança nunca respondeu e foi encerrada. O seu worker desapareceu, portanto nada foi enviado.',
+        'stopped_at' => 'Esta cópia de segurança parou antes de terminar, durante: :step.',
+        'stopped_before_steps' => 'Parou antes do primeiro passo.',
+        'stopped_cause' => [
+            'timed_out' => 'Passou o tempo limite de uma cópia de segurança e foi parada.',
+            'server_restarted' => 'O servidor foi reiniciado enquanto ela corria.',
+            'worker_restarted' => 'O worker em segundo plano do painel foi reiniciado enquanto ela corria, por exemplo numa atualização do painel.',
+        ],
+        'stopped_unknown' => 'Não foi possível descobrir a causa. As habituais são um reinício do servidor, um reinício do worker em segundo plano do painel ou o servidor ficar sem memória.',
+        'stopped_retry' => 'Nada desta execução pode ser usado. Clique em Tentar novamente para fazer uma nova cópia.',
         'restore_in_progress' => 'Não efetuada: um restauro desta aplicação começou antes de esta cópia poder ser executada. Inicie-a novamente quando o restauro terminar.',
         'clear_not_running' => 'Esta cópia de segurança não está em curso, portanto não há nada para limpar.',
         'clear_too_soon' => 'Esta cópia de segurança pode ainda estar em execução. Ela encerra-se sozinha :minutes minutos após começar se o worker não responder.',

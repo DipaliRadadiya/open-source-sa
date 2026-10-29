@@ -2,6 +2,7 @@
 
 return [
     'steps' => [
+        'check_local_space' => 'Checking free space',
         'dump_database' => 'Dumping the database',
         'archive_files' => 'Creating the archive',
         'archive_volumes' => 'Archiving the volumes',
@@ -102,6 +103,15 @@ return [
         'unknown' => 'The backup failed for an unknown reason.',
         'crashed' => 'The backup stopped unexpectedly — the process was killed before it could finish. Usually the server ran out of memory, or the worker was restarted mid-backup.',
         'abandoned' => 'This backup never reported back and has been closed out. Its worker is gone, so nothing was uploaded.',
+        'stopped_at' => 'This backup stopped before it finished, while: :step.',
+        'stopped_before_steps' => 'It stopped before its first step.',
+        'stopped_cause' => [
+            'timed_out' => 'It ran past the time limit for one backup and was stopped.',
+            'server_restarted' => 'The server was restarted while it was running.',
+            'worker_restarted' => 'The panel\'s background worker was restarted while it was running, for example by a panel update.',
+        ],
+        'stopped_unknown' => 'The cause could not be found. The usual ones are a server restart, a restart of the panel\'s background worker, or the server running out of memory.',
+        'stopped_retry' => 'Nothing from this run can be used. Click Retry to take a new backup.',
         'restore_in_progress' => 'Not taken: a restore of this application started before this backup could run. Start it again once the restore has finished.',
         'clear_not_running' => 'This backup is not in progress, so there is nothing to clear.',
         'clear_too_soon' => 'This backup may still be running. It clears itself :minutes minutes after it started if the worker never reports back.',

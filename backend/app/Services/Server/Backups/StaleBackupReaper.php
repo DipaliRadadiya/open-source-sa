@@ -41,6 +41,21 @@ class StaleBackupReaper
      *
      * @var array<int, string>
      */
+    /**
+     * Every key BackupRunner writes to `reason` while a step runs.
+     *
+     * @var array<int, string>
+     */
+    public const STEPS = [
+        'check_local_space',
+        'dump_database',
+        'archive_files',
+        'archive_volumes',
+        'upload_artifact',
+        'verify_artifact',
+        'prune_old_backups',
+    ];
+
     public const IN_FLIGHT = [
         BackupStatus::Pending->value,
         BackupStatus::Running->value,
@@ -174,8 +189,28 @@ class StaleBackupReaper
         $backup->update([
             'status' => BackupStatus::Failed,
             'reason' => 'abandoned',
+            // Where it had got to and the likely why (2026-10-29): `reason`
+            // held the running step until now, and this is the last chance
+            // to keep it.
+            'stopped_step' => self::runningStep($backup),
+            'stopped_cause' => app(BackupStopCause::class)->for($backup),
             'finished_at' => now(),
         ]);
+    }
+
+    /**
+     * The step a run was on when it stopped, or null.
+     *
+     * While a backup runs, `reason` holds the step it is on (BackupRunner
+     * writes it before each one), so a row that died mid-run still says
+     * where. Only a real step key is kept: anything else is a reason, not
+     * a place.
+     */
+    public static function runningStep(Backup $backup): ?string
+    {
+        $step = $backup->reason;
+
+        return is_string($step) && in_array($step, self::STEPS, true) ? $step : null;
     }
 
     /**

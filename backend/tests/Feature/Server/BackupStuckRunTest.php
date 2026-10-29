@@ -11,10 +11,13 @@ use App\Models\StorageDestination;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\BackupRunner;
+use App\Services\Server\Backups\BackupStopCause;
 use App\Services\Server\Backups\StaleBackupReaper;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
@@ -283,4 +286,136 @@ it('skips a scheduled run while a staging push is overwriting the site', functio
     (new RunBackup($this->backupTarget->id))->handle(app(BackupRunner::class), app(ActivityLogger::class));
 
     expect(Backup::where('backup_target_id', $this->backupTarget->id)->count())->toBe(0);
+});
+
+/*
+ * 2026-10-29, Dipali: after "Clear" a stuck backup only ever said "never
+ * reported back", so neither the user nor support could tell what happened.
+ * The step it was on and the likely cause are now kept and spelled out.
+ */
+describe('saying where a dead run stopped and why', function () {
+
+    /** The box's boot time and the worker's start, as the cause reads them. */
+    function stopClock(?string $bootedAt, ?string $workerStartedAt): void
+    {
+        $stat = tempnam(sys_get_temp_dir(), 'stat');
+        file_put_contents($stat, $bootedAt === null ? "cpu 1 2 3\n" : "cpu 1 2 3\nbtime ".strtotime($bootedAt)."\nprocesses 9\n");
+        config(['server.backups.boot_stat_path' => $stat]);
+
+        Process::fake(fn ($process) => ($process->command[0] ?? '') === 'systemctl'
+            ? Process::result(output: $workerStartedAt === null ? "\n" : date('D Y-m-d H:i:s', strtotime($workerStartedAt))." UTC\n")
+            : Process::result(exitCode: 1));
+    }
+
+    function runOnStep(string $step, int $minutes): Backup
+    {
+        $backup = stuckRun(BackupStatus::Running, $minutes);
+        $backup->update(['reason' => $step]);
+
+        return $backup->refresh();
+    }
+
+    it('keeps the step a cleared run was on, and finds a restarted worker', function () {
+        grantPermission($this->user, 'backup');
+        stopClock(bootedAt: '-30 days', workerStartedAt: '-2 hours');
+        $stale = runOnStep('upload_artifact', 24 * 60);
+
+        $payload = $this->postJson("/api/backups/{$stale->id}/clear")->assertOk()->json('backup');
+
+        expect($payload['reason'])->toBe('abandoned')
+            ->and($payload['stopped_step'])->toBe('upload_artifact')
+            ->and($payload['stopped_cause'])->toBe(BackupStopCause::WORKER_RESTARTED)
+            ->and($payload['reason_title'])->toBe(
+                'This backup stopped before it finished, while: Uploading to storage. '
+                ."The panel's background worker was restarted while it was running, for example by a panel update. "
+                .'Nothing from this run can be used. Click Retry to take a new backup.'
+            );
+    });
+
+    it('says the server was restarted when it booted after the run started', function () {
+        stopClock(bootedAt: '-3 hours', workerStartedAt: '-3 hours');
+        $stale = runOnStep('archive_files', 24 * 60);
+
+        app(StaleBackupReaper::class)->reap($this->backupTarget);
+
+        expect($stale->fresh()->stopped_step)->toBe('archive_files')
+            ->and($stale->fresh()->stopped_cause)->toBe(BackupStopCause::SERVER_RESTARTED);
+    });
+
+    it('says the cause is unknown rather than guessing when nothing restarted', function () {
+        grantPermission($this->user, 'backup');
+        stopClock(bootedAt: '-30 days', workerStartedAt: '-30 days');
+        $stale = runOnStep('dump_database', 24 * 60);
+
+        app(StaleBackupReaper::class)->reap($this->backupTarget);
+        $payload = $this->getJson("/api/backups/{$stale->id}")->assertOk()->json('backup');
+
+        expect($payload['stopped_cause'])->toBeNull()
+            ->and($payload['reason_title'])->toContain('while: Dumping the database.')
+            ->and($payload['reason_title'])->toContain('The cause could not be found.');
+    });
+
+    it('says a crashed job hit its time limit', function () {
+        stopClock(bootedAt: '-30 days', workerStartedAt: '-30 days');
+        $backup = runOnStep('upload_artifact', 10);
+
+        (new RunBackup($this->backupTarget->id))->failed(new TimeoutExceededException('timed out'));
+
+        expect($backup->fresh()->reason)->toBe('crashed')
+            ->and($backup->fresh()->stopped_step)->toBe('upload_artifact')
+            ->and($backup->fresh()->stopped_cause)->toBe(BackupStopCause::TIMED_OUT);
+    });
+
+    it('says a crashed job died with its worker', function () {
+        stopClock(bootedAt: '-30 days', workerStartedAt: '-1 minute');
+        $backup = runOnStep('verify_artifact', 10);
+
+        (new RunBackup($this->backupTarget->id))->failed(new RuntimeException('killed'));
+
+        expect($backup->fresh()->stopped_step)->toBe('verify_artifact')
+            ->and($backup->fresh()->stopped_cause)->toBe(BackupStopCause::WORKER_RESTARTED);
+    });
+
+    it('says it stopped before any step when it never started one', function () {
+        grantPermission($this->user, 'backup');
+        stopClock(bootedAt: '-1 hour', workerStartedAt: '-1 hour');
+        $stale = stuckRun(BackupStatus::Pending, 24 * 60);
+
+        app(StaleBackupReaper::class)->reap($this->backupTarget);
+        $payload = $this->getJson("/api/backups/{$stale->id}")->assertOk()->json('backup');
+
+        expect($payload['stopped_step'])->toBeNull()
+            ->and($payload['reason_title'])->toStartWith('It stopped before its first step. The server was restarted');
+    });
+
+    it('leaves rows closed before this change with their old sentence', function () {
+        grantPermission($this->user, 'backup');
+        $old = stuckRun(BackupStatus::Failed, 60);
+        $old->update(['reason' => 'abandoned']);
+
+        $this->getJson("/api/backups/{$old->id}")
+            ->assertJsonPath('backup.stopped_step', null)
+            ->assertJsonPath('backup.reason_title', __('backup.errors.abandoned'));
+    });
+
+    it('knows nothing when the box will not say', function () {
+        stopClock(bootedAt: null, workerStartedAt: null);
+
+        expect(app(BackupStopCause::class)->for(stuckRun(BackupStatus::Running, 60)))->toBeNull();
+    });
+
+    it('has every new sentence in every language', function () {
+        foreach (['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru'] as $locale) {
+            $keys = [
+                'backup.steps.check_local_space', 'backup.errors.stopped_at', 'backup.errors.stopped_before_steps',
+                'backup.errors.stopped_unknown', 'backup.errors.stopped_retry',
+                ...array_map(fn ($c) => 'backup.errors.stopped_cause.'.$c, [BackupStopCause::TIMED_OUT, BackupStopCause::SERVER_RESTARTED, BackupStopCause::WORKER_RESTARTED]),
+                ...array_map(fn ($s) => 'backup.steps.'.$s, StaleBackupReaper::STEPS),
+            ];
+
+            foreach ($keys as $key) {
+                expect(__($key, [], $locale))->not->toBe($key, "{$locale}: {$key}");
+            }
+        }
+    });
 });

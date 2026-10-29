@@ -2,6 +2,7 @@
 
 return [
     'steps' => [
+        'check_local_space' => 'Comprobando el espacio libre',
         'dump_database' => 'Volcando la base de datos',
         'archive_files' => 'Creando el archivo',
         'archive_volumes' => 'Archivando los volúmenes',
@@ -102,6 +103,15 @@ return [
         'unknown' => 'La copia de seguridad falló por un motivo desconocido.',
         'crashed' => 'La copia de seguridad se detuvo inesperadamente: el proceso terminó antes de completarse. Normalmente el servidor se quedó sin memoria o el worker se reinició a mitad.',
         'abandoned' => 'Esta copia de seguridad nunca respondió y se ha cerrado. Su worker ya no existe, así que no se subió nada.',
+        'stopped_at' => 'Esta copia de seguridad se detuvo antes de terminar, durante: :step.',
+        'stopped_before_steps' => 'Se detuvo antes de su primer paso.',
+        'stopped_cause' => [
+            'timed_out' => 'Superó el tiempo límite de una copia de seguridad y se detuvo.',
+            'server_restarted' => 'El servidor se reinició mientras se ejecutaba.',
+            'worker_restarted' => 'El worker en segundo plano del panel se reinició mientras se ejecutaba, por ejemplo por una actualización del panel.',
+        ],
+        'stopped_unknown' => 'No se pudo averiguar la causa. Las habituales son un reinicio del servidor, un reinicio del worker en segundo plano del panel o que el servidor se quedara sin memoria.',
+        'stopped_retry' => 'Nada de esta ejecución se puede usar. Haz clic en Reintentar para crear una copia nueva.',
         'restore_in_progress' => 'No se realizó: una restauración de esta aplicación empezó antes de que esta copia pudiera ejecutarse. Vuelve a iniciarla cuando termine la restauración.',
         'clear_not_running' => 'Esta copia de seguridad no está en curso, así que no hay nada que limpiar.',
         'clear_too_soon' => 'Esta copia de seguridad puede seguir ejecutándose. Se cierra sola :minutes minutos después de comenzar si el worker no responde.',

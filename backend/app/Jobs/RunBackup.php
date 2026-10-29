@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\StagingManager;
 use App\Services\Server\Backups\BackupRunner;
+use App\Services\Server\Backups\BackupStopCause;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\GoogleHttpClient;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -192,14 +193,19 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
             'detail' => $e?->getMessage(),
         ]);
 
+        // One row at a time, not one UPDATE: each keeps its own step and
+        // cause (2026-10-29) — `reason` still names the step it was on.
         Backup::query()
             ->where('backup_target_id', $this->backupTargetId)
             ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
-            ->update([
-                'status' => BackupStatus::Failed->value,
+            ->get()
+            ->each(fn (Backup $backup) => $backup->update([
+                'status' => BackupStatus::Failed,
                 'reason' => 'crashed',
+                'stopped_step' => StaleBackupReaper::runningStep($backup),
+                'stopped_cause' => app(BackupStopCause::class)->for($backup, $e),
                 'finished_at' => now(),
-            ]);
+            ]));
 
         // A crash is still an attempt. BackupRunner's catch block records one
         // for every handled failure, five lines from here, and says why: a

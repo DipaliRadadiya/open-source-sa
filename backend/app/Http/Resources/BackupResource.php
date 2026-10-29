@@ -76,9 +76,12 @@ class BackupResource extends JsonResource
             // `reason` carries the step that failed — a stable key. The title
             // explains it in the viewer's language; the frontend branches on
             // the key, never on the prose.
-            'reason_title' => $this->reason === null
-                ? null
-                : __('backup.errors.'.$this->reason),
+            'reason_title' => $this->reasonTitle(),
+            // Where a run that died without reporting had got to, and the
+            // likely why (2026-10-29). Null on every other row, and on rows
+            // closed before they were recorded.
+            'stopped_step' => $this->stopped_step,
+            'stopped_cause' => $this->stopped_cause,
             // Why the storage refused (FS-C33), in the destination test's
             // own categories and words: `invalid_credentials` → "The access
             // key or secret was rejected." Null when the step was not a
@@ -119,5 +122,35 @@ class BackupResource extends JsonResource
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];
+    }
+
+    /**
+     * A run that died without reporting (`abandoned` / `crashed`) says
+     * where it stopped, the likely why, and what to do (2026-10-29, Dipali:
+     * "if proper msg display then user can identify issue"). Rows closed
+     * before the step was recorded keep their old sentence: they never said
+     * where, and inventing it now would be worse.
+     */
+    private function reasonTitle(): ?string
+    {
+        if ($this->reason === null) {
+            return null;
+        }
+
+        $diedUnreported = in_array($this->reason, ['abandoned', 'crashed'], true);
+
+        if (! $diedUnreported || ($this->stopped_step === null && $this->stopped_cause === null)) {
+            return __('backup.errors.'.$this->reason);
+        }
+
+        return implode(' ', [
+            $this->stopped_step === null
+                ? __('backup.errors.stopped_before_steps')
+                : __('backup.errors.stopped_at', ['step' => __('backup.steps.'.$this->stopped_step)]),
+            $this->stopped_cause === null
+                ? __('backup.errors.stopped_unknown')
+                : __('backup.errors.stopped_cause.'.$this->stopped_cause),
+            __('backup.errors.stopped_retry'),
+        ]);
     }
 }

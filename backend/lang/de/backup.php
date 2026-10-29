@@ -2,6 +2,7 @@
 
 return [
     'steps' => [
+        'check_local_space' => 'Freier Speicher wird geprüft',
         'dump_database' => 'Datenbank wird exportiert',
         'archive_files' => 'Archiv wird erstellt',
         'archive_volumes' => 'Volumes werden archiviert',
@@ -102,6 +103,15 @@ return [
         'unknown' => 'Die Sicherung schlug aus unbekanntem Grund fehl.',
         'crashed' => 'Die Sicherung wurde unerwartet beendet — der Prozess wurde abgebrochen, bevor er fertig war. Meist ging dem Server der Arbeitsspeicher aus oder der Worker wurde mittendrin neu gestartet.',
         'abandoned' => 'Diese Sicherung hat sich nie zurückgemeldet und wurde abgeschlossen. Ihr Worker existiert nicht mehr, es wurde nichts hochgeladen.',
+        'stopped_at' => 'Diese Sicherung wurde vor dem Ende beendet, bei: :step.',
+        'stopped_before_steps' => 'Sie wurde vor ihrem ersten Schritt beendet.',
+        'stopped_cause' => [
+            'timed_out' => 'Sie lief länger als das Zeitlimit für eine Sicherung und wurde abgebrochen.',
+            'server_restarted' => 'Der Server wurde neu gestartet, während sie lief.',
+            'worker_restarted' => 'Der Hintergrund-Worker des Panels wurde neu gestartet, während sie lief, zum Beispiel durch ein Panel-Update.',
+        ],
+        'stopped_unknown' => 'Die Ursache konnte nicht ermittelt werden. Häufig sind es ein Neustart des Servers, ein Neustart des Hintergrund-Workers des Panels oder zu wenig Arbeitsspeicher.',
+        'stopped_retry' => 'Von diesem Lauf ist nichts verwendbar. Klicken Sie auf „Erneut versuchen“, um eine neue Sicherung zu erstellen.',
         'restore_in_progress' => 'Nicht erstellt: Eine Wiederherstellung dieser Anwendung begann, bevor diese Sicherung laufen konnte. Starten Sie sie erneut, sobald die Wiederherstellung abgeschlossen ist.',
         'clear_not_running' => 'Diese Sicherung läuft nicht, es gibt nichts zu bereinigen.',
         'clear_too_soon' => 'Diese Sicherung läuft möglicherweise noch. Sie wird :minutes Minuten nach dem Start automatisch abgeschlossen, wenn sich der Worker nicht meldet.',
