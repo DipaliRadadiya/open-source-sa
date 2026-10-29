@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Php\IonCubeRequest;
 use App\Http\Requests\Server\Php\PhpDefaultRequest;
 use App\Http\Requests\Server\Php\PhpExtensionRequest;
 use App\Http\Requests\Server\Php\PhpVersionRequest;
@@ -347,7 +348,7 @@ class PhpController extends Controller
      * Install it. 202 and a queued job: the archive is ~29 MB and a request
      * held open that long dies at the web server with the work half done.
      */
-    public function installIonCube(string $version, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
+    public function installIonCube(string $version, IonCubeRequest $request, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         abort_unless($php->installed($version), 404);
 
@@ -378,7 +379,7 @@ class PhpController extends Controller
 
         $installs->start(InstallIonCubeLoader::RUNTIME, $version);
 
-        InstallIonCubeLoader::dispatch($version, Auth::id());
+        InstallIonCubeLoader::dispatch($version, Auth::id(), $request->safetyCopy());
 
         $log->log('php.ioncube_install_started', null, ['version' => $version]);
 
@@ -389,13 +390,13 @@ class PhpController extends Controller
      * Remove it. Synchronous, unlike the install: this deletes two files and
      * reloads, with nothing to download.
      */
-    public function removeIonCube(string $version, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log): JsonResponse
+    public function removeIonCube(string $version, IonCubeRequest $request, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log): JsonResponse
     {
         abort_unless($php->installed($version), 404);
 
-        $loader->remove($version);
+        $loader->remove($version, $request->safetyCopy());
 
-        $log->log('php.ioncube_removed', null, ['version' => $version]);
+        $log->log('php.ioncube_removed', null, ['version' => $version, 'safety_copy' => $request->safetyCopy()]);
 
         return response()->json(['ioncube' => $loader->status($version)]);
     }

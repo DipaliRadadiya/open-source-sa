@@ -30,6 +30,9 @@ class CustomFail2banRequest extends FormRequest
         return [
             'jail_config_content' => ['required', 'string', 'max:65535'],
             'filter_config_content' => ['required', 'string', 'max:65535'],
+            // Keep the files this replaces until the reload has held. The
+            // user's choice since 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -112,5 +115,10 @@ class CustomFail2banRequest extends FormRequest
             'filter_config_content.string' => __('fail2ban.validation.filter_content_string'),
             'filter_config_content.max' => __('fail2ban.validation.filter_content_max'),
         ];
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 }

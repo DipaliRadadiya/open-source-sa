@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Exceptions\Server\Application\Fail2banConfigRejectedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\CustomFail2banRequest;
+use App\Http\Requests\Server\Application\DisableFail2banRequest;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationFail2banManager;
@@ -152,7 +153,7 @@ class ApplicationFail2banController extends Controller
         // (bug #95); the old files are back by now, and the user gets
         // fail2ban's message in the same shape as a failed test.
         try {
-            $manager->enableForApp($application, $jailContent, $filterContent);
+            $manager->enableForApp($application, $jailContent, $filterContent, $request->safetyCopy());
         } catch (Fail2banConfigRejectedException $e) {
             return response()->json([
                 'testOk' => false,
@@ -166,7 +167,7 @@ class ApplicationFail2banController extends Controller
         $application->fail2ban_filter_content = $filterContent;
         $application->save();
 
-        $log->log('application.fail2ban_enabled', $application, ['name' => $application->name]);
+        $log->log('application.fail2ban_enabled', $application, ['name' => $application->name, 'safety_copy' => $request->safetyCopy()]);
 
         return response()->json([
             'testOk' => true,
@@ -174,7 +175,7 @@ class ApplicationFail2banController extends Controller
         ]);
     }
 
-    public function destroy(Application $application, ApplicationFail2banManager $manager, ActivityLogger $log): JsonResponse
+    public function destroy(DisableFail2banRequest $request, Application $application, ApplicationFail2banManager $manager, ActivityLogger $log): JsonResponse
     {
         if ($application->fail2ban_jail_content === null) {
             return response()->json([
@@ -182,14 +183,14 @@ class ApplicationFail2banController extends Controller
             ], 422);
         }
 
-        $manager->disableForApp($application);
+        $manager->disableForApp($application, $request->safetyCopy());
 
         $application->fail2ban_jail_name = null;
         $application->fail2ban_jail_content = null;
         $application->fail2ban_filter_content = null;
         $application->save();
 
-        $log->log('application.fail2ban_disabled', $application, ['name' => $application->name]);
+        $log->log('application.fail2ban_disabled', $application, ['name' => $application->name, 'safety_copy' => $request->safetyCopy()]);
 
         return response()->json([
             'message' => __('fail2ban.disabled_successfully'),

@@ -3333,6 +3333,8 @@ Validate, dry-run against `fail2ban-client -t`, save, write to disk, reload. The
 
 Both fields are required, must be strings, and are capped at 65,535 characters.
 
+**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): the jail and filter this replaces are copied aside (`….panel-bak`) until the reload has held, then deleted. `false` writes no copy: the old files are held in memory and written back from there if the reload fails. Either way nothing stays on disk after a good save. The activity line ends *"(without a safety copy)"* when it is `false`. Same on `DELETE`.
+
 **The jail may only be the site's own.** Every `[section]` in `jail_config_content` must be `[{name}]` or the site's jail name (`[panel-site-shop]`), and every `filter =` must be `{filter}` or that same name. `[sshd]`, `[DEFAULT]` (which changes every jail on the server) or `filter = sshd` are valid fail2ban config, so `-t` accepts them, and are refused here with **`422`** and a validation error on `jail_config_content` naming the replacement.
 
 **Response `200`** — test passed, configuration applied:
@@ -3351,6 +3353,8 @@ Both fields are required, must be strings, and are capped at 65,535 characters.
 **Permission:** `app_fail2ban` (manage) | **Throttle:** 10/min
 
 Remove only this application's actual, ownership-checked jail and filter, reload, then clear the record. On a failed reload the previous files are restored and the record remains unchanged. No parallel-name cleanup or package/system file removal.
+
+**Request (optional):** `{"safety_copy": false}` — as on `POST`: the files are held in memory instead of copied aside until the reload has held.
 
 **Response `200`** — disabled:
 ```json
@@ -6675,12 +6679,14 @@ The ionCube Loader, which commercial PHP applications (WHMCS and most licensed s
 
 `202` — the archive is ~29 MB, so the install is queued. Poll `GET` until `status` leaves `installing`. A second call while one is running is a no-op `202`, not a second download. A version ionCube does not publish for is refused `422` before anything is queued, and so is a version whose ionCube is `v7` or `external`.
 
+**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): the loader and ini files the install replaces get a recovery copy (`….panel-ioncube-<uuid>.bak`) until the change has held, then it is deleted. `false` writes no copy: their contents are held in memory and written back from there if the install fails. The activity line ends *"(without a safety copy)"*. Same on `DELETE`.
+
 **Installing a new PHP version installs ionCube for it too** when another installed PHP version already has ionCube (any `source`), as v7 did. It is a separate queued install on that version's card, so poll its `GET` the same way; the activity log says "Started installing the ionCube Loader for PHP X, because other PHP versions on this server have it". Skipped for versions ionCube publishes no loader for. If it fails, PHP itself is still installed and the card shows the failure.
 
 ### DELETE `/php/versions/{version}/ioncube`
 **Permission:** `php` (manage)
 
-`200`, synchronous — two files removed and a reload, nothing to download (for `source: "v7"` see above). `422` when `source` is `external`.
+`200`, synchronous — two files removed and a reload, nothing to download (for `source: "v7"` see above). `422` when `source` is `external`. Optional `{"safety_copy": false}`, as on `POST`.
 
 **Removing a PHP version removes its ionCube too** — the panel's own loader and ini are deleted after the version's packages are purged (an external one goes with the purge / the version's config directory).
 

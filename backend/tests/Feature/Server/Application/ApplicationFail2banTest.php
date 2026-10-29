@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Resources\ActivityLogResource;
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -1134,4 +1136,76 @@ it('keeps the database and restores owned v7 files when disable reload fails', f
     expect(file_get_contents($this->jailD.'/shop.conf'))->toBe($jail)
         ->and(file_get_contents($this->filterD.'/shop.conf'))->toBe($filter)
         ->and($this->application->fresh()->fail2ban_jail_name)->toBe('shop');
+});
+
+describe('the user may change a jail without a copy (2026-10-29)', function () {
+    /** The site's jail and filter on disk, as the fake reads them. */
+    function existingShopJail(): string
+    {
+        @mkdir(test()->jailD, 0777, true);
+        @mkdir(test()->filterD, 0777, true);
+        file_put_contents(test()->jailD.'/panel-site-shop.conf', "[panel-site-shop]\nenabled = true\nmaxretry = 3\n");
+        file_put_contents(test()->filterD.'/panel-site-shop.conf', "[Definition]\nfailregex = ^old <HOST>\n");
+
+        return test()->jailD.'/panel-site-shop.conf';
+    }
+
+    it('writes no copy, and puts the old jail back from memory when the reload fails', function () {
+        $this->application = createFail2banApp('Shop', 'shop.test');
+        $jailPath = existingShopJail();
+        $runs = new ArrayObject;
+        $writes = [];
+        fakeAppFail2ban(writes: $writes, reloadOk: false, existing: true, runs: $runs);
+
+        $this->withHeaders(appFail2banHeaders())
+            ->postJson(appFail2banUrl(), [
+                'jail_config_content' => "[{name}]\nenabled = true\nfilter = {filter}\nlogpath = {logpath}\n",
+                'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n",
+                'safety_copy' => false,
+            ])->assertStatus(500);
+
+        $commands = collect($runs->getArrayCopy());
+        expect($commands->first(fn (array $c) => ($c[0] ?? '') === 'cp' && str_ends_with((string) end($c), '.panel-bak')))->toBeNull()
+            ->and($writes[$jailPath])->toBe("[panel-site-shop]\nenabled = true\nmaxretry = 3\n")
+            ->and($commands->filter(fn (array $c) => ($c[1] ?? '') === 'reload'))->toHaveCount(2);
+    });
+
+    it('turns a jail on without a copy, and says so in the log', function () {
+        $this->application = createFail2banApp('Shop', 'shop.test');
+        existingShopJail();
+        $runs = new ArrayObject;
+        fakeAppFail2ban(existing: true, runs: $runs);
+
+        $this->withHeaders(appFail2banHeaders())
+            ->postJson(appFail2banUrl(), [
+                'jail_config_content' => "[{name}]\nenabled = true\n",
+                'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n",
+                'safety_copy' => false,
+            ])->assertOk();
+
+        expect(collect($runs->getArrayCopy())->first(fn (array $c) => str_ends_with((string) end($c), '.panel-bak')))->toBeNull();
+        $log = ActivityLog::where('action', 'fail2ban_enabled')->latest('id')->first();
+        expect(ActivityLogResource::make($log)->resolve()['description'])->toEndWith('(without a safety copy)');
+    });
+
+    it('turns a jail off without a copy', function () {
+        $this->application = createFail2banApp('Shop', 'shop.test');
+        $this->application->forceFill(['fail2ban_jail_content' => "[{name}]\nenabled = true\n"])->save();
+        existingShopJail();
+        $runs = new ArrayObject;
+        fakeAppFail2ban(existing: true, runs: $runs);
+
+        $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl(), ['safety_copy' => false])->assertOk();
+
+        expect(collect($runs->getArrayCopy())->first(fn (array $c) => str_ends_with((string) end($c), '.panel-bak')))->toBeNull();
+    });
+
+    it('refuses a value that is not true or false', function () {
+        $this->application = createFail2banApp('Shop', 'shop.test');
+        fakeAppFail2ban();
+
+        $this->withHeaders(appFail2banHeaders())
+            ->postJson(appFail2banUrl(), ['jail_config_content' => "[{name}]\n", 'filter_config_content' => "[Definition]\n", 'safety_copy' => 'maybe'])
+            ->assertJsonValidationErrors('safety_copy');
+    });
 });

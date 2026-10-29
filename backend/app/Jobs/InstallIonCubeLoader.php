@@ -40,14 +40,19 @@ class InstallIonCubeLoader implements ShouldQueue
 
     public int $timeout = 600;
 
-    public function __construct(public string $version, public ?int $actorId = null) {}
+    /**
+     * `$keepCopy`: whether the files the install replaces get a recovery copy
+     * on disk, or are held in memory only (2026-10-29, the user's choice).
+     * Defaulted, so a job queued before the field existed still runs.
+     */
+    public function __construct(public string $version, public ?int $actorId = null, public bool $keepCopy = true) {}
 
     public function handle(IonCubeLoader $loader, ActivityLogger $log, InstallTracker $installs): void
     {
         $installs->begin(self::RUNTIME, $this->version);
 
         try {
-            $loader->install($this->version);
+            $loader->install($this->version, $this->keepCopy);
         } catch (PhpConfigException $e) {
             // Recorded, not just logged. `installed` is read from disk, so a
             // failed install is otherwise indistinguishable from one still
@@ -67,7 +72,7 @@ class InstallIonCubeLoader implements ShouldQueue
 
         $installs->succeed(self::RUNTIME, $this->version);
 
-        $log->log('php.ioncube_installed', null, ['version' => $this->version], actor: $this->actor());
+        $log->log('php.ioncube_installed', null, ['version' => $this->version, 'safety_copy' => $this->keepCopy], actor: $this->actor());
     }
 
     /**

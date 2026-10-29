@@ -256,7 +256,7 @@ class IonCubeLoader
      *
      * @throws PhpConfigException
      */
-    public function install(string $version): void
+    public function install(string $version, bool $keepCopy = true): void
     {
         if (! $this->supports($version)) {
             throw PhpConfigException::ionCubeUnsupportedVersion($version);
@@ -278,7 +278,7 @@ class IonCubeLoader
 
             $this->assertLoaderBinary($extracted, $version);
 
-            $backups = $this->snapshot($version, $loader);
+            $backups = $this->snapshot($version, $loader, $keepCopy);
             try {
                 $this->place($version, $extracted, $loader);
                 $this->enable($version, $loader);
@@ -304,12 +304,12 @@ class IonCubeLoader
      * references is inert, while an ini pointing at a file that has been
      * deleted stops PHP from starting.
      */
-    public function remove(string $version): void
+    public function remove(string $version, bool $keepCopy = true): void
     {
         $source = $this->source($version);
 
         if ($source === self::SOURCE_V7) {
-            $this->removeV7($version);
+            $this->removeV7($version, $keepCopy);
 
             return;
         }
@@ -319,7 +319,7 @@ class IonCubeLoader
         }
 
         $loader = $this->loaderPath($version);
-        $backups = $this->snapshot($version, $loader);
+        $backups = $this->snapshot($version, $loader, $keepCopy);
         try {
             foreach ($this->stack->sapis($version) as $sapi) {
                 $result = $this->files->delete($this->iniPath($version, $sapi), $this->context($version, 'ioncube_remove_ini'));
@@ -359,7 +359,7 @@ class IonCubeLoader
      *
      * @throws PhpConfigException
      */
-    private function removeV7(string $version): void
+    private function removeV7(string $version, bool $keepCopy = true): void
     {
         $package = $this->v7Package($version);
 
@@ -373,7 +373,7 @@ class IonCubeLoader
         $loaders = array_values(array_unique(array_merge(...array_values($lines))));
         $extensionDir = $this->extensionDir($version);
 
-        $backups = $this->snapshotPaths($version, [...$loaders, ...array_keys($lines)]);
+        $backups = $this->snapshotPaths($version, [...$loaders, ...array_keys($lines)], $keepCopy);
         try {
             foreach ($lines as $ini => $ignored) {
                 $read = $this->files->get($ini, $this->context($version, 'ioncube_v7_read_ini'));
@@ -680,23 +680,27 @@ class IonCubeLoader
     }
 
     /** @return array<string, ?string> Original path => recovery copy, or null if absent. */
-    private function snapshot(string $version, string $loader): array
+    private function snapshot(string $version, string $loader, bool $keepCopy = true): array
     {
         $paths = [$loader];
         foreach ($this->stack->sapis($version) as $sapi) {
             $paths[] = $this->iniPath($version, $sapi);
         }
 
-        return $this->snapshotPaths($version, $paths);
+        return $this->snapshotPaths($version, $paths, $keepCopy);
     }
 
     /**
      * Binaries first, then INIs: {@see restore()} relies on that order.
      *
+     * `$keepCopy` false (2026-10-29, the user's choice): no recovery copy is
+     * written beside the files. Their contents are held here instead and
+     * written back from memory if the change fails.
+     *
      * @param  array<int, string>  $paths
-     * @return array<string, ?string> Original path => recovery copy, or null if absent.
+     * @return array<string, array{file?: string, content?: string}|null> Original path => recovery copy, or null if absent.
      */
-    private function snapshotPaths(string $version, array $paths): array
+    private function snapshotPaths(string $version, array $paths, bool $keepCopy = true): array
     {
         // Unique adjacent copies survive download cleanup and a failed recovery.
         $suffix = '.panel-ioncube-'.Str::uuid().'.bak';
@@ -707,20 +711,26 @@ class IonCubeLoader
                 throw PhpConfigException::ionCubeDiscoveryFailed($exists->reference);
             }
             $backups[$path] = null;
-            if ($exists->ok) {
+            if ($exists->ok && ! $keepCopy) {
+                $read = $this->serverOps->run(['cat', $path], $this->context($version, 'ioncube_read_previous'));
+                if ($read->failed()) {
+                    throw PhpConfigException::ionCubeInstallFailed($read->reference);
+                }
+                $backups[$path] = ['content' => $read->output()];
+            } elseif ($exists->ok) {
                 $backup = $path.$suffix;
                 $copy = $this->serverOps->run(['cp', '-p', $path, $backup], $this->context($version, 'ioncube_backup'));
                 if ($copy->failed()) {
                     throw PhpConfigException::ionCubeInstallFailed($copy->reference);
                 }
-                $backups[$path] = $backup;
+                $backups[$path] = ['file' => $backup];
             }
         }
 
         return $backups;
     }
 
-    /** @param array<string, ?string> $backups */
+    /** @param array<string, array{file?: string, content?: string}|null> $backups */
     private function restore(string $version, array $backups): void
     {
         // Restore an old binary before its INIs. For a fresh install, remove
@@ -732,9 +742,11 @@ class IonCubeLoader
             }
         }
         foreach ($ordered as $path => $backup) {
-            $result = $backup === null
-                ? $this->files->delete($path, $this->context($version, 'ioncube_restore'))
-                : $this->serverOps->run(['cp', '-p', $backup, $path], $this->context($version, 'ioncube_restore'));
+            $result = match (true) {
+                $backup === null => $this->files->delete($path, $this->context($version, 'ioncube_restore')),
+                isset($backup['file']) => $this->serverOps->run(['cp', '-p', $backup['file'], $path], $this->context($version, 'ioncube_restore')),
+                default => $this->serverOps->run(['tee', $path], $this->context($version, 'ioncube_restore'), input: $backup['content'] ?? ''),
+            };
             if ($result->failed()) {
                 throw PhpConfigException::ionCubeRollbackFailed($result->reference);
             }
@@ -742,13 +754,17 @@ class IonCubeLoader
         $this->discardBackups($version, $backups);
     }
 
-    /** @param array<string, ?string> $backups */
+    /** @param array<string, array{file?: string, content?: string}|null> $backups */
     private function discardBackups(string $version, array $backups): void
     {
-        foreach (array_filter($backups) as $backup) {
+        foreach ($backups as $backup) {
+            if (! isset($backup['file'])) {
+                // Absent, or held only in memory: nothing on disk to remove.
+                continue;
+            }
             // Cleanup failure is logged by ServerOps; it does not undo an
             // otherwise successful operation. The recovery copy is harmless.
-            $this->files->delete($backup, $this->context($version, 'ioncube_cleanup_backup'));
+            $this->files->delete($backup['file'], $this->context($version, 'ioncube_cleanup_backup'));
         }
     }
 

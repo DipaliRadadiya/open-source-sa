@@ -462,7 +462,7 @@ class ApplicationFail2banManager
      * cannot load is one restart away from fail2ban not starting at all,
      * and with it the sshd jail every other site relies on.
      */
-    public function enableForApp(Application $application, string $jailContent, string $filterContent): void
+    public function enableForApp(Application $application, string $jailContent, string $filterContent, bool $keepCopy = true): void
     {
         // Every path that writes a site jail comes through here, including
         // re-enabling one saved before the allowlist existed — refused with
@@ -491,7 +491,7 @@ class ApplicationFail2banManager
 
         $backups = [];
         foreach (array_keys($files) as $path) {
-            $backups[$path] = $this->backup($path, $context);
+            $backups[$path] = $this->backup($path, $context, $keepCopy);
         }
 
         try {
@@ -515,9 +515,7 @@ class ApplicationFail2banManager
             throw $e;
         }
 
-        foreach (array_filter($backups) as $backup) {
-            $this->serverOps->run(['rm', '-f', $backup], $context + ['op' => 'fail2ban_discard_backup']);
-        }
+        $this->discard($backups, $context);
     }
 
     /**
@@ -534,7 +532,7 @@ class ApplicationFail2banManager
      * well, with the same care `migrateLegacy()` takes over a filter the
      * fail2ban package owns.
      */
-    public function disableForApp(Application $application): void
+    public function disableForApp(Application $application, bool $keepCopy = true): void
     {
         $context = ['feature' => 'application', 'application' => $application->id];
 
@@ -542,7 +540,7 @@ class ApplicationFail2banManager
 
         $backups = [];
         foreach ([$this->getJailPath($application), $this->getFilterPath($application)] as $path) {
-            $backups[$path] = $this->backup($path, $context);
+            $backups[$path] = $this->backup($path, $context, $keepCopy);
         }
 
         try {
@@ -557,9 +555,7 @@ class ApplicationFail2banManager
             throw $exception;
         }
 
-        foreach (array_filter($backups) as $backup) {
-            $this->serverOps->run(['rm', '-f', $backup], $context + ['op' => 'fail2ban_discard_backup']);
-        }
+        $this->discard($backups, $context);
     }
 
     /**
@@ -764,9 +760,14 @@ class ApplicationFail2banManager
      * `.panel-bak` because fail2ban only reads `*.conf` and `*.local`, so the
      * copy sitting beside the original is never loaded as a second jail.
      *
+     * `$keepCopy` false (2026-10-29, the user's choice): no file is written.
+     * The old text is held here for the reload and written back from memory
+     * if fail2ban refuses the new one.
+     *
      * @param  array<string, mixed>  $context
+     * @return array{file?: string, content?: string}|null
      */
-    private function backup(string $path, array $context): ?string
+    private function backup(string $path, array $context, bool $keepCopy = true): ?array
     {
         $exists = $this->serverOps->probe(['test', '-f', $path], $context + ['op' => 'fail2ban_backup_check']);
 
@@ -778,26 +779,54 @@ class ApplicationFail2banManager
             return null;
         }
 
+        if (! $keepCopy) {
+            $read = $this->serverOps->run(['cat', '--', $path], $context + ['op' => 'fail2ban_read_previous']);
+            $this->must($read);
+
+            return ['content' => $read->output()];
+        }
+
         $backup = $path.'.panel-bak';
         $this->must($this->serverOps->run(['cp', '-p', $path, $backup], $context + ['op' => 'fail2ban_backup']));
 
-        return $backup;
+        return ['file' => $backup];
     }
 
     /**
      * Put every file back as it was: the old one where there was one, none
      * where there was not.
      *
-     * @param  array<string, ?string>  $backups
+     * @param  array<string, array{file?: string, content?: string}|null>  $backups
      * @param  array<string, mixed>  $context
      */
     private function restore(array $backups, array $context): void
     {
         foreach ($backups as $path => $backup) {
             $this->serverOps->run(
-                $backup === null ? ['rm', '-f', $path] : ['mv', '-f', $backup, $path],
+                match (true) {
+                    $backup === null => ['rm', '-f', $path],
+                    isset($backup['file']) => ['mv', '-f', $backup['file'], $path],
+                    default => ['tee', $path],
+                },
                 $context + ['op' => 'fail2ban_restore'],
+                input: $backup['content'] ?? null,
             );
+        }
+    }
+
+    /**
+     * The copies, once the change has held. Nothing to do for one kept only in
+     * memory.
+     *
+     * @param  array<string, array{file?: string, content?: string}|null>  $backups
+     * @param  array<string, mixed>  $context
+     */
+    private function discard(array $backups, array $context): void
+    {
+        foreach ($backups as $backup) {
+            if (isset($backup['file'])) {
+                $this->serverOps->run(['rm', '-f', $backup['file']], $context + ['op' => 'fail2ban_discard_backup']);
+            }
         }
     }
 

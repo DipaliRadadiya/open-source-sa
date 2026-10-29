@@ -1058,3 +1058,74 @@ describe('a new PHP version on a server with ionCube', function () {
         $this->assertDatabaseHas('activity_logs', ['type' => 'php', 'action' => 'installed']);
     });
 });
+
+describe('the user may install or remove it without a copy (2026-10-29)', function () {
+    $copies = fn (ArrayObject $runs) => collect($runs)->filter(fn (string $c) => str_contains($c, '.panel-ioncube-'));
+
+    it('writes no recovery copy, and puts the old files back from memory when the install fails', function () use ($copies) {
+        $runs = fakeIonCube(['existing' => true, 'config_test' => false]);
+
+        $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version, keepCopy: false));
+
+        expect($error['message'])->toBe(__('errors/php.ioncube_config_test_failed'))
+            ->and($copies($runs))->toBeEmpty()
+            // Read before, written back after: the loader and every SAPI's ini.
+            ->and(collect($runs)->filter(fn (string $c) => str_starts_with($c, 'cat ') && str_ends_with($c, '.so')))->not->toBeEmpty()
+            ->and(collect($runs)->filter(fn (string $c) => str_starts_with($c, 'tee ') && str_ends_with($c, '.so')))->not->toBeEmpty()
+            ->and(collect($runs)->filter(fn (string $c) => str_starts_with($c, 'tee ') && str_ends_with($c, '01-ioncube.ini'))->count())->toBeGreaterThanOrEqual(2)
+            ->and(collect($runs)->filter(fn (string $c) => str_contains($c, 'systemctl reload')))->toBeEmpty();
+    });
+
+    it('still takes the copies when nothing is said', function () use ($copies) {
+        $runs = fakeIonCube(['existing' => true, 'config_test' => false]);
+
+        ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+
+        expect($copies($runs))->not->toBeEmpty();
+    });
+
+    it('removes it without a copy, and puts the inis back from memory if the binary will not go', function () use ($copies) {
+        $runs = fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'rm' && str_ends_with($args[2] ?? '', '.so')]);
+
+        $error = ionCubeError(fn () => app(IonCubeLoader::class)->remove($this->version, keepCopy: false));
+
+        expect($error['message'])->toBe(__('errors/php.ioncube_removal_failed'))
+            ->and($copies($runs))->toBeEmpty()
+            ->and(collect($runs)->filter(fn (string $c) => str_starts_with($c, 'tee ') && str_ends_with($c, '01-ioncube.ini'))->count())->toBeGreaterThanOrEqual(2);
+    });
+
+    it('runs the queued install without a copy when told to', function () use ($copies) {
+        $runs = fakeIonCube(['existing' => true, 'config_test' => false]);
+
+        app()->call([new InstallIonCubeLoader($this->version, $this->admin->id, false), 'handle']);
+
+        expect($copies($runs))->toBeEmpty()
+            ->and(collect($runs)->filter(fn (string $c) => str_starts_with($c, 'cat ') && str_ends_with($c, '.so')))->not->toBeEmpty();
+    });
+
+    it('removes it through the endpoint without a copy when told to', function () use ($copies) {
+        $runs = fakeIonCube(['existing' => true]);
+
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->deleteJson("/api/php/versions/{$this->version}/ioncube", ['safety_copy' => false])
+            ->assertOk();
+
+        expect($copies($runs))->toBeEmpty()
+            ->and(collect($runs)->filter(fn (string $c) => str_starts_with($c, 'cat ') && str_ends_with($c, '.so')))->not->toBeEmpty();
+    });
+
+    it('passes the switch to the queued install, and refuses anything but true or false', function () {
+        Queue::fake();
+        fakeIonCube();
+
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->postJson("/api/php/versions/{$this->version}/ioncube", ['safety_copy' => false])
+            ->assertStatus(202);
+
+        Queue::assertPushed(InstallIonCubeLoader::class, fn (InstallIonCubeLoader $job) => $job->keepCopy === false);
+
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->deleteJson("/api/php/versions/{$this->version}/ioncube", ['safety_copy' => 'maybe'])
+            ->assertJsonValidationErrors('safety_copy');
+    });
+});
