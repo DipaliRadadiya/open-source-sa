@@ -87,7 +87,9 @@
     },
     "serverOnline": "Online",
     "keepFileCopy": "Manter uma cópia do arquivo atual",
-    "keepFileCopyOff": "Sem uma cópia, você não poderá voltar à versão atual."
+    "keepFileCopyOff": "Sem uma cópia, você não poderá voltar à versão atual.",
+    "keepSettingsCopy": "Manter uma cópia das configurações atuais",
+    "keepSettingsCopyOff": "Sem uma cópia, as configurações antigas ficam só na memória enquanto as novas são verificadas. Se o painel parar durante o salvamento, elas não poderão ser recuperadas."
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -2393,6 +2395,7 @@
     },
     "ini": {
       "description": "O arquivo completo, como o PHP lê. Ao salvar, o arquivo antigo é copiado e o PHP verifica o novo. Se o PHP rejeitar, o antigo é restaurado e nada muda.",
+      "descriptionNoCopy": "O arquivo completo, como o PHP lê. Ao salvar, o PHP verifica o novo. Se o PHP rejeitar, o antigo é restaurado e nada muda.",
       "perApp": "Para alterar o tamanho de envio, a memória ou os limites de tempo de uma só aplicação, use as configurações do PHP dessa aplicação.",
       "perAppLink": "Ir para Aplicações",
       "retry": "Tentar novamente",

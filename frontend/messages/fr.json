@@ -87,7 +87,9 @@
     },
     "serverOnline": "En ligne",
     "keepFileCopy": "Conserver une copie du fichier actuel",
-    "keepFileCopyOff": "Sans copie, vous ne pourrez pas revenir à la version actuelle."
+    "keepFileCopyOff": "Sans copie, vous ne pourrez pas revenir à la version actuelle.",
+    "keepSettingsCopy": "Conserver une copie des réglages actuels",
+    "keepSettingsCopyOff": "Sans copie, les anciens réglages ne sont gardés qu'en mémoire pendant la vérification des nouveaux. Si le panneau s'arrête pendant l'enregistrement, ils ne pourront pas être remis."
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -2393,6 +2395,7 @@
     },
     "ini": {
       "description": "Le fichier complet, tel que PHP le lit. À l’enregistrement, l’ancien fichier est sauvegardé et PHP vérifie le nouveau. Si PHP le refuse, l’ancien fichier est remis en place et rien ne change.",
+      "descriptionNoCopy": "Le fichier complet, tel que PHP le lit. À l’enregistrement, PHP vérifie le nouveau. Si PHP le refuse, l’ancien fichier est remis en place et rien ne change.",
       "perApp": "Pour modifier la taille d’envoi, la mémoire ou les limites de temps d’une seule application, utilisez plutôt les paramètres PHP de cette application.",
       "perAppLink": "Aller aux applications",
       "retry": "Réessayer",

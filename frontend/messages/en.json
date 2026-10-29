@@ -87,7 +87,9 @@
     },
     "serverOnline": "Online",
     "keepFileCopy": "Keep a copy of the current file",
-    "keepFileCopyOff": "Without a copy, you can't go back to the current version."
+    "keepFileCopyOff": "Without a copy, you can't go back to the current version.",
+    "keepSettingsCopy": "Keep a copy of the current settings",
+    "keepSettingsCopyOff": "Without a copy, the old settings are only kept in memory while the new ones are checked. If the panel stops during the save, they can't be put back."
   },
   "systemUsers": {
     "title": "System Users",
@@ -2393,6 +2395,7 @@
     },
     "ini": {
       "description": "The whole file, as PHP reads it. When you save, the old file is backed up and PHP checks the new one. If PHP rejects it, the old file is put back and nothing changes.",
+      "descriptionNoCopy": "The whole file, as PHP reads it. When you save, PHP checks the new one. If PHP rejects it, the old file is put back and nothing changes.",
       "perApp": "To change upload size, memory or time limits for one application only, use that application’s PHP settings instead.",
       "perAppLink": "Go to Applications",
       "retry": "Try again",

@@ -21,13 +21,14 @@ export function getIonCube(version, { signal } = {}) {
 }
 
 // 202, then poll. `422` when ionCube has no loader for this version.
-export function installIonCube(version) {
-  return api.post(`/php/versions/${encodeURIComponent(version)}/ioncube`);
+// `safetyCopy: false` keeps the replaced loader and ini files in memory instead of on disk.
+export function installIonCube(version, { safetyCopy = true } = {}) {
+  return api.post(`/php/versions/${encodeURIComponent(version)}/ioncube`, { safety_copy: safetyCopy });
 }
 
 /** Immediate, unlike the install: it deletes one ini file and reloads. */
-export function removeIonCube(version) {
-  return api.delete(`/php/versions/${encodeURIComponent(version)}/ioncube`);
+export function removeIonCube(version, { safetyCopy = true } = {}) {
+  return api.delete(`/php/versions/${encodeURIComponent(version)}/ioncube`, { data: { safety_copy: safetyCopy } });
 }
 
 export function getPhpExtensions(version, { signal } = {}) {
@@ -47,10 +48,12 @@ export function readPhpIni(version) {
 }
 
 // A bad ini can stop FPM; the backend tests with `php-fpm -t` and restores on failure.
-export function savePhpIni(version, contents) {
+// `safetyCopy: false` writes no php.ini.panel-bak; the old text is held in memory for the check.
+export function savePhpIni(version, contents, { safetyCopy = true } = {}) {
   return api.put(`/php/versions/${encodeURIComponent(version)}/ini`, {
     contents,
     acknowledged: true,
+    safety_copy: safetyCopy,
   });
 }
 
@@ -60,6 +63,6 @@ export function readPhpSettings(version) {
   return api.get(`/php/versions/${encodeURIComponent(version)}/settings`);
 }
 
-export function savePhpSettings(version, settings) {
-  return api.put(`/php/versions/${encodeURIComponent(version)}/settings`, settings);
+export function savePhpSettings(version, settings, { safetyCopy = true } = {}) {
+  return api.put(`/php/versions/${encodeURIComponent(version)}/settings`, { ...settings, safety_copy: safetyCopy });
 }

@@ -133,15 +133,18 @@ export function updateApplicationWaf(id, payload) {
 }
 
 // Jail and filter go together. A failed config test answers 500 `{testOk: false, output}`: read the body.
-export function saveApplicationFail2ban(id, { jail, filter }) {
+// `safetyCopy: false`: the replaced jail and filter are held in memory, not copied aside.
+export function saveApplicationFail2ban(id, { jail, filter }, { safetyCopy = true } = {}) {
   return api.post(`/applications/${id}/fail2ban`, {
     jail_config_content: jail,
     filter_config_content: filter,
+    safety_copy: safetyCopy,
   });
 }
 
-export function deleteApplicationFail2ban(id) {
-  return api.delete(`/applications/${id}/fail2ban`);
+// The choice rides in the DELETE's body.
+export function deleteApplicationFail2ban(id, { safetyCopy = true } = {}) {
+  return api.delete(`/applications/${id}/fail2ban`, { data: { safety_copy: safetyCopy } });
 }
 
 // Synchronous and slow (300s timeout) with no job to poll; the caller holds a pending state.

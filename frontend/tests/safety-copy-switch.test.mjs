@@ -129,3 +129,48 @@ test("a staging run refused for space shows the field's sentence", async () => {
   assert.equal(runErrorText(null), null);
   assert.match(read("components/applications/staging/staging-run-status.jsx"), /runErrorText\(run\.error\)/);
 });
+
+// 8d7b5341 + 6e9ea48f (Dipali, 29 Oct): php.ini, PHP settings, site fail2ban and ionCube take safety_copy.
+test("PHP settings, site fail2ban and ionCube send safety_copy, true unless switched off", () => {
+  const php = read("lib/api/php.js");
+  assert.match(php, /savePhpIni\(version, contents, \{ safetyCopy = true \} = \{\}\)[\s\S]*?safety_copy: safetyCopy,/);
+  assert.match(php, /\/settings`, \{ \.\.\.settings, safety_copy: safetyCopy \}\)/);
+  assert.match(php, /\/ioncube`, \{ safety_copy: safetyCopy \}\)/);
+  assert.match(php, /api\.delete\(`\/php\/versions\/\$\{encodeURIComponent\(version\)\}\/ioncube`, \{ data: \{ safety_copy: safetyCopy \} \}\)/);
+  const apps = read("lib/api/applications.js");
+  assert.match(apps, /filter_config_content: filter,\s*safety_copy: safetyCopy,/);
+  // A DELETE carries the choice in its body.
+  assert.match(apps, /api\.delete\(`\/applications\/\$\{id\}\/fail2ban`, \{ data: \{ safety_copy: safetyCopy \} \}\)/);
+});
+
+test("each settings place has the switch, on by default, with the red warning when off", () => {
+  for (const [file, id] of [
+    ["components/php/ini-editor.jsx", "ini-safety-copy-"],
+    ["components/php/php-common-settings.jsx", "settings-safety-copy-"],
+    ["components/php/ioncube-card.jsx", "ioncube-safety-copy-"],
+    ["components/php/ioncube-card.jsx", "ioncube-remove-safety-copy-"],
+    ["components/applications/fail2ban/fail2ban-panel.jsx", "fail2ban-safety-copy"],
+    ["components/applications/fail2ban/fail2ban-panel.jsx", "fail2ban-remove-safety-copy"],
+  ]) {
+    const s = read(file);
+    assert.match(s, /const \[safetyCopy, setSafetyCopy\] = useState\(true\);/, file);
+    assert.ok(s.includes(`id=${id.endsWith("-") ? `{\`${id}` : `"${id}"`}`), `${file} ${id}`);
+    assert.match(s, /label=\{tc\("keepSettingsCopy"\)\}/, file);
+    assert.match(s, /\{tc\("keepSettingsCopyOff"\)\}/, file);
+    assert.match(s, /setSafetyCopy\(true\);/, file);
+  }
+  // A first fail2ban setup replaces no files, so it is not asked and keeps the default.
+  const f2b = read("components/applications/fail2ban/fail2ban-panel.jsx");
+  assert.match(f2b, /\{canManage && !isSetup && changed \? \(/);
+  assert.match(f2b, /safetyCopy: isSetup \|\| safetyCopy/);
+  // php.ini's card stops promising a backup when there will be none.
+  assert.match(read("components/php/ini-editor.jsx"), /tPhp\(safetyCopy \? "ini\.description" : "ini\.descriptionNoCopy"\)/);
+  for (const locale of LOCALES) {
+    const m = JSON.parse(read(`messages/${locale}.json`));
+    assert.ok(m.common.keepSettingsCopy && m.common.keepSettingsCopyOff && m.php.ini.descriptionNoCopy, locale);
+    assert.doesNotMatch(m.php.ini.descriptionNoCopy, /backed up|backup/i, locale);
+  }
+  const en = JSON.parse(read("messages/en.json"));
+  assert.equal(en.common.keepSettingsCopy, "Keep a copy of the current settings");
+  assert.equal(en.common.keepSettingsCopyOff, "Without a copy, the old settings are only kept in memory while the new ones are checked. If the panel stops during the save, they can't be put back.");
+});
