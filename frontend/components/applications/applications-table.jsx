@@ -111,7 +111,7 @@ function LastBackupCell({ row, table }) {
 function OwnerCell({ row }) {
   const value = row.original.system_user?.username ?? "—";
   return (
-    <span className="block truncate font-mono text-xs text-muted-foreground" title={value}>
+    <span className="block truncate text-sm text-muted-foreground" title={value}>
       {value}
     </span>
   );
@@ -166,7 +166,7 @@ function SizeCell({ row }) {
     );
   }
 
-  return <span className="whitespace-nowrap tabular-nums">{size}</span>;
+  return <span className="whitespace-nowrap tabular-nums text-muted-foreground">{size}</span>;
 }
 
 function ActionsCell({ row, table }) {
@@ -226,27 +226,31 @@ function Filters({ statusOptions, typeOptions, t }) {
 // 100 at lg, xl and 2xl. Sized from the widest locale's cell at the NARROWEST table of
 // each breakpoint (704px at 1024, 960px at 1280, 1215px at 1536), measured 7 Oct:
 // Status 166px (ru "Приостановлено"; de "fehlgeschlagen" in the deploy tag 148px),
-// Last backup 132px (pt), Runs on 120px (ru), Size 93px (es "Tamaño" + sort arrow).
-// Columns join as the table widens: Size from xl, System user and Created from 2xl.
+// Last backup 132px (pt), Runs on 120px (ru), Size 93px (es "Tamaño" + sort arrow),
+// System user 131px (de "Systembenutzer", one word that cannot wrap).
+// Every fact column stays on one line (29 Oct: a two-line "41 minutes ago" beside one-line
+// cells read as unaligned); the ⋯ column gave up the room, as it holds a single 32px button.
+// Columns join as the table widens: System user from xl, Size and Created from 2xl (29 Oct, Krishna:
+// System user on 1280 laptops, and Size made way so Last backup fits one line in every locale).
 const COLUMN_WIDTHS = {
   withBackups: {
-    name: "w-[33%] xl:w-[38%] 2xl:w-[25%]",
+    name: "w-[33%] xl:w-[30%] 2xl:w-[25%]",
     status: "w-[24%] xl:w-[18%] 2xl:w-[14%]",
     runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
-    lastBackup: "w-[19%] xl:w-[14%] 2xl:w-[11%]",
-    owner: "hidden 2xl:table-cell 2xl:w-[13%]",
-    size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
+    lastBackup: "w-[19%] xl:w-[20%] 2xl:w-[15%]",
+    owner: "hidden xl:table-cell xl:w-[14%] 2xl:w-[11%]",
+    size: "hidden 2xl:table-cell 2xl:w-[8%]",
     created: "hidden 2xl:table-cell 2xl:w-[12%]",
-    actions: "w-[7%]",
+    actions: "w-[7%] xl:w-[5%]",
   },
   withoutBackups: {
-    name: "w-[52%] xl:w-[52%] 2xl:w-[36%]",
+    name: "w-[52%] xl:w-[50%] 2xl:w-[38%]",
     status: "w-[24%] xl:w-[18%] 2xl:w-[14%]",
     runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
-    owner: "hidden 2xl:table-cell 2xl:w-[15%]",
-    size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
+    owner: "hidden xl:table-cell xl:w-[14%] 2xl:w-[15%]",
+    size: "hidden 2xl:table-cell 2xl:w-[8%]",
     created: "hidden 2xl:table-cell 2xl:w-[10%]",
-    actions: "w-[7%]",
+    actions: "w-[7%] xl:w-[5%]",
   },
 };
 

@@ -83,7 +83,9 @@ test("the least useful columns are the ones that hide on narrower tables", () =>
    * Eight columns do not fit 704px, or even 1120px: sharing the room evenly cut
    * every value ("Static fil…", "Not pro…") and pushed the Russian, Spanish,
    * French and Portuguese status pills out of their column. Created goes first
-   * (not actionable, the detail page carries it) with System user, then Size (7 Oct).
+   * (not actionable, the detail page carries it) and Size, then System user (7 Oct).
+   * Since 29 Oct System user shows from xl (Krishna wants it on 1280 laptops) and Size
+   * from 2xl, so Last backup keeps one line in every locale at 960px.
    */
   const keys = (set) => {
     const body = table.slice(table.indexOf(`  ${set}: {`), table.indexOf("},", table.indexOf(`  ${set}: {`)));
@@ -94,8 +96,8 @@ test("the least useful columns are the ones that hide on narrower tables", () =>
     const hidden = Object.entries(cols).filter(([, className]) => className.includes("hidden"));
     assert.deepEqual(hidden.map(([key]) => key).sort(), ["created", "owner", "size"], set);
     assert.match(cols.created, /^hidden 2xl:table-cell/);
-    assert.match(cols.owner, /^hidden 2xl:table-cell/);
-    assert.match(cols.size, /^hidden xl:table-cell/);
+    assert.match(cols.owner, /^hidden xl:table-cell/);
+    assert.match(cols.size, /^hidden 2xl:table-cell/);
   }
 });
 
@@ -104,13 +106,13 @@ test("Size has room for the longest locale's heading", () => {
    * Spanish "Tamaño" plus the sort arrow needs 93px. At 10% of 704px the
    * column was 70px and the heading hung 23px outside it — English looked
    * perfect and two locales were broken, which is why this is measured from
-   * the widest word rather than the shortest. The table is 960px at 1280 and
-   * 1215px at 1536, so 10% and 8% are the floors.
+   * the widest word rather than the shortest. The table is 1215px at 1536, so 8% is
+   * the floor; below 2xl the column is hidden (29 Oct).
    */
   for (const set of ["withBackups", "withoutBackups"]) {
     const body = table.slice(table.indexOf(`  ${set}: {`), table.indexOf("},", table.indexOf(`  ${set}: {`)));
     const size = body.match(/size: "([^"]+)"/)[1];
-    assert.ok(Number(size.match(/(?:^| )xl:w-\[(\d+)%\]/)[1]) >= 10, `${set}: Size too narrow at xl`);
+    assert.match(size, /^hidden 2xl:table-cell/, `${set}: Size shows below 2xl`);
     assert.ok(Number(size.match(/2xl:w-\[(\d+)%\]/)[1]) >= 8, `${set}: Size too narrow at 2xl`);
   }
 });
