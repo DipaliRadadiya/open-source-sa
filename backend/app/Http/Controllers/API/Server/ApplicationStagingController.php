@@ -17,6 +17,8 @@ use App\Models\Restore;
 use App\Models\StagingRun;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\StagingManager;
+use App\Services\Server\Disk\DiskSpaceCheck;
+use App\Services\Server\Disk\SizeEstimate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -37,8 +39,15 @@ class ApplicationStagingController extends Controller
         ]);
     }
 
-    public function store(CreateStagingRequest $request, Application $application, CreateStaging $action): JsonResponse
+    public function store(CreateStagingRequest $request, Application $application, CreateStaging $action, DiskSpaceCheck $space, SizeEstimate $sizes): JsonResponse
     {
+        // Room for a copy of the site and its database first (2026-10-29).
+        $space->require(
+            (int) $sizes->sum($sizes->files($application), $sizes->databases($application)),
+            $application->rootPath(),
+            'disk_space',
+        );
+
         try {
             $staging = $action->execute($application, $request->domain());
         } catch (ProvisioningFailedException $e) {
@@ -98,6 +107,21 @@ class ApplicationStagingController extends Controller
 
         if (Restore::inProgressFor($application->id) || ($staging !== null && Restore::inProgressFor($staging->id))) {
             throw ValidationException::withMessages(['mode' => [__('backup.errors.restore_already_running')]]);
+        }
+
+        // Room first (2026-10-29): the files set aside while they are replaced,
+        // the copy of the database being replaced when the safety copy is on,
+        // and the live site's backup when one was asked for.
+        $target = $kind === 'push' ? $application : $staging;
+
+        if ($target !== null) {
+            $sizes = app(SizeEstimate::class);
+            $backupTarget = $backup ? $application->backupTarget : null;
+            app(DiskSpaceCheck::class)->require((int) $sizes->sum(
+                in_array($mode, ['files', 'full'], true) ? $sizes->files($target) : null,
+                $safetyCopy && in_array($mode, ['database', 'full'], true) ? $sizes->databases($target) : null,
+                $backupTarget !== null ? $sizes->backup($backupTarget) : null,
+            ), $target->rootPath(), 'disk_space');
         }
 
         $run = StagingRun::create([

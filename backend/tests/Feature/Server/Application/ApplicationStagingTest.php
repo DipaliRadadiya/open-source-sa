@@ -29,6 +29,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Staging: a staging site is just another `Application` row
@@ -1975,15 +1976,21 @@ describe('the safety copy switch on push and pull (2026-10-29)', function () {
         app()->instance(LocalBackupFolder::class, $folder);
         config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
 
+        // Refused before anything is queued (2026-10-29), with the numbers.
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])
-            ->assertStatus(202)
-            ->assertJsonPath('run.status', 'failed')
-            ->assertJsonPath('run.error_status', 422)
-            ->assertJsonPath('run.error.errors.safety_copy.0', __('errors/application.staging_not_enough_space'));
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('disk_space');
 
-        expect($safetyDumps($seen))->toBe(0)
+        expect(StagingRun::count())->toBe(0)
+            ->and($safetyDumps($seen))->toBe(0)
             // Nothing was loaded into the live database either.
             ->and(collect($seen)->first(fn (string $c) => str_contains($c, 'source ')))->toBeNull();
+
+        // And the job still asks for itself, as the disk can fill up between
+        // the request and the run.
+        expect(fn () => app(PushStaging::class)->execute($this->production->fresh(), 'database', false, $this->admin, true))
+            ->toThrow(ValidationException::class, __('errors/application.staging_not_enough_space'));
+        expect($safetyDumps($seen))->toBe(0);
     });
 
     it('refuses to set the files aside when the disk has no room for them, and replaces nothing', function () {
@@ -2032,4 +2039,25 @@ describe('the safety copy switch on push and pull (2026-10-29)', function () {
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full', 'safety_copy' => 'maybe'])
             ->assertJsonValidationErrors('safety_copy');
     });
+});
+
+/** `$usable` bytes free above the reserve, on every disk (2026-10-29 space check). */
+function stagingUsableSpace(int $usable): void
+{
+    $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+    $folder->shouldReceive('space')->andReturn(['free' => 1024 ** 3, 'total' => 100 * 1024 ** 3]);
+    app()->instance(LocalBackupFolder::class, $folder);
+    config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - $usable]);
+}
+
+it('refuses a staging copy that would not fit, before anything is made (2026-10-29)', function () {
+    fakeStagingServer();
+    $this->production->forceFill(['directory_size_bytes' => 100000])->save();
+    stagingUsableSpace(99999);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('disk_space');
+
+    expect($this->production->fresh()->staging)->toBeNull();
 });

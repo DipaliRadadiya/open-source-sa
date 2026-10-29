@@ -6,4 +6,6 @@ return [
     'operation_timed_out' => 'O servidor demorou demasiado nesta operação e interrompeu-a. Não há nada avariado — o trabalho era demasiado grande para o tempo que um único pedido permite. Algo maior do que isto pertence a uma cópia de segurança, que corre em segundo plano e não tem esse limite.',
     'stale_lock' => 'Um ficheiro de bloqueio residual está a impedir toda a gestão de utilizadores neste servidor. Nada o está a usar — foi deixado por um comando interrompido. Execute `php artisan panel:doctor` para ver os ficheiros a remover.',
     'sudo_denied' => 'A permissão sudo deste servidor é mais antiga do que o painel que nele corre, por isso o comando foi recusado antes de ser executado. Nada foi alterado e tentar de novo não ajuda. Execute `sudo php artisan panel:sudoers` no servidor para reescrever a permissão e tente novamente.',
+    // Before an action that writes a lot to the disk (2026-10-29).
+    'not_enough_disk_space' => 'Não há espaço livre suficiente no disco do servidor: são precisos cerca de :needed e só :free estão disponíveis. Liberte espaço e tente novamente.',
 ];

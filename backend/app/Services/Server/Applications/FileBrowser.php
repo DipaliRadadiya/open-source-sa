@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\FileArchiveJob;
 use App\Rules\SafeRelativePath;
 use App\Services\Server\Compression\ArchiveCompressor;
+use App\Services\Server\Disk\DiskSpaceCheck;
 use App\Services\Server\Docker\VolumeSizes;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -18,6 +19,7 @@ use App\Support\Bytes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 /**
  * List, view, edit and download a site's own files.
@@ -1171,6 +1173,7 @@ class FileBrowser
         $target = $this->resolve($application, $targetPath);
         $this->refuseExisting($application, $target, 'target');
         $this->assertType($application, dirname($target), 'd');
+        $this->requireRoomToCompress($application, [$source], $target);
 
         return $this->queue($application, 'compress', [$path], $targetPath);
     }
@@ -1653,7 +1656,11 @@ class FileBrowser
             ? $this->listZipEntries($application, $archive)
             : $this->listTarEntries($application, $archive);
 
-        $this->validateArchiveEntries($application, $entries, $target);
+        $unpacked = $this->validateArchiveEntries($application, $entries, $target);
+
+        // Room for what it unpacks to first (2026-10-29): said now, not by a
+        // half-extracted folder and a full disk.
+        app(DiskSpaceCheck::class)->require($unpacked, $target, 'disk_space');
 
         // Queued for the same reason compress is, and validated first for the
         // same reason too: the zip-slip and zip-bomb checks above are the
@@ -1823,7 +1830,7 @@ class FileBrowser
      *
      * @param  array<int, array{name: string, type: string, size: int, host?: string}>  $entries
      */
-    private function validateArchiveEntries(Application $application, array $entries, string $target): void
+    private function validateArchiveEntries(Application $application, array $entries, string $target): int
     {
         abort_if($entries === [], 422, __('errors/application.archive_empty'));
         abort_if(count($entries) > self::MAX_ARCHIVE_ENTRIES, 422, __('errors/application.archive_too_many_entries'));
@@ -1857,6 +1864,8 @@ class FileBrowser
         }
 
         abort_if($totalBytes > self::MAX_UNCOMPRESSED_BYTES, 422, __('errors/application.archive_too_large'));
+
+        return $totalBytes;
     }
 
     /**
@@ -2450,8 +2459,32 @@ class FileBrowser
         $target = $this->resolve($application, $targetPath);
         $this->refuseExisting($application, $target, 'target');
         $this->assertType($application, dirname($target), 'd');
+        $this->requireRoomToCompress($application, array_map(fn (string $path): string => $this->resolve($application, $path), array_values($paths)), $target);
 
         return $this->queue($application, 'compress', array_values($paths), $targetPath);
+    }
+
+    /**
+     * Room for the archive first (2026-10-29). Its size is not known until it
+     * is written, so this asks for the size of what goes in — the most it can
+     * be, as compression only makes it smaller. A source that cannot be
+     * measured counts as nothing, and the check lets it through.
+     *
+     * @param  list<string>  $sources  absolute paths
+     */
+    private function requireRoomToCompress(Application $application, array $sources, string $target): void
+    {
+        $bytes = 0;
+
+        foreach ($sources as $source) {
+            try {
+                $bytes += $this->measure($application, $source);
+            } catch (Throwable) {
+                // Unknown, not refused.
+            }
+        }
+
+        app(DiskSpaceCheck::class)->require($bytes, dirname($target), 'disk_space');
     }
 
     /**

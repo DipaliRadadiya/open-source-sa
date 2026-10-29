@@ -13,6 +13,9 @@ use App\Models\ServerCapability;
 use App\Models\SiteClone;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Backups\Storage\LocalBackupFolder;
+use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Process;
@@ -1191,4 +1194,30 @@ it('rewrites the clone\'s addresses on the site\'s own PHP', function () {
 
         return $i !== false && $p->command[$i - 2] === '/usr/bin/php7.4';
     });
+});
+
+/** `$usable` bytes free above the reserve, on every disk (2026-10-29 space check). */
+function cloneUsableSpace(int $usable): void
+{
+    $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+    $folder->shouldReceive('space')->andReturn(['free' => 1024 ** 3, 'total' => 100 * 1024 ** 3]);
+    app()->instance(LocalBackupFolder::class, $folder);
+    config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - $usable]);
+}
+
+it('refuses a clone that would not fit, before anything is queued (2026-10-29)', function () {
+    fakeCloneServer();
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id, 'name' => 'Big', 'slug' => 'big', 'domain' => 'big.test',
+        'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+        'directory_size_bytes' => 100000,
+    ]);
+    cloneUsableSpace(99999);
+
+    $this->withHeaders(cloneHeaders())
+        ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'big-clone.test'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('disk_space');
+
+    expect(SiteClone::count())->toBe(0);
 });

@@ -3,14 +3,12 @@
 namespace App\Services\Server\Backups\Steps;
 
 use App\Contracts\BackupStep;
-use App\Enums\BackupStatus;
-use App\Enums\BackupType;
 use App\Enums\StorageProvider;
 use App\Exceptions\Server\Storage\LocalBackupFolderException;
-use App\Models\Backup;
 use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\LocalSpaceGuard;
 use App\Services\Server\Backups\Storage\LocalBackupFolder;
+use App\Services\Server\Disk\SizeEstimate;
 
 /**
  * Before a backup writes anything: will it fit on this server's disk?
@@ -41,6 +39,7 @@ class CheckLocalSpace implements BackupStep
     public function __construct(
         private LocalBackupFolder $folder,
         private LocalSpaceGuard $space,
+        private SizeEstimate $sizes,
     ) {}
 
     public function key(): string
@@ -65,7 +64,7 @@ class CheckLocalSpace implements BackupStep
             throw new LocalBackupFolderException($problem);
         }
 
-        $estimate = $this->estimate($context);
+        $estimate = $this->sizes->backup($context->target);
 
         if ($estimate === null) {
             return;
@@ -86,60 +85,6 @@ class CheckLocalSpace implements BackupStep
     public function cleanup(BackupContext $context): void
     {
         //
-    }
-
-    /**
-     * About how many bytes this backup will write, or null when nothing is
-     * known — a target with no finished backup whose size was never measured.
-     */
-    private function estimate(BackupContext $context): ?int
-    {
-        $last = Backup::query()
-            ->where('backup_target_id', $context->target->id)
-            ->where('status', BackupStatus::Verified)
-            ->whereNotNull('size_bytes')
-            ->latest('id')
-            ->value('size_bytes');
-
-        if ($last !== null) {
-            return (int) $last;
-        }
-
-        if ($context->isDatabaseTarget()) {
-            return $this->known($context->database()?->size_bytes);
-        }
-
-        $application = $context->target->application;
-
-        if ($application === null) {
-            return null;
-        }
-
-        $files = $application->directory_size_bytes;
-        $volumes = $application->volume_size_bytes;
-        $database = fn (): ?int => $application->databases()->sum('size_bytes') ?: null;
-
-        return match ($context->target->type) {
-            BackupType::Filesystem => $this->known($files),
-            BackupType::Database => $this->known($database()),
-            BackupType::Full => $this->sum($files, $database()),
-            BackupType::Volumes, BackupType::VolumesConfig => $this->known($volumes),
-            // Compose files and a `.env`: a few kilobytes.
-            BackupType::Config => null,
-            default => null,
-        };
-    }
-
-    private function known(mixed $bytes): ?int
-    {
-        return $bytes === null || (int) $bytes <= 0 ? null : (int) $bytes;
-    }
-
-    private function sum(mixed ...$parts): ?int
-    {
-        $known = array_filter(array_map(fn (mixed $part): ?int => $this->known($part), $parts), fn (?int $part): bool => $part !== null);
-
-        return $known === [] ? null : array_sum($known);
     }
 
     /**

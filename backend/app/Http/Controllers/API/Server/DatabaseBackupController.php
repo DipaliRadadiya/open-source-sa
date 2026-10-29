@@ -24,6 +24,8 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use App\Services\Server\Disk\DiskSpaceCheck;
+use App\Services\Server\Disk\SizeEstimate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -89,6 +91,9 @@ class DatabaseBackupController extends Controller
             throw ValidationException::withMessages(['database' => [__('backup.errors.already_running')]]);
         }
 
+        // Room for it first (2026-10-29): said now, not by a failed backup.
+        app(DiskSpaceCheck::class)->requireForBackup($target);
+
         RunBackup::dispatch($target->id, request()->user()?->id);
 
         return response()->json([
@@ -100,8 +105,15 @@ class DatabaseBackupController extends Controller
      * Restore one of its own backups, or an archived backup of the same
      * engine, into this database. Checked in the request; queued here.
      */
-    public function restore(RestoreDatabaseBackupRequest $request, Database $database, Backup $backup): JsonResponse
+    public function restore(RestoreDatabaseBackupRequest $request, Database $database, Backup $backup, DiskSpaceCheck $space, SizeEstimate $sizes): JsonResponse
     {
+        // Room for it first (2026-10-29): the answer now, not after the dump.
+        $space->require(
+            (int) $sizes->restore($backup, BackupType::Database->value, $request->safetyCopy(), $database),
+            DiskSpaceCheck::workingDirectory(),
+            'disk_space',
+        );
+
         $restore = Restore::create([
             'backup_id' => $backup->id,
             'application_id' => null,

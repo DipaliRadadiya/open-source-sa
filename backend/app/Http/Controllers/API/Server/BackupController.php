@@ -29,6 +29,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use App\Services\Server\Disk\DiskSpaceCheck;
 use App\Services\Server\Docker\VolumeSizes;
 use App\Support\ListSearch;
 use App\Support\ListSort;
@@ -352,6 +353,8 @@ class BackupController extends Controller
         }
 
         $this->refuseVolumesWithoutVolumes($target);
+        // Room for it first (2026-10-29): said now, not by a failed backup.
+        app(DiskSpaceCheck::class)->requireForBackup($target);
 
         RunBackup::dispatch($target->id, request()->user()?->id);
 
@@ -561,6 +564,8 @@ class BackupController extends Controller
         }
 
         $this->refuseVolumesWithoutVolumes($target);
+        // Room for it first (2026-10-29): said now, not by a failed backup.
+        app(DiskSpaceCheck::class)->requireForBackup($target);
 
         RunBackup::dispatch($target->id, request()->user()?->id);
 

@@ -11,7 +11,10 @@ use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\FileBrowser;
+use App\Services\Server\Backups\Storage\LocalBackupFolder;
 use App\Services\Server\CommandPipe;
+use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\UploadedFile;
@@ -3218,5 +3221,65 @@ describe('the user may save a file without a copy (2026-10-29)', function () {
         $this->actingAs($this->admin)
             ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'x', 'safety_copy' => 'maybe'])
             ->assertJsonValidationErrors('safety_copy');
+    });
+});
+
+/** `$usable` bytes free above the reserve, on every disk (2026-10-29 space check). */
+function filesUsableSpace(int $usable): void
+{
+    $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();
+    $folder->shouldReceive('space')->andReturn(['free' => 1024 ** 3, 'total' => 100 * 1024 ** 3]);
+    app()->instance(LocalBackupFolder::class, $folder);
+    config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - $usable]);
+}
+
+describe('room on the disk first (2026-10-29)', function () {
+    it('refuses to compress what would not fit, before anything is queued', function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['my-plugin'] = ['type' => 'd'];
+        FileBrowserFake::$fs['my-plugin/plugin.php'] = ['type' => 'f', 'size' => 5000, 'content' => 'x'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        fakeFileBrowserServer();
+        filesUsableSpace(4999);
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tar.gz'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('disk_space');
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('wp-content/backup.tar.gz');
+    });
+
+    it('compresses when it fits', function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['my-plugin'] = ['type' => 'd'];
+        FileBrowserFake::$fs['my-plugin/plugin.php'] = ['type' => 'f', 'size' => 5000, 'content' => 'x'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        fakeFileBrowserServer();
+        filesUsableSpace(5000);
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tar.gz'])
+            ->assertAccepted();
+    });
+
+    it('refuses to unpack what would not fit, counting what the archive says it holds', function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins/thing.zip'] = ['type' => 'f', 'size' => 100];
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => 'd', 'size' => 0, 'name' => 'my-plugin/'],
+            ['type' => '-', 'size' => 9000, 'name' => 'my-plugin/plugin.php'],
+        ];
+        filesUsableSpace(8999);
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), ['path' => 'wp-content/plugins/thing.zip', 'target' => 'wp-content/plugins'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('disk_space');
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('wp-content/plugins/my-plugin/plugin.php');
     });
 });

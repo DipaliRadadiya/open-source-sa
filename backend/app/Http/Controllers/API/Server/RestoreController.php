@@ -10,6 +10,8 @@ use App\Http\Resources\RestoreResource;
 use App\Jobs\RunRestore;
 use App\Models\Backup;
 use App\Models\Restore;
+use App\Services\Server\Disk\DiskSpaceCheck;
+use App\Services\Server\Disk\SizeEstimate;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
@@ -32,8 +34,16 @@ class RestoreController extends Controller
      * visible — it is the one operation where "nothing happened" and "it is
      * about to overwrite my site" must not look the same.
      */
-    public function store(RestoreBackupRequest $request, Backup $backup): JsonResponse
+    public function store(RestoreBackupRequest $request, Backup $backup, DiskSpaceCheck $space, SizeEstimate $sizes): JsonResponse
     {
+        // Room for it first (2026-10-29), so the answer is now, not after a
+        // download and half an unpack.
+        $space->require(
+            (int) $sizes->restore($backup, $request->requestedType(), $request->safetyCopy()),
+            DiskSpaceCheck::workingDirectory(),
+            'disk_space',
+        );
+
         $restore = Restore::create([
             'backup_id' => $backup->id,
             // Taken from the backup, never from the request. A restore aimed

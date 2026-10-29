@@ -9,6 +9,8 @@ use App\Http\Resources\CloneResource;
 use App\Jobs\RunClone;
 use App\Models\Application;
 use App\Models\SiteClone;
+use App\Services\Server\Disk\DiskSpaceCheck;
+use App\Services\Server\Disk\SizeEstimate;
 use Illuminate\Http\JsonResponse;
 
 class ApplicationCloneController extends Controller
@@ -65,6 +67,14 @@ class ApplicationCloneController extends Controller
                 ->exists(),
             409,
             __('clone.errors.already_running'),
+        );
+
+        // Room for a copy of the site and its databases first (2026-10-29).
+        $sizes = app(SizeEstimate::class);
+        app(DiskSpaceCheck::class)->require(
+            (int) $sizes->sum($sizes->files($application), $sizes->databases($application)),
+            $application->rootPath(),
+            'disk_space',
         );
 
         $clone = SiteClone::create([
