@@ -105,6 +105,10 @@ Schedule::command('sites:narrow-app-secrets')->everyFiveMinutes()->withoutOverla
 // the API promised a sweep that never ran.
 Schedule::command('files:prune-trash')->daily()->withoutOverlapping(120);
 
+// The activity log's "keep for" choice (2026-10-29). A no-op while it is
+// "keep everything", the default.
+Schedule::command('activity:prune')->daily()->withoutOverlapping(120);
+
 // Unfinished uploads, for the same reason and by the same oversight: a closed
 // laptop mid-upload leaves a part file behind, uploads have no size limit, and
 // `ChunkedUpload::reap()` was written when the feature shipped and never

@@ -337,6 +337,15 @@ Returns every `type` and `action` value the system can record, for building filt
 
 ---
 
+### GET / PUT `/admin/activity-log/retention`
+**Permission:** `access-admin` (the choice deletes every user's history) · PUT `throttle:10,1` · added 2026-10-29
+
+How long the activity log is kept. **GET `200`:** `{"retention": {"months": null, "choices": [3, 6, 12, 24], "entries": 12840, "oldest_at": "14-03-2026 09:12:00"}}` — `months: null` is **keep everything, the default**: nothing is deleted on any server until an admin picks a value.
+
+**PUT:** `{"months": 12}` (one of `choices`) or `{"months": null}` (keep everything). `months` must be present; anything else is a `422` on `months`. Answers the same shape. Activity: `setting.activity_retention_updated` (with `months`) / `setting.activity_retention_cleared`.
+
+A daily `activity:prune` deletes activity entries older than the choice, plus the panel's own **finished** task runs of the same age (Disk Cleaner runs, security update runs, staging push/pull runs, add-on runs — never one still queued or running). Not sync runs (their items point at them), and not backups, restores, exports or imports, which belong to real files and keep their own rules. Nothing from the last 30 days is ever deleted. Each clean-up that removed something is logged as `setting.activity_entries_deleted` (`count`, `runs`, `months`), written after the delete so it is never one of the rows removed.
+
 ### GET `/admin/activity-log`
 **Permission:** `access-admin` (view)
 
