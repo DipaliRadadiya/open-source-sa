@@ -78,8 +78,8 @@ class AdminerSiteType extends AbstractSiteType
     }
 
     /**
-     * Adminer 6.1.2, measured 2026-10-14: `composer.json` declares
-     * `"php": ">=7.4"`. No ceiling — none is published, and a ceiling with no
+     * Adminer 6.1.2, measured 2026-10-14, and 6.2.0 again on 2026-10-29:
+     * `composer.json` declares `"php": ">=7.4"`. No ceiling — none is published, and a ceiling with no
      * source behind it refuses working versions for nothing (the phpMyAdmin
      * reasoning, 2026-09-18).
      */

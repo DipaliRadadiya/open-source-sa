@@ -1756,7 +1756,7 @@ return [
             // noticed. `version` is only the fallback for when GitHub cannot
             // be asked — set it, and empty `releases_api`, to hold one.
             'releases_api' => env('SERVER_ADMINER_RELEASES_API', 'https://api.github.com/repos/vrana/adminer/releases'),
-            'version' => env('SERVER_ADMINER_VERSION', '6.1.2'),
+            'version' => env('SERVER_ADMINER_VERSION', '6.2.0'),
             // The single-file build with every bundled driver and language.
             // Both hops (github.com -> objects.githubusercontent.com) are
             // https, which the download step requires.
