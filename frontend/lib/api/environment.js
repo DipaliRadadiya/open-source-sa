@@ -1,11 +1,13 @@
 import { api } from "@/lib/api/client";
 import { envHistoryResponseSchema } from "@/lib/schemas/environment";
 
-// A 422 on errors.raw carries syntax errors verbatim.
-export async function saveEnvironment(appId, { raw, restart = false }) {
+// A 422 on errors.raw carries syntax errors verbatim. `safetyCopy: false` keeps no
+// `.env.bak-…` of the file being replaced, so there is nothing to go back to.
+export async function saveEnvironment(appId, { raw, restart = false, safetyCopy = true }) {
   const res = await api.put(`/applications/${appId}/environment`, {
     raw,
     restart,
+    safety_copy: safetyCopy,
   });
   return res.data;
 }
@@ -26,10 +28,11 @@ export async function getEnvironmentDiff(appId, logId) {
   return res.data;
 }
 
-export async function restoreEnvironment(appId, { backup, restart = false }) {
+export async function restoreEnvironment(appId, { backup, restart = false, safetyCopy = true }) {
   const res = await api.post(`/applications/${appId}/environment/restore`, {
     backup,
     restart,
+    safety_copy: safetyCopy,
   });
   return res.data;
 }

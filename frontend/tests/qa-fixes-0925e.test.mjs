@@ -63,7 +63,7 @@ test("Japanese clear-log titles: no stray space, full-width question mark", () =
 
 test("the editor sends the version it opened and stops on changed_on_disk (OLD-27, 9 Oct)", () => {
   const s = read(`${F}/file-editor-dialog.jsx`);
-  assert.match(s, /saveFileContent\(appId, file\.path, contents, loaded\?\.version\)/);
+  assert.match(s, /saveFileContent\(appId, file\.path, contents, loaded\?\.version, \{ safetyCopy \}\)/);
   assert.match(s, /reason === "changed_on_disk"/);
   assert.match(s, /disabled=\{!dirty \|\| saving \|\| loading \|\| stale\}/);
   assert.match(read("lib/api/files.js"), /\.\.\.\(version \? \{ version \} : \{\}\)/);

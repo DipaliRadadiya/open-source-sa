@@ -85,7 +85,9 @@
       "configuration": "Paramètres",
       "server": "Serveur"
     },
-    "serverOnline": "En ligne"
+    "serverOnline": "En ligne",
+    "keepFileCopy": "Conserver une copie du fichier actuel",
+    "keepFileCopyOff": "Sans copie, vous ne pourrez pas revenir à la version actuelle."
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -3840,6 +3842,7 @@
         "action": "Restaurer",
         "title": "Restaurer une sauvegarde",
         "subtitle": "Choisissez une copie enregistrée. Le fichier actuel est d'abord sauvegardé, l'opération est donc réversible.",
+        "subtitleNoCopy": "Choisissez une copie enregistrée.",
         "restart": "Redémarrer l'application après la restauration",
         "done": "Environnement restauré.",
         "failed": "Impossible de restaurer la sauvegarde.",
@@ -3858,8 +3861,10 @@
         "restoreFailed": "Cette version n'a pas pu être restaurée.",
         "prunedReason": "Le fichier contenant cette version a été supprimé pour rester dans les sauvegardes conservées.",
         "firstSaveReason": "C'était le premier enregistrement, il n'y a pas de version antérieure à laquelle revenir.",
+        "noCopyReason": "Cette modification a été enregistrée sans copie, il n'y a donc pas de version antérieure à laquelle revenir.",
         "confirmTitle": "Restaurer la version d'avant cette modification ?",
         "confirmBody": "Le fichier actuel est sauvegardé au préalable, cette opération est donc elle aussi réversible.",
+        "confirmBodyNoCopy": "Le fichier actuel est remplacé.",
         "cancel": "Annuler",
         "confirmSubmit": "Restaurer",
         "diffLoading": "Lecture des copies enregistrées…",
@@ -4765,6 +4770,7 @@
       },
       "editor": {
         "subtitle": "Une sauvegarde est créée automatiquement avant chaque enregistrement.",
+        "subtitleNoCopy": "Modifiez le fichier, puis enregistrez.",
         "readOnly": "Vous avez un accès en lecture seule à ce fichier.",
         "tooLarge": "Ce fichier dépasse 5 Mo et ne peut pas être prévisualisé ici — téléchargez-le.",
         "notText": "Ce fichier ne semble pas être du texte et ne peut pas être prévisualisé ici — téléchargez-le.",
@@ -4784,6 +4790,7 @@
         "action": "Restaurer",
         "title": "Restaurer une version précédente",
         "subtitle": "La restauration sauvegarde d'abord le contenu actuel, donc même un mauvais choix est annulable.",
+        "subtitleNoCopy": "Choisissez une version précédente.",
         "done": "Restauré.",
         "failed": "Impossible de restaurer cette version.",
         "reloadFailed": "Restauré, mais l'éditeur n'a pas pu recharger le fichier. Rouvrez-le pour voir la version restaurée."

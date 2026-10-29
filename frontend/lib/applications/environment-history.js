@@ -1,9 +1,10 @@
 /** How a `.env` history row is read; kept out of the component for testing. */
 
-// A first save (no previous version) differs from one pruned by retention.
+// A first save (no previous version) differs from one pruned by retention, and from a save
+// made with the copy turned off (`safety_copy: false`, once the history rows carry it).
 export function unrestorableReason(entry) {
   if (entry?.restorable) return null;
-  if (!entry?.backup) return "first";
+  if (!entry?.backup) return entry?.safety_copy === false ? "noCopy" : "first";
 
   return "pruned";
 }

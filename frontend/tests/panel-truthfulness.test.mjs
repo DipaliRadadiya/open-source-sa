@@ -36,7 +36,7 @@ test("both doors to an env restore offer the same choice", () => {
    */
   const history = read("components/applications/environment/environment-history-card.jsx");
 
-  assert.match(history, /restoreEnvironment\(appId, \{ backup: pending\.backup, restart \}\)/);
+  assert.match(history, /restoreEnvironment\(appId, \{ backup: pending\.backup, restart, safetyCopy \}\)/);
   assert.match(history, /requiresRestart = false/);
   assert.match(history, /tEnv\("restore\.restart"\)/, "the two dialogs must share one wording");
 

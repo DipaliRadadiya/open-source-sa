@@ -25,6 +25,8 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { RestoreBackupDialog } from "@/components/applications/environment/restore-backup-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Must not change: a new N8N_ENCRYPTION_KEY makes every saved n8n credential
 // unreadable; port and folder must match the service and proxy. The API only checks syntax.
@@ -79,6 +81,9 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   // errors.raw also carries "N8N_PORT cannot be changed here": a protected key, not a syntax error.
   const [rawRefusal, setRawRefusal] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  // Keep the file being replaced as a `.env.bak-…`. Holds for later saves on this page, and is on
+  // again whenever the page is opened: the choice is never remembered.
+  const [safetyCopy, setSafetyCopy] = useState(true);
   const [guarded, setGuarded] = useState([]);
   // Warnings the check found in the text about to be saved, not yet in the saved file.
   const [preflight, setPreflight] = useState([]);
@@ -148,6 +153,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       const data = await saveEnvironment(appId, {
         raw: sent,
         restart: sendRestart,
+        // A first save has no file to keep.
+        safetyCopy: !env.exists || safetyCopy,
       });
       const next = data?.environment;
       if (next) {
@@ -307,6 +314,25 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             aria-label={t("sectionTitle")}
           />
         </div>
+
+        {/* A first save replaces nothing, so there is no copy to choose. */}
+        {canManage && env.exists ? (
+          <div className="space-y-2">
+            <SafetyCopySwitch
+              id="env-safety-copy"
+              compact
+              checked={safetyCopy}
+              onCheckedChange={setSafetyCopy}
+              disabled={saving}
+              label={tc("keepFileCopy")}
+            />
+            {!safetyCopy ? (
+              <Caution tone="destructive">
+                <p>{tc("keepFileCopyOff")}</p>
+              </Caution>
+            ) : null}
+          </div>
+        ) : null}
 
         {tooLarge ? (
           <NotSaved title={t("tooLargeTitle")}>{t("tooLarge")}</NotSaved>

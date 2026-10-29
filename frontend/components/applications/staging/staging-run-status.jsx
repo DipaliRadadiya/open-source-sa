@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { stagingRunActive } from "@/lib/schemas/application-staging";
+import { runErrorText, stagingRunActive } from "@/lib/schemas/application-staging";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Caution } from "@/components/ui/caution";
 import { Note } from "@/components/ui/note";
@@ -52,7 +52,7 @@ export function StagingRunStatus({ run, production, staging }) {
             <XCircle className="size-4 shrink-0" />
             {t(`${kind}FailedAt`, { domain: target ?? "", time: run.finished_at_human ?? "" })}
           </p>
-          {run.error?.message ? <p>{run.error.message}</p> : null}
+          {runErrorText(run.error) ? <p>{runErrorText(run.error)}</p> : null}
           {run.error?.reference ? (
             <p className="font-mono text-xs">{t("reference", { reference: run.error.reference })}</p>
           ) : null}

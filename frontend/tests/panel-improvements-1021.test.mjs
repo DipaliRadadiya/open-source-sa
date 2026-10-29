@@ -105,7 +105,7 @@ test("staging push and pull say they started, and the page shows how the run end
   }
   const status = read("components/applications/staging/staging-run-status.jsx");
   assert.match(status, /<AutoRefresh intervalMs=\{3000\}/);
-  assert.match(status, /run\.error\?\.message/);
+  assert.match(status, /runErrorText\(run\.error\)/);
   const panel = read("components/applications/staging/staging-panel.jsx");
   assert.match(panel, /const busyReason = stagingRunActive\(latestRun\) \? t\("run\.busy"\) : null;/);
   const { applicationStagingResponseSchema, stagingRunActive } = await import("../lib/schemas/application-staging.js");

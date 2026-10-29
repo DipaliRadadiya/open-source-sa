@@ -34,6 +34,13 @@ export const stagingRunSchema = z.object({
 
 export const stagingRunActive = (run) => run?.status === "queued" || run?.status === "running";
 
+// A refusal (422) carries its sentence on the field, e.g. `errors.safety_copy` when there is no
+// room for the database copy; Laravel's `message` can be a generic summary of it.
+export function runErrorText(error) {
+  const field = Object.values(error?.errors ?? {}).flat().find((text) => typeof text === "string" && text);
+  return field ?? error?.message ?? null;
+}
+
 export const applicationStagingResponseSchema = z.object({
   staging: applicationSchema.nullable().default(null),
   latest_run: stagingRunSchema.nullish(),

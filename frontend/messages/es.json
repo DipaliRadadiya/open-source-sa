@@ -85,7 +85,9 @@
       "configuration": "Ajustes",
       "server": "Servidor"
     },
-    "serverOnline": "En línea"
+    "serverOnline": "En línea",
+    "keepFileCopy": "Guardar una copia del archivo actual",
+    "keepFileCopyOff": "Sin una copia, no podrás volver a la versión actual."
   },
   "systemUsers": {
     "title": "Usuarios del sistema",
@@ -3840,6 +3842,7 @@
         "action": "Restaurar",
         "title": "Restaurar una copia",
         "subtitle": "Elige una copia guardada. El archivo actual se respalda primero, así que es reversible.",
+        "subtitleNoCopy": "Elige una copia guardada.",
         "restart": "Reiniciar la aplicación después de restaurar",
         "done": "Entorno restaurado.",
         "failed": "No pudimos restaurar la copia.",
@@ -3858,8 +3861,10 @@
         "restoreFailed": "No se pudo restaurar esa versión.",
         "prunedReason": "El archivo con esta versión se eliminó para respetar el número de copias que se conservan.",
         "firstSaveReason": "Este fue el primer guardado, así que no hay ninguna versión anterior a la que volver.",
+        "noCopyReason": "Este cambio se guardó sin copia, así que no hay una versión anterior a la que volver.",
         "confirmTitle": "¿Restaurar la versión anterior a este cambio?",
         "confirmBody": "El archivo actual se respalda primero, así que esto también se puede deshacer.",
+        "confirmBodyNoCopy": "Se reemplaza el archivo actual.",
         "cancel": "Cancelar",
         "confirmSubmit": "Restaurar",
         "diffLoading": "Leyendo las copias guardadas…",
@@ -4765,6 +4770,7 @@
       },
       "editor": {
         "subtitle": "Los cambios se respaldan automáticamente antes de cada guardado.",
+        "subtitleNoCopy": "Edita el archivo y guárdalo.",
         "readOnly": "Tienes acceso de solo lectura a este archivo.",
         "tooLarge": "Este archivo pesa más de 5 MB y no se puede previsualizar aquí — descárgalo en su lugar.",
         "notText": "Este archivo no parece ser texto y no se puede previsualizar aquí — descárgalo en su lugar.",
@@ -4784,6 +4790,7 @@
         "action": "Restaurar",
         "title": "Restaurar una versión anterior",
         "subtitle": "Restaurar respalda primero el contenido actual, así que elegir la versión equivocada también se puede deshacer.",
+        "subtitleNoCopy": "Elige una versión anterior.",
         "done": "Restaurado.",
         "failed": "No se pudo restaurar esa versión.",
         "reloadFailed": "Restaurado, pero el editor no pudo volver a cargar el archivo. Ábrelo de nuevo para ver la versión restaurada."

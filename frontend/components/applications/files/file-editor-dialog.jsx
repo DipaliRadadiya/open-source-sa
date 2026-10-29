@@ -22,6 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { RestoreFileBackupDialog } from "@/components/applications/files/restore-file-backup-dialog";
 
 // CodeMirror and its language packages are only needed here, so they load on
@@ -64,6 +66,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const [stale, setStale] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  // Keep the version being replaced. Mounted per open, so it is on again every time.
+  const [safetyCopy, setSafetyCopy] = useState(true);
 
   // Re-read after a restore (it answers only `{restored: true}`), or the next Save
   // overwrites it. If the re-read fails the editor closes.
@@ -134,7 +138,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     setSaving(true);
     setSaveError(null);
     try {
-      await saveFileContent(appId, file.path, contents, loaded?.version);
+      await saveFileContent(appId, file.path, contents, loaded?.version, { safetyCopy });
       await refreshAndWait();
       toast.success(t("editor.saved"));
       saved.current = true;
@@ -195,7 +199,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           {/* A blocked file has nothing to save, so the backups line would be wrong; screen
               readers get the reason instead. */}
           <DialogDescription className={blocked ? "sr-only" : "pt-1"}>
-            {blocked ?? (canEdit ? t("editor.subtitle") : t("editor.readOnly"))}
+            {blocked ?? (canEdit ? t(safetyCopy ? "editor.subtitle" : "editor.subtitleNoCopy") : t("editor.readOnly"))}
           </DialogDescription>
         </DialogHeader>
 
@@ -271,7 +275,25 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           </div>
         ) : null}
 
+        {canEdit && !blocked && !loading && !safetyCopy ? (
+          <Caution tone="destructive">
+            <p>{tc("keepFileCopyOff")}</p>
+          </Caution>
+        ) : null}
+
         <DialogFooter>
+          {/* Left of the buttons, read just before Save; its own row on a phone so the buttons stay together. */}
+          {canEdit && !blocked && !loading ? (
+            <SafetyCopySwitch
+              id="file-safety-copy"
+              compact
+              checked={safetyCopy}
+              onCheckedChange={setSafetyCopy}
+              disabled={saving}
+              label={tc("keepFileCopy")}
+              className="w-full sm:me-auto sm:w-fit"
+            />
+          ) : null}
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
             {t("cancel")}
           </Button>

@@ -9,6 +9,8 @@ import { parseApiWallClock } from "@/lib/format/api-date";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Restoring first backs up the current file, so the choice is itself undoable.
 export function RestoreBackupDialog({
@@ -20,9 +22,12 @@ export function RestoreBackupDialog({
   onRestored,
 }) {
   const t = useTranslations("applications.environment");
+  const tc = useTranslations("common");
   const format = useFormatter();
   const [selected, setSelected] = useState(null);
   const [restart, setRestart] = useState(false);
+  // On by default and on again every time the dialog closes.
+  const [safetyCopy, setSafetyCopy] = useState(true);
   const [busy, setBusy] = useState(false);
 
   function handleOpenChange(next) {
@@ -30,6 +35,7 @@ export function RestoreBackupDialog({
     if (!next) {
       setSelected(null);
       setRestart(false);
+      setSafetyCopy(true);
     }
     onOpenChange?.(next);
   }
@@ -41,6 +47,7 @@ export function RestoreBackupDialog({
       const data = await restoreEnvironment(appId, {
         backup: selected,
         restart,
+        safetyCopy,
       });
       toast.success(t("restore.done"));
       onRestored?.(data?.environment ?? null);
@@ -58,7 +65,7 @@ export function RestoreBackupDialog({
       onOpenChange={handleOpenChange}
       icon={History}
       title={t("restore.title")}
-      description={t("restore.subtitle")}
+      description={safetyCopy ? t("restore.subtitle") : t("restore.subtitleNoCopy")}
       cancelLabel={t("cancel")}
       confirmLabel={t("restore.action")}
       confirmDisabled={!selected}
@@ -106,6 +113,19 @@ export function RestoreBackupDialog({
           );
         })}
       </div>
+
+      <SafetyCopySwitch
+        id="env-restore-safety-copy"
+        checked={safetyCopy}
+        onCheckedChange={setSafetyCopy}
+        disabled={busy}
+        label={tc("keepFileCopy")}
+      />
+      {!safetyCopy ? (
+        <Caution tone="destructive" size="md">
+          <p>{tc("keepFileCopyOff")}</p>
+        </Caution>
+      ) : null}
 
       {requiresRestart ? (
         <div className="flex items-start gap-2.5 rounded-lg border p-3">

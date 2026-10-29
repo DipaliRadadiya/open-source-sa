@@ -85,7 +85,9 @@
       "configuration": "Einstellungen",
       "server": "Server"
     },
-    "serverOnline": "Online"
+    "serverOnline": "Online",
+    "keepFileCopy": "Eine Kopie der aktuellen Datei behalten",
+    "keepFileCopyOff": "Ohne Kopie können Sie nicht zur aktuellen Version zurückkehren."
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -3840,6 +3842,7 @@
         "action": "Wiederherstellen",
         "title": "Backup wiederherstellen",
         "subtitle": "Wählen Sie eine gespeicherte Kopie. Die aktuelle Datei wird vorher gesichert — das ist also umkehrbar.",
+        "subtitleNoCopy": "Wählen Sie eine gespeicherte Kopie.",
         "restart": "Anwendung nach dem Wiederherstellen neu starten",
         "done": "Umgebung wiederhergestellt.",
         "failed": "Das Backup konnte nicht wiederhergestellt werden.",
@@ -3858,8 +3861,10 @@
         "restoreFailed": "Diese Version konnte nicht wiederhergestellt werden.",
         "prunedReason": "Die Datei mit dieser Version wurde gelöscht, um die Zahl der aufbewahrten Backups einzuhalten.",
         "firstSaveReason": "Das war der erste Speichervorgang, es gibt also keine frühere Version.",
+        "noCopyReason": "Diese Änderung wurde ohne Kopie gespeichert, daher gibt es keine frühere Version, zu der Sie zurückkehren können.",
         "confirmTitle": "Die Version von vor dieser Änderung wiederherstellen?",
         "confirmBody": "Die aktuelle Datei wird zuerst gesichert, dieser Schritt lässt sich also ebenfalls rückgängig machen.",
+        "confirmBodyNoCopy": "Die aktuelle Datei wird ersetzt.",
         "cancel": "Abbrechen",
         "confirmSubmit": "Wiederherstellen",
         "diffLoading": "Die gespeicherten Kopien werden gelesen…",
@@ -4765,6 +4770,7 @@
       },
       "editor": {
         "subtitle": "Änderungen werden vor jedem Speichern automatisch gesichert.",
+        "subtitleNoCopy": "Bearbeiten Sie die Datei und speichern Sie sie.",
         "readOnly": "Sie haben auf diese Datei nur Lesezugriff.",
         "tooLarge": "Diese Datei ist größer als 5 MB und kann hier nicht angezeigt werden — laden Sie sie stattdessen herunter.",
         "notText": "Diese Datei scheint kein Text zu sein und kann hier nicht angezeigt werden — laden Sie sie stattdessen herunter.",
@@ -4784,6 +4790,7 @@
         "action": "Wiederherstellen",
         "title": "Frühere Version wiederherstellen",
         "subtitle": "Beim Wiederherstellen wird der aktuelle Inhalt zuerst gesichert — die falsche Version zu wählen ist also selbst umkehrbar.",
+        "subtitleNoCopy": "Wählen Sie eine frühere Version.",
         "done": "Wiederhergestellt.",
         "failed": "Diese Version konnte nicht wiederhergestellt werden.",
         "reloadFailed": "Wiederhergestellt, aber der Editor konnte die Datei nicht neu laden. Öffnen Sie sie erneut, um die wiederhergestellte Version zu sehen."

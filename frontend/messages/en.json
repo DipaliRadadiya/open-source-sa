@@ -85,7 +85,9 @@
       "configuration": "Settings",
       "server": "Server"
     },
-    "serverOnline": "Online"
+    "serverOnline": "Online",
+    "keepFileCopy": "Keep a copy of the current file",
+    "keepFileCopyOff": "Without a copy, you can't go back to the current version."
   },
   "systemUsers": {
     "title": "System Users",
@@ -3840,6 +3842,7 @@
         "action": "Restore",
         "title": "Restore a backup",
         "subtitle": "Pick a saved copy. The current file is backed up first, so this is reversible.",
+        "subtitleNoCopy": "Pick a saved copy.",
         "restart": "Restart the application after restoring",
         "done": "Environment restored.",
         "failed": "We couldn't restore the backup.",
@@ -3858,8 +3861,10 @@
         "restoreFailed": "That version could not be restored.",
         "prunedReason": "The file holding this version has been deleted to stay within the backups kept.",
         "firstSaveReason": "This was the first save, so there is no earlier version to go back to.",
+        "noCopyReason": "This change was saved without a copy, so there is no earlier version to go back to.",
         "confirmTitle": "Restore the version from before this change?",
         "confirmBody": "The current file is backed up first, so this is itself undoable.",
+        "confirmBodyNoCopy": "The current file is replaced.",
         "cancel": "Cancel",
         "confirmSubmit": "Restore",
         "diffLoading": "Reading the saved copies…",
@@ -4765,6 +4770,7 @@
       },
       "editor": {
         "subtitle": "Changes are backed up automatically before each save.",
+        "subtitleNoCopy": "Edit the file, then save.",
         "readOnly": "You have view-only access to this file.",
         "tooLarge": "This file is larger than 5 MB and can't be previewed here — download it instead.",
         "notText": "This file looks like it isn't text and can't be previewed here — download it instead.",
@@ -4784,6 +4790,7 @@
         "action": "Restore",
         "title": "Restore a previous version",
         "subtitle": "Restoring backs up the current content first, so picking the wrong version is itself undoable.",
+        "subtitleNoCopy": "Pick a previous version.",
         "done": "Restored.",
         "failed": "Couldn't restore that version.",
         "reloadFailed": "Restored, but the editor couldn't reload the file. Open it again to see the restored version."

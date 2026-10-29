@@ -19,12 +19,13 @@ export function getFileContent(appId, path) {
   return api.get(`/applications/${appId}/files/content`, { params: { path } });
 }
 
-export function saveFileContent(appId, path, content, version) {
-  return api.put(`/applications/${appId}/files/content`, { path, content, ...(version ? { version } : {}) });
+// `safetyCopy: false` keeps no backup of the version being replaced.
+export function saveFileContent(appId, path, content, version, { safetyCopy = true } = {}) {
+  return api.put(`/applications/${appId}/files/content`, { path, content, safety_copy: safetyCopy, ...(version ? { version } : {}) });
 }
 
-export function restoreFileContent(appId, path, backup) {
-  return api.post(`/applications/${appId}/files/content/restore`, { path, backup });
+export function restoreFileContent(appId, path, backup, { safetyCopy = true } = {}) {
+  return api.post(`/applications/${appId}/files/content/restore`, { path, backup, safety_copy: safetyCopy });
 }
 
 // Used as a cookie-authenticated `<a href download>`; the endpoint always

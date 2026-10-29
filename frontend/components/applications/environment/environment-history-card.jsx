@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Key names only. Values load on demand from backup files for `manage` users,
 // never from the activity log. Restore returns the file to its state before the change.
@@ -51,6 +53,9 @@ export function EnvironmentHistoryCard({
   const [busy, setBusy] = useState(false);
   // Off by default, matching the editor's dialog.
   const [restart, setRestart] = useState(false);
+  // On by default and on again every time the confirmation closes.
+  const [safetyCopy, setSafetyCopy] = useState(true);
+  const tc = useTranslations("common");
 
   // Pages after the first, fetched on request. Dropped when the first page
   // changes, since every row shifts and one would otherwise be hidden.
@@ -81,12 +86,13 @@ export function EnvironmentHistoryCard({
   async function confirmRestore() {
     setBusy(true);
     try {
-      await restoreEnvironment(appId, { backup: pending.backup, restart });
+      await restoreEnvironment(appId, { backup: pending.backup, restart, safetyCopy });
       // Refresh so the editor shows the restored file; close only once it lands.
       refreshThen(() => {
         toast.success(t("restored"));
         setPending(null);
         setRestart(false);
+        setSafetyCopy(true);
       });
     } catch (error) {
       toast.error(apiMessage(error, t("restoreFailed")));
@@ -137,15 +143,28 @@ export function EnvironmentHistoryCard({
           setPending(null);
           // Cleared so an abandoned tick does not apply to the next restore.
           setRestart(false);
+          setSafetyCopy(true);
         }}
         icon={RotateCcw}
         title={t("confirmTitle")}
-        description={t("confirmBody")}
+        description={safetyCopy ? t("confirmBody") : t("confirmBodyNoCopy")}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmSubmit")}
         pending={busy || refreshing}
         onConfirm={confirmRestore}
       >
+        <SafetyCopySwitch
+          id="history-restore-safety-copy"
+          checked={safetyCopy}
+          onCheckedChange={setSafetyCopy}
+          disabled={busy || refreshing}
+          label={tc("keepFileCopy")}
+        />
+        {!safetyCopy ? (
+          <Caution tone="destructive" size="md">
+            <p>{tc("keepFileCopyOff")}</p>
+          </Caution>
+        ) : null}
         {/* Same control and strings as the editor's restore dialog. */}
         {requiresRestart ? (
           <div className="flex items-start gap-2.5 rounded-lg border p-3">
@@ -257,7 +276,9 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
                     ? t("prunedReason")
                     : blocked === "first"
                       ? t("firstSaveReason")
-                      : null
+                      : blocked === "noCopy"
+                        ? t("noCopyReason")
+                        : null
                 }
               >
                 <Button

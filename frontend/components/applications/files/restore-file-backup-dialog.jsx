@@ -7,17 +7,25 @@ import { restoreFileContent } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 import { parseApiWallClock } from "@/lib/format/api-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
 // Restoring first backs up the current version, so a wrong pick is undoable.
 export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpenChange, onRestored }) {
   const t = useTranslations("applications.files");
+  const tc = useTranslations("common");
   const format = useFormatter();
   const [selected, setSelected] = useState(null);
+  // On by default and on again every time the dialog closes.
+  const [safetyCopy, setSafetyCopy] = useState(true);
   const [busy, setBusy] = useState(false);
 
   function handleOpenChange(next) {
     if (busy) return;
-    if (!next) setSelected(null);
+    if (!next) {
+      setSelected(null);
+      setSafetyCopy(true);
+    }
     onOpenChange?.(next);
   }
 
@@ -25,7 +33,7 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
     if (!selected) return;
     setBusy(true);
     try {
-      await restoreFileContent(appId, path, selected);
+      await restoreFileContent(appId, path, selected, { safetyCopy });
       toast.success(t("restore.done"));
       // The editor re-reads the file itself; this endpoint returns no content.
       onRestored?.();
@@ -43,7 +51,7 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
       onOpenChange={handleOpenChange}
       icon={History}
       title={t("restore.title")}
-      description={t("restore.subtitle")}
+      description={safetyCopy ? t("restore.subtitle") : t("restore.subtitleNoCopy")}
       cancelLabel={t("cancel")}
       confirmLabel={t("restore.action")}
       confirmDisabled={!selected}
@@ -82,6 +90,19 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
           );
         })}
       </div>
+
+      <SafetyCopySwitch
+        id="file-restore-safety-copy"
+        checked={safetyCopy}
+        onCheckedChange={setSafetyCopy}
+        disabled={busy}
+        label={tc("keepFileCopy")}
+      />
+      {!safetyCopy ? (
+        <Caution tone="destructive" size="md">
+          <p>{tc("keepFileCopyOff")}</p>
+        </Caution>
+      ) : null}
     </ConfirmDialog>
   );
 }

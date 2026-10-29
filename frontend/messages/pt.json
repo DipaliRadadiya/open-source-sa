@@ -85,7 +85,9 @@
       "configuration": "Configurações",
       "server": "Servidor"
     },
-    "serverOnline": "Online"
+    "serverOnline": "Online",
+    "keepFileCopy": "Manter uma cópia do arquivo atual",
+    "keepFileCopyOff": "Sem uma cópia, você não poderá voltar à versão atual."
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -3840,6 +3842,7 @@
         "action": "Restaurar",
         "title": "Restaurar um backup",
         "subtitle": "Escolha uma cópia salva. O arquivo atual é salvo antes, então isso é reversível.",
+        "subtitleNoCopy": "Escolha uma cópia salva.",
         "restart": "Reiniciar a aplicação após restaurar",
         "done": "Ambiente restaurado.",
         "failed": "Não foi possível restaurar o backup.",
@@ -3858,8 +3861,10 @@
         "restoreFailed": "Não foi possível restaurar essa versão.",
         "prunedReason": "O arquivo que continha esta versão foi excluído para manter os backups dentro do limite.",
         "firstSaveReason": "Este foi o primeiro salvamento, então não há versão anterior para voltar.",
+        "noCopyReason": "Esta alteração foi salva sem cópia, então não há uma versão anterior para onde voltar.",
         "confirmTitle": "Restaurar a versão anterior a esta alteração?",
         "confirmBody": "O ficheiro atual é guardado primeiro, pelo que esta ação também é reversível.",
+        "confirmBodyNoCopy": "O arquivo atual é substituído.",
         "cancel": "Cancelar",
         "confirmSubmit": "Restaurar",
         "diffLoading": "Lendo as cópias salvas…",
@@ -4765,6 +4770,7 @@
       },
       "editor": {
         "subtitle": "As alterações são salvas em backup automaticamente antes de cada salvamento.",
+        "subtitleNoCopy": "Edite o arquivo e salve.",
         "readOnly": "Você tem acesso somente leitura a este arquivo.",
         "tooLarge": "Este arquivo tem mais de 5 MB e não pode ser pré-visualizado aqui — baixe-o em vez disso.",
         "notText": "Este arquivo parece não ser texto e não pode ser pré-visualizado aqui — baixe-o em vez disso.",
@@ -4784,6 +4790,7 @@
         "action": "Restaurar",
         "title": "Restaurar uma versão anterior",
         "subtitle": "Restaurar faz um backup do conteúdo atual antes, então escolher a versão errada também é reversível.",
+        "subtitleNoCopy": "Escolha uma versão anterior.",
         "done": "Restaurado.",
         "failed": "Não foi possível restaurar essa versão.",
         "reloadFailed": "Restaurado, mas o editor não conseguiu recarregar o arquivo. Abra-o novamente para ver a versão restaurada."

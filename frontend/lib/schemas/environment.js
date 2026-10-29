@@ -56,6 +56,7 @@ export const envHistoryEntrySchema = z
     backup: z.string().nullish(),
     // Required, not defaulted: a default of false would silently disable every Restore button.
     restorable: z.boolean(),
+    safety_copy: z.boolean().nullish(),
   })
   .passthrough();
 
