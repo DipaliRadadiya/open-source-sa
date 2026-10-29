@@ -468,3 +468,25 @@ describe('the overview\'s database rows', function () {
             ->assertUnprocessable()->assertJsonValidationErrors('sort');
     });
 });
+
+it('lets the user restore a database without the copy first (2026-10-29)', function () {
+    Queue::fake();
+    $backup = dbBackupRow();
+    $url = "/api/databases/{$this->db->id}/backups/{$backup->id}/restore";
+
+    $this->withHeaders(dbBackupHeaders())->postJson($url, ['confirm' => 'ledger'])
+        ->assertStatus(202)->assertJsonPath('restore.safety_copy', true);
+    expect(Restore::latest('id')->first()->safety_copy)->toBeTrue();
+
+    Restore::query()->delete();
+    $this->withHeaders(dbBackupHeaders())->postJson($url, ['confirm' => 'ledger', 'safety_copy' => false])
+        ->assertStatus(202)->assertJsonPath('restore.safety_copy', false);
+    expect(Restore::latest('id')->first()->safety_copy)->toBeFalse();
+});
+
+it('refuses a safety_copy that is not true or false', function () {
+    $backup = dbBackupRow();
+
+    $this->withHeaders(dbBackupHeaders())->postJson("/api/databases/{$this->db->id}/backups/{$backup->id}/restore", ['confirm' => 'ledger', 'safety_copy' => 'maybe'])
+        ->assertJsonValidationErrors('safety_copy');
+});

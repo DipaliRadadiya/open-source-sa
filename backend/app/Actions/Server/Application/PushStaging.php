@@ -28,11 +28,11 @@ class PushStaging
      *                        believing they had a way back.
      * @return Backup|null The backup taken first, when one was asked for.
      */
-    public function execute(Application $production, string $mode, bool $backup = false, ?User $actor = null): ?Backup
+    public function execute(Application $production, string $mode, bool $backup = false, ?User $actor = null, bool $safetyCopy = true): ?Backup
     {
         $taken = $backup ? $this->backUp($production, $actor) : null;
 
-        $this->staging->push($production, $mode);
+        $this->staging->push($production, $mode, $safetyCopy);
 
         // One sentence per mode (ST-B4): the mode was a raw code inside the
         // sentence — "Pushed staging to my-blog (full)" — in every language.
@@ -40,6 +40,8 @@ class PushStaging
         // The actor passed on: this runs on the queue, where no one is signed in.
         $this->activityLogger->log('application.staging_pushed_'.$mode, $production, [
             'name' => $production->name,
+            // Read by the activity screen: "(without a safety copy)".
+            'safety_copy' => $safetyCopy,
         ], $actor);
 
         return $taken;

@@ -3012,6 +3012,8 @@ Create a staging clone.
 
 Push staging changes back to production.
 
+**`safety_copy`** (optional, `true` by default, since 2026-10-29 — the user's choice): when the push replaces the database (`database`/`full`), dump the live database first; that dump is a "safety copy" on the Staging screen and is what a push that fails part-way puts back. `false` skips it: no safety copy, and a database that fails part-way is **not** put back (files still are). The run carries `safety_copy`; the activity line ends *"(without a safety copy)"*. Same on `pull`, for the staging database.
+
 > **Runs on the queue since 2026-10-20 (RC-16).** Both `push` and `pull` answer **`202`** with a run, not the result:
 > ```json
 > {"run": {"id": 7, "kind": "push", "mode": "files", "backup": false, "status": "queued",
@@ -3055,7 +3057,7 @@ When recovery itself fails, production deliberately remains disabled and the pri
 
 **Update staging from live** — the reverse of a push. Call it on the **live** application. Staging's files and/or database are replaced with live's; **live is only read**, never disabled.
 
-**Request:** `{"mode": "files|database|full"}` — same meanings as a push, pointed at staging.
+**Request:** `{"mode": "files|database|full", "safety_copy": true}` — same meanings as a push, pointed at staging. `safety_copy` as on a push (optional, default `true`).
 
 What stays staging's own, every mode: `wp-config.php` (its database, URL, `DISABLE_WP_CRON`), the mail trap and noindex mu-plugins (both written again after the copy), and search-engine visibility (`blog_public = 0`, forced and then checked). Media copies additively, as in a push (a file deleted on live stays on staging). URLs in the copied database are rewritten live → staging.
 
@@ -4142,6 +4144,8 @@ Run now. **Throttle:** 6/min. **`202`** `{"backup_target": {…}}`. `422` when n
 **Throttle:** 2/min. `{"confirm": "<the database name, typed>"}`. Restores **its own** backup, or an **archived** one (below) **of the same engine**, into this database. **`202`** `{"restore": {…}}`; poll `GET /restores/{id}`.
 
 A restore first takes a **safety backup** of the database as it is now (through this database's own schedule — so the database needs one), then drops, recreates, gives its users back and loads the dump. No site file and no process is touched.
+
+**`safety_copy`** (optional, `true` by default, since 2026-10-29): `false` skips that safety backup — the user's choice. Then there is no Undo, and an import that fails part-way leaves the database as far as it got. The restore carries `safety_copy`, and the activity log reads *"…without a safety copy"*.
 
 **`422`** — the backup is not verified; it belongs to another database and is not archived; engine differs (*"This backup is from a mysql database and cannot be restored into a postgresql database."*); the database has no backup schedule (*"Set up backups for this database first…"*); wrong `confirm`; a restore, import or export of this database is running. Imports and exports refuse while a restore runs, too.
 

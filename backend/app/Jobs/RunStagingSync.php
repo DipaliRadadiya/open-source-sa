@@ -79,10 +79,10 @@ class RunStagingSync implements ShouldBeUnique, ShouldQueue
 
         try {
             if ($run->kind === 'push') {
-                $backup = $push->execute($production, $run->mode, $run->backup, $this->actor());
+                $backup = $push->execute($production, $run->mode, $run->backup, $this->actor(), $run->safety_copy !== false);
                 $run->update(['backup_id' => $backup?->id]);
             } else {
-                $pull->execute($production, $run->mode, $this->actor());
+                $pull->execute($production, $run->mode, $this->actor(), $run->safety_copy !== false);
             }
 
             $run->update(['status' => StagingRun::SUCCEEDED, 'finished_at' => now()]);

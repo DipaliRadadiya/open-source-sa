@@ -28,6 +28,8 @@ return [
     'change_secret' => ':field बदला गया',
     'change_secret_removed' => ':field हटाया गया',
     // The settings group in `setting.updated` ("Updated :group settings").
+    // A staging push/pull run without its database safety copy.
+    'without_safety_copy' => ':sentence (सुरक्षा कॉपी के बिना)',
     'setting_groups' => [
         'general' => 'सामान्य',
         'security' => 'सुरक्षा',

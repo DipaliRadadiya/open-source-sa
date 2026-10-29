@@ -70,13 +70,13 @@ class ApplicationStagingController extends Controller
      */
     public function push(PushStagingRequest $request, Application $application): JsonResponse
     {
-        return $this->start($application, 'push', $request->mode(), $request->wantsBackup());
+        return $this->start($application, 'push', $request->mode(), $request->wantsBackup(), $request->safetyCopy());
     }
 
     /** Update staging from live — on the queue, as a push is. */
     public function pull(PullStagingRequest $request, Application $application): JsonResponse
     {
-        return $this->start($application, 'pull', $request->mode(), false);
+        return $this->start($application, 'pull', $request->mode(), false, $request->safetyCopy());
     }
 
     public function run(Application $application, StagingRun $run): JsonResponse
@@ -86,7 +86,7 @@ class ApplicationStagingController extends Controller
         return response()->json(['run' => StagingRunResource::make($run)->resolve()]);
     }
 
-    private function start(Application $application, string $kind, string $mode, bool $backup): JsonResponse
+    private function start(Application $application, string $kind, string $mode, bool $backup, bool $safetyCopy = true): JsonResponse
     {
         $staging = $application->staging;
 
@@ -106,6 +106,7 @@ class ApplicationStagingController extends Controller
             'kind' => $kind,
             'mode' => $mode,
             'backup' => $backup,
+            'safety_copy' => $safetyCopy,
             'status' => StagingRun::QUEUED,
             'user_id' => Auth::id(),
         ]);

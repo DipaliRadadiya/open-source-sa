@@ -27,6 +27,8 @@ class StagingRunResource extends JsonResource
             'kind' => $run->kind,
             'mode' => $run->mode,
             'backup' => $run->backup,
+            // Whether the database being replaced was copied first.
+            'safety_copy' => $run->safety_copy !== false,
             'status' => $stranded ? StagingRun::FAILED : $run->status,
             // What the endpoint itself would have answered before it ran on
             // the queue: `message`, `code` or `reason`, `reference`, and for a

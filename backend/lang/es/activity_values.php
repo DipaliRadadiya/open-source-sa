@@ -28,6 +28,8 @@ return [
     'change_secret' => ':field cambiada',
     'change_secret_removed' => ':field eliminada',
     // The settings group in `setting.updated` ("Updated :group settings").
+    // A staging push/pull run without its database safety copy.
+    'without_safety_copy' => ':sentence (sin copia de seguridad previa)',
     'setting_groups' => [
         'general' => 'general',
         'security' => 'seguridad',

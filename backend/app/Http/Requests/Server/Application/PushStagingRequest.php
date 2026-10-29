@@ -27,6 +27,10 @@ class PushStagingRequest extends FormRequest
             // files that exist only on the live site (ST-B4) — and 'database'
             // and 'full' replace the live database, which is saved first.
             'mode' => ['required', Rule::in(['files', 'database', 'full'])],
+            // Dump the database being replaced first, so it can be put back
+            // (the Staging screen's safety copies). The user's choice since
+            // 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
             // FS-B10: take a full backup of the live site through its own
             // backup setup first, and push only if it verified.
             'backup' => ['sometimes', 'boolean'],
@@ -72,6 +76,11 @@ class PushStagingRequest extends FormRequest
     public function wantsBackup(): bool
     {
         return $this->boolean('backup');
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 
     public function mode(): string

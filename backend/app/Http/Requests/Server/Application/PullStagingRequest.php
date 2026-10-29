@@ -27,6 +27,10 @@ class PullStagingRequest extends FormRequest
             // As for a push: `files` leaves staging's database alone, and
             // `database`/`full` replace it — staging's is dumped first.
             'mode' => ['required', Rule::in(['files', 'database', 'full'])],
+            // Dump the database being replaced first, so it can be put back
+            // (the Staging screen's safety copies). The user's choice since
+            // 2026-10-29; on unless they turn it off.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -42,6 +46,11 @@ class PullStagingRequest extends FormRequest
                 $validator->errors()->add('application', __('errors/application.staging_missing'));
             }
         }];
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 
     public function mode(): string

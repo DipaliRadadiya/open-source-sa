@@ -184,6 +184,12 @@ class ActivityLogResource extends JsonResource
             $sentence = __($key, $replacements);
         }
 
+        // A staging push/pull run with the safety copy turned off says so
+        // (2026-10-29), so a broken database later is not a mystery.
+        if ((((array) ($this->properties ?? []))['safety_copy'] ?? null) === false) {
+            $sentence = __('activity_values.without_safety_copy', ['sentence' => $sentence]);
+        }
+
         $changes = $this->changes();
 
         return match (true) {

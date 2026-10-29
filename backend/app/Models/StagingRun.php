@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * A staging push or update-from-live, run on the queue (RC-16).
  */
 #[Fillable([
-    'application_id', 'staging_application_id', 'kind', 'mode', 'backup', 'status',
+    'application_id', 'staging_application_id', 'kind', 'mode', 'backup', 'safety_copy', 'status',
     'error', 'error_status', 'backup_id', 'user_id', 'started_at', 'finished_at',
 ])]
 class StagingRun extends Model
@@ -29,6 +29,7 @@ class StagingRun extends Model
     {
         return [
             'backup' => 'boolean',
+            'safety_copy' => 'boolean',
             'error' => 'array',
             'error_status' => 'integer',
             'started_at' => 'datetime',

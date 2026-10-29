@@ -35,6 +35,9 @@ class RestoreDatabaseBackupRequest extends FormRequest
             // Typed, not clicked — the database's name, as a site restore
             // asks for the domain.
             'confirm' => ['required', 'string'],
+            // Back the database up before replacing it, so the restore can be
+            // undone. The user's choice since 2026-10-29; on by default.
+            'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -90,5 +93,10 @@ class RestoreDatabaseBackupRequest extends FormRequest
                 $validator->errors()->add('backup', __('backup.errors.restore_database_busy'));
             }
         });
+    }
+
+    public function safetyCopy(): bool
+    {
+        return $this->boolean('safety_copy', true);
     }
 }

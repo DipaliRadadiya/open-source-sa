@@ -110,6 +110,7 @@ class DatabaseBackupController extends Controller
             'database_id' => $database->id,
             'user_id' => $request->user()?->id,
             'type' => BackupType::Database->value,
+            'safety_copy' => $request->safetyCopy(),
             'status' => RestoreStatus::Pending,
             'reference' => (string) Str::uuid(),
         ]);

@@ -180,7 +180,7 @@ class StagingManager
      * backup job reads, so a scheduled backup does not archive a site that
      * is half-overwritten either.
      */
-    public function push(Application $production, string $mode): void
+    public function push(Application $production, string $mode, bool $safetyCopy = true): void
     {
         if (Restore::inProgressFor($production->id)) {
             throw ValidationException::withMessages([
@@ -199,7 +199,7 @@ class StagingManager
         Cache::put(self::markerKey($production->id), true, 3600);
 
         try {
-            $this->runPush($production, $mode);
+            $this->runPush($production, $mode, $safetyCopy);
         } finally {
             Cache::forget(self::markerKey($production->id));
             $lock->release();
@@ -224,7 +224,7 @@ class StagingManager
      * a pull of the same pair cannot run together; staging's is the one its own
      * safety-copy restore takes.
      */
-    public function pull(Application $production, string $mode): void
+    public function pull(Application $production, string $mode, bool $safetyCopy = true): void
     {
         $staging = $production->staging;
 
@@ -260,7 +260,7 @@ class StagingManager
 
         try {
             $strategy = $this->strategyFor($production);
-            $this->replace($staging, $production, $mode, fn () => $strategy->pull($production, $staging, $mode));
+            $this->replace($staging, $production, $mode, fn () => $strategy->pull($production, $staging, $mode), $safetyCopy);
         } finally {
             Cache::forget(self::markerKey($staging->id));
             $stagingLock->release();
@@ -445,7 +445,7 @@ class StagingManager
         }
     }
 
-    private function runPush(Application $production, string $mode): void
+    private function runPush(Application $production, string $mode, bool $safetyCopy = true): void
     {
         $staging = $production->staging;
 
@@ -459,7 +459,7 @@ class StagingManager
             throw new StagingOperationException((string) Str::uuid());
         }
 
-        $this->replace($production, $staging, $mode, fn () => $strategy->push($production, $staging, $mode));
+        $this->replace($production, $staging, $mode, fn () => $strategy->push($production, $staging, $mode), $safetyCopy);
     }
 
     /**
@@ -470,7 +470,7 @@ class StagingManager
      *
      * @param  callable(): void  $strategyStep  the type's database half
      */
-    private function replace(Application $target, Application $source, string $mode, callable $strategyStep): void
+    private function replace(Application $target, Application $source, string $mode, callable $strategyStep, bool $safetyCopy = true): void
     {
         // Both sites are the same type, so either answers.
         $strategy = $this->strategyFor($target);
@@ -511,7 +511,10 @@ class StagingManager
         // work it runs writes nothing but transients and `rewrite_rules`,
         // which WordPress regenerates on demand, so dumping a large database
         // there would be real cost to protect data that comes back anyway.
-        if ($pushesDatabase) {
+        // Unless the user turned the copy off (2026-10-29): then a database
+        // that fails part-way is not put back. Files still are — their
+        // snapshot is only kept while the swap runs, never as a copy.
+        if ($pushesDatabase && $safetyCopy) {
             try {
                 $databaseSnapshot = $this->safetyDump($target);
             } catch (Throwable $failure) {

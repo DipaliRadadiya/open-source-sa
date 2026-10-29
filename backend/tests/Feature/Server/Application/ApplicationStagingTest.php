@@ -1904,3 +1904,67 @@ it('runs every wp-cli step on the site\'s own PHP', function () {
     Process::assertRan(fn ($p) => $usesWp($p) && in_array('search-replace', $p->command, true) && $onSitePhp($p));
     Process::assertNotRan(fn ($p) => $usesWp($p) && ! $onSitePhp($p));
 });
+
+describe('the safety copy switch on push and pull (2026-10-29)', function () {
+    /** Every command run, flattened, with production's visibility answered. */
+    function stagingCommandsSeen(string $visibility = '1'): ArrayObject
+    {
+        $seen = new ArrayObject;
+        Process::fake(function ($process) use ($seen, $visibility) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $seen[] = implode(' ', $args);
+
+            if (in_array('option', $args, true) && in_array('get', $args, true)) {
+                return Process::result(output: $visibility."\n");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        return $seen;
+    }
+
+    // The dump itself, not the `find` that lists old ones to prune.
+    $safetyDumps = fn (ArrayObject $seen) => collect($seen)->filter(fn (string $c) => str_contains($c, '--result-file=') && str_contains($c, 'pre-push-'))->count();
+
+    beforeEach(function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+    });
+
+    it('still copies the database first when nothing is said', function () use ($safetyDumps) {
+        $seen = stagingCommandsSeen();
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded')->assertJsonPath('run.safety_copy', true);
+
+        expect($safetyDumps($seen))->toBeGreaterThan(0);
+    });
+
+    it('pushes without the copy when the user turns it off, and says so in the log', function () use ($safetyDumps) {
+        $seen = stagingCommandsSeen();
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full', 'safety_copy' => false])
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded')->assertJsonPath('run.safety_copy', false);
+
+        expect($safetyDumps($seen))->toBe(0);
+        $line = collect($this->withHeaders(stagingHeaders())->getJson('/api/activity-log?filter[type]=application&per_page=50')->json('activity_log'))
+            ->firstWhere('action', 'staging_pushed_full');
+        expect($line['description'])->toEndWith('(without a safety copy)');
+    });
+
+    it('pulls without the copy when the user turns it off', function () use ($safetyDumps) {
+        // Staging is kept out of search engines: its visibility reads 0.
+        $seen = stagingCommandsSeen('0');
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/pull', ['mode' => 'database', 'safety_copy' => false])
+            ->assertStatus(202)->assertJsonPath('run.status', 'succeeded');
+
+        expect($safetyDumps($seen))->toBe(0);
+    });
+
+    it('refuses a value that is not true or false', function () {
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full', 'safety_copy' => 'maybe'])
+            ->assertJsonValidationErrors('safety_copy');
+    });
+});
