@@ -128,6 +128,16 @@ class SiteTypeManager
      */
     public const BLOCKED_PHP_VERSION = 'php_version';
 
+    /**
+     * The database engine is here and running, but older than this application
+     * runs on — Moodle and Mautic on Ubuntu 24.04's MySQL 8.0.
+     *
+     * Not `BLOCKED_DATABASE`: that one sends the user to install an engine, and
+     * the engine is installed. MySQL and MariaDB cannot share a server, so the
+     * install offer would be a dead end for every MySQL-only type.
+     */
+    public const BLOCKED_DATABASE_VERSION = 'database_version';
+
     public function catalog(): array
     {
         // Types this stack will never host and retired recipes are left out
@@ -319,6 +329,17 @@ class SiteTypeManager
 
         $missing = $this->missingEngines($type);
 
+        if ($missing !== null && ($old = $this->engineTooOld($type)) !== null) {
+            return [
+                'code' => self::BLOCKED_DATABASE_VERSION,
+                'reason' => __('application.unavailable.database_version', [
+                    'type' => app(SiteTypeText::class)->title($type->name()),
+                    ...$old,
+                ]),
+                'runtime' => null,
+            ];
+        }
+
         if ($missing !== null) {
             return [
                 'code' => self::BLOCKED_DATABASE,
@@ -500,6 +521,43 @@ class SiteTypeManager
 
         return $installer === null
             || $this->versions->meets($engine, $installer->minimumEngineVersions());
+    }
+
+    /**
+     * The first engine this type accepts that is here and running but below
+     * the type's minimum, or null when no engine falls short that way.
+     *
+     * Only asked once {@see missingEngines()} has found nothing usable, so it
+     * never turns an available card grey: a Moodle on 24.04 with PostgreSQL
+     * installed beside the old MySQL is still offered, on PostgreSQL.
+     *
+     * @return array{engine: string, minimum: string, version: string}|null
+     */
+    private function engineTooOld(SiteType $type): ?array
+    {
+        $installer = $this->installers->installerForType($type->name());
+
+        if ($installer === null) {
+            return null;
+        }
+
+        foreach ($this->acceptedEngines($type) as $engine) {
+            if (! $this->engineUsable($engine)) {
+                continue;
+            }
+
+            $minimum = $this->versions->shortfall($engine, $installer->minimumEngineVersions());
+
+            if ($minimum !== null) {
+                return [
+                    'engine' => (string) config("server.databases.engines.{$engine}.label", $engine),
+                    'minimum' => $minimum,
+                    'version' => (string) $this->versions->version($engine),
+                ];
+            }
+        }
+
+        return null;
     }
 
     private function engineUsable(string $engine): bool

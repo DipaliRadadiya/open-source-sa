@@ -39,6 +39,22 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
+     * What Mautic's own installer enforces, word for word: "Supported versions
+     * are MySQL 8.4.0 (or higher) and MariaDB 10.11.0 (or higher)".
+     *
+     * The panel installs the latest release, so this follows upstream rather
+     * than a pinned line. Without it a stock Ubuntu 24.04 box (MySQL 8.0) was
+     * offered Mautic, and the site was created and then cancelled inside
+     * `mautic:install` — found by the CF-06 create matrix, 2026-10-21.
+     *
+     * @return array<string, string>
+     */
+    public function minimumEngineVersions(): array
+    {
+        return ['mysql' => '8.4.0', 'mariadb' => '10.11.0'];
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void

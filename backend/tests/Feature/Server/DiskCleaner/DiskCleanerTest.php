@@ -228,7 +228,7 @@ it('still offers the package removal for a manual clean', function () {
         ->postJson('/api/disk-cleaner/clean', ['categories' => ['apt_orphans']])
         ->assertOk();
 
-    Process::assertRan(fn ($p) => $p->command === ['apt-get', '-y', 'autoremove', '--purge']);
+    Process::assertRan(fn ($p) => $p->command === aptCommand('-y', 'autoremove', '--purge'));
 });
 
 describe('the journal estimate', function () {

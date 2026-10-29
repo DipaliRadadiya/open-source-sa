@@ -279,3 +279,45 @@ describe('apt', function () {
         expect($waits)->toBe(2);
     });
 });
+
+describe('apt\'s own lock wait (S-09)', function () {
+    it('tells apt-get not to wait on the lock itself', function () {
+        // install.sh leaves a `DPkg::Lock::Timeout "900"` drop-in behind, so
+        // apt-get waited on unattended-upgrades' lock for the whole 900 s
+        // install timeout, was killed, and the retry above never ran.
+        // Switched off on the command line, the panel's bounded loop waits.
+        Process::fake(fn () => Process::result(output: 'done'));
+
+        app(ServerOps::class)->apt(['apt-get', 'install', '-y', 'mariadb-server'], ['feature' => 'test']);
+
+        Process::assertRan(fn ($process) => array_slice((array) $process->command, -5) === [
+            'install', '-y', 'mariadb-server', '-o', 'DPkg::Lock::Timeout=0',
+        ]);
+    });
+
+    it('bounds the whole wait by attempts × delay, and names it', function () {
+        config(['server.apt.lock_attempts' => 40, 'server.apt.lock_delay_ms' => 15000]);
+
+        expect(ServerOps::aptLockBudgetSeconds())->toBe(600);
+    });
+
+    it('fails with the lock message once the budget is spent, not a timeout', function () {
+        config(['server.apt.lock_attempts' => 4, 'server.apt.lock_delay_ms' => 0]);
+        $attempts = 0;
+
+        Process::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return Process::result(
+                errorOutput: 'E: Could not get lock /var/lib/dpkg/lock-frontend. It is held by process 15959 (unattended-upgr)',
+                exitCode: 100,
+            );
+        });
+
+        $result = app(ServerOps::class)->apt(['apt-get', 'install', '-y', 'postgresql'], ['feature' => 'test']);
+
+        expect($attempts)->toBe(4)
+            ->and($result->failed())->toBeTrue()
+            ->and($result->errorOutput())->toContain('Could not get lock');
+    });
+});

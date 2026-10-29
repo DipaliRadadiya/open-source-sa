@@ -366,7 +366,7 @@ describe('extensions', function () {
         // it while the job went on to log `extension_enabled`. The claim and
         // the state have to agree.
         expect(collect($runs))
-            ->toContain(['apt-get', 'install', '-y', '--no-install-recommends', 'php8.4-redis'])
+            ->toContain(aptCommand('install', '-y', '--no-install-recommends', 'php8.4-redis'))
             ->toContain(['/usr/sbin/phpenmod', '-v', '8.4', '-s', 'ALL', 'redis']);
     });
 

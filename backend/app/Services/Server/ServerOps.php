@@ -365,12 +365,33 @@ class ServerOps
      * takes it atomically, so letting apt contend and retrying is the version
      * with no race in it.
      *
+     * 🔴 **`DPkg::Lock::Timeout=0`, said out loud.** The loop above only works
+     * if apt *refuses* a held lock, and on a panel server it does not:
+     * install.sh writes `/etc/apt/apt.conf.d/99<slug>-lock-wait` with
+     * `DPkg::Lock::Timeout "900"` for its own run and leaves it there. So the
+     * panel's `apt-get` printed "Waiting for cache lock: … held by process
+     * 15959 (unattended-upgr)" for 900 s — exactly the engine install
+     * timeout — was killed at the ceiling, and the install failed as
+     * `unknown` with nothing retried (CF-06, ref d2c1e572; reproduced on a
+     * fresh 26.04 box with that drop-in). The command line beats the drop-in,
+     * which other apt users (certbot, add-apt-repository) keep. Telling apt
+     * not to wait gives the loop back its job, so the wait is bounded by
+     * `lock_attempts × lock_delay_ms`, and a lock still held at the end fails
+     * as "Could not get lock" — classified `apt_lock`, not `unknown`.
+     *
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
      * @param  callable(int, int): void|null  $onWait  told each time the lock was busy
      */
     public function apt(array $command, array $context = [], int $timeout = 900, array $env = [], ?callable $onOutput = null, ?callable $onWait = null): ServerOpsResult
     {
+        // Last rather than first: apt reads options anywhere on the line, and
+        // the verb staying at [1] keeps every reader of the command — the ops
+        // log, the sudo grant check — seeing `apt-get install …` as before.
+        if (($command[0] ?? null) === 'apt-get') {
+            $command = [...$command, '-o', 'DPkg::Lock::Timeout=0'];
+        }
+
         return $this->run(
             $command,
             $context,
@@ -380,6 +401,21 @@ class ServerOps
             retryAttempts: max(1, (int) config('server.apt.lock_attempts', 40)),
             retryDelayMs: max(100, (int) config('server.apt.lock_delay_ms', 15000)),
             onRetry: $onWait,
+        );
+    }
+
+    /**
+     * How long {@see apt()} waits out a held lock before failing, in seconds.
+     *
+     * A job that runs apt has to outlast this as well as the install itself,
+     * or the worker kills it mid-wait and the user gets "stopped unexpectedly"
+     * for what is really "another install is running".
+     */
+    public static function aptLockBudgetSeconds(): int
+    {
+        return intdiv(
+            max(1, (int) config('server.apt.lock_attempts', 40)) * max(100, (int) config('server.apt.lock_delay_ms', 15000)),
+            1000,
         );
     }
 

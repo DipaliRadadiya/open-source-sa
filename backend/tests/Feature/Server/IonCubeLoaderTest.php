@@ -963,7 +963,7 @@ describe('an ionCube v7 installed', function () {
             ($this->lsphp)()->remove($this->version);
 
             $commands = collect($runs)->values();
-            $remove = $commands->search("apt-get remove -y {$this->package}");
+            $remove = $commands->search(implode(' ', aptCommand('remove', '-y', $this->package)));
             $test = $commands->search(fn ($c) => str_contains($c, '/litespeed/php.ini -v'));
             expect($remove)->not->toBeFalse()
                 ->and($test)->toBeGreaterThan($remove)
@@ -978,7 +978,7 @@ describe('an ionCube v7 installed', function () {
             $error = ionCubeError(fn () => ($this->lsphp)()->remove($this->version));
 
             expect($error['message'])->toBe(__('errors/php.ioncube_config_test_failed'))
-                ->and(collect($runs)->contains("apt-get install -y {$this->package}"))->toBeTrue();
+                ->and(collect($runs)->contains(implode(' ', aptCommand('install', '-y', $this->package))))->toBeTrue();
         });
     });
 });

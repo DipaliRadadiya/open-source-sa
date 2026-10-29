@@ -96,7 +96,29 @@ function fakeEngineVersionAnswer(mixed $process): ?FakeProcessResult
         return Process::result(output: '16.4 (Ubuntu 16.4-0ubuntu0.24.04.2)');
     }
 
-    return str_contains($sql, 'VERSION()') ? Process::result(output: '8.0.36') : null;
+    if (! str_contains($sql, 'VERSION()')) {
+        return null;
+    }
+
+    // Per client, because the two number their releases apart: answering
+    // `8.0.36` from MariaDB describes a MariaDB 8, below every MariaDB floor.
+    // MySQL answers 8.4 — what Ubuntu 26.04 ships — because Moodle 5.0 and
+    // Mautic need it; a test about 24.04's 8.0 says so explicitly.
+    return Process::result(output: ($process->command[0] ?? '') === 'mariadb'
+        ? '10.11.14-MariaDB-0ubuntu0.24.04.1'
+        : '8.4.6-0ubuntu0.26.04.1');
+}
+
+/**
+ * An apt-get command as ServerOps::apt() runs it: with apt's own lock wait
+ * switched off, so a held lock fails and is retried on the panel's budget
+ * rather than hanging until the process timeout (S-09).
+ *
+ * @return list<string>
+ */
+function aptCommand(string ...$args): array
+{
+    return ['apt-get', ...$args, '-o', 'DPkg::Lock::Timeout=0'];
 }
 
 /**

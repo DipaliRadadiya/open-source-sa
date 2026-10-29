@@ -49,6 +49,7 @@ return [
         'stack_profile' => 'This server is not set up to host this kind of application.',
         'profile' => 'This server does not serve :profile applications, so this rendering type cannot be used here. Choose one this server serves.',
         'database' => 'This application needs :engines, which this server does not have.',
+        'database_version' => ':type needs :engine :minimum or newer, and this server has :engine :version. Upgrade it, or use a server with a newer :engine.',
         'php' => 'This server does not have PHP installed.',
         'php_version_install' => 'This server has no PHP version :type runs on (:range). Install PHP :version from the PHP screen first.',
         'php_version_none' => 'This server has no PHP version :type runs on (:range), and none of those versions can be installed from this server\'s package repository.',

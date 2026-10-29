@@ -673,3 +673,64 @@ it('reports a one-click container app as Docker sees it, not null', function () 
     fakeLiveProjects(['sv-app-'.$this->application->id."\tUp 4 minutes"]);
     expect(readinessResource($this->application->fresh())['container_status'])->toBeNull();
 });
+
+/*
+ * S-09: a container that does not speak HTTP. The CF-07 matrix's
+ * `postgres:16-alpine` (env + two volumes) ran fine for the whole wait and
+ * failed as `container_not_answering` on 24.04 and 26.04 alike — `/` on a
+ * database port can never answer.
+ */
+describe('a container whose port is not HTTP (S-09)', function () {
+    beforeEach(function () {
+        $this->application->forceFill(['image' => 'postgres:16-alpine', 'container_port' => 5432])->save();
+    });
+
+    it('passes a running database without asking / at all', function () {
+        $ran = fakeReadinessBox(['curl' => '000', 'exposed' => '{"5432/tcp":{}}']);
+
+        expect(applyMemos())->toBeNull()
+            ->and($this->application->fresh()->container_status)->toBe('running')
+            ->and($this->application->fresh()->last_failure)->toBeNull()
+            ->and(collect($ran)->contains(fn ($args) => $args[0] === 'curl'))->toBeFalse();
+    });
+
+    it('still stops at a database that exited', function () {
+        fakeReadinessBox(['curl' => '000', 'running' => false]);
+
+        expect(applyMemos()->reason)->toBe('container_exited');
+    });
+
+    it('still stops at a database that keeps restarting', function () {
+        fakeReadinessBox(['curl' => '000', 'state' => 'restarting']);
+
+        expect(applyMemos()->reason)->toBe('container_restarting');
+    });
+
+    it('lets the image\'s healthcheck decide when it has one', function () {
+        fakeReadinessBox(['curl' => '000', 'health' => 'unhealthy']);
+
+        expect(applyMemos()->reason)->toBe('container_unhealthy');
+    });
+
+    it('passes as starting when the healthcheck has no verdict by the deadline', function () {
+        config(['server.docker.readiness.timeout' => 9, 'server.docker.readiness.interval' => 3]);
+        $this->freezeTime();
+        Sleep::fake(syncWithCarbon: true);
+        $ran = fakeReadinessBox(['curl' => '000', 'health' => 'starting']);
+
+        expect(applyMemos())->toBeNull()
+            ->and($this->application->fresh()->container_status)->toBe('starting')
+            ->and(collect($ran)->contains(fn ($args) => $args[0] === 'curl'))->toBeFalse();
+    });
+
+    it('keeps the HTTP check for a web container with the same env and volumes', function () {
+        // The other half of the CF-07 row: nginx with env + two volumes went
+        // Active by answering `/`, and a web port that never answers must
+        // still fail rather than pass on "running".
+        $this->application->forceFill(['image' => 'nginx:1.27-alpine', 'container_port' => 80])->save();
+        $ran = fakeReadinessBox(['curl' => '000', 'exposed' => '{"80/tcp":{}}']);
+
+        expect(applyMemos()->reason)->toBe('container_not_answering')
+            ->and(collect($ran)->contains(fn ($args) => $args[0] === 'curl'))->toBeTrue();
+    });
+});

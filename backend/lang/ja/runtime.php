@@ -89,6 +89,7 @@ return [
     ],
 
     'database_install_failed' => [
+        'apt_lock' => 'サーバーで別のパッケージのインストールが実行中で、パネルが待機した後もまだ終わっていませんでした。数分後にもう一度お試しください。',
         'package_not_found' => 'このサーバーに :version のパッケージがありません。そのパッケージリポジトリが設定され、到達可能か確認してください。',
         // The repository was added and its index fetched successfully;
         // the engine simply has no build for this Ubuntu release.

@@ -89,6 +89,7 @@ return [
     ],
 
     'database_install_failed' => [
+        'apt_lock' => 'सर्वर पर कोई दूसरा पैकेज इंस्टॉल चल रहा है, और पैनल के इंतज़ार करने के बाद भी चल रहा था। कुछ मिनट बाद फिर कोशिश करें।',
         'package_not_found' => 'इस सर्वर पर :version के लिए कोई पैकेज नहीं है। जाँचें कि उसकी पैकेज रिपॉज़िटरी कॉन्फ़िगर और उपलब्ध है।',
         // The repository was added and its index fetched successfully;
         // the engine simply has no build for this Ubuntu release.

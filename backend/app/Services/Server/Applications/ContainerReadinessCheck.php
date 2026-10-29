@@ -27,6 +27,13 @@ use Illuminate\Support\Sleep;
  * over a Kanboard that served a 200 error page while Docker called it
  * unhealthy. Those sites can also read `starting` and `unhealthy`.
  *
+ * A container whose port speaks something other than HTTP — PostgreSQL on
+ * 5432, Redis on 6379 — is never asked for `/` (S-09). It cannot answer, and
+ * the CF-07 matrix's `postgres:16-alpine` ran perfectly for the whole 90 s
+ * and failed as `container_not_answering` on every release. For those the
+ * container's own state decides: its HEALTHCHECK when it has one, otherwise
+ * running, and still running at the next look.
+ *
  * On failure the reason is stored on the application in words a person can act
  * on — "Nothing answers on container port 8082 — the image listens on 5230" —
  * with the last lines of the container's own log beside it.
@@ -85,6 +92,8 @@ class ContainerReadinessCheck
         // the clock moves, so there the tries are counted instead.
         $attempts = $interval > 0 ? PHP_INT_MAX : $timeout;
         $pasted = trim((string) $application->compose) !== '';
+        $nonHttp = ! $pasted && $this->speaksOtherProtocol($application);
+        $seenRunning = 0;
 
         $started = now();
         $deadline = $started->copy()->addSeconds($timeout);
@@ -115,7 +124,7 @@ class ContainerReadinessCheck
                 ]);
             }
 
-            $status = $health === 'starting' ? 0 : $this->probe($application, $port, max(1, min(5, $remaining)));
+            $status = $health === 'starting' || $nonHttp ? 0 : $this->probe($application, $port, max(1, min(5, $remaining)));
 
             if ($status !== null && $status > 0) {
                 $this->passed($application);
@@ -136,6 +145,16 @@ class ContainerReadinessCheck
 
                 if (! $containers->running($application, $documentRoot)) {
                     $this->fail($application, $documentRoot, $containers, 'exited', 'container_exited');
+                }
+
+                // Twice, not once: `compose up` returns before a container
+                // with a bad setting has had time to exit, and one sighting
+                // would call that running. A HEALTHCHECK, when there is one,
+                // still decides above.
+                if ($nonHttp && $health === null && ++$seenRunning >= 2) {
+                    $this->passed($application);
+
+                    return;
                 }
 
                 // curl wrote nothing: the probe did not happen, so nothing was
@@ -166,6 +185,12 @@ class ContainerReadinessCheck
         // of start period, and holding a deploy that long is worse than saying
         // so: one request to `/` now, and an answer passes as `starting` —
         // the live status turns it into running or unhealthy once Docker has.
+        if ($health === 'starting' && $nonHttp) {
+            $this->passed($application, 'starting');
+
+            return;
+        }
+
         if ($health === 'starting') {
             $status = $this->probe($application, $port, 5);
 
@@ -194,6 +219,24 @@ class ContainerReadinessCheck
             ...($containerPort > 0 && ! $pasted ? ['port' => $containerPort] : []),
             'seconds' => $waited,
         ]);
+    }
+
+    /**
+     * Whether the container port is one a non-HTTP service owns.
+     *
+     * By the port, because nothing else tells them apart in time. Create
+     * requires a port and nginx proxies the domain to it, so "no web port"
+     * never happens literally; and through docker-proxy a database that drops
+     * the request looks exactly like a web app still booting — both are an
+     * accepted connection and an empty reply.
+     */
+    private function speaksOtherProtocol(Application $application): bool
+    {
+        return in_array(
+            (int) $application->container_port,
+            array_map('intval', (array) config('server.docker.readiness.non_http_ports', [])),
+            true,
+        );
     }
 
     private function passed(Application $application, string $status = 'running'): void

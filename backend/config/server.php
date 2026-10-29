@@ -1997,6 +1997,12 @@ return [
             'restart_grace' => (int) env('DOCKER_READINESS_RESTART_GRACE', 30),
             // Log lines kept on the application beside a failure.
             'log_lines' => 50,
+            // Container ports that speak something other than HTTP, so a
+            // request for `/` can never pass: verified by the container's
+            // state instead (S-09). PostgreSQL, MySQL/MariaDB, Redis,
+            // MongoDB, Memcached, AMQP, MQTT, NATS, Kafka, ZooKeeper,
+            // Cassandra, SMTP.
+            'non_http_ports' => [5432, 3306, 6379, 27017, 11211, 5672, 1883, 4222, 9092, 2181, 9042, 25, 587],
         ],
     ],
 

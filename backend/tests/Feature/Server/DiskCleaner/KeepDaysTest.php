@@ -175,7 +175,7 @@ describe('no choice is exactly what each category did before', function () {
         expect($rotated)->not->toContain('-mmin')->and(end($rotated))->toBe('-delete')
             // The week tmp always kept, with the very test it always used.
             ->and($tmp)->toContain('-mtime')->and($tmp[array_search('-mtime', $tmp, true) + 1])->toBe('+7')
-            ->and(dcCommandsStarting($ran, 'apt-get'))->toBe([['apt-get', 'clean']]);
+            ->and(dcCommandsStarting($ran, 'apt-get'))->toBe([aptCommand('clean')]);
     });
 
     it('empties every current service log and nothing else', function () {
@@ -315,7 +315,7 @@ describe('a choice', function () {
         app(AptCacheTarget::class)->clean(0);
 
         expect(dcCommandsStarting($ran, 'find')[0])->toContain('-cmin', '+10080', '-delete')->not->toContain('-mmin')
-            ->and(dcCommandsStarting($ran, 'apt-get'))->toBe([['apt-get', 'clean']]);
+            ->and(dcCommandsStarting($ran, 'apt-get'))->toBe([aptCommand('clean')]);
     });
 
     it('runs the saved choice on the schedule, delete all included', function () {
