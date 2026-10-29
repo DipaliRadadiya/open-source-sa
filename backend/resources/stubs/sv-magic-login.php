@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: ServerAvatar Magic Login
  * Description: Consumes a single-use, short-lived token minted by the panel and signs the named administrator in. Inert without one.
@@ -23,7 +24,6 @@
  * outbound Referer header, and this token is worth full administrator access.
  * The legacy implementation put it in the URL; this does not.
  */
-
 if (! defined('ABSPATH')) {
     exit;
 }

@@ -1,4 +1,5 @@
 <?php
+
 // Managed by the panel's Mautic recipe (RC-37). Run once by start.sh, as
 // www-data, while Mautic is not installed. It runs Mautic's own installer
 // (bin/console mautic:install) with the admin account from the container's

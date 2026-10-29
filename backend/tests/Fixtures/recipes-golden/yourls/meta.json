@@ -59,7 +59,7 @@
         "cpu_limit"
     ],
     "starter_files": {
-        "/docker-entrypoint-init.d/front-page.php": "<?php\n// Written once by the panel; yours to edit. The official image runs every .php file in\n// /docker-entrypoint-init.d on each start, before Apache. YOURLS ships no front page, so\n// the bare domain answers 403; this sends it to the admin area instead. Short links are\n// not affected: Apache only serves index.php for \"/\" itself.\n$index = '/var/www/html/index.php';\n\nif (! file_exists($index)) {\n    file_put_contents($index, \"<?php\\nheader('Location: /admin/', true, 302);\\n\");\n}\n"
+        "/docker-entrypoint-init.d/front-page.php": "<?php\n\n// Written once by the panel; yours to edit. The official image runs every .php file in\n// /docker-entrypoint-init.d on each start, before Apache. YOURLS ships no front page, so\n// the bare domain answers 403; this sends it to the admin area instead. Short links are\n// not affected: Apache only serves index.php for \"/\" itself.\n$index = '/var/www/html/index.php';\n\nif (! file_exists($index)) {\n    file_put_contents($index, \"<?php\\nheader('Location: /admin/', true, 302);\\n\");\n}\n"
     },
     "first_run_claim": null,
     "volume_mounts": [

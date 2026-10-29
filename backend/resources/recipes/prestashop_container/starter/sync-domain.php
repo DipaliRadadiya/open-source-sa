@@ -1,4 +1,5 @@
 <?php
+
 // Managed by the panel's PrestaShop recipe (RC-37). Run by the container's start
 // command, as www-data, before Apache starts on an installed shop.
 //
@@ -9,7 +10,7 @@
 // Delete this file to manage the domain yourself (Shop Parameters > Traffic & SEO).
 
 $domain = strtolower((string) getenv('PS_DOMAIN'));
-if (!preg_match('/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/', $domain)) {
+if (! preg_match('/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/', $domain)) {
     exit(0);
 }
 
@@ -34,6 +35,7 @@ function sync_domain(string $domain): void
 {
     if (Shop::isFeatureActive()) {
         echo "sync-domain: multistore is on, domains are left alone\n";
+
         return;
     }
 
