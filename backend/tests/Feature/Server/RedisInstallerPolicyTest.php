@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\Process;
  * existing servers, and only the installer's own line.
  */
 
-const REDIS_CONF = '/etc/redis/redis.conf';
+const REDIS_POLICY_CONF = '/etc/redis/redis.conf';
 
 beforeEach(function () {
     $this->dir = sys_get_temp_dir().'/sv-oss-redis-policy-'.getmypid();
     File::ensureDirectoryExists($this->dir);
     File::put($this->dir.'/redis-cli', '');
 
-    config(['server.redis_cli' => $this->dir.'/redis-cli', 'server.redis_conf' => REDIS_CONF, 'database.redis.default.password' => null]);
+    config(['server.redis_cli' => $this->dir.'/redis-cli', 'server.redis_conf' => REDIS_POLICY_CONF, 'database.redis.default.password' => null]);
 });
 
 afterEach(fn () => File::deleteDirectory($this->dir));
@@ -33,8 +33,8 @@ function redisPolicyDisk(string $conf, string $cliAnswer = "OK\n"): ArrayObject
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         return match (true) {
-            $args === ['cat', REDIS_CONF] => Process::result(output: $disk['conf']),
-            $args === ['tee', REDIS_CONF] => (function () use ($disk, $process) {
+            $args === ['cat', REDIS_POLICY_CONF] => Process::result(output: $disk['conf']),
+            $args === ['tee', REDIS_POLICY_CONF] => (function () use ($disk, $process) {
                 $disk['conf'] = (string) $process->input;
                 $disk['writes']++;
 

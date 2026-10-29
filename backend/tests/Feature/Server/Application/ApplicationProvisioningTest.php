@@ -175,7 +175,7 @@ function provisionDisk(string $broken, array $failCommands = []): ArrayObject
     return $disk;
 }
 
-function runProvision(Application $app): Application
+function provisionThroughJob(Application $app): Application
 {
     (new ProvisionApplication($app->id))->handle(app(ApplicationProvisioner::class), app(ActivityLogger::class));
 
@@ -187,7 +187,7 @@ it('takes a failed site out of sites-enabled, so the next site still passes its 
     // site created after it failed at test_config as well.
     $disk = provisionDisk('server_name broken.example.com');
 
-    $broken = runProvision(makeApp(['name' => 'Broken', 'slug' => 'broken', 'domain' => 'broken.example.com']));
+    $broken = provisionThroughJob(makeApp(['name' => 'Broken', 'slug' => 'broken', 'domain' => 'broken.example.com']));
 
     expect($broken->status->value)->toBe('failed')
         ->and($broken->failed_step)->toBe('test_config')
@@ -195,7 +195,7 @@ it('takes a failed site out of sites-enabled, so the next site still passes its 
         ->and($disk['links'])->not->toHaveKey('/etc/nginx/sites-enabled/broken.conf')
         ->and($disk['files'])->not->toHaveKey('/etc/nginx/sites-available/broken.conf');
 
-    $next = runProvision(makeApp(['name' => 'Next', 'slug' => 'next', 'domain' => 'next.example.com']));
+    $next = provisionThroughJob(makeApp(['name' => 'Next', 'slug' => 'next', 'domain' => 'next.example.com']));
 
     expect($next->status->value)->toBe('active')
         ->and($disk['links'])->toHaveKey('/etc/nginx/sites-enabled/next.conf');
@@ -204,7 +204,7 @@ it('takes a failed site out of sites-enabled, so the next site still passes its 
 it('tests the config again after taking a failed site out', function () {
     $disk = provisionDisk('server_name shop.example.com');
 
-    runProvision(makeApp());
+    provisionThroughJob(makeApp());
 
     // Once for the site, once to prove the server is healthy without it.
     expect($disk['tests'])->toBe(2);
@@ -222,7 +222,7 @@ it('logs it when the config still fails after the failed site came out', functio
     Log::shouldReceive('info', 'debug', 'error', 'notice')->andReturnNull();
     Log::shouldReceive('warning')->andReturnNull();
 
-    $app = runProvision(makeApp());
+    $app = provisionThroughJob(makeApp());
 
     expect($app->failed_step)->toBe('test_config');
 });
@@ -232,7 +232,7 @@ it('takes the config back out when writing it stops halfway', function () {
     // behind for the next write, resync or person to trip over.
     $disk = provisionDisk('nothing-is-broken', [['ln']]);
 
-    $app = runProvision(makeApp());
+    $app = provisionThroughJob(makeApp());
 
     expect($app->status->value)->toBe('failed')
         ->and($app->failed_step)->toBe('write_config')
