@@ -151,7 +151,48 @@ class DeleteApplicationDockerResources
             }
         }
 
-        return ['volumes' => $removable, 'network' => $removableNetwork, 'kept' => $kept];
+        return ['volumes' => $removable, 'network' => $removableNetwork, 'images' => [], 'kept' => $kept];
+    }
+
+    /**
+     * The images this site's containers were created from that nothing else
+     * uses (2026-10-29, Dipali: a deleted Docker app left its images behind
+     * forever — 58 GB on one server). Asked before `compose down`, while the
+     * containers still say which images they run; removed after it, by
+     * {@see apply()}. An image another container uses — another site's, or
+     * anything else on the server, running or stopped — is kept, and so is
+     * everything when Docker cannot be asked.
+     *
+     * @param  array{volumes: list<string>, network: ?string, images?: list<string>, kept: list<string>}  $plan
+     * @return array{volumes: list<string>, network: ?string, images: list<string>, kept: list<string>}
+     */
+    public function planImages(Application $application, array $plan): array
+    {
+        $containers = collect($this->docker->containers());
+        $project = $this->containers->project($application);
+        $own = $containers->where('project', $project);
+
+        if ($containers->isEmpty()) {
+            $plan['kept'][] = 'unreadable:docker-container-list';
+
+            return $plan + ['images' => []];
+        }
+
+        $plan['images'] = [];
+
+        foreach ($own->pluck('image')->filter()->unique() as $image) {
+            $others = $containers->filter(fn (array $container): bool => $container['image'] === $image && $container['project'] !== $project);
+
+            if ($others->isNotEmpty()) {
+                $plan['kept'][] = "image:{$image}:used-by-".$others->pluck('name')->implode(',');
+
+                continue;
+            }
+
+            $plan['images'][] = $image;
+        }
+
+        return $plan;
     }
 
     /**
@@ -162,7 +203,7 @@ class DeleteApplicationDockerResources
      * the whole delete as failed when the only thing it did not finish is cleanup
      * somebody can do by hand from the Docker page.
      *
-     * @param  array{volumes: list<string>, network: ?string, kept: list<string>}  $plan
+     * @param  array{volumes: list<string>, network: ?string, images?: list<string>, kept: list<string>}  $plan
      * @return array{removed: list<string>, kept: list<string>}
      */
     public function apply(Application $application, array $plan): array
@@ -186,6 +227,18 @@ class DeleteApplicationDockerResources
             } else {
                 $removed[] = "network:{$plan['network']}";
             }
+        }
+
+        // After the network: Docker refuses an image a container still uses,
+        // and by now this site's containers are gone.
+        foreach ($plan['images'] ?? [] as $image) {
+            if ($this->docker->removeImage($image)->failed()) {
+                $kept[] = "image:{$image}:remove-failed";
+
+                continue;
+            }
+
+            $removed[] = "image:{$image}";
         }
 
         $this->activityLogger->log('application.docker_resources_removed', $application, [

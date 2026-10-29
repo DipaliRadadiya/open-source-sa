@@ -422,6 +422,12 @@ class ApplicationController extends Controller
                 ? $dockerResources->plan($application)
                 : null;
 
+            // Its images too, unless turned off (2026-10-29). Read now, while
+            // the containers still say which images they run.
+            if ($application->serving_profile === 'docker' && $request->removeDockerImages()) {
+                $dockerPlan = $dockerResources->planImages($application, $dockerPlan ?? ['volumes' => [], 'network' => null, 'kept' => []]);
+            }
+
             // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
             // pasted compose file's own named volumes survive the delete they were
             // explicitly included in — found on a real box, see ContainerSupervisor.

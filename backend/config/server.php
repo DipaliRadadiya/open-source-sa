@@ -53,6 +53,7 @@ use App\Services\Server\Databases\Installers\MySqlInstaller;
 use App\Services\Server\Databases\Installers\PostgresInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
+use App\Services\Server\DiskCleaner\Targets\DockerImagesTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
@@ -2722,6 +2723,7 @@ return [
         'targets' => [
             AptCacheTarget::class,
             AptOrphansTarget::class,
+            DockerImagesTarget::class,
             JournalTarget::class,
             RotatedLogsTarget::class,
             ServiceLogsTarget::class,

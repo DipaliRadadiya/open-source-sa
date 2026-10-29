@@ -418,8 +418,10 @@ it('describes each category in its own words, in every language', function (stri
     $lines = require lang_path("{$locale}/disk-cleaner.php");
     $notes = collect($lines)->except('keep_days')->pluck('note');
 
+    // One note per configured category, counted from the list rather than
+    // typed: docker_images (2026-10-29) made a literal 7 wrong.
     expect($notes->duplicates()->all())->toBe([])
-        ->and($notes->count())->toBe(7);
+        ->and($notes->count())->toBe(count((array) config('server.disk_cleaner.targets')));
 })->with(['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru']);
 
 it('words the cleaned categories for the keep choice, not a fixed window', function () {

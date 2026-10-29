@@ -432,6 +432,41 @@ class DockerResources
     }
 
     /**
+     * Every container on the server, running or stopped, with the image it
+     * was created from and its Compose project. Empty when Docker did not
+     * answer — which callers must treat as "unknown", never as "none".
+     *
+     * @return list<array{name: string, image: string, project: ?string}>
+     */
+    public function containers(): array
+    {
+        return array_values(array_map(function (array $row): array {
+            $project = null;
+
+            foreach (explode(',', (string) ($row['Labels'] ?? '')) as $label) {
+                if (str_starts_with($label, 'com.docker.compose.project=')) {
+                    $project = substr($label, strlen('com.docker.compose.project='));
+                }
+            }
+
+            return ['name' => (string) ($row['Names'] ?? ''), 'image' => (string) ($row['Image'] ?? ''), 'project' => $project];
+        }, $this->jsonLines(['docker', 'ps', '-a', '--no-trunc', '--format', '{{json .}}'], 'docker_container_ls')));
+    }
+
+    /**
+     * Remove an image — and never with `--force`, so Docker itself refuses
+     * one that any container still uses (2026-10-29).
+     */
+    public function removeImage(string $image): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['docker', 'image', 'rm', '--', $image],
+            ['feature' => 'docker', 'op' => 'docker_image_remove'],
+            timeout: 60,
+        );
+    }
+
+    /**
      * A name Docker will accept, and that cannot be an argument.
      *
      * The value reaches a command line. Docker's own rule is

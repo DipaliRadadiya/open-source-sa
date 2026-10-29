@@ -3,6 +3,7 @@
 return [
     'apt_cache' => ['label' => 'Package cache', 'description' => 'Downloaded .deb package files.', 'note' => 'Delete all empties the cache; a keep choice removes only downloads older than it. Installed packages keep working.'],
     'apt_orphans' => ['label' => 'Unused packages', 'description' => 'Automatically-installed packages and old kernels no longer required.', 'note' => 'Removes packages nothing depends on anymore and superseded kernels; the running kernel is kept.'],
+    'docker_images' => ['label' => 'Unused Docker images', 'description' => 'Docker images no container uses, and Docker\'s build cache.', 'note' => 'Removes images that no container uses (running or stopped) and the build cache. Apps\' data (volumes) is never touched, and a removed image is downloaded again when an app needs it.'],
     'journal' => ['label' => 'System journal', 'description' => 'systemd journal history.', 'note' => 'Removes journal entries older than your keep choice; Delete all removes all of them.'],
     'rotated_logs' => ['label' => 'Rotated logs', 'description' => 'Old compressed and rotated log archives under /var/log.', 'note' => 'Deletes rotated archives (.gz / .1 / .old) older than your keep choice, or all of them with Delete all. Current logs are untouched.'],
     'service_logs' => ['label' => 'Service logs', 'description' => 'Current log files of running services.', 'note' => 'Delete all empties them (the files stay and services keep writing). A keep choice empties only logs nothing has written to within it.'],

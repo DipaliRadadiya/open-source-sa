@@ -1401,6 +1401,8 @@ Delete the application record. Optionally delete its data.
 
 **Request body (all optional):** `{"remove_files": false, "remove_databases": false}`
 
+**`remove_docker_images`** (2026-10-29, Docker sites only): also remove the images the site's containers ran, once its containers are gone — but only images **no other container on the server uses** (running or stopped), and never with `--force`, so Docker itself refuses one still in use. **On by default for a user with `docker` manage**, off (and not removed) for one without; sending `true` without that permission is a `403`, like `remove_docker_resources`. Send `false` to keep them. What was removed and what was kept, with the reason (`image:mysql:8.0:used-by-…`), is in the `application.docker_resources_removed` activity row.
+
 Both flags are accepted as query parameters too (`?remove_files=true`), and both
 accept `true`/`false`/`1`/`0`. Anything else is a `422` — until now `remove_files`
 was not validated at all, so a typo silently meant "keep".
@@ -6168,6 +6170,7 @@ One `keep_days` for the whole clean, the same on every category, on `POST /disk-
 | `tmp` | every file **not written to in the last hour** (running installs/uploads live there) | files older than N days | 7 days |
 | `apt_cache` | `apt-get clean` | packages downloaded more than N days ago (by arrival, not apt's date stamp) | `apt-get clean` |
 | `apt_orphans` | — `keeps_days: false`: the choice is ignored, it always removes all | | |
+| `docker_images` (2026-10-29, only where Docker is installed) | — `keeps_days: false`, always all: `docker image prune --all --force` (images **no container uses**, running or stopped) then `docker builder prune --all --force`. Never volumes, containers or networks. The estimate is what `docker system df` calls reclaimable for images and the build cache. Schedulable (`safe: true`): anything it removes is downloaded again when needed. | | |
 
 A log that is still being written keeps all its lines under "keep N days": its older days are in the rotated copies, and there is no safe way to cut lines out of a file a web server is appending to.
 
