@@ -6577,7 +6577,16 @@
       "stateOn": "Container-Anmeldung an",
       "stateOff": "Container-Anmeldung aus",
       "hostSshOn": "{username} kann sich weiterhin per SSH auf diesem Server anmelden, außerhalb des Containers. Um das zu verhindern, schalten Sie die SSH-Anmeldung unter <link>Systembenutzer</link> aus.",
+      "hostSshNotEnforced": "{username} kann sich weiterhin per SSH auf diesem Server anmelden, außerhalb des Containers, weil die SSH-Anmelderegeln auf diesem Server ausgeschaltet sind. Schalten Sie sie unter <link>Zugang & Sicherheit</link> ein.",
       "offBody": "Schalten Sie sie ein, dann landet die Anmeldung als {username} direkt im Container dieser Anwendung.",
+      "turnOffDialog": {
+        "title": "Container-Anmeldung für {username} ausschalten?",
+        "body": "Die Anmeldung als {username} öffnet dann nicht mehr den Container dieser Anwendung.",
+        "alsoSsh": "Auch die SSH-Anmeldung von {username} auf dem Server ausschalten",
+        "alsoSshHint": "Das gilt für {username} auf dem ganzen Server: SSH und SFTP funktionieren für alle seine Anwendungen nicht mehr.",
+        "notEnforced": "Die SSH-Anmelderegeln sind auf diesem Server ausgeschaltet, daher kann das Panel die SSH-Anmeldung von {username} nicht verhindern. Schalten Sie sie unter <link>Zugang & Sicherheit</link> ein.",
+        "submit": "Ausschalten"
+      },
       "systemUser": "Systembenutzer",
       "loading": "Kommandozeilenzugriff wird geladen",
       "copied": "Befehl kopiert",
@@ -6609,6 +6618,8 @@
         "turnOff": "Ausschalten",
         "turnedOff": "Container-Anmeldung für {username} ist ausgeschaltet",
         "turnedOffHostSsh": "Container-Anmeldung ist ausgeschaltet. {username} kann SSH auf dem Server weiterhin nutzen.",
+        "turnedOffBoth": "Container-Anmeldung und SSH-Anmeldung sind für {username} ausgeschaltet.",
+        "sshOffFailed": "Die Container-Anmeldung ist ausgeschaltet, aber die SSH-Anmeldung von {username} konnte nicht ausgeschaltet werden.",
         "turnOffFailed": "Die Container-Anmeldung konnte nicht ausgeschaltet werden.",
         "more": "Weitere Befehle"
       }

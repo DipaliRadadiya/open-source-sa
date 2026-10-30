@@ -6577,7 +6577,16 @@
       "stateOn": "Inicio de sesión en el contenedor activado",
       "stateOff": "Inicio de sesión en el contenedor desactivado",
       "hostSshOn": "{username} aún puede iniciar sesión en este servidor por SSH, fuera del contenedor. Para impedirlo, desactive su inicio de sesión SSH en <link>Usuarios del sistema</link>.",
+      "hostSshNotEnforced": "{username} aún puede iniciar sesión en este servidor por SSH, fuera del contenedor, porque las reglas de inicio de sesión SSH están desactivadas en este servidor. Actívelas en <link>Acceso y seguridad</link>.",
       "offBody": "Actívelo y, al iniciar sesión como {username}, se abrirá directamente el contenedor de esta aplicación.",
+      "turnOffDialog": {
+        "title": "¿Desactivar el inicio de sesión en el contenedor para {username}?",
+        "body": "Al iniciar sesión como {username} ya no se abrirá el contenedor de esta aplicación.",
+        "alsoSsh": "Desactivar también el inicio de sesión SSH de {username} en el servidor",
+        "alsoSshHint": "Esto se aplica a {username} en todo el servidor: SSH y SFTP dejan de funcionar para todas sus aplicaciones.",
+        "notEnforced": "Las reglas de inicio de sesión SSH están desactivadas en este servidor, así que el panel no puede impedir que {username} inicie sesión por SSH. Actívelas en <link>Acceso y seguridad</link>.",
+        "submit": "Desactivar"
+      },
       "systemUser": "Usuario del sistema",
       "loading": "Cargando el acceso por línea de comandos",
       "copied": "Comando copiado",
@@ -6609,6 +6618,8 @@
         "turnOff": "Desactivar",
         "turnedOff": "El inicio de sesión en el contenedor está desactivado para {username}",
         "turnedOffHostSsh": "El inicio de sesión en el contenedor está desactivado. {username} aún puede usar SSH en el servidor.",
+        "turnedOffBoth": "El inicio de sesión en el contenedor y el inicio de sesión SSH están desactivados para {username}.",
+        "sshOffFailed": "El inicio de sesión en el contenedor está desactivado, pero no se pudo desactivar el inicio de sesión SSH de {username}.",
         "turnOffFailed": "No se pudo desactivar el inicio de sesión en el contenedor.",
         "more": "Más comandos"
       }

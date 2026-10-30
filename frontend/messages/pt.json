@@ -6577,7 +6577,16 @@
       "stateOn": "Login no contentor ligado",
       "stateOff": "Login no contentor desligado",
       "hostSshOn": "{username} ainda pode entrar neste servidor por SSH, fora do contentor. Para impedir isso, desligue o login SSH dele em <link>Usuários do sistema</link>.",
+      "hostSshNotEnforced": "{username} ainda pode entrar neste servidor por SSH, fora do contentor, porque as regras de login SSH estão desligadas neste servidor. Ligue-as em <link>Acesso e segurança</link>.",
       "offBody": "Ligue-o e entrar como {username} vai abrir diretamente o contentor desta aplicação.",
+      "turnOffDialog": {
+        "title": "Desligar o login no contentor para {username}?",
+        "body": "Entrar como {username} não vai mais abrir o contentor desta aplicação.",
+        "alsoSsh": "Desligar também o login SSH de {username} no servidor",
+        "alsoSshHint": "Isso vale para {username} no servidor inteiro: SSH e SFTP deixam de funcionar para todas as aplicações dele.",
+        "notEnforced": "As regras de login SSH estão desligadas neste servidor, então o painel não consegue impedir que {username} entre por SSH. Ligue-as em <link>Acesso e segurança</link>.",
+        "submit": "Desligar"
+      },
       "systemUser": "Usuário do sistema",
       "loading": "Carregando o acesso por linha de comando",
       "copied": "Comando copiado",
@@ -6609,6 +6618,8 @@
         "turnOff": "Desligar",
         "turnedOff": "O login no contentor está desligado para {username}",
         "turnedOffHostSsh": "O login no contentor está desligado. {username} ainda pode usar SSH no servidor.",
+        "turnedOffBoth": "O login no contentor e o login SSH estão desligados para {username}.",
+        "sshOffFailed": "O login no contentor está desligado, mas não foi possível desligar o login SSH de {username}.",
         "turnOffFailed": "Não foi possível desligar o login no contentor.",
         "more": "Mais comandos"
       }

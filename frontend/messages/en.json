@@ -6577,7 +6577,16 @@
       "stateOn": "Container login on",
       "stateOff": "Container login off",
       "hostSshOn": "{username} can still log in to this server over SSH, outside the container. To stop that, turn off its SSH login in <link>System Users</link>.",
+      "hostSshNotEnforced": "{username} can still log in to this server over SSH, outside the container, because SSH login rules are off on this server. Turn them on in <link>Access & security</link>.",
       "offBody": "Turn it on and logging in as {username} opens this app's container directly.",
+      "turnOffDialog": {
+        "title": "Turn off container login for {username}?",
+        "body": "Logging in as {username} will no longer open this app's container.",
+        "alsoSsh": "Also turn off {username}'s SSH login to the server",
+        "alsoSshHint": "This applies to {username} on the whole server: SSH and SFTP stop for all of their applications.",
+        "notEnforced": "SSH login rules are off on this server, so the panel cannot stop {username} logging in over SSH. Turn them on in <link>Access & security</link>.",
+        "submit": "Turn off"
+      },
       "systemUser": "System user",
       "loading": "Loading command-line access",
       "copied": "Command copied",
@@ -6609,6 +6618,8 @@
         "turnOff": "Turn off",
         "turnedOff": "Container login is off for {username}",
         "turnedOffHostSsh": "Container login is off. {username} can still use SSH on the server.",
+        "turnedOffBoth": "Container login and SSH login are off for {username}.",
+        "sshOffFailed": "Container login is off, but {username}'s SSH login could not be turned off.",
         "turnOffFailed": "Container login could not be turned off.",
         "more": "More commands"
       }
