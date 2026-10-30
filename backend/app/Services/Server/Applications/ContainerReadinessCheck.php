@@ -5,7 +5,9 @@ namespace App\Services\Server\Applications;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
+use Illuminate\Support\Str;
 
 /**
  * After `compose up`, wait for the site to actually answer (DS-03).
@@ -282,7 +284,25 @@ class ContainerReadinessCheck
             default => 'verify_serving',
         };
 
-        throw new ProvisioningFailedException($step, '', $reason);
+        // A reference that leads somewhere. This verdict comes from probing, not
+        // from one failed command, so there was no server-ops line to point at and
+        // the reference was '' — a refused resume then showed its reason with no
+        // reference (integrated QA on .115, 2026-10-30). The verdict is logged under
+        // its own reference: what was decided, not the container's log, which is
+        // already stored on the application above.
+        $reference = (string) Str::uuid();
+
+        Log::channel('server-ops')->warning('container readiness failed', [
+            'feature' => 'application',
+            'op' => 'container_readiness',
+            'application' => $application->id,
+            'reference' => $reference,
+            'step' => $step,
+            'reason' => $reason,
+            'status' => $status,
+        ]);
+
+        throw new ProvisioningFailedException($step, $reference, $reason);
     }
 
     /**

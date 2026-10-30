@@ -355,6 +355,29 @@ it('stops at a container that exited', function () {
         ->and($this->application->fresh()->container_status)->toBe('exited');
 });
 
+it('gives a readiness failure a reference that leads to a server-ops log line', function () {
+    // The verdict comes from probing, not from one failed command, so there was
+    // no server-ops line to point at and the reference was ''. A refused resume
+    // then showed a reason and no reference (integrated QA on .115). The verdict
+    // is now logged under its own reference — the reason and status, not the
+    // container's log, which is stored on the application already.
+    $file = tempnam(sys_get_temp_dir(), 'server-ops-');
+    config(['logging.channels.server-ops' => ['driver' => 'single', 'path' => $file, 'level' => 'debug']]);
+    fakeReadinessBox(['curl' => '000', 'running' => false]);
+
+    $e = applyMemos();
+
+    $line = collect(file($file))->first(fn (string $l) => str_contains($l, 'container readiness failed'));
+    @unlink($file);
+
+    expect($e->reference)->toMatch('/^[0-9a-f-]{36}$/')
+        ->and($line)->not->toBeNull()
+        ->and($line)->toContain('"reference":"'.$e->reference.'"')
+        ->and($line)->toContain('"reason":"container_exited"')
+        ->and($line)->toContain('"application":'.$this->application->id)
+        ->and($line)->not->toContain('"log"');
+});
+
 it('does not fail a site on a probe that never ran', function () {
     // curl printed nothing: nothing was measured, so nothing is concluded.
     fakeReadinessBox(['curl' => '']);
