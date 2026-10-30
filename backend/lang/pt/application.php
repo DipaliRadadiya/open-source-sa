@@ -264,6 +264,7 @@ return [
         'container_not_answering' => 'O contêiner está rodando, mas nada respondeu na porta dele. Verifique o log e se a porta do contêiner é aquela em que a aplicação escuta.',
         'container_unhealthy' => 'O contêiner está em execução, mas a verificação de integridade da própria imagem diz que ele não está funcionando. O log dele e a saída da verificação mostrada aqui dizem o porquê.',
         'compose_port_taken' => 'Este ficheiro compose publica uma porta do anfitrião que outra aplicação deste servidor já usa, por isso não pode arrancar aqui. Publique outra porta do anfitrião no ficheiro compose e implante novamente.',
+        'container_port_in_use' => 'O contentor não conseguiu arrancar porque algo neste servidor já usa uma das portas do anfitrião que ele publica. Publique outra porta do anfitrião no ficheiro compose e implemente novamente.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.

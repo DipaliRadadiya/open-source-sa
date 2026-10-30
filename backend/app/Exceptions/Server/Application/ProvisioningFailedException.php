@@ -111,6 +111,22 @@ class ProvisioningFailedException extends Exception
             return 'composer_platform';
         }
 
+        // The container could not bind its published host port, because something
+        // on the server already holds it. Measured on a real box (Docker QA,
+        // 2026-10-30), a pasted file publishing 80 with nginx on 0.0.0.0:80:
+        //   failed to set up container networking: driver failed programming
+        //   external connectivity on endpoint …: failed to bind host port
+        //   127.0.0.1:80/tcp: address already in use
+        // and Docker's wording when another container holds it:
+        //   Bind for 127.0.0.1:20001 failed: port is already allocated
+        // The form now refuses a port that is listened on; this names the race
+        // and anything that reached the server some other way. Only for the step
+        // that publishes ports — "address already in use" from a deploy script is
+        // somebody else's process and not this diagnosis.
+        if ($step === 'container_start' && preg_match('/(bind host port \S+: address already in use|Bind for \S+ failed: port is already allocated)/i', $result->output()."\n".$result->errorOutput()) === 1) {
+            return 'container_port_in_use';
+        }
+
         // A registry refused to serve the image.
         //
         // Named here for the same reason as the two above: the failure is

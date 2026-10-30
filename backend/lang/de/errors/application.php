@@ -3,6 +3,7 @@
 return [
     'compose_port_ambiguous' => 'Diese Compose-Datei veröffentlicht mehr als einen Port, daher kann das Panel nicht erkennen, welcher die Website bedient. Tragen Sie unter „Container-Port“ den internen Port ein, der weitergeleitet werden soll.',
     'compose_port_taken' => 'Port :port wird auf diesem Server bereits von :application verwendet. Veröffentlichen Sie in Ihrer Compose-Datei einen anderen Host-Port.',
+    'compose_port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port, daher kann der Container ihn nicht veröffentlichen. Veröffentlichen Sie in Ihrer Compose-Datei einen anderen Host-Port.',
     'compose_unparsable' => 'Docker konnte diese Compose-Datei nicht lesen. Prüfen Sie Einrückung und Anführungszeichen — die Meldung von Docker selbst steht im Serveroperations-Protokoll.',
     'compose_no_services' => 'Diese Compose-Datei definiert keine Dienste, es gäbe also nichts auszuführen.',
     'compose_bind_outside' => 'Dienst :service bindet :path ein, was außerhalb des eigenen Verzeichnisses dieser Anwendung liegt. Ein Container darf nur seine eigenen Dateien einbinden.',

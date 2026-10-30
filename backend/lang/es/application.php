@@ -264,6 +264,7 @@ return [
         'container_not_answering' => 'El contenedor está en marcha pero nada respondió en su puerto. Revisa su registro y que el puerto del contenedor sea en el que escucha la aplicación.',
         'container_unhealthy' => 'El contenedor está en marcha, pero la comprobación de estado de la propia imagen dice que no funciona. Su registro y la salida de la comprobación que se muestra aquí indican por qué.',
         'compose_port_taken' => 'Este archivo compose publica un puerto del host que ya usa otra aplicación de este servidor, así que no puede arrancar aquí. Publique otro puerto del host en el archivo compose y vuelva a desplegar.',
+        'container_port_in_use' => 'El contenedor no pudo arrancar porque algo en este servidor ya usa uno de los puertos del host que publica. Publica otro puerto del host en el archivo compose y vuelve a desplegar.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.

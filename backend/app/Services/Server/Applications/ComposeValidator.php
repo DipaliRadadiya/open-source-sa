@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Models\Application;
+use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\ServerOps;
 
 /**
@@ -236,10 +237,6 @@ class ComposeValidator
             ->orderBy('app_port')
             ->pluck('name', 'app_port');
 
-        if ($held->isEmpty()) {
-            return null;
-        }
-
         $ranges = $this->publishedRanges($resolved);
 
         if (($proxied = $this->publishedPort($resolved, $containerPort)) !== null) {
@@ -250,6 +247,49 @@ class ComposeValidator
             foreach ($held as $port => $name) {
                 if ($port >= $low && $port <= $high) {
                     return __('errors/application.compose_port_taken', ['port' => $port, 'application' => $name]);
+                }
+            }
+        }
+
+        return $this->portListening($ranges, $except);
+    }
+
+    /**
+     * A published port something on the server is already listening on.
+     *
+     * The check above knows only the panel's own applications. Everything else
+     * on the box passed — the web server on 80 and 443, SSH, a database — and the
+     * file was accepted, rewritten to `127.0.0.1:80`, and then failed at
+     * "Container start" with no reason: found in Docker QA on a real box, where
+     * the server-ops log said `bind host port 127.0.0.1:80/tcp: address already
+     * in use` with nginx holding `0.0.0.0:80`. So the form asks what is listening,
+     * the same way {@see PortAllocator::conflict()} already does for every other
+     * port a user picks.
+     *
+     * When the file belongs to an existing site, the ports its own containers
+     * publish right now are not a conflict: while it runs, the listener IS the
+     * site, and refusing them would refuse every save of an unchanged file.
+     *
+     * @param  list<array{0: int, 1: int}>  $ranges
+     */
+    private function portListening(array $ranges, ?int $except): ?string
+    {
+        $listening = app(PortAllocator::class)->listening();
+
+        if ($listening === [] || $ranges === []) {
+            return null;
+        }
+
+        $own = [];
+
+        if ($except !== null && ($application = Application::query()->find($except)) !== null) {
+            $own = app(DockerResources::class)->publishedHostPorts(app(ContainerSupervisor::class)->project($application));
+        }
+
+        foreach ($ranges as [$low, $high]) {
+            foreach ($listening as $port) {
+                if ($port >= $low && $port <= $high && ! in_array($port, $own, true)) {
+                    return __('errors/application.compose_port_in_use', ['port' => $port]);
                 }
             }
         }

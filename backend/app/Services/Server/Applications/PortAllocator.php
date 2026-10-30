@@ -224,7 +224,7 @@ class PortAllocator
      *
      * @return array<int, int>
      */
-    private function listening(): array
+    public function listening(): array
     {
         $result = $this->serverOps->run(
             ['ss', '-ltnH'],

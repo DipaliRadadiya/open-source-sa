@@ -41,12 +41,17 @@ beforeEach(function () {
  *
  * @param  list<array{0: int|string, 1: int}>  $ports
  */
-function rc43Box(array $ports, bool $running = false): void
+function rc43Box(array $ports, bool $running = false, array $listening = []): void
 {
-    Process::fake(function ($process) use ($ports, $running) {
+    Process::fake(function ($process) use ($ports, $running, $listening) {
         $line = implode(' ', (array) $process->command);
 
         return match (true) {
+            // `ss -ltnH`, as the server prints it: what is listening right now.
+            str_contains($line, 'ss -ltnH') => Process::result(implode('', array_map(
+                fn (int $port): string => "LISTEN 0      511          0.0.0.0:{$port}        0.0.0.0:*\n",
+                $listening,
+            ))),
             str_contains($line, 'config --format json') => Process::result(json_encode(['services' => ['web' => [
                 'image' => 'nginx:alpine',
                 'ports' => array_map(fn (array $port): array => [
@@ -193,4 +198,120 @@ it('translates the refusal in every locale, with both placeholders', function ()
     // A translator's fallback to English is not a translation.
     expect(trans('errors/application.compose_port_taken', [], 'de'))
         ->not->toBe(trans('errors/application.compose_port_taken', [], 'en'));
+});
+
+describe('a port something on the server is already listening on', function () {
+    // Found in Docker QA on a real box: a pasted file publishing "80:80" was
+    // accepted (201), rewritten to 127.0.0.1:80, and failed at "Container start"
+    // with no reason — the server-ops log said `bind host port 127.0.0.1:80/tcp:
+    // address already in use`, nginx holding 0.0.0.0:80. The form only knew the
+    // panel's own applications.
+
+    it('refuses it before anything is created, naming the port', function () {
+        rc43Box([[80, 80]], listening: [22, 80, 443]);
+
+        $response = rc43Store("services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"80:80\"\n")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('compose');
+
+        expect($response->json('errors.compose'))->toContain(__('errors/application.compose_port_in_use', ['port' => 80]))
+            ->and(Application::count())->toBe(0);
+        Queue::assertNothingPushed();
+    });
+
+    it('sees a listened port inside a published range', function () {
+        rc43Box([['18080-18090', 80]], listening: [18085]);
+
+        $response = rc43Store("services:\n  web:\n    image: nginx:alpine\n")->assertUnprocessable();
+
+        expect($response->json('errors.compose'))->toContain(__('errors/application.compose_port_in_use', ['port' => 18085]));
+    });
+
+    it('still creates the file when nothing listens on its ports', function () {
+        // The negative control: other ports in use must not refuse this one.
+        rc43Box([[18080, 80]], listening: [22, 80, 443]);
+
+        rc43Store("services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"127.0.0.1:18080:80\"\n")
+            ->assertCreated();
+    });
+
+    it('names another application before a bare listener, when both hold it', function () {
+        rc43Holder(18080);
+        rc43Box([[18080, 80]], listening: [18080]);
+
+        $response = rc43Store("services:\n  web:\n    image: nginx:alpine\n")->assertUnprocessable();
+
+        expect($response->json('errors.compose'))->toBe([
+            __('errors/application.compose_port_taken', ['port' => 18080, 'application' => 'cmp-docker']),
+        ]);
+    });
+
+    it('has the message in every locale', function () {
+        foreach (['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru'] as $locale) {
+            expect(__('errors/application.compose_port_in_use', ['port' => 80], $locale))->toContain('80')
+                ->and(__('application.failure_reason.container_port_in_use', [], $locale))
+                ->not->toBe('application.failure_reason.container_port_in_use');
+        }
+    });
+});
+
+describe('editing the file of a site that is already running', function () {
+    /**
+     * A running site whose containers publish $own; `ss` sees $listening.
+     *
+     * @param  list<int>  $own
+     * @param  list<int>  $listening
+     */
+    function rc43EditBox(int $published, array $own, array $listening): Application
+    {
+        $site = rc43Holder($published, 'running-site');
+
+        Process::fake(function ($process) use ($published, $own, $listening) {
+            $line = implode(' ', (array) $process->command);
+
+            return match (true) {
+                str_contains($line, 'ss -ltnH') => Process::result(implode('', array_map(
+                    fn (int $port): string => "LISTEN 0      511          0.0.0.0:{$port}        0.0.0.0:*\n",
+                    $listening,
+                ))),
+                // `docker ps` for this project's own containers, as Docker prints it.
+                str_contains($line, 'label=com.docker.compose.project=') => Process::result(implode(', ', array_map(
+                    fn (int $port): string => "127.0.0.1:{$port}->80/tcp",
+                    $own,
+                ))."\n"),
+                str_contains($line, 'config --format json') => Process::result(json_encode(['services' => ['web' => [
+                    'image' => 'nginx:alpine',
+                    'ports' => [['host_ip' => '127.0.0.1', 'published' => (string) $published, 'target' => 80]],
+                ]]])),
+                str_contains($line, '--status running') => Process::result("abc\n"),
+                str_contains($line, 'curl') => Process::result('200'),
+                default => Process::result(),
+            };
+        });
+
+        return $site;
+    }
+
+    it('does not refuse the ports its own container holds', function () {
+        // While it runs, the listener on its port IS the site. Refusing that would
+        // refuse every save of an unchanged file.
+        $site = rc43EditBox(18080, own: [18080], listening: [22, 18080]);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$site->id}/container/compose", [
+                'compose' => "services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"127.0.0.1:18080:80\"\n",
+            ])
+            ->assertSuccessful();
+    });
+
+    it('still refuses a port something else holds', function () {
+        $site = rc43EditBox(18080, own: [], listening: [18080]);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$site->id}/container/compose", [
+                'compose' => "services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"127.0.0.1:18080:80\"\n",
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('compose');
+    });
 });

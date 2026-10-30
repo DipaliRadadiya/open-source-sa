@@ -441,6 +441,47 @@ class DockerResources
         return $project === '' || $network === '' ? null : ['project' => $project, 'network' => $network];
     }
 
+    /**
+     * The host ports a compose project's containers publish right now.
+     *
+     * `docker ps` prints them as `127.0.0.1:20001->2368/tcp`, a range as
+     * `127.0.0.1:8000-8010->8000-8010/tcp`, and an IPv6 copy of the same
+     * binding as `[::]:8080->80/tcp`. Only the host side of each arrow is read.
+     * Nothing — not an error — when Docker cannot be asked.
+     *
+     * @return list<int>
+     */
+    public function publishedHostPorts(string $project): array
+    {
+        $result = $this->serverOps->run(
+            ['docker', 'ps', '--filter', "label=com.docker.compose.project={$project}", '--format', '{{.Ports}}'],
+            ['feature' => 'docker', 'op' => 'docker_project_ports'],
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        preg_match_all('/:(\d+)(?:-(\d+))?->/', $result->output(), $matches, PREG_SET_ORDER);
+
+        $ports = [];
+
+        foreach ($matches as $match) {
+            $low = (int) $match[1];
+            $high = isset($match[2]) && $match[2] !== '' ? (int) $match[2] : $low;
+
+            // A range is a handful of ports; anything absurd is not a range.
+            if ($high < $low || $high - $low > 1000) {
+                continue;
+            }
+
+            array_push($ports, ...range($low, $high));
+        }
+
+        return array_values(array_unique($ports));
+    }
+
     public function createVolume(string $name): ServerOpsResult
     {
         return $this->serverOps->run(
