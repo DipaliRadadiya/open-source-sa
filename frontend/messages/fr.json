@@ -6577,7 +6577,16 @@
       "stateOn": "Connexion au conteneur activée",
       "stateOff": "Connexion au conteneur désactivée",
       "hostSshOn": "{username} peut toujours se connecter à ce serveur en SSH, hors du conteneur. Pour l'empêcher, désactivez sa connexion SSH dans <link>Utilisateurs système</link>.",
+      "hostSshNotEnforced": "{username} peut toujours se connecter à ce serveur en SSH, hors du conteneur, car les règles de connexion SSH sont désactivées sur ce serveur. Activez-les dans <link>Accès et sécurité</link>.",
       "offBody": "Activez-la et la connexion en tant que {username} ouvrira directement le conteneur de cette application.",
+      "turnOffDialog": {
+        "title": "Désactiver la connexion au conteneur pour {username} ?",
+        "body": "Se connecter en tant que {username} n'ouvrira plus le conteneur de cette application.",
+        "alsoSsh": "Désactiver aussi la connexion SSH de {username} au serveur",
+        "alsoSshHint": "Cela s'applique à {username} sur tout le serveur : SSH et SFTP cessent de fonctionner pour toutes ses applications.",
+        "notEnforced": "Les règles de connexion SSH sont désactivées sur ce serveur, le panneau ne peut donc pas empêcher {username} de se connecter en SSH. Activez-les dans <link>Accès et sécurité</link>.",
+        "submit": "Désactiver"
+      },
       "systemUser": "Utilisateur système",
       "loading": "Chargement de l'accès en ligne de commande",
       "copied": "Commande copiée",
@@ -6609,6 +6618,8 @@
         "turnOff": "Désactiver",
         "turnedOff": "La connexion au conteneur est désactivée pour {username}",
         "turnedOffHostSsh": "La connexion au conteneur est désactivée. {username} peut toujours utiliser SSH sur le serveur.",
+        "turnedOffBoth": "La connexion au conteneur et la connexion SSH sont désactivées pour {username}.",
+        "sshOffFailed": "La connexion au conteneur est désactivée, mais la connexion SSH de {username} n'a pas pu être désactivée.",
         "turnOffFailed": "Impossible de désactiver la connexion au conteneur.",
         "more": "Plus de commandes"
       }

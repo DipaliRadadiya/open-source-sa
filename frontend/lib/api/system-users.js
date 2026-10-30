@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { systemUsersResponseSchema } from "@/lib/schemas/application";
 
 // Client-side System User mutations; callers refresh the server component after.
 
@@ -31,6 +32,17 @@ export function setSystemUserShell(id, shell) {
 
 export function setSystemUserSsh(id, ssh_access) {
   return api.put(`/system-users/${id}/ssh`, { ssh_access });
+}
+
+// One user by exact name, plus whether the server enforces SSH access (the list's meta).
+export async function findSystemUser(username) {
+  const { data } = await api.get("/system-users", { params: { search: username } });
+  const parsed = systemUsersResponseSchema.safeParse(data);
+  const users = parsed.success ? parsed.data.system_users : [];
+  return {
+    user: users.find((user) => user.username === username) ?? null,
+    enforced: parsed.success ? (parsed.data.meta?.ssh_access_enforced ?? null) : null,
+  };
 }
 
 // Accepted shells, localised. Client-side because the create dialog also opens

@@ -12,6 +12,7 @@ import {
   enableContainerAccess,
   getContainerAccess,
 } from "@/lib/api/docker";
+import { findSystemUser, setSystemUserSsh } from "@/lib/api/system-users";
 import { containerAccessSchema, containerLoginSchema } from "@/lib/schemas/docker";
 import {
   defaultContainer,
@@ -31,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormModal } from "@/components/ui/form-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Caution } from "@/components/ui/caution";
 import { Note } from "@/components/ui/note";
@@ -83,6 +85,13 @@ export function ContainerAccessCard({
   const [failed, setFailed] = useState(false);
   const [offPending, setOffPending] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
+  // The owner's System User row (for its id) and whether the server enforces SSH access.
+  const [sshUser, setSshUser] = useState(null);
+  const [confirmOff, setConfirmOff] = useState(false);
+  const [alsoSsh, setAlsoSsh] = useState(false);
+  const [offError, setOffError] = useState(null);
+  const ownerName = access?.owner.username;
+  const ownerSsh = access?.owner.ssh_access;
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -103,7 +112,20 @@ export function ContainerAccessCard({
     };
   }, [application.id, enabled]);
 
+  useEffect(() => {
+    if (!ownerName || !canSeeSystemUsers) return undefined;
+    let cancelled = false;
+    findSystemUser(ownerName)
+      .then((found) => !cancelled && setSshUser(found))
+      .catch(() => !cancelled && setSshUser(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerName, ownerSsh, canSeeSystemUsers]);
+
   if (!enabled || failed) return null;
+
+  const enforced = sshUser?.enforced ?? null;
 
   // After POST or DELETE: the answer if it carries the card's data, else a re-read.
   async function settle(response) {
@@ -120,19 +142,47 @@ export function ContainerAccessCard({
     }
   }
 
-  async function turnOff() {
-    setOffPending(true);
-    try {
-      const response = await disableContainerAccess(application.id);
-      // Turning it off leaves SSH as it is, so say where that login now lands.
-      const hostSsh = hostSshStillOn({ ...access, owner: { ...access.owner, container_login: false } });
-      toast.success(t(hostSsh ? "commands.turnedOffHostSsh" : "commands.turnedOff", { username: access.owner.username }));
-      await settle(response);
-    } catch (error) {
-      toast.error(apiMessage(error, t("commands.turnOffFailed")));
-    } finally {
-      setOffPending(false);
+  // With server SSH still possible after it, Turn off asks first; otherwise one click as before.
+  function requestTurnOff() {
+    const afterOff = { ...access, owner: { ...access.owner, container_login: false } };
+    if (hostSshStillOn(afterOff, enforced)) {
+      setAlsoSsh(false);
+      setOffError(null);
+      setConfirmOff(true);
+      return;
     }
+    turnOff(false);
+  }
+
+  async function turnOff(alsoServerSsh) {
+    const name = access.owner.username;
+    setOffPending(true);
+    let response;
+    try {
+      response = await disableContainerAccess(application.id);
+    } catch (error) {
+      const message = apiMessage(error, t("commands.turnOffFailed"));
+      if (confirmOff) setOffError(message);
+      else toast.error(message);
+      setOffPending(false);
+      return;
+    }
+    if (alsoServerSsh && sshUser?.user) {
+      // Only after container login is off; a failure here leaves SSH exactly as it was.
+      try {
+        await setSystemUserSsh(sshUser.user.id, false);
+        toast.success(t("commands.turnedOffBoth", { username: name }));
+      } catch (error) {
+        toast.error(apiMessage(error, t("commands.sshOffFailed", { username: name })));
+      }
+      await settle(null);
+    } else {
+      const afterOff = { ...access, owner: { ...access.owner, container_login: false } };
+      toast.success(t(hostSshStillOn(afterOff, enforced) ? "commands.turnedOffHostSsh" : "commands.turnedOff", { username: name }));
+      await settle(response);
+    }
+    setConfirmOff(false);
+    setOffPending(false);
   }
 
   const username = access?.owner.username;
@@ -156,7 +206,7 @@ export function ContainerAccessCard({
         {access && canManageSystemUsers ? (
           <CardAction className="row-span-1 self-center">
             {loginOn ? (
-              <Button type="button" variant="outline" size="sm" onClick={turnOff} disabled={offPending}>
+              <Button type="button" variant="outline" size="sm" onClick={requestTurnOff} disabled={offPending}>
                 {offPending ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
                 {t("commands.turnOff")}
               </Button>
@@ -189,21 +239,33 @@ export function ContainerAccessCard({
               )}
             </div>
 
-            {hostSshStillOn(access) ? (
+            {hostSshStillOn(access, enforced) ? (
               <div className="px-(--card-spacing) py-3" data-testid="container-access-host-ssh">
                 <Caution size="md">
                   <p>
-                    {t.rich("hostSshOn", {
-                      username,
-                      link: (chunks) =>
-                        canSeeSystemUsers ? (
-                          <Link href={systemUserHref} prefetch={false} className={linkClass}>
-                            {chunks}
-                          </Link>
-                        ) : (
-                          chunks
-                        ),
-                    })}
+                    {enforced === false
+                      ? t.rich("hostSshNotEnforced", {
+                          username,
+                          link: (chunks) =>
+                            canOpenSecurity ? (
+                              <Link href="/settings/security" prefetch={false} className={linkClass}>
+                                {chunks}
+                              </Link>
+                            ) : (
+                              chunks
+                            ),
+                        })
+                      : t.rich("hostSshOn", {
+                          username,
+                          link: (chunks) =>
+                            canSeeSystemUsers ? (
+                              <Link href={systemUserHref} prefetch={false} className={linkClass}>
+                                {chunks}
+                              </Link>
+                            ) : (
+                              chunks
+                            ),
+                        })}
                   </p>
                 </Caution>
               </div>
@@ -223,6 +285,55 @@ export function ContainerAccessCard({
           </div>
         )}
       </CardContent>
+
+      {access && loginOn && canManageSystemUsers ? (
+        <ConfirmDialog
+          open={confirmOff}
+          onOpenChange={setConfirmOff}
+          icon={Power}
+          tone="warning"
+          title={t("turnOffDialog.title", { username })}
+          description={t("turnOffDialog.body", { username })}
+          confirmLabel={t("turnOffDialog.submit")}
+          pending={offPending}
+          error={offError}
+          onConfirm={() => turnOff(alsoSsh)}
+        >
+          {enforced === false ? (
+            <Note>
+              {t.rich("turnOffDialog.notEnforced", {
+                username,
+                link: (chunks) =>
+                  canOpenSecurity ? (
+                    <Link href="/settings/security" prefetch={false} className={linkClass}>
+                      {chunks}
+                    </Link>
+                  ) : (
+                    chunks
+                  ),
+              })}
+            </Note>
+          ) : sshUser?.user ? (
+            <div className="flex items-start gap-3 rounded-lg border p-3" data-testid="container-access-also-ssh">
+              <Checkbox
+                id="container-access-also-ssh"
+                checked={alsoSsh}
+                onCheckedChange={(value) => setAlsoSsh(value === true)}
+                disabled={offPending}
+                className="mt-0.5"
+              />
+              <div className="min-w-0 space-y-1">
+                <Label htmlFor="container-access-also-ssh" className="leading-snug">
+                  {t("turnOffDialog.alsoSsh", { username })}
+                </Label>
+                <p className="text-xs leading-relaxed text-muted-foreground">{t("turnOffDialog.alsoSshHint", { username })}</p>
+              </div>
+            </div>
+          ) : (
+            <Note>{t.rich("hostSshOn", { username, link: (chunks) => chunks })}</Note>
+          )}
+        </ConfirmDialog>
+      ) : null}
 
       {access && !loginOn && canManageSystemUsers ? (
         <TurnOnDialog
