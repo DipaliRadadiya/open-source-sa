@@ -243,6 +243,34 @@ describe('one restart is not a loop (F2)', function () {
         expect(app(ContainerSupervisor::class)->crashLooping($this->application, '/home/loop/loop.test'))->toBeFalse();
     });
 
+    it('takes a recreated container as healthy, not as a loop', function () {
+        // `up` can replace the container between the two looks — a new one starts
+        // at RestartCount 0. A count that went DOWN is not a restart.
+        Sleep::fake();
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [
+            '3 '.now()->subSeconds(5)->toIso8601ZuluString().' running',
+            '0 '.now()->subSeconds(1)->toIso8601ZuluString().' running',
+        ]);
+
+        expect(app(ContainerSupervisor::class)->crashLooping($this->application, '/home/loop/loop.test'))->toBeFalse();
+    });
+
+    it('waits exactly as long as configured, once, however many containers are suspect', function () {
+        // Bounded: one wait per check, not one per container and not a poll.
+        config(['server.docker.crash_loop_confirm_seconds' => 3]);
+        Sleep::fake();
+        $restarted = '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running';
+        fakeLoopBox(
+            json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running'])."\n".json_encode(['Name' => 'sv-app-1-db-1', 'State' => 'running']),
+            $restarted,
+        );
+
+        expect(app(ContainerSupervisor::class)->crashLooping($this->application, '/home/loop/loop.test'))->toBeFalse();
+
+        Sleep::assertSleptTimes(1);
+        Sleep::assertSequence([Sleep::for(3)->seconds()]);
+    });
+
     it('resumes a paused site whose container restarted once', function () {
         Sleep::fake();
         $this->application->forceFill(['disabled_at' => now()])->save();

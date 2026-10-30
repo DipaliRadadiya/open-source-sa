@@ -680,6 +680,72 @@ it('does not pass --volumes to a plain delete', function () {
     expect($down)->not->toBeNull()->and($down)->not->toContain('--volumes');
 });
 
+/**
+ * A box where the site has moved to `team-net` and its original Compose network
+ * is still there, unused and labelled as this project's. Records every command.
+ *
+ * @param  list<list<string>>  $ran
+ */
+function movedSiteBox(array &$ran): void
+{
+    $project = 'sv-app-'.test()->application->id;
+
+    Process::fake(function ($process) use (&$ran, $project) {
+        $args = $process->command;
+
+        while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
+            array_shift($args);
+        }
+
+        $ran[] = $args;
+        $line = implode(' ', $args);
+
+        return match (true) {
+            str_contains($line, 'network ls') => Process::result(output: json_encode(['Name' => "{$project}_default", 'ID' => 'n1', 'Driver' => 'bridge', 'Scope' => 'local', 'Internal' => 'false'])."\n"
+                .json_encode(['Name' => 'team-net', 'ID' => 'n2', 'Driver' => 'bridge', 'Scope' => 'local', 'Internal' => 'false'])."\n"),
+            str_contains($line, 'com.docker.compose.project"}}') => Process::result(output: "{$project}|default\n"),
+            str_contains($line, '{{json .Containers}}') => Process::result(output: "{}\n"),
+            ($args[0] ?? '') === 'docker' && in_array('ps', $args, true) => Process::result(output: "abc123\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+}
+
+function networkRemovals(array $ran): array
+{
+    return collect($ran)
+        ->filter(fn (array $args) => ($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'network' && ($args[2] ?? '') === 'rm')
+        ->map(fn (array $args) => end($args))
+        ->values()
+        ->all();
+}
+
+it('removes the original network on delete when asked to remove Docker resources (BUG-5)', function () {
+    // The positive twin of the opt-out test below: it proves this box makes the
+    // removal visible, so the opt-out test's silence means something.
+    $this->application->forceFill(['docker_network' => 'team-net'])->save();
+    $ran = [];
+    movedSiteBox($ran);
+
+    $this->withHeaders(composeHeaders())
+        ->deleteJson('/api/applications/'.$this->application->id, ['remove_docker_resources' => true]);
+
+    expect(networkRemovals($ran))->toContain('sv-app-'.$this->application->id.'_default');
+});
+
+it('removes no network on a plain delete, even one the site has moved off (BUG-5 opt-out)', function () {
+    // Removing Docker objects stays opt-in: the original-network cleanup rides on
+    // `remove_docker_resources` like every other Docker removal on delete.
+    $this->application->forceFill(['docker_network' => 'team-net'])->save();
+    $ran = [];
+    movedSiteBox($ran);
+
+    $this->withHeaders(composeHeaders())
+        ->deleteJson('/api/applications/'.$this->application->id);
+
+    expect(networkRemovals($ran))->toBe([]);
+});
+
 /*
  * A port another application holds (RC-43).
  *

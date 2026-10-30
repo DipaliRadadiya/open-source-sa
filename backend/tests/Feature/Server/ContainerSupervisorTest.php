@@ -1500,6 +1500,40 @@ describe('a one-click app\'s limits changed after install (F1)', function () {
         expect($override)->toContain("          memory: \"1g\"\n")->not->toContain('mem_limit');
     });
 
+    it('writes both spellings, one value, when the app service uses both', function () {
+        // Compose refuses two different values for the pair (RC-42); one value in
+        // both places is accepted.
+        [$override] = f1Apply('1g', null, ['mem_limit' => '671088640', 'deploy' => ['resources' => ['limits' => ['memory' => '671088640']]]]);
+
+        expect($override)->toContain("    mem_limit: 1g\n")->toContain("          memory: \"1g\"\n");
+    });
+
+    it('leaves a hand-edited recipe file as the user wrote it', function () {
+        // The override is a second `-f`; the user's compose.yml is not rewritten.
+        $ran = [];
+        $written = null;
+        [$ops, $files] = containerDeps([
+            'compose_validate' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => [
+                    'ghost' => ['image' => 'ghost:5-alpine', 'mem_limit' => '671088640', 'environment' => ['EXTRA' => 'mine'], 'ports' => [['published' => '20001', 'target' => 2368, 'host_ip' => '127.0.0.1']]],
+                    'db' => ['image' => 'mysql:8.4', 'mem_limit' => '536870912'],
+                ],
+            ])), answered: true),
+            'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+        ], $ran, $written);
+        overrideWritten('');
+
+        $edited = "services:\n  ghost:\n    image: ghost:5-alpine\n    environment:\n      EXTRA: mine\n  db:\n    image: mysql:8.4\n";
+        $application = containerApp();
+        $application->forceFill(['site_type' => 'ghost', 'compose' => $edited, 'memory_limit' => '1g'])->save();
+
+        (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+            ->apply($application, '/home/shop/shop/public_html');
+
+        expect($written)->toContain('EXTRA: mine')
+            ->and(overrideWritten())->toContain("  ghost:\n    mem_limit: 1g\n")->not->toContain('EXTRA');
+    });
+
     it('writes nothing when the limits are what the file already says', function () {
         expect(f1Apply('640m', '0.5')[0])->toBe('')
             ->and(overrideDeleted())->toBeTrue();
