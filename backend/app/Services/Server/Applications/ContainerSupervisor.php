@@ -769,8 +769,12 @@ class ContainerSupervisor
         // disk plainly said 512m. Found on the box by reading `docker inspect`
         // after trusting the file — the override had been doing this to memory
         // since one-click apps shipped, and the CPU quota would have joined it.
+        //
+        // So a one-click gets its own, narrower override: the app service only,
+        // and only when the site's limit differs from what the file already says
+        // ({@see recipeOverride()}).
         if ($this->panelRendered($application)) {
-            return $this->discardOverride($documentRoot, $context);
+            return $this->recipeOverride($application, $documentRoot, $context);
         }
 
         $limit = (string) ($application->memory_limit
@@ -788,33 +792,9 @@ class ContainerSupervisor
         foreach ($this->pastedServices as $service => $definition) {
             $lines[] = "  {$service}:";
 
-            // **The key the user's service already uses (RC-42).** Compose refuses
-            // `mem_limit` next to `deploy.resources.limits.memory` with a different
-            // value — "can't set distinct values" — and the override merges over the
-            // user's file, so writing the other spelling made a pasted file with its
-            // own `deploy:` limits a site that never started. The same pair exists
-            // for `cpus`. A service that spells one both ways gets both, with one
-            // value, which Compose accepts.
-            //
             // The panel's number is a ceiling, not a replacement: a service that
             // asks for less than it keeps what it asked for.
             $limits = (array) ($definition['deploy']['resources']['limits'] ?? []);
-            $deploy = [];
-
-            $memory = $this->lowerMemory($limit, $definition['mem_limit'] ?? $limits['memory'] ?? null);
-
-            // Quoted, unlike `mem_limit` (RC-42-FIX): Compose's schema takes a number
-            // for `mem_limit` but only a string here, and refuses the whole file —
-            // "deploy.resources.limits.memory must be a string" — over a byte count
-            // YAML read as an integer. Safe to quote: the value is always one the
-            // panel produced (see lowerMemory), never text from the user's file.
-            if (isset($limits['memory'])) {
-                $deploy['memory'] = "\"{$memory}\"";
-            }
-
-            if (isset($definition['mem_limit']) || ! isset($limits['memory'])) {
-                $lines[] = "    mem_limit: {$memory}";
-            }
 
             // Applied to EVERY service in the pasted file, unlike the generated
             // single-service template. There is no way to tell which of a
@@ -822,27 +802,11 @@ class ContainerSupervisor
             // limiting none of them — makes the field do nothing for exactly the
             // sites most likely to need it. Each service gets the quota, so the
             // number is a per-container ceiling and not a budget shared out.
-            if ($cpus !== null) {
-                $quota = $this->lowerCpus((string) $cpus, $definition['cpus'] ?? $limits['cpus'] ?? null);
-
-                if (isset($limits['cpus'])) {
-                    $deploy['cpus'] = $quota;
-                }
-
-                if (isset($definition['cpus']) || ! isset($limits['cpus'])) {
-                    $lines[] = "    cpus: {$quota}";
-                }
-            }
-
-            if ($deploy !== []) {
-                $lines[] = '    deploy:';
-                $lines[] = '      resources:';
-                $lines[] = '        limits:';
-
-                foreach ($deploy as $key => $value) {
-                    $lines[] = "          {$key}: {$value}";
-                }
-            }
+            array_push($lines, ...$this->limitLines(
+                $definition,
+                $this->lowerMemory($limit, $definition['mem_limit'] ?? $limits['memory'] ?? null),
+                $cpus !== null ? $this->lowerCpus((string) $cpus, $definition['cpus'] ?? $limits['cpus'] ?? null) : null,
+            ));
 
             $lines[] = '    logging:';
             $lines[] = '      driver: json-file';
@@ -853,6 +817,137 @@ class ContainerSupervisor
 
         $path = rtrim($documentRoot, '/').'/compose.panel.yml';
 
+        $written = $this->files->put($path, implode("\n", $lines)."\n", $context);
+
+        if ($written->failed()) {
+            throw new ProvisioningFailedException('compose_override', $written->reference);
+        }
+
+        return $path;
+    }
+
+    /**
+     * The limit lines for one service of an override, under the key that service
+     * already uses (RC-42).
+     *
+     * Compose refuses `mem_limit` next to `deploy.resources.limits.memory` with a
+     * different value — "can't set distinct values" — and the override merges over
+     * the file, so writing the other spelling made a file with its own `deploy:`
+     * limits a site that never started. The same pair exists for `cpus`. A service
+     * that spells one both ways gets both, with one value, which Compose accepts.
+     *
+     * A null value writes nothing for that limit. Every value is one the panel
+     * produced — validated shorthand or a byte count — never text from the file.
+     *
+     * @param  array<string, mixed>  $definition  the service, resolved.
+     * @return list<string>
+     */
+    private function limitLines(array $definition, ?string $memory, ?string $cpus): array
+    {
+        $limits = (array) ($definition['deploy']['resources']['limits'] ?? []);
+        $lines = [];
+        $deploy = [];
+
+        if ($memory !== null) {
+            // Quoted, unlike `mem_limit` (RC-42-FIX): Compose's schema takes a number
+            // for `mem_limit` but only a string here, and refuses the whole file —
+            // "deploy.resources.limits.memory must be a string" — over a byte count
+            // YAML read as an integer.
+            if (isset($limits['memory'])) {
+                $deploy['memory'] = "\"{$memory}\"";
+            }
+
+            if (isset($definition['mem_limit']) || ! isset($limits['memory'])) {
+                $lines[] = "    mem_limit: {$memory}";
+            }
+        }
+
+        if ($cpus !== null) {
+            if (isset($limits['cpus'])) {
+                $deploy['cpus'] = $cpus;
+            }
+
+            if (isset($definition['cpus']) || ! isset($limits['cpus'])) {
+                $lines[] = "    cpus: {$cpus}";
+            }
+        }
+
+        if ($deploy !== []) {
+            $lines[] = '    deploy:';
+            $lines[] = '      resources:';
+            $lines[] = '        limits:';
+
+            foreach ($deploy as $key => $value) {
+                $lines[] = "          {$key}: {$value}";
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * A one-click app's limits, changed after it was installed (F1).
+     *
+     * The file in the `compose` column was rendered from the recipe's template at
+     * create, with the limit of that moment baked into the app service. Saving a
+     * new `memory_limit` re-applied that same file, and the panel's override skips
+     * one-click apps on purpose — so the new number reached nothing. Found in Docker
+     * QA on a real box: NocoDB saved at 768m and kept running at 1 GiB.
+     *
+     * So this override names **the recipe's app service and nothing else**. The
+     * database keeps its own limit, which is the reason the broad override was
+     * switched off for one-click apps in the first place (Ghost's MySQL got the
+     * app's 640m). And the site's value **replaces** the file's rather than capping
+     * it, unlike a pasted file: raising an app from 768m to 1g has to raise it.
+     *
+     * Written only when the site's value differs from what the file already says,
+     * so an app whose limits were never changed after install keeps running from
+     * its own file exactly as before, with no override at all. A recipe with no
+     * service marked `app`, or one the resolved file does not contain, gets none
+     * either — today's behaviour, rather than a guess at which service to limit.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function recipeOverride(Application $application, string $documentRoot, array $context): ?string
+    {
+        $recipe = app(RecipeRegistry::class)->find((string) $application->site_type);
+        $apps = array_values(array_filter($recipe?->services ?? [], fn (array $s): bool => ($s['role'] ?? null) === 'app'));
+        $service = (string) ($apps[0]['name'] ?? '');
+        $definition = $service !== '' ? ($this->pastedServices[$service] ?? null) : null;
+
+        if (count($apps) !== 1 || $definition === null) {
+            return $this->discardOverride($documentRoot, $context);
+        }
+
+        $limits = (array) ($definition['deploy']['resources']['limits'] ?? []);
+
+        $memory = filled($application->memory_limit) ? (string) $application->memory_limit : null;
+        $own = $definition['mem_limit'] ?? $limits['memory'] ?? null;
+
+        if ($memory !== null && is_scalar($own) && self::memoryBytes($memory) === self::memoryBytes((string) $own)) {
+            $memory = null;
+        }
+
+        $cpus = filled($application->cpu_limit) ? (string) $application->cpu_limit : null;
+        $ownCpus = $definition['cpus'] ?? $limits['cpus'] ?? null;
+
+        if ($cpus !== null && is_numeric($ownCpus) && is_numeric($cpus) && (float) $cpus === (float) $ownCpus) {
+            $cpus = null;
+        }
+
+        if ($memory === null && $cpus === null) {
+            return $this->discardOverride($documentRoot, $context);
+        }
+
+        $lines = [
+            '# Written by the panel. Merged over compose.yml by `docker compose -f`.',
+            '# The app service only: the site\'s own limits, changed after install.',
+            'services:',
+            "  {$service}:",
+            ...$this->limitLines($definition, $memory, $cpus),
+        ];
+
+        $path = rtrim($documentRoot, '/').'/compose.panel.yml';
         $written = $this->files->put($path, implode("\n", $lines)."\n", $context);
 
         if ($written->failed()) {

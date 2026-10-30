@@ -5,6 +5,7 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Rules\ContainerMountPath;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Docker\RegistryAuth;
@@ -1078,9 +1079,12 @@ it('writes no override for a file the panel rendered itself', function () {
     [$ops, $files] = containerDeps([
         'compose_validate' => fn () => new ServerOpsResult(
             ok: true, reference: 'r', result: processResult(json_encode([
+                // What `docker compose config` really resolves the file above to:
+                // sizes in bytes, the CPU quota as a number. A recipe override is
+                // decided by comparing the site's limits with these.
                 'services' => [
-                    'ghost' => ['image' => 'ghost:5-alpine', 'ports' => [['published' => '20001', 'target' => 2368, 'host_ip' => '127.0.0.1']]],
-                    'db' => ['image' => 'mysql:8.4'],
+                    'ghost' => ['image' => 'ghost:5-alpine', 'mem_limit' => '671088640', 'cpus' => 0.5, 'ports' => [['published' => '20001', 'target' => 2368, 'host_ip' => '127.0.0.1']]],
+                    'db' => ['image' => 'mysql:8.4', 'mem_limit' => '536870912'],
                 ],
             ])), answered: true,
         ),
@@ -1414,3 +1418,102 @@ it('refuses to render a compose file from a value with a line break in it (DS-08
     'image' => [['image' => "nginx\n    privileged: true"]],
     'memory limit' => [['memory_limit' => "512m\n    privileged: true"]],
 ]);
+
+describe('a one-click app\'s limits changed after install (F1)', function () {
+    // Found in Docker QA on a real box: NocoDB saved at 768m kept running at 1 GiB.
+    // The recipe's file carries the limit of install day, and the broad override
+    // is switched off for one-click apps (it capped their database at the app's
+    // number). So a narrow one names the app service alone.
+
+    /**
+     * Apply a Ghost one-click whose installed file says ghost 640m / 0.5 CPU and
+     * db 512m, with the site's limits set to $memory / $cpus. Returns the
+     * override written ('' for none) and the commands run.
+     *
+     * @param  array<string, mixed>  $ghost  extra resolved keys for the ghost service.
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    function f1Apply(?string $memory, ?string $cpus, array $ghost = ['mem_limit' => '671088640', 'cpus' => 0.5]): array
+    {
+        $ran = [];
+        $written = null;
+        [$ops, $files] = containerDeps([
+            'compose_validate' => fn () => new ServerOpsResult(
+                ok: true, reference: 'r', result: processResult(json_encode([
+                    'services' => [
+                        'ghost' => ['image' => 'ghost:5-alpine', 'ports' => [['published' => '20001', 'target' => 2368, 'host_ip' => '127.0.0.1']]] + $ghost,
+                        'db' => ['image' => 'mysql:8.4', 'mem_limit' => '536870912'],
+                    ],
+                ])), answered: true,
+            ),
+            'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+        ], $ran, $written);
+
+        overrideWritten('');
+        overrideDeleted(false);
+
+        $application = containerApp();
+        $application->forceFill([
+            'site_type' => 'ghost',
+            'compose' => "services:\n  ghost:\n    image: ghost:5-alpine\n  db:\n    image: mysql:8.4\n",
+            'memory_limit' => $memory,
+            'cpu_limit' => $cpus,
+        ])->save();
+
+        (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+            ->apply($application, '/home/shop/shop/public_html');
+
+        return [overrideWritten(), $ran];
+    }
+
+    it('raises the app service to the new limit, and touches nothing else', function () {
+        [$override, $ran] = f1Apply('1g', '0.5');
+
+        // Replaced, not capped: a pasted file's ceiling would have kept 640m here.
+        expect($override)->toBe(implode("\n", [
+            '# Written by the panel. Merged over compose.yml by `docker compose -f`.',
+            "# The app service only: the site's own limits, changed after install.",
+            'services:',
+            '  ghost:',
+            '    mem_limit: 1g',
+        ])."\n")
+            ->and($override)->not->toContain('db:')
+            ->and(collect($ran)->contains(fn (array $call) => $call['op'] === 'compose_up'
+                && in_array('/home/shop/shop/public_html/compose.panel.yml', $call['command'], true)))->toBeTrue();
+    });
+
+    it('lowers it too', function () {
+        [$override] = f1Apply('384m', '0.5');
+
+        expect($override)->toContain("  ghost:\n    mem_limit: 384m\n")->not->toContain('db:');
+    });
+
+    it('applies a changed CPU quota on its own', function () {
+        [$override] = f1Apply('640m', '1.5');
+
+        expect($override)->toContain("  ghost:\n    cpus: 1.5\n")->not->toContain('mem_limit');
+    });
+
+    it('uses the deploy spelling when the recipe\'s app service does', function () {
+        [$override] = f1Apply('1g', null, ['deploy' => ['resources' => ['limits' => ['memory' => '671088640']]]]);
+
+        expect($override)->toContain("          memory: \"1g\"\n")->not->toContain('mem_limit');
+    });
+
+    it('writes nothing when the limits are what the file already says', function () {
+        expect(f1Apply('640m', '0.5')[0])->toBe('')
+            ->and(overrideDeleted())->toBeTrue();
+    });
+
+    it('writes nothing when the site has no limit of its own', function () {
+        expect(f1Apply(null, null)[0])->toBe('');
+    });
+});
+
+it('ships every recipe with exactly one app service, which a limit change targets', function () {
+    foreach (app(RecipeRegistry::class)->all() as $recipe) {
+        $apps = array_filter($recipe->services, fn (array $s): bool => ($s['role'] ?? null) === 'app');
+
+        expect($apps)->toHaveCount(1, "{$recipe->slug} must mark exactly one service as role: app");
+    }
+});
