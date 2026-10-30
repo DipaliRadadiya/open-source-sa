@@ -347,3 +347,108 @@ describe('who may', function () {
         expect(loginRan(['usermod', '-aG', 'sv-app-shell', 'adarsh-oc']))->toBeFalse();
     });
 });
+
+describe('DELETE with disable_ssh — also turn off the owner\'s SSH (Dipali, 2026-10-30)', function () {
+    // QA: "Turn off" made the card say Off while the same key still logged in, now
+    // to a shell on the server. Container login off leaves SSH on by design; the
+    // user is now asked, and the server — which knows the owner — does both.
+
+    it('turns off container login and the owner\'s SSH when asked', function () {
+        $this->owner->update(['container_login' => true, 'ssh_access' => true]);
+
+        $this->withHeaders(loginHeaders())->deleteJson(loginUrl(), ['disable_ssh' => true])
+            ->assertOk()
+            ->assertJsonPath('owner.container_login', false)
+            ->assertJsonPath('owner.ssh_access', false);
+
+        expect(loginRan(['gpasswd', '-d', 'adarsh-oc', 'sv-app-shell']))->toBeTrue()
+            ->and(loginRan(['gpasswd', '-d', 'adarsh-oc', 'ssh-users']))->toBeTrue()
+            ->and($this->owner->refresh()->ssh_access)->toBeFalse();
+    });
+
+    it('leaves SSH exactly as it was when the flag is false', function () {
+        $this->owner->update(['container_login' => true, 'ssh_access' => true]);
+
+        $this->withHeaders(loginHeaders())->deleteJson(loginUrl(), ['disable_ssh' => false])
+            ->assertOk()
+            ->assertJsonPath('owner.ssh_access', true);
+
+        expect(loginRan(['gpasswd', '-d', 'adarsh-oc', 'ssh-users']))->toBeFalse();
+    });
+
+    it('does not touch SSH that is already off', function () {
+        $this->owner->update(['container_login' => true, 'ssh_access' => false]);
+
+        $this->withHeaders(loginHeaders())->deleteJson(loginUrl(), ['disable_ssh' => true])->assertOk();
+
+        expect(loginRan(['gpasswd', '-d', 'adarsh-oc', 'ssh-users']))->toBeFalse();
+    });
+
+    it('refuses a value that is not a boolean, and changes nothing', function () {
+        $this->owner->update(['container_login' => true, 'ssh_access' => true]);
+
+        $this->withHeaders(loginHeaders())->deleteJson(loginUrl(), ['disable_ssh' => 'banana'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('disable_ssh');
+
+        expect(loginRan(['gpasswd', '-d', 'adarsh-oc', 'sv-app-shell']))->toBeFalse()
+            ->and($this->owner->refresh()->container_login)->toBeTrue();
+    });
+
+    it('is refused without system_user manage, and runs nothing', function () {
+        $this->owner->update(['container_login' => true, 'ssh_access' => true]);
+        $viewer = loginViewer(['application', 'app_compose', 'system_user']);
+
+        $this->withHeaders(loginHeaders($viewer))->deleteJson(loginUrl(), ['disable_ssh' => true])->assertForbidden();
+
+        expect(loginRan(['gpasswd', '-d', 'adarsh-oc', 'ssh-users']))->toBeFalse()
+            ->and($this->owner->refresh()->ssh_access)->toBeTrue();
+    });
+
+    it('keeps container login off and says so when the SSH step fails', function () {
+        // After container login, on purpose: a failure here leaves today's state.
+        $this->owner->update(['container_login' => true, 'ssh_access' => true]);
+        $base = Process::fake(function ($process) {
+            $args = $process->command;
+            $this->ran[] = $args;
+
+            return ($args[0] ?? '') === 'gpasswd' && in_array('ssh-users', $args, true)
+                ? Process::result(exitCode: 1, errorOutput: 'gpasswd: failure')
+                : Process::result(exitCode: 0);
+        });
+
+        $response = $this->withHeaders(loginHeaders())->deleteJson(loginUrl(), ['disable_ssh' => true]);
+
+        expect($response->status())->toBeGreaterThanOrEqual(400)
+            ->and($response->json('reference'))->not->toBeEmpty()
+            ->and($this->owner->refresh()->container_login)->toBeFalse()
+            ->and($this->owner->ssh_access)->toBeTrue();
+    });
+
+    it('tells the card when turning SSH off would NOT be enforced', function () {
+        // This box's sshd has no AllowGroups: leaving the group stops nothing.
+        $this->withHeaders(loginHeaders())->getJson(loginUrl())
+            ->assertOk()
+            ->assertJsonPath('ssh_access_enforced', false);
+    });
+
+    it('tells the card when it would be, reading sshd once for everything', function () {
+        Process::fake(function ($process) {
+            $args = $process->command;
+            $this->ran[] = $args;
+
+            return match (true) {
+                $args[0] === 'sshd' && ($args[1] ?? null) === '-T' && ($args[2] ?? null) === '-C' => Process::result(output: "forcecommand /usr/local/libexec/panel/app-login\n"),
+                // `sshd -T` prints a list keyword once per entry.
+                $args[0] === 'sshd' => Process::result(output: "port 22\npasswordauthentication yes\nallowgroups sudo\nallowgroups ssh-users\n"),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        $this->withHeaders(loginHeaders())->getJson(loginUrl())
+            ->assertOk()
+            ->assertJsonPath('ssh_access_enforced', true);
+
+        expect(collect($this->ran)->filter(fn (array $a) => $a === ['sshd', '-T'])->count())->toBe(1);
+    });
+});

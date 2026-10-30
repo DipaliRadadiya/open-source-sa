@@ -7344,6 +7344,7 @@ curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/
 - `containers`: read from the site's **stored compose file** (a Simple-mode site: the file the panel renders for it), never from `docker ps`. `name` is the service's `container_name` when set, otherwise `<project>-<service>-1`. `main: true` on the service that publishes the site's `app_port` (short or long port syntax, any host address); it comes first, then the rest in file order. Services under a Compose `profiles` key are left out (a plain `compose up` does not start them), and so is any name Docker would refuse (`[a-zA-Z0-9][a-zA-Z0-9_.-]*`): these are pasted into a terminal under `sudo`. A file that does not parse gives `[]`. A Simple-mode site with no container port gives the compose endpoint's `422` with `reason: container_port_missing`.
 - `ssh_users`: every system user with `ssh_access`, `sudo` and `has_password` (the panel knows a password, which is what `sudo` asks for), ordered by username — **only** for a caller who also holds `system_user` view; otherwise `[]`. Never a password, hash, key or home path.
 - `password_login`: whether sshd accepts passwords server-wide (`PasswordAuthentication`, from the same cached `sshd -T` read as `ssh_port`).
+- `ssh_access_enforced`: whether turning a user's SSH login off actually stops them logging in, i.e. sshd has `AllowGroups ssh-users` (from the same cached read). `null` when sshd could not be read; treat it like `false` and do not promise that access is gone.
 - `owner`: the app's own system user, on this endpoint's permission (flags and counts only): `ssh_access`, `container_login` (in the `sv-app-shell` group), `has_password`, `ssh_keys` (a count) and `other_apps` (how many **non-Docker** apps it owns — those lose ordinary SSH/SFTP when container login is on). `null` for an app with no system user, with `commands: null`.
 - `app`: the name used in `@<app>`: the app's slug when it is 1–40 characters of `a-z 0-9 -`, otherwise (or on a clash) `app-<id>`.
 - `commands`: exact copyable lines. `-p <port>` only when SSH is not on 22; `@<app>` only when the owner has more than one Docker app (with one, the helper opens it by default).
@@ -7367,6 +7368,13 @@ Turns **container login** on for the app's owner (RC-28): sets its key and/or pa
 
 ### DELETE `/applications/{application}/container/access`
 **Permission:** `system_user` (manage). **Throttle:** 10/min. Takes the owner out of `sv-app-shell`. If `ssh_access` is still on, its next login is an ordinary one on the server. Answers `200` with the GET body.
+
+```json
+{ "disable_ssh": true }
+```
+
+- `disable_ssh` (optional, boolean, default `false`): also turns the owner's SSH login off (the System Users switch), right after container login. Without it the endpoint behaves exactly as before. It applies to the user, so SSH **and SFTP** stop for all of that user's apps on the server, and it only blocks logins when `ssh_access_enforced` is `true`. Skipped when SSH is already off.
+- If the SSH step fails, container login is already off and SSH is unchanged; the answer is the System Users SSH error with its reference.
 
 #### What the user can type (container login on)
 | Command | Does |
