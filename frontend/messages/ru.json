@@ -6484,7 +6484,7 @@
     },
     "containerState": {
       "starting": "Запуск",
-      "restarting": "Перезапускается"
+      "restarting": "Перезапуск"
     },
     "containerFailure": {
       "title": "Контейнер не отвечает",

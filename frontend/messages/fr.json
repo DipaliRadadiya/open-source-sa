@@ -6028,7 +6028,7 @@
     },
     "status": {
       "pending": "En attente",
-      "provisioning": "Provisionnement",
+      "provisioning": "Préparation",
       "active": "En exécution",
       "paused": "En pause",
       "failed": "Échec"
@@ -6484,7 +6484,7 @@
     },
     "containerState": {
       "starting": "Démarrage",
-      "restarting": "Redémarre en boucle"
+      "restarting": "Redémarrage"
     },
     "containerFailure": {
       "title": "Le conteneur ne répond pas",

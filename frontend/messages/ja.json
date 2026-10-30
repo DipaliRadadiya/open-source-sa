@@ -6484,7 +6484,7 @@
     },
     "containerState": {
       "starting": "開始中",
-      "restarting": "再起動を繰り返しています"
+      "restarting": "再起動中"
     },
     "containerFailure": {
       "title": "コンテナが応答していません",

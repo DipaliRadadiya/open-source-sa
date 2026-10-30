@@ -6028,7 +6028,7 @@
     },
     "status": {
       "pending": "Ausstehend",
-      "provisioning": "Wird eingerichtet",
+      "provisioning": "Einrichtung",
       "active": "Läuft",
       "paused": "Pausiert",
       "failed": "Fehlgeschlagen"

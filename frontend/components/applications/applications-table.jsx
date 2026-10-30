@@ -147,7 +147,8 @@ function SizeCell({ row }) {
     }
   }
 
-  // Never measured: the words themselves are the trigger.
+  // Never measured: the words themselves are the trigger. They may wrap: "Nicht gemessen" is
+  // 24px wider than the column in German, and only a site the sweep has not reached shows it.
   if (size === null) {
     return (
       <Tooltip>
@@ -156,7 +157,7 @@ function SizeCell({ row }) {
             type="button"
             onClick={measure}
             disabled={measuring}
-            className="rounded whitespace-nowrap text-muted-foreground underline decoration-dotted decoration-from-font underline-offset-4 transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:no-underline"
+            className="rounded text-left leading-snug whitespace-normal text-muted-foreground underline decoration-dotted decoration-from-font underline-offset-4 transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:no-underline"
           >
             {measuring ? t("size.measuring") : t("size.notMeasured")}
           </button>
@@ -226,30 +227,32 @@ function Filters({ statusOptions, typeOptions, t }) {
 // Percentages plus `fixedLayout` bound the columns so `truncate` works. Each set totals
 // 100 at lg, xl and 2xl. Sized from the widest locale's cell at the NARROWEST table of
 // each breakpoint (704px at 1024, 960px at 1280, 1215px at 1536), measured 7 Oct:
-// Status 166px (ru "Приостановлено"; de "fehlgeschlagen" in the deploy tag 148px),
+// Status 162px (de "Fehlgeschlagen", ru "Приостановлено"; since 30 Oct no pill is longer: fr "Redémarre
+// en boucle" (204px) became "Redémarrage", like en "Restarting"; de "fehlgeschlagen" deploy tag 148px),
 // Last backup 132px (pt), Runs on 120px (ru), Size 93px (es "Tamaño" + sort arrow),
 // System user 131px (de "Systembenutzer", one word that cannot wrap).
 // Every fact column stays on one line (29 Oct: a two-line "41 minutes ago" beside one-line
 // cells read as unaligned); the ⋯ column gave up the room, as it holds a single 32px button.
-// Columns join as the table widens: System user from xl, Size and Created from 2xl (29 Oct, Krishna:
-// System user on 1280 laptops, and Size made way so Last backup fits one line in every locale).
+// Columns join as the table widens: System user and Size from xl, Created from 2xl (Krishna: System
+// user on 1280 laptops, 29 Oct; Size is important, 30 Oct). Application takes what is left at xl:
+// the others are at their measured floors (Last backup 178px, fr "Manuel uniquement").
 const COLUMN_WIDTHS = {
   withBackups: {
-    name: "w-[33%] xl:w-[30%] 2xl:w-[25%]",
-    status: "w-[24%] xl:w-[18%] 2xl:w-[14%]",
+    name: "w-[33%] xl:w-[22%] 2xl:w-[25%]",
+    status: "w-[24%] xl:w-[17%] 2xl:w-[14%]",
     runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
-    lastBackup: "w-[19%] xl:w-[20%] 2xl:w-[15%]",
+    lastBackup: "w-[19%] xl:w-[19%] 2xl:w-[15%]",
     owner: "hidden xl:table-cell xl:w-[14%] 2xl:w-[11%]",
-    size: "hidden 2xl:table-cell 2xl:w-[8%]",
+    size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
     created: "hidden 2xl:table-cell 2xl:w-[12%]",
     actions: "w-[7%] xl:w-[5%]",
   },
   withoutBackups: {
-    name: "w-[52%] xl:w-[50%] 2xl:w-[38%]",
-    status: "w-[24%] xl:w-[18%] 2xl:w-[14%]",
+    name: "w-[52%] xl:w-[41%] 2xl:w-[38%]",
+    status: "w-[24%] xl:w-[17%] 2xl:w-[14%]",
     runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
     owner: "hidden xl:table-cell xl:w-[14%] 2xl:w-[15%]",
-    size: "hidden 2xl:table-cell 2xl:w-[8%]",
+    size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
     created: "hidden 2xl:table-cell 2xl:w-[10%]",
     actions: "w-[7%] xl:w-[5%]",
   },

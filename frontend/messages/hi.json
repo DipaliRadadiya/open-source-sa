@@ -6484,7 +6484,7 @@
     },
     "containerState": {
       "starting": "शुरू हो रहा है",
-      "restarting": "बार-बार रीस्टार्ट हो रहा है"
+      "restarting": "रीस्टार्ट हो रहा है"
     },
     "containerFailure": {
       "title": "कंटेनर जवाब नहीं दे रहा है",
