@@ -26,6 +26,7 @@ use App\Services\Server\ServerPublicIp;
 use App\Services\Server\Settings\SecuritySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class ApplicationContainerController extends Controller
 {
@@ -367,7 +368,11 @@ class ApplicationContainerController extends Controller
         );
 
         try {
-            $updated = $action->execute($application, $request->validated());
+            $updated = $action->execute(
+                $application,
+                Arr::except($request->validated(), ['remove_previous_network']),
+                $request->boolean('remove_previous_network', true),
+            );
         } catch (ProvisioningFailedException $e) {
             // The settings were saved; bringing the container up on them failed.
             // Said as a 422 with the reason rather than a 500, and said the same way

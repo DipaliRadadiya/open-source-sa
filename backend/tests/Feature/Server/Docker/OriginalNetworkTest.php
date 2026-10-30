@@ -5,9 +5,11 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
+use App\Models\User;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\ServerOpsResult;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -120,4 +122,62 @@ it('never removes the default network when the site is moved back onto it', func
     app(UpdateContainerSettings::class)->execute($this->site, ['docker_network' => null]);
 
     expect($this->ran)->not->toContain("rm:{$this->default}");
+});
+
+describe('the user chooses whether the old network goes (Dipali, 2026-10-30)', function () {
+    beforeEach(function () {
+        $this->seed(PermissionSeeder::class);
+        $this->admin = User::factory()->admin()->create();
+    });
+
+    it('keeps the network the site was created on when asked to', function () {
+        networkSwitchBox($this);
+
+        $saved = app(UpdateContainerSettings::class)->execute($this->site, ['docker_network' => 'team-net'], removePreviousNetwork: false);
+
+        expect($saved->docker_network)->toBe('team-net')
+            ->and($this->ran)->toBe([]);
+    });
+
+    it('keeps it through the API when remove_previous_network is false', function () {
+        networkSwitchBox($this);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->site->id}/container", ['docker_network' => 'team-net', 'remove_previous_network' => false])
+            ->assertOk()
+            ->assertJsonPath('application.docker_network', 'team-net');
+
+        expect($this->ran)->not->toContain("rm:{$this->default}");
+    });
+
+    it('removes it through the API when the flag is omitted, exactly as before', function () {
+        networkSwitchBox($this);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->site->id}/container", ['docker_network' => 'team-net'])
+            ->assertOk();
+
+        expect($this->ran)->toContain("rm:{$this->default}");
+    });
+
+    it('removes it through the API when the flag is true', function () {
+        networkSwitchBox($this);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->site->id}/container", ['docker_network' => 'team-net', 'remove_previous_network' => true])
+            ->assertOk();
+
+        expect($this->ran)->toContain("rm:{$this->default}");
+    });
+
+    it('refuses a value that is not a boolean', function () {
+        networkSwitchBox($this);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->site->id}/container", ['docker_network' => 'team-net', 'remove_previous_network' => 'banana'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('remove_previous_network');
+
+        expect($this->site->fresh()->docker_network)->toBeNull();
+    });
 });
