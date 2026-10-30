@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\Docker\OriginalNetwork;
 
 /**
  * Remove the Docker network and volumes a site was using, when asked to.
@@ -29,6 +30,7 @@ class DeleteApplicationDockerResources
         private DockerResources $docker,
         private ActivityLogger $activityLogger,
         private ContainerSupervisor $containers,
+        private OriginalNetwork $originalNetwork,
     ) {}
 
     /**
@@ -45,7 +47,7 @@ class DeleteApplicationDockerResources
      * attached, because that is exactly what had not happened yet. This is the same
      * before/after split the controller already makes for databases.
      *
-     * @return array{volumes: list<string>, network: ?string, kept: list<string>}
+     * @return array{volumes: list<string>, networks: list<string>, kept: list<string>}
      */
     public function plan(Application $application): array
     {
@@ -120,10 +122,11 @@ class DeleteApplicationDockerResources
         }
 
         $network = (string) ($application->docker_network ?? '');
-        $removableNetwork = null;
+        $removableNetworks = [];
+        $networks = $network !== '' ? collect($this->docker->networks()) : collect();
 
         if ($network !== '') {
-            $row = collect($this->docker->networks())->firstWhere('name', $network);
+            $row = $networks->firstWhere('name', $network);
 
             $others = collect($row['sites'] ?? [])
                 ->reject(fn (array $site): bool => (int) $site['id'] === (int) $application->id);
@@ -147,11 +150,15 @@ class DeleteApplicationDockerResources
             } elseif ($foreign->isNotEmpty()) {
                 $kept[] = "{$network}:attached-".$foreign->pluck('name')->implode(',');
             } else {
-                $removableNetwork = $network;
+                $removableNetworks[] = $network;
             }
         }
 
-        return ['volumes' => $removable, 'network' => $removableNetwork, 'images' => [], 'kept' => $kept];
+        if (($original = $this->originalNetwork->find($application, $networks, $kept)) !== null) {
+            $removableNetworks[] = $original;
+        }
+
+        return ['volumes' => $removable, 'networks' => $removableNetworks, 'images' => [], 'kept' => $kept];
     }
 
     /**
@@ -163,8 +170,8 @@ class DeleteApplicationDockerResources
      * anything else on the server, running or stopped — is kept, and so is
      * everything when Docker cannot be asked.
      *
-     * @param  array{volumes: list<string>, network: ?string, images?: list<string>, kept: list<string>}  $plan
-     * @return array{volumes: list<string>, network: ?string, images: list<string>, kept: list<string>}
+     * @param  array{volumes: list<string>, networks: list<string>, images?: list<string>, kept: list<string>}  $plan
+     * @return array{volumes: list<string>, networks: list<string>, images: list<string>, kept: list<string>}
      */
     public function planImages(Application $application, array $plan): array
     {
@@ -203,7 +210,7 @@ class DeleteApplicationDockerResources
      * the whole delete as failed when the only thing it did not finish is cleanup
      * somebody can do by hand from the Docker page.
      *
-     * @param  array{volumes: list<string>, network: ?string, images?: list<string>, kept: list<string>}  $plan
+     * @param  array{volumes: list<string>, networks: list<string>, images?: list<string>, kept: list<string>}  $plan
      * @return array{removed: list<string>, kept: list<string>}
      */
     public function apply(Application $application, array $plan): array
@@ -221,12 +228,14 @@ class DeleteApplicationDockerResources
             $removed[] = "volume:{$name}";
         }
 
-        if ($plan['network'] !== null) {
-            if ($this->docker->removeNetwork($plan['network'])->failed()) {
-                $kept[] = "{$plan['network']}:remove-failed";
-            } else {
-                $removed[] = "network:{$plan['network']}";
+        foreach ($plan['networks'] as $name) {
+            if ($this->docker->removeNetwork($name)->failed()) {
+                $kept[] = "{$name}:remove-failed";
+
+                continue;
             }
+
+            $removed[] = "network:{$name}";
         }
 
         // After the network: Docker refuses an image a container still uses,

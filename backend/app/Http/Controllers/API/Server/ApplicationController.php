@@ -425,7 +425,7 @@ class ApplicationController extends Controller
             // Its images too, unless turned off (2026-10-29). Read now, while
             // the containers still say which images they run.
             if ($application->serving_profile === 'docker' && $request->removeDockerImages()) {
-                $dockerPlan = $dockerResources->planImages($application, $dockerPlan ?? ['volumes' => [], 'network' => null, 'kept' => []]);
+                $dockerPlan = $dockerResources->planImages($application, $dockerPlan ?? ['volumes' => [], 'networks' => [], 'kept' => []]);
             }
 
             // The Docker opt-in reaches `compose down` as `--volumes`. Without it a

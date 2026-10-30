@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerSupervisor;
+use App\Services\Server\Docker\OriginalNetwork;
 
 /**
  * Save a container site's structured fields and make them true on the box.
@@ -29,6 +30,7 @@ class UpdateContainerSettings
         private ActivityLogger $activityLogger,
         private ContainerSupervisor $containers,
         private ApplicationProvisioner $provisioner,
+        private OriginalNetwork $originalNetwork,
     ) {}
 
     /**
@@ -37,6 +39,7 @@ class UpdateContainerSettings
     public function execute(Application $application, array $data): Application
     {
         $application->forceFill($data)->save();
+        $networkChanged = $application->wasChanged('docker_network');
 
         // Nothing on disk to rewrite for a site that was never provisioned, and
         // a disabled one is deliberately not running — bringing its container up
@@ -68,6 +71,13 @@ class UpdateContainerSettings
                 ])->save();
 
                 $failure = $e;
+            }
+
+            // The site is on its new network now, so the one Compose made for it
+            // at create is nobody's (BUG-5). Only after a successful apply: until
+            // then the container may still be on it. Never fatal — see release().
+            if ($failure === null && $networkChanged) {
+                $this->originalNetwork->release($application);
             }
         }
 

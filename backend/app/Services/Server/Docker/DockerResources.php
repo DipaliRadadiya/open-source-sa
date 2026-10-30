@@ -405,6 +405,42 @@ class DockerResources
         );
     }
 
+    /**
+     * Was this network created by Docker Compose as a project's own default
+     * network — and if so, for which project? Null when it was not, or when
+     * Docker could not be asked.
+     *
+     * The name alone is a guess: anybody can `docker network create
+     * sv-app-6_default`. Compose labels every network it creates with the
+     * project and the network's key in the file, and a network it made for a
+     * file that names no networks is keyed `default`. That label pair is what
+     * makes "this site's own original network" a fact rather than an inference.
+     *
+     * @return array{project: string, network: string}|null
+     */
+    public function composeNetwork(string $name): ?array
+    {
+        $result = $this->serverOps->run(
+            ['docker', 'network', 'inspect', '--format',
+                '{{index .Labels "com.docker.compose.project"}}|{{index .Labels "com.docker.compose.network"}}', $name],
+            ['feature' => 'docker', 'op' => 'docker_network_labels'],
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        [$project, $network] = array_pad(explode('|', trim($result->output()), 2), 2, '');
+
+        // A missing label prints as `<no value>` on some Docker versions and
+        // as nothing on others.
+        $project = $project === '<no value>' ? '' : trim($project);
+        $network = $network === '<no value>' ? '' : trim($network);
+
+        return $project === '' || $network === '' ? null : ['project' => $project, 'network' => $network];
+    }
+
     public function createVolume(string $name): ServerOpsResult
     {
         return $this->serverOps->run(

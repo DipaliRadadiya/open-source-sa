@@ -63,12 +63,21 @@ function dockerSite(string $name, array $overrides = []): Application
     ], $overrides));
 }
 
-/** @param  list<array<string,mixed>>  $volumes */
-function fakeDockerState(array $volumes, array $networks = [], array &$ran = []): void
+/**
+ * @param  list<array<string,mixed>>  $volumes
+ * @param  array<string, array{project: string, network: string}|null>  $labels  what Compose's
+ *                                                                               labels say per network; absent = none.
+ */
+function fakeDockerState(array $volumes, array $networks = [], array &$ran = [], array $labels = []): void
 {
     $mock = Mockery::mock(DockerResources::class);
     $mock->shouldReceive('volumes')->andReturn($volumes);
     $mock->shouldReceive('networks')->andReturn($networks);
+    $mock->shouldReceive('composeNetwork')->andReturnUsing(function (string $name) use (&$ran, $labels) {
+        $ran[] = "labels:{$name}";
+
+        return $labels[$name] ?? null;
+    });
     $mock->shouldReceive('removeVolume')->andReturnUsing(function (string $name) use (&$ran) {
         $ran[] = "volume:{$name}";
 
@@ -293,4 +302,97 @@ it('says so when Docker could not be asked at all', function () {
     expect($kept)->toContain('unreadable:docker-volume-list')
         ->and($kept)->toContain('alpha_db:not-listed')
         ->and($ran)->toBe([]);
+});
+
+describe('the network the site was created on, after it moved (BUG-5)', function () {
+    // Found in Docker QA on a real box: a site moved from its own network to
+    // `qaui-net` was deleted with "delete Docker network and volumes", and
+    // `sv-app-110_default` stayed behind, still listed against the deleted app.
+
+    function movedSite(): Application
+    {
+        return dockerSite('alpha', ['docker_network' => 'alpha-net']);
+    }
+
+    /** @return array<string, mixed> */
+    function defaultNetworkRow(Application $site, array $sites = [], array $containers = []): array
+    {
+        return ['name' => "sv-app-{$site->id}_default", 'built_in' => false, 'containers' => $containers, 'sites' => $sites];
+    }
+
+    function ownLabels(Application $site): array
+    {
+        return ["sv-app-{$site->id}_default" => ['project' => "sv-app-{$site->id}", 'network' => 'default']];
+    }
+
+    it('removes it along with the network the site is on now', function () {
+        $site = movedSite();
+
+        $ran = [];
+        fakeDockerState([], [
+            ['name' => 'alpha-net', 'built_in' => false, 'containers' => [], 'sites' => [['id' => $site->id, 'name' => 'alpha']]],
+            defaultNetworkRow($site),
+        ], $ran, ownLabels($site));
+
+        expect(deleteDockerResources($site)['removed'])
+            ->toBe(['network:alpha-net', "network:sv-app-{$site->id}_default"]);
+    });
+
+    it('keeps one with the right name that Compose did not create for this site', function () {
+        // Anybody can `docker network create sv-app-6_default`. The name is a guess;
+        // Compose's labels are the fact.
+        $site = movedSite();
+
+        $ran = [];
+        fakeDockerState([], [defaultNetworkRow($site)], $ran);
+
+        expect(deleteDockerResources($site)['kept'])->toContain("sv-app-{$site->id}_default:not-created-by-this-site")
+            ->and($ran)->not->toContain("network:sv-app-{$site->id}_default");
+    });
+
+    it('keeps one Compose made for a different project', function () {
+        $site = movedSite();
+
+        $ran = [];
+        fakeDockerState([], [defaultNetworkRow($site)], $ran, [
+            "sv-app-{$site->id}_default" => ['project' => 'someone-else', 'network' => 'default'],
+        ]);
+
+        expect(deleteDockerResources($site)['kept'])->toContain("sv-app-{$site->id}_default:not-created-by-this-site")
+            ->and($ran)->not->toContain("network:sv-app-{$site->id}_default");
+    });
+
+    it('keeps it when another site was put on it', function () {
+        $site = movedSite();
+        $other = dockerSite('beta', ['docker_network' => "sv-app-{$site->id}_default"]);
+
+        $ran = [];
+        fakeDockerState([], [defaultNetworkRow($site, sites: [['id' => $other->id, 'name' => 'beta']])], $ran, ownLabels($site));
+
+        expect(deleteDockerResources($site)['kept'])->toContain("sv-app-{$site->id}_default:joined-by-beta")
+            ->and($ran)->not->toContain("network:sv-app-{$site->id}_default");
+    });
+
+    it('keeps it when a container outside this site is attached', function () {
+        $site = movedSite();
+
+        $ran = [];
+        fakeDockerState([], [defaultNetworkRow($site, containers: [['name' => 'debug-shell', 'ports' => []]])], $ran, ownLabels($site));
+
+        expect(deleteDockerResources($site)['kept'])->toContain("sv-app-{$site->id}_default:attached-debug-shell")
+            ->and($ran)->not->toContain("network:sv-app-{$site->id}_default");
+    });
+
+    it('does not touch a site\'s own default network when it never moved', function () {
+        // `compose down` removes that one itself; planning it too would only add a
+        // "remove failed" for a network that is already gone.
+        $site = dockerSite('alpha');
+
+        $ran = [];
+        fakeDockerState([], [defaultNetworkRow($site)], $ran, ownLabels($site));
+
+        deleteDockerResources($site);
+
+        expect($ran)->toBe([]);
+    });
 });
