@@ -976,7 +976,11 @@
     "localPathAbsolute": "Enter a full folder path that starts with /, such as /var/backups/panel.",
     "unresolvedPhp": "Replace the PHP placeholder with a PHP binary, such as php or /usr/bin/php8.3.",
     "nameTaken": "This name is already taken. Please choose a different name.",
-    "localPathRoot": "Choose a folder inside it, such as /var/backups/panel, not /var/backups, /mnt or /media itself."
+    "localPathRoot": "Choose a folder inside it, such as /var/backups/panel, not /var/backups, /mnt or /media itself.",
+    "dockerName": "Start with a letter or number, then use only letters, numbers, dots, dashes and underscores.",
+    "dockerNameLength": "Use 128 characters or fewer.",
+    "dockerMemory": "Use a size with a unit, like 512m or 2g.",
+    "dockerCpu": "Use a number of cores, like 1 or 0.5."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2843,7 +2847,8 @@
     },
     "confirm": {
       "title": "Clean up these items?",
-      "description": "This cannot be undone. Active log files are emptied, not deleted.",
+      "description": "This cannot be undone.",
+      "truncateNote": "Active log files are emptied, not deleted.",
       "cancel": "Cancel",
       "submit": "Clean up",
       "working": "Working — this can take a minute on a busy server.",
@@ -6569,8 +6574,10 @@
     },
     "containerAccess": {
       "title": "Command-line access",
-      "stateOn": "On",
-      "stateOff": "Off",
+      "stateOn": "Container login on",
+      "stateOff": "Container login off",
+      "hostSshOn": "{username} can still log in to this server over SSH, outside the container. To stop that, turn off its SSH login in <link>System Users</link>.",
+      "offBody": "Turn it on and logging in as {username} opens this app's container directly.",
       "systemUser": "System user",
       "loading": "Loading command-line access",
       "copied": "Command copied",
@@ -6601,6 +6608,7 @@
         "note": "No sudo needed. With an SSH key there is no password prompt; otherwise it asks for {username}'s password once. <link>For normal server SSH, create a separate system user.</link>",
         "turnOff": "Turn off",
         "turnedOff": "Container login is off for {username}",
+        "turnedOffHostSsh": "Container login is off. {username} can still use SSH on the server.",
         "turnOffFailed": "Container login could not be turned off.",
         "more": "More commands"
       }

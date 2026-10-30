@@ -15,6 +15,7 @@ import {
 import { containerAccessSchema, containerLoginSchema } from "@/lib/schemas/docker";
 import {
   defaultContainer,
+  hostSshStillOn,
   shellCommandFor,
   showsContainerAccess,
   turnOnNeeds,
@@ -123,7 +124,9 @@ export function ContainerAccessCard({
     setOffPending(true);
     try {
       const response = await disableContainerAccess(application.id);
-      toast.success(t("commands.turnedOff", { username: access.owner.username }));
+      // Turning it off leaves SSH as it is, so say where that login now lands.
+      const hostSsh = hostSshStillOn({ ...access, owner: { ...access.owner, container_login: false } });
+      toast.success(t(hostSsh ? "commands.turnedOffHostSsh" : "commands.turnedOff", { username: access.owner.username }));
       await settle(response);
     } catch (error) {
       toast.error(apiMessage(error, t("commands.turnOffFailed")));
@@ -186,12 +189,32 @@ export function ContainerAccessCard({
               )}
             </div>
 
+            {hostSshStillOn(access) ? (
+              <div className="px-(--card-spacing) py-3" data-testid="container-access-host-ssh">
+                <Caution size="md">
+                  <p>
+                    {t.rich("hostSshOn", {
+                      username,
+                      link: (chunks) =>
+                        canSeeSystemUsers ? (
+                          <Link href={systemUserHref} prefetch={false} className={linkClass}>
+                            {chunks}
+                          </Link>
+                        ) : (
+                          chunks
+                        ),
+                    })}
+                  </p>
+                </Caution>
+              </div>
+            ) : null}
+
             {loginOn ? (
               <div className="px-(--card-spacing) py-4">
                 <Commands access={access} canSeeSystemUsers={canSeeSystemUsers} />
               </div>
             ) : canManageSystemUsers ? (
-              <p className="px-(--card-spacing) py-3 text-muted-foreground">{t("turnOn.body", { username })}</p>
+              <p className="px-(--card-spacing) py-3 text-muted-foreground">{t("offBody", { username })}</p>
             ) : (
               <p className="px-(--card-spacing) py-3 text-muted-foreground" data-testid="container-access-read-only">
                 {t("readOnly", { username })}

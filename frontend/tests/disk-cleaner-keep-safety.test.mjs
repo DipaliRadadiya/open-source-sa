@@ -26,8 +26,9 @@ test("an older API gets no dropdown, no choice in the request and no history lab
 
 test("Delete all names only what is ticked, and the application history only when it goes", () => {
   const panel = strip(read("components/disk-cleaner/cleanup-panel.jsx"));
-  assert.match(panel, /t\("keep\.deleteAllItems", \{ items: chosen\.map\(\(c\) => c\.label\)\.join\(", "\) \}\)/);
-  assert.match(panel, /chosen\.some\(\(c\) => c\.key === "site_logs"\) \? ` \$\{t\("keep\.deleteAllSiteLogs"\)\}` : null/);
+  // Only what the keep choice applies to: Docker images and unused packages go whole anyway.
+  assert.match(panel, /t\("keep\.deleteAllItems", \{ items: keptChosen\.map\(\(c\) => c\.label\)\.join\(", "\) \}\)/);
+  assert.match(panel, /keptChosen\.some\(\(c\) => c\.key === "site_logs"\) \? ` \$\{t\("keep\.deleteAllSiteLogs"\)\}` : null/);
   assert.doesNotMatch(panel, /deleteAllWarning/);
   for (const locale of LOCALES) {
     const keep = JSON.parse(read(`messages/${locale}.json`)).diskCleaner.keep;

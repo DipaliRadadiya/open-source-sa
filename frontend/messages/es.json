@@ -976,7 +976,11 @@
     "localPathAbsolute": "Introduce la ruta completa de una carpeta que empiece por /, como /var/backups/panel.",
     "unresolvedPhp": "Sustituye el marcador de PHP por un binario de PHP, como php o /usr/bin/php8.3.",
     "nameTaken": "Este nombre ya está en uso. Elige otro nombre.",
-    "localPathRoot": "Elige una carpeta dentro, como /var/backups/panel, no /var/backups, /mnt o /media en sí."
+    "localPathRoot": "Elige una carpeta dentro, como /var/backups/panel, no /var/backups, /mnt o /media en sí.",
+    "dockerName": "Empiece por una letra o un número y use solo letras, números, puntos, guiones y guiones bajos.",
+    "dockerNameLength": "Use 128 caracteres o menos.",
+    "dockerMemory": "Use un tamaño con unidad, como 512m o 2g.",
+    "dockerCpu": "Use un número de núcleos, como 1 o 0.5."
   },
   "serverDashboard": {
     "title": "Panel",
@@ -2843,7 +2847,8 @@
     },
     "confirm": {
       "title": "¿Limpiar estos elementos?",
-      "description": "Esto no se puede deshacer. Los registros activos se vacían, no se eliminan.",
+      "description": "Esto no se puede deshacer.",
+      "truncateNote": "Los registros activos se vacían, no se eliminan.",
       "cancel": "Cancelar",
       "submit": "Limpiar",
       "working": "Trabajando: puede tardar un minuto en un servidor ocupado.",
@@ -6569,8 +6574,10 @@
     },
     "containerAccess": {
       "title": "Acceso por línea de comandos",
-      "stateOn": "Activado",
-      "stateOff": "Desactivado",
+      "stateOn": "Inicio de sesión en el contenedor activado",
+      "stateOff": "Inicio de sesión en el contenedor desactivado",
+      "hostSshOn": "{username} aún puede iniciar sesión en este servidor por SSH, fuera del contenedor. Para impedirlo, desactive su inicio de sesión SSH en <link>Usuarios del sistema</link>.",
+      "offBody": "Actívelo y, al iniciar sesión como {username}, se abrirá directamente el contenedor de esta aplicación.",
       "systemUser": "Usuario del sistema",
       "loading": "Cargando el acceso por línea de comandos",
       "copied": "Comando copiado",
@@ -6601,6 +6608,7 @@
         "note": "No necesita sudo. Con una clave SSH no se pide contraseña; si no, se pide la contraseña de {username} una vez. <link>Para el SSH normal del servidor, cree un usuario del sistema aparte.</link>",
         "turnOff": "Desactivar",
         "turnedOff": "El inicio de sesión en el contenedor está desactivado para {username}",
+        "turnedOffHostSsh": "El inicio de sesión en el contenedor está desactivado. {username} aún puede usar SSH en el servidor.",
         "turnOffFailed": "No se pudo desactivar el inicio de sesión en el contenedor.",
         "more": "Más comandos"
       }

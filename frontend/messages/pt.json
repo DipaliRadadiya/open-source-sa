@@ -976,7 +976,11 @@
     "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /, como /var/backups/panel.",
     "unresolvedPhp": "Substitua o marcador de PHP por um binário PHP, como php ou /usr/bin/php8.3.",
     "nameTaken": "Este nome já está em uso. Escolha outro nome.",
-    "localPathRoot": "Escolha uma pasta dentro dela, como /var/backups/panel, e não /var/backups, /mnt ou /media em si."
+    "localPathRoot": "Escolha uma pasta dentro dela, como /var/backups/panel, e não /var/backups, /mnt ou /media em si.",
+    "dockerName": "Comece com uma letra ou número e use apenas letras, números, pontos, hífenes e sublinhados.",
+    "dockerNameLength": "Use 128 caracteres ou menos.",
+    "dockerMemory": "Informe um tamanho com unidade, como 512m ou 2g.",
+    "dockerCpu": "Informe um número de núcleos, como 1 ou 0.5."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -2843,7 +2847,8 @@
     },
     "confirm": {
       "title": "Limpar estes itens?",
-      "description": "Isso não pode ser desfeito. Arquivos de log ativos são esvaziados, não excluídos.",
+      "description": "Isso não pode ser desfeito.",
+      "truncateNote": "Arquivos de log ativos são esvaziados, não excluídos.",
       "cancel": "Cancelar",
       "submit": "Limpar",
       "working": "Trabalhando — pode levar um minuto em um servidor ocupado.",
@@ -6569,8 +6574,10 @@
     },
     "containerAccess": {
       "title": "Acesso por linha de comando",
-      "stateOn": "Ligado",
-      "stateOff": "Desligado",
+      "stateOn": "Login no contentor ligado",
+      "stateOff": "Login no contentor desligado",
+      "hostSshOn": "{username} ainda pode entrar neste servidor por SSH, fora do contentor. Para impedir isso, desligue o login SSH dele em <link>Usuários do sistema</link>.",
+      "offBody": "Ligue-o e entrar como {username} vai abrir diretamente o contentor desta aplicação.",
       "systemUser": "Usuário do sistema",
       "loading": "Carregando o acesso por linha de comando",
       "copied": "Comando copiado",
@@ -6601,6 +6608,7 @@
         "note": "Não precisa de sudo. Com uma chave SSH não há pedido de senha; caso contrário, a senha de {username} é pedida uma vez. <link>Para SSH normal no servidor, crie um usuário do sistema separado.</link>",
         "turnOff": "Desligar",
         "turnedOff": "O login no contentor está desligado para {username}",
+        "turnedOffHostSsh": "O login no contentor está desligado. {username} ainda pode usar SSH no servidor.",
         "turnOffFailed": "Não foi possível desligar o login no contentor.",
         "more": "Mais comandos"
       }

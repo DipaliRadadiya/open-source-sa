@@ -976,7 +976,11 @@
     "localPathAbsolute": "/var/backups/panel のように、/ で始まるフォルダーのフルパスを入力してください。",
     "unresolvedPhp": "PHP のプレースホルダーを php や /usr/bin/php8.3 などの PHP バイナリに置き換えてください。",
     "nameTaken": "この名前はすでに使われています。別の名前を選んでください。",
-    "localPathRoot": "/var/backups/panel のように、その中のフォルダーを指定してください。/var/backups、/mnt、/media そのものは使えません。"
+    "localPathRoot": "/var/backups/panel のように、その中のフォルダーを指定してください。/var/backups、/mnt、/media そのものは使えません。",
+    "dockerName": "先頭は英字か数字にし、英字、数字、ドット、ハイフン、アンダースコアのみを使ってください。",
+    "dockerNameLength": "128 文字以内で入力してください。",
+    "dockerMemory": "512m や 2g のように、単位付きのサイズを入力してください。",
+    "dockerCpu": "1 や 0.5 のように、コア数を入力してください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -2843,7 +2847,8 @@
     },
     "confirm": {
       "title": "これらの項目をクリーンアップしますか？",
-      "description": "この操作は取り消せません。アクティブなログファイルは削除ではなく空にされます。",
+      "description": "この操作は取り消せません。",
+      "truncateNote": "アクティブなログファイルは削除ではなく空にされます。",
       "cancel": "キャンセル",
       "submit": "クリーンアップ",
       "working": "処理中です — サーバーの負荷によっては数分かかります。",
@@ -6569,8 +6574,10 @@
     },
     "containerAccess": {
       "title": "コマンドラインアクセス",
-      "stateOn": "オン",
-      "stateOff": "オフ",
+      "stateOn": "コンテナログイン: オン",
+      "stateOff": "コンテナログイン: オフ",
+      "hostSshOn": "{username} は引き続き、コンテナの外でこのサーバーに SSH でログインできます。止めるには、<link>システムユーザー</link>でこのユーザーの SSH ログインをオフにしてください。",
+      "offBody": "オンにすると、{username} としてログインしたときにこのアプリのコンテナが直接開きます。",
       "systemUser": "システムユーザー",
       "loading": "コマンドラインアクセスを読み込んでいます",
       "copied": "コマンドをコピーしました",
@@ -6601,6 +6608,7 @@
         "note": "sudo は不要です。SSH 鍵があればパスワードは尋ねられません。鍵がない場合は {username} のパスワードを 1 回だけ尋ねられます。<link>サーバーへの通常の SSH には、別のシステムユーザーを作成してください。</link>",
         "turnOff": "オフにする",
         "turnedOff": "{username} のコンテナログインをオフにしました",
+        "turnedOffHostSsh": "コンテナログインをオフにしました。{username} は引き続きサーバーで SSH を使えます。",
         "turnOffFailed": "コンテナログインをオフにできませんでした。",
         "more": "その他のコマンド"
       }

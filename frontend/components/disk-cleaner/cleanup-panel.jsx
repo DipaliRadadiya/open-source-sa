@@ -20,6 +20,7 @@ import { InfoHint } from "@/components/ui/info-hint";
 import { MeasuredAt } from "@/components/disk-cleaner/measured-at";
 import { KeepSelect, useKeepLabel } from "@/components/disk-cleaner/keep-select";
 import { hasKeepChoice, keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-days";
+import { confirmNotes, keepApplicable } from "@/lib/disk-cleaner/confirm-notes";
 import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
 import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
@@ -73,6 +74,8 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const chosen = cleanable.filter((c) => selected.has(c.key));
   const chosenBytes = chosen.reduce((total, c) => total + c.bytes, 0);
   const riskyChosen = chosen.filter((c) => !c.safe);
+  const notes = confirmNotes(chosen);
+  const keptChosen = keepApplicable(chosen);
 
   function toggle(key) {
     setSelected((prev) => {
@@ -402,7 +405,10 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             </div>
           </div>
 
-          {keep != null ? (
+          {notes.truncates ? <p className="text-sm">{t("confirm.truncateNote")}</p> : null}
+
+          {/* Only when something ticked uses it: Docker images and unused packages always go whole. */}
+          {keep != null && notes.keepApplies ? (
             <p className="text-sm">
               {t("keep.confirmLine", { choice: keepLabel(keep, recommended) })}
             </p>
@@ -410,11 +416,11 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
           {/* Names only what is ticked: the old sentence said every log goes even with only the journal
               chosen. Application logs are the history people go back to after an incident. */}
-          {keep === 0 ? (
+          {keep === 0 && notes.keepApplies ? (
             <Caution tone="destructive" size="md">
               <p>
-                {t("keep.deleteAllItems", { items: chosen.map((c) => c.label).join(", ") })}
-                {chosen.some((c) => c.key === "site_logs") ? ` ${t("keep.deleteAllSiteLogs")}` : null}
+                {t("keep.deleteAllItems", { items: keptChosen.map((c) => c.label).join(", ") })}
+                {keptChosen.some((c) => c.key === "site_logs") ? ` ${t("keep.deleteAllSiteLogs")}` : null}
               </p>
             </Caution>
           ) : null}

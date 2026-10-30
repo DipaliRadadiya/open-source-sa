@@ -137,7 +137,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
       window.dispatchEvent(new CustomEvent(PHP_INI_CHANGED, { detail: { version, source: "settings" } }));
       onSaved(parsed.success ? parsed.data.settings : { ...settings, ...payload });
     } catch (error) {
-      if (!handleValidationError(error, form)) toast.error(apiMessage(error, t("failed")));
+      handleValidationError(error, form, { fallback: t("failed") });
     } finally {
       setPending(false);
     }

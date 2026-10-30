@@ -30,3 +30,11 @@ export function turnOnNeeds(access) {
   if (access.password_login !== true) return "nothing";
   return owner.has_password ? "nothing" : "keyOrPassword";
 }
+
+// Container login off only stops routing SSH into the container (RC-28): with SSH access on and
+// a way to sign in, the owner's next login is a shell on the server. Said, never assumed off.
+export function hostSshStillOn(access) {
+  const owner = access?.owner;
+  if (!owner || owner.container_login || !owner.ssh_access) return false;
+  return owner.ssh_keys > 0 || access.password_login !== false;
+}

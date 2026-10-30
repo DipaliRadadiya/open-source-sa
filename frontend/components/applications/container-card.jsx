@@ -147,9 +147,7 @@ export function ContainerCard({
       toast.success(t("saved"));
       target.reset(values);
     } catch (error) {
-      if (!handleValidationError(error, target)) {
-        toast.error(apiMessage(error, t("failed")));
-      }
+      handleValidationError(error, target, { fallback: t("failed") });
     } finally {
       setBusy(false);
     }

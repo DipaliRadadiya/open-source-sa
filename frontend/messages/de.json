@@ -976,7 +976,11 @@
     "localPathAbsolute": "Geben Sie einen vollständigen Ordnerpfad ein, der mit / beginnt, z. B. /var/backups/panel.",
     "unresolvedPhp": "Ersetzen Sie den PHP-Platzhalter durch eine PHP-Binärdatei, z. B. php oder /usr/bin/php8.3.",
     "nameTaken": "Dieser Name ist bereits vergeben. Bitte wählen Sie einen anderen Namen.",
-    "localPathRoot": "Wählen Sie einen Ordner darin, z. B. /var/backups/panel, nicht /var/backups, /mnt oder /media selbst."
+    "localPathRoot": "Wählen Sie einen Ordner darin, z. B. /var/backups/panel, nicht /var/backups, /mnt oder /media selbst.",
+    "dockerName": "Beginnen Sie mit einem Buchstaben oder einer Ziffer und verwenden Sie nur Buchstaben, Ziffern, Punkte, Binde- und Unterstriche.",
+    "dockerNameLength": "Höchstens 128 Zeichen.",
+    "dockerMemory": "Geben Sie eine Größe mit Einheit an, z. B. 512m oder 2g.",
+    "dockerCpu": "Geben Sie eine Anzahl Kerne an, z. B. 1 oder 0.5."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2843,7 +2847,8 @@
     },
     "confirm": {
       "title": "Diese Einträge bereinigen?",
-      "description": "Das lässt sich nicht zurücknehmen. Aktive Protokolldateien werden geleert, nicht gelöscht.",
+      "description": "Das lässt sich nicht zurücknehmen.",
+      "truncateNote": "Aktive Protokolldateien werden geleert, nicht gelöscht.",
       "cancel": "Abbrechen",
       "submit": "Bereinigen",
       "working": "Läuft — auf einem gut beschäftigten Server kann das eine Minute dauern.",
@@ -6569,8 +6574,10 @@
     },
     "containerAccess": {
       "title": "Kommandozeilenzugriff",
-      "stateOn": "An",
-      "stateOff": "Aus",
+      "stateOn": "Container-Anmeldung an",
+      "stateOff": "Container-Anmeldung aus",
+      "hostSshOn": "{username} kann sich weiterhin per SSH auf diesem Server anmelden, außerhalb des Containers. Um das zu verhindern, schalten Sie die SSH-Anmeldung unter <link>Systembenutzer</link> aus.",
+      "offBody": "Schalten Sie sie ein, dann landet die Anmeldung als {username} direkt im Container dieser Anwendung.",
       "systemUser": "Systembenutzer",
       "loading": "Kommandozeilenzugriff wird geladen",
       "copied": "Befehl kopiert",
@@ -6601,6 +6608,7 @@
         "note": "Kein sudo nötig. Mit einem SSH-Schlüssel gibt es keine Passwortabfrage, sonst wird einmal nach dem Passwort von {username} gefragt. <link>Für normales SSH auf dem Server legen Sie einen eigenen Systembenutzer an.</link>",
         "turnOff": "Ausschalten",
         "turnedOff": "Container-Anmeldung für {username} ist ausgeschaltet",
+        "turnedOffHostSsh": "Container-Anmeldung ist ausgeschaltet. {username} kann SSH auf dem Server weiterhin nutzen.",
         "turnOffFailed": "Die Container-Anmeldung konnte nicht ausgeschaltet werden.",
         "more": "Weitere Befehle"
       }

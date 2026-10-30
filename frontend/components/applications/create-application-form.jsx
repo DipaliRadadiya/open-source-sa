@@ -104,6 +104,7 @@ import {
   dockerVolumeProblem,
 } from "@/lib/docker/create-request";
 import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
+import { breaksDockerLimit, dockerLimitRule } from "@/lib/applications/docker-limit-rules";
 
 const COMMON_FIELD_NAMES = new Set([
   "site_type",
@@ -332,6 +333,7 @@ function ConfigField({
   patternRule = null,
 }) {
   const t = useTranslations("applications");
+  const tv = useTranslations("validation");
   const isAccount = config.source === "git_accounts";
   // Memoised: the `[]` fallback is a new array every render.
   const runtimeVersions = useMemo(
@@ -635,7 +637,7 @@ function ConfigField({
           !form.formState.errors?.[config.name] &&
           String(field.value ?? "").trim() !== "" &&
           !patternRule.pattern.test(String(field.value).trim()) ? (
-            <p className="text-sm text-destructive">{t(patternRule.message)}</p>
+            <p className="text-sm text-destructive">{patternRule.scope === "validation" ? tv(patternRule.message) : t(patternRule.message)}</p>
           ) : null}
           {isPort ? null : runtimeFailed ? (
             <FormDescription className="text-destructive">
@@ -965,7 +967,11 @@ export function CreateApplicationForm({
     .map((config) => {
       const value = values?.[config.name];
       const rule = FIELD_PATTERNS[values?.site_type]?.[config.name];
-      const breaksRule = Boolean(rule) && String(value ?? "").trim() !== "" && !rule.pattern.test(String(value).trim());
+      // A refused value (pattern, limit shape, or the server's 422 on that field) is not ready.
+      const breaksRule =
+        (Boolean(rule) && String(value ?? "").trim() !== "" && !rule.pattern.test(String(value).trim())) ||
+        breaksDockerLimit(config.name, value) ||
+        Boolean(form.formState.errors[config.name]);
       const ready = (!config.required || hasConfigValue(config, value)) && !breaksRule;
       // The image is only ready once the registry has confirmed it exists.
       if (isDockerSimple && config.name === "image" && hasConfigValue(config, value)) {
@@ -2296,7 +2302,7 @@ export function CreateApplicationForm({
                           phpRange={selected?.php_version_range ?? null}
                           nodeRange={selected?.node_version_range ?? null}
                           timezones={timezones}
-                          patternRule={FIELD_PATTERNS[selected?.name]?.[config.name] ?? null}
+                          patternRule={FIELD_PATTERNS[selected?.name]?.[config.name] ?? dockerLimitRule(config.name)}
                         />
                       ))}
                     </div>
@@ -2341,7 +2347,7 @@ export function CreateApplicationForm({
                             nodeVersions={typeNodeVersions}
                             nodeVersionsFailed={nodeVersionsFailed}
                             timezones={timezones}
-                            patternRule={FIELD_PATTERNS[selected?.name]?.[config.name] ?? null}
+                            patternRule={FIELD_PATTERNS[selected?.name]?.[config.name] ?? dockerLimitRule(config.name)}
                           />
                         ))}
                       </CollapsibleContent>

@@ -1,6 +1,7 @@
 import { z } from "zod";
 // Relative: node tests import this file without the `@/` alias.
 import { passwordField, sshKeySchema } from "./system-user.js";
+import { DOCKER_CPU_PATTERN, DOCKER_MEMORY_PATTERN } from "../applications/docker-limit-rules.js";
 
 /**
  * A Docker network as the panel presents it.
@@ -190,9 +191,9 @@ export const dockerLimitsResponseSchema = z.object({
  */
 export const dockerNameSchema = z
   .string()
-  .min(1)
-  .max(128)
-  .regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/);
+  .min(1, "requiredField")
+  .max(128, "dockerNameLength")
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/, "dockerName");
 
 /**
  * The container settings form.
@@ -202,14 +203,14 @@ export const dockerNameSchema = z
  * not `.min(1)`.
  */
 export const containerSettingsFormSchema = z.object({
-  container_port: z.coerce.number().int().min(1).max(65535),
+  container_port: z.coerce.number("portRange").int("portRange").min(1, "portRange").max(65535, "portRange"),
   // A sentinel string, not a number or a null: Radix reserves `""` for "nothing
   // selected", so "pull anonymously" needs a value of its own and the form holds
   // the id as a string. The card maps both back on submit.
   registry_id: z.string(),
   memory_limit: z
     .string()
-    .regex(/^\d+(b|k|m|g)?$/i)
+    .regex(DOCKER_MEMORY_PATTERN, "dockerMemory")
     .or(z.literal("")),
   // Cores, with up to two decimal places — the same shape `WithinHostCpus`
   // accepts. Empty is a real answer and means no quota, which is why it is not
@@ -217,7 +218,7 @@ export const containerSettingsFormSchema = z.object({
   // because only the server knows how big the server is.
   cpu_limit: z
     .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
+    .regex(DOCKER_CPU_PATTERN, "dockerCpu")
     .or(z.literal("")),
   docker_network: z.string(),
 });

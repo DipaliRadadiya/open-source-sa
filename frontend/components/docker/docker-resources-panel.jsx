@@ -479,7 +479,7 @@ function CreateDialog({ kind, onOpenChange, onCreated }) {
       await (kind === "network" ? createDockerNetwork(name) : createDockerVolume(name));
       await onCreated(name);
     } catch (error) {
-      if (!handleValidationError(error, form)) toast.error(apiMessage(error, t("failed")));
+      handleValidationError(error, form, { fallback: t("failed") });
     }
   }
 
@@ -515,7 +515,7 @@ function CreateDialog({ kind, onOpenChange, onCreated }) {
                 <Input placeholder={t(`${kind}s.placeholder`)} autoComplete="off" spellCheck={false} className="font-mono text-sm" autoFocus {...field} />
               </FormControl>
               <FormDescription>{t("nameRule")}</FormDescription>
-              <FormMessage>{form.formState.errors.name?.type === "invalid_string" ? t("nameRule") : undefined}</FormMessage>
+              <FormMessage />
             </FormItem>
           )}
         />

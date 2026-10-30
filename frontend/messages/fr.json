@@ -976,7 +976,11 @@
     "localPathAbsolute": "Saisissez le chemin complet d'un dossier commençant par /, par exemple /var/backups/panel.",
     "unresolvedPhp": "Remplacez l'espace réservé PHP par un binaire PHP, comme php ou /usr/bin/php8.3.",
     "nameTaken": "Ce nom est déjà pris. Veuillez choisir un autre nom.",
-    "localPathRoot": "Choisissez un dossier à l'intérieur, comme /var/backups/panel, pas /var/backups, /mnt ou /media eux-mêmes."
+    "localPathRoot": "Choisissez un dossier à l'intérieur, comme /var/backups/panel, pas /var/backups, /mnt ou /media eux-mêmes.",
+    "dockerName": "Commencez par une lettre ou un chiffre, puis utilisez uniquement des lettres, chiffres, points, tirets et traits de soulignement.",
+    "dockerNameLength": "128 caractères maximum.",
+    "dockerMemory": "Indiquez une taille avec une unité, par exemple 512m ou 2g.",
+    "dockerCpu": "Indiquez un nombre de cœurs, par exemple 1 ou 0.5."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -2843,7 +2847,8 @@
     },
     "confirm": {
       "title": "Nettoyer ces éléments ?",
-      "description": "Action irréversible. Les fichiers de journaux actifs sont vidés, pas supprimés.",
+      "description": "Action irréversible.",
+      "truncateNote": "Les fichiers de journaux actifs sont vidés, pas supprimés.",
       "cancel": "Annuler",
       "submit": "Nettoyer",
       "working": "En cours — cela peut prendre une minute sur un serveur chargé.",
@@ -6569,8 +6574,10 @@
     },
     "containerAccess": {
       "title": "Accès en ligne de commande",
-      "stateOn": "Activé",
-      "stateOff": "Désactivé",
+      "stateOn": "Connexion au conteneur activée",
+      "stateOff": "Connexion au conteneur désactivée",
+      "hostSshOn": "{username} peut toujours se connecter à ce serveur en SSH, hors du conteneur. Pour l'empêcher, désactivez sa connexion SSH dans <link>Utilisateurs système</link>.",
+      "offBody": "Activez-la et la connexion en tant que {username} ouvrira directement le conteneur de cette application.",
       "systemUser": "Utilisateur système",
       "loading": "Chargement de l'accès en ligne de commande",
       "copied": "Commande copiée",
@@ -6601,6 +6608,7 @@
         "note": "Pas besoin de sudo. Avec une clé SSH, aucun mot de passe n'est demandé ; sinon, le mot de passe de {username} est demandé une fois. <link>Pour un accès SSH normal au serveur, créez un utilisateur système distinct.</link>",
         "turnOff": "Désactiver",
         "turnedOff": "La connexion au conteneur est désactivée pour {username}",
+        "turnedOffHostSsh": "La connexion au conteneur est désactivée. {username} peut toujours utiliser SSH sur le serveur.",
         "turnOffFailed": "Impossible de désactiver la connexion au conteneur.",
         "more": "Plus de commandes"
       }

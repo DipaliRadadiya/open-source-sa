@@ -50,7 +50,8 @@ test("Already clean, the order and the total follow the choice; Delete all warns
   assert.match(panel, /const cleanRows = useMemo\(\(\) => priced\.filter\(\(c\) => !\(c\.bytes > 0\)\), \[priced\]\);/);
   assert.match(panel, /const chosenBytes = chosen\.reduce\(\(total, c\) => total \+ c\.bytes, 0\);/);
   assert.match(panel, /cleanDisk\(chosen\.map\(\(c\) => c\.key\), keep\)/);
-  assert.match(panel, /\{keep === 0 \? \(\s*<Caution tone="destructive"/);
+  // Only when a ticked item uses the choice (docker-qa-1030): Docker images go whole either way.
+  assert.match(panel, /\{keep === 0 && notes\.keepApplies \? \(\s*<Caution tone="destructive"/);
   assert.match(read("lib/api/disk-cleaner.js"), /keep_days: keepDays/);
 });
 

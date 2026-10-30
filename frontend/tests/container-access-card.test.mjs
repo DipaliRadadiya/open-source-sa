@@ -6,7 +6,7 @@ installDom();
 const { createElement } = await import("react");
 const { IntlProvider } = await import("use-intl");
 const { render, screen, cleanup, fireEvent, waitFor } = await import("@testing-library/react");
-const { defaultContainer, shellCommandFor, showsContainerAccess, turnOnNeeds } =
+const { defaultContainer, hostSshStillOn, shellCommandFor, showsContainerAccess, turnOnNeeds } =
   await import("../lib/applications/container-access.js");
 const messages = JSON.parse(readFileSync("messages/en.json", "utf8"));
 const m = messages.applications.containerAccess;
@@ -129,6 +129,14 @@ test("helpers: shell line per container, main by default, what turning on needs"
   assert.equal(turnOnNeeds({ ...off, password_login: false }), "key");
   assert.equal(turnOnNeeds({ ...off, password_login: null }), "nothing", "an unread sshd setting is not refused here");
 
+  // Container login off leaves SSH as it is: say so while the owner can still sign in to the host.
+  assert.equal(hostSshStillOn(on), false, "on: the login lands in the container");
+  assert.equal(hostSshStillOn(off), false, "no SSH access");
+  assert.equal(hostSshStillOn({ ...off, owner: { ...owner, ssh_access: true, ssh_keys: 1 } }), true);
+  assert.equal(hostSshStillOn({ ...off, owner: { ...owner, ssh_access: true } }), true, "password login on");
+  assert.equal(hostSshStillOn({ ...off, password_login: null, owner: { ...owner, ssh_access: true } }), true, "unread sshd: not assumed off");
+  assert.equal(hostSshStillOn({ ...off, password_login: false, owner: { ...owner, ssh_access: true } }), false, "no key and no password login: no way in");
+
   assert.equal(showsContainerAccess(dockerApp), true);
   for (const profile of ["php", "node", null, undefined]) {
     assert.equal(showsContainerAccess({ serving_profile: profile }), false);
@@ -155,7 +163,8 @@ test("off: skeleton first, then a short card, and the turn-on form in a dialog",
   assert.equal(text("container-access-owner"), `${m.systemUser}oc-app`);
   assert.equal(text("container-access-state"), m.stateOff);
   assert.equal(screen.getByRole("link", { name: "oc-app" }).getAttribute("href"), "/system-users?search=oc-app");
-  assert.ok(screen.getByText(fill(m.turnOn.body, { username: "oc-app" })));
+  // What turning it on does, not a claim about now: the dialog keeps turnOn.body.
+  assert.ok(screen.getByText(fill(m.offBody, { username: "oc-app" })));
   assert.equal(screen.queryByRole("textbox"), null, "no form on the dashboard itself");
 
   await openTurnOn();
@@ -358,15 +367,33 @@ test("Copy writes the exact line and toasts", async () => {
   ]);
 });
 
-test("on: an admin can turn it off; the card goes back to the turn-on step", async () => {
+test("on: an admin can turn it off; with SSH still on, the card and toast say the host login stays", async () => {
   let reads = 0;
-  globalThis.__dockerApi.access = async () => ({ data: reads++ === 0 ? on : { ...off, owner: { ...owner, ssh_keys: 1 } } });
+  const hostOnly = { ...off, owner: { ...owner, ssh_access: true, ssh_keys: 1 } };
+  globalThis.__dockerApi.access = async () => ({ data: reads++ === 0 ? on : hostOnly });
+  globalThis.__dockerApi.disableAccess = async () => ({ data: { message: "ok" } });
+  show();
+  assert.equal(screen.queryByTestId("container-access-host-ssh"), null);
+  fireEvent.click(await screen.findByRole("button", { name: m.commands.turnOff }));
+  await screen.findByRole("button", { name: m.turnOn.open });
+  assert.equal(globalThis.__dockerApiCalls.disableAccess, 1);
+  assert.deepEqual(globalThis.__toasts, [{ kind: "success", message: fill(m.commands.turnedOffHostSsh, { username: "oc-app" }) }]);
+  assert.equal(text("container-access-state"), m.stateOff);
+  const note = screen.getByTestId("container-access-host-ssh");
+  assert.equal(note.textContent, fill(m.hostSshOn, { username: "oc-app" }).replace(/<\/?link>/g, ""));
+  assert.equal(note.querySelector("a").getAttribute("href"), "/system-users?search=oc-app");
+});
+
+test("on: turning it off for an owner without SSH access says only that it is off", async () => {
+  let reads = 0;
+  const noSsh = { ...on, owner: { ...on.owner, ssh_access: false } };
+  globalThis.__dockerApi.access = async () => ({ data: reads++ === 0 ? noSsh : { ...off, owner: { ...owner, ssh_keys: 1 } } });
   globalThis.__dockerApi.disableAccess = async () => ({ data: { message: "ok" } });
   show();
   fireEvent.click(await screen.findByRole("button", { name: m.commands.turnOff }));
   await screen.findByRole("button", { name: m.turnOn.open });
-  assert.equal(globalThis.__dockerApiCalls.disableAccess, 1);
   assert.deepEqual(globalThis.__toasts, [{ kind: "success", message: fill(m.commands.turnedOff, { username: "oc-app" }) }]);
+  assert.equal(screen.queryByTestId("container-access-host-ssh"), null);
 });
 
 test("on: a failed turn-off toasts and keeps the commands", async () => {
