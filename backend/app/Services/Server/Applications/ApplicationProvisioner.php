@@ -829,7 +829,9 @@ class ApplicationProvisioner
             try {
                 $this->containers->apply($application, $documentRoot);
             } catch (ProvisioningFailedException $exception) {
-                throw new ApplicationAvailabilityException($exception->reference);
+                // The reason travels too (F3): "the container keeps restarting"
+                // is something the user can act on; a bare reference is not.
+                throw new ApplicationAvailabilityException($exception->reference, $exception->reason);
             }
         }
 

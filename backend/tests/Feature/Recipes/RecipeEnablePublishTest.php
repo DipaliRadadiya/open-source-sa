@@ -52,3 +52,71 @@ it('does not publish containers when a viewer is forbidden to enable the recipe'
 
     expect($site->fresh()->disabled_at)->not->toBeNull();
 });
+
+describe('a refused resume says why (F3)', function () {
+    function rc08RefuseEnable(ProvisioningFailedException $why): void
+    {
+        $containers = Mockery::mock(ContainerSupervisor::class)->makePartial();
+        $containers->shouldReceive('apply')->once()->andThrow($why);
+        app()->instance(ContainerSupervisor::class, $containers);
+    }
+
+    it('names the reason the container step gave, keeping code, reference and status', function () {
+        $site = rc03RecipeInstall(rc03RecipeSite('gitea', ['docker_secrets' => []]));
+        $site->forceFill(['status' => 'active', 'disabled_at' => now()])->save();
+        rc08RefuseEnable(new ProvisioningFailedException('container_restarting', 'loop-reference', 'container_restarting'));
+
+        $this->actingAs(rc08RecipeViewer('application', manage: true))
+            ->postJson('/api/applications/'.$site->id.'/enable')
+            ->assertStatus(500)
+            ->assertJsonPath('code', 'server_operation_failed')
+            ->assertJsonPath('reference', 'loop-reference')
+            ->assertJsonPath('reason', 'container_restarting')
+            ->assertJsonPath('message', __('errors/application.availability_failed_because', [
+                'reason' => __('application.failure_reason.container_restarting'),
+            ]));
+
+        expect($site->fresh()->disabled_at)->not->toBeNull();
+    });
+
+    it('answers in the language the user asked for', function () {
+        $site = rc03RecipeInstall(rc03RecipeSite('gitea', ['docker_secrets' => []]));
+        $site->forceFill(['status' => 'active', 'disabled_at' => now()])->save();
+        rc08RefuseEnable(new ProvisioningFailedException('container_restarting', 'loop-reference', 'container_restarting'));
+
+        $message = $this->actingAs(rc08RecipeViewer('application', manage: true))
+            ->withHeader('Accept-Language', 'de')
+            ->postJson('/api/applications/'.$site->id.'/enable')
+            ->assertStatus(500)
+            ->json('message');
+
+        expect($message)->toStartWith('Die Anwendung konnte nicht wieder eingeschaltet werden.')
+            ->toContain(__('application.failure_reason.container_restarting', [], 'de'));
+    });
+
+    it('keeps the old message when the step gave no reason', function () {
+        $site = rc03RecipeInstall(rc03RecipeSite('gitea', ['docker_secrets' => []]));
+        $site->forceFill(['status' => 'active', 'disabled_at' => now()])->save();
+        rc08RefuseEnable(new ProvisioningFailedException('compose_write', 'write-reference'));
+
+        $this->actingAs(rc08RecipeViewer('application', manage: true))
+            ->postJson('/api/applications/'.$site->id.'/enable')
+            ->assertStatus(500)
+            ->assertJsonPath('message', __('errors/application.availability_failed'))
+            ->assertJsonMissingPath('reason');
+    });
+
+    it('never shows a reason that is not a known code', function () {
+        // `compose_invalid` carries sentences, not a code; an unknown code would
+        // render as its raw lang key. Neither reaches the user.
+        $site = rc03RecipeInstall(rc03RecipeSite('gitea', ['docker_secrets' => []]));
+        $site->forceFill(['status' => 'active', 'disabled_at' => now()])->save();
+        rc08RefuseEnable(new ProvisioningFailedException('compose_invalid', '', 'services.app.image is required'));
+
+        $this->actingAs(rc08RecipeViewer('application', manage: true))
+            ->postJson('/api/applications/'.$site->id.'/enable')
+            ->assertStatus(500)
+            ->assertJsonPath('message', __('errors/application.availability_failed'))
+            ->assertJsonMissingPath('reason');
+    });
+});

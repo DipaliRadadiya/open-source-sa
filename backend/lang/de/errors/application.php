@@ -61,6 +61,7 @@ return [
     'already_disabled' => 'Diese Anwendung ist bereits deaktiviert.',
     'not_disabled' => 'Diese Anwendung ist nicht deaktiviert.',
     'availability_failed' => 'Das Ändern der Verfügbarkeit der Anwendung ist auf dem Server fehlgeschlagen.',
+    'availability_failed_because' => 'Die Anwendung konnte nicht wieder eingeschaltet werden. :reason',
     'basic_auth_failed' => 'Das Ändern des Passwortschutzes ist auf dem Server fehlgeschlagen.',
     'environment_failed' => 'Das Panel konnte die Umgebungsdatei der Anwendung auf dem Server nicht prüfen und meldet daher weder das eine noch das andere.',
     'bot_blocker_failed' => 'Das Ändern der KI-Bot-Blocker-Richtlinie ist auf dem Server fehlgeschlagen.',

@@ -62,6 +62,7 @@ return [
     'already_disabled' => 'Esta aplicação já está desativada.',
     'not_disabled' => 'Esta aplicação não está desativada.',
     'availability_failed' => 'Não foi possível alterar a disponibilidade da aplicação no servidor.',
+    'availability_failed_because' => 'Não foi possível reativar a aplicação. :reason',
     'basic_auth_failed' => 'Não foi possível alterar a proteção por senha no servidor.',
     'environment_failed' => 'O painel não conseguiu verificar o arquivo de ambiente da aplicação no servidor, portanto não afirma nada em nenhum sentido.',
     'bot_blocker_failed' => 'Não foi possível alterar a política do Bloqueador de Bots de IA no servidor.',

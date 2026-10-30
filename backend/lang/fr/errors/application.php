@@ -61,6 +61,7 @@ return [
     'already_disabled' => 'Cette application est déjà désactivée.',
     'not_disabled' => 'Cette application n\'est pas désactivée.',
     'availability_failed' => 'La modification de la disponibilité de l\'application a échoué sur le serveur.',
+    'availability_failed_because' => 'L\'application n\'a pas pu être réactivée. :reason',
     'basic_auth_failed' => 'La modification de la protection par mot de passe a échoué sur le serveur.',
     'environment_failed' => 'Le panneau n’a pas pu vérifier le fichier d’environnement de l’application sur le serveur ; il ne se prononce donc ni dans un sens ni dans l’autre.',
     'bot_blocker_failed' => 'La modification de la politique du bloqueur de robots IA a échoué sur le serveur.',

@@ -62,6 +62,7 @@ return [
     'already_disabled' => 'This application is already disabled.',
     'not_disabled' => 'This application is not disabled.',
     'availability_failed' => 'Changing the application\'s availability failed on the server.',
+    'availability_failed_because' => 'The application could not be turned back on. :reason',
     'basic_auth_failed' => 'Changing password protection failed on the server.',
     'environment_failed' => 'The panel could not check the application\'s environment file on the server, so it will not report one either way.',
     'bot_blocker_failed' => 'Changing the AI Bot Blocker policy failed on the server.',

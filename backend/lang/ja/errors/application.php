@@ -61,6 +61,7 @@ return [
     'already_disabled' => 'このアプリケーションはすでに無効になっています。',
     'not_disabled' => 'このアプリケーションは無効になっていません。',
     'availability_failed' => 'アプリケーションの可用性の変更がサーバーで失敗しました。',
+    'availability_failed_because' => 'アプリケーションを再開できませんでした。:reason',
     'basic_auth_failed' => 'パスワード保護の変更がサーバーで失敗しました。',
     'environment_failed' => 'サーバー上でアプリケーションの環境ファイルを確認できなかったため、あるともないとも報告しません。',
     'bot_blocker_failed' => 'AIボットブロッカーのポリシー変更がサーバーで失敗しました。',

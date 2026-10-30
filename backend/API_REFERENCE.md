@@ -1262,6 +1262,8 @@ Reverse `disable` — restore the live vhost.
 
 **Response `200`:** `{"application": {...}}`
 
+`500 {"message": "…", "code": "server_operation_failed", "reference": "…"}` on failure; the site stays disabled. For a container site, when the container step refused for a known reason, the message names it and the body also carries `"reason"` — the same codes as `failed_reason` (e.g. `container_restarting`, `registry_credentials_rejected`). Absent when there is no known reason.
+
 ---
 
 ### POST `/applications/{application}/detect-type`
