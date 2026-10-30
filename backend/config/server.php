@@ -1859,6 +1859,13 @@ return [
         // still drains a running install (RC-F04).
         'install_timeout' => (int) env('DOCKER_INSTALL_TIMEOUT', 1200),
 
+        // How long a container that restarted recently is watched before it is
+        // called a crash loop (F2). One restart is the restart policy working; a
+        // loop restarts again or sits in `restarting` within this window, because
+        // Docker's backoff is short while the count is low. Paid only when the
+        // first sample looked suspicious.
+        'crash_loop_confirm_seconds' => (int) env('DOCKER_CRASH_LOOP_CONFIRM_SECONDS', 10),
+
         // Where a registry credential is materialised for the length of one
         // pull. Mirrors `git_credential_dir`, and for the identical reason: the
         // secret has to reach a CLI that only reads it from a file, so it is

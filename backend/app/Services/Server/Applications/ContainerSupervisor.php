@@ -11,6 +11,7 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
 /**
@@ -203,6 +204,19 @@ class ContainerSupervisor
      *    fresh container with restarts on the clock has restarted for its own
      *    reasons.
      *
+     * **The second signal is a suspicion, not a verdict.** One restart is not a
+     * loop: a process that died once and came straight back is the restart policy
+     * doing its job. Answering "looping" for that refused to resume a site that was
+     * up and serving — found in QA on a real box (F2): PID 1 killed once, Docker
+     * restarted it, and every resume for the next two minutes answered 500 and
+     * left the site paused. So a suspect is looked at again after
+     * `server.docker.crash_loop_confirm_seconds`, and it is a loop only if it
+     * restarted again in between or is no longer running. A real loop cannot hide
+     * from that: Docker holds a crashed container in `restarting` for the whole
+     * backoff delay, and the delay is short while the count climbs, so ten seconds
+     * later it is either restarting or has a higher count. The wait is paid only
+     * when something looked wrong.
+     *
      * Unreadable output answers false. This runs after a successful `up`, and
      * failing a deploy because a status query did not parse would turn a working
      * site into a reported failure — the opposite of the mistake it exists to stop.
@@ -214,6 +228,8 @@ class ContainerSupervisor
         if (! $result->answered) {
             return false;
         }
+
+        $suspects = [];
 
         foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
             $line = trim($line);
@@ -236,8 +252,29 @@ class ContainerSupervisor
             // per-container question is asked of Docker directly and only for the
             // containers this project actually has.
             $name = (string) ($row['Name'] ?? '');
+            $state = $name === '' ? null : $this->restartState($name);
 
-            if ($name !== '' && $this->restartedSinceStarting($name)) {
+            if ($state !== null && $this->restartedRecently($state)) {
+                $suspects[$name] = $state['count'];
+            }
+        }
+
+        if ($suspects === []) {
+            return false;
+        }
+
+        Sleep::for((int) config('server.docker.crash_loop_confirm_seconds', 10))->seconds();
+
+        foreach ($suspects as $name => $count) {
+            $again = $this->restartState($name);
+
+            // Unreadable the second time is unreadable, not a loop — the same
+            // rule as the first sample.
+            if ($again === null) {
+                continue;
+            }
+
+            if ($again['count'] > $count || ! in_array($again['status'], ['running', null], true)) {
                 return true;
             }
         }
@@ -341,35 +378,56 @@ class ContainerSupervisor
     }
 
     /**
-     * Has this container restarted since it was created?
+     * How often this container has restarted, when it last started, and what
+     * state it is in now — or null when Docker did not answer.
      *
-     * `RestartCount` and `StartedAt` in one call, because two calls to inspect the
-     * same container is two chances for the answer to change underneath.
+     * One call, because two calls to inspect the same container is two chances
+     * for the answer to change underneath. The status is last so that a missing
+     * one leaves the other two readable; it is null then, which the caller reads
+     * as "no evidence either way".
+     *
+     * @return array{count: int, started_at: int|false, status: ?string}|null
      */
-    private function restartedSinceStarting(string $name): bool
+    private function restartState(string $name): ?array
     {
         $result = $this->serverOps->run(
-            ['docker', 'inspect', '--format', '{{.RestartCount}} {{.State.StartedAt}}', $name],
+            ['docker', 'inspect', '--format', '{{.RestartCount}} {{.State.StartedAt}} {{.State.Status}}', $name],
             ['feature' => 'application', 'op' => 'container_restarts'],
             timeout: 20,
         );
 
         if (! $result->answered) {
-            return false;
+            return null;
         }
 
         $parts = preg_split('/\s+/', trim($result->output()));
-        $count = (int) ($parts[0] ?? 0);
 
-        if ($count < 1) {
-            return false;
+        // A container that is gone, or output that is not Docker's, says nothing
+        // about restarts. Reading it as "count 0" would be a guess that happens to
+        // be harmless here; null says what it is.
+        if (! ctype_digit($parts[0] ?? '')) {
+            return null;
         }
 
-        $startedAt = strtotime($parts[1] ?? '');
+        return [
+            'count' => (int) ($parts[0] ?? 0),
+            'started_at' => strtotime($parts[1] ?? ''),
+            'status' => isset($parts[2]) && $parts[2] !== '' ? strtolower($parts[2]) : null,
+        ];
+    }
 
-        // Only a container that started recently. An older one's restarts are
-        // history, not a loop — see the note on the caller.
-        return $startedAt !== false && (time() - $startedAt) < 120;
+    /**
+     * Restarted at least once, and started within the last two minutes. Only
+     * a container that started recently: an older one's restarts are history,
+     * not a loop — see the note on {@see crashLooping()}.
+     *
+     * @param  array{count: int, started_at: int|false, status: ?string}  $state
+     */
+    private function restartedRecently(array $state): bool
+    {
+        return $state['count'] >= 1
+            && $state['started_at'] !== false
+            && (time() - $state['started_at']) < 120;
     }
 
     /**

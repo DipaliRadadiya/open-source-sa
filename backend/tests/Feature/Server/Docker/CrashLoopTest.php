@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Server\Applications\ContainerSupervisor;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 
 /**
  * A container that bounces instead of staying up.
@@ -48,11 +49,19 @@ beforeEach(function () {
 
 /**
  * @param  string  $psState  what `compose ps --format json` reports.
- * @param  string  $inspectOut  what `docker inspect` reports: "<restarts> <startedAt>".
+ * @param  string|list<string>|Closure(int): string  $inspectOut  what `docker inspect`
+ *                                                                reports: "<restarts> <startedAt> [<status>]".
+ *                                                                A list is answered in order, one entry per
+ *                                                                inspect, the last one repeating. A closure is
+ *                                                                given the 1-based inspect number — for a loop,
+ *                                                                whose count keeps climbing however often asked.
  */
-function fakeLoopBox(string $psState, string $inspectOut = '0 '): void
+function fakeLoopBox(string $psState, string|array|Closure $inspectOut = '0 '): void
 {
-    Process::fake(function ($process) use ($psState, $inspectOut) {
+    $answers = $inspectOut instanceof Closure ? $inspectOut : (array) $inspectOut;
+    $GLOBALS['loopBoxInspects'] = 0;
+
+    Process::fake(function ($process) use ($psState, &$answers) {
         $args = $process->command;
 
         while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
@@ -60,7 +69,13 @@ function fakeLoopBox(string $psState, string $inspectOut = '0 '): void
         }
 
         if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
-            return Process::result(output: $inspectOut);
+            $n = ++$GLOBALS['loopBoxInspects'];
+
+            if ($answers instanceof Closure) {
+                return Process::result(output: $answers($n));
+            }
+
+            return Process::result(output: count($answers) > 1 ? array_shift($answers) : $answers[0]);
         }
 
         // The liveness sample, which a bouncing container passes.
@@ -92,9 +107,14 @@ it('catches the loop even when the sample lands on a running moment', function (
     // The actual failure: `ps --status running` answers, and `ps --format json` says
     // running too, because the sample happened between two crashes. The restart
     // count is what gives it away.
+    //
+    // A real loop does not hold still for the confirmation sample: ten seconds
+    // later Docker has restarted it again. The first fake answered the same count
+    // forever, which no looping container does.
+    Sleep::fake();
     fakeLoopBox(
         json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']),
-        '10 '.now()->subSeconds(20)->toIso8601ZuluString(),
+        fn (int $n) => (9 + $n).' '.now()->subSeconds(2)->toIso8601ZuluString().' running',
     );
 
     try {
@@ -147,4 +167,92 @@ it('points at the container log, which is the only place the answer is', functio
     $line = __('application.failure_reason.container_restarting', [], 'en');
 
     expect($line)->toContain('log')->toContain('entrypoint');
+});
+
+describe('one restart is not a loop (F2)', function () {
+    // Found in QA on a real box: PID 1 killed once inside Ghost, Docker brought it
+    // straight back, and for the next two minutes every resume answered 500 and
+    // left the site paused — a restart count of 1 on a container started seconds
+    // ago was read as a loop. A suspicion is now looked at again before it decides
+    // anything.
+
+    it('lets a container through that restarted once and stayed up', function () {
+        Sleep::fake();
+        $restarted = '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running';
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [$restarted, $restarted]);
+
+        // Asked directly: through `apply()` an image site goes via the readiness
+        // check, whose grace window would hide a wrong answer here.
+        expect(app(ContainerSupervisor::class)->crashLooping($this->application, '/home/loop/loop.test'))->toBeFalse()
+            ->and($GLOBALS['loopBoxInspects'])->toBe(2);
+        Sleep::assertSleptTimes(1);
+        Sleep::assertSequence([Sleep::for(10)->seconds()]);
+    });
+
+    it('calls it a loop when the count went up during the wait', function () {
+        Sleep::fake();
+        fakeLoopBox(
+            json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']),
+            fn (int $n) => $n.' '.now()->subSeconds(1)->toIso8601ZuluString().' running',
+        );
+
+        expect(fn () => app(ContainerSupervisor::class)->apply($this->application, '/home/loop/loop.test'))
+            ->toThrow(ProvisioningFailedException::class);
+    });
+
+    it('calls it a loop when the container is no longer running after the wait', function () {
+        // The count can stand still while Docker holds the container in its
+        // backoff delay — the state is what says so.
+        Sleep::fake();
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [
+            '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running',
+            '1 '.now()->subSeconds(5)->toIso8601ZuluString().' restarting',
+        ]);
+
+        expect(fn () => app(ContainerSupervisor::class)->apply($this->application, '/home/loop/loop.test'))
+            ->toThrow(ProvisioningFailedException::class);
+    });
+
+    it('does not wait at all when the first look already shows restarting', function () {
+        Sleep::fake();
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'restarting']));
+
+        expect(fn () => app(ContainerSupervisor::class)->apply($this->application, '/home/loop/loop.test'))
+            ->toThrow(ProvisioningFailedException::class);
+
+        Sleep::assertNeverSlept();
+    });
+
+    it('does not wait for a container that never restarted', function () {
+        Sleep::fake();
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), '0 '.now()->subSeconds(5)->toIso8601ZuluString().' running');
+
+        app(ContainerSupervisor::class)->apply($this->application, '/home/loop/loop.test');
+
+        expect($GLOBALS['loopBoxInspects'])->toBe(1);
+        Sleep::assertNeverSlept();
+    });
+
+    it('treats an unreadable second look as no evidence', function () {
+        Sleep::fake();
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [
+            '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running',
+            '',
+        ]);
+
+        expect(app(ContainerSupervisor::class)->crashLooping($this->application, '/home/loop/loop.test'))->toBeFalse();
+    });
+
+    it('resumes a paused site whose container restarted once', function () {
+        Sleep::fake();
+        $this->application->forceFill(['disabled_at' => now()])->save();
+        $restarted = '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running';
+        fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [$restarted, $restarted]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/enable")
+            ->assertOk();
+
+        expect($this->application->fresh()->disabled_at)->toBeNull();
+    });
 });
