@@ -33,8 +33,12 @@ export function turnOnNeeds(access) {
 
 // Container login off only stops routing SSH into the container (RC-28): with SSH access on and
 // a way to sign in, the owner's next login is a shell on the server. Said, never assumed off.
-export function hostSshStillOn(access) {
+// `enforced` is the System Users list's `meta.ssh_access_enforced`: when the server does not enforce
+// SSH groups (false), ssh_access stops nobody, so only a way to sign in counts.
+export function hostSshStillOn(access, enforced = null) {
   const owner = access?.owner;
-  if (!owner || owner.container_login || !owner.ssh_access) return false;
-  return owner.ssh_keys > 0 || access.password_login !== false;
+  if (!owner || owner.container_login) return false;
+  const canSignIn = owner.ssh_keys > 0 || access.password_login !== false;
+  if (enforced === false) return canSignIn;
+  return owner.ssh_access && canSignIn;
 }

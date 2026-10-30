@@ -6577,7 +6577,16 @@
       "stateOn": "コンテナログイン: オン",
       "stateOff": "コンテナログイン: オフ",
       "hostSshOn": "{username} は引き続き、コンテナの外でこのサーバーに SSH でログインできます。止めるには、<link>システムユーザー</link>でこのユーザーの SSH ログインをオフにしてください。",
+      "hostSshNotEnforced": "このサーバーでは SSH ログインのルールがオフのため、{username} は引き続きコンテナの外でこのサーバーに SSH でログインできます。<link>アクセスとセキュリティ</link>でオンにしてください。",
       "offBody": "オンにすると、{username} としてログインしたときにこのアプリのコンテナが直接開きます。",
+      "turnOffDialog": {
+        "title": "{username} のコンテナログインをオフにしますか？",
+        "body": "{username} としてログインしても、このアプリのコンテナは開かなくなります。",
+        "alsoSsh": "{username} のサーバーへの SSH ログインもオフにする",
+        "alsoSshHint": "これはサーバー全体の {username} に適用されます。このユーザーのすべてのアプリで SSH と SFTP が使えなくなります。",
+        "notEnforced": "このサーバーでは SSH ログインのルールがオフのため、パネルは {username} の SSH ログインを止められません。<link>アクセスとセキュリティ</link>でオンにしてください。",
+        "submit": "オフにする"
+      },
       "systemUser": "システムユーザー",
       "loading": "コマンドラインアクセスを読み込んでいます",
       "copied": "コマンドをコピーしました",
@@ -6609,6 +6618,8 @@
         "turnOff": "オフにする",
         "turnedOff": "{username} のコンテナログインをオフにしました",
         "turnedOffHostSsh": "コンテナログインをオフにしました。{username} は引き続きサーバーで SSH を使えます。",
+        "turnedOffBoth": "{username} のコンテナログインと SSH ログインをオフにしました。",
+        "sshOffFailed": "コンテナログインはオフになりましたが、{username} の SSH ログインをオフにできませんでした。",
         "turnOffFailed": "コンテナログインをオフにできませんでした。",
         "more": "その他のコマンド"
       }
