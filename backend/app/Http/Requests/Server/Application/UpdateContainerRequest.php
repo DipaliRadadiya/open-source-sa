@@ -95,6 +95,12 @@ class UpdateContainerRequest extends FormRequest
             // Null is a real answer: it means Docker's default bridge.
             'docker_network' => ['sometimes', 'nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
+            // When the network changes, whether the network the site was created on
+            // (`<project>_default`) is removed once the move has come up. Default
+            // true, today's behaviour — the user can keep it (Dipali, 2026-10-30).
+            // Not a column: the controller hands it to the action separately.
+            'remove_previous_network' => ['sometimes', 'boolean'],
+
             // Which stored credential pulls this site's image. Editable here even
             // though `image` is not, and the asymmetry is deliberate: a token
             // expires or gets rotated while the image reference stays exactly

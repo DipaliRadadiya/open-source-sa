@@ -35,8 +35,11 @@ class UpdateContainerSettings
 
     /**
      * @param  array<string, mixed>  $data
+     * @param  bool  $removePreviousNetwork  on a network change, remove the network
+     *                                       the site was created on once the move is up
+     *                                       (the user's choice; default true = as before).
      */
-    public function execute(Application $application, array $data): Application
+    public function execute(Application $application, array $data, bool $removePreviousNetwork = true): Application
     {
         $application->forceFill($data)->save();
         $networkChanged = $application->wasChanged('docker_network');
@@ -76,7 +79,7 @@ class UpdateContainerSettings
             // The site is on its new network now, so the one Compose made for it
             // at create is nobody's (BUG-5). Only after a successful apply: until
             // then the container may still be on it. Never fatal — see release().
-            if ($failure === null && $networkChanged) {
+            if ($failure === null && $networkChanged && $removePreviousNetwork) {
                 $this->originalNetwork->release($application);
             }
         }
