@@ -44,7 +44,9 @@ class SecuritySettings implements SettingGroup
     private const LEGACY_DROP_IN = '99-panel.conf';
 
     // See port(). Holds the port and whether passwords are accepted.
-    private const PORT_CACHE = 'server.ssh_login.effective';
+    // `.v2`: the cached array gained `ssh_access_enforced` (2026-10-30); a value
+    // cached by the previous release has the old shape and must not be read back.
+    private const PORT_CACHE = 'server.ssh_login.effective.v2';
 
     public function __construct(
         private ServerOps $serverOps,
@@ -117,7 +119,22 @@ class SecuritySettings implements SettingGroup
     }
 
     /**
-     * @return array{port: int, password_authentication: bool}
+     * Whether removing someone's SSH login is enforced, from the same cached read
+     * as port().
+     *
+     * For the Command-line access card, which offers to turn the owner's SSH off
+     * too and must only promise what sshd will do (Dipali, 2026-10-30). The card
+     * is on every Docker app's dashboard, so it shares the one cached `sshd -T`
+     * rather than running another, as {@see sshAccessEnforced()} does for the
+     * System Users screen. Null when sshd could not be read: unknown, not "no".
+     */
+    public function cachedSshAccessEnforced(): ?bool
+    {
+        return $this->loginSummary()['ssh_access_enforced'];
+    }
+
+    /**
+     * @return array{port: int, password_authentication: bool, ssh_access_enforced: ?bool}
      */
     private function loginSummary(): array
     {
@@ -126,10 +143,14 @@ class SecuritySettings implements SettingGroup
         // read back as this shape.
         return Cache::remember(self::PORT_CACHE, now()->addMinutes(5), function (): array {
             $effective = $this->effectiveConfig();
+            $groups = preg_split('/\s+/', $effective['allowgroups'] ?? '') ?: [];
 
             return [
                 'port' => (int) ($effective['port'] ?? config('server.ssh_port', 22)),
                 'password_authentication' => ($effective['passwordauthentication'] ?? 'yes') === 'yes',
+                // No output at all is a read that failed, not an sshd without
+                // AllowGroups — every working `sshd -T` prints a port.
+                'ssh_access_enforced' => $effective === [] ? null : in_array(SshUsersGroup::NAME, $groups, true),
             ];
         });
     }

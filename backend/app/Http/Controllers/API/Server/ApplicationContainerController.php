@@ -7,8 +7,10 @@ use App\Actions\Server\Application\UpdateContainerCompose;
 use App\Actions\Server\Application\UpdateContainerSettings;
 use App\Actions\Server\SystemUser\DisableContainerLogin;
 use App\Actions\Server\SystemUser\EnableContainerLogin;
+use App\Actions\Server\SystemUser\ToggleSshAccess;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Application\DisableContainerLoginRequest;
 use App\Http\Requests\Server\Application\EnableContainerLoginRequest;
 use App\Http\Requests\Server\Application\UpdateComposeRequest;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
@@ -184,14 +186,26 @@ class ApplicationContainerController extends Controller
      * ordinary login on the server again.
      */
     public function disableAccess(
-        Request $request,
+        DisableContainerLoginRequest $request,
         Application $application,
         DisableContainerLogin $action,
+        ToggleSshAccess $ssh,
     ): JsonResponse {
         $this->assertContainerApp($application);
         abort_if($application->systemUser === null, 422, __('errors/system-user.container_login_no_owner'));
 
         $action->execute($application->systemUser);
+
+        // The user's choice, asked because turning container login off leaves the
+        // owner's ordinary SSH on, and the card used to say "Off" while the key
+        // still got a shell on the server. After container login, not before: if
+        // this step fails, what is left is exactly today's behaviour, and the SSH
+        // failure answers with its own message and reference.
+        $owner = $application->systemUser->refresh();
+
+        if ($request->boolean('disable_ssh') && $owner->ssh_access) {
+            $ssh->execute($owner, false);
+        }
 
         return $this->accessResponse($request, $application->refresh());
     }
@@ -253,6 +267,11 @@ class ApplicationContainerController extends Controller
             'containers' => $list,
             'ssh_users' => $users,
             'password_login' => $security->passwordLogin(),
+            // Whether removing someone's SSH login is actually enforced by sshd
+            // (`AllowGroups`), so a "turn off SSH too" dialog only promises what
+            // the server will do. From the card's one cached sshd read; null means
+            // it could not be read — treat it as "not known to be enforced".
+            'ssh_access_enforced' => $security->cachedSshAccessEnforced(),
             ...app(ContainerLoginInfo::class)->for($application, $host, $port),
         ]);
     }
