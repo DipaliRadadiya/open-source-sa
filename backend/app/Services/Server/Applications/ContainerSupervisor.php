@@ -114,18 +114,28 @@ class ContainerSupervisor
         // The pull happens inside `up`, so the credential has to be available
         // for it — and only for it. `with()` writes the file, runs this, and
         // removes it in a `finally`, including when the pull is what failed.
+        $timeout = $install ? (int) config('server.docker.install_timeout', 1200) : null;
+
         $result = $this->registryAuth->with(
             $application->registry,
             ['feature' => 'application', 'application' => $application->id],
-            fn (?string $auth): ServerOpsResult => $this->compose(
-                $application,
-                $documentRoot,
-                ['up', '-d', '--remove-orphans'],
-                'compose_up',
-                $override,
-                $auth,
-                $install ? (int) config('server.docker.install_timeout', 1200) : null,
-            ),
+            function (?string $auth) use ($application, $documentRoot, $override, $timeout): ServerOpsResult {
+                $repair = $this->recreateDetached($application, $documentRoot, $override, $auth, $timeout);
+
+                if ($repair !== null && $repair->failed()) {
+                    return $repair;
+                }
+
+                return $this->compose(
+                    $application,
+                    $documentRoot,
+                    ['up', '-d', '--remove-orphans'],
+                    'compose_up',
+                    $override,
+                    $auth,
+                    $timeout,
+                );
+            },
         );
 
         if ($result->failed()) {
@@ -185,6 +195,90 @@ class ContainerSupervisor
     private function readiness(): ContainerReadinessCheck
     {
         return $this->readiness ??= new ContainerReadinessCheck($this->serverOps);
+    }
+
+    /**
+     * Rebuild the services whose container is attached to no network at all.
+     *
+     * A port clash makes `compose up` fail while Docker is wiring the
+     * container's network, and Docker leaves that container attached to
+     * NOTHING. The next `up` sees a container whose configuration has not
+     * changed and simply starts it again: it publishes no port and cannot
+     * reach its database, so a one-click app crash-loops on "Invalid database
+     * host" while its database, still running, made the resume answer 200.
+     * Found in Docker QA on a real box (Ghost after a port clash); Pull and
+     * redeploy refuses a stopped container, so there was no way out from the
+     * panel at all.
+     *
+     * Zero networks is proof, not a guess: the panel refuses `network_mode` in
+     * every compose file it runs, so each of its containers is on at least one
+     * network. Only those services are recreated (`--no-deps`), and a recreate
+     * keeps named, bind and anonymous volumes. Proven live before this was
+     * written: the database container kept its id and a marker in it and in
+     * the app's volume survived. A healthy project has nothing to repair and
+     * costs one listing and one inspect.
+     *
+     * Null when there was nothing to repair or Docker could not be asked —
+     * unreadable output is no evidence, the same rule as {@see crashLooping()}.
+     */
+    private function recreateDetached(Application $application, string $documentRoot, ?string $override, ?string $auth, ?int $timeout): ?ServerOpsResult
+    {
+        $services = $this->detachedServices($application);
+
+        if ($services === []) {
+            return null;
+        }
+
+        return $this->compose(
+            $application,
+            $documentRoot,
+            ['up', '-d', '--no-deps', '--force-recreate', ...$services],
+            'compose_recreate_detached',
+            $override,
+            $auth,
+            $timeout,
+        );
+    }
+
+    /**
+     * The compose services of this project whose container is on no network.
+     *
+     * @return list<string>
+     */
+    private function detachedServices(Application $application): array
+    {
+        $ids = $this->serverOps->run(
+            ['docker', 'ps', '-aq', '--filter', 'label=com.docker.compose.project='.$this->project($application)],
+            ['feature' => 'application', 'op' => 'container_ids', 'application' => $application->id],
+            timeout: self::QUERY_TIMEOUT,
+        );
+
+        $list = $ids->answered ? (preg_split('/\s+/', trim($ids->output())) ?: []) : [];
+        $list = array_values(array_filter($list, fn (string $id): bool => preg_match('/^[0-9a-f]{6,64}$/', $id) === 1));
+
+        if ($list === []) {
+            return [];
+        }
+
+        $inspect = $this->serverOps->run(
+            ['docker', 'inspect', '--format', '{{index .Config.Labels "com.docker.compose.service"}} {{len .NetworkSettings.Networks}}', ...$list],
+            ['feature' => 'application', 'op' => 'container_networks', 'application' => $application->id],
+            timeout: self::QUERY_TIMEOUT,
+        );
+
+        if (! $inspect->answered) {
+            return [];
+        }
+
+        $detached = [];
+
+        foreach (preg_split('/\r?\n/', trim($inspect->output())) ?: [] as $line) {
+            if (preg_match('/^([A-Za-z0-9][A-Za-z0-9_.-]*) (\d+)$/', trim($line), $m) === 1 && (int) $m[2] === 0) {
+                $detached[] = $m[1];
+            }
+        }
+
+        return array_values(array_unique($detached));
     }
 
     /**

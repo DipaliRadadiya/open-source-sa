@@ -15,6 +15,7 @@ use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\NginxDriver;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Process;
 use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
@@ -1550,4 +1551,90 @@ it('ships every recipe with exactly one app service, which a limit change target
 
         expect($apps)->toHaveCount(1, "{$recipe->slug} must mark exactly one service as role: app");
     }
+});
+
+describe('a container left on no network after a failed start', function () {
+    // Found in Docker QA on a real box: a port clash made `compose up` fail while
+    // Docker wired the container's network, and Docker left Ghost attached to
+    // nothing. Every later `up` just started that same container — no port, no
+    // route to its database — while MySQL kept running, so a resume said 200 and
+    // the site was 502. Pull and redeploy refuses a stopped container.
+
+    /**
+     * @param  string  $networks  `docker inspect` lines: "<service> <network count>".
+     * @return array{0: list<array{op: string, command: list<string>}>, 1: ?Throwable}
+     */
+    function detachedRun(string $networks, bool $idsAnswered = true, ?Closure $recreate = null): array
+    {
+        $ran = [];
+        $written = null;
+        [$ops, $files] = containerDeps([
+            'container_ids' => fn () => new ServerOpsResult(ok: $idsAnswered, reference: 'r', result: processResult("4f1c2d3e4b5a\n9a8b7c6d5e4f\n"), answered: $idsAnswered),
+            'container_networks' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult($networks), answered: true),
+            'compose_recreate_detached' => $recreate ?? fn () => new ServerOpsResult(ok: true, reference: 'r', answered: true),
+            'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+        ], $ran, $written);
+
+        $error = null;
+
+        try {
+            (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+                ->apply(containerApp(), '/home/shop/shop/public_html');
+        } catch (Throwable $e) {
+            $error = $e;
+        }
+
+        return [$ran, $error];
+    }
+
+    function opsRun(array $ran): array
+    {
+        return array_column($ran, 'op');
+    }
+
+    it('recreates only the detached service, before the normal up', function () {
+        [$ran] = detachedRun("ghost 0\ndb 1\n");
+
+        $recreate = collect($ran)->firstWhere('op', 'compose_recreate_detached');
+        $ops = opsRun($ran);
+
+        expect($recreate)->not->toBeNull()
+            ->and(array_slice($recreate['command'], -5))->toBe(['up', '-d', '--no-deps', '--force-recreate', 'ghost'])
+            ->and(array_search('compose_recreate_detached', $ops, true))->toBeLessThan(array_search('compose_up', $ops, true));
+    });
+
+    it('recreates nothing in a healthy project', function () {
+        [$ran] = detachedRun("ghost 1\ndb 1\n");
+
+        expect(opsRun($ran))->not->toContain('compose_recreate_detached')->toContain('compose_up');
+    });
+
+    it('recreates nothing when Docker could not be asked', function () {
+        // No evidence is not evidence of breakage.
+        [$ran] = detachedRun("ghost 0\n", idsAnswered: false);
+
+        expect(opsRun($ran))->not->toContain('container_networks')->not->toContain('compose_recreate_detached');
+    });
+
+    it('stops with a named reason when the repair itself cannot start', function () {
+        // Still taken: the repair fails exactly the way the start would, and says so.
+        [$ran, $error] = detachedRun("ghost 0\ndb 1\n", recreate: fn () => new ServerOpsResult(
+            ok: false, reference: 'rec-ref',
+            result: Process::result(output: '', errorOutput: 'Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint sv-app-1-ghost-1 (x): failed to bind host port 127.0.0.1:3000/tcp: address already in use', exitCode: 1),
+            answered: true,
+        ));
+
+        expect($error)->toBeInstanceOf(ProvisioningFailedException::class)
+            ->and($error->step)->toBe('container_start')
+            ->and($error->reason)->toBe('container_port_in_use')
+            ->and(opsRun($ran))->not->toContain('compose_up');
+    });
+
+    it('never passes something that is not a service name to compose', function () {
+        [$ran] = detachedRun("ghost 0\n--rm 0\n\$(id) 0\n");
+
+        $recreate = collect($ran)->firstWhere('op', 'compose_recreate_detached');
+
+        expect(array_slice($recreate['command'], -5))->toBe(['up', '-d', '--no-deps', '--force-recreate', 'ghost']);
+    });
 });
