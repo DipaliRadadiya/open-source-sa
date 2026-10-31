@@ -12,7 +12,6 @@ import {
   enableContainerAccess,
   getContainerAccess,
 } from "@/lib/api/docker";
-import { findSystemUser, setSystemUserSsh } from "@/lib/api/system-users";
 import { containerAccessSchema, containerLoginSchema } from "@/lib/schemas/docker";
 import {
   defaultContainer,
@@ -85,13 +84,9 @@ export function ContainerAccessCard({
   const [failed, setFailed] = useState(false);
   const [offPending, setOffPending] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
-  // The owner's System User row (for its id) and whether the server enforces SSH access.
-  const [sshUser, setSshUser] = useState(null);
   const [confirmOff, setConfirmOff] = useState(false);
   const [alsoSsh, setAlsoSsh] = useState(false);
   const [offError, setOffError] = useState(null);
-  const ownerName = access?.owner.username;
-  const ownerSsh = access?.owner.ssh_access;
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -112,20 +107,10 @@ export function ContainerAccessCard({
     };
   }, [application.id, enabled]);
 
-  useEffect(() => {
-    if (!ownerName || !canSeeSystemUsers) return undefined;
-    let cancelled = false;
-    findSystemUser(ownerName)
-      .then((found) => !cancelled && setSshUser(found))
-      .catch(() => !cancelled && setSshUser(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [ownerName, ownerSsh, canSeeSystemUsers]);
-
   if (!enabled || failed) return null;
 
-  const enforced = sshUser?.enforced ?? null;
+  // Whether sshd enforces SSH access: true, false, or null when it could not be read.
+  const enforced = access?.ssh_access_enforced ?? null;
 
   // After POST or DELETE: the answer if it carries the card's data, else a re-read.
   async function settle(response) {
@@ -157,32 +142,43 @@ export function ContainerAccessCard({
   async function turnOff(alsoServerSsh) {
     const name = access.owner.username;
     setOffPending(true);
-    let response;
     try {
-      response = await disableContainerAccess(application.id);
+      const response = await disableContainerAccess(application.id, { disableSsh: alsoServerSsh });
+      const afterOff = { ...access, owner: { ...access.owner, container_login: false } };
+      const message = alsoServerSsh
+        ? enforced === true
+          ? "commands.turnedOffBoth"
+          : "commands.turnedOffBothUnconfirmed"
+        : hostSshStillOn(afterOff, enforced)
+          ? "commands.turnedOffHostSsh"
+          : "commands.turnedOff";
+      toast.success(t(message, { username: name }));
+      await settle(response);
+      setConfirmOff(false);
     } catch (error) {
+      if (alsoServerSsh) {
+        // The server turns SSH off only after container login, so a failure may come
+        // from either step: re-read to see which one is now true.
+        let now = null;
+        try {
+          now = readAccess((await getContainerAccess(application.id)).data);
+          setAccess(now);
+        } catch {
+          now = null;
+        }
+        if (now && !now.owner.container_login) {
+          toast.error(t("commands.sshOffFailed", { username: name }), { description: apiMessage(error, "") || undefined });
+          setConfirmOff(false);
+          setOffPending(false);
+          return;
+        }
+      }
       const message = apiMessage(error, t("commands.turnOffFailed"));
       if (confirmOff) setOffError(message);
       else toast.error(message);
+    } finally {
       setOffPending(false);
-      return;
     }
-    if (alsoServerSsh && sshUser?.user) {
-      // Only after container login is off; a failure here leaves SSH exactly as it was.
-      try {
-        await setSystemUserSsh(sshUser.user.id, false);
-        toast.success(t("commands.turnedOffBoth", { username: name }));
-      } catch (error) {
-        toast.error(apiMessage(error, t("commands.sshOffFailed", { username: name })));
-      }
-      await settle(null);
-    } else {
-      const afterOff = { ...access, owner: { ...access.owner, container_login: false } };
-      toast.success(t(hostSshStillOn(afterOff, enforced) ? "commands.turnedOffHostSsh" : "commands.turnedOff", { username: name }));
-      await settle(response);
-    }
-    setConfirmOff(false);
-    setOffPending(false);
   }
 
   const username = access?.owner.username;
@@ -313,7 +309,7 @@ export function ContainerAccessCard({
                   ),
               })}
             </Note>
-          ) : sshUser?.user ? (
+          ) : (
             <div className="flex items-start gap-3 rounded-lg border p-3" data-testid="container-access-also-ssh">
               <Checkbox
                 id="container-access-also-ssh"
@@ -329,8 +325,6 @@ export function ContainerAccessCard({
                 <p className="text-xs leading-relaxed text-muted-foreground">{t("turnOffDialog.alsoSshHint", { username })}</p>
               </div>
             </div>
-          ) : (
-            <Note>{t.rich("hostSshOn", { username, link: (chunks) => chunks })}</Note>
           )}
         </ConfirmDialog>
       ) : null}

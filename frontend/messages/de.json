@@ -6619,6 +6619,7 @@
         "turnedOff": "Container-Anmeldung für {username} ist ausgeschaltet",
         "turnedOffHostSsh": "Container-Anmeldung ist ausgeschaltet. {username} kann SSH auf dem Server weiterhin nutzen.",
         "turnedOffBoth": "Container-Anmeldung und SSH-Anmeldung sind für {username} ausgeschaltet.",
+        "turnedOffBothUnconfirmed": "Die Container-Anmeldung ist ausgeschaltet. Die SSH-Anmeldung von {username} ist im Panel ausgeschaltet, aber dieser Server setzt das eventuell noch nicht durch: Prüfen Sie Zugang & Sicherheit.",
         "sshOffFailed": "Die Container-Anmeldung ist ausgeschaltet, aber die SSH-Anmeldung von {username} konnte nicht ausgeschaltet werden.",
         "turnOffFailed": "Die Container-Anmeldung konnte nicht ausgeschaltet werden.",
         "more": "Weitere Befehle"

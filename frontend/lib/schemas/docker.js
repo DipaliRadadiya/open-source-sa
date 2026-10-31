@@ -327,6 +327,8 @@ export const containerAccessSchema = z.object({
   }),
   // Null when the server could not read sshd's setting: neither on nor off.
   password_login: z.boolean().nullish(),
+  // Whether sshd enforces SSH access (AllowGroups); null = could not be read, not known to be enforced.
+  ssh_access_enforced: z.boolean().nullish(),
   commands: z
     .object({
       shell: z.string().min(1),

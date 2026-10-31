@@ -6619,6 +6619,7 @@
         "turnedOff": "{username} のコンテナログインをオフにしました",
         "turnedOffHostSsh": "コンテナログインをオフにしました。{username} は引き続きサーバーで SSH を使えます。",
         "turnedOffBoth": "{username} のコンテナログインと SSH ログインをオフにしました。",
+        "turnedOffBothUnconfirmed": "コンテナログインはオフです。パネルでは {username} の SSH ログインをオフにしましたが、このサーバーではまだ適用されていない可能性があります。アクセスとセキュリティを確認してください。",
         "sshOffFailed": "コンテナログインはオフになりましたが、{username} の SSH ログインをオフにできませんでした。",
         "turnOffFailed": "コンテナログインをオフにできませんでした。",
         "more": "その他のコマンド"

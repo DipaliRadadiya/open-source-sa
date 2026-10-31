@@ -6619,6 +6619,7 @@
         "turnedOff": "El inicio de sesión en el contenedor está desactivado para {username}",
         "turnedOffHostSsh": "El inicio de sesión en el contenedor está desactivado. {username} aún puede usar SSH en el servidor.",
         "turnedOffBoth": "El inicio de sesión en el contenedor y el inicio de sesión SSH están desactivados para {username}.",
+        "turnedOffBothUnconfirmed": "El inicio de sesión en el contenedor está desactivado. El inicio de sesión SSH de {username} está desactivado en el panel, pero es posible que este servidor aún no lo aplique: revise Acceso y seguridad.",
         "sshOffFailed": "El inicio de sesión en el contenedor está desactivado, pero no se pudo desactivar el inicio de sesión SSH de {username}.",
         "turnOffFailed": "No se pudo desactivar el inicio de sesión en el contenedor.",
         "more": "Más comandos"

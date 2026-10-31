@@ -6619,6 +6619,7 @@
         "turnedOff": "La connexion au conteneur est désactivée pour {username}",
         "turnedOffHostSsh": "La connexion au conteneur est désactivée. {username} peut toujours utiliser SSH sur le serveur.",
         "turnedOffBoth": "La connexion au conteneur et la connexion SSH sont désactivées pour {username}.",
+        "turnedOffBothUnconfirmed": "La connexion au conteneur est désactivée. La connexion SSH de {username} est désactivée dans le panneau, mais ce serveur ne l'applique peut-être pas encore : vérifiez Accès et sécurité.",
         "sshOffFailed": "La connexion au conteneur est désactivée, mais la connexion SSH de {username} n'a pas pu être désactivée.",
         "turnOffFailed": "Impossible de désactiver la connexion au conteneur.",
         "more": "Plus de commandes"

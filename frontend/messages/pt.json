@@ -6619,6 +6619,7 @@
         "turnedOff": "O login no contentor está desligado para {username}",
         "turnedOffHostSsh": "O login no contentor está desligado. {username} ainda pode usar SSH no servidor.",
         "turnedOffBoth": "O login no contentor e o login SSH estão desligados para {username}.",
+        "turnedOffBothUnconfirmed": "O login no contentor está desligado. O login SSH de {username} foi desligado no painel, mas este servidor pode ainda não aplicar isso: confira Acesso e segurança.",
         "sshOffFailed": "O login no contentor está desligado, mas não foi possível desligar o login SSH de {username}.",
         "turnOffFailed": "Não foi possível desligar o login no contentor.",
         "more": "Mais comandos"

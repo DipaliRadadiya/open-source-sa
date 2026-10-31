@@ -6619,6 +6619,7 @@
         "turnedOff": "Container login is off for {username}",
         "turnedOffHostSsh": "Container login is off. {username} can still use SSH on the server.",
         "turnedOffBoth": "Container login and SSH login are off for {username}.",
+        "turnedOffBothUnconfirmed": "Container login is off. SSH login is switched off for {username} in the panel, but this server may not enforce it yet: check Access & security.",
         "sshOffFailed": "Container login is off, but {username}'s SSH login could not be turned off.",
         "turnOffFailed": "Container login could not be turned off.",
         "more": "More commands"

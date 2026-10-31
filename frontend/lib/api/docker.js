@@ -132,8 +132,9 @@ export function enableContainerAccess(id, payload = {}) {
 }
 
 // The owner's SSH goes back to a normal host login if it is still on.
-export function disableContainerAccess(id) {
-  return api.delete(`/applications/${id}/container/access`);
+// `disableSsh`: also turn off the owner's SSH login, server-side, right after container login.
+export function disableContainerAccess(id, { disableSsh = false } = {}) {
+  return api.delete(`/applications/${id}/container/access`, disableSsh ? { data: { disable_ssh: true } } : undefined);
 }
 
 /**
