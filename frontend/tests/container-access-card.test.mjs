@@ -5,7 +5,7 @@ import { installDom, loadComponent } from "./support/dom.mjs";
 installDom();
 const { createElement } = await import("react");
 const { IntlProvider } = await import("use-intl");
-const { render, screen, cleanup, fireEvent, waitFor, within } = await import("@testing-library/react");
+const { act, render, screen, cleanup, fireEvent, waitFor, within } = await import("@testing-library/react");
 const { defaultContainer, hostSshStillOn, shellCommandFor, showsContainerAccess, turnOnNeeds } =
   await import("../lib/applications/container-access.js");
 const messages = JSON.parse(readFileSync("messages/en.json", "utf8"));
@@ -444,10 +444,18 @@ test("on: when the server does not enforce SSH rules, no option is offered and t
   // ssh_access false stops nobody when the server does not enforce it.
   const unenforced = { ...off, owner: { ...owner, ssh_access: false, ssh_keys: 1 } };
   globalThis.__dockerApi.access = async () => ({ data: reads++ === 0 ? { ...on, owner: { ...on.owner, ssh_access: false } } : unenforced });
-  globalThis.__dockerApi.findUser = async () => ({ user: { id: 7, username: "oc-app" }, enforced: false });
+  let lookedUp;
+  const lookup = new Promise((resolve) => (lookedUp = resolve));
+  globalThis.__dockerApi.findUser = async () => {
+    lookedUp();
+    return { user: { id: 7, username: "oc-app" }, enforced: false };
+  };
   globalThis.__dockerApi.disableAccess = async () => ({ data: { message: "ok" } });
   show();
-  fireEvent.click(await screen.findByRole("button", { name: m.commands.turnOff }));
+  const turnOff = await screen.findByRole("button", { name: m.commands.turnOff });
+  // Only the lookup knows the server does not enforce SSH; clicking before it lands is a plain turn-off.
+  await act(() => lookup);
+  fireEvent.click(turnOff);
   const dialog = await screen.findByRole("alertdialog");
   assert.equal(within(dialog).queryByRole("checkbox"), null, "nothing to tick: it would not stop SSH");
   assert.ok(dialog.textContent.includes(fill(m.turnOffDialog.notEnforced, { username: "oc-app" }).replace(/<\/?link>/g, "")));
