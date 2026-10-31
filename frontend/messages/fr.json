@@ -6376,6 +6376,12 @@
         "body": "Cette application utilise son propre fichier compose : son port, ses limites de mémoire et de CPU, son réseau et ses volumes se modifient là, pas ici.",
         "link": "Ouvrir le fichier compose"
       },
+      "recipeLimits": {
+        "title": "Mémoire et CPU",
+        "hint": "Limites du conteneur propre à cette application. Sa base de données garde sa propre limite.",
+        "composeTitle": "Port, réseau et volumes",
+        "composeBody": "Cette application utilise son propre fichier compose : ces réglages se modifient là."
+      },
       "imageSection": "Image",
       "imageSectionHint": "Ce que ce conteneur exécute et l'identifiant avec lequel il le récupère.",
       "saveImage": "Enregistrer le registre",

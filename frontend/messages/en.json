@@ -6376,6 +6376,12 @@
         "body": "This application runs its own compose file, so its port, memory and CPU limits, network and volumes are changed there, not here.",
         "link": "Open the compose file"
       },
+      "recipeLimits": {
+        "title": "Memory and CPU",
+        "hint": "Limits for this application's own container. Its database keeps its own limit.",
+        "composeTitle": "Port, network and volumes",
+        "composeBody": "This application runs its own compose file, so these are changed there."
+      },
       "imageSection": "Image",
       "imageSectionHint": "What this container runs, and the credential it pulls with.",
       "saveImage": "Save registry",

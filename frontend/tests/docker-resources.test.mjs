@@ -207,7 +207,8 @@ test("the card says the site restarts before the click, not after", () => {
   // Saving recreates the container. That is downtime, and it is not something
   // to discover from a graph.
   // Beside each card's Save, where the click happens.
-  assert.equal(card.match(/changedBy=\{canManage \? t\("restartNote"\) : null\}/g).length, 2);
+  // Image, settings, and a 1-Click Recipe's limits (31 Oct).
+  assert.equal(card.match(/changedBy=\{canManage \? t\("restartNote"\) : null\}/g).length, 3);
   for (const locale of LOCALES) {
     assert.ok(
       messages[locale].applications.container.restartNote,

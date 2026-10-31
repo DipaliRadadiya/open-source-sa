@@ -95,6 +95,8 @@ export function ContainerCard({
 
   // The registry saves with the image card, the rest with the network card: each card
   // saves only its own fields (every field is optional on the PUT).
+  // Installed from the 1-Click catalog: its memory and CPU are set here even though it runs its own compose file.
+  const isRecipe = application.origin?.kind === "recipe";
   const imageDefaults = {
     registry_id: application.registry_id
       ? String(application.registry_id)
@@ -153,6 +155,46 @@ export function ContainerCard({
       (registry) => String(registry.id) === imageDefaults.registry_id,
     );
 
+  // Memory and CPU, the same fields and rules for a simple app and a 1-Click Recipe.
+  const limitFields = (
+    <>
+      <FormField
+        control={form.control}
+        name="memory_limit"
+        render={({ field }) => (
+          <Row
+            label={t("memoryLimit")}
+            hint={
+              limits.defaultMemoryLimit
+                ? t("memoryLimitHint", { default: limits.defaultMemoryLimit })
+                : t("memoryLimitHintUnknown")
+            }
+          >
+            <FormControl>
+              <Input placeholder={limits.defaultMemoryLimit ?? "512m"} disabled={!canManage} {...field} />
+            </FormControl>
+          </Row>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="cpu_limit"
+        render={({ field }) => (
+          <Row
+            label={t("cpuLimit")}
+            // The server's real core count; the rule only when it could not be asked.
+            hint={limits.cpus ? t("cpuLimitHint", { cores: limits.cpus }) : t("cpuLimitHintUnknown")}
+          >
+            <FormControl>
+              {/* Empty here means NO limit, the opposite of memory's empty. */}
+              <Input placeholder={t("cpuLimitPlaceholder")} inputMode="decimal" disabled={!canManage} {...field} />
+            </FormControl>
+          </Row>
+        )}
+      />
+    </>
+  );
+
   async function put(payload, setBusy, target, values, savedMessage = async () => t("saved")) {
     setBusy(true);
     try {
@@ -193,6 +235,19 @@ export function ContainerCard({
       form,
       values,
       keepChoice ? () => movedMessage(values.docker_network, removePrevious) : undefined,
+    );
+
+  // A recipe's compose file owns its port, network and volumes; only the limits are the panel's,
+  // and they apply to the app's own service (its database keeps its own limit).
+  const saveLimits = (values) =>
+    put(
+      {
+        memory_limit: values.memory_limit === "" ? null : values.memory_limit,
+        cpu_limit: values.cpu_limit === "" ? null : values.cpu_limit,
+      },
+      setSavingSettings,
+      form,
+      values,
     );
 
   // Said from the networks after the save: the server keeps the old one while something uses it.
@@ -306,10 +361,45 @@ export function ContainerCard({
           </form>
         </Form>
 
-        {/* A compose file the user owns (a 1-Click Recipe, or one taken over on the
-            Compose File page) is what runs: port, limits, network and volumes saved
-            here would answer "saved" and change nothing. */}
-        {ownCompose ? (
+        {/* A compose file the user owns is what runs. A 1-Click Recipe still takes its
+            memory and CPU from here (the backend writes them to the app's own service);
+            a file taken over on the Compose File page owns everything, so saving here
+            would answer "saved" and change nothing. */}
+        {ownCompose && isRecipe ? (
+          <>
+            <Form {...form}>
+              <form noValidate onSubmit={form.handleSubmit(saveLimits)}>
+                <Section
+                  icon={Gauge}
+                  title={t("recipeLimits.title")}
+                  description={t("recipeLimits.hint")}
+                  changedBy={canManage ? t("restartNote") : null}
+                  actions={
+                    <SectionActions
+                      label={t("saveAction")}
+                      isDirty={form.formState.isDirty}
+                      pending={savingSettings}
+                      onDiscard={() => form.reset(defaults)}
+                      canManage={canManage}
+                    />
+                  }
+                >
+                  {limitFields}
+                  <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                    <Gauge className="mt-0.5 size-3.5 shrink-0" />
+                    {t("limitsBody")}
+                  </p>
+                </Section>
+              </form>
+            </Form>
+            <Note icon={FileCode} title={t("recipeLimits.composeTitle")}>
+              {t("recipeLimits.composeBody")}{" "}
+              <Link href={`/applications/${application.id}/compose`} className={linkClass}>
+                {t("ownCompose.link")}
+              </Link>
+            </Note>
+          </>
+        ) : ownCompose ? (
           <Note icon={FileCode} title={t("ownCompose.title")}>
             {t("ownCompose.body")}{" "}
             <Link href={`/applications/${application.id}/compose`} className={linkClass}>
@@ -450,40 +540,7 @@ export function ContainerCard({
                     }}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="memory_limit"
-                    render={({ field }) => (
-                      <Row
-                        label={t("memoryLimit")}
-                        hint={
-                          limits.defaultMemoryLimit
-                            ? t("memoryLimitHint", { default: limits.defaultMemoryLimit })
-                            : t("memoryLimitHintUnknown")
-                        }
-                      >
-                        <FormControl>
-                          <Input placeholder={limits.defaultMemoryLimit ?? "512m"} disabled={!canManage} {...field} />
-                        </FormControl>
-                      </Row>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="cpu_limit"
-                    render={({ field }) => (
-                      <Row
-                        label={t("cpuLimit")}
-                        // The server's real core count; the rule only when it could not be asked.
-                        hint={limits.cpus ? t("cpuLimitHint", { cores: limits.cpus }) : t("cpuLimitHintUnknown")}
-                      >
-                        <FormControl>
-                          {/* Empty here means NO limit, the opposite of memory's empty. */}
-                          <Input placeholder={t("cpuLimitPlaceholder")} inputMode="decimal" disabled={!canManage} {...field} />
-                        </FormControl>
-                      </Row>
-                    )}
-                  />
+                  {limitFields}
 
                   {/* How the two limits fail, which is the part nobody knows: one line, not a box. */}
                   <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
