@@ -13,7 +13,9 @@ test("nothing inside the Container settings form opens its own form", () => {
   const card = read("components/applications/container-card.jsx");
   assert.match(card, /<form noValidate onSubmit=\{imageForm\.handleSubmit\(saveImage\)\}>/);
   assert.match(card, /<form noValidate onSubmit=\{form\.handleSubmit\(saveSettings\)\}>/);
-  assert.equal(card.match(/<form\b/g).length, 2);
+  // A 1-Click Recipe's limits form replaces the settings form, never sits inside it (31 Oct).
+  assert.match(card, /<form noValidate onSubmit=\{form\.handleSubmit\(saveLimits\)\}>/);
+  assert.equal(card.match(/<form\b/g).length, 3);
   for (const file of ["components/applications/container-volumes.jsx", "components/applications/container-credentials.jsx"]) {
     assert.doesNotMatch(read(file), /<form\b/, file);
   }
@@ -50,7 +52,9 @@ test("container logs offer neither Download nor Clear, and the failure panel ope
 // saved on the Container page answered "saved" and changed nothing (20 Oct).
 test("an application on its own compose file gets a pointer, not inert fields", () => {
   const card = read("components/applications/container-card.jsx");
-  assert.match(card, /\{ownCompose \? \(\s*<Note icon=\{FileCode\} title=\{t\("ownCompose\.title"\)\}>/);
+  // A recipe gets its Memory and CPU fields first (Dipali, 31 Oct); any other own compose file the pointer.
+  assert.match(card, /\{ownCompose && isRecipe \? \(/);
+  assert.match(card, /\) : ownCompose \? \(\s*<Note icon=\{FileCode\} title=\{t\("ownCompose\.title"\)\}>/);
   const page = read("app/(app)/applications/[application]/container/page.jsx");
   assert.match(page, /const ownCompose = Boolean\(compose && !compose\.failed && compose\.generated === false\);/);
   assert.match(page, /ownCompose=\{ownCompose\}/);

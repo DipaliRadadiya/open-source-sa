@@ -6376,6 +6376,12 @@
         "body": "Esta aplicação usa o seu próprio ficheiro compose, por isso a porta, os limites de memória e CPU, a rede e os volumes mudam-se lá, não aqui.",
         "link": "Abrir o ficheiro compose"
       },
+      "recipeLimits": {
+        "title": "Memória e CPU",
+        "hint": "Limites do contentor próprio desta aplicação. A base de dados mantém o seu próprio limite.",
+        "composeTitle": "Porta, rede e volumes",
+        "composeBody": "Esta aplicação usa o seu próprio ficheiro compose, por isso estes mudam-se lá."
+      },
       "imageSection": "Imagem",
       "imageSectionHint": "O que este contentor executa e a credencial com que o descarrega.",
       "saveImage": "Guardar registo",

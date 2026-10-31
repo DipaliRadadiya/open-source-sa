@@ -6376,6 +6376,12 @@
         "body": "Esta aplicación usa su propio archivo compose, así que su puerto, los límites de memoria y CPU, la red y los volúmenes se cambian allí, no aquí.",
         "link": "Abrir el archivo compose"
       },
+      "recipeLimits": {
+        "title": "Memoria y CPU",
+        "hint": "Límites del contenedor propio de esta aplicación. Su base de datos mantiene su propio límite.",
+        "composeTitle": "Puerto, red y volúmenes",
+        "composeBody": "Esta aplicación usa su propio archivo compose, así que estos se cambian allí."
+      },
       "imageSection": "Imagen",
       "imageSectionHint": "Lo que ejecuta este contenedor y la credencial con la que lo descarga.",
       "saveImage": "Guardar registro",

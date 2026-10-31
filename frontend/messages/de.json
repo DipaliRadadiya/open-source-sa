@@ -6376,6 +6376,12 @@
         "body": "Diese Anwendung läuft mit ihrer eigenen Compose-Datei. Port, Speicher- und CPU-Limit, Netzwerk und Volumes werden dort geändert, nicht hier.",
         "link": "Compose-Datei öffnen"
       },
+      "recipeLimits": {
+        "title": "Speicher und CPU",
+        "hint": "Limits für den eigenen Container dieser Anwendung. Ihre Datenbank behält ihr eigenes Limit.",
+        "composeTitle": "Port, Netzwerk und Volumes",
+        "composeBody": "Diese Anwendung läuft mit ihrer eigenen Compose-Datei, daher werden diese dort geändert."
+      },
       "imageSection": "Image",
       "imageSectionHint": "Was dieser Container ausführt und mit welchen Anmeldedaten er es abruft.",
       "saveImage": "Registry speichern",
