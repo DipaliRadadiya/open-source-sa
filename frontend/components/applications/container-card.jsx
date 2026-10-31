@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Network, KeyRound, RefreshCw, Gauge, FileCode, Package, HardDrive } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
-import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
+import { listDockerNetworks, pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
+import { moveOutcome, offersKeepChoice, ownNetworkName } from "@/lib/docker/previous-network";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { InfoRow, Row, Section, SectionActions } from "@/components/settings/setting-row";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Note } from "@/components/ui/note";
 import { Button } from "@/components/ui/button";
 import { ContainerVolumes } from "@/components/applications/container-volumes";
@@ -117,6 +120,18 @@ export function ContainerCard({
     mode: "onBlur",
   });
 
+  const tMove = useTranslations("docker.previousNetwork");
+  const [removePrevious, setRemovePrevious] = useState(true);
+  const chosenNetwork = useWatch({ control: form.control, name: "docker_network" });
+  const toNetwork = (value) => (value === DEFAULT_NETWORK ? null : value);
+  const keepChoice = offersKeepChoice({
+    applicationId: application.id,
+    current: toNetwork(defaults.docker_network),
+    next: toNetwork(chosenNetwork),
+    networks,
+  });
+  const ownNetwork = ownNetworkName(application.id);
+
   // The application's own network, kept in the list even when it is gone: dropping it
   // would show "Its own network" for an application that will not start.
   const missing =
@@ -138,13 +153,13 @@ export function ContainerCard({
       (registry) => String(registry.id) === imageDefaults.registry_id,
     );
 
-  async function put(payload, setBusy, target, values) {
+  async function put(payload, setBusy, target, values, savedMessage = async () => t("saved")) {
     setBusy(true);
     try {
       await updateContainerSettings(application.id, payload);
       // Before the toast: the Docker page and the dashboard facts are server-rendered.
       await refreshAndWait();
-      toast.success(t("saved"));
+      toast.success(await savedMessage());
       target.reset(values);
     } catch (error) {
       handleValidationError(error, target, { fallback: t("failed") });
@@ -171,11 +186,26 @@ export function ContainerCard({
         cpu_limit: values.cpu_limit === "" ? null : values.cpu_limit,
         docker_network:
           values.docker_network === DEFAULT_NETWORK ? null : values.docker_network,
+        // Only on a move that could remove the app's own network; otherwise the server's default.
+        ...(keepChoice ? { remove_previous_network: removePrevious } : {}),
       },
       setSavingSettings,
       form,
       values,
+      keepChoice ? () => movedMessage(values.docker_network, removePrevious) : undefined,
     );
+
+  // Said from the networks after the save: the server keeps the old one while something uses it.
+  async function movedMessage(network, removeRequested) {
+    let networksAfter = networks;
+    try {
+      networksAfter = await listDockerNetworks();
+    } catch {
+      return t("saved");
+    }
+    const outcome = moveOutcome({ applicationId: application.id, removeRequested, networksAfter });
+    return tMove(outcome, { network, name: ownNetwork });
+  }
 
   async function pull() {
     setPulling(true);
@@ -347,6 +377,24 @@ export function ContainerCard({
                       </Row>
                     )}
                   />
+
+                  {keepChoice ? (
+                    <div className="flex items-start gap-3 rounded-lg border p-3" data-testid="remove-previous-network">
+                      <Checkbox
+                        id="remove-previous-network"
+                        checked={removePrevious}
+                        onCheckedChange={(value) => setRemovePrevious(value === true)}
+                        disabled={!canManage || savingSettings}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0 space-y-1">
+                        <Label htmlFor="remove-previous-network" className="leading-snug">
+                          {tMove("label", { name: ownNetwork })}
+                        </Label>
+                        <p className="text-xs leading-relaxed text-muted-foreground">{tMove("hint")}</p>
+                      </div>
+                    </div>
+                  ) : null}
 
                   <FormField
                     control={form.control}

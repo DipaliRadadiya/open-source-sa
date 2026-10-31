@@ -8195,7 +8195,14 @@
       "nameHint": "So wird diese Anmeldung im Panel angezeigt, etwa auf der Container-Seite einer Anwendung."
     },
     "noPermission": "Ihre Rolle enthält nicht „Docker“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
-    "nameRule": "Buchstaben, Ziffern, Punkte, Binde- und Unterstriche; Beginn mit Buchstabe oder Ziffer."
+    "nameRule": "Buchstaben, Ziffern, Punkte, Binde- und Unterstriche; Beginn mit Buchstabe oder Ziffer.",
+    "previousNetwork": {
+      "label": "Altes Netzwerk der Anwendung entfernen ({name})",
+      "hint": "Docker hat es für diese Anwendung angelegt. Abwählen, um es zu behalten.",
+      "removed": "Nach {network} verschoben. Das alte Netzwerk {name} wurde entfernt.",
+      "kept": "Nach {network} verschoben. Das alte Netzwerk {name} wurde behalten.",
+      "inUse": "Nach {network} verschoben. Das alte Netzwerk {name} wurde behalten, weil es noch verwendet wird."
+    }
   },
   "operations": {
     "title": "Hintergrundaufgaben",

@@ -8195,7 +8195,14 @@
       "nameHint": "Como esta credencial aparece no painel, por exemplo na página Contentor de uma aplicação."
     },
     "noPermission": "Seu papel não inclui Docker com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
-    "nameRule": "Letras, números, pontos, hífenes e sublinhados; comece com uma letra ou número."
+    "nameRule": "Letras, números, pontos, hífenes e sublinhados; comece com uma letra ou número.",
+    "previousNetwork": {
+      "label": "Remover a rede antiga da aplicação ({name})",
+      "hint": "O Docker criou-a para esta aplicação. Desmarque para a manter.",
+      "removed": "Movida para {network}. A rede antiga {name} foi removida.",
+      "kept": "Movida para {network}. A rede antiga {name} foi mantida.",
+      "inUse": "Movida para {network}. A rede antiga {name} foi mantida porque algo ainda a usa."
+    }
   },
   "operations": {
     "title": "Tarefas em segundo plano",

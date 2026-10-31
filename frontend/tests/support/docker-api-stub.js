@@ -18,3 +18,4 @@ export const getContainerSecrets = call("secrets");
 export const getContainerAccess = call("access");
 export const enableContainerAccess = call("enableAccess");
 export const disableContainerAccess = call("disableAccess");
+export const listDockerNetworks = call("networks");

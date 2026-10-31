@@ -8195,7 +8195,14 @@
       "nameHint": "How this credential is listed in the panel, for example on an application's Container page."
     },
     "noPermission": "Your role does not include Docker with Manage access. Ask an administrator to grant it.",
-    "nameRule": "Letters, numbers, dots, dashes and underscores; start with a letter or number."
+    "nameRule": "Letters, numbers, dots, dashes and underscores; start with a letter or number.",
+    "previousNetwork": {
+      "label": "Remove the app's old network ({name})",
+      "hint": "Docker made it for this app. Untick to keep it.",
+      "removed": "Moved to {network}. The old network {name} was removed.",
+      "kept": "Moved to {network}. The old network {name} was kept.",
+      "inUse": "Moved to {network}. The old network {name} was kept because something still uses it."
+    }
   },
   "operations": {
     "title": "Background jobs",

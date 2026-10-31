@@ -8195,7 +8195,14 @@
       "nameHint": "Cómo aparece esta credencial en el panel, por ejemplo en la página Contenedor de una aplicación."
     },
     "noPermission": "Tu rol no incluye Docker con acceso de gestión. Pide a un administrador que te lo conceda.",
-    "nameRule": "Letras, números, puntos, guiones y guiones bajos; empiece por una letra o un número."
+    "nameRule": "Letras, números, puntos, guiones y guiones bajos; empiece por una letra o un número.",
+    "previousNetwork": {
+      "label": "Eliminar la red anterior de la aplicación ({name})",
+      "hint": "Docker la creó para esta aplicación. Desmarque para conservarla.",
+      "removed": "Movida a {network}. La red anterior {name} se eliminó.",
+      "kept": "Movida a {network}. La red anterior {name} se conservó.",
+      "inUse": "Movida a {network}. La red anterior {name} se conservó porque algo aún la usa."
+    }
   },
   "operations": {
     "title": "Tareas en segundo plano",

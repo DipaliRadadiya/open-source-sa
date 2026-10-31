@@ -3,12 +3,14 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { HardDrive, Loader2, Network } from "lucide-react";
-import { updateContainerSettings } from "@/lib/api/docker";
+import { listDockerNetworks, updateContainerSettings } from "@/lib/api/docker";
+import { moveOutcome, offersKeepChoice, ownNetworkName } from "@/lib/docker/previous-network";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Caution } from "@/components/ui/caution";
 import {
   Select,
@@ -42,18 +44,26 @@ export function AttachSiteDialog({
   kind,
   name,
   sites = [],
+  networks = [],
 }) {
   const t = useTranslations("docker.attach");
   const tc = useTranslations("common");
+  const tMove = useTranslations("docker.previousNetwork");
   const { refreshAndWait } = useRefresh();
 
   const [site, setSite] = useState("");
   const [path, setPath] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
+  const [removePrevious, setRemovePrevious] = useState(true);
 
   const isVolume = kind === "volume";
   const chosen = sites.find((candidate) => String(candidate.id) === site);
+  // A network move off the site's own network: ask whether that network goes (default) or stays.
+  const keepChoice =
+    !isVolume &&
+    Boolean(chosen) &&
+    offersKeepChoice({ applicationId: chosen.id, current: chosen.docker_network ?? null, next: name, networks });
 
   // Already attached: for a network that is the site's single network; for a
   // volume, this same volume at any path. Offered anyway rather than filtered
@@ -78,20 +88,32 @@ export function AttachSiteDialog({
               { volume: name, path: path.trim() },
             ],
           }
-        : { docker_network: name };
+        : { docker_network: name, ...(keepChoice ? { remove_previous_network: removePrevious } : {}) };
 
       await updateContainerSettings(chosen.id, payload);
       await refreshAndWait();
-      toast.success(t("attached", { name, site: chosen.name }));
+      toast.success(keepChoice ? await movedMessage(chosen.id) : t("attached", { name, site: chosen.name }));
       onOpenChange(false);
       setSite("");
       setPath("");
+      setRemovePrevious(true);
     } catch (requestError) {
       // The server's sentence: it is the only thing that can say "that path is
       // where the site's own files are".
       setError(apiMessage(requestError, t("failed")));
     } finally {
       setPending(false);
+    }
+  }
+
+  // Read from the networks after the save: the server keeps the old one while something uses it.
+  async function movedMessage(applicationId) {
+    try {
+      const networksAfter = await listDockerNetworks();
+      const outcome = moveOutcome({ applicationId, removeRequested: removePrevious, networksAfter });
+      return tMove(outcome, { network: name, name: ownNetworkName(applicationId) });
+    } catch {
+      return t("attached", { name, site: chosen.name });
     }
   }
 
@@ -161,6 +183,24 @@ export function AttachSiteDialog({
               disabled={pending}
             />
             <p className="text-xs text-muted-foreground">{t("pathHint")}</p>
+          </div>
+        ) : null}
+
+        {keepChoice ? (
+          <div className="flex items-start gap-3 rounded-lg border p-3" data-testid="remove-previous-network">
+            <Checkbox
+              id="attach-remove-previous-network"
+              checked={removePrevious}
+              onCheckedChange={(value) => setRemovePrevious(value === true)}
+              disabled={pending}
+              className="mt-0.5"
+            />
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor="attach-remove-previous-network" className="leading-snug">
+                {tMove("label", { name: ownNetworkName(chosen.id) })}
+              </Label>
+              <p className="text-xs leading-relaxed text-muted-foreground">{tMove("hint")}</p>
+            </div>
           </div>
         ) : null}
 

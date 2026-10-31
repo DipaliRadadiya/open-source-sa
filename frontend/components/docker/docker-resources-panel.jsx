@@ -307,6 +307,7 @@ export function DockerResourcesPanel({
         kind={attaching?.kind}
         name={attaching?.name ?? ""}
         sites={sites}
+        networks={networks}
       />
     </div>
   );

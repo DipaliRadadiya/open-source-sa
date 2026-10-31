@@ -4,6 +4,11 @@ export function createDockerNetwork(name) {
   return api.post("/docker/networks", { name });
 }
 
+// The networks as they are now, to tell the user whether a move removed the old one.
+export function listDockerNetworks() {
+  return api.get("/docker/networks").then((response) => response.data?.networks ?? []);
+}
+
 export function deleteDockerNetwork(name) {
   return api.delete(`/docker/networks/${encodeURIComponent(name)}`);
 }

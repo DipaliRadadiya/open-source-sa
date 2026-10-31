@@ -8195,7 +8195,14 @@
       "nameHint": "Comment cet identifiant apparaît dans le panneau, par exemple sur la page Conteneur d'une application."
     },
     "noPermission": "Votre rôle n'inclut pas Docker avec l'accès Manage. Demandez à un administrateur de l'accorder.",
-    "nameRule": "Lettres, chiffres, points, tirets et traits de soulignement ; commencez par une lettre ou un chiffre."
+    "nameRule": "Lettres, chiffres, points, tirets et traits de soulignement ; commencez par une lettre ou un chiffre.",
+    "previousNetwork": {
+      "label": "Supprimer l'ancien réseau de l'application ({name})",
+      "hint": "Docker l'a créé pour cette application. Décochez pour le garder.",
+      "removed": "Déplacée vers {network}. L'ancien réseau {name} a été supprimé.",
+      "kept": "Déplacée vers {network}. L'ancien réseau {name} a été conservé.",
+      "inUse": "Déplacée vers {network}. L'ancien réseau {name} a été conservé car il est encore utilisé."
+    }
   },
   "operations": {
     "title": "Tâches en arrière-plan",
