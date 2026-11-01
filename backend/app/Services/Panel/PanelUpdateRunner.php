@@ -121,8 +121,13 @@ class PanelUpdateRunner
      */
     public static function transientCommand(string $path, string $log, string $key): string
     {
+        // OOMPolicy=continue: the default (stop) makes systemd stop the whole
+        // unit the moment the kernel OOM-kills any process in it. The frontend
+        // build is the one most likely to be killed, and the script itself has
+        // to survive that to roll back and record `frontend_build_out_of_memory`
+        // instead of leaving the screen on a run that never finishes.
         return sprintf(
-            'sudo -n systemd-run --collect --quiet --unit=%s /bin/sh -c %s',
+            'sudo -n systemd-run --collect --quiet -p OOMPolicy=continue --unit=%s /bin/sh -c %s',
             escapeshellarg('panel-update-'.$key),
             escapeshellarg(self::redirected($path, $log)),
         );

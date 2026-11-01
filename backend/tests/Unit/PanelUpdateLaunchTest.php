@@ -26,6 +26,14 @@ it('starts the update in a transient unit so a service restart cannot take it do
         ->toContain('/tmp/update-7.log');
 });
 
+it('keeps the update unit running when the kernel OOM-kills the build inside it', function () {
+    // systemd's default OOMPolicy=stop stops the whole unit on any OOM kill in
+    // it, which takes the update script down before it can roll back or record
+    // frontend_build_out_of_memory.
+    expect(PanelUpdateRunner::transientCommand('/tmp/run-7.sh', '/tmp/update-7.log', '7'))
+        ->toContain('-p OOMPolicy=continue');
+});
+
 it('keeps the script attached to nothing that can hang up on it', function () {
     // Output has to go to the log and stdin to /dev/null, or the child holds
     // the php-fpm request's pipes open and the response never finishes

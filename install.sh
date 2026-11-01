@@ -1156,6 +1156,16 @@ resolve_stack() {
 # single session cookie can cover both. Separating with a dash instead would
 # make them unrelated siblings under nip.io and logging in would not work.
 
+# The source address of this server's route to the internet, or nothing when
+# there is no route. `ip route get` exits 2 on "Network is unreachable", and
+# under pipefail that failure used to fire the ERR trap before the caller's own
+# "could not determine this server's IP" could explain it, so a server with no
+# network got a raw trap report (twice) instead.
+local_route_ip() {
+    { ip -4 route get 1.1.1.1 2>/dev/null || true; } \
+        | awk '!f{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); f=1}}'
+}
+
 resolve_hostnames() {
     step "Working out the address"
 
@@ -1180,9 +1190,10 @@ resolve_hostnames() {
     done
 
     if [[ -z "$ip" ]]; then
-        ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '!f{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); f=1}}')
-        [[ -n "$ip" ]] || die "could not determine this server's IP address.
-     Re-run with --domain=your.hostname to skip the lookup."
+        ip=$(local_route_ip)
+        [[ -n "$ip" ]] || die "could not determine this server's IP address: no IP lookup service answered and there is no route to the internet.
+     This server needs a working internet connection to install (packages, Node, certificates).
+     Check its network (try: curl -I https://api.ipify.org), then run this again, or re-run with --domain=your.hostname to skip the lookup."
         warn "could not reach an IP lookup service; using the local address $ip"
     fi
 
