@@ -232,7 +232,23 @@ class ReleaseUpdateScript
         elif [ "\$BUILD_RAM_MB" -ge 3500 ]; then BUILD_HEAP_MB=3072
         else BUILD_HEAP_MB=2048; fi
         {$asUser}env "PATH={$node}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$release}/frontend ci --no-audit --no-fund
-        {$asUser}env "PATH={$node}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$release}/frontend run build
+        # A build the kernel killed for memory is named as such, so the panel can
+        # say "out of memory" rather than "could not be built". Only the reason
+        # changes: the rollback below is the same either way. npm exits 1, not
+        # 137, when its child is killed, so the proof is this cgroup's OOM
+        # count: memory.events counts kills by either OOM killer (the kernel's
+        # or a cgroup limit), anyone may read it, and it needs no pipe into grep,
+        # which a dry run would feed echoed text into.
+        BUILD_CGROUP=/sys/fs/cgroup\$(awk -F: '\$1 == "0" {print \$3}' /proc/self/cgroup 2>/dev/null)
+        oom_kills() { awk '\$1 == "oom_kill" {print \$2; found=1} END {if (!found) print 0}' "\$BUILD_CGROUP/memory.events" 2>/dev/null || echo 0; }
+        BUILD_OOM_BEFORE=\$(oom_kills)
+        {$asUser}env "PATH={$node}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$release}/frontend run build || {
+            BUILD_RC=\$?
+            if [ "\$BUILD_RC" = 137 ] || [ "\$(oom_kills)" -gt "\$BUILD_OOM_BEFORE" ]; then
+                STEP=frontend_build_out_of_memory
+            fi
+            false
+        }
 
         # The first step that changes anything outside the release directory,
         # and so the first one after LAST_SAFE_STEP. It is deliberately not

@@ -73,6 +73,7 @@ return [
         'configure_services' => 'No se pudieron ajustar los servicios.',
         'optimize' => 'No se pudieron reconstruir las cachés.',
         'frontend_build' => 'No se pudo compilar la interfaz. Normalmente significa que el servidor se quedó sin memoria o disco.',
+        'frontend_build_out_of_memory' => 'La compilación de la interfaz se quedó sin memoria y el sistema la detuvo. Añade swap o memoria (necesita unos 4 GB de RAM y swap en total) y vuelve a intentar la actualización. La versión anterior sigue funcionando.',
         'restart_services' => 'No se pudieron reiniciar los servicios.',
         'maintenance_off' => 'No se pudo sacar el panel del modo de mantenimiento.',
         'health_check' => 'El panel actualizado no respondió correctamente, así que se restauró la versión anterior.',

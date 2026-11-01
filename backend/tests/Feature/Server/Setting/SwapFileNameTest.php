@@ -18,7 +18,7 @@
 it('manages the swap file the installer actually creates', function () {
     $installer = (string) file_get_contents(base_path('../install.sh'));
 
-    expect(preg_match('/^\s*local swapfile=(\S+)\s*$/m', $installer, $matches))->toBe(1);
+    expect(preg_match('/^PANEL_SWAPFILE=(\S+)$/m', $installer, $matches))->toBe(1);
 
     // The shipped *default*, read as source rather than through `config()`.
     //

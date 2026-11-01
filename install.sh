@@ -255,9 +255,11 @@ report_failure() {
     # No log means we stopped in preflight, before anything was touched. Do
     # not point the user at a file that does not exist, and do not pad the
     # message with recovery steps for a machine that was never changed.
-    if [[ ! -r "${LOG_FILE:-}" ]]; then
+    # The requirements check runs after the log exists, but it too stops before
+    # anything is changed, and says so itself.
+    if [[ ! -r "${LOG_FILE:-}" || "$headline" == *"Nothing has been changed on this server."* ]]; then
         # The fresh-server stop already says it, in the sentence Central shows.
-        [[ "$headline" == *"Nothing on this server was changed."* ]] \
+        [[ "$headline" == *"Nothing on this server was changed."* || "$headline" == *"Nothing has been changed on this server."* ]] \
             || printf '\n  %sNothing on this server was changed.%s\n' "$DIM" "$RESET" >&2
         printf '\n' >&2
 
@@ -511,10 +513,8 @@ preflight() {
         esac
     done
 
-    local free_mb
-    free_mb=$(df -Pm /var | awk 'NR==2 {print $4}')
-    (( free_mb >= 3000 )) || die "need at least 3 GB free on /var, found ${free_mb} MB"
-    ok "${free_mb} MB free on /var"
+    # Memory, swap and disk are checked in check_requirements(), once the stack
+    # is known: a Docker server needs more disk than the others.
 
     command -v systemctl >/dev/null 2>&1 || die "systemd is required"
 
@@ -1210,18 +1210,25 @@ resolve_hostnames() {
 
 # ─── Swap ────────────────────────────────────────────────────────────────────
 
-# The memory the frontend build needs, measured rather than assumed. Building
-# the panel frontend inside a memory cgroup on 2 vCPUs: 2000 MB is killed
-# during compilation, 2500 MB compiles and is then killed during static
-# generation, 3000 MB succeeds. 3072 is that figure plus nothing -- the build
-# is not the only thing on the box, but it is the only thing sized here,
-# because everything else was already running when the number was measured.
+# The memory the install needs while the frontend build runs: RAM and swap
+# together, measured rather than assumed. Re-measured 2026-11-01 on fresh
+# TeamCompute boxes (Ubuntu 24.04, main b7404f244), because the 3072 MB this
+# used to be had gone stale as the frontend grew:
+#
+#   - a clean `next build` alone peaks at 3059 MB RAM + 257 MB swap (2 vCPU,
+#     4 GB box), and the panel's own services already use ~600 MB by then;
+#   - 2 GB RAM + 1.1 GB swap (the old 3072 budget): the kernel OOM-killed
+#     next-build at 1.6 GB anon-rss -- the bare "Killed" users reported;
+#   - 1 GB RAM + 2.1 GB swap: swap filled, the box stopped answering SSH;
+#   - 2 GB RAM + 2.6 GB swap (this budget): built in 299 s on 1 vCPU, peaking
+#     at 1634 MB RAM + 1506 MB swap for the build, with 437 MB already in use.
+#
+# 4608 is the 3.3 GB build plus the 0.6 GB already running, plus margin.
 #
 # Kept in step with panel_update.preflight.min_free_memory_mb, which the
-# in-place updater checks against RAM + swap. If a box clears this at install
-# time it clears the updater's check later; letting the two drift means a
-# server its own installer built fine can never update.
-BUILD_MEMORY_MB=3072
+# in-place updater reports against free memory + swap: that check sees the
+# services already running, so it asks for the build alone (3584).
+BUILD_MEMORY_MB=4608
 
 # Every box gets swap, including ones with RAM to spare. The build is not the
 # only reason to have it: a swapless server has no margin at all, so the first
@@ -1238,35 +1245,293 @@ MINIMUM_SWAP_MB=1024
 # that 1 MB and far below any increment worth acting on.
 SWAP_TOLERANCE_MB=64
 
+# The swapfile the installer manages. A second file rather than resizing the
+# first: /swapfile may not be ours, and swapoff-ing a file the box is actively
+# paging into is a far worse failure than using a little more disk.
+#
+# ⚠️ This name is also the panel's `server.swap_file`, and the two must stay
+# equal: the Memory screen answers "is swap on?" by looking for that exact path
+# in the kernel's swap list. While they disagreed, this gigabyte was live and
+# the screen said off. A test asserts the two match, so changing it here alone
+# fails the suite rather than the server.
+PANEL_SWAPFILE=/swapfile-panel
+
+# How much of the swap is the file we manage. Read from /proc/swaps rather than
+# `swapon --show`, which is in /sbin and not always on PATH. A file listed as
+# "(deleted)" does not match, which is correct: it is gone and is not coming
+# back.
+req_our_swap_mb() {
+    local ours
+    ours=$(awk -v f="$PANEL_SWAPFILE" '$1 == f {printf "%d", $3/1024}' /proc/swaps 2>/dev/null)
+    printf '%s\n' "${ours:-0}"
+}
+
+# The size configure_swap() will (re)create the panel's swapfile at, or 0 when
+# it leaves swap alone. One function for the check and the action, so the
+# check cannot promise one thing while configure_swap() does another.
+#
+# Two independent requirements, and the box has to satisfy both:
+#
+#   1. RAM + swap must clear BUILD_MEMORY_MB, or `next build` is killed with a
+#      bare "Killed". On a 2 GB box this is the binding one.
+#   2. There must be at least MINIMUM_SWAP_MB of swap regardless, so that even
+#      a large server has somewhere to page rather than reaching for the OOM
+#      killer at the first spike.
+#
+# Sized against the swap that is NOT ours, because our own file is deleted and
+# recreated. Counting it would size the replacement as though it still
+# existed: a box wanting 2048 MB, already holding our 1024 MB file, computed
+# 1025 MB -- then removed the 1024 and created 1025, landing at half the target.
+#
+# mkswap spends one page on its header, so a file of N MB reports as N-1.
+# Without SWAP_TOLERANCE_MB every re-run saw a 1 MB shortfall and "fixed" it,
+# and since the fix is swapoff/delete/recreate, re-running the installer
+# REPLACED a gigabyte of swap with a 1 MB file ("size = 1020 KiB", observed).
+swap_to_add_mb() {
+    local ram_mb="$1" swap_mb="$2" ours_mb="$3" wanted_mb add_mb
+    wanted_mb=$(( BUILD_MEMORY_MB - ram_mb ))
+    (( wanted_mb < MINIMUM_SWAP_MB )) && wanted_mb=$MINIMUM_SWAP_MB
+    add_mb=$(( wanted_mb - (swap_mb - ours_mb) ))
+    if (( add_mb <= 0 )) || (( ours_mb > 0 && ours_mb + SWAP_TOLERANCE_MB >= add_mb )); then
+        add_mb=0
+    fi
+    printf '%s\n' "$add_mb"
+}
+
+# ─── Requirements ────────────────────────────────────────────────────────────
+#
+# The numbers the README's Requirements table quotes. A test reads both and
+# fails when they disagree, so change them here and there together.
+#
+# MIN_RAM_MB: below this the install is refused up front. A 1 GB box cannot
+# build the panel even with swap (it thrashed until SSH stopped answering, see
+# BUILD_MEMORY_MB); 2 GB builds with the swap configure_swap() adds. A "2 GB"
+# server reports less than 2048 MB to the OS (1967 on TeamCompute), hence the
+# tolerance: the check refuses only when RAM + RAM_TOLERANCE_MB is still short.
+MIN_RAM_MB=2048
+RECOMMENDED_RAM_MB=4096
+RAM_TOLERANCE_MB=256
+
+# Free space on /var, besides the swap. Measured 2026-11-01 on a fresh Ubuntu
+# 24.04 image (1.6 GB used before): a lemp install writes 3.4 GB on top of its
+# swapfile -- the panel in /var/www 1.8 GB (code, vendor, node_modules, the
+# build), packages and apt's lists 0.8 GB, Node 0.2 GB, npm's cache 0.2 GB. The
+# 3 GB this check used to ask for was less than the install itself, so 5 GB:
+# the install plus room for the logs, the database and a first site.
+MIN_DISK_MB=5120
+# A Docker server stores every application's images on this disk as well.
+# Measured 2026-11-01 (fresh Ubuntu 24.04, Docker 29): a docker install writes
+# 3.8 GB besides its swapfile, and pulling two 1-Click Recipes' images took
+# another 9.2 GB -- Open WebUI 0.9 GB, Dify 8.3 GB (its API image alone is
+# 4.1 GB). 20 GB is the install plus room for one large recipe and a few
+# small ones.
+DOCKER_MIN_DISK_MB=20480
+
+# Every failed requirement, collected so the refusal names them all at once
+# instead of one per run.
+REQUIREMENT_FAILURES=()
+# Set when this server cannot add swap at all (a container). configure_swap()
+# then skips its optional minimum instead of failing half-way through.
+SWAP_UNAVAILABLE=0
+
+# The facts, one function each, so the tests can describe a small server
+# without being one.
+req_ram_mb() {
+    local ram limit
+    ram=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+    # A memory limit on this process's cgroup (a container, or systemd's
+    # MemoryMax) is the RAM the build really gets, whatever MemTotal says.
+    limit=$(req_cgroup_limit_mb)
+    if [[ -n "$limit" ]] && (( limit < ram )); then
+        ram=$limit
+    fi
+    printf '%s\n' "$ram"
+}
+# The smallest memory.max on the way up from this process's cgroup: a limit
+# on a parent slice binds just as hard as one on the scope itself.
+req_cgroup_limit_mb() {
+    local cg max lowest=""
+    cg=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup 2>/dev/null)
+    while [[ -n "$cg" && "$cg" != "/" ]]; do
+        max=$(cat "/sys/fs/cgroup${cg}/memory.max" 2>/dev/null || true)
+        if [[ "$max" =~ ^[0-9]+$ ]] && [[ -z "$lowest" || "$max" -lt "$lowest" ]]; then
+            lowest=$max
+        fi
+        cg=${cg%/*}
+    done
+    [[ -n "$lowest" ]] && printf '%s\n' $(( lowest / 1048576 ))
+    return 0
+}
+# How many processes in this process's cgroup the OOM killer has killed, by
+# either kind (the kernel's own or a cgroup limit). memory.events counts the
+# whole subtree and anyone may read it, so a rise across the build is proof
+# without needing the kernel log.
+req_oom_kills() {
+    local cg
+    cg=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup 2>/dev/null)
+    awk '$1 == "oom_kill" {print $2; found=1} END {if (!found) print 0}' "/sys/fs/cgroup${cg}/memory.events" 2>/dev/null || echo 0
+}
+req_swap_mb() { awk '/SwapTotal/ {printf "%d", $2/1024}' /proc/meminfo; }
+req_free_mb() { df -Pm "$1" 2>/dev/null | awk 'NR==2 {print $4}'; }
+req_same_disk() { [[ "$(df -P "$1" 2>/dev/null | awk 'NR==2 {print $1}')" == "$(df -P "$2" 2>/dev/null | awk 'NR==2 {print $1}')" ]]; }
+# "none" on a VM or bare metal, otherwise the container type (lxc, openvz, …).
+req_container() { systemd-detect-virt --container 2>/dev/null || true; }
+# Can this kernel run Docker's containers? Two things Docker cannot work
+# without: being allowed to mount in a new mount namespace, and the overlay
+# filesystem it stores images on. Both are tried rather than looked up: an
+# overlay module that is not loaded yet is missing from /proc/filesystems, and
+# a container cannot `modprobe` -- asking those two refused Docker in an LXD
+# container that runs it fine (found live, 2026-11-01). The mounts are made
+# inside a private namespace that dies with them, over an empty temporary
+# directory; the only lasting trace is the kernel loading its overlay module,
+# which Docker would do anyway.
+req_docker_kernel() {
+    local dir problems=()
+    if dir=$(mktemp -d 2>/dev/null) && mkdir -p "$dir/lower" "$dir/upper" "$dir/work" "$dir/merged"; then
+        if ! unshare --mount --propagation private mount -t tmpfs req-probe "$dir/merged" >/dev/null 2>&1; then
+            problems+=("this server is not allowed to create containers (mounting in a new namespace was refused)")
+        elif ! unshare --mount --propagation private mount -t overlay req-probe \
+                -o "lowerdir=$dir/lower,upperdir=$dir/upper,workdir=$dir/work" "$dir/merged" >/dev/null 2>&1; then
+            problems+=("the overlay filesystem Docker stores images on cannot be mounted here")
+        fi
+    fi
+    [[ -n "$dir" && -d "$dir" ]] && rm -rf "$dir"
+    [[ -e /sys/fs/cgroup/cgroup.controllers || -d /sys/fs/cgroup/memory ]] \
+        || problems+=("control groups are not available")
+    if (( ${#problems[@]} )); then
+        local IFS=';'
+        printf '%s\n' "${problems[*]}"
+    fi
+    return 0
+}
+
+requirement_fail() {
+    REQUIREMENT_FAILURES+=("$1")
+}
+
+# Everything this server needs, checked after the stack is known and before
+# anything is changed. Every shortfall is collected and named in one message.
+check_requirements() {
+    step "Checking requirements"
+
+    local ram swap ours container free_var need_disk add_mb new_mb
+    ram=$(req_ram_mb)
+    swap=$(req_swap_mb)
+    ours=$(req_our_swap_mb)
+    container=$(req_container)
+    container=${container:-none}
+
+    if (( ram + RAM_TOLERANCE_MB < MIN_RAM_MB )); then
+        requirement_fail "Memory: this server has ${ram} MB of RAM. The panel needs at least ${MIN_RAM_MB} MB (${RECOMMENDED_RAM_MB} MB recommended)."
+    else
+        ok "${ram} MB RAM"
+    fi
+
+    # Swap, worked out by the function configure_swap() itself uses.
+    if [[ "${PANEL_SWAP_MB:-}" == "0" ]]; then
+        add_mb=0
+    elif [[ -n "${PANEL_SWAP_MB:-}" ]]; then
+        add_mb=$PANEL_SWAP_MB
+    else
+        add_mb=$(swap_to_add_mb "$ram" "$swap" "$ours")
+    fi
+
+    if (( add_mb > 0 )) && [[ "$container" != "none" ]]; then
+        if (( ram + swap < BUILD_MEMORY_MB )); then
+            requirement_fail "Swap: this server is a ${container} container, which cannot add swap. It has ${ram} MB of RAM and ${swap} MB of swap; building the panel needs ${BUILD_MEMORY_MB} MB of the two together. Give the container more memory (or swap from its host), or use a virtual machine."
+        else
+            # Enough to build; the extra margin is optional, so do without.
+            SWAP_UNAVAILABLE=1
+            ok "${ram} MB RAM + ${swap} MB swap (a ${container} container cannot add swap; not needed)"
+            add_mb=0
+        fi
+    elif (( add_mb > 0 && ours > 0 )); then
+        ok "${ram} MB RAM + ${swap} MB swap; the panel's swapfile will be resized to ${add_mb} MB"
+    elif (( add_mb > 0 )); then
+        ok "${ram} MB RAM + ${swap} MB swap; ${add_mb} MB of swap will be added"
+    else
+        ok "${ram} MB RAM + ${swap} MB swap"
+    fi
+
+    # Our own swapfile is deleted before its replacement is made, so only the
+    # difference comes out of the free space.
+    new_mb=$(( add_mb - ours ))
+    (( add_mb == 0 || new_mb < 0 )) && new_mb=0
+
+    need_disk=$MIN_DISK_MB
+    [[ "$STACK" == "docker" ]] && need_disk=$DOCKER_MIN_DISK_MB
+    free_var=$(req_free_mb /var)
+    free_var=${free_var:-0}
+    # The swapfile is created on /; when that is the same disk as /var it
+    # comes out of the same free space.
+    if (( new_mb > 0 )) && req_same_disk / /var; then
+        if (( free_var < need_disk + new_mb )); then
+            requirement_fail "Disk: ${free_var} MB free on /var. This install needs ${need_disk} MB there$( [[ "$STACK" == "docker" ]] && printf ' for a Docker server' ) plus ${new_mb} MB for swap: $(( need_disk + new_mb )) MB in total."
+        else
+            ok "${free_var} MB free on /var (${need_disk} MB + ${new_mb} MB swap needed)"
+        fi
+    else
+        if (( free_var < need_disk )); then
+            requirement_fail "Disk: ${free_var} MB free on /var. This install needs at least ${need_disk} MB there$( [[ "$STACK" == "docker" ]] && printf ' for a Docker server' )."
+        else
+            ok "${free_var} MB free on /var"
+        fi
+        if (( new_mb > 0 )); then
+            local free_root
+            free_root=$(req_free_mb /)
+            if (( ${free_root:-0} < new_mb )); then
+                requirement_fail "Disk: ${free_root:-0} MB free on /, where the swapfile needs ${new_mb} MB."
+            fi
+        fi
+    fi
+
+    if [[ "$STACK" == "docker" ]]; then
+        local problems
+        if [[ "$container" == "openvz" ]]; then
+            requirement_fail "Docker: this server is an OpenVZ container, which cannot run Docker. Use a virtual machine."
+        else
+            problems=$(req_docker_kernel)
+            if [[ -n "$problems" ]]; then
+                requirement_fail "Docker: this server cannot run Docker: ${problems//;/; }.$( [[ "$container" == lxc* ]] && printf ' On LXC/LXD, turn on nesting for this container (security.nesting=true) and restart it.' )"
+            elif [[ "$container" == lxc* ]]; then
+                # What LXD's security.nesting changes cannot be seen from in
+                # here: with it off, every probe above still passes and Docker
+                # still installs, and only `docker run` fails, inside runc
+                # ("open sysctl net.ipv4.ip_unprivileged_port_start ...
+                # permission denied", measured 2026-11-01 on LXD 5.21). So say
+                # it rather than guess either way.
+                ok "this server can mount what Docker needs"
+                warn "this is an LXC container: Docker's containers only start if nesting is on for it (on the host: lxc config set <name> security.nesting=true, then restart it)"
+            else
+                ok "this server can run Docker"
+            fi
+        fi
+    fi
+
+    if (( ${#REQUIREMENT_FAILURES[@]} )); then
+        local message="This server does not meet the panel's requirements, so the install stopped." item
+        for item in "${REQUIREMENT_FAILURES[@]}"; do
+            message+=$'\n'"     - ${item}"
+        done
+        message+=$'\n'"     The README lists the requirements under \"Requirements\"."
+        message+=$'\n'"     Nothing has been changed on this server."
+        die "$message"
+    fi
+}
+
 configure_swap() {
     step "Checking memory"
 
-    local ram_mb swap_mb wanted_mb add_mb ours_mb
-    ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+    local ram_mb swap_mb add_mb ours_mb swapfile="$PANEL_SWAPFILE"
+    # The same reading check_requirements() used: a cgroup memory limit is the
+    # RAM the build really gets.
+    ram_mb=$(req_ram_mb)
 
     # Existing swap is counted, not treated as a reason to stop looking. The
     # old check bailed the moment *any* swap existed, so a box that came with a
     # 256 MB swapfile got nothing added and failed the build anyway.
-    swap_mb=$(awk '/SwapTotal/ {printf "%d", $2/1024}' /proc/meminfo)
-
-    # A second file rather than resizing the first: /swapfile may not be ours,
-    # and swapoff-ing a file the box is actively paging into is a far worse
-    # failure than using a little more disk.
-    #
-    # ⚠️ This name is also the panel's `server.swap_file`, and the two must
-    # stay equal: the Memory screen answers "is swap on?" by looking for that
-    # exact path in the kernel's swap list. While they disagreed, this
-    # gigabyte was live and the screen said off. A test asserts the two match,
-    # so changing it here alone fails the suite rather than the server.
-    local swapfile=/swapfile-panel
-
-    # How much of that total is the file we manage. Read from /proc/swaps
-    # rather than `swapon --show`, which is in /sbin and not always on PATH,
-    # and which would be a second way of reading what /proc/meminfo above
-    # already answers. A file listed as "(deleted)" does not match, which is
-    # correct: it is gone and is not coming back.
-    ours_mb=$(awk -v f="$swapfile" '$1 == f {printf "%d", $3/1024}' /proc/swaps 2>/dev/null)
-    ours_mb=${ours_mb:-0}
+    swap_mb=$(req_swap_mb)
+    ours_mb=$(req_our_swap_mb)
 
     # PANEL_SWAP_MB is the escape hatch: `0` skips this entirely (for a box
     # whose swap the operator manages), any other number forces that size.
@@ -1275,52 +1540,23 @@ configure_swap() {
         return
     fi
 
+    # A container cannot add swap; check_requirements() has already made sure
+    # this one has enough memory to build without it.
+    if (( SWAP_UNAVAILABLE )); then
+        ok "${ram_mb} MB RAM + ${swap_mb} MB swap; a container cannot add swap, and this is enough"
+        return
+    fi
+
     if [[ -n "${PANEL_SWAP_MB:-}" ]]; then
         add_mb="$PANEL_SWAP_MB"
         say "     adding ${add_mb} MB of swap (PANEL_SWAP_MB)"
     else
-        # Two independent requirements, and the box has to satisfy both:
-        #
-        #   1. RAM + swap must clear BUILD_MEMORY_MB, or `next build` is killed
-        #      with a bare "Killed" and no mention of memory. On a 1 GB box
-        #      this is the binding one.
-        #   2. There must be at least MINIMUM_SWAP_MB of swap regardless, so
-        #      that even a large server has somewhere to page rather than
-        #      reaching for the OOM killer at the first spike.
-        #
-        # A 4 GB box already clears (1) on RAM alone and still gets a
-        # gigabyte from (2); a 1 GB box needs 2 GB for (1), which covers (2)
-        # on its own.
-        wanted_mb=$(( BUILD_MEMORY_MB - ram_mb ))
-        (( wanted_mb < MINIMUM_SWAP_MB )) && wanted_mb=$MINIMUM_SWAP_MB
-
-        # Sized against the swap that is NOT ours, because our own file is
-        # about to be deleted and recreated. Counting it would size the
-        # replacement as though it still existed: a 1 GB box wanting 2048 MB,
-        # already holding our 1024 MB file, computed 1025 MB — then removed the
-        # 1024 and created 1025, landing at half the target.
-        add_mb=$(( wanted_mb - (swap_mb - ours_mb) ))
-
-        if (( add_mb <= 0 )); then
+        add_mb=$(swap_to_add_mb "$ram_mb" "$swap_mb" "$ours_mb")
+        if (( add_mb == 0 )); then
             ok "${ram_mb} MB RAM + ${swap_mb} MB swap, nothing to add"
             return
         fi
-
-        # mkswap spends one page on its header, so a file of N MB reports as
-        # N-1: 64 MB measures 63, 1024 measures 1023. Without a tolerance every
-        # re-run therefore saw a 1 MB shortfall and "fixed" it — and since the
-        # fix is swapoff/delete/recreate at add_mb, re-running the installer
-        # REPLACED a gigabyte of swap with a 1 MB file. Observed on a real
-        # server: "Setting up swapspace version 1, size = 1020 KiB".
-        #
-        # The faked /proc/meminfo this was verified against used exact numbers,
-        # which is precisely why it could not show this.
-        if (( ours_mb > 0 && ours_mb + SWAP_TOLERANCE_MB >= add_mb )); then
-            ok "${ram_mb} MB RAM + ${swap_mb} MB swap, already enough"
-            return
-        fi
-
-        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — sizing ${swapfile} to ${add_mb} MB (want ${wanted_mb} MB total)"
+        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — sizing ${swapfile} to ${add_mb} MB (want $(( add_mb + swap_mb - ours_mb )) MB of swap in total)"
     fi
 
     if [[ -e "$swapfile" ]]; then
@@ -2607,18 +2843,71 @@ build_frontend() {
         heap_mb=3072
     else
         # Above physical RAM on a small box, deliberately: configure_swap()
-        # has already added 2 GB by this point, and a slow build that
-        # finishes beats a fast one that does not.
+        # has already brought RAM + swap up to BUILD_MEMORY_MB by this point,
+        # and a slow build that finishes beats a fast one that does not.
         heap_mb=2048
     fi
 
     say "     this is the slow part — a few minutes"
     run sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
         npm --prefix "$dir" ci --no-audit --no-fund
-    run sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
-        "NODE_OPTIONS=--max-old-space-size=${heap_mb}" \
-        npm --prefix "$dir" run build
+    # Not through run(): when the kernel kills the build for memory, all the
+    # log says is "Killed", and that needs explaining in words.
+    #
+    # Under a memory limit the OOM killer does not stop at the build: once it
+    # has killed next-build it can go on through everything in the cgroup,
+    # this installer included, and then nothing explains anything (seen live
+    # under a systemd MemoryMax). So the installer makes itself the last thing
+    # it would pick while the build runs, and the build goes back to the
+    # score it would have had. Root may lower its own score; anyone may raise.
+    local since oom_before adj rc=0
+    since=$(date +%s)
+    oom_before=$(req_oom_kills)
+    adj=$(cat "/proc/$BASHPID/oom_score_adj" 2>/dev/null || echo 0)
+    echo -900 >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
+    (
+        echo "$adj" >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
+        exec sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
+            "NODE_OPTIONS=--max-old-space-size=${heap_mb}" \
+            npm --prefix "$dir" run build
+    ) >>"$LOG_FILE" 2>&1 || rc=$?
+    echo "$adj" >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
+    if (( rc != 0 )); then
+        build_was_killed "$rc" "$since" "$oom_before" && die "$(build_kill_message)"
+        report_failure "This command failed. Its output is in the log." "\$ npm --prefix ${dir} run build"
+        exit 1
+    fi
     ok "panel built (${heap_mb} MB build heap)"
+}
+
+# Did the kernel kill the build for lack of memory? Exit 137 is SIGKILL. npm
+# does not pass that on (it exits 1 and logs "signal SIGKILL"), so the log, the
+# cgroup's OOM count and the kernel log are asked as well.
+build_was_killed() {
+    local rc="$1" since="$2" oom_before="${3:-}"
+    (( rc == 137 )) && return 0
+    tail -n 40 "$LOG_FILE" 2>/dev/null | grep -qE '(^|[[:space:]])Killed$|SIGKILL' && return 0
+    [[ -n "$oom_before" ]] && (( $(req_oom_kills) > oom_before )) && return 0
+    journalctl -k --since "@${since}" --no-pager 2>/dev/null | grep -qiE 'out of memory|oom-kill|oom_reaper' && return 0
+    return 1
+}
+
+# The explanation for a build the kernel killed: the numbers, the fix, and
+# that running the installer again is safe.
+build_kill_message() {
+    local ram swap limit
+    ram=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+    swap=$(req_swap_mb)
+    limit=$(req_cgroup_limit_mb)
+    printf '%s\n' "Building the panel ran out of memory, so the system stopped it (\"Killed\")."
+    printf '     %s\n' "This server has ${ram} MB of RAM and ${swap} MB of swap. The build needs about ${BUILD_MEMORY_MB} MB of RAM and swap together."
+    if [[ -n "$limit" ]] && (( limit < ram )); then
+        printf '     %s\n' "This install also runs under a memory limit of ${limit} MB (a container or a systemd MemoryMax), which is what it really gets."
+    fi
+    printf '     %s\n' "To fix it, give the build more memory, then run this installer again:"
+    printf '       %s\n' "- add swap:  sudo fallocate -l 2G /swapfile2 && sudo chmod 600 /swapfile2 && sudo mkswap /swapfile2 && sudo swapon /swapfile2"
+    printf '       %s\n' "- or stop other programs that use a lot of memory, or move to a server with at least ${RECOMMENDED_RAM_MB} MB of RAM."
+    printf '     %s' "Running the installer again is safe: it skips the work that is already done."
 }
 
 # ─── PHP-FPM pool ────────────────────────────────────────────────────────────
@@ -5192,6 +5481,7 @@ main() {
     preflight
     resolve_stack
     resolve_hostnames
+    check_requirements
 
     if (( DRY_RUN )); then
         dry_run_plan

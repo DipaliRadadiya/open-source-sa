@@ -73,6 +73,7 @@ return [
         'configure_services' => 'Não foi possível ajustar os serviços.',
         'optimize' => 'Não foi possível reconstruir as caches.',
         'frontend_build' => 'Não foi possível compilar a interface. Normalmente significa falta de memória ou espaço em disco.',
+        'frontend_build_out_of_memory' => 'A compilação da interface ficou sem memória e o sistema a interrompeu. Adicione swap ou memória (são necessários cerca de 4 GB de RAM e swap no total) e tente a atualização novamente. A versão anterior continua em execução.',
         'restart_services' => 'Não foi possível reiniciar os serviços.',
         'maintenance_off' => 'Não foi possível retirar o painel do modo de manutenção.',
         'health_check' => 'O painel atualizado não respondeu corretamente, por isso a versão anterior foi restaurada.',

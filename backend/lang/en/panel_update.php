@@ -86,6 +86,7 @@ return [
         'configure_services' => 'Services could not be tuned.',
         'optimize' => 'Caches could not be rebuilt.',
         'frontend_build' => 'The interface could not be built. This usually means the server ran out of memory or disk space.',
+        'frontend_build_out_of_memory' => 'The interface build ran out of memory and the system stopped it. Add swap or memory (it needs about 4 GB of RAM and swap together), then try the update again. The previous version is still running.',
         'restart_services' => 'Services could not be restarted.',
         'maintenance_off' => 'The panel could not be taken out of maintenance mode.',
         'health_check' => 'The updated panel did not answer correctly, so the previous version was restored.',

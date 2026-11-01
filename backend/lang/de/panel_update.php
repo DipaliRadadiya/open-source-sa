@@ -73,6 +73,7 @@ return [
         'configure_services' => 'Die Dienste konnten nicht abgestimmt werden.',
         'optimize' => 'Caches konnten nicht neu aufgebaut werden.',
         'frontend_build' => 'Die Oberfläche konnte nicht gebaut werden. Meist fehlt dem Server Arbeitsspeicher oder Speicherplatz.',
+        'frontend_build_out_of_memory' => 'Beim Bauen der Oberfläche ging der Arbeitsspeicher aus, und das System hat den Vorgang beendet. Füge Swap oder Arbeitsspeicher hinzu (benötigt werden etwa 4 GB RAM und Swap zusammen) und versuche das Update erneut. Die bisherige Version läuft weiter.',
         'restart_services' => 'Dienste konnten nicht neu gestartet werden.',
         'maintenance_off' => 'Der Wartungsmodus konnte nicht beendet werden.',
         'health_check' => 'Das aktualisierte Panel antwortete nicht korrekt, daher wurde die vorherige Version wiederhergestellt.',

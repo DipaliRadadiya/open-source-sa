@@ -73,6 +73,7 @@ return [
         'configure_services' => 'Les services n\'ont pas pu être réglés.',
         'optimize' => 'Les caches n’ont pas pu être reconstruits.',
         'frontend_build' => 'L’interface n’a pas pu être compilée. Cela signifie généralement un manque de mémoire ou d’espace disque.',
+        'frontend_build_out_of_memory' => 'La compilation de l’interface a manqué de mémoire et le système l’a arrêtée. Ajoutez du swap ou de la mémoire (il faut environ 4 Go de RAM et de swap au total), puis relancez la mise à jour. La version précédente fonctionne toujours.',
         'restart_services' => 'Les services n’ont pas pu être redémarrés.',
         'maintenance_off' => 'Le panneau n’a pas pu sortir du mode maintenance.',
         'health_check' => 'Le panneau mis à jour n’a pas répondu correctement ; la version précédente a été restaurée.',

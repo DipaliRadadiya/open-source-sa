@@ -42,15 +42,25 @@ permissions and feature-specific restrictions.
 
 Use a **fresh, dedicated server** with root access:
 
-- Ubuntu **22.04, 24.04 or 26.04 LTS** on **x86_64 or aarch64**.
-- At least **3 GB free on `/var`**, plus room for swap, applications, databases
-  and temporary backup/restore files.
-- Memory sized for your workloads. The installer sizes swap to provide at least
-  **3072 MB RAM + swap** for the frontend build and at least **1024 MB swap**.
-  This is a build budget, not a promise that every application fits a small VPS.
+- Ubuntu **22.04, 24.04 or 26.04 LTS** on **x86_64 or aarch64**, on a virtual
+  machine or bare metal. A container (LXC/LXD, OpenVZ) works only if it has
+  enough memory without swap, and a Docker server in LXC needs nesting turned on.
 - Ports **80 and 443** available for the selected web server, reachable for HTTP
   traffic and certificate validation; outbound access to package repositories
   and other services used during installation.
+
+| | Minimum | Recommended |
+|---|---|---|
+| Normal stacks (lemp, lamp, mern, ols) | 2 GB RAM, 5 GB free on `/var` | 4 GB RAM, plus disk for your sites, databases and backups |
+| Docker stack | 2 GB RAM, 20 GB free on `/var` | 4 GB RAM, plus disk for your applications' images and data |
+
+The installer checks these before it changes anything, and stops with one
+message listing everything that falls short. Building the panel needs
+**4608 MB RAM + swap**, so the installer adds swap to reach that (2.6 GB on a
+2 GB server) and gives every server at least **1024 MB swap**; that swap comes
+out of the same disk, on top of the free space in the table. The minimum is
+enough to install and run the panel, not a promise that every application fits
+a small server.
 
 [Supported platforms](SUPPORTED_PLATFORMS.md) documents upstream package caveats,
 including MongoDB unavailability on Ubuntu 26.04 and LSPHP version differences.

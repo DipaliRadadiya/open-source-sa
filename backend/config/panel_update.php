@@ -116,6 +116,6 @@ return [
 
     'preflight' => [
         'min_free_disk_mb' => (int) env('PANEL_UPDATE_MIN_DISK_MB', 2048),
-        'min_free_memory_mb' => (int) env('PANEL_UPDATE_MIN_MEMORY_MB', 2560),
+        'min_free_memory_mb' => (int) env('PANEL_UPDATE_MIN_MEMORY_MB', 3584),
     ],
 ];
