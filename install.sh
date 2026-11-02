@@ -225,7 +225,10 @@ warn() { printf '     %s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
 redact_log() {
     local text secret
     text="$(sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')"
-    for secret in "$PANEL_ADMIN_PASSWORD" "$CENTRAL_TOKEN" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
+    # Every name defaulted: setup_backend unsets PANEL_ADMIN_PASSWORD once the
+    # admin exists, and a bare "$PANEL_ADMIN_PASSWORD" under `set -u` killed
+    # this mid-report on every failure after that point.
+    for secret in "${PANEL_ADMIN_PASSWORD:-}" "${CENTRAL_TOKEN:-}" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
         [[ -n "$secret" ]] && text="${text//"$secret"/[redacted]}"
     done
     if [[ -n "$text" ]]; then
