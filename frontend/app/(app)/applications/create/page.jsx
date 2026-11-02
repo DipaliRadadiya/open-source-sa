@@ -11,6 +11,7 @@ import { getTimezones } from "@/lib/settings/get-timezones";
 import { getEngines } from "@/lib/databases/get-databases";
 import { engineInstalling, noDatabaseEngine } from "@/lib/applications/database-readiness";
 import { withAvailability } from "@/lib/applications/blockers";
+import { withServableRenderingTypes } from "@/lib/applications/rendering-options";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -38,7 +39,7 @@ export default async function CreateApplicationPage({ searchParams }) {
     getGitAccounts(),
     getPhp(),
     getNode(),
-    // Temporary-domain option: target address and wildcard-DNS hosts.
+    // Temporary-domain option (target address, wildcard-DNS hosts) and what the server can serve.
     getServerCapabilities().catch(() => null),
     getTimezones().catch(() => []),
     // Cheap and cached; tells whether a WordPress install can work here.
@@ -55,9 +56,10 @@ export default async function CreateApplicationPage({ searchParams }) {
 
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} message={types.message} debug={types.debug} />;
 
-  // Mark availability here so the prefill reads the same `available` as the grid.
+  // Mark availability here so the prefill reads the same `available` as the grid. A rendering
+  // type the server cannot serve (PHP on a Node server) is not offered at all.
   const siteTypes = withAvailability(
-    types.siteTypes,
+    withServableRenderingTypes(types.siteTypes, capabilities?.servingProfiles),
     {
       runtimes: {
         phpVersions,
