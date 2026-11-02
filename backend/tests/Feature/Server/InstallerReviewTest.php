@@ -414,3 +414,79 @@ describe('R2: a directory in the panel\'s place is moved aside, never deleted', 
             ->and($run['out'])->toContain('moved to '.$aside[0]);
     });
 });
+
+/**
+ * A function out of install.sh whose body has a `}` line of its own (a
+ * heredoc), which installerFn would stop at: everything up to the function
+ * that follows it in the file.
+ */
+function installerFnBefore(string $name, string $next): string
+{
+    $source = installerSource();
+    $start = strpos($source, "\n{$name}() {\n");
+    $end = strpos($source, "\n{$next}() {\n", (int) $start);
+
+    expect($start)->toBeInt("install.sh has no {$name}()")->and($end)->toBeInt("install.sh has no {$next}() after {$name}()");
+
+    $chunk = substr($source, $start + 1, $end - $start);
+
+    // Up to and including the last top-level `}` before the next function.
+    return substr($chunk, 0, (int) strrpos($chunk, "\n}\n") + 3);
+}
+
+describe('R3: a TLS config OpenLiteSpeed rejects is taken back out', function () {
+    /*
+     * install_ols_certificate appended vhssl{} to the vhosts and a Defaultssl
+     * listener to httpd_config.conf, and when `openlitespeed -t` rejected the
+     * result it only set SCHEME=http. The running server was fine; at the
+     * next restart or reboot lshttpd read the broken file and did not start,
+     * taking the panel and every site with it.
+     */
+    function olsCertificateRun(int $test): array
+    {
+        $root = reviewDir();
+        $conf = $root.'/httpd_config.conf';
+        $vhconf = $root.'/vhconf.conf';
+        file_put_contents($conf, "listener Default{\n    address                  *:80\n}\n");
+        file_put_contents($vhconf, "docRoot /var/www/panel/backend/public\n");
+        @mkdir($root.'/usr/local/lsws/bin', 0777, true);
+        file_put_contents($root.'/usr/local/lsws/bin/openlitespeed', "#!/bin/sh\necho \"[ERROR] test said no\"\nexit {$test}\n");
+        chmod($root.'/usr/local/lsws/bin/openlitespeed', 0755);
+
+        $run = reviewBash(reviewRooted(installerFnBefore('install_ols_certificate', 'configure_tls'), $root, ['/usr/local/lsws/']).'
+            run() { "$@"; }
+            systemctl() { echo "systemctl $*"; }
+            ols_listener_maps() { echo "  map                     panel panel.example.com"; }
+            PANEL_SLUG=panel; PANEL_HOST=panel.example.com; SINGLE_HOST=1; LOG_FILE=/dev/null
+            SCHEME=https; TLS_STATE=letsencrypt
+            install_ols_certificate '.escapeshellarg($conf).' '.escapeshellarg($vhconf).' /etc/letsencrypt/live/x/fullchain.pem /etc/letsencrypt/live/x/privkey.pem
+            echo "SCHEME=$SCHEME TLS_STATE=$TLS_STATE"');
+
+        return $run + [
+            'conf' => (string) file_get_contents($conf),
+            'vhconf' => (string) file_get_contents($vhconf),
+            'left' => array_values(array_diff(scandir($root), ['.', '..', 'usr', 'httpd_config.conf', 'vhconf.conf'])),
+        ];
+    }
+
+    it('restores both files exactly when the test fails', function () {
+        $run = olsCertificateRun(test: 2);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('SCHEME=http TLS_STATE=none')
+            ->and($run['out'])->not->toContain('systemctl restart')
+            ->and($run['conf'])->toBe("listener Default{\n    address                  *:80\n}\n")
+            ->and($run['vhconf'])->toBe("docRoot /var/www/panel/backend/public\n")
+            ->and($run['left'])->toBe([]);
+    });
+
+    it('keeps the TLS config, and no backup, when the test passes', function () {
+        $run = olsCertificateRun(test: 0);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('systemctl restart lshttpd')
+            ->and($run['conf'])->toContain('listener Defaultssl {')
+            ->and($run['vhconf'])->toContain('vhssl {')
+            ->and($run['left'])->toBe([]);
+    });
+});

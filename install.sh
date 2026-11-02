@@ -5427,9 +5427,20 @@ install_ols_certificate() {
     # a name mismatch.
     (( SINGLE_HOST )) || vhconfs+=("/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api/vhconf.conf")
 
+    # Every file this edits, as it was, so a config OpenLiteSpeed rejects is
+    # taken back out below rather than left for the next restart to find. A
+    # rejected config does not stop the server that is running; it stops the
+    # one that starts after a reboot, and with it the panel and every site
+    # (review finding R3).
+    local target backups=()
+    for target in "$conf" "${vhconfs[@]}"; do
+        [[ -f "$target" ]] || continue
+        cp -a "$target" "${target}.pre-tls"
+        backups+=("$target")
+    done
+
     # The certificate on the vhost. Without this a second site on the box would
     # be served the panel's certificate and every visitor gets a name mismatch.
-    local target
     for target in "${vhconfs[@]}"; do
         [[ -f "$target" ]] || continue
         grep -q '^vhssl {' "$target" && continue
@@ -5479,12 +5490,18 @@ CONF
     fi
 
     if ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
-        warn "OpenLiteSpeed rejected the TLS config — the panel stays on HTTP"
+        for target in "${backups[@]}"; do
+            mv -f "${target}.pre-tls" "$target"
+        done
+        warn "OpenLiteSpeed rejected the TLS config — it has been taken back out and the panel stays on HTTP"
         warn "the certificate was issued; install it by hand from ${cert}"
         SCHEME="http"
         TLS_STATE="none"
         return
     fi
+    for target in "${backups[@]}"; do
+        rm -f "${target}.pre-tls"
+    done
 
     run systemctl restart lshttpd
     ok "OpenLiteSpeed serving HTTPS for ${PANEL_HOST}"
