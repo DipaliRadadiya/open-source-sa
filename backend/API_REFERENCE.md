@@ -6796,6 +6796,7 @@ The same component list as the Services page — one read drives both screens.
   "complete": false, "status": "installing", "percent": 60,
   "key": "database", "label": "Installing Database",
   "stack": "lemp", "web_server": "nginx",
+  "system_updates_running": false,
   "components": [
     {"key": "database", "title": "Database", "description": "MySQL or MariaDB",
      "state": "installing", "detail": null, "recommended": true,
@@ -6814,6 +6815,8 @@ The same component list as the Services page — one read drives both screens.
 `state`: `installed | pending | installing | failed`. **`pending` means "not found"**, not "not tried". `action` is `null` when the panel cannot install this component (e.g. Redis, MongoDB).
 
 The `wp_cli` component (WP-CLI) is `recommended: false`, so it never affects `complete`. Its `action` is `POST /api/wp-cli/install`.
+
+**`system_updates_running`** (boolean, added 2026-11-02) is `true` while Ubuntu is installing its own updates (unattended-upgrades: `apt-daily.service` or `apt-daily-upgrade.service` running, or an `unattended-upgrade` process). The installer now reports "installed" as soon as the panel works, and on a server that booted minutes ago Ubuntu's first-boot updates usually go on for a few more minutes. Anything installed from this page meanwhile (a database engine, a PHP version, fail2ban…) waits for them before it starts, so its row stays `installing` longer than usual. Show a note while it is `true`, e.g. *"Ubuntu is still finishing its security updates in the background (usually a few minutes). Installing new software may take a few extra minutes until it's done."* Read-only, no sudo; re-read on every poll, so it turns `false` by itself once the updates finish.
 
 ---
 
