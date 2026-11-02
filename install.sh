@@ -5523,6 +5523,21 @@ configure_tls() {
         return
     fi
 
+    # A self-signed fallback left by an earlier run comes out first (review
+    # finding R5). That run said "re-run later"; on the re-run certbot then
+    # succeeded beside it, two blocks answered on 443 for the same name, and
+    # the stale self-signed one could be the one served. If certbot fails
+    # again, the fallback below writes it afresh. The running server keeps
+    # what it loaded until certbot or the fallback reloads it.
+    if [[ "$WEB_SERVER" == "apache" ]]; then
+        if [[ -e "/etc/apache2/sites-enabled/${PANEL_SLUG}-tls.conf" ]]; then
+            run a2dissite "${PANEL_SLUG}-tls"
+        fi
+        rm -f "/etc/apache2/sites-available/${PANEL_SLUG}-tls.conf"
+    else
+        rm -f "/etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf" "/etc/nginx/sites-available/${PANEL_SLUG}-tls.conf"
+    fi
+
     # certbot's plugin has to match the web server it is editing.
     local plugin="--nginx"
     [[ "$WEB_SERVER" == "apache" ]] && plugin="--apache"

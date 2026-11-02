@@ -490,3 +490,65 @@ describe('R3: a TLS config OpenLiteSpeed rejects is taken back out', function ()
             ->and($run['left'])->toBe([]);
     });
 });
+
+describe('R5: a re-run that gets a real certificate drops the self-signed fallback', function () {
+    /*
+     * When Let's Encrypt failed (common on nip.io) the installer wrote a
+     * self-signed site, <slug>-tls, beside the port-80 one and told the user
+     * to re-run later. Nothing removed it on that re-run: after certbot
+     * succeeded two server blocks answered on 443 for the same name, and the
+     * stale self-signed one could be the one served.
+     */
+    function tlsRerun(string $webServer, bool $issued): array
+    {
+        $root = reviewDir();
+        foreach (['/etc/nginx/sites-available', '/etc/nginx/sites-enabled', '/etc/apache2/sites-available', '/etc/apache2/sites-enabled'] as $dir) {
+            @mkdir($root.$dir, 0777, true);
+        }
+        // What the earlier run's fallback left.
+        $stale = $webServer === 'nginx'
+            ? ['/etc/nginx/sites-available/panel-tls.conf', '/etc/nginx/sites-enabled/panel-tls.conf']
+            : ['/etc/apache2/sites-available/panel-tls.conf', '/etc/apache2/sites-enabled/panel-tls.conf'];
+        foreach ($stale as $path) {
+            file_put_contents($root.$path, "# Self-signed fallback, written by the Control panel installer.\n");
+        }
+
+        $run = reviewBash(reviewRooted(installerFnBefore('configure_tls', 'certbot_issue'), $root, ['/etc/nginx/', '/etc/apache2/', '/etc/ssl/']).'
+            run() { "$@"; }
+            step() { :; }
+            certbot_issue() { echo "certbot $*"; '.($issued ? 'return 0' : 'return 1').'; }
+            a2dissite() { rm -f '.escapeshellarg($root).'/etc/apache2/sites-enabled/"$1".conf; echo "a2dissite $1"; }
+            openssl() { :; }; self_signed_apache() { echo "self_signed_apache"; TLS_STATE=self-signed; }
+            nginx() { return 0; }; systemctl() { :; }
+            WANT_SSL=1; WEB_SERVER='.$webServer.'; PANEL_SLUG=panel; PANEL_HOST=panel.example.com; API_HOST=panel.example.com
+            SINGLE_HOST=1; ADMIN_EMAIL=""; DOMAIN=""; APP_DIR=/var/www/panel; LOG_FILE=/dev/null
+            configure_tls
+            echo "TLS_STATE=$TLS_STATE"');
+
+        return $run + ['left' => array_values(array_filter($stale, fn ($p) => file_exists($root.$p)))];
+    }
+
+    it('removes the nginx fallback before certbot runs', function () {
+        $run = tlsRerun('nginx', issued: true);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('TLS_STATE=letsencrypt')
+            ->and($run['left'])->toBe([]);
+    });
+
+    it('disables and removes the Apache fallback before certbot runs', function () {
+        $run = tlsRerun('apache', issued: true);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('a2dissite panel-tls')
+            ->and($run['out'])->toContain('TLS_STATE=letsencrypt')
+            ->and($run['left'])->toBe([]);
+    });
+
+    it('still falls back to self-signed when certbot fails again', function () {
+        $run = tlsRerun('apache', issued: false);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('self_signed_apache');
+    });
+});
