@@ -347,3 +347,40 @@ describe('reports to Central', function () {
         expect($sent)->toBe(['a', 'c', 'e']);
     });
 });
+
+describe('nothing long runs unwatched', function () {
+    it('watches every run_progress command, so a slow add-apt-repository is never silent', function () {
+        $run = progressRun('LOG_FILE=/dev/null
+            progress_start() { echo "START $*"; }; progress_stop() { echo "STOP"; }
+            run() { echo "RUN $*"; }
+            run_progress "Adding the ondrej/php repository" add-apt-repository -y -n ppa:ondrej/php', 'run_progress');
+
+        expect(explode("\n", $run['out']))->toBe([
+            '     → Adding the ondrej/php repository...',
+            'START adding the ondrej/php repository',
+            'RUN add-apt-repository -y -n ppa:ondrej/php',
+            'STOP',
+            'ok: Adding the ondrej/php repository (0s)',
+        ]);
+    });
+
+    it('watches the commands found silent for 20–65 s on real servers', function (string $fn, string $label) {
+        $source = installerFn($fn);
+        $start = strpos($source, 'progress_start "'.$label);
+
+        expect($start)->not->toBeFalse("{$fn}() does not start the ticker")
+            ->and(strpos($source, 'progress_stop', (int) $start))->not->toBeFalse("{$fn}() does not stop it");
+    })->with([
+        ['install_postfix', 'installing local mail (Postfix)'],
+        ['install_ols_packages', 'installing ${lsphp}'],
+        ['install_node_body', 'downloading fnm'],
+        ['install_node_body', 'downloading Node'],
+        ['install_packages', 'downloading composer'],
+        ['fetch_source_body', 'downloading the panel'],
+        ['setup_backend', "installing the API's PHP dependencies"],
+        ['frontend_deps', "downloading the interface's packages"],
+        ['build_frontend', 'building the interface'],
+        ['certbot_issue', "getting a certificate from Let's Encrypt"],
+        ['finish', 'checking the installation'],
+    ]);
+});

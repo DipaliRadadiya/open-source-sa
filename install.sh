@@ -327,7 +327,9 @@ run_progress() {
     local started=$SECONDS
 
     say "     → ${label}..."
+    progress_start "${label,}"
     run "$@"
+    progress_stop
     ok "${label} ($((SECONDS - started))s)"
 }
 
@@ -2524,11 +2526,16 @@ install_postfix() {
     printf 'postfix postfix/main_mailer_type select Internet Site\npostfix postfix/mailname string %s\n' "$mailname" \
         | debconf-set-selections >>"$LOG_FILE" 2>&1 || true
 
+    local started=$SECONDS
+    say "     → Installing local mail (Postfix)..."
+    progress_start "installing local mail (Postfix)" apt_install
     if DEBIAN_FRONTEND=noninteractive apt-get install -y postfix >>"$LOG_FILE" 2>&1; then
         POSTFIX_STATE="installed"
     else
         POSTFIX_STATE="failed"
     fi
+    progress_stop
+    ok "Installing local mail (Postfix) ($((SECONDS - started))s)"
 }
 
 # What happened to Postfix in the package step: preinstalled, installed or
@@ -2650,11 +2657,13 @@ install_packages() {
     COMPOSER_BIN=$(command -v composer 2>/dev/null || true)
 
     if [[ -z "$COMPOSER_BIN" ]]; then
+        progress_start "downloading composer"
         run curl -fsSL -o /tmp/composer-setup.php https://getcomposer.org/installer
         # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
         # /usr/bin/php at all, and a bare invocation would either fail or --
         # worse -- find some other PHP and install composer against it.
         run "$PANEL_PHP_BIN" /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+        progress_stop
         rm -f /tmp/composer-setup.php
         COMPOSER_BIN=/usr/local/bin/composer
         ok "composer"
@@ -2687,10 +2696,12 @@ find_node_bin() {
 install_node_body() {
     if [[ ! -x "$FNM_BIN" ]]; then
         mkdir -p "$FNM_DIR"
+        progress_start "downloading fnm"
         run curl -fsSL -o /tmp/fnm-install.sh https://fnm.vercel.app/install
         # --skip-shell: this is a service account with no interactive shell to
         # rewrite, and the panel calls fnm by absolute path anyway.
         run bash /tmp/fnm-install.sh --install-dir "$FNM_DIR" --skip-shell
+        progress_stop
         rm -f /tmp/fnm-install.sh
         ln -sf "${FNM_DIR}/fnm" "$FNM_BIN"
         ok "fnm installed at $FNM_BIN"
@@ -3449,7 +3460,7 @@ build_frontend() {
         since=$(date +%s)
         oom_before=$(req_oom_kills)
         echo -900 >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
-        progress_start "building the interface (usually 2–3 min)" build
+        progress_start "building the interface (a few minutes)" build
         (
             echo "$adj" >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
             if (( beside )); then
@@ -4082,6 +4093,7 @@ install_ols_packages() {
     # so this line already fails for it.
     local lsphp="lsphp${PHP_VERSION//./}" started=$SECONDS
     say "     → Installing ${lsphp} and its extensions..."
+    progress_start "installing ${lsphp}" apt_install
     # The panel's own extensions are in this list too, because on this stack the
     # panel runs on the same lsphp its sites do. curl/intl/sqlite3 are what
     # Laravel and the panel's SQLite database need; redis/igbinary back the
@@ -4102,6 +4114,7 @@ install_ols_packages() {
     if ! apt-get install -y "${lsphp}-imagick" "${lsphp}-imap" >>"$LOG_FILE" 2>&1; then
         warn "${lsphp} has no imagick/imap package — sites on it run without them"
     fi
+    progress_stop
     ok "Installing ${lsphp} and its extensions ($((SECONDS - started))s)"
 }
 
