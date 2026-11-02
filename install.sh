@@ -5156,19 +5156,30 @@ configure_sudoers() {
     # root, and the next cache write would fail.
     #
     # setup_backend has already run (see main), so vendor/ exists.
+    #
+    # Rendered beside the grant under a name with a dot in it, which sudo
+    # skips, made 0440, validated, and only then moved over the real name --
+    # what panel:sudoers itself does. Rendering straight into the real name
+    # emptied a working grant on every re-run before anything was rendered,
+    # and a failure then left the panel with no privileges at all. A failure
+    # now leaves the grant that was there.
+    local grant="/etc/sudoers.d/${PANEL_SLUG}"
+    local staged="/etc/sudoers.d/${PANEL_SLUG}.new"
+    rm -f "$staged"
     if ! sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:sudoers --print' \
-        -- "${APP_DIR}/backend" "${PANEL_PHP_BIN}" >/etc/sudoers.d/${PANEL_SLUG} 2>>"$LOG_FILE"; then
-        rm -f /etc/sudoers.d/${PANEL_SLUG}
+        -- "${APP_DIR}/backend" "${PANEL_PHP_BIN}" >"$staged" 2>>"$LOG_FILE"; then
+        rm -f "$staged"
         die "could not render the sudoers grant from config/server.php"
     fi
-    chmod 440 /etc/sudoers.d/${PANEL_SLUG}
+    chmod 440 "$staged"
 
     # A malformed sudoers file locks everyone out of sudo, so it is validated
-    # and removed if it does not parse.
-    if ! visudo -cqf /etc/sudoers.d/${PANEL_SLUG} >>"$LOG_FILE" 2>&1; then
-        rm -f /etc/sudoers.d/${PANEL_SLUG}
-        die "the generated sudoers file did not validate and has been removed"
+    # before it goes anywhere sudo reads.
+    if ! visudo -cqf "$staged" >>"$LOG_FILE" 2>&1; then
+        rm -f "$staged"
+        die "the generated sudoers file did not validate; the existing grant is unchanged"
     fi
+    mv -f "$staged" "$grant"
     ok "sudoers rule installed for ${APP_USER}"
 
     # The security page reads effective sshd config with `sudo -n sshd -T`, and

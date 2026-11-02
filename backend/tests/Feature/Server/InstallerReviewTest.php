@@ -216,3 +216,73 @@ describe('S1: the web interface cannot use the panel account\'s sudo', function 
         expect(installedUnits()['frontend'])->toContain("\n".FrontendUnit::NO_NEW_PRIVILEGES."\n");
     });
 });
+
+describe('S2: the sudoers grant is replaced only by a validated one', function () {
+    /*
+     * configure_sudoers redirected the render straight into
+     * /etc/sudoers.d/<slug>. On a re-run the `>` emptied the working grant
+     * before anything was rendered, and a render or visudo failure then
+     * removed the file: the panel had no privileges at all until a later run
+     * succeeded. The new file was also in sudo's directory, world-readable
+     * and unvalidated, until the chmod and visudo after it.
+     */
+    function sudoersRun(string $render, int $visudo = 0): array
+    {
+        $root = reviewDir();
+        @mkdir($root.'/etc/sudoers.d', 0777, true);
+        @mkdir($root.'/etc/tmpfiles.d', 0777, true);
+        file_put_contents($root.'/etc/sudoers.d/panel', "panel ALL=(root) NOPASSWD: /usr/bin/old\n");
+        // Writable by the test's user, as any file is to root: the installer
+        // runs as root, and a 0440 grant would stop only this test.
+        chmod($root.'/etc/sudoers.d/panel', 0640);
+
+        $run = reviewBash(reviewRooted(installerFn('configure_sudoers'), $root, ['/etc/sudoers.d/', '/etc/tmpfiles.d/']).'
+            run() { :; }
+            step() { :; }
+            die() { echo "DIE: $*"; exit 1; }
+            # The render: install.sh runs artisan panel:sudoers --print through sudo -u.
+            sudo() { '.$render.'; }
+            visudo() { [[ "$1" == -cqf && -f "$2" ]] || { echo "visudo called with $*"; return 2; }
+                echo "visudo checked $(stat -c %a "$2") $2"; return '.$visudo.'; }
+            APP_DIR=/var/www/panel; APP_USER=panel; PANEL_SLUG=panel; PANEL_PHP_BIN=/usr/bin/php8.4
+            LOG_FILE=/dev/stdout
+            configure_sudoers');
+
+        $grant = $root.'/etc/sudoers.d/panel';
+
+        return $run + [
+            'grant' => is_file($grant) ? (string) file_get_contents($grant) : null,
+            'mode' => is_file($grant) ? fileperms($grant) & 0777 : null,
+            'others' => array_values(array_diff(scandir($root.'/etc/sudoers.d'), ['.', '..', 'panel'])),
+        ];
+    }
+
+    it('keeps the working grant when the render fails', function () {
+        $run = sudoersRun('printf "panel ALL=(root) NOPASSWD: /usr/bin/ha"; return 1');
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: could not render the sudoers grant')
+            ->and($run['grant'])->toBe("panel ALL=(root) NOPASSWD: /usr/bin/old\n")
+            ->and($run['others'])->toBe([]);
+    });
+
+    it('keeps the working grant when the new one does not validate', function () {
+        $run = sudoersRun('printf "panel ALL=(root NOPASSWD /usr/bin/new\n"', visudo: 1);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: the generated sudoers file did not validate')
+            ->and($run['grant'])->toBe("panel ALL=(root) NOPASSWD: /usr/bin/old\n")
+            ->and($run['others'])->toBe([]);
+    });
+
+    it('validates the new grant under a name sudo ignores, 0440, then moves it into place', function () {
+        $run = sudoersRun('printf "panel ALL=(root) NOPASSWD: /usr/bin/new\n"');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['grant'])->toBe("panel ALL=(root) NOPASSWD: /usr/bin/new\n")
+            ->and($run['mode'])->toBe(0440)
+            ->and($run['others'])->toBe([])
+            // sudo skips names in /etc/sudoers.d that contain a dot.
+            ->and($run['out'])->toMatch('#visudo checked 440 \S+/etc/sudoers\.d/[^/\s]*\.[^/\s]*#');
+    });
+});
