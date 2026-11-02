@@ -41,30 +41,29 @@ it('refreshes the PHP repository even when its sources file already exists', fun
     // download succeeds, so "the file exists" never meant "apt has the index".
     // Skipping the refresh on that basis is what produced a configured
     // repository with no packages behind it.
-    $source = installerSource();
-
-    $function = substr(
-        $source,
-        strpos($source, 'add_php_repository() {'),
-        strpos($source, 'php_candidate() {') - strpos($source, 'add_php_repository() {'),
-    );
-
-    $compgenAt = strpos($function, 'compgen -G "/etc/apt/sources.list.d/ondrej*php*"');
-
-    expect($compgenAt)->not->toBeFalse();
-
-    // Measured against the `fi` that closes that branch, not against the `if`.
     //
-    // The first version of this test compared the refresh to the `compgen`
-    // line and passed under the very regression it was written for — the
-    // refresh sits after `compgen` whether it is inside the branch or outside
-    // it. Only "after the branch ends" distinguishes the two.
-    $closingFi = strpos($function, "\n    fi\n", $compgenAt);
-    $refreshAt = strrpos($function, 'Refreshing package lists from the PHP repository');
+    // Since 2026-11-02 the refresh is not add_php_repository's own: every
+    // source is written first and install_packages refreshes them all at once.
+    // So the guard is now that the one refresh comes after the sources and is
+    // not inside any condition — it runs whether the file was just written or
+    // was already there — and that PHP is asked of apt only after it.
+    $add = installerFn('add_php_repository');
 
-    expect($closingFi)->not->toBeFalse()
-        ->and($refreshAt)->not->toBeFalse()
-        ->and($refreshAt)->toBeGreaterThan($closingFi);
+    expect($add)->toContain('compgen -G "/etc/apt/sources.list.d/ondrej*php*"')
+        ->and(preg_match('/apt-get[^\n]*update/', $add))->toBe(0);
+
+    $packages = installerFn('install_packages');
+    $sources = strpos($packages, "\n    add_package_sources\n");
+    // Four spaces: at the function's own level, not inside an if.
+    $refresh = strpos($packages, "\n    run_apt \"Refreshing package lists\" apt-get update -qq\n");
+    $asked = strpos($packages, 'ensure_php_available');
+
+    expect($sources)->not->toBeFalse()
+        ->and($refresh)->not->toBeFalse()
+        ->and($sources)->toBeLessThan($refresh)
+        ->and($refresh)->toBeLessThan($asked);
+
+    expect(installerFn('add_package_sources'))->toContain('add_php_repository');
 });
 
 it('does not tell the user the repository lacks the package', function () {

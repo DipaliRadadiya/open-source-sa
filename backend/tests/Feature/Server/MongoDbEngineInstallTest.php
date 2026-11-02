@@ -436,7 +436,12 @@ it('repairs the panel-created MongoDB key before the bootstrap installer updates
 
     $installer = file_get_contents($path);
     $repair = strpos($installer, 'repair_panel_mongodb_repository');
-    $firstUpdate = strpos($installer, 'run_progress "Refreshing system package lists" apt-get update -qq');
+    // The package step's first refresh: install_source_tools' (only when a
+    // tool is missing) or the one refresh after every source is written.
+    $firstUpdate = min(array_filter([
+        strpos($installer, 'run_apt "Refreshing system package lists" apt-get update -qq'),
+        strpos($installer, 'run_apt "Refreshing package lists" apt-get update -qq'),
+    ]));
 
     expect($repair)->not->toBeFalse()
         ->and($firstUpdate)->not->toBeFalse()

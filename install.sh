@@ -127,6 +127,12 @@ PROGRESS_URL="${PROGRESS_URL:-}"
 #   its built-in branding.
 CENTRAL_URL="${CENTRAL_URL:-}"
 PROGRESS_READY=0   # set once PROGRESS_URL has been checked
+# PROGRESS_ACTIVITY=1 — Central asks for the lines the installer prints while a
+#   long command runs (which packages are being set up, the wait for Ubuntu's
+#   updates, "still building…"), as `activity`, `activity_code` and
+#   `activity_elapsed` on an `installing` report. Off unless asked for: a
+#   Central that does not expect them would add every one to its step history.
+PROGRESS_ACTIVITY="${PROGRESS_ACTIVITY:-0}"
 
 # Secrets this script comes to know beyond the ones above (every Redis password
 # it tried), so the log lines a failed report carries can leave them out.
@@ -276,7 +282,7 @@ report_failure() {
     printf '    3. Still stuck? Open an issue with the log and the line above.\n\n' >&2
 }
 
-die() { report_failure "$*"; exit 1; }
+die() { progress_stop 2>/dev/null || true; report_failure "$*"; exit 1; }
 
 # set -e kills the script on ANY failing command, including the ~200 that do
 # not go through run(). Without this trap that death is completely silent:
@@ -286,6 +292,7 @@ on_error() {
     local code="$1" line="$2" command="$3"
 
     trap - ERR
+    progress_stop 2>/dev/null || true
     report_failure \
         "A command failed (exit ${code}) and the install cannot safely continue." \
         "line ${line}: ${command}"
@@ -306,6 +313,7 @@ run() {
     # A command in an `if` condition does not fire the ERR trap, so this
     # reports once rather than twice.
     if ! "$@" >>"$LOG_FILE" 2>&1; then
+        progress_stop 2>/dev/null || true
         report_failure "This command failed. Its output is in the log." "\$ $*"
         exit 1
     fi
@@ -321,6 +329,298 @@ run_progress() {
     say "     → ${label}..."
     run "$@"
     ok "${label} ($((SECONDS - started))s)"
+}
+
+# ─── Progress while a long command runs ──────────────────────────────────────
+#
+# A command that runs for minutes used to print one line and then nothing: a
+# ten-minute wait for Ubuntu's own updates looked exactly like a hung installer,
+# in the terminal and in Central. So while one runs, a ticker in the background
+# watches it and prints a full line when there is something to say:
+#
+#   - which group of packages apt is setting up, from apt's own status lines;
+#   - that apt is waiting for Ubuntu's updates, every 15 s;
+#   - otherwise how far it got, or "still <doing what>", after 15 s of silence.
+#
+# Full lines only, never \r: the journal and Central's systemd-run capture
+# keep every byte. The ticker only watches — the command runs exactly as
+# before, with the same exit code and failure handling — and it is stopped
+# before anything else is printed (progress_stop; die, run and the EXIT trap
+# call it too, so none outlives a failure).
+
+PROGRESS_PID=""
+# A private directory for this run (apt's status file, the last activity sent
+# to Central), made in main() and removed by the EXIT trap.
+RUN_DIR=""
+
+# 5 → "5 s", 75 → "1 min 15 s".
+fmt_elapsed() {
+    local s="${1:-0}"
+
+    if (( s < 60 )); then
+        printf '%d s' "$s"
+    else
+        printf '%d min %02d s' $((s / 60)) $((s % 60))
+    fi
+}
+
+# The clock, as a function so the tests can set it.
+now_s() { date +%s; }
+
+# The readable group a package belongs to, or nothing for one that is not
+# worth a line of its own (a library: it shows as "installing NN%").
+apt_group() {
+    local pkg="${1%%:*}" v
+
+    case "$pkg" in
+        php[0-9]*)
+            v="${pkg#php}"
+            printf 'PHP %s' "${v%%-*}" ;;
+        lsphp[0-9]*)
+            v="${pkg#lsphp}"; v="${v%%-*}"
+            printf 'PHP %s.%s (LiteSpeed)' "${v:0:1}" "${v:1}" ;;
+        nginx|nginx-*|libnginx-mod-*) printf 'nginx' ;;
+        apache2|apache2-*) printf 'Apache' ;;
+        openlitespeed*) printf 'OpenLiteSpeed' ;;
+        redis-server|redis-tools|redis) printf 'Redis' ;;
+        build-essential|gcc|gcc-[0-9]*|g++|g++-[0-9]*|cpp|cpp-[0-9]*|make|libc6-dev) printf 'build tools' ;;
+        postfix) printf 'local mail (Postfix)' ;;
+        certbot|python3-certbot*) printf 'certificate tool' ;;
+        docker-*|containerd.io) printf 'Docker' ;;
+        supervisor) printf 'supervisor' ;;
+        sqlite3) printf 'SQLite' ;;
+    esac
+}
+
+# The complete lines a file gained since byte offset ${!2}, into the variable
+# named $3; the offset moves past them. A half-written last line waits for the
+# next tick. Bytes, not characters: the ticker runs under LC_ALL=C.
+progress_new_lines() {
+    # Prefixed locals: the caller's variables are written by name, and a local
+    # of the same name here would take the write instead.
+    local _pn_file="$1" _pn_offvar="$2" _pn_outvar="$3" _pn_off _pn_size _pn_chunk
+
+    printf -v "$_pn_outvar" '%s' ""
+    _pn_off="${!_pn_offvar}"
+    _pn_size=$(stat -c %s "$_pn_file" 2>/dev/null) || return 0
+    if (( _pn_size < _pn_off )); then
+        printf -v "$_pn_offvar" '%s' "$_pn_size"
+        return 0
+    fi
+    (( _pn_size > _pn_off )) || return 0
+
+    _pn_chunk="$(tail -c +"$((_pn_off + 1))" "$_pn_file" 2>/dev/null | head -c "$((_pn_size - _pn_off))"; printf x)"
+    _pn_chunk="${_pn_chunk%x}"
+    [[ "$_pn_chunk" == *$'\n'* ]] || return 0
+    _pn_chunk="${_pn_chunk%$'\n'*}"$'\n'
+
+    printf -v "$_pn_offvar" '%s' "$((_pn_off + ${#_pn_chunk}))"
+    printf -v "$_pn_outvar" '%s' "$_pn_chunk"
+}
+
+# The ticker's state for one command: what it is doing ($1), its Central
+# activity code ($2) and apt's status file ($3, optional).
+progress_init() {
+    PT_LABEL="$1"
+    PT_CODE="${2:-heartbeat}"
+    PT_STATUS="${3:-}"
+    PT_START=$(now_s)
+    PT_LAST_LINE=$PT_START
+    PT_LAST_GROUP=0
+    PT_STATUS_SEEN=$PT_START
+    # Read and moved by name, through progress_new_lines.
+    # shellcheck disable=SC2034
+    PT_STATUS_OFF=0
+    # shellcheck disable=SC2034
+    PT_LOG_OFF=$(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0)
+    PT_SEEN="|"
+    PT_QUEUE=()
+    PT_DETAIL=""
+    PT_LOCK_SINCE=0
+    PT_LOCK_LAST=0
+    PT_LOCK_SAID=0
+    PT_LOCK_HOLDER=""
+    PT_ACT_T=0
+    PT_ACT_CODE=""
+    if [[ -n "$RUN_DIR" && -r "${RUN_DIR}/activity-last" ]]; then
+        read -r PT_ACT_T PT_ACT_CODE <"${RUN_DIR}/activity-last" || true
+    fi
+}
+
+# One line from the ticker, indented under the command's "→" line.
+progress_say() {
+    printf '         %s%s%s\n' "$DIM" "$2" "$RESET"
+    PT_LAST_LINE=$PT_NOW
+    progress_activity "$1" "$2"
+}
+
+# The same line to Central, when it asked (PROGRESS_ACTIVITY=1): one when the
+# code changes, at most every 15 s, otherwise one a minute. A few dozen per
+# install, far inside Central's history and rate limits.
+progress_activity() {
+    [[ "$PROGRESS_ACTIVITY" == "1" ]] || return 0
+    (( PROGRESS_READY )) || return 0
+
+    if [[ "$1" == "$PT_ACT_CODE" ]]; then
+        (( PT_NOW - PT_ACT_T >= 60 )) || return 0
+    else
+        (( PT_NOW - PT_ACT_T >= 15 )) || return 0
+    fi
+
+    PT_ACT_T=$PT_NOW
+    PT_ACT_CODE="$1"
+    [[ -n "$RUN_DIR" ]] && printf '%s %s\n' "$PT_ACT_T" "$PT_ACT_CODE" >"${RUN_DIR}/activity-last"
+    ACTIVITY_CODE="$1" ACTIVITY_TEXT="$2" ACTIVITY_ELAPSED=$((PT_NOW - PT_START)) send_progress installing
+}
+
+# One look at the command: called every 2 s by the ticker, and directly by the
+# tests with the clock set.
+progress_tick() {
+    local line kind pkg pct msg group chunk lock waiting=0
+
+    PT_NOW=$(now_s)
+
+    # apt's status lines: `pmstatus:<pkg>:<percent>:<text>`, `dlstatus:…`.
+    if [[ -n "$PT_STATUS" ]]; then
+        progress_new_lines "$PT_STATUS" PT_STATUS_OFF chunk
+        while IFS= read -r line; do
+            [[ -n "$line" ]] || continue
+            PT_STATUS_SEEN=$PT_NOW
+            IFS=: read -r kind pkg pct msg <<<"$line"
+            # Some apt versions name the architecture: <pkg>:amd64.
+            if [[ ! "$pct" =~ ^[0-9.]+$ ]]; then
+                IFS=: read -r kind pkg _ pct msg <<<"$line"
+            fi
+            case "$kind" in
+                dlstatus) PT_DETAIL="downloading ${pct%%.*}%" ;;
+                pmstatus)
+                    PT_DETAIL="installing ${pct%%.*}%"
+                    group=$(apt_group "$pkg")
+                    if [[ -n "$group" && "$PT_SEEN" != *"|${group}|"* && "$msg" =~ ^(Configuring|Preparing\ to\ configure|Installed) ]]; then
+                        PT_SEEN+="${group}|"
+                        PT_QUEUE+=("$group")
+                    fi
+                    ;;
+            esac
+        done <<<"$chunk"
+    fi
+
+    # apt waiting on a lock says so about once a second, in the log:
+    #   Waiting for cache lock: Could not get lock /var/lib/dpkg/lock-frontend.
+    #   It is held by process 2207 (unattended-upgr)... 12s
+    progress_new_lines "$LOG_FILE" PT_LOG_OFF chunk
+    if [[ "$chunk" == *"Waiting for cache lock"* ]]; then
+        lock="${chunk##*Waiting for cache lock}"
+        lock="${lock%%$'\n'*}"
+        if [[ "$lock" =~ held\ by\ process\ ([0-9]+)\ \(([^\)]*)\) ]]; then
+            PT_LOCK_HOLDER="${BASH_REMATCH[2]}, PID ${BASH_REMATCH[1]}"
+        fi
+        # apt counts its own wait ("... 12s"); started from that, not from now.
+        if (( ! PT_LOCK_SINCE )); then
+            PT_LOCK_SINCE=$PT_NOW
+            [[ "$lock" =~ \.\.\.\ ([0-9]+)s ]] && PT_LOCK_SINCE=$((PT_NOW - BASH_REMATCH[1]))
+        fi
+        PT_LOCK_LAST=$PT_NOW
+    fi
+
+    if (( PT_LOCK_LAST && PT_NOW - PT_LOCK_LAST <= 5 )); then
+        waiting=1
+    elif [[ -n "$PT_STATUS" ]] && (( PT_NOW - PT_STATUS_SEEN >= 15 )) \
+            && (( PT_LOCK_SINCE || PT_NOW - PT_LAST_LINE >= 15 )) && ubuntu_updates_running; then
+        # An apt command with no word from apt for 15 s while Ubuntu's
+        # updates run is waiting for them, whether or not it says so (-qq
+        # does not). apt commands only: the build runs beside the updates on
+        # purpose, and is not waiting for anything.
+        waiting=1
+        PT_LOCK_HOLDER="unattended-upgr"
+        (( PT_LOCK_SINCE )) || PT_LOCK_SINCE=$PT_STATUS_SEEN
+    fi
+
+    if (( waiting )); then
+        if (( PT_NOW - PT_LAST_LINE >= 15 || ! PT_LOCK_SAID )); then
+            PT_LOCK_SAID=1
+            progress_say apt_lock_wait "$(apt_wait_text "$PT_LOCK_HOLDER") Waiting… $(fmt_elapsed $((PT_NOW - PT_LOCK_SINCE))) so far"
+        fi
+        return 0
+    fi
+    if (( PT_LOCK_SINCE )); then
+        PT_LOCK_SINCE=0
+        PT_LOCK_LAST=0
+        PT_LOCK_SAID=0
+        if [[ "$PT_LOCK_HOLDER" == *unattended-upgr* ]]; then
+            progress_say "$PT_CODE" "Ubuntu's updates let go of the package lock — carrying on"
+        else
+            progress_say "$PT_CODE" "the other package manager is done — carrying on"
+        fi
+        return 0
+    fi
+
+    if (( ${#PT_QUEUE[@]} && PT_NOW - PT_LAST_GROUP >= 5 )); then
+        PT_LAST_GROUP=$PT_NOW
+        progress_say "$PT_CODE" "setting up ${PT_QUEUE[0]} · $(fmt_elapsed $((PT_NOW - PT_START)))"
+        PT_QUEUE=("${PT_QUEUE[@]:1}")
+        return 0
+    fi
+
+    if (( PT_NOW - PT_LAST_LINE >= 15 )); then
+        progress_say "$PT_CODE" "${PT_DETAIL:-still ${PT_LABEL}} · $(fmt_elapsed $((PT_NOW - PT_START)))"
+    fi
+}
+
+# progress_start LABEL [ACTIVITY_CODE] [APT_STATUS_FILE]
+progress_start() {
+    (( DRY_RUN )) && return 0
+    progress_stop
+
+    (
+        trap - ERR
+        set +eu
+        export LC_ALL=C
+        trap 'kill "$PT_SLEEP" 2>/dev/null; exit 0' TERM
+        progress_init "$@"
+        while :; do
+            sleep 2 &
+            PT_SLEEP=$!
+            wait "$PT_SLEEP"
+            progress_tick
+        done
+    ) &
+    PROGRESS_PID=$!
+}
+
+progress_stop() {
+    [[ -n "${PROGRESS_PID:-}" ]] || return 0
+    kill "$PROGRESS_PID" 2>/dev/null || true
+    wait "$PROGRESS_PID" 2>/dev/null || true
+    PROGRESS_PID=""
+}
+
+# run_progress for apt: the same "→ … ✓ (Ns)" lines, with the ticker reading
+# apt's status lines in between. They go to a regular file, not a pipe: a file
+# can neither block apt nor kill it with SIGPIPE if the reader dies.
+run_apt() {
+    local label="$1"
+    shift
+    local started=$SECONDS status
+
+    say "     → ${label}..."
+    if (( DRY_RUN )) || [[ -z "$RUN_DIR" ]]; then
+        run "$@"
+    else
+        status="${RUN_DIR}/apt-status"
+        : >"$status"
+        progress_start "${label,}" apt_install "$status"
+        run "$@" -o APT::Status-Fd=3 3>>"$status"
+        progress_stop
+    fi
+    ok "${label} ($((SECONDS - started))s)"
+}
+
+# The EXIT trap: no ticker outlives the install, and the run directory goes.
+on_exit() {
+    progress_stop
+    [[ -n "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
+    return 0
 }
 
 # ─── Arguments ───────────────────────────────────────────────────────────────
@@ -559,8 +859,9 @@ dry_run_plan() {
         printf '     A real run would, in order:\n'
     fi
     printf '       - make sure there is swap for the build\n'
-    printf '       - install the packages for the %s stack (%s)\n' "$STACK" "$WEB_SERVER"
-    printf '       - create the %s account and install Node\n' "$APP_USER"
+    printf '       - create the %s account\n' "$APP_USER"
+    printf '       - install every package for the %s stack (%s) in one go\n' "$STACK" "$WEB_SERVER"
+    printf '       - install Node\n'
     printf '       - fetch the panel into %s\n' "$APP_DIR"
     printf '       - configure Redis, mail, PHP and %s\n' "$WEB_SERVER"
     printf '       - get a certificate for %s\n' "$PANEL_HOST"
@@ -1619,6 +1920,8 @@ derive_php_runtime() {
     fi
 }
 
+# Writes the PHP source only; install_packages refreshes every source at once,
+# after all of them are written (see the note there).
 add_php_repository() {
     if [[ "$OS_VERSION_ID" == "26.04" ]]; then
         local keyring=/etc/apt/keyrings/sury-php.gpg
@@ -1643,7 +1946,6 @@ add_php_repository() {
                 "$keyring" "$OS_CODENAME" >"$list"
         fi
 
-        run_progress "Refreshing package lists from the PHP repository" apt-get update -qq
         ok "sury.org PHP repository added (${OS_CODENAME})"
         return
     fi
@@ -1651,19 +1953,20 @@ add_php_repository() {
     # A glob inside [[ -f ]] is not expanded, so it is matched with compgen —
     # the naive version silently always thought the repository was missing.
     #
-    # The refresh happens either way, and that is the point. `add-apt-repository`
-    # writes the sources file before the download succeeds, so a run interrupted
-    # between the two leaves a file apt has never fetched an index for. Skipping
-    # the refresh because the file exists is what turned that into a dead
-    # install: apt has the source and no packages from it.
+    # The refresh happens either way, and that is the point: install_packages
+    # refreshes every source after this, whether the file was just written or
+    # was already there. `add-apt-repository` writes the sources file before the
+    # download succeeds, so a run interrupted between the two leaves a file apt
+    # has never fetched an index for. Skipping the refresh because the file
+    # exists is what turned that into a dead install: apt has the source and no
+    # packages from it.
+    #
+    # -n: no refresh of its own. One refresh for every source, not one each.
     if ! compgen -G "/etc/apt/sources.list.d/ondrej*php*" >/dev/null; then
-        run_progress "Adding the ondrej/php repository" add-apt-repository -y ppa:ondrej/php
+        run_progress "Adding the ondrej/php repository" add-apt-repository -y -n ppa:ondrej/php
     else
-        say "     → ondrej/php repository already configured, refreshing it..."
+        skip "ondrej/php repository (refreshed with the others)"
     fi
-
-    run_progress "Refreshing package lists from the PHP repository" apt-get update -qq
-    ok "ondrej/php repository ready"
 }
 
 # The version apt would install for php${PHP_VERSION}-fpm, empty when there is
@@ -1699,9 +2002,11 @@ php_candidate() {
 # against a deliberately unreachable source. So "the repository was added"
 # could be reported over a download that never happened.
 #
-# Hence: ask, and only if the answer is no, add/refresh and ask again. A repair
-# rather than an accusation — which also makes re-running the installer fix the
-# box, the case users actually hit.
+# Hence: ask apt, after the source is in place AND the index refreshed. Since
+# 2026-11-02 that is the normal path rather than the repair: install_packages
+# writes the PHP source when it is missing (add_php_repository), refreshes every
+# source once, and only then asks here — so a re-run with a stale source still
+# converges, because the refresh always runs.
 ensure_php_available() {
     if (( DRY_RUN )); then
         printf '     %s$ apt-cache policy php%s-fpm%s\n' "$DIM" "$PHP_VERSION" "$RESET"
@@ -1709,17 +2014,6 @@ ensure_php_available() {
     fi
 
     local candidate
-    candidate=$(php_candidate)
-
-    # Already resolvable: the repository is configured *and* fetched. Nothing to
-    # add, and no apt-get update anybody is waiting on.
-    if [[ -n "$candidate" ]]; then
-        ok "PHP ${PHP_VERSION} available (${candidate})"
-        return
-    fi
-
-    add_php_repository
-
     candidate=$(php_candidate)
 
     if [[ -z "$candidate" ]]; then
@@ -1825,32 +2119,145 @@ apt_lock_holder() {
     printf 'another package manager'
 }
 
+# Is Ubuntu installing its own updates right now? The units apt.systemd.daily
+# runs in are `activating` for as long as they run; and a run started some
+# other way is still an `unattended-upgrade` process. Not its `-shutdown`
+# helper, which idles on every server (see apt_lock_is_held). The panel asks
+# the same two things (SystemUpdatesActivity) for its setup page.
+ubuntu_updates_running() {
+    local state
+
+    for state in $(systemctl show -p ActiveState --value apt-daily.service apt-daily-upgrade.service 2>/dev/null); do
+        [[ "$state" == "activating" || "$state" == "deactivating" ]] && return 0
+    done
+    pgrep -f 'bin/unattended-upgrade( |$)' >/dev/null 2>&1
+}
+
+# Something else is doing package work: it holds the lock, or Ubuntu's updates
+# are running (between their download and install they hold no lock at all).
+package_manager_busy() {
+    apt_lock_is_held || ubuntu_updates_running
+}
+
+# What a wait is for, in words. $1: the holder apt or apt_lock_holder named.
+apt_wait_text() {
+    if [[ "${1:-}" == *unattended-upgr* ]] || ubuntu_updates_running; then
+        printf '%s' "Ubuntu is installing its own security updates (normal on a new server)."
+    else
+        printf '%s' "Another package manager is running (${1:-another package manager})."
+    fi
+}
+
+# Waits for the lock another package manager holds, saying what it is waiting
+# for every 15 s. Never takes the lock from it.
+#
+# `soft` as $1: give up with a warning (return 1) rather than stop the install,
+# for a caller that can carry on without apt (a certificate retry).
+#
+# While install_packages is waiting (EARLY_WORK=1), the time goes to the work
+# that needs no package at all — Node, the panel's source, the interface's npm
+# packages — one item at a time, with the lock checked again after each.
 wait_for_apt_lock() {
-    local holder waited=0
+    local mode="${1:-}" holder started=$SECONDS waited=0 said=0
 
     (( DRY_RUN )) && return 0
     apt_lock_is_held || return 0
     holder=$(apt_lock_holder)
 
-    say "     → Another package manager is running (${holder})."
+    say "     → $(apt_wait_text "$holder")"
     say "       Waiting up to $((APT_LOCK_WAIT / 60)) minutes for it to finish..."
 
     while apt_lock_is_held; do
         if (( waited >= APT_LOCK_WAIT )); then
-            printf '\n' >&2
+            if [[ "$mode" == "soft" ]]; then
+                warn "another package manager is still running after $((waited / 60)) minutes — carrying on without waiting for it"
+                return 1
+            fi
             die "another package manager is still running after $((waited / 60)) minutes:
        ${holder}
      It was left alone deliberately — killing it can corrupt this server's
      package database. Wait for it to finish, then run this installer again."
         fi
 
-        sleep 5
-        waited=$((waited + 5))
-        printf '\r       waiting... %ss' "$waited"
+        EARLY_RAN=0
+        if (( EARLY_WORK )); then
+            early_work_next
+        fi
+        if (( ! EARLY_RAN )); then
+            sleep 5
+        fi
+        waited=$((SECONDS - started))
+
+        if (( waited - said >= 15 )); then
+            said=$waited
+            say "       $(apt_wait_text "$holder") Waiting… $(fmt_elapsed "$waited") so far"
+        fi
     done
 
-    (( waited > 0 )) && printf '\r%s\r' "                                        "
-    ok "the other package manager finished (${waited}s)"
+    if [[ "$holder" == *unattended-upgr* ]]; then
+        ok "Ubuntu's updates let go of the package lock ($(fmt_elapsed "$waited"))"
+    else
+        ok "the other package manager finished ($(fmt_elapsed "$waited"))"
+    fi
+}
+
+# ─── Work that needs no package, while the lock is held ──────────────────────
+#
+# Installing Node through fnm, fetching the panel and `npm ci` need curl,
+# unzip, git and the panel account — all on the image or made before the
+# package step — and no apt at all. So when install_packages has to wait for
+# another package manager, it does them in the meantime (wait_for_apt_lock).
+#
+# Each runs in a subshell that cannot report: a failure here goes to the log
+# only, and the item simply runs again in its own step, with the normal fatal
+# handling. That matters, because Central deletes a server it is told failed.
+EARLY_WORK=0
+EARLY_RAN=0
+EARLY_TRIED="|"
+EARLY_DONE="|"
+
+# The overrides are called by the item's own code, which shellcheck cannot see.
+# shellcheck disable=SC2317
+early_sandbox() {
+    trap - ERR
+    trap 'progress_stop' EXIT
+    PROGRESS_PID=""
+    report_failure() { printf 'while waiting: stopped: %s %s\n' "$1" "${2:-}"; }
+    save_install_state() { :; }
+    send_progress() { :; }
+    die() { printf 'while waiting: stopped: %s\n' "$*"; exit 1; }
+}
+
+early_item() {
+    local key="$1" label="$2" fn="$3" started=$SECONDS rc=0
+
+    EARLY_RAN=1
+    EARLY_TRIED+="${key}|"
+    say "     → while we wait: ${label}..."
+
+    # In the background and waited for, not in an `if`: errexit is off inside
+    # an if's condition, and the item has to stop at its first failure.
+    ( early_sandbox; "$fn" ) >>"$LOG_FILE" 2>&1 &
+    wait $! || rc=$?
+
+    if (( rc == 0 )); then
+        EARLY_DONE+="${key}|"
+        ok "while we wait: ${label} ($((SECONDS - started))s)"
+    else
+        say "       not finished while we waited — it runs again in its own step"
+    fi
+}
+
+# The next item whose tools are present, if any (sets EARLY_RAN).
+early_work_next() {
+    if [[ "$EARLY_TRIED" != *"|node|"* ]] && command -v curl >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
+        early_item node "installing Node ${NODE_VERSION} (fnm)" install_node_body
+    elif [[ "$EARLY_TRIED" != *"|fetch|"* ]] && command -v git >/dev/null 2>&1; then
+        early_item fetch "fetching the panel" fetch_source_body
+    elif [[ "$EARLY_TRIED" != *"|deps|"* && "$EARLY_DONE" == *"|node|"* && "$EARLY_DONE" == *"|fetch|"* ]]; then
+        early_item deps "downloading the interface's packages" frontend_deps
+    fi
+    return 0
 }
 
 # MongoDB publishes an ASCII-armoured signing key. Panel releases before this
@@ -1933,104 +2340,250 @@ repair_panel_mongodb_repository() {
 # It is consistently several minor versions behind and does not carry the
 # compose v2 plugin, and compose is the format the panel generates — so the
 # older package would work right up until the first `docker compose` call.
-DOCKER_PACKAGES_DONE=0
-
-install_docker_packages() {
-    if (( DOCKER_PACKAGES_DONE )); then
-        return 0
-    fi
-    DOCKER_PACKAGES_DONE=1
-
+# The Docker source only; its packages go into install_packages's one install.
+add_docker_repository() {
     local keyring="/etc/apt/keyrings/docker.asc"
     local list="/etc/apt/sources.list.d/docker.list"
 
     if [[ -f "$keyring" && -f "$list" ]]; then
         skip "Docker repository already configured"
-    else
-        run install -d -m 0755 /etc/apt/keyrings
-        run_progress "Downloading the Docker repository signing key" \
-            curl -fsSL -o "$keyring" https://download.docker.com/linux/ubuntu/gpg
-        run chmod 0644 "$keyring"
-
-        if (( DRY_RUN )); then
-            printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
-        else
-            # dpkg's own architecture, not `uname -m`: the repository is
-            # indexed by amd64/arm64, and uname says x86_64/aarch64.
-            printf 'deb [arch=%s signed-by=%s] https://download.docker.com/linux/ubuntu %s stable\n' \
-                "$(dpkg --print-architecture)" "$keyring" "$OS_CODENAME" >"$list"
-        fi
-
-        run_progress "Refreshing package lists from the Docker repository" apt-get update -qq
-        ok "Docker repository added (${OS_CODENAME})"
+        return 0
     fi
 
-    # buildx and compose are plugins now, not separate binaries. Without
-    # docker-compose-plugin there is no `docker compose` subcommand at all, and
-    # the panel generates compose files — so omitting it ships a stack whose
-    # every deploy fails on the first call.
-    run_progress "Installing Docker" apt-get install -y -qq \
-        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    run install -d -m 0755 /etc/apt/keyrings
+    run_progress "Downloading the Docker repository signing key" \
+        curl -fsSL -o "$keyring" https://download.docker.com/linux/ubuntu/gpg
+    run chmod 0644 "$keyring"
 
-    run systemctl enable --now docker
+    if (( DRY_RUN )); then
+        printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
+    else
+        # dpkg's own architecture, not `uname -m`: the repository is
+        # indexed by amd64/arm64, and uname says x86_64/aarch64.
+        printf 'deb [arch=%s signed-by=%s] https://download.docker.com/linux/ubuntu %s stable\n' \
+            "$(dpkg --print-architecture)" "$keyring" "$OS_CODENAME" >"$list"
+    fi
 
-    ok "Docker installed ($(docker --version 2>/dev/null || echo 'version unknown'))"
+    ok "Docker repository added (${OS_CODENAME})"
 }
 
+# Every package the panel needs, one per line: the one list install_packages
+# hands apt in a single transaction.
+#
+# update-notifier-common provides `apt-check`, which is how the panel counts
+# pending and security updates. Without it the Settings page cannot tell the
+# difference between "nothing waiting" and "could not look", so it reports
+# neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
+#
+# build-essential is here because npm packages ship prebuilt binaries only
+# for some Node versions, and fall back to compiling from source for the
+# rest. A server with no compiler turns that fallback into a dead install:
+# n8n died in `node-gyp` building isolated-vm on 2026-09-15, and the error
+# it surfaced was about dependency resolution, because npm buries the one
+# line that matters under thousands of peer warnings.
+#
+# Installed for every stack, deliberately. Which packages need compiling is
+# not knowable at install time — the user picks site types later, and a
+# git-deployed project can depend on anything — so a conditional would have
+# to guess the future. It is ~235 MB, and it is the difference between an
+# install that works and one that fails for a reason the user cannot act on.
+# `pigz` is gzip across every core, and backups are where that shows.
+# Measured on a 103 GB site with 8 cores: `tar -czf` took 67 minutes with
+# gzip pinned at 99.5% of one core and seven idle; pigz did the same work in
+# ~15. Same format — pigz emits ordinary gzip, so `tar -tzf`, the verify step
+# and every archive already in a bucket are unaffected.
+#
+# The panel falls back to gzip when this is absent, so it is an improvement
+# rather than a requirement. That fallback is load-bearing: the updater ships
+# code, never packages, so this line only ever reaches *fresh* installs —
+# an existing panel upgrading to the code that prefers pigz will not have it
+# until somebody runs `apt install pigz` by hand. ~60 KB.
+#
+# `acl` is setfacl: each site user's home is closed to every other local
+# account and opened, by ACL, to the panel and the web server only (see
+# HomeDirectoryAccess). Ubuntu 26.04 does not ship it. Unlike pigz, existing
+# servers get it too: `sites:resync` installs it when it is missing.
+panel_packages() {
+    printf '%s\n' software-properties-common curl git unzip zip rsync ca-certificates gnupg \
+        update-notifier-common build-essential pigz acl
+
+    # Only the chosen web server. Installing both would have them fight over
+    # port 80, and apt starts them on install.
+    case "$WEB_SERVER" in
+        nginx)         printf '%s\n' nginx ;;
+        apache)        printf '%s\n' apache2 ;;
+        openlitespeed) printf '%s\n' openlitespeed ;;
+    esac
+
+    printf '%s\n' redis-server sqlite3 supervisor
+
+    # OpenLiteSpeed's panel PHP is lsphp, installed by install_ols_packages
+    # right after this list (see the note there).
+    [[ "$PANEL_PHP_SAPI" == "fpm" ]] && panel_php_packages
+
+    # certbot from the start, not when the certificate is issued: an apt run
+    # there is the one Ubuntu's updates queued behind for seven minutes.
+    # No certbot plugin exists for OpenLiteSpeed. --webroot instead: certbot
+    # drops its token in the document root and never touches the config, so
+    # installing the certificate is our job (see install_ols_certificate).
+    if (( WANT_SSL )); then
+        case "$WEB_SERVER" in
+            nginx)         printf '%s\n' certbot python3-certbot-nginx ;;
+            apache)        printf '%s\n' certbot python3-certbot-apache ;;
+            openlitespeed) printf '%s\n' certbot ;;
+        esac
+    fi
+
+    # Docker, when the stack asked for it, from Docker's own repository
+    # (add_docker_repository). buildx and compose are plugins now, not
+    # separate binaries. Without docker-compose-plugin there is no `docker
+    # compose` subcommand at all, and the panel generates compose files — so
+    # omitting it ships a stack whose every deploy fails on the first call.
+    if [[ "$STACK" == "docker" ]]; then
+        printf '%s\n' docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    fi
+
+    return 0
+}
+
+# Matches the extensions the panel actually loads. Kept explicit rather
+# than pulling php${V} — the metapackage drags in apache2 as a
+# dependency, which would fight nginx for port 80.
+panel_php_packages() {
+    printf '%s\n' \
+        "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_VERSION}-common" \
+        "php${PHP_VERSION}-bcmath" "php${PHP_VERSION}-curl" "php${PHP_VERSION}-intl" \
+        "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-zip" \
+        "php${PHP_VERSION}-gd" "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-mysql" \
+        "php${PHP_VERSION}-pgsql" \
+        "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache" \
+        "php${PHP_VERSION}-soap" \
+        "php${PHP_VERSION}-imagick" "php${PHP_VERSION}-imap" "php${PHP_VERSION}-gmp"
+    # pgsql alongside mysql: the panel can manage a PostgreSQL server, and
+    # without this extension no PHP application on the box can connect to
+    # one — the databases would be creatable and unusable.
+    #
+    # soap has no package on the LiteSpeed stack because LSPHP compiles
+    # it in, so an OpenLiteSpeed box has always had it. Naming it here
+    # is what stops nginx and Apache being the odd ones out: the two
+    # lists are now identical, and PhpRuntimeTest fails if they drift.
+    #
+    # What v7 installs as well (operator, 2026-10-07): imagick for
+    # WordPress's image editor, imap for Mautic, gmp for Nextcloud.
+    # Measured on 24.04 and 26.04 for every PHP 7.4–8.5.
+}
+
+# What writing the third-party sources needs before the refresh: curl, gpg,
+# the CA bundle and add-apt-repository. Ubuntu's cloud images ship all of
+# them, so this is normally nothing; a missing one costs one extra refresh.
+install_source_tools() {
+    local missing=()
+
+    command -v curl >/dev/null 2>&1 || missing+=(curl)
+    command -v gpg >/dev/null 2>&1 || missing+=(gnupg)
+    [[ -f /etc/ssl/certs/ca-certificates.crt ]] || missing+=(ca-certificates)
+    if [[ "$PANEL_PHP_SAPI" == "fpm" && "$OS_VERSION_ID" != "26.04" ]]; then
+        command -v add-apt-repository >/dev/null 2>&1 || missing+=(software-properties-common)
+    fi
+
+    (( ${#missing[@]} )) || return 0
+
+    wait_for_apt_lock
+    run_apt "Refreshing system package lists" apt-get update -qq
+    run_apt "Installing ${missing[*]}" apt-get install -y "${missing[@]}"
+}
+
+# Every third-party source the stack needs, written before the one refresh.
+add_package_sources() {
+    if [[ "$PANEL_PHP_SAPI" == "fpm" ]]; then
+        add_php_repository
+    fi
+    if [[ "$STACK" == "docker" ]]; then
+        add_docker_repository
+    fi
+    if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
+        add_ols_repository
+    fi
+}
+
+# Local mail, installed right after the main list. A call of its own because
+# it is never fatal (configure_mail): one package failing must not take the
+# whole transaction down with it. A Postfix that was here before the install
+# is left exactly as it was.
+install_postfix() {
+    if [[ "$POSTFIX_STATE" == "preinstalled" ]]; then
+        return 0
+    fi
+    if dpkg-query -W -f='${Status}' postfix 2>/dev/null | grep -q "install ok installed"; then
+        POSTFIX_STATE="installed"
+        return 0
+    fi
+
+    local mailname
+    mailname=$(hostname -f 2>/dev/null || hostname)
+    printf 'postfix postfix/main_mailer_type select Internet Site\npostfix postfix/mailname string %s\n' "$mailname" \
+        | debconf-set-selections >>"$LOG_FILE" 2>&1 || true
+
+    if DEBIAN_FRONTEND=noninteractive apt-get install -y postfix >>"$LOG_FILE" 2>&1; then
+        POSTFIX_STATE="installed"
+    else
+        POSTFIX_STATE="failed"
+    fi
+}
+
+# What happened to Postfix in the package step: preinstalled, installed or
+# failed. configure_mail acts on it.
+POSTFIX_STATE=""
+
+# ─── The package step ────────────────────────────────────────────────────────
+#
+# Every apt operation of the install happens here, in one block with no gaps,
+# and none after it (a test holds that line). The reason is measured, not
+# assumed (2026-11-01, seven fresh 4 GB servers): Ubuntu's first-boot
+# unattended-upgrades queues behind our package work and takes the lock in the
+# first gap of a few seconds — on six of seven boxes the gap after this step —
+# and then holds it for 6–9 minutes. The next apt call of ours (Postfix, or
+# certbot) waited all of that, and everything else waited behind it.
+#
+# With every package in now, Ubuntu's updates run beside the configuration
+# and the build, which need no package at all. Nothing interrupts them.
+#
+#   1. sources first, written without a refresh of their own;
+#   2. one refresh;
+#   3. one install of every package (panel_packages);
+#   4. straight after, the non-fatal ones: Postfix, lsphp's extensions.
 install_packages() {
     step "Installing packages"
 
     export DEBIAN_FRONTEND=noninteractive
 
     configure_apt_lock_wait
+    EARLY_WORK=1
     wait_for_apt_lock
     repair_panel_mongodb_repository
 
-    run_progress "Refreshing system package lists" apt-get update -qq
-    # update-notifier-common provides `apt-check`, which is how the panel counts
-    # pending and security updates. Without it the Settings page cannot tell the
-    # difference between "nothing waiting" and "could not look", so it reports
-    # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
-    #
-    # build-essential is here because npm packages ship prebuilt binaries only
-    # for some Node versions, and fall back to compiling from source for the
-    # rest. A server with no compiler turns that fallback into a dead install:
-    # n8n died in `node-gyp` building isolated-vm on 2026-09-15, and the error
-    # it surfaced was about dependency resolution, because npm buries the one
-    # line that matters under thousands of peer warnings.
-    #
-    # Installed for every stack, deliberately. Which packages need compiling is
-    # not knowable at install time — the user picks site types later, and a
-    # git-deployed project can depend on anything — so a conditional would have
-    # to guess the future. It is ~235 MB, and it is the difference between an
-    # install that works and one that fails for a reason the user cannot act on.
-    # `pigz` is gzip across every core, and backups are where that shows.
-    # Measured on a 103 GB site with 8 cores: `tar -czf` took 67 minutes with
-    # gzip pinned at 99.5% of one core and seven idle; pigz did the same work in
-    # ~15. Same format — pigz emits ordinary gzip, so `tar -tzf`, the verify step
-    # and every archive already in a bucket are unaffected.
-    #
-    # The panel falls back to gzip when this is absent, so it is an improvement
-    # rather than a requirement. That fallback is load-bearing: the updater ships
-    # code, never packages, so this line only ever reaches *fresh* installs —
-    # an existing panel upgrading to the code that prefers pigz will not have it
-    # until somebody runs `apt install pigz` by hand. ~60 KB.
-    #
-    # `acl` is setfacl: each site user's home is closed to every other local
-    # account and opened, by ACL, to the panel and the web server only (see
-    # HomeDirectoryAccess). Ubuntu 26.04 does not ship it. Unlike pigz, existing
-    # servers get it too: `sites:resync` installs it when it is missing.
-    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz acl
-
-    # Docker, when the stack asked for it. Here rather than in a configure_*
-    # step so the runtime is present before anything tries to use it, and
-    # because it is the one package set that comes from a third-party
-    # repository the panel itself does not otherwise need.
-    if [[ "$STACK" == "docker" ]]; then
-        install_docker_packages
+    if dpkg-query -W -f='${Status}' postfix 2>/dev/null | grep -q "install ok installed"; then
+        POSTFIX_STATE="preinstalled"
     fi
 
-    local php_pkgs=()
+    install_source_tools
+    add_package_sources
+
+    wait_for_apt_lock
+    run_apt "Refreshing package lists" apt-get update -qq
+
+    # Asked after the refresh, of apt itself — see ensure_php_available().
+    if [[ "$PANEL_PHP_SAPI" == "fpm" ]]; then
+        ensure_php_available
+    fi
+
+    local pkgs=()
+    mapfile -t pkgs < <(panel_packages)
+
+    wait_for_apt_lock
+    EARLY_WORK=0
+    run_apt "Installing packages" apt-get install -y "${pkgs[@]}"
+    install_postfix
 
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
         # OpenLiteSpeed: the panel runs on LSPHP, the same build its hosted
@@ -2045,11 +2598,9 @@ install_packages() {
         # an OLS box that never installs it never grows the phantom directory
         # that made every OpenLiteSpeed server detect as Apache.
         #
-        # Brought forward from configure_web_server, and the ordering is the
+        # Here rather than in configure_web_server, and the ordering is the
         # reason: composer is fetched a few lines below and run with
-        # PANEL_PHP_BIN, which on this stack is lsphp. Leaving the LiteSpeed
-        # packages until configure_ols would mean running composer with a PHP
-        # that is not installed yet.
+        # PANEL_PHP_BIN, which on this stack is lsphp.
         #
         # install_ols_packages guards itself, so the later call from
         # configure_ols is a no-op rather than a second apt run.
@@ -2081,47 +2632,14 @@ install_packages() {
         # only created on this stack, so it cannot shadow ondrej's php
         # elsewhere.
         run ln -sfn "$PANEL_PHP_BIN" /usr/local/bin/php
-    else
-        # Adds the repository only when apt cannot already resolve PHP — see
-        # ensure_php_available(). The two used to be separate calls, and the
-        # first one deciding by filename is what let the second die blaming the
-        # repository for a download that had failed.
-        ensure_php_available
-
-        # Matches the extensions the panel actually loads. Kept explicit rather
-        # than pulling php${V} — the metapackage drags in apache2 as a
-        # dependency, which would fight nginx for port 80.
-        php_pkgs=(
-            "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_VERSION}-common"
-            "php${PHP_VERSION}-bcmath" "php${PHP_VERSION}-curl" "php${PHP_VERSION}-intl"
-            "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-zip"
-            "php${PHP_VERSION}-gd" "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-mysql"
-            # pgsql alongside mysql: the panel can manage a PostgreSQL server, and
-            # without this extension no PHP application on the box can connect to
-            # one — the databases would be creatable and unusable.
-            "php${PHP_VERSION}-pgsql"
-            "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache"
-            # soap has no package on the LiteSpeed stack because LSPHP compiles
-            # it in, so an OpenLiteSpeed box has always had it. Naming it here
-            # is what stops nginx and Apache being the odd ones out: the two
-            # lists are now identical, and PhpRuntimeTest fails if they drift.
-            "php${PHP_VERSION}-soap"
-            # What v7 installs as well (operator, 2026-10-07): imagick for
-            # WordPress's image editor, imap for Mautic, gmp for Nextcloud.
-            # Measured on 24.04 and 26.04 for every PHP 7.4–8.5.
-            "php${PHP_VERSION}-imagick" "php${PHP_VERSION}-imap" "php${PHP_VERSION}-gmp"
-        )
     fi
-    # Only the chosen web server. Installing both would have them fight over
-    # port 80, and apt starts them on install.
-    local web_pkgs=()
-    case "$WEB_SERVER" in
-        nginx)  web_pkgs=(nginx) ;;
-        apache) web_pkgs=(apache2) ;;
-    esac
 
-    run_progress "Installing ${WEB_SERVER}, Redis, SQLite, supervisor, and PHP ${PHP_VERSION}" apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 supervisor "${php_pkgs[@]}"
     ok "${WEB_SERVER}, redis, sqlite, PHP ${PHP_VERSION}"
+
+    if [[ "$STACK" == "docker" ]]; then
+        run systemctl enable --now docker
+        ok "Docker installed ($(docker --version 2>/dev/null || echo 'version unknown'))"
+    fi
 
     # Whatever composer we end up using, remember *where* it is. The check
     # below asks "is composer installed anywhere", and the install step later
@@ -2154,7 +2672,19 @@ install_packages() {
 
 install_node() {
     step "Installing Node ${NODE_VERSION} (fnm)"
+    install_node_body
+}
 
+# fnm's own layout: node-versions/vX.Y.Z/installation/bin/node — four levels
+# below node-versions, which is why maxdepth is 5 and not 3.
+find_node_bin() {
+    find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" -print -quit 2>/dev/null || true
+}
+
+# The step without its header, so install_packages can run it while it waits
+# for the package lock (early_work_next). Re-run safe: a second run skips
+# what the first did.
+install_node_body() {
     if [[ ! -x "$FNM_BIN" ]]; then
         mkdir -p "$FNM_DIR"
         run curl -fsSL -o /tmp/fnm-install.sh https://fnm.vercel.app/install
@@ -2170,7 +2700,9 @@ install_node() {
 
     export FNM_DIR
     if ! "$FNM_BIN" list 2>/dev/null | grep -q "v${NODE_VERSION}\."; then
+        progress_start "downloading Node ${NODE_VERSION}"
         run "$FNM_BIN" install "$NODE_VERSION"
+        progress_stop
         run "$FNM_BIN" alias "$NODE_VERSION" default
         ok "Node ${NODE_VERSION}"
     else
@@ -2180,9 +2712,7 @@ install_node() {
     # Resolved once and written into the frontend's unit file. The panel's own
     # frontend should keep running the version it was built against even if
     # someone later changes the server's default.
-    # fnm lays versions out as node-versions/vX.Y.Z/installation/bin/node —
-    # four levels below node-versions, which is why maxdepth is 5 and not 3.
-    NODE_BIN=$(find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" -print -quit 2>/dev/null)
+    NODE_BIN=$(find_node_bin)
     [[ -x "${NODE_BIN:-}" ]] || die "installed Node ${NODE_VERSION} but cannot find its binary under ${FNM_DIR}"
 
     # Bare node/npm/npx for everything that is not the panel: an SSH user, a
@@ -2281,6 +2811,15 @@ assert_panel_knows_stack() {
 fetch_source() {
     step "Fetching the panel"
 
+    if [[ "$EARLY_DONE" == *"|fetch|"* ]]; then
+        skip "fetched while waiting for the package lock"
+        return 0
+    fi
+    fetch_source_body
+}
+
+# The step without its header, for early_work_next — see install_node_body.
+fetch_source_body() {
     # git >=2.35.2 refuses to run any command against a repo whose top-level
     # directory is owned by a different user than the one invoking it (the
     # "dubious ownership" check, added after CVE-2022-24765). Every git call
@@ -2308,8 +2847,10 @@ fetch_source() {
         # installer with a different --branch on an existing box was impossible.
         # Writing the destination ref ourselves works for main too -- it
         # rewrites the ref it already has.
+        progress_start "downloading the panel"
         run sudo -u "${APP_USER}" -H git -C "$APP_DIR" fetch --depth 1 origin \
             "+refs/heads/${REPO_BRANCH}:refs/remotes/origin/${REPO_BRANCH}"
+        progress_stop
         run sudo -u "${APP_USER}" -H git -C "$APP_DIR" reset --hard "origin/${REPO_BRANCH}"
         ok "updated to the latest ${REPO_BRANCH}"
     else
@@ -2325,7 +2866,9 @@ fetch_source() {
             warn "${APP_DIR} exists but is not a git checkout (leftover from an interrupted attempt) — removing before cloning"
             run rm -rf "$APP_DIR"
         fi
+        progress_start "downloading the panel"
         run git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$APP_DIR"
+        progress_stop
         ok "cloned into ${APP_DIR}"
     fi
 
@@ -2405,28 +2948,21 @@ set_env() {
 # listening on loopback only: the sites need to send, nothing needs to
 # receive, and v7's listener on every interface was kept closed only by the
 # firewall. Never fatal — a panel without local mail still works.
+#
+# Installed in the package step (install_postfix); configured here, which needs
+# no apt at all.
 configure_mail() {
     step "Setting up local mail (Postfix)"
 
-    if (( DRY_RUN )); then
-        run apt-get install -y postfix
-        return
-    fi
-
-    if dpkg-query -W -f='${Status}' postfix 2>/dev/null | grep -q "install ok installed"; then
-        skip "Postfix already installed — its configuration is left as it is"
-        return
-    fi
-
-    local mailname
-    mailname=$(hostname -f 2>/dev/null || hostname)
-    printf 'postfix postfix/main_mailer_type select Internet Site\npostfix postfix/mailname string %s\n' "$mailname" \
-        | debconf-set-selections >>"$LOG_FILE" 2>&1 || true
-
-    if ! DEBIAN_FRONTEND=noninteractive apt-get install -y postfix >>"$LOG_FILE" 2>&1; then
-        warn "could not install Postfix — sites will not be able to send mail"
-        return
-    fi
+    case "$POSTFIX_STATE" in
+        preinstalled)
+            skip "Postfix already installed — its configuration is left as it is"
+            return ;;
+        installed) ;;
+        *)
+            warn "could not install Postfix — sites will not be able to send mail"
+            return ;;
+    esac
 
     postconf -e 'inet_interfaces = loopback-only' >>"$LOG_FILE" 2>&1 || true
     systemctl restart postfix >>"$LOG_FILE" 2>&1 || true
@@ -2582,11 +3118,19 @@ configure_redis() {
     # Proven, not assumed: if Redis cannot be reached with this credential the
     # panel must not be configured to depend on it, or the first request 500s
     # with NOAUTH and the screen you would fix it from is behind that failure.
-    local candidate
-    for candidate in "${candidates[@]}"; do
-        if redis_password_works "$candidate"; then
-            REDIS_PASSWORD="$candidate"
-            break
+    #
+    # Three tries, a second apart: Ubuntu's updates may be running beside this
+    # step, and their needrestart hook can restart Redis under the probe.
+    local candidate attempt
+    for attempt in 1 2 3; do
+        for candidate in "${candidates[@]}"; do
+            if redis_password_works "$candidate"; then
+                REDIS_PASSWORD="$candidate"
+                break 2
+            fi
+        done
+        if (( attempt < 3 )); then
+            sleep 1
         fi
     done
 
@@ -2613,7 +3157,9 @@ setup_backend() {
     # Through the interpreter rather than relying on composer's own shebang.
     # The `php` symlink above makes the shebang work too, but naming the binary
     # here means this step does not depend on PATH at all.
+    progress_start "installing the API's PHP dependencies" composer
     run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" "${COMPOSER_BIN:-/usr/local/bin/composer}" install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
+    progress_stop
     ok "dependencies installed"
 
     [[ -f "${dir}/.env" ]] || cp "${dir}/.env.example" "${dir}/.env"
@@ -2860,8 +3406,32 @@ build_frontend() {
     fi
 
     say "     this is the slow part — a few minutes"
-    run sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
-        npm --prefix "$dir" ci --no-audit --no-fund
+    frontend_deps
+
+    # Ubuntu's first-boot updates usually run beside this step now (see
+    # install_packages), and dpkg, unattended-upgrades and an occasional
+    # update-initramfs take a few hundred MB of their own. So, only while
+    # they run:
+    #
+    #   - a server below the recommended RAM waits for them and builds alone,
+    #     as every install did before: beside them it could run out of memory;
+    #   - a larger one builds beside them, but as the process the kernel stops
+    #     first (oom_score_adj +500) — never dpkg in the middle of an upgrade;
+    #   - a build killed for memory there waits for them, then builds once
+    #     more, alone, as before. A second kill is explained as always.
+    #
+    # Nothing here touches unattended-upgrades; only our own score moves.
+    local ram beside=0
+    if package_manager_busy; then
+        ram=$(req_ram_mb)
+        if (( ram < RECOMMENDED_RAM_MB - RAM_TOLERANCE_MB )); then
+            say "     Waiting for Ubuntu's updates to finish before building — building beside them could run out of memory on a server with ${ram} MB of RAM"
+            wait_for_apt_lock
+        else
+            beside=1
+        fi
+    fi
+
     # Not through run(): when the kernel kills the build for memory, all the
     # log says is "Killed", and that needs explaining in words.
     #
@@ -2870,25 +3440,70 @@ build_frontend() {
     # this installer included, and then nothing explains anything (seen live
     # under a systemd MemoryMax). So the installer makes itself the last thing
     # it would pick while the build runs, and the build goes back to the
-    # score it would have had. Root may lower its own score; anyone may raise.
-    local since oom_before adj rc=0
-    since=$(date +%s)
-    oom_before=$(req_oom_kills)
+    # score it would have had — or +500 beside Ubuntu's updates. Root may
+    # lower its own score; anyone may raise.
+    local since oom_before adj rc attempt
     adj=$(cat "/proc/$BASHPID/oom_score_adj" 2>/dev/null || echo 0)
-    echo -900 >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
-    (
+    for attempt in 1 2; do
+        rc=0
+        since=$(date +%s)
+        oom_before=$(req_oom_kills)
+        echo -900 >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
+        progress_start "building the interface (usually 2–3 min)" build
+        (
+            echo "$adj" >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
+            if (( beside )); then
+                echo 500 >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
+            fi
+            exec sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
+                "NODE_OPTIONS=--max-old-space-size=${heap_mb}" \
+                npm --prefix "$dir" run build
+        ) >>"$LOG_FILE" 2>&1 || rc=$?
+        progress_stop
         echo "$adj" >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
-        exec sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
-            "NODE_OPTIONS=--max-old-space-size=${heap_mb}" \
-            npm --prefix "$dir" run build
-    ) >>"$LOG_FILE" 2>&1 || rc=$?
-    echo "$adj" >"/proc/$BASHPID/oom_score_adj" 2>/dev/null || true
-    if (( rc != 0 )); then
-        build_was_killed "$rc" "$since" "$oom_before" && die "$(build_kill_message)"
-        report_failure "This command failed. Its output is in the log." "\$ npm --prefix ${dir} run build"
-        exit 1
-    fi
+        if (( rc != 0 )); then
+            if (( beside && attempt == 1 )) && build_was_killed "$rc" "$since" "$oom_before"; then
+                say "     The build ran out of memory beside Ubuntu's updates; waiting for them, then building again"
+                wait_for_apt_lock
+                beside=0
+                continue
+            fi
+            build_was_killed "$rc" "$since" "$oom_before" && die "$(build_kill_message)"
+            report_failure "This command failed. Its output is in the log." "\$ npm --prefix ${dir} run build"
+            exit 1
+        fi
+        break
+    done
     ok "panel built (${heap_mb} MB build heap)"
+}
+
+# `npm ci` for the interface, skipped when node_modules already matches
+# package-lock.json (the marker below): when it ran while install_packages
+# waited for the package lock, or on a re-run of the installer.
+frontend_deps() {
+    local dir="${APP_DIR}/frontend" node_dir marker sum
+
+    [[ -x "${NODE_BIN:-}" ]] || NODE_BIN=$(find_node_bin)
+    [[ -x "${NODE_BIN:-}" ]] || die "cannot find Node ${NODE_VERSION} under ${FNM_DIR}"
+    node_dir=$(dirname "$NODE_BIN")
+    marker="${dir}/node_modules/.panel-ci.sha256"
+    sum=$(sha256sum "${dir}/package-lock.json" 2>/dev/null | cut -c1-64 || true)
+
+    if [[ -n "$sum" && -f "$marker" && "$(cat "$marker" 2>/dev/null)" == "$sum" ]]; then
+        skip "the interface's packages (package-lock.json unchanged)"
+        return 0
+    fi
+
+    progress_start "downloading the interface's packages" npm_ci
+    run sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
+        npm --prefix "$dir" ci --no-audit --no-fund
+    progress_stop
+
+    if [[ -n "$sum" ]]; then
+        printf '%s\n' "$sum" >"$marker"
+        chown "${APP_USER}:${APP_USER}" "$marker"
+    fi
+    ok "the interface's packages are installed"
 }
 
 # Did the kernel kill the build for lack of memory? Exit 137 is SIGKILL. npm
@@ -3348,15 +3963,9 @@ ensure_ols_dynamic_response_limit() {
 # one source with signed-by.
 OLS_PACKAGES_DONE=0
 
-install_ols_packages() {
-    # Called twice on this stack -- once early from install_packages so the
-    # panel has a PHP to run composer with, once from configure_ols where it
-    # has always lived. The second is a no-op rather than a second apt run.
-    if (( OLS_PACKAGES_DONE )); then
-        return 0
-    fi
-    OLS_PACKAGES_DONE=1
-
+# The LiteSpeed source only; install_packages refreshes it with the others and
+# installs openlitespeed in its one list.
+add_ols_repository() {
     local keyring=/usr/share/keyrings/litespeed.gpg
     local list=/etc/apt/sources.list.d/litespeed.list
 
@@ -3437,12 +4046,20 @@ install_ols_packages() {
     # LiteSpeed publish one suite per Debian/Ubuntu codename under debian/.
     printf 'deb [signed-by=%s] http://rpms.litespeedtech.com/debian/ %s main\n' \
         "$keyring" "$OS_CODENAME" >"$list"
+    ok "LiteSpeed repository added (${OS_CODENAME})"
+}
+
+# lsphp, straight after install_packages's one install (openlitespeed is in
+# that list). Called twice on this stack -- once from install_packages so the
+# panel has a PHP to run composer with, once from configure_ols where it has
+# always lived. The second is a no-op rather than a second apt run.
+install_ols_packages() {
+    if (( OLS_PACKAGES_DONE )); then
+        return 0
+    fi
+    OLS_PACKAGES_DONE=1
 
     export DEBIAN_FRONTEND=noninteractive
-    wait_for_apt_lock
-    run_progress "Refreshing package lists from the LiteSpeed repository" apt-get update -qq
-
-    run apt-get install -y openlitespeed
 
     # lsphp is for the *hosted sites*, not the panel. Installed here so the
     # first site created does not have to wait for it, and so a box that cannot
@@ -3463,7 +4080,8 @@ install_ols_packages() {
     # both jammy and noble, verified 2026-09-10 against their Packages index).
     # A version with no -pgsql would have no -mysql and no interpreter either,
     # so this line already fails for it.
-    local lsphp="lsphp${PHP_VERSION//./}"
+    local lsphp="lsphp${PHP_VERSION//./}" started=$SECONDS
+    say "     → Installing ${lsphp} and its extensions..."
     # The panel's own extensions are in this list too, because on this stack the
     # panel runs on the same lsphp its sites do. curl/intl/sqlite3 are what
     # Laravel and the panel's SQLite database need; redis/igbinary back the
@@ -3484,6 +4102,7 @@ install_ols_packages() {
     if ! apt-get install -y "${lsphp}-imagick" "${lsphp}-imap" >>"$LOG_FILE" 2>&1; then
         warn "${lsphp} has no imagick/imap package — sites on it run without them"
     fi
+    ok "Installing ${lsphp} and its extensions ($((SECONDS - started))s)"
 }
 
 # The panel's own vhconf.conf.
@@ -4592,7 +5211,7 @@ configure_tls_ols() {
         args+=(--register-unsafely-without-email)
     fi
 
-    if certbot "${args[@]}" >>"$LOG_FILE" 2>&1; then
+    if certbot_issue "${args[@]}"; then
         cert="/etc/letsencrypt/live/${PANEL_HOST}/fullchain.pem"
         key="/etc/letsencrypt/live/${PANEL_HOST}/privkey.pem"
         TLS_STATE="letsencrypt"
@@ -4707,16 +5326,7 @@ configure_tls() {
         return
     fi
 
-    export DEBIAN_FRONTEND=noninteractive
-    case "$WEB_SERVER" in
-        nginx)  run apt-get install -y certbot python3-certbot-nginx ;;
-        apache) run apt-get install -y certbot python3-certbot-apache ;;
-        # No certbot plugin exists for OpenLiteSpeed. --webroot instead: certbot
-        # drops its token in the document root and never touches the config, so
-        # installing the certificate is our job (see install_ols_certificate).
-        openlitespeed) run apt-get install -y certbot ;;
-    esac
-
+    # certbot and its plugin came in with every other package (panel_packages).
     if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
         configure_tls_ols
         return
@@ -4735,7 +5345,7 @@ configure_tls() {
         args+=(--register-unsafely-without-email)
     fi
 
-    if certbot "${args[@]}" >>"$LOG_FILE" 2>&1; then
+    if certbot_issue "${args[@]}"; then
         ok "Let's Encrypt certificate issued"
         TLS_STATE="letsencrypt"
         SCHEME="https"
@@ -4839,6 +5449,37 @@ NGINX
         TLS_STATE="none"
         SCHEME="http"
     fi
+}
+
+# certbot, with a short retry while Ubuntu's updates run beside it: their
+# needrestart hook can restart the web server in the middle of the challenge.
+# Once 10 s later, then once more after they let go of the package lock. Three
+# tries at most, well inside Let's Encrypt's 5 failed validations per host an
+# hour. Never fatal: the callers fall back to a self-signed certificate.
+certbot_issue() {
+    local attempt
+
+    progress_start "getting a certificate from Let's Encrypt" certificate
+    for attempt in 1 2 3; do
+        if certbot "$@" >>"$LOG_FILE" 2>&1; then
+            progress_stop
+            return 0
+        fi
+        if (( attempt == 3 )) || ! package_manager_busy; then
+            break
+        fi
+        if (( attempt == 1 )); then
+            say "     certbot failed while Ubuntu's updates were running; trying again in 10 s"
+            sleep 10
+        else
+            progress_stop
+            say "     certbot failed again; waiting for Ubuntu's updates to let go, then one last try"
+            wait_for_apt_lock soft || break
+            progress_start "getting a certificate from Let's Encrypt" certificate
+        fi
+    done
+    progress_stop
+    return 1
 }
 
 # ─── SSH login status ────────────────────────────────────────────────────────
@@ -5061,6 +5702,13 @@ send_progress() {
             printf ',"step":%s,"total":%s' "${STEP_NO:-0}" "${STEP_TOTAL:-0}"
             printf ',"title":%s' "$(json_str "$(one_line "$CURRENT_STEP")")"
             printf ',"started_at":%s,"updated_at":%s' "${INSTALL_STARTED:-0}" "$(date +%s)"
+            # What the long command of this step is doing right now (the
+            # ticker's line), only when Central asked: PROGRESS_ACTIVITY=1.
+            if [[ "${PROGRESS_ACTIVITY:-0}" == "1" && -n "${ACTIVITY_CODE:-}" ]]; then
+                printf ',"activity":%s' "$(json_str "$(one_line "${ACTIVITY_TEXT:-}" 200)")"
+                printf ',"activity_code":%s' "$(json_str "$ACTIVITY_CODE")"
+                printf ',"activity_elapsed":%s' "$(( ${ACTIVITY_ELAPSED:-0} + 0 ))"
+            fi
             if [[ "$state" == "failed" ]]; then
                 # Longer than the login screen's line: the fresh-server stop
                 # names everything it found.
@@ -5440,10 +6088,16 @@ finish() {
     step "Checking the installation"
     if (( DRY_RUN )); then
         printf '     %s$ artisan panel:doctor%s\n' "$DIM" "$RESET"
-    elif sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:doctor' -- "$backend" "${PANEL_PHP_BIN}"; then
-        ok "all checks passed"
     else
-        warn "some checks failed — see above. The panel is installed but parts of it will not work until these are fixed."
+        local doctor_rc=0
+        progress_start "checking the installation" doctor
+        sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:doctor' -- "$backend" "${PANEL_PHP_BIN}" || doctor_rc=$?
+        progress_stop
+        if (( doctor_rc == 0 )); then
+            ok "all checks passed"
+        else
+            warn "some checks failed — see above. The panel is installed but parts of it will not work until these are fixed."
+        fi
     fi
 
     save_install_state installed
@@ -5481,6 +6135,17 @@ finish() {
 
     printf '  Then use the setup page to install a database engine and anything\n'
     printf '  else you need.\n\n'
+
+    # The install no longer waits for Ubuntu's first-boot updates (they run
+    # beside it; see install_packages), so on a new server they can still be
+    # going. Nothing to do about it but know: the panel's own installs wait
+    # for them, and the setup page says so (system_updates_running).
+    if ubuntu_updates_running; then
+        printf '  ✅ %sPanel is ready.%s Ubuntu is still finishing its security updates in the\n' "$BOLD" "$RESET"
+        printf '     background (usually a few minutes). Installing new software from the\n'
+        printf "     panel may take a few extra minutes until it's done.\n\n"
+        printf 'Ubuntu updates still running at the end of the install\n' >>"$LOG_FILE"
+    fi
 }
 
 # ─── Run ─────────────────────────────────────────────────────────────────────
@@ -5499,15 +6164,24 @@ main() {
         exit 0
     fi
 
+    RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/${PANEL_SLUG}-install.XXXXXX")"
+    trap on_exit EXIT
+
     # First, because everything after this changes the server: from here on an
     # administrator who logs in can see how far it got.
     start_login_status
     protect_from_needrestart
     configure_swap
-    install_packages
-    # fnm's shared runtime tree is owned by the panel account, so that
-    # account must exist before install_node() changes its ownership.
+    # Before the packages, not after: install_node() hands fnm's tree to this
+    # account, and install_packages may run it early, while it waits for the
+    # package lock. useradd needs no package — and run before apt, it never
+    # contends with a postinst adding a user of its own for /etc/passwd's lock.
     create_user
+    # Every apt operation of the install, in one block (see install_packages).
+    # Nothing after it may use apt: Ubuntu's first-boot updates start right
+    # behind it and hold the lock for minutes, and they run beside everything
+    # below, which needs no package. InstallerAptPhaseTest holds that line.
+    install_packages
     install_node
     fetch_source
     configure_redis
