@@ -3941,6 +3941,12 @@ PANELINI
     # panel does the same on every edit (see OlsSharedConfig); the installer is
     # the one write that happens before the panel exists to do it.
     [[ -f "${conf}.preinstall" ]] || run cp -f "$conf" "${conf}.preinstall"
+    # And this run's own copy, which is the one restored below. .preinstall is
+    # the file as OpenLiteSpeed shipped it, from the FIRST run: on a re-run the
+    # live file also holds every site the panel has registered since
+    # (OlsSharedConfig), and restoring .preinstall deleted them all from the
+    # web server (review finding R6).
+    run cp -f "$conf" "${conf}.pre-run"
 
     run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
 
@@ -3972,7 +3978,7 @@ PANELINI
     printf '%s\n' "$test_output" >>"$LOG_FILE"
 
     if (( test_status != 0 )); then
-        warn "the generated OpenLiteSpeed config failed its own test — restoring the original"
+        warn "the generated OpenLiteSpeed config failed its own test — restoring the file as it was before this run"
 
         # ALL of it, not the [ERROR] lines. OpenLiteSpeed fails this test on
         # [WARN] too — an unbalanced brace is reported as one — so filtering to
@@ -3982,10 +3988,10 @@ PANELINI
         printf '     openlitespeed -t exited %s:\n' "$test_status" >&2
         printf '%s\n' "$test_output" | sed 's/^/     /' >&2
 
-        run cp -f "${conf}.preinstall" "$conf"
+        run cp -f "${conf}.pre-run" "$conf"
 
-        # Now ask the same question of the file exactly as OpenLiteSpeed
-        # shipped it. If that fails too, nothing the panel wrote is to blame
+        # Now ask the same question of the file exactly as it was before this
+        # run. If that fails too, nothing this run wrote is to blame
         # and restoring it has fixed nothing — saying "the original has been
         # restored" would be an outright lie, and the operator would go looking
         # in the wrong file.
@@ -3994,12 +4000,12 @@ PANELINI
         printf '%s\n' "$base_output" >>"$LOG_FILE"
 
         if (( base_status != 0 )); then
-            die "OpenLiteSpeed also rejects its own shipped configuration on this
-     server, so this is not something the panel put in the file. Both
+            die "OpenLiteSpeed also rejects its configuration as it was before this
+     run, so this is not something this run put in the file. Both
      tests are in $LOG_FILE. Nothing has been left modified."
         fi
 
-        die "OpenLiteSpeed rejected the generated config; the original has been restored — see $LOG_FILE"
+        die "OpenLiteSpeed rejected the generated config; the file as it was before this run has been restored — see $LOG_FILE"
     fi
 
     run systemctl enable lshttpd

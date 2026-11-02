@@ -552,3 +552,51 @@ describe('R5: a re-run that gets a real certificate drops the self-signed fallba
             ->and($run['out'])->toContain('self_signed_apache');
     });
 });
+
+describe('R6: a rejected OpenLiteSpeed config on a re-run restores this run\'s copy', function () {
+    /*
+     * configure_ols saved httpd_config.conf as .preinstall on the first run
+     * only, and restored THAT copy whenever `openlitespeed -t` rejected the
+     * generated config. On a re-run the live file also holds every site the
+     * panel registered since (OlsSharedConfig writes them there), so the
+     * restore deleted those sites from the web server.
+     */
+    function olsRerun(): array
+    {
+        $root = reviewDir();
+        $conf = $root.'/usr/local/lsws/conf/httpd_config.conf';
+        @mkdir(dirname($conf), 0777, true);
+        @mkdir($root.'/usr/local/lsws/bin', 0777, true);
+        @mkdir($root.'/etc/tmpfiles.d', 0777, true);
+        // As OpenLiteSpeed shipped it, saved by the first run.
+        file_put_contents($conf.'.preinstall', "listener Default{\n}\n");
+        // Today: the panel, and a site created through it since.
+        file_put_contents($conf, "listener Default{\n}\nvirtualHost panel {\n}\nvirtualHost customer-shop {\n}\n");
+        // Rejects the generated config, accepts the one it is restored to.
+        file_put_contents($root.'/usr/local/lsws/bin/openlitespeed', "#!/bin/sh\nif grep -q BROKEN {$conf}; then echo '[ERROR] no'; exit 2; fi\nexit 0\n");
+        chmod($root.'/usr/local/lsws/bin/openlitespeed', 0755);
+
+        $run = reviewBash(reviewRooted(installerFnBefore('configure_ols', 'ensure_ols_context_paths'), $root, ['/usr/local/lsws/', '/etc/', '/run/']).'
+            run() { case "$1" in mkdir|cp) "$@" ;; *) : ;; esac; }
+            step() { :; }
+            die() { echo "DIE: $*"; exit 1; }
+            install_ols_packages() { :; }; ensure_ols_context_paths() { :; }; ensure_ols_dynamic_response_limit() { :; }
+            write_ols_vhost() { :; }; write_ols_api_vhost() { :; }; harden_ols_webadmin() { :; }
+            systemctl() { echo "systemctl $*"; }; systemd-tmpfiles() { :; }
+            register_ols_panel_vhost() { echo "BROKEN" >>"$1"; }
+            PANEL_SLUG=panel; APP_USER=panel; OLS_USER=nobody; APP_DIR=/var/www/panel; SINGLE_HOST=1
+            PANEL_HOST=panel.example.com; LOG_FILE=/dev/null
+            configure_ols');
+
+        return $run + ['conf' => (string) file_get_contents($conf)];
+    }
+
+    it('keeps the sites registered since the first install', function () {
+        $run = olsRerun();
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: OpenLiteSpeed rejected the generated config')
+            ->and($run['conf'])->toContain('virtualHost customer-shop')
+            ->and($run['conf'])->not->toContain('BROKEN');
+    });
+});
