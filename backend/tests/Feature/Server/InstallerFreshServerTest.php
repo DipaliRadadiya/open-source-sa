@@ -506,10 +506,44 @@ describe('a re-run', function () {
         'the panel\'s nginx site' => [fn ($r) => freshPut($r, '/etc/nginx/sites-enabled/panel.conf', "server {}\n"), "the panel's own nginx site"],
         'the panel\'s Apache site' => [fn ($r) => freshPut($r, '/etc/apache2/sites-enabled/panel.conf', "<VirtualHost *:80>\n</VirtualHost>\n"), "the panel's own Apache site"],
         'the panel\'s OpenLiteSpeed site' => [fn ($r) => freshPut($r, '/usr/local/lsws/conf/httpd_config.conf', "virtualHost panel {\n}\n"), "the panel's own OpenLiteSpeed site"],
-        'the panel\'s files' => [fn ($r) => freshDir($r, '/var/www/panel/backend'), 'the panel in '],
-        'the panel account' => [fn ($r) => file_put_contents($r.'/etc/passwd', "panel:x:999:999::/home/panel:/bin/bash\n", FILE_APPEND), 'the panel account'],
+        'the panel\'s checkout' => [fn ($r) => freshPanelCheckout($r), 'the panel in '],
+    ]);
+
+    // Review finding R2. `panel` is a generic name: a directory at
+    // /var/www/panel or an account called panel used to be enough to skip the
+    // check, and the installer then deleted that directory as a leftover
+    // clone. Somebody else's application there is not ours.
+    it('does not take :dataset for a re-run', function (Closure $mark) {
+        $box = freshImage();
+        freshPut($box['root'], '/etc/nginx/sites-enabled/customer.example.com', "server {}\n");
+        $mark($box['root']);
+
+        $run = freshPreflight($box);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->not->toContain('FRESH_CHECK=rerun')
+            ->and($run['out'])->not->toContain('PREFLIGHT-PASSED')
+            ->and($run['out'])->toContain('customer.example.com');
+    })->with([
+        'another application in /var/www/panel' => [function ($r) {
+            freshPut($r, '/var/www/panel/index.php', "<?php // customer data\n");
+            freshDir($r, '/var/www/panel/backend');
+        }],
+        'another git checkout in /var/www/panel' => [function ($r) {
+            freshDir($r, '/var/www/panel/.git');
+            freshPut($r, '/var/www/panel/artisan', "#!/usr/bin/env php\n");
+        }],
+        'an account called panel' => [fn ($r) => file_put_contents($r.'/etc/passwd', "panel:x:1001:1001::/home/panel:/bin/bash\n", FILE_APPEND)],
     ]);
 });
+
+/** What fetch_source leaves at APP_DIR: a git checkout of this repository. */
+function freshPanelCheckout(string $root): void
+{
+    freshDir($root, '/var/www/panel/.git');
+    freshPut($root, '/var/www/panel/install.sh', "#!/usr/bin/env bash\n");
+    freshPut($root, '/var/www/panel/backend/artisan', "#!/usr/bin/env php\n");
+}
 
 describe('a failure after preflight', function () {
     it('names the log in its report, and shows and sends the log\'s end with every secret redacted', function () {

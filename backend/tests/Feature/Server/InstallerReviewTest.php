@@ -381,3 +381,36 @@ describe('S4: values from the command line and environment are checked first', f
 it('S4: ends git clone\'s options before the repository and directory', function () {
     expect(installerCode())->toMatch('/git clone [^\n]*-- "\$REPO_URL" "\$APP_DIR"/');
 });
+
+describe('R2: a directory in the panel\'s place is moved aside, never deleted', function () {
+    /*
+     * fetch_source found APP_DIR without a .git, called it "a leftover from
+     * an interrupted attempt" and ran rm -rf on it. With the fresh-server
+     * guard taking any directory there for a re-run, that was somebody
+     * else's application. Even a real leftover costs nothing to keep.
+     */
+    it('keeps what was there, beside the new checkout', function () {
+        $root = reviewDir();
+        $app = $root.'/var/www/panel';
+        mkdir($app, 0777, true);
+        file_put_contents($app.'/customer.txt', 'customer data');
+
+        $run = reviewBash(installerFn('fetch_source_body').'
+            run() { "$@"; }
+            progress_start() { :; }; progress_stop() { :; }
+            assert_panel_knows_stack() { :; }
+            chown() { :; }; sudo() { :; }
+            git() { case "$1" in clone) mkdir -p "${@: -1}/.git" ;; esac; }
+            APP_DIR='.escapeshellarg($app).'; APP_USER=panel; REPO_BRANCH=main; REPO_URL=https://example.com/panel.git
+            LOG_FILE=/dev/null
+            fetch_source_body');
+
+        $aside = glob($app.'.old-*');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($app.'/.git')->toBeDirectory()
+            ->and($aside)->toHaveCount(1)
+            ->and(file_get_contents($aside[0].'/customer.txt'))->toBe('customer data')
+            ->and($run['out'])->toContain('moved to '.$aside[0]);
+    });
+});

@@ -789,7 +789,8 @@ validate_inputs() {
         || die "PANEL_SLUG must be lower-case letters, digits and '-', starting with a letter (at most 32). Got: ${PANEL_SLUG}"
     [[ "$APP_USER" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] \
         || die "APP_USER must be a Linux user name: lower-case letters, digits, '-' and '_' (at most 32). Got: ${APP_USER}"
-    # At least two levels deep: a re-run that finds no checkout here deletes it.
+    # At least two levels deep: a run that finds something other than a
+    # checkout here moves it aside (fetch_source), and /var is not a site.
     [[ "$APP_DIR" =~ ^(/[A-Za-z0-9._-]+){2,}$ && "/${APP_DIR}/" != */../* && "/${APP_DIR}/" != */./* ]] \
         || die "APP_DIR must be an absolute path at least two levels deep, like /var/www/panel, with no spaces or '..'. Got: ${APP_DIR}"
 }
@@ -1049,10 +1050,15 @@ fresh_server_rerun() {
         printf 'the panel'\''s own Apache site'
     elif grep -q "^virtualHost ${PANEL_SLUG} " "${R}/usr/local/lsws/conf/httpd_config.conf" 2>/dev/null; then
         printf 'the panel'\''s own OpenLiteSpeed site'
-    elif [[ -d "$APP_DIR" ]]; then
+    elif [[ -d "${APP_DIR}/.git" && -f "${APP_DIR}/install.sh" && -f "${APP_DIR}/backend/artisan" ]]; then
+        # A checkout of this repository, not merely something at the path:
+        # `panel` is a generic name, and a directory or an account by that
+        # name used to be enough -- the check was skipped on a server that
+        # was not ours, and fetch_source then cleared the directory as a
+        # leftover clone (review finding R2). The account is no longer asked
+        # at all: every install since the state file has one, and an account
+        # alone proves nothing.
         printf 'the panel in %s' "$APP_DIR"
-    elif grep -q "^${APP_USER}:" "${R}/etc/passwd" 2>/dev/null; then
-        printf 'the %s account' "$APP_USER"
     else
         return 1
     fi
@@ -2969,11 +2975,17 @@ fetch_source_body() {
             # .git — an interrupted clone, or something else pre-creating
             # the path. git then either refuses to clone into it or, worse,
             # leaves it in a state where later plumbing (git config, fetch)
-            # fails with a cryptic "not in a git directory". APP_DIR is
-            # entirely owned by this installer (see UPDATE_STATE_DIR above),
-            # so clearing it before a fresh clone is safe.
-            warn "${APP_DIR} exists but is not a git checkout (leftover from an interrupted attempt) — removing before cloning"
-            run rm -rf "$APP_DIR"
+            # fails with a cryptic "not in a git directory".
+            #
+            # Moved aside, not deleted. This used to be rm -rf on the theory
+            # that the installer owns APP_DIR, and with `panel` as the
+            # default name the directory was sometimes another application
+            # (review finding R2). A leftover clone costs some disk to keep;
+            # somebody's site costs everything to lose.
+            local aside
+            aside="${APP_DIR}.old-$(date +%Y%m%d-%H%M%S)"
+            run mv "$APP_DIR" "$aside"
+            warn "${APP_DIR} existed but was not a git checkout — moved to ${aside} (delete it once you have checked it is not needed)"
         fi
         progress_start "downloading the panel"
         run git clone --depth 1 --branch "$REPO_BRANCH" -- "$REPO_URL" "$APP_DIR"
