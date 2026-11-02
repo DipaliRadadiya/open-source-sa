@@ -21,13 +21,16 @@ import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive
 const DEFAULT_PRESET = "aws";
 
 // The test endpoint needs a saved id, so this saves first, then tests.
-export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri, existingNames = [] }) {
+// `initialPreset`: opened from a destination in the empty state, it starts there (and comes back to
+// it after a close); the picker inside still changes it. Callers key the dialog on it.
+export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri, existingNames = [], initialPreset = null }) {
   const t = useTranslations("storage.connect");
   const { refreshAndWait } = useRefresh();
 
   // The preset lives in component state because it selects the schema; a
   // resolver cannot be rebuilt from a value it is validating.
-  const [preset, setPreset] = useState(DEFAULT_PRESET);
+  const startPreset = initialPreset ?? DEFAULT_PRESET;
+  const [preset, setPreset] = useState(startPreset);
   const provider = providerForPreset(preset);
 
   const resolver = useMemo(() => zodResolver(createStorageDestinationSchema(preset)), [preset]);
@@ -39,7 +42,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
     defaultValues: {
       name: "",
       prefix: "",
-      config: defaultConfig(providerForPreset(DEFAULT_PRESET)),
+      config: defaultConfig(providerForPreset(startPreset)),
     },
   });
 
@@ -60,14 +63,14 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
       if (data?.existing) {
         toast.info(data.message ?? t("alreadyAdded", { name: created?.name ?? "" }));
         onOpenChange?.(false);
-        reset(DEFAULT_PRESET);
+        reset(startPreset);
         return;
       }
 
       // "This server": the backend says whether it created the folder or found it, two different pieces of news.
       toast.success(t("added"), data?.folder?.message ? { description: data.folder.message } : undefined);
       onOpenChange?.(false);
-      reset(DEFAULT_PRESET);
+      reset(startPreset);
 
       // Drive consent is keyed to an existing destination, so a new one cannot pass yet.
       if (created && provider === "google_drive_oauth") {
@@ -122,7 +125,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
   }
 
   function handleOpenChange(next) {
-    if (!next) reset(DEFAULT_PRESET);
+    if (!next) reset(startPreset);
     onOpenChange?.(next);
   }
 

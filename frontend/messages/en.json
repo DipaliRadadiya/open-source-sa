@@ -3658,12 +3658,12 @@
     "empty": {
       "title": "No Git account connected",
       "description": "Connect GitHub, GitLab or Bitbucket so applications can deploy from your repositories.",
-      "providers": "GitHub, GitLab or Bitbucket",
       "howItWorks": "How this works",
       "stepsTitle": "To get started, follow these three steps:",
-      "step1": "Create a token on {provider} with read access to your repositories.",
-      "step2": "Click Connect account and paste the token there.",
-      "step3": "Choose this account when you create an application."
+      "step1": "Pick your Git provider:",
+      "step2": "Create a token there with read access to your repositories, and paste it into the form that opens.",
+      "step3": "Choose this account when you create an application.",
+      "connectNamed": "Connect {name}"
     },
     "health": {
       "valid": "Working",
@@ -6932,9 +6932,11 @@
       "body": "Backups need somewhere to go. Connect a storage destination and any application can send its backups there.",
       "reassurance": "The keys are stored encrypted and are only ever used to upload this server's backups and remove old ones.",
       "stepsTitle": "To get started, follow these three steps:",
-      "step1": "Pick where backups should go: an S3 bucket, an FTP or SFTP server, or Google Drive.",
-      "step2": "Get a login that can upload, download and delete files there — an access key, or a username and password.",
-      "step3": "Enter those details in the form here."
+      "step1": "Pick where backups should go:",
+      "step2": "Get a login that can upload, download and delete files there, such as an access key or a username and password. Google Drive signs in with your Google account; this server needs none.",
+      "step3": "Enter those details in the form here.",
+      "otherS3": "Other S3-compatible",
+      "addNamed": "Add {name}"
     },
     "row": {
       "credentialsSet": "Credentials set",

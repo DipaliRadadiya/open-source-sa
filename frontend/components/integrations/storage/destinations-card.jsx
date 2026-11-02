@@ -6,6 +6,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { HardDrive, Plus, Trash2 } from "lucide-react";
+import { PRESETS } from "@/lib/storage/providers";
 import { deleteDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
 import { Button } from "@/components/ui/button";
@@ -20,14 +21,17 @@ import { ConnectDestinationDialog } from "@/components/integrations/storage/conn
 import { EditDestinationDialog } from "@/components/integrations/storage/edit-dialog";
 import { ReplaceCredentialsDialog } from "@/components/integrations/storage/replace-credentials-dialog";
 
-// Named in the empty state so "S3-compatible" is concrete; "other" is omitted.
-const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces"];
+// Every choice the Add destination picker offers, in its order (tester sheet, 2 Nov: only the
+// S3 providers were named). "Other" alone says nothing out of the picker, so it gets its own words.
+const EMPTY_STATE_PROVIDERS = PRESETS.filter((preset) => !preset.legacy).map((preset) => preset.value);
 
 // A plain card of rows rather than a DataTable: the list is always short.
 export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null }) {
   const t = useTranslations("storage");
   const { refreshAndWait } = useRefresh();
   const [connecting, setConnecting] = useState(false);
+  // The destination picked from the empty state; null opens the form on its usual default.
+  const [connectPreset, setConnectPreset] = useState(null);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
   // A refused delete keeps the dialog open with the reason: the backend refuses
@@ -65,7 +69,14 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
   // Shared by the header and the empty state so the two cannot differ.
   const addButton = (
     <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-      <Button type="button" disabled={!canManage} onClick={() => setConnecting(true)}>
+      <Button
+        type="button"
+        disabled={!canManage}
+        onClick={() => {
+          setConnectPreset(null);
+          setConnecting(true);
+        }}
+      >
         <Plus className="size-4" />
         {t("card.add")}
       </Button>
@@ -95,34 +106,24 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
       <CardContent className="px-5 py-0">
         {destinations.length === 0 ? (
-          // Same empty-state structure as the Git integration card: chip,
-          // title, description, reassurance, qualifying providers, steps, action.
-          <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-10 text-center sm:py-12">
-            <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-              <HardDrive className="size-6" aria-hidden />
-            </span>
-            <div className="space-y-2">
-              <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
-              <p className="max-w-md text-sm leading-6 text-muted-foreground">{t("empty.body")}</p>
-              {/* Keys are encrypted at rest and only used for this server's backups. */}
-              <p className="max-w-md text-xs leading-5 text-muted-foreground">
-                {t("empty.reassurance")}
-              </p>
+          // Two columns from md (Krishna, 2 Nov: the stacked version was too long): what this is and
+          // the action on the left, the steps on the right, with the destinations inside step 1
+          // rather than a second list above it. One column on a phone.
+          <div className="grid gap-6 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-10">
+            <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
+              <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                <HardDrive className="size-6" aria-hidden />
+              </span>
+              <div className="space-y-2">
+                <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
+                <p className="text-sm leading-6 text-muted-foreground">{t("empty.body")}</p>
+                {/* Keys are encrypted at rest and only used for this server's backups. */}
+                <p className="text-xs leading-5 text-muted-foreground">{t("empty.reassurance")}</p>
+              </div>
+              {addButton}
             </div>
 
-              {/* Qualifying providers, as text (no logos for these). */}
-            <div className="flex flex-wrap justify-center gap-2">
-              {EMPTY_STATE_PROVIDERS.map((provider) => (
-                <span
-                  key={provider}
-                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground"
-                >
-                  {t(`form.providers.${provider}`)}
-                </span>
-              ))}
-            </div>
-
-            <div className="w-full rounded-xl border bg-muted/30 p-4 text-left sm:p-5">
+            <div className="rounded-xl border bg-muted/30 p-4 sm:p-5">
               <p className="text-sm font-medium">{t("empty.stepsTitle")}</p>
               <ol className="mt-3 space-y-3 text-sm text-muted-foreground">
                 {[t("empty.step1"), t("empty.step2"), t("empty.step3")].map((step, index) => (
@@ -130,13 +131,39 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-background text-xs font-medium text-foreground ring-1 ring-border">
                       {index + 1}
                     </span>
-                    <span className="leading-5">{step}</span>
+                    <div className="min-w-0 space-y-2">
+                      <span className="block leading-5">{step}</span>
+                      {/* Every destination type, each opening the form already on it. */}
+                      {index === 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {EMPTY_STATE_PROVIDERS.map((provider) => {
+                            const name = provider === "other" ? t("empty.otherS3") : t(`form.providers.${provider}`);
+                            return (
+                              <ReasonTooltip key={provider} reason={canManage ? null : t("noPermission")}>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="xs"
+                                  disabled={!canManage}
+                                  aria-label={t("empty.addNamed", { name })}
+                                  onClick={() => {
+                                    setConnectPreset(provider);
+                                    setConnecting(true);
+                                  }}
+                                >
+                                  <Plus aria-hidden />
+                                  {name}
+                                </Button>
+                              </ReasonTooltip>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ol>
             </div>
-
-            {addButton}
           </div>
         ) : (
           <div className="divide-y">
@@ -157,7 +184,10 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         )}
       </CardContent>
 
+      {/* Keyed on the starting destination: a new one starts a fresh form. */}
       <ConnectDestinationDialog
+        key={connectPreset ?? "default"}
+        initialPreset={connectPreset}
         open={connecting}
         onOpenChange={setConnecting}
         oauthRedirectUri={oauthRedirectUri}

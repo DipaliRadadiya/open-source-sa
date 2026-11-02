@@ -54,7 +54,8 @@ test("admin attention titles keep one line from md", () => {
 test("14 Oct: Git onboarding names the real button; the Files second divider never strands", () => {
   const en = JSON.parse(read("messages/en.json"));
   assert.doesNotMatch(en.git.empty.step2, /form above/);
-  assert.match(en.git.empty.step2, /Connect account/);
+  // Since 2 Nov each provider in step 1 opens its own form, so step 2 points at that form.
+  assert.match(en.git.empty.step2, /the form that opens/);
   assert.match(read("components/applications/files/files-panel.jsx"), /<Separator orientation="vertical" className="mx-0\.5 !h-5 !self-center hidden @\[52rem\]\/toolbar:block" \/>\s*<FixPermissionsButton/);
 });
 

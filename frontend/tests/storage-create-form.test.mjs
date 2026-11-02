@@ -78,7 +78,9 @@ test("a missing field is reported at that field, in words we translate", () => {
 test("the preset is state, not a form field", () => {
   // The pairing that broke: if it ever becomes a form value it has to appear in
   // defaultValues too, or this is the same bug again.
-  assert.match(DIALOG, /const \[preset, setPreset\] = useState\(DEFAULT_PRESET\)/);
+  // Starts on the destination picked in the empty state (2 Nov), or the usual default.
+  assert.match(DIALOG, /const startPreset = initialPreset \?\? DEFAULT_PRESET;/);
+  assert.match(DIALOG, /const \[preset, setPreset\] = useState\(startPreset\)/);
   assert.doesNotMatch(DIALOG, /defaultValues:\s*\{[^}]*preset/s);
 });
 

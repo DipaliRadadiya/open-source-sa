@@ -3658,12 +3658,12 @@
     "empty": {
       "title": "Kein Git-Konto verbunden",
       "description": "Verbinden Sie GitHub, GitLab oder Bitbucket, damit Anwendungen aus Ihren Repositories deployen können.",
-      "providers": "GitHub, GitLab oder Bitbucket",
       "howItWorks": "So funktioniert es",
       "stepsTitle": "Zum Start folgen Sie diesen drei Schritten:",
-      "step1": "Erstellen Sie bei {provider} ein Token mit Lesezugriff auf Ihre Repositories.",
-      "step2": "Klicken Sie auf „Konto verbinden“ und fügen Sie dort das Token ein.",
-      "step3": "Wählen Sie dieses Konto, wenn Sie eine Anwendung anlegen."
+      "step1": "Wählen Sie Ihren Git-Anbieter:",
+      "step2": "Erstellen Sie dort ein Token mit Lesezugriff auf Ihre Repositories und fügen Sie es in das Formular ein, das sich öffnet.",
+      "step3": "Wählen Sie dieses Konto, wenn Sie eine Anwendung anlegen.",
+      "connectNamed": "{name} verbinden"
     },
     "health": {
       "valid": "Funktioniert",
@@ -6932,9 +6932,11 @@
       "body": "Backups brauchen ein Ziel. Verbinden Sie ein Speicherziel, dann kann jede Anwendung ihre Backups dorthin senden.",
       "reassurance": "Die Schlüssel werden verschlüsselt gespeichert und nur dafür genutzt, die Backups dieses Servers hochzuladen und alte zu entfernen.",
       "stepsTitle": "Zum Start folgen Sie diesen drei Schritten:",
-      "step1": "Wählen Sie, wohin Backups gehen: ein S3-Bucket, ein FTP- oder SFTP-Server oder Google Drive.",
-      "step2": "Besorgen Sie einen Zugang, der dort Dateien hoch- und herunterladen und löschen darf — einen Zugriffsschlüssel oder Benutzername und Passwort.",
-      "step3": "Tragen Sie diese Angaben hier im Formular ein."
+      "step1": "Wählen Sie, wohin Backups gehen:",
+      "step2": "Besorgen Sie einen Zugang, der dort Dateien hoch- und herunterladen und löschen darf, etwa einen Zugriffsschlüssel oder Benutzername und Passwort. Google Drive meldet sich mit Ihrem Google-Konto an; dieser Server braucht keinen.",
+      "step3": "Tragen Sie diese Angaben hier im Formular ein.",
+      "otherS3": "Anderer S3-kompatibler Speicher",
+      "addNamed": "{name} hinzufügen"
     },
     "row": {
       "credentialsSet": "Zugangsdaten gesetzt",

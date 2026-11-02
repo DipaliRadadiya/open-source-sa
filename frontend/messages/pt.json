@@ -3658,12 +3658,12 @@
     "empty": {
       "title": "Nenhuma conta Git conectada",
       "description": "Conecte GitHub, GitLab ou Bitbucket para que as aplicações possam fazer deploy dos seus repositórios.",
-      "providers": "GitHub, GitLab ou Bitbucket",
       "howItWorks": "Como funciona",
       "stepsTitle": "Para começar, siga estes três passos:",
-      "step1": "Crie um token no {provider} com acesso de leitura aos seus repositórios.",
-      "step2": "Clique em Conectar conta e cole o token lá.",
-      "step3": "Escolha esta conta ao criar uma aplicação."
+      "step1": "Escolha seu provedor Git:",
+      "step2": "Crie lá um token com acesso de leitura aos seus repositórios e cole-o no formulário que se abre.",
+      "step3": "Escolha esta conta ao criar uma aplicação.",
+      "connectNamed": "Conectar {name}"
     },
     "health": {
       "valid": "Funcionando",
@@ -6932,9 +6932,11 @@
       "body": "Os backups precisam de um destino. Conecte um destino de armazenamento e qualquer aplicação poderá enviar seus backups para lá.",
       "reassurance": "As chaves são armazenadas criptografadas e são usadas somente para enviar os backups deste servidor e remover os antigos.",
       "stepsTitle": "Para começar, siga estes três passos:",
-      "step1": "Escolha para onde vão os backups: um bucket S3, um servidor FTP ou SFTP, ou o Google Drive.",
-      "step2": "Obtenha um acesso que possa enviar, baixar e apagar arquivos lá — uma chave de acesso, ou usuário e senha.",
-      "step3": "Insira esses dados no formulário aqui."
+      "step1": "Escolha para onde vão os backups:",
+      "step2": "Obtenha um acesso que possa enviar, baixar e apagar arquivos lá, como uma chave de acesso ou usuário e senha. O Google Drive entra com sua conta Google; este servidor não precisa de nenhum.",
+      "step3": "Insira esses dados no formulário aqui.",
+      "otherS3": "Outro compatível com S3",
+      "addNamed": "Adicionar {name}"
     },
     "row": {
       "credentialsSet": "Credenciais definidas",

@@ -16,19 +16,22 @@ function focusConnectButton(event) {
 }
 
 // The form mounts fresh per provider so its generated Zod schema never changes under a half-filled form.
+// `initialProvider`: opened from a provider in the empty state, it skips the picker and comes back to
+// that form after a close ("Change" still leads to the picker). Callers key the dialog on it.
 export function ConnectDialog({
   providers,
   open,
   onAccountConnected,
   onOpenChange,
+  initialProvider = null,
 }) {
   const t = useTranslations("git.connect");
   const { name: brand } = useBranding();
-  const [chosen, setChosen] = useState(null);
+  const [chosen, setChosen] = useState(initialProvider);
 
   function handleOpenChange(next) {
-    // Reset to step one on close.
-    if (!next) setChosen(null);
+    // Reset to where it opened on close.
+    if (!next) setChosen(initialProvider);
     onOpenChange?.(next);
   }
 

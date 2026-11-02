@@ -3658,12 +3658,12 @@
     "empty": {
       "title": "Aucun compte Git connecté",
       "description": "Connectez GitHub, GitLab ou Bitbucket pour que les applications puissent se déployer depuis vos dépôts.",
-      "providers": "GitHub, GitLab ou Bitbucket",
       "howItWorks": "Comment ça marche",
       "stepsTitle": "Pour commencer, suivez ces trois étapes :",
-      "step1": "Créez un token sur {provider} avec accès en lecture à vos dépôts.",
-      "step2": "Cliquez sur « Connecter un compte » et collez-y le jeton.",
-      "step3": "Choisissez ce compte lors de la création d'une application."
+      "step1": "Choisissez votre fournisseur Git :",
+      "step2": "Créez-y un token avec accès en lecture à vos dépôts, puis collez-le dans le formulaire qui s'ouvre.",
+      "step3": "Choisissez ce compte lors de la création d'une application.",
+      "connectNamed": "Connecter {name}"
     },
     "health": {
       "valid": "Fonctionne",
@@ -6932,9 +6932,11 @@
       "body": "Les sauvegardes ont besoin d'un endroit où aller. Connectez une destination de stockage et chaque application pourra y envoyer ses sauvegardes.",
       "reassurance": "Les clés sont stockées chiffrées et ne servent qu'à envoyer les sauvegardes de ce serveur et à supprimer les anciennes.",
       "stepsTitle": "Pour commencer, suivez ces trois étapes :",
-      "step1": "Choisissez où iront les sauvegardes : un bucket S3, un serveur FTP ou SFTP, ou Google Drive.",
-      "step2": "Obtenez un accès qui peut envoyer, télécharger et supprimer des fichiers à cet endroit : une clé d'accès, ou un identifiant et un mot de passe.",
-      "step3": "Saisissez ces informations dans le formulaire ici."
+      "step1": "Choisissez où iront les sauvegardes :",
+      "step2": "Obtenez un accès qui peut envoyer, télécharger et supprimer des fichiers à cet endroit, comme une clé d'accès ou un identifiant et un mot de passe. Google Drive se connecte avec votre compte Google ; ce serveur n'en demande aucun.",
+      "step3": "Saisissez ces informations dans le formulaire ici.",
+      "otherS3": "Autre compatible S3",
+      "addNamed": "Ajouter {name}"
     },
     "row": {
       "credentialsSet": "Identifiants définis",

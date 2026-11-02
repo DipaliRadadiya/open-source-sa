@@ -3658,12 +3658,12 @@
     "empty": {
       "title": "No hay ninguna cuenta de Git conectada",
       "description": "Conecta GitHub, GitLab o Bitbucket para que las aplicaciones puedan desplegar desde tus repositorios.",
-      "providers": "GitHub, GitLab o Bitbucket",
       "howItWorks": "Cómo funciona",
       "stepsTitle": "Para empezar, sigue estos tres pasos:",
-      "step1": "Crea un token en {provider} con acceso de lectura a tus repositorios.",
-      "step2": "Pulsa Conectar cuenta y pega ahí el token.",
-      "step3": "Elige esta cuenta al crear una aplicación."
+      "step1": "Elige tu proveedor de Git:",
+      "step2": "Crea allí un token con acceso de lectura a tus repositorios y pégalo en el formulario que se abre.",
+      "step3": "Elige esta cuenta al crear una aplicación.",
+      "connectNamed": "Conectar {name}"
     },
     "health": {
       "valid": "Funciona",
@@ -6932,9 +6932,11 @@
       "body": "Las copias necesitan un lugar al que ir. Conecta un destino de almacenamiento y cualquier aplicación podrá enviar allí sus copias.",
       "reassurance": "Las claves se guardan cifradas y solo se usan para subir las copias de este servidor y borrar las antiguas.",
       "stepsTitle": "Para empezar, sigue estos tres pasos:",
-      "step1": "Elige a dónde irán las copias: un bucket S3, un servidor FTP o SFTP, o Google Drive.",
-      "step2": "Consigue un acceso que pueda subir, descargar y borrar archivos allí: una clave de acceso, o un usuario y contraseña.",
-      "step3": "Introduce esos datos en el formulario de aquí."
+      "step1": "Elige a dónde irán las copias:",
+      "step2": "Consigue un acceso que pueda subir, descargar y borrar archivos allí, como una clave de acceso o un usuario y contraseña. Google Drive usa tu cuenta de Google; este servidor no necesita ninguno.",
+      "step3": "Introduce esos datos en el formulario de aquí.",
+      "otherS3": "Otro compatible con S3",
+      "addNamed": "Añadir {name}"
     },
     "row": {
       "credentialsSet": "Credenciales guardadas",

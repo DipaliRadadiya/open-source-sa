@@ -31,6 +31,8 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
   // Only the manual re-check spins the button; rows show their own "checking".
   const [rechecking, setRechecking] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  // The provider picked from the empty state; null opens the provider picker.
+  const [connectProvider, setConnectProvider] = useState(null);
   // The account just connected in this tab (cleared on refresh/navigation);
   // the next-step prompt names it and links with its id.
   const [justConnected, setJustConnected] = useState(null);
@@ -94,7 +96,10 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
     <ReasonTooltip reason={connectReason}>
       <Button
         disabled={Boolean(connectReason)}
-        onClick={() => setConnecting(true)}
+        onClick={() => {
+          setConnectProvider(null);
+          setConnecting(true);
+        }}
         data-git-connect
       >
         <Plus className="size-4" />
@@ -139,54 +144,58 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
         <CardContent className="px-5 py-0">
           {accounts.length === 0 ? (
-            <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-10 text-center sm:py-12">
-              <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                <GitBranch className="size-6" aria-hidden />
-              </span>
-
-              <div className="space-y-2">
-                <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
-                <p className="max-w-md text-sm leading-6 text-muted-foreground">
-                  {t("empty.description")}
-                </p>
-                <p className="max-w-md text-xs leading-5 text-muted-foreground">
-                  {t("connect.readOnly", { brand })}
-                </p>
+            // The same two columns as the Storage empty state (Krishna, 2 Nov): what this is and the
+            // action on the left, the steps on the right, each provider in step 1 opening its form.
+            <div className="grid gap-6 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-10">
+              <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
+                <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                  <GitBranch className="size-6" aria-hidden />
+                </span>
+                <div className="space-y-2">
+                  <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
+                  <p className="text-sm leading-6 text-muted-foreground">{t("empty.description")}</p>
+                  <p className="text-xs leading-5 text-muted-foreground">{t("connect.readOnly", { brand })}</p>
+                </div>
+                {connectButton}
               </div>
 
-              {providers.length > 0 ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {providers.map((provider) => (
-                    <span
-                      key={provider.name}
-                      className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground"
-                    >
-                      <ProviderLogo provider={provider.name} className="size-3.5" />
-                      {provider.title}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="w-full rounded-xl border bg-muted/30 p-4 text-left sm:p-5">
+              <div className="rounded-xl border bg-muted/30 p-4 sm:p-5">
                 <p className="text-sm font-medium">{t("empty.stepsTitle")}</p>
                 <ol className="mt-3 space-y-3 text-sm text-muted-foreground">
-                  {[
-                    t("empty.step1", { provider: t("empty.providers") }),
-                    t("empty.step2"),
-                    t("empty.step3"),
-                  ].map((step, index) => (
+                  {[t("empty.step1"), t("empty.step2"), t("empty.step3")].map((step, index) => (
                     <li key={step} className="flex items-start gap-3">
                       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-background text-xs font-medium text-foreground ring-1 ring-border">
                         {index + 1}
                       </span>
-                      <span className="leading-5">{step}</span>
+                      <div className="min-w-0 space-y-2">
+                        <span className="block leading-5">{step}</span>
+                        {index === 0 && providers.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {providers.map((provider) => (
+                              <ReasonTooltip key={provider.name} reason={connectReason}>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="xs"
+                                  disabled={Boolean(connectReason)}
+                                  aria-label={t("empty.connectNamed", { name: provider.title })}
+                                  onClick={() => {
+                                    setConnectProvider(provider);
+                                    setConnecting(true);
+                                  }}
+                                >
+                                  <ProviderLogo provider={provider.name} className="size-3.5" />
+                                  {provider.title}
+                                </Button>
+                              </ReasonTooltip>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ol>
               </div>
-
-              {connectButton}
             </div>
           ) : (
             <>
@@ -246,7 +255,10 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
       {canManage ? (
         <>
+          {/* Keyed on the starting provider: a new one starts a fresh form. */}
           <ConnectDialog
+            key={connectProvider?.name ?? "picker"}
+            initialProvider={connectProvider}
             providers={providers}
             open={connecting}
             onAccountConnected={setJustConnected}
