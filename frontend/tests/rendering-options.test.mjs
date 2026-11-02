@@ -67,3 +67,13 @@ test("the create page filters the types before the form sees them", async () => 
   const page = fs.readFileSync(new URL("../app/(app)/applications/create/page.jsx", import.meta.url), "utf8");
   assert.match(page, /withServableRenderingTypes\(types\.siteTypes, capabilities\?\.servingProfiles\)/);
 });
+
+test("on a PHP server the PHP version is shown, and sent, only for a PHP application", async () => {
+  // It stayed under "Server-side rendering", "Client-side rendering" and "Static", which
+  // never run PHP. The form sends only visible fields, so hiding it also stops sending it.
+  const fs = await import("node:fs");
+  const form = fs.readFileSync(new URL("../components/applications/create-application-form.jsx", import.meta.url), "utf8");
+  assert.match(form, /const asksRendering = typeFields\.some\(\(config\) => config\.name === "rendering_type"\);/);
+  assert.match(form, /\(config\.source !== "php_versions" \|\| !asksRendering \|\| renderingType === "php"\)/);
+  assert.match(form, /\/\/ Only visible fields are sent\.\n\s+for \(const config of visibleFields\)/);
+});

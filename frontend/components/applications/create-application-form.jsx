@@ -915,11 +915,15 @@ export function CreateApplicationForm({
     return String(dependencyValues?.[field] ?? "") === expected;
   };
 
+  // A type that asks how it is rendered (Git) runs PHP only as a PHP application: its PHP
+  // version is shown, and sent, for that choice alone.
+  const asksRendering = typeFields.some((config) => config.name === "rendering_type");
   const visibleFields = typeFields
     .filter(
       (config) =>
         dependsOnSatisfied(config.depends_on) &&
         (config.depends_on !== "rendering_type" || renderingType === "ssr") &&
+        (config.source !== "php_versions" || !asksRendering || renderingType === "php") &&
         (config.depends_on !== "node_rendering" ||
           ["ssr", "csr"].includes(renderingType)),
     )
