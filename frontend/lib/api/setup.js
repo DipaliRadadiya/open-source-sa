@@ -1,5 +1,6 @@
 import { api } from "@/lib/api/client";
 import { setupResponseSchema } from "@/lib/schemas/setup";
+import { RETRY_RESTART } from "@/lib/api/restart-blip";
 
 // The axios client already bakes in the `/api` prefix, so strip it from the
 // endpoint the API hands back (`/api/databases/engines/mariadb`).
@@ -13,6 +14,7 @@ export function runSetupAction(action, body) {
     method: action.method ?? "POST",
     url: toClientPath(action.endpoint),
     ...(body ? { data: body } : {}),
+    ...RETRY_RESTART,
   });
 }
 

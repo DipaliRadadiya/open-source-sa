@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { RETRY_RESTART } from "@/lib/api/restart-blip";
 import { chunkSizeFor } from "@/lib/files/chunk-size";
 
 /** Engine capability list — also the poll target while an install runs. */
@@ -8,7 +9,7 @@ export function getEngines({ signal } = {}) {
 
 // 202, then poll `getEngines`. An engine already present returns 200 with `queued: false`.
 export function installEngine(engine) {
-  return api.post(`/databases/engines/${encodeURIComponent(engine)}`);
+  return api.post(`/databases/engines/${encodeURIComponent(engine)}`, undefined, RETRY_RESTART);
 }
 
 // For naming them only: the delete call sends a flag and the API resolves the

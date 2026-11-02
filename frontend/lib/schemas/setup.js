@@ -50,6 +50,8 @@ export const setupResponseSchema = z.object({
       label: z.string().nullish(),
       stack: z.string().nullish(),
       web_server: z.string().nullish(),
+      // Ubuntu's own updates (unattended-upgrades) are running; installs wait for them.
+      system_updates_running: z.boolean().catch(false).default(false),
       components: z.array(componentSchema).default([]),
     })
     .passthrough(),

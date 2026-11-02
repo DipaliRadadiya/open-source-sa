@@ -14,6 +14,7 @@ import { getAllApplications } from "@/lib/applications/get-applications";
 import { getEngines } from "@/lib/databases/get-databases";
 import { attentionFindings } from "@/lib/dashboard/attention";
 import { SetupBanner } from "@/components/setup/setup-banner";
+import { SystemUpdatesNote } from "@/components/setup/system-updates-note";
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/dashboard/server-info-card";
@@ -98,6 +99,7 @@ export default async function DashboardPage() {
       )}
 
       <SetupBanner remaining={setupRemaining} />
+      <SystemUpdatesNote running={setupResult.setup?.system_updates_running} />
 
       {allowed ? (
         <>

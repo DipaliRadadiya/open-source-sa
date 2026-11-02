@@ -1461,7 +1461,8 @@
       }
     },
     "whatToDo": "Qué hacer",
-    "noAnswer": "El servidor no respondió. Puede que se haya hecho o no; recarga la página para ver cómo quedó."
+    "noAnswer": "El servidor no respondió. Puede que se haya hecho o no; recarga la página para ver cómo quedó.",
+    "serverRestarting": "El servidor está reiniciando un servicio. Inténtalo de nuevo en un momento."
   },
   "logs": {
     "title": "Registros del sistema",
@@ -6913,7 +6914,8 @@
     "fail2banOff": "Instalado, pero todavía no protege nada. <link>Activa la protección de SSH en Fail2ban</link>.",
     "recommendedProgress": "{done} de {total} recomendados instalados",
     "optionalLeft": "{count, plural, one {# extra opcional disponible abajo} other {# extras opcionales disponibles abajo}}",
-    "dockerDetail": "ejecuta los contenedores de tus aplicaciones"
+    "dockerDetail": "ejecuta los contenedores de tus aplicaciones",
+    "systemUpdatesRunning": "Ubuntu todavía está terminando sus actualizaciones de seguridad en segundo plano (suele tardar unos minutos). Instalar software nuevo puede tardar unos minutos más hasta que terminen."
   },
   "storage": {
     "title": "Almacenamiento",

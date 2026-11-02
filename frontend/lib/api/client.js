@@ -1,4 +1,5 @@
 import axios from "axios";
+import { isRestartBlip, RESTART_RETRY_MS } from "./restart-blip.js";
 
 // All backend routes are under /api, so bake the prefix into baseURL —
 // endpoint calls stay clean (api.post("/login") -> .../api/login).
@@ -48,6 +49,13 @@ api.interceptors.response.use(
       } catch {
         // Couldn't renew — fall through and report the original failure.
       }
+    }
+
+    // Opted in per call (install buttons): one replay after a restart 503, then the error stands.
+    if (config?.retryRestart && !config._restartRetried && isRestartBlip(error)) {
+      config._restartRetried = true;
+      await new Promise((resolve) => setTimeout(resolve, RESTART_RETRY_MS));
+      return api(config);
     }
 
     if (status === 401 && typeof window !== "undefined") {

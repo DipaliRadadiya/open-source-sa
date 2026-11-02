@@ -9,11 +9,14 @@ import { ArrowRight, CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 import { fetchSetup, runSetupAction } from "@/lib/api/setup";
 import { apiMessage } from "@/lib/api/error-message";
 import { SetupComponent } from "@/components/setup/setup-component";
+import { SystemUpdatesNote } from "@/components/setup/system-updates-note";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const POLL_MS = 3000;
+// Only Ubuntu's own updates to watch: slower, just so the note goes away by itself.
+const UPDATES_POLL_MS = 15000;
 // Past this, stop implying steady progress (apt on a small box is slow).
 const SLOW_AFTER_MS = 3 * 60 * 1000;
 // Past this, stop claiming an install without the server agreeing (a stuck
@@ -55,28 +58,31 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
     return () => clearTimeout(id);
   }, [started]);
 
-  // Poll only while something is in flight; pause when the tab is hidden.
+  const updatesRunning = Boolean(setup.system_updates_running);
+  const pollMs = anyInstalling ? POLL_MS : updatesRunning ? UPDATES_POLL_MS : null;
+
+  // Poll while something is in flight or Ubuntu is updating; pause when the tab is hidden.
   useEffect(() => {
-    if (!anyInstalling) return undefined;
+    if (!pollMs) return undefined;
     let active = true;
     const startedAt = Date.now();
     const id = setInterval(async () => {
       if (document.hidden) return;
-      if (Date.now() - startedAt > SLOW_AFTER_MS) setSlow(true);
+      if (pollMs === POLL_MS && Date.now() - startedAt > SLOW_AFTER_MS) setSlow(true);
       try {
         const next = await fetchSetup();
         if (active && next) setSetup(next);
       } catch {
         // Keep polling — a blip mid-install is not a failed install.
       }
-    }, POLL_MS);
+    }, pollMs);
     return () => {
       active = false;
       clearInterval(id);
       // Installing stopped — clear the "taking longer" note for next time.
       setSlow(false);
     };
-  }, [anyInstalling]);
+  }, [pollMs]);
 
   async function install(component, action, body) {
     setSlow(false);
@@ -163,6 +169,8 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
 
   return (
     <div className="space-y-8">
+      <SystemUpdatesNote running={updatesRunning} />
+
       {/* Overview: one count and one bar while work is left; once done, the bar would only
           repeat "all set", so the card says that instead. */}
       <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-e1">

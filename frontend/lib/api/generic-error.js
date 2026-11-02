@@ -33,3 +33,14 @@ export function setNoAnswerMessage(next) {
 export function noAnswerMessage() {
   return noAnswer;
 }
+
+/** A restart 503 that outlived its one replay (`lib/api/restart-blip.js`). */
+let serverRestarting = "The server is restarting a service. Try again in a moment.";
+
+export function setServerRestartingMessage(next) {
+  if (typeof next === "string" && next.trim()) serverRestarting = next;
+}
+
+export function serverRestartingMessage() {
+  return serverRestarting;
+}

@@ -1461,7 +1461,8 @@
       }
     },
     "whatToDo": "What to do",
-    "noAnswer": "No answer from the server. It may or may not have happened — reload the page to see where it stands."
+    "noAnswer": "No answer from the server. It may or may not have happened — reload the page to see where it stands.",
+    "serverRestarting": "The server is restarting a service. Try again in a moment."
   },
   "logs": {
     "title": "System Logs",
@@ -6913,7 +6914,8 @@
     "fail2banOff": "Installed, but nothing is protected yet. <link>Turn on SSH protection in Fail2ban</link>.",
     "recommendedProgress": "{done} of {total} recommended installed",
     "optionalLeft": "{count, plural, one {# optional extra available below} other {# optional extras available below}}",
-    "dockerDetail": "runs your applications' containers"
+    "dockerDetail": "runs your applications' containers",
+    "systemUpdatesRunning": "Ubuntu is still finishing its security updates in the background (usually a few minutes). Installing new software may take a few extra minutes until it's done."
   },
   "storage": {
     "title": "Storage",

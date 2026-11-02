@@ -6,6 +6,7 @@ import {
   setGenericErrorMessage,
   setNoAnswerMessage,
   setRateLimitedMessage,
+  setServerRestartingMessage,
 } from "@/lib/api/generic-error";
 
 // Hands translated fallback sentences to `lib/api/generic-error.js`. Lives in the shells since every form needs them.
@@ -16,6 +17,7 @@ export function ErrorCopy() {
     setGenericErrorMessage(t("title"));
     setRateLimitedMessage(t("rateLimited.body"));
     setNoAnswerMessage(t("noAnswer"));
+    setServerRestartingMessage(t("serverRestarting"));
   }, [t]);
 
   return null;

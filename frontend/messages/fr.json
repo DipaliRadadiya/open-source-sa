@@ -1461,7 +1461,8 @@
       }
     },
     "whatToDo": "Que faire",
-    "noAnswer": "Aucune réponse du serveur. L'action a pu être effectuée ou non : rechargez la page pour voir où elle en est."
+    "noAnswer": "Aucune réponse du serveur. L'action a pu être effectuée ou non : rechargez la page pour voir où elle en est.",
+    "serverRestarting": "Le serveur redémarre un service. Réessayez dans un instant."
   },
   "logs": {
     "title": "Journaux système",
@@ -6913,7 +6914,8 @@
     "fail2banOff": "Installé, mais rien n'est encore protégé. <link>Activez la protection SSH dans Fail2ban</link>.",
     "recommendedProgress": "{done} recommandés installés sur {total}",
     "optionalLeft": "{count, plural, one {# extra facultatif disponible ci-dessous} other {# extras facultatifs disponibles ci-dessous}}",
-    "dockerDetail": "exécute les conteneurs de vos applications"
+    "dockerDetail": "exécute les conteneurs de vos applications",
+    "systemUpdatesRunning": "Ubuntu termine encore ses mises à jour de sécurité en arrière-plan (en général quelques minutes). D'ici là, l'installation de nouveaux logiciels peut prendre quelques minutes de plus."
   },
   "storage": {
     "title": "Stockage",

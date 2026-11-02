@@ -1,4 +1,5 @@
-import { noAnswerMessage, rateLimitedMessage } from "./generic-error.js";
+import { noAnswerMessage, rateLimitedMessage, serverRestartingMessage } from "./generic-error.js";
+import { isRestartBlip } from "./restart-blip.js";
 
 // Laravel's untranslated text for a throttled or crashed request; the fallback says more.
 const FRAMEWORK_RATE_LIMIT = /^too many (attempts|requests)\.?$/i;
@@ -21,6 +22,7 @@ export function mayStillBeRunning(error) {
 // Appends ` · ref`; pass `{ reference: false }` where the caller renders it separately.
 export function apiMessage(error, fallback, { reference: withReference = true } = {}) {
   if (isUnansweredWrite(error)) return noAnswerMessage();
+  if (isRestartBlip(error)) return serverRestartingMessage();
 
   const data = error?.response?.data;
   const message = data?.message;

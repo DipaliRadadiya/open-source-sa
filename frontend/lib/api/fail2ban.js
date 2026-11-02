@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { RETRY_RESTART } from "@/lib/api/restart-blip";
 
 export function getFail2ban({ signal } = {}) {
   return api.get("/fail2ban", { signal });
@@ -6,7 +7,7 @@ export function getFail2ban({ signal } = {}) {
 
 // 202, queued: poll `GET /fail2ban` until `installed` flips. Enables no jails.
 export function installFail2ban() {
-  return api.post("/fail2ban/install");
+  return api.post("/fail2ban/install", undefined, RETRY_RESTART);
 }
 
 // One file rewritten whole; omitted jails keep their state.

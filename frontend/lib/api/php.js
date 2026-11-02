@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { RETRY_RESTART } from "@/lib/api/restart-blip";
 
 /** Sets what bare `php` resolves to. Sites keep the version their pool runs. */
 export function setDefaultPhpVersion(version) {
@@ -7,7 +8,7 @@ export function setDefaultPhpVersion(version) {
 
 /** Queued: returns 202 and the caller polls. Already installed returns 200. */
 export function installPhpVersion(version) {
-  return api.post("/php/versions", { version });
+  return api.post("/php/versions", { version }, RETRY_RESTART);
 }
 
 // `422` for the panel's own version, a version a site pins, and the current default.
