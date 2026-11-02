@@ -603,19 +603,38 @@ progress_stop() {
 run_apt() {
     local label="$1"
     shift
-    local started=$SECONDS status
+
+    if (( DRY_RUN )) || [[ -z "$RUN_DIR" ]]; then
+        local started=$SECONDS
+        say "     → ${label}..."
+        run "$@"
+        ok "${label} ($((SECONDS - started))s)"
+        return 0
+    fi
+
+    if ! try_apt "$label" "$@"; then
+        report_failure "This command failed. Its output is in the log." "\$ $*"
+        exit 1
+    fi
+}
+
+# run_apt that hands a failure back rather than stopping the install, for a
+# caller with a fallback (install_packages's optional packages).
+try_apt() {
+    local label="$1"
+    shift
+    local started=$SECONDS status rc=0
 
     say "     → ${label}..."
-    if (( DRY_RUN )) || [[ -z "$RUN_DIR" ]]; then
-        run "$@"
-    else
-        status="${RUN_DIR}/apt-status"
-        : >"$status"
-        progress_start "${label,}" apt_install "$status"
-        run "$@" -o APT::Status-Fd=3 3>>"$status"
-        progress_stop
+    status="${RUN_DIR}/apt-status"
+    : >"$status"
+    progress_start "${label,}" apt_install "$status"
+    "$@" -o APT::Status-Fd=3 3>>"$status" >>"$LOG_FILE" 2>&1 || rc=$?
+    progress_stop
+    if (( rc == 0 )); then
+        ok "${label} ($((SECONDS - started))s)"
     fi
-    ok "${label} ($((SECONDS - started))s)"
+    return "$rc"
 }
 
 # The EXIT trap: no ticker outlives the install, and the run directory goes.
@@ -2521,10 +2540,7 @@ install_postfix() {
         return 0
     fi
 
-    local mailname
-    mailname=$(hostname -f 2>/dev/null || hostname)
-    printf 'postfix postfix/main_mailer_type select Internet Site\npostfix postfix/mailname string %s\n' "$mailname" \
-        | debconf-set-selections >>"$LOG_FILE" 2>&1 || true
+    preseed_postfix
 
     local started=$SECONDS
     say "     → Installing local mail (Postfix)..."
@@ -2536,6 +2552,15 @@ install_postfix() {
     fi
     progress_stop
     ok "Installing local mail (Postfix) ($((SECONDS - started))s)"
+}
+
+# Postfix's two questions, answered before apt asks them: v7's "Internet Site"
+# for this machine's own name.
+preseed_postfix() {
+    local mailname
+    mailname=$(hostname -f 2>/dev/null || hostname)
+    printf 'postfix postfix/main_mailer_type select Internet Site\npostfix postfix/mailname string %s\n' "$mailname" \
+        | debconf-set-selections >>"$LOG_FILE" 2>&1 || true
 }
 
 # What happened to Postfix in the package step: preinstalled, installed or
@@ -2584,13 +2609,42 @@ install_packages() {
         ensure_php_available
     fi
 
-    local pkgs=()
+    # The optional packages (Postfix; lsphp and its extensions on
+    # OpenLiteSpeed) go into the SAME transaction. They used to be calls of
+    # their own, straight after, and the sub-second gap before them was enough:
+    # Ubuntu's updates wait on the lock behind us, and on one of seven fresh
+    # servers (2026-11-02) they took it there, and Postfix waited five minutes.
+    # apt has no way to hold the lock across two calls (it ignores
+    # DPKG_FRONTEND_LOCKED, tested on apt 2.8), so there is one call.
+    #
+    # They stay optional: if the whole list fails, the required ones are
+    # installed on their own and the optional ones after, each non-fatal, as
+    # before. Only then is there a gap, and only in that rare case.
+    local pkgs=() optional=()
     mapfile -t pkgs < <(panel_packages)
+    if [[ "$POSTFIX_STATE" != "preinstalled" ]]; then
+        optional+=(postfix)
+        preseed_postfix
+    fi
+    if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
+        mapfile -t -O "${#optional[@]}" optional < <(install_ols_packages --list)
+    fi
 
     wait_for_apt_lock
     EARLY_WORK=0
-    run_apt "Installing packages" apt-get install -y "${pkgs[@]}"
-    install_postfix
+    if (( DRY_RUN )) || [[ -z "$RUN_DIR" ]]; then
+        run_apt "Installing packages" apt-get install -y "${pkgs[@]}" "${optional[@]}"
+        install_postfix
+    elif try_apt "Installing packages" apt-get install -y "${pkgs[@]}" "${optional[@]}"; then
+        install_postfix
+        if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
+            OLS_PACKAGES_DONE=1
+        fi
+    else
+        warn "one of the optional packages (local mail, or a PHP extension) could not be installed with the rest — installing the rest on its own"
+        run_apt "Installing packages" apt-get install -y "${pkgs[@]}"
+        install_postfix
+    fi
 
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
         # OpenLiteSpeed: the panel runs on LSPHP, the same build its hosted
@@ -4065,6 +4119,28 @@ add_ols_repository() {
 # panel has a PHP to run composer with, once from configure_ols where it has
 # always lived. The second is a no-op rather than a second apt run.
 install_ols_packages() {
+    local lsphp="lsphp${PHP_VERSION//./}" started=$SECONDS
+    # The panel's own extensions are in this list too, because on this stack the
+    # panel runs on the same lsphp its sites do. curl/intl/sqlite3 are what
+    # Laravel and the panel's SQLite database need; redis/igbinary back the
+    # cache and queue; opcache is the difference between a usable panel and a
+    # slow one.
+    local core=(
+        "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" "${lsphp}-pgsql"
+        "${lsphp}-curl" "${lsphp}-intl" "${lsphp}-sqlite3"
+        "${lsphp}-redis" "${lsphp}-igbinary" "${lsphp}-opcache"
+    )
+    # imagick and imap, as v7 installs them (operator, 2026-10-07). Optional:
+    # LiteSpeed packages them from 8.2 up only. gmp needs nothing — LiteSpeed
+    # compiles it in.
+    local extras=("${lsphp}-imagick" "${lsphp}-imap")
+
+    # --list: the names, for install_packages's one transaction.
+    if [[ "${1:-}" == "--list" ]]; then
+        printf '%s\n' "${core[@]}" "${extras[@]}"
+        return 0
+    fi
+
     if (( OLS_PACKAGES_DONE )); then
         return 0
     fi
@@ -4091,27 +4167,16 @@ install_ols_packages() {
     # both jammy and noble, verified 2026-09-10 against their Packages index).
     # A version with no -pgsql would have no -mysql and no interpreter either,
     # so this line already fails for it.
-    local lsphp="lsphp${PHP_VERSION//./}" started=$SECONDS
     say "     → Installing ${lsphp} and its extensions..."
     progress_start "installing ${lsphp}" apt_install
-    # The panel's own extensions are in this list too, because on this stack the
-    # panel runs on the same lsphp its sites do. curl/intl/sqlite3 are what
-    # Laravel and the panel's SQLite database need; redis/igbinary back the
-    # cache and queue; opcache is the difference between a usable panel and a
-    # slow one.
-    if ! apt-get install -y \
-        "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" "${lsphp}-pgsql" \
-        "${lsphp}-curl" "${lsphp}-intl" "${lsphp}-sqlite3" \
-        "${lsphp}-redis" "${lsphp}-igbinary" "${lsphp}-opcache" >>"$LOG_FILE" 2>&1; then
+    if ! apt-get install -y "${core[@]}" >>"$LOG_FILE" 2>&1; then
         warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"
         warn "check with: apt-cache search lsphp"
     fi
 
-    # imagick and imap, as v7 installs them (operator, 2026-10-07). A call of
-    # their own and optional: LiteSpeed packages them from 8.2 up only, and in
-    # the call above one missing name would take the panel's own PHP down with
-    # it. gmp needs nothing — LiteSpeed compiles it in.
-    if ! apt-get install -y "${lsphp}-imagick" "${lsphp}-imap" >>"$LOG_FILE" 2>&1; then
+    # A call of their own: in the call above one missing name would take the
+    # panel's own PHP down with it.
+    if ! apt-get install -y "${extras[@]}" >>"$LOG_FILE" 2>&1; then
         warn "${lsphp} has no imagick/imap package — sites on it run without them"
     fi
     progress_stop

@@ -193,24 +193,25 @@ describe('the package step', function () {
             STACK='.$stack.'; WEB_SERVER='.$web.'; PANEL_PHP_SAPI='.$sapi.'; WANT_SSL=1; PHP_VERSION=8.4
             OS_VERSION_ID=24.04; PANEL_PHP_BIN=/usr/bin/php8.4; LOG_FILE=/dev/null; EARLY_WORK=0
             POSTFIX_STATE=""; OLS_PACKAGES_DONE=0
+            RUN_DIR=$(mktemp -d); trap "rm -rf $RUN_DIR" EXIT
             # fd 9 is the real stdout: the output of apt goes to the log.
             exec 9>&1; rec() { echo "REC $*" >&9; }
             run() { "$@"; }
             progress_start() { :; }; progress_stop() { :; }
-            apt-get() { rec "apt-get $*"; }
+            # Recorded without the status-fd options the ticker adds.
+            apt-get() { local a=("$@"); [[ "${a[-2]:-}" == "-o" ]] && a=("${a[@]:0:${#a[@]}-2}"); rec "apt-get ${a[*]}"; [[ " ${a[*]} " == *" postfix "* ]] && : >"$RUN_DIR/postfix"; return 0; }
             debconf-set-selections() { cat >/dev/null; }
-            dpkg-query() { return 1; }
+            dpkg-query() { [[ -e "$RUN_DIR/postfix" ]] && echo "install ok installed"; }
             configure_apt_lock_wait() { rec "lock-config"; }
             wait_for_apt_lock() { rec "wait"; }
             repair_panel_mongodb_repository() { rec "mongodb-repair"; }
             install_source_tools() { rec "source-tools"; }
             add_package_sources() { rec "sources"; }
             ensure_php_available() { rec "php-candidate"; }
-            install_ols_packages() { rec "lsphp"; }
             systemctl() { rec "systemctl $*"; }; docker() { echo "Docker 1"; }; ln() { rec "ln $*"; }
             composer() { :; }
             '.$extra.'
-            install_packages', 'install_packages', 'run_apt', 'panel_packages', 'panel_php_packages', 'install_postfix');
+            install_packages', 'install_packages', 'run_apt', 'try_apt', 'panel_packages', 'panel_php_packages', 'install_postfix', 'preseed_postfix', 'install_ols_packages');
     }
 
     it('writes every source, refreshes once, then installs everything at once', function () {
@@ -223,32 +224,56 @@ describe('the package step', function () {
         $installs = array_values(array_filter($recs, fn ($r) => str_starts_with($r, 'apt-get install')));
         $updates = array_values(array_filter($recs, fn ($r) => str_starts_with($r, 'apt-get update')));
 
+        // ONE install, Postfix in it: a gap before a call of its own is where
+        // Ubuntu's updates took the lock on a real server (2026-11-02).
         expect($updates)->toBe(['apt-get update -qq'])
-            ->and($installs)->toHaveCount(2)
+            ->and($installs)->toHaveCount(1)
             ->and($installs[0])->toStartWith('apt-get install -y software-properties-common')
             ->and($installs[0])->toContain(' nginx ')->toContain(' php8.4-fpm ')->toContain(' python3-certbot-nginx')
-            ->and($installs[1])->toBe('apt-get install -y postfix');
+            ->and($installs[0])->toEndWith(' postfix');
 
         // Order: sources, then the one refresh, then PHP is asked of apt, then
-        // the one install, then Postfix straight after it.
+        // the one install.
         $at = fn (string $prefix) => (int) array_key_first(array_filter($recs, fn ($r) => str_starts_with($r, $prefix)));
         expect($at('source-tools'))->toBeLessThan($at('sources'))
             ->and($at('mongodb-repair'))->toBeLessThan($at('apt-get update'))
             ->and($at('sources'))->toBeLessThan($at('apt-get update'))
             ->and($at('apt-get update'))->toBeLessThan($at('php-candidate'))
-            ->and($at('php-candidate'))->toBeLessThan($at('apt-get install -y software-properties-common'))
-            ->and($at('apt-get install -y software-properties-common'))->toBe($at('apt-get install -y postfix') - 1);
+            ->and($at('php-candidate'))->toBeLessThan($at('apt-get install -y software-properties-common'));
     });
 
-    it('installs lsphp right after the list on OpenLiteSpeed, and never asks for ondrej PHP', function () {
+    it('puts lsphp in the same one install on OpenLiteSpeed, and never asks for ondrej PHP', function () {
         $run = packageStep('ols', 'openlitespeed', 'lsapi');
         preg_match_all('/^REC (.*)$/m', $run['out'], $m);
+        $installs = array_values(array_filter($m[1], fn ($r) => str_starts_with($r, 'apt-get install')));
 
         expect($run['code'])->toBe(0, $run['out'])
             ->and($m[1])->not->toContain('php-candidate')
-            ->and($m[1])->toContain('lsphp');
-        expect(array_search('lsphp', $m[1], true))->toBe(array_search('apt-get install -y postfix', $m[1], true) + 1)
-            ->and($m[1])->toContain('apt-get install -y postfix');
+            ->and($installs)->toHaveCount(1)
+            ->and($installs[0])->toContain(' openlitespeed ')->toContain(' postfix ')
+            ->toContain(' lsphp84 ')->toContain(' lsphp84-opcache ')->toContain(' lsphp84-imagick ');
+    });
+
+    it('falls back to the required list alone, then the optional ones non-fatally, when one fails', function () {
+        // The whole list fails once (an optional name apt cannot install);
+        // the required ones alone work.
+        $run = packageStep('ols', 'openlitespeed', 'lsapi', '
+            apt-get() { local a=("$@"); [[ "${a[-2]:-}" == "-o" ]] && a=("${a[@]:0:${#a[@]}-2}"); rec "apt-get ${a[*]}"
+                [[ " ${a[*]} " == *" postfix "* && " ${a[*]} " == *" openlitespeed "* ]] && return 100
+                [[ " ${a[*]} " == *" lsphp84-imagick "* ]] && return 100
+                [[ " ${a[*]} " == *" postfix "* ]] && : >"$RUN_DIR/postfix"; return 0; }
+            trap \'echo "POSTFIX_STATE=$POSTFIX_STATE"; rm -rf "$RUN_DIR"\' EXIT');
+        preg_match_all('/^REC (apt-get install.*)$/m', $run['out'], $m);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('warn: one of the optional packages')
+            ->and($m[1])->toHaveCount(5)
+            ->and($m[1][1])->toContain(' openlitespeed')->not->toContain('postfix')->not->toContain('lsphp')
+            ->and($m[1][2])->toBe('apt-get install -y postfix')
+            ->and($m[1][3])->toStartWith('apt-get install -y lsphp84 lsphp84-common')
+            ->and($m[1][4])->toBe('apt-get install -y lsphp84-imagick lsphp84-imap')
+            ->and($run['out'])->toContain('warn: lsphp84 has no imagick/imap package')
+            ->and($run['out'])->toContain('POSTFIX_STATE=installed');
     });
 
     it('starts Docker after the one install on docker', function () {
@@ -260,9 +285,9 @@ describe('the package step', function () {
 
     it('leaves a Postfix that was already there alone', function () {
         $run = packageStep('lemp', 'nginx', 'fpm', 'dpkg-query() { echo "install ok installed"; }
-            trap \'echo "POSTFIX_STATE=$POSTFIX_STATE"\' EXIT');
+            trap \'echo "POSTFIX_STATE=$POSTFIX_STATE"; rm -rf "$RUN_DIR"\' EXIT');
 
-        expect($run['out'])->not->toContain('apt-get install -y postfix')
+        expect($run['out'])->not->toContain(' postfix')
             ->and($run['out'])->toContain('POSTFIX_STATE=preinstalled');
     });
 
