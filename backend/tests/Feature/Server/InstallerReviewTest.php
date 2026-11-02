@@ -338,7 +338,10 @@ describe('S4: values from the command line and environment are checked first', f
 
         expect($run['code'])->toBe(1, $run['out'])
             ->and($run['out'])->not->toContain('ACCEPTED')
-            ->and($run['out'])->toContain('DIE: '.$message);
+            ->and($run['out'])->toContain('DIE: '.$message)
+            // report_failure's cue that this is not a failed install: without
+            // it, a re-run's refusal showed the last install's log as its own.
+            ->and($run['out'])->toContain('Nothing has been changed on this server.');
     })->with([
         'a pasted URL' => [['DOMAIN' => 'https://panel.example.com/'], [], '--domain must be a host name'],
         'config injection' => [['DOMAIN' => 'x.example.com; } server { listen 80 default_server; root /;'], [], '--domain must be a host name'],
@@ -359,6 +362,28 @@ describe('S4: values from the command line and environment are checked first', f
         'a directory with ..' => [[], ['APP_DIR' => '/var/www/../../etc'], 'APP_DIR must be'],
         'a directory with a space' => [[], ['APP_DIR' => '/var/www/my panel'], 'APP_DIR must be'],
     ]);
+
+    it('does not show an earlier install\'s log as the reason', function () {
+        // Found on a real re-run (2026-11-02): the refusal printed the last
+        // install's log tail and "What to do" under "Install stopped".
+        $dir = reviewDir();
+        $run = reviewBash(installerFunctions('validate_inputs', 'redact_log', 'log_tail', 'report_failure', 'save_install_state', 'send_progress', 'json_str', 'json_text', 'one_line', 'report_log_tail').'
+            die() { report_failure "$*"; exit 1; }
+            STEP_NO=0; STEP_TOTAL=0; CURRENT_STEP="starting up"; LOGIN_STATUS=0; INSTALL_STARTED=1700000000
+            REDACT=(); PANEL_ADMIN_PASSWORD=""; CENTRAL_TOKEN=""; PROGRESS_READY=0
+            INSTALL_STATE_DIR='.escapeshellarg($dir.'/state').'
+            LOG_FILE='.escapeshellarg($dir.'/install.log').'
+            echo "Site roots: 0 locked." >"$LOG_FILE"
+            DOMAIN=https://panel.example.com/; ADMIN_EMAIL=""; REPO_BRANCH=main; REPO_URL=https://example.com/p.git
+            PANEL_SLUG=panel; APP_USER=panel; APP_DIR=/var/www/panel
+            validate_inputs');
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('--domain must be a host name')
+            ->and($run['out'])->not->toContain('Last lines of the log')
+            ->and($run['out'])->not->toContain('Site roots')
+            ->and($run['out'])->not->toContain('What to do');
+    });
 
     it('checks them before anything else, even before asking for root', function () {
         // The whole installer, as this (non-root) user: on main a bad --domain

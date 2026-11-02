@@ -771,38 +771,46 @@ validate_central_inputs() {
 # as --domain made a broken vhost and a certbot failure ten minutes later --
 # but a `;` or `}` in --domain also rewrote the nginx config around it.
 validate_inputs() {
+    # Before anything is changed, so it says so -- which also keeps
+    # report_failure from showing an earlier install's log as if it were
+    # this run's.
+    input_refused() {
+        die "$1
+     Nothing has been changed on this server."
+    }
+
     if [[ -n "$DOMAIN" ]]; then
         DOMAIN="${DOMAIN,,}"
         # Labels of letters, digits and inner hyphens; two or more of them;
         # the last starts with a letter (so not an IP, and punycode TLDs pass).
         [[ ${#DOMAIN} -le 253 && "$DOMAIN" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$ ]] \
-            || die "--domain must be a host name like panel.example.com -- no https://, no path, no port. Got: ${DOMAIN}"
+            || input_refused "--domain must be a host name like panel.example.com -- no https://, no path, no port. Got: ${DOMAIN}"
     fi
 
     if [[ -n "$ADMIN_EMAIL" ]]; then
         [[ "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] \
-            || die "--email must be an email address like you@example.com. Got: ${ADMIN_EMAIL}"
+            || input_refused "--email must be an email address like you@example.com. Got: ${ADMIN_EMAIL}"
     fi
 
     # What `git check-ref-format` allows, narrowed: no leading '-' (it would
     # be an option), no '..', no spaces or shell characters.
     [[ "$REPO_BRANCH" =~ ^[A-Za-z0-9._][A-Za-z0-9._/-]*$ && "$REPO_BRANCH" != *..* && "$REPO_BRANCH" != */ ]] \
-        || die "--branch must be a branch name like main or release/v8. Got: ${REPO_BRANCH}"
+        || input_refused "--branch must be a branch name like main or release/v8. Got: ${REPO_BRANCH}"
 
     [[ "$REPO_URL" =~ ^(https?|ssh|git|file)://[^[:space:]]+$ \
         || "$REPO_URL" =~ ^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^[:space:]]+$ \
         || "$REPO_URL" =~ ^/[^[:space:]]+$ ]] \
-        || die "--repo must be a git URL (https://, ssh://, user@host:path) or an absolute path. Got: ${REPO_URL}"
+        || input_refused "--repo must be a git URL (https://, ssh://, user@host:path) or an absolute path. Got: ${REPO_URL}"
 
     # The slug names units, vhosts, files under /etc and the login script.
     [[ "$PANEL_SLUG" =~ ^[a-z][a-z0-9-]{0,31}$ ]] \
-        || die "PANEL_SLUG must be lower-case letters, digits and '-', starting with a letter (at most 32). Got: ${PANEL_SLUG}"
+        || input_refused "PANEL_SLUG must be lower-case letters, digits and '-', starting with a letter (at most 32). Got: ${PANEL_SLUG}"
     [[ "$APP_USER" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] \
-        || die "APP_USER must be a Linux user name: lower-case letters, digits, '-' and '_' (at most 32). Got: ${APP_USER}"
+        || input_refused "APP_USER must be a Linux user name: lower-case letters, digits, '-' and '_' (at most 32). Got: ${APP_USER}"
     # At least two levels deep: a run that finds something other than a
     # checkout here moves it aside (fetch_source), and /var is not a site.
     [[ "$APP_DIR" =~ ^(/[A-Za-z0-9._-]+){2,}$ && "/${APP_DIR}/" != */../* && "/${APP_DIR}/" != */./* ]] \
-        || die "APP_DIR must be an absolute path at least two levels deep, like /var/www/panel, with no spaces or '..'. Got: ${APP_DIR}"
+        || input_refused "APP_DIR must be an absolute path at least two levels deep, like /var/www/panel, with no spaces or '..'. Got: ${APP_DIR}"
 }
 
 preflight() {
