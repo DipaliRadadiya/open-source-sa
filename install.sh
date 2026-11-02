@@ -65,6 +65,16 @@ NODE_VERSION="${NODE_VERSION:-24}"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
 FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
+# fnm itself, pinned: the release binary and its SHA-256 (GitHub's published
+# asset digest), rather than fnm.vercel.app's script fetching whatever is
+# latest and running it as root (review finding S3). Bump all three together.
+FNM_VERSION="1.39.0"
+FNM_SHA256_X86_64="7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224"
+FNM_SHA256_AARCH64="4eaff58b2c5bf30d0934027572dd0b5bbb60d2a1af309230b53662d4b1d45599"
+# The apt signing keys trusted for packages.sury.org and Docker: the primary
+# key fingerprints, checked like the LiteSpeed ones (add_ols_repository).
+SURY_KEY_FPR="15058500A0235D97F5D10063B188E2B695BD4743"
+DOCKER_KEY_FPR="9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
 # The identity OpenLiteSpeed's workers run as, from its own httpd_config.conf
 # defaults. Named once because two places need it -- the panel's fpm socket on
 # the other stacks, and the panel's LSAPI socket directory on this one -- and
@@ -2004,8 +2014,7 @@ add_php_repository() {
         fi
 
         run install -d -m 0755 /etc/apt/keyrings
-        run_progress "Downloading the PHP repository signing key" curl -fsSL -o "$keyring" https://packages.sury.org/php/apt.gpg
-        run chmod 0644 "$keyring"
+        fetch_apt_key "PHP repository" https://packages.sury.org/php/apt.gpg "$SURY_KEY_FPR" "$keyring"
 
         # Written with signed-by rather than apt-key: apt-key is deprecated and
         # a key trusted globally would sign for every repository on the box,
@@ -2422,9 +2431,7 @@ add_docker_repository() {
     fi
 
     run install -d -m 0755 /etc/apt/keyrings
-    run_progress "Downloading the Docker repository signing key" \
-        curl -fsSL -o "$keyring" https://download.docker.com/linux/ubuntu/gpg
-    run chmod 0644 "$keyring"
+    fetch_apt_key "Docker repository" https://download.docker.com/linux/ubuntu/gpg "$DOCKER_KEY_FPR" "$keyring"
 
     if (( DRY_RUN )); then
         printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
@@ -2762,18 +2769,112 @@ install_packages() {
 
     if [[ -z "$COMPOSER_BIN" ]]; then
         progress_start "downloading composer"
-        run curl -fsSL -o /tmp/composer-setup.php https://getcomposer.org/installer
-        # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
-        # /usr/bin/php at all, and a bare invocation would either fail or --
-        # worse -- find some other PHP and install composer against it.
-        run "$PANEL_PHP_BIN" /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+        install_composer_binary
         progress_stop
-        rm -f /tmp/composer-setup.php
         COMPOSER_BIN=/usr/local/bin/composer
         ok "composer"
     else
         skip "composer (${COMPOSER_BIN})"
     fi
+}
+
+# ─── Checked downloads ───────────────────────────────────────────────────────
+#
+# Everything here is fetched over https from a well-known host and then run or
+# trusted as root, and used to be taken on that alone: Composer's installer,
+# fnm's install script, the sury.org and Docker apt keys (review finding S3).
+# A compromised upstream or CDN would have been root on every new server. Each
+# is now checked against something that does not come from the same download,
+# and the scratch files live in RUN_DIR (mktemp, root-only, removed on exit)
+# instead of fixed names in /tmp.
+
+# A scratch file for one download.
+download_tmp() {
+    mktemp "${RUN_DIR:-${TMPDIR:-/tmp}}/download.XXXXXX"
+}
+
+# An apt signing key, trusted only if it is exactly one key with the expected
+# primary fingerprint. One, not "includes": signed-by trusts every key in the
+# file, so an extra key would sign for this repository too.
+fetch_apt_key() {
+    local label="$1" url="$2" fpr="$3" dest="$4" tmp keys got
+
+    if (( DRY_RUN )); then
+        printf '     %s$ fetch %s, check it is %s, install as %s%s\n' "$DIM" "$url" "$fpr" "$dest" "$RESET"
+        return 0
+    fi
+
+    tmp="$(download_tmp)"
+    run_progress "Downloading the ${label} signing key" curl -fsSL -o "$tmp" "$url"
+    keys="$(gpg --show-keys --with-colons "$tmp" 2>/dev/null)" || keys=""
+    got="$(awk -F: '$1 == "pub" { p = 1; next } p && $1 == "fpr" { print $10; exit }' <<<"$keys")"
+
+    if [[ "$(grep -c '^pub:' <<<"$keys" || true)" != 1 || "$got" != "$fpr" ]]; then
+        rm -f "$tmp"
+        die "the ${label} signing key from ${url} is not the expected one.
+     expected exactly one key, ${fpr}
+     got      ${got:-nothing} ($(grep -c '^pub:' <<<"$keys" || true) key(s))
+     Refusing to trust it. Nothing has been added to apt."
+    fi
+
+    run install -m 0644 "$tmp" "$dest"
+    rm -f "$tmp"
+}
+
+# Composer, from its installer, checked against the SHA-384 Composer publishes
+# for it on a different host -- the check getcomposer.org/download documents.
+install_composer_binary() {
+    local setup sig expected actual
+    setup="$(download_tmp)"
+    sig="$(download_tmp)"
+
+    run curl -fsSL -o "$setup" https://getcomposer.org/installer
+    run curl -fsSL -o "$sig" https://composer.github.io/installer.sig
+    expected="$(tr -d '[:space:]' <"$sig")"
+    actual="$(sha384sum "$setup" | cut -d' ' -f1)"
+
+    if [[ ! "$expected" =~ ^[0-9a-f]{96}$ || "$actual" != "$expected" ]]; then
+        rm -f "$setup" "$sig"
+        die "Composer's installer does not match the checksum Composer publishes for it.
+     expected ${expected:-nothing} (https://composer.github.io/installer.sig)
+     got      ${actual}
+     Refusing to run it. Try again in a few minutes: the two can disagree
+     for a moment right after a Composer release."
+    fi
+
+    # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
+    # /usr/bin/php at all, and a bare invocation would either fail or --
+    # worse -- find some other PHP and install composer against it.
+    run "$PANEL_PHP_BIN" "$setup" --install-dir=/usr/local/bin --filename=composer
+    rm -f "$setup" "$sig"
+}
+
+# fnm, as the pinned release binary checked against its pinned SHA-256. The
+# same file fnm.vercel.app's script installs, without the script: it fetched
+# "latest", checked nothing, and was itself run as root unchecked.
+install_fnm_binary() {
+    local asset want zip
+
+    case "$(uname -m)" in
+        x86_64)  asset=fnm-linux; want="$FNM_SHA256_X86_64" ;;
+        aarch64) asset=fnm-arm64; want="$FNM_SHA256_AARCH64" ;;
+        *)       die "no fnm build for $(uname -m)" ;;
+    esac
+
+    zip="$(download_tmp)"
+    run curl -fsSL -o "$zip" "https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/${asset}.zip"
+
+    if [[ "$(sha256sum "$zip" | cut -d' ' -f1)" != "$want" ]]; then
+        rm -f "$zip"
+        die "fnm ${FNM_VERSION} (${asset}.zip) does not match its pinned checksum.
+     expected ${want}
+     got      $(sha256sum "$zip" 2>/dev/null | cut -d' ' -f1)
+     Refusing to install it."
+    fi
+
+    run unzip -o -q "$zip" fnm -d "$FNM_DIR"
+    run chmod 0755 "${FNM_DIR}/fnm"
+    rm -f "$zip"
 }
 
 # ─── Node, through fnm ───────────────────────────────────────────────────────
@@ -2801,12 +2902,8 @@ install_node_body() {
     if [[ ! -x "$FNM_BIN" ]]; then
         mkdir -p "$FNM_DIR"
         progress_start "downloading fnm"
-        run curl -fsSL -o /tmp/fnm-install.sh https://fnm.vercel.app/install
-        # --skip-shell: this is a service account with no interactive shell to
-        # rewrite, and the panel calls fnm by absolute path anyway.
-        run bash /tmp/fnm-install.sh --install-dir "$FNM_DIR" --skip-shell
+        install_fnm_binary
         progress_stop
-        rm -f /tmp/fnm-install.sh
         ln -sf "${FNM_DIR}/fnm" "$FNM_BIN"
         ok "fnm installed at $FNM_BIN"
     else

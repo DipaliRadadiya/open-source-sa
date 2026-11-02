@@ -600,3 +600,147 @@ describe('R6: a rejected OpenLiteSpeed config on a re-run restores this run\'s c
             ->and($run['conf'])->not->toContain('BROKEN');
     });
 });
+
+describe('S3: what is run or trusted as root is checked first', function () {
+    /*
+     * Composer's installer and fnm's install script were downloaded to fixed
+     * names in /tmp and run as root; the sury.org and Docker apt keys were
+     * installed as fetched. Nothing compared any of them with anything, so a
+     * compromised upstream or CDN was root on every new server. The
+     * LiteSpeed keys were already pinned; these now are too.
+     */
+    $download = '
+        run() { "$@"; }
+        progress_start() { :; }; progress_stop() { :; }
+        die() { echo "DIE: $*"; exit 1; }
+        DRY_RUN=0; LOG_FILE=/dev/null
+    ';
+
+    /** gpg --show-keys --with-colons for keys with these primary fingerprints. */
+    function colonsFor(string ...$fprs): string
+    {
+        $out = '';
+        foreach ($fprs as $fpr) {
+            $out .= 'pub:-:4096:1:'.substr($fpr, -16).":1550000000:::-:::scSC::::::23::0:\nfpr:::::::::{$fpr}:\n";
+            $out .= "sub:-:4096:1:AAAAAAAAAAAAAAAA:1550000000::::::e::::::23:\nfpr:::::::::0000000000000000000000000000AAAAAAAAAAAA:\n";
+        }
+
+        return $out;
+    }
+
+    function aptKeyRun(string $download, string $colons): array
+    {
+        $root = reviewDir();
+        file_put_contents($root.'/colons', $colons);
+
+        $run = reviewBash(installerFunctions('download_tmp', 'fetch_apt_key').$download.'
+            run_progress() { shift; "$@"; }
+            curl() { while [[ "$1" != -o ]]; do shift; done; echo "key bytes" >"$2"; }
+            gpg() { cat '.escapeshellarg($root.'/colons').'; }
+            RUN_DIR='.escapeshellarg($root).'; DIM=""; RESET=""
+            fetch_apt_key "Docker repository" https://download.docker.com/linux/ubuntu/gpg 9DC858229FC7DD38854AE2D88D81803C0EBFCD88 '.escapeshellarg($root.'/docker.asc').'
+            echo INSTALLED');
+
+        return $run + ['installed' => is_file($root.'/docker.asc'), 'left' => count(glob($root.'/download.*'))];
+    }
+
+    it('installs the apt key that is the expected one', function () use ($download) {
+        $run = aptKeyRun($download, colonsFor('9DC858229FC7DD38854AE2D88D81803C0EBFCD88'));
+
+        expect($run['code'])->toBe(0, $run['out'])->and($run['installed'])->toBeTrue()->and($run['left'])->toBe(0);
+    });
+
+    it('refuses an apt key with another fingerprint, or with a second key in the file', function (array $fprs) use ($download) {
+        $run = aptKeyRun($download, colonsFor(...$fprs));
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: the Docker repository signing key from https://download.docker.com/linux/ubuntu/gpg is not the expected one')
+            ->and($run['installed'])->toBeFalse()
+            ->and($run['left'])->toBe(0);
+    })->with([
+        'another key' => [['1111111111111111111111111111111111111111']],
+        'the key and another' => [['9DC858229FC7DD38854AE2D88D81803C0EBFCD88', '1111111111111111111111111111111111111111']],
+        'nothing' => [[]],
+    ]);
+
+    it('pins the fingerprints sury.org and Docker publish', function () {
+        expect(installerSource())->toContain('SURY_KEY_FPR="15058500A0235D97F5D10063B188E2B695BD4743"')
+            ->and(installerSource())->toContain('DOCKER_KEY_FPR="9DC858229FC7DD38854AE2D88D81803C0EBFCD88"')
+            ->and(installerCode())->not->toMatch('#curl [^\n]*-o "\$keyring" https://(packages\.sury\.org|download\.docker\.com)#');
+    });
+
+    function composerRun(string $download, bool $tampered): array
+    {
+        $root = reviewDir();
+        $installer = "<?php echo 'composer installer';\n";
+        $sig = hash('sha384', $installer);
+        file_put_contents($root.'/served', $tampered ? $installer."// and something else\n" : $installer);
+
+        $run = reviewBash(installerFunctions('download_tmp', 'install_composer_binary').$download.'
+            curl() { local out url; while (( $# )); do case "$1" in -o) out="$2"; shift ;; https://*) url="$1" ;; esac; shift; done
+                case "$url" in *installer.sig) echo '.$sig.' >"$out" ;; *) cp '.escapeshellarg($root.'/served').' "$out" ;; esac; }
+            PANEL_PHP_BIN=fakephp; fakephp() { echo "RAN THE INSTALLER $1"; }
+            RUN_DIR='.escapeshellarg($root).'
+            install_composer_binary');
+
+        return $run + ['left' => count(glob($root.'/download.*'))];
+    }
+
+    it('runs a Composer installer that matches Composer\'s published checksum', function () use ($download) {
+        $run = composerRun($download, tampered: false);
+
+        expect($run['code'])->toBe(0, $run['out'])->and($run['out'])->toContain('RAN THE INSTALLER')->and($run['left'])->toBe(0);
+    });
+
+    it('refuses a Composer installer that does not', function () use ($download) {
+        $run = composerRun($download, tampered: true);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain("DIE: Composer's installer does not match the checksum")
+            ->and($run['out'])->not->toContain('RAN THE INSTALLER')
+            ->and($run['left'])->toBe(0);
+    });
+
+    function fnmRun(string $download, bool $tampered): array
+    {
+        $root = reviewDir();
+        $zip = $root.'/fnm-linux.zip';
+        file_put_contents($root.'/fnm', "#!/bin/sh\necho fnm\n");
+        exec('cd '.escapeshellarg($root).' && zip -q fnm-linux.zip fnm && rm fnm');
+        $sha = hash_file('sha256', $zip);
+        if ($tampered) {
+            file_put_contents($zip, 'x', FILE_APPEND);
+        }
+        mkdir($root.'/fnm-dir');
+
+        $run = reviewBash(installerFunctions('download_tmp', 'install_fnm_binary').$download.'
+            curl() { local out; while (( $# )); do case "$1" in -o) out="$2"; shift ;; esac; shift; done; cp '.escapeshellarg($zip).' "$out"; }
+            uname() { echo x86_64; }
+            FNM_VERSION=1.39.0; FNM_SHA256_X86_64='.$sha.'; FNM_SHA256_AARCH64=none
+            FNM_DIR='.escapeshellarg($root.'/fnm-dir').'; RUN_DIR='.escapeshellarg($root).'
+            install_fnm_binary');
+
+        return $run + ['installed' => is_file($root.'/fnm-dir/fnm'), 'left' => count(glob($root.'/download.*'))];
+    }
+
+    it('installs the pinned fnm binary that matches its checksum', function () use ($download) {
+        $run = fnmRun($download, tampered: false);
+
+        expect($run['code'])->toBe(0, $run['out'])->and($run['installed'])->toBeTrue()->and($run['left'])->toBe(0);
+    });
+
+    it('refuses an fnm download that does not', function () use ($download) {
+        $run = fnmRun($download, tampered: true);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: fnm 1.39.0 (fnm-linux.zip) does not match its pinned checksum')
+            ->and($run['installed'])->toBeFalse()
+            ->and($run['left'])->toBe(0);
+    });
+
+    it('runs nothing out of a fixed name in /tmp any more', function () {
+        expect(installerCode())->not->toContain('/tmp/composer-setup.php')
+            ->and(installerCode())->not->toContain('/tmp/fnm-install.sh')
+            ->and(installerCode())->not->toContain('fnm.vercel.app');
+    });
+});
