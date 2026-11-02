@@ -101,7 +101,7 @@ return [
         'queue_stalled' => ':count 件のジョブが待機中、最も古いものは :minutes 分前から',
         'queue_failed' => '失敗したジョブ :failed 件、待機中 :count 件',
         'queue_ok' => '待機中 :count 件、滞留なし',
-        'health_no_response' => ':url から応答がありません',
+        'health_no_response_reason' => ':attempts 回試しても :url から応答がありません (:reason)',
         'health_status' => ':url が :status を返しました',
         'health_version' => ':served を配信中、コードは :running です',
         'health_ok' => ':url → :version',

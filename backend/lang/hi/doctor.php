@@ -101,7 +101,7 @@ return [
         'queue_stalled' => ':count जॉब प्रतीक्षा में, सबसे पुरानी :minutes मिनट से',
         'queue_failed' => ':failed जॉब विफल; :count प्रतीक्षा में',
         'queue_ok' => ':count प्रतीक्षा में, कोई अटकी नहीं',
-        'health_no_response' => ':url से कोई जवाब नहीं',
+        'health_no_response_reason' => ':attempts प्रयासों के बाद भी :url से कोई जवाब नहीं (:reason)',
         'health_status' => ':url ने :status लौटाया',
         'health_version' => ':served परोसा जा रहा है, कोड :running है',
         'health_ok' => ':url → :version',

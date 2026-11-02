@@ -101,7 +101,7 @@ return [
         'queue_stalled' => 'заданий в ожидании: :count, самое старое ждёт :minutes мин',
         'queue_failed' => 'неудачных заданий: :failed; в ожидании: :count',
         'queue_ok' => 'в ожидании: :count, зависших нет',
-        'health_no_response' => 'нет ответа от :url',
+        'health_no_response_reason' => 'нет ответа от :url после :attempts попыток (:reason)',
         'health_status' => ':url ответил :status',
         'health_version' => 'отдаётся :served, код — :running',
         'health_ok' => ':url → :version',

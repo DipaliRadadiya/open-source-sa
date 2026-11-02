@@ -101,7 +101,7 @@ return [
         'queue_stalled' => ':count Job(s) wartend, der älteste seit :minutes Min.',
         'queue_failed' => ':failed fehlgeschlagene(r) Job(s); :count wartend',
         'queue_ok' => ':count wartend, keiner veraltet',
-        'health_no_response' => 'keine Antwort von :url',
+        'health_no_response_reason' => 'keine Antwort von :url nach :attempts Versuchen (:reason)',
         'health_status' => ':url antwortete mit :status',
         'health_version' => 'liefert :served aus, der Code ist :running',
         'health_ok' => ':url → :version',

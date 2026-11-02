@@ -4,7 +4,10 @@ namespace App\Services\Server\Doctor\Checks;
 
 use App\Contracts\DoctorCheck;
 use App\Services\Panel\InstalledPanelInfo;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -17,9 +20,19 @@ use Throwable;
  *
  * It asserts the version matches too. A 200 alone would be just as happy
  * talking to a different panel on the same box.
+ *
+ * Tried up to three times, 1 s then 2 s apart, but only when nothing answered
+ * or the answer was a 5xx. The installer runs this check while Ubuntu's own
+ * first-boot updates may still be going, and their needrestart hook can restart
+ * php-fpm or the web server under it: one unlucky probe said "no response" over
+ * a panel that worked a second later. A 4xx or a wrong version is an answer,
+ * and is reported at once.
  */
 class HealthEndpointCheck implements DoctorCheck
 {
+    /** How many times the panel is asked before the check fails. */
+    public const ATTEMPTS = 3;
+
     public function __construct(private InstalledPanelInfo $installed) {}
 
     public function key(): string
@@ -32,11 +45,21 @@ class HealthEndpointCheck implements DoctorCheck
         $url = rtrim((string) config('app.url'), '/').'/api/health';
 
         try {
-            $response = Http::timeout(10)->connectTimeout(5)->get($url);
+            $response = Http::timeout(10)->connectTimeout(5)
+                ->retry([1000, 2000], when: fn (Throwable $e): bool => $e instanceof ConnectionException
+                    || ($e instanceof RequestException && $e->response->serverError()), throw: false)
+                ->get($url);
         } catch (Throwable $e) {
+            // Guzzle's cURL text ("cURL error 28: Connection timed out after
+            // 5001 ms", "Could not resolve host"): the URL and the cause, and
+            // nothing secret. It is what tells a firewall from a DNS problem.
             return [
                 'status' => 'fail',
-                'detail' => __('doctor.details.health_no_response', ['url' => $url]),
+                'detail' => __('doctor.details.health_no_response_reason', [
+                    'url' => $url,
+                    'attempts' => self::ATTEMPTS,
+                    'reason' => Str::limit(Str::squish($e->getMessage()), 200),
+                ]),
                 'fix' => 'doctor.fixes.health_unreachable',
             ];
         }

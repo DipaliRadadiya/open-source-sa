@@ -103,7 +103,7 @@ return [
         'queue_stalled' => ':count job(s) waiting, oldest for :minutes min',
         'queue_failed' => ':failed failed job(s); :count waiting',
         'queue_ok' => ':count waiting, none stale',
-        'health_no_response' => 'no response from :url',
+        'health_no_response_reason' => 'no response from :url after :attempts tries (:reason)',
         'health_status' => ':url returned :status',
         'health_version' => 'serving :served, code is :running',
         'health_ok' => ':url → :version',
