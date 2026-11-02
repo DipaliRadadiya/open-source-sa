@@ -212,7 +212,7 @@ function freshPreflight(array $box, array $vars = [], string $after = ''): array
         trap '.escapeshellarg('echo "ERR-TRAP line $LINENO: $BASH_COMMAND"').' ERR
         '.installerFunctions(
         'redact_log', 'log_tail', 'report_failure', 'save_install_state', 'send_progress', 'json_str', 'json_text', 'one_line',
-        'report_log_tail', 'validate_central_inputs', 'dry_run_plan',
+        'report_log_tail', 'validate_inputs', 'validate_central_inputs', 'dry_run_plan',
         'fresh_note', 'fresh_ok', 'fresh_warn', 'fresh_found', 'fresh_count', 'fresh_join', 'fresh_names', 'fresh_lines',
         'fresh_entries', 'fresh_has_package', 'fresh_server_rerun', 'fresh_check_panels', 'fresh_check_legacy_agent',
         'fresh_check_web_servers', 'fresh_check_databases', 'fresh_check_redis', 'fresh_check_fpm', 'fresh_check_docker',
@@ -230,6 +230,7 @@ function freshPreflight(array $box, array $vars = [], string $after = ''): array
         INSTALL_STATE_DIR='.escapeshellarg($r.'/var/lib/panel-install').'
         LOG_FILE='.escapeshellarg($r.'/var/log/panel-install.log').'
         PANEL_ADMIN_USERNAME=""; PANEL_ADMIN_PASSWORD=""; PROGRESS_READY=0
+        DOMAIN=""; ADMIN_EMAIL=""; REPO_BRANCH=main; REPO_URL=https://github.com/DipaliRadadiya/open-source-sa.git
         CENTRAL_TOKEN="central-tok"; PROGRESS_URL="http://127.0.0.1:'.$port.'/p"
         STACK=lemp; WEB_SERVER=nginx; PANEL_HOST=panel.example.com
         PATH='.escapeshellarg($box['bin']).':$PATH

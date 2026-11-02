@@ -286,3 +286,98 @@ describe('S2: the sudoers grant is replaced only by a validated one', function (
             ->and($run['out'])->toMatch('#visudo checked 440 \S+/etc/sudoers\.d/[^/\s]*\.[^/\s]*#');
     });
 });
+
+describe('S4: values from the command line and environment are checked first', function () {
+    /*
+     * --domain, --branch, --repo and --email were used as given, and so were
+     * PANEL_SLUG, APP_USER and APP_DIR from the environment. A pasted
+     * `https://panel.example.com/` went into every vhost's server_name and
+     * failed late, at certbot; a value with `;` or `}` rewrote the nginx
+     * config around it; a `/` broke the Apache fallback's sed.
+     */
+    function inputsRun(array $args = [], array $env = []): array
+    {
+        $env += ['PANEL_SLUG' => 'panel', 'APP_USER' => 'panel', 'APP_DIR' => '/var/www/panel'];
+        $vars = ['DOMAIN' => '', 'ADMIN_EMAIL' => '', 'REPO_BRANCH' => 'main', 'REPO_URL' => 'https://github.com/DipaliRadadiya/open-source-sa.git'];
+
+        $set = '';
+        foreach ($args + $vars + $env as $name => $value) {
+            $set .= $name.'='.escapeshellarg($value)."\n";
+        }
+
+        return reviewBash(installerFn('validate_inputs').'
+            die() { echo "DIE: $*"; exit 1; }
+            '.$set.'
+            validate_inputs
+            echo "ACCEPTED DOMAIN=$DOMAIN"');
+    }
+
+    it('accepts what a real install passes', function (array $args, array $env = []) {
+        $run = inputsRun($args, $env);
+
+        expect($run['code'])->toBe(0, $run['out'])->and($run['out'])->toContain('ACCEPTED');
+    })->with([
+        'defaults' => [[]],
+        'a domain' => [['DOMAIN' => 'panel.example.com']],
+        'a deep domain, digits and hyphens' => [['DOMAIN' => 'a-1.b2.panel.example.co.uk']],
+        'an IDN in punycode' => [['DOMAIN' => 'xn--bcher-kva.xn--p1ai']],
+        'an email' => [['ADMIN_EMAIL' => 'ops+le@example.com']],
+        'a branch with a slash' => [['REPO_BRANCH' => 'fix/installer-review-dipali']],
+        'a release-style branch' => [['REPO_BRANCH' => 'release/v8.0.1']],
+        'an ssh repository' => [['REPO_URL' => 'git@github.com:someone/fork.git']],
+        'a local mirror' => [['REPO_URL' => '/srv/mirror/panel.git']],
+        'a custom slug, user and directory' => [[], ['PANEL_SLUG' => 'sv-panel2', 'APP_USER' => 'sv_panel', 'APP_DIR' => '/opt/sv-panel2']],
+    ]);
+
+    it('lower-cases the domain rather than refusing it', function () {
+        expect(inputsRun(['DOMAIN' => 'Panel.Example.COM'])['out'])->toContain('ACCEPTED DOMAIN=panel.example.com');
+    });
+
+    it('refuses what would break a config or a command', function (array $args, array $env, string $message) {
+        $run = inputsRun($args, $env);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->not->toContain('ACCEPTED')
+            ->and($run['out'])->toContain('DIE: '.$message);
+    })->with([
+        'a pasted URL' => [['DOMAIN' => 'https://panel.example.com/'], [], '--domain must be a host name'],
+        'config injection' => [['DOMAIN' => 'x.example.com; } server { listen 80 default_server; root /;'], [], '--domain must be a host name'],
+        'a bare name' => [['DOMAIN' => 'localhost'], [], '--domain must be a host name'],
+        'a trailing hyphen' => [['DOMAIN' => 'panel-.example.com'], [], '--domain must be a host name'],
+        'an email with a space' => [['ADMIN_EMAIL' => 'ops @example.com'], [], '--email must be an email address'],
+        'an email that is an option' => [['ADMIN_EMAIL' => '--staging@x.io'], [], '--email must be an email address'],
+        'a branch that is an option' => [['REPO_BRANCH' => '--upload-pack=touch /tmp/x'], [], '--branch must be a branch name'],
+        'a branch with ..' => [['REPO_BRANCH' => 'main/../x'], [], '--branch must be a branch name'],
+        'a repo that is an option' => [['REPO_URL' => '--upload-pack=touch /tmp/x'], [], '--repo must be'],
+        'a repo with a space' => [['REPO_URL' => 'https://example.com/a b.git'], [], '--repo must be'],
+        'a slug with a slash' => [[], ['PANEL_SLUG' => '../etc'], 'PANEL_SLUG must be'],
+        'a slug with a space' => [[], ['PANEL_SLUG' => 'my panel'], 'PANEL_SLUG must be'],
+        'an upper-case user' => [[], ['APP_USER' => 'Panel'], 'APP_USER must be'],
+        'a relative directory' => [[], ['APP_DIR' => 'var/www/panel'], 'APP_DIR must be'],
+        'the root directory' => [[], ['APP_DIR' => '/'], 'APP_DIR must be'],
+        'a top-level directory' => [[], ['APP_DIR' => '/var'], 'APP_DIR must be'],
+        'a directory with ..' => [[], ['APP_DIR' => '/var/www/../../etc'], 'APP_DIR must be'],
+        'a directory with a space' => [[], ['APP_DIR' => '/var/www/my panel'], 'APP_DIR must be'],
+    ]);
+
+    it('checks them before anything else, even before asking for root', function () {
+        // The whole installer, as this (non-root) user: on main a bad --domain
+        // got as far as "run this as root", proof that nothing had looked at it.
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('runs the real installer; only safe as a non-root user');
+        }
+
+        $dir = reviewDir();
+        $env = 'INSTALL_STATE_DIR='.escapeshellarg($dir.'/state').' UPDATE_STATE_DIR='.escapeshellarg($dir.'/update');
+        exec($env.' bash '.escapeshellarg(base_path('../install.sh')).' --dry-run '.escapeshellarg('--domain=https://panel.example.com/').' 2>&1', $out, $code);
+        $out = implode("\n", $out);
+
+        expect($code)->toBe(1, $out)
+            ->and($out)->toContain('--domain must be a host name')
+            ->and($out)->not->toContain('run this as root');
+    });
+});
+
+it('S4: ends git clone\'s options before the repository and directory', function () {
+    expect(installerCode())->toMatch('/git clone [^\n]*-- "\$REPO_URL" "\$APP_DIR"/');
+});
