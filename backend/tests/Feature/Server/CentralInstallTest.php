@@ -123,7 +123,7 @@ describe('install.sh', function () {
             expect(
                 str_contains($line, 'PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"')
                 || str_contains($line, '<<<"$PANEL_ADMIN_PASSWORD"')
-                || str_contains($line, 'for secret in "$PANEL_ADMIN_PASSWORD"')
+                || str_contains($line, 'for secret in "${PANEL_ADMIN_PASSWORD:-}"')
                 || preg_match('/^\s*(if|\[\[|\(\()/', $line) === 1
             )->toBeTrue("unexpected use of the password: {$line}");
         }
