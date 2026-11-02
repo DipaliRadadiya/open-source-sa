@@ -267,11 +267,14 @@ describe('the package step', function () {
 
         expect($run['code'])->toBe(0, $run['out'])
             ->and($run['out'])->toContain('warn: one of the optional packages')
-            ->and($m[1])->toHaveCount(5)
+            // R7: the panel's own lsphp core is required (fatal), the sites'
+            // database drivers are not, so they are two separate calls.
+            ->and($m[1])->toHaveCount(6)
             ->and($m[1][1])->toContain(' openlitespeed')->not->toContain('postfix')->not->toContain('lsphp')
             ->and($m[1][2])->toBe('apt-get install -y postfix')
-            ->and($m[1][3])->toStartWith('apt-get install -y lsphp84 lsphp84-common')
-            ->and($m[1][4])->toBe('apt-get install -y lsphp84-imagick lsphp84-imap')
+            ->and($m[1][3])->toStartWith('apt-get install -y lsphp84 lsphp84-common')->not->toContain('-mysql')
+            ->and($m[1][4])->toBe('apt-get install -y lsphp84-mysql lsphp84-pgsql')
+            ->and($m[1][5])->toBe('apt-get install -y lsphp84-imagick lsphp84-imap')
             ->and($run['out'])->toContain('warn: lsphp84 has no imagick/imap package')
             ->and($run['out'])->toContain('POSTFIX_STATE=installed');
     });
