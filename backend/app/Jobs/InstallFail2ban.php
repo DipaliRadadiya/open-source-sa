@@ -40,9 +40,20 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 600;
+    /**
+     * The work itself, plus apt's wait for a lock another package manager
+     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
+     * does. A fresh server's installer now finishes while Ubuntu's first-boot
+     * updates may still hold the lock, so a job started straight away waits
+     * for it — and must not be killed by the worker mid-wait, which reads as
+     * "stopped unexpectedly" instead of "another install is running".
+     */
+    public int $timeout;
 
-    public function __construct(public ?int $actorId = null) {}
+    public function __construct(public ?int $actorId = null)
+    {
+        $this->timeout = 600 + ServerOps::aptLockBudgetSeconds();
+    }
 
     public function handle(
         ServerOps $serverOps,

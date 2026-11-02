@@ -7,6 +7,7 @@ use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\IonCubeLoader;
+use App\Services\Server\ServerOps;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -38,14 +39,25 @@ class InstallIonCubeLoader implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 600;
+    /**
+     * The work itself, plus apt's wait for a lock another package manager
+     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
+     * does. A fresh server's installer now finishes while Ubuntu's first-boot
+     * updates may still hold the lock, so a job started straight away waits
+     * for it — and must not be killed by the worker mid-wait, which reads as
+     * "stopped unexpectedly" instead of "another install is running".
+     */
+    public int $timeout;
 
     /**
      * `$keepCopy`: whether the files the install replaces get a recovery copy
      * on disk, or are held in memory only (2026-10-29, the user's choice).
      * Defaulted, so a job queued before the field existed still runs.
      */
-    public function __construct(public string $version, public ?int $actorId = null, public bool $keepCopy = true) {}
+    public function __construct(public string $version, public ?int $actorId = null, public bool $keepCopy = true)
+    {
+        $this->timeout = 600 + ServerOps::aptLockBudgetSeconds();
+    }
 
     public function handle(IonCubeLoader $loader, ActivityLogger $log, InstallTracker $installs): void
     {

@@ -1,9 +1,17 @@
 <?php
 
+use App\Jobs\InstallBuildTools;
 use App\Jobs\InstallDatabaseEngine;
+use App\Jobs\InstallFail2ban;
+use App\Jobs\InstallIonCubeLoader;
+use App\Jobs\InstallPhpExtension;
+use App\Jobs\InstallPhpVersion;
+use App\Jobs\InstallSupervisor;
+use App\Jobs\RemovePhpVersion;
 use App\Jobs\RunBackup;
 use App\Jobs\RunRestore;
 use App\Services\Server\Applications\ProvisioningBudget;
+use App\Services\Server\ServerOps;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 
@@ -101,6 +109,32 @@ it('keeps the jobs that size themselves inside it too', function (string $connec
     expect((new RunBackup(1))->timeout)->toBeLessThan($retryAfter)
         ->and((new RunRestore(1, 1))->timeout)->toBeLessThan($retryAfter);
 })->with(['database', 'redis', 'beanstalkd']);
+
+// Every job that runs apt through ServerOps::apt(), which waits out a lock
+// another package manager holds for up to aptLockBudgetSeconds(). A fresh
+// server's installer now finishes while Ubuntu's first-boot updates can still
+// hold that lock, so a job started straight away waits — and a timeout shorter
+// than the wait plus the work kills it mid-wait as "stopped unexpectedly".
+dataset('apt jobs', fn () => [
+    'InstallDatabaseEngine' => [fn () => new InstallDatabaseEngine('mysql'), 900],
+    'InstallPhpVersion' => [fn () => new InstallPhpVersion('8.3'), 900],
+    'InstallPhpExtension' => [fn () => new InstallPhpExtension('8.3', 'gmp'), 900],
+    'RemovePhpVersion' => [fn () => new RemovePhpVersion('8.3'), 900],
+    'InstallBuildTools' => [fn () => new InstallBuildTools, 900],
+    'InstallSupervisor' => [fn () => new InstallSupervisor, 600],
+    'InstallFail2ban' => [fn () => new InstallFail2ban, 600],
+    'InstallIonCubeLoader' => [fn () => new InstallIonCubeLoader('8.3'), 600],
+]);
+
+it('lets every apt job outlast apt\'s wait for the lock, inside the reservation', function (Closure $job, int $work) {
+    $timeout = $job()->timeout;
+
+    expect($timeout)->toBeGreaterThanOrEqual($work + ServerOps::aptLockBudgetSeconds());
+
+    foreach (['database', 'redis', 'beanstalkd'] as $connection) {
+        expect($timeout)->toBeLessThan((int) config("queue.connections.{$connection}.retry_after"));
+    }
+})->with('apt jobs');
 
 /**
  * @return array<int, string> every job class that claims a unique lock
