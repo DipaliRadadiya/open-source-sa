@@ -421,6 +421,11 @@ class StoreApplicationRequest extends FormRequest
             ? 'validation.admin_password_strength_no_symbol'
             : 'validation.admin_password_strength')];
 
+        // A Docker volume typed into the mounts list: the same sentence the
+        // other Docker name fields give (ExistingDockerVolume, NewDockerName),
+        // rather than Laravel's bare "format is invalid".
+        $messages['volume_mounts.*.volume.regex'] = __('validation.docker_volume_invalid');
+
         if ($fixed === null) {
             return $messages;
         }

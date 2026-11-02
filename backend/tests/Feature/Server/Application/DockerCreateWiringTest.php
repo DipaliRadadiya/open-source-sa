@@ -415,3 +415,20 @@ it('creates a site whose directory is mounted away from /app', function () {
     expect($application->site_mount_path)->toBe('/panel-site')
         ->and($application->volume_mounts)->toBe([['volume' => 'gotify-data', 'path' => '/app/data']]);
 });
+
+it('names the rule when a mounted volume name is invalid, in the user\'s language', function (string $locale) {
+    fakeDockerBoxFor();
+
+    $response = $this->withHeaders(dockerCreateHeaders() + ['Accept-Language' => $locale])
+        ->postJson('/api/applications', dockerCreatePayload([
+            'volume_mounts' => [['volume' => '-bad name', 'path' => '/data']],
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('volume_mounts.0.volume');
+
+    $message = $response->json('errors')['volume_mounts.0.volume'][0];
+
+    expect($message)->toBe(trans('validation.docker_volume_invalid', [], $locale))
+        ->and($message)->not->toContain('format is invalid')
+        ->and($message)->not->toBe('validation.docker_volume_invalid');
+})->with(['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru']);
