@@ -744,3 +744,53 @@ describe('S3: what is run or trusted as root is checked first', function () {
             ->and(installerCode())->not->toContain('fnm.vercel.app');
     });
 });
+
+describe('R7: OpenLiteSpeed stops at once if the panel\'s own PHP cannot be installed', function () {
+    /*
+     * install_ols_packages installed lsphp and every extension in one apt
+     * call and only warned when it failed. Since the install-speed work this
+     * runs only when the one big transaction has already failed, but then a
+     * missing name still left the panel's own PHP (lsphp on this stack) or
+     * its curl/intl/sqlite3/redis extensions uninstalled, and the install
+     * went on to fail later, in composer or artisan, far from the cause.
+     */
+    function olsPackagesRun(string $missing): array
+    {
+        return reviewBash(installerFn('install_ols_packages').'
+            progress_start() { :; }; progress_stop() { :; }
+            die() { echo "DIE: $*"; exit 1; }
+            apt-get() { for a in "$@"; do [[ "$a" == '.escapeshellarg($missing).' ]] && { echo "E: Unable to locate package $a"; return 100; }; done; echo "apt-get $*"; }
+            PHP_VERSION=8.4; OLS_PACKAGES_DONE=0; LOG_FILE=/dev/stdout
+            install_ols_packages
+            echo "CONTINUED"');
+    }
+
+    it('stops when an extension the panel itself runs on is missing', function (string $missing) {
+        $run = olsPackagesRun($missing);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: could not install lsphp84')
+            ->and($run['out'])->not->toContain('CONTINUED');
+    })->with(['lsphp84', 'lsphp84-common', 'lsphp84-curl', 'lsphp84-intl', 'lsphp84-sqlite3', 'lsphp84-redis']);
+
+    it('goes on, with a warning, when only an extension for hosted sites is missing', function (string $missing) {
+        $run = olsPackagesRun($missing);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('CONTINUED')
+            ->and($run['out'])->toContain('warn:')
+            // The panel's own set went in regardless.
+            ->and($run['out'])->toMatch('/apt-get install -y lsphp84 lsphp84-common .*lsphp84-sqlite3/');
+    })->with(['lsphp84-pgsql', 'lsphp84-mysql', 'lsphp84-imap']);
+
+    it('still lists every package for the one big transaction', function () {
+        $run = reviewBash(installerFn('install_ols_packages').'
+            PHP_VERSION=8.4
+            install_ols_packages --list');
+
+        expect(preg_split('/\R/', trim($run['out'])))->toEqualCanonicalizing([
+            'lsphp84', 'lsphp84-common', 'lsphp84-mysql', 'lsphp84-pgsql', 'lsphp84-curl', 'lsphp84-intl',
+            'lsphp84-sqlite3', 'lsphp84-redis', 'lsphp84-igbinary', 'lsphp84-opcache', 'lsphp84-imagick', 'lsphp84-imap',
+        ]);
+    });
+});

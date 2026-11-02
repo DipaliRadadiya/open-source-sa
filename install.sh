@@ -4285,10 +4285,13 @@ install_ols_packages() {
     # cache and queue; opcache is the difference between a usable panel and a
     # slow one.
     local core=(
-        "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" "${lsphp}-pgsql"
+        "${lsphp}" "${lsphp}-common"
         "${lsphp}-curl" "${lsphp}-intl" "${lsphp}-sqlite3"
         "${lsphp}-redis" "${lsphp}-igbinary" "${lsphp}-opcache"
     )
+    # The database clients hosted sites connect with. The panel itself runs on
+    # SQLite, so these are the sites' and do not stop the install (below).
+    local sites=("${lsphp}-mysql" "${lsphp}-pgsql")
     # imagick and imap, as v7 installs them (operator, 2026-10-07). Optional:
     # LiteSpeed packages them from 8.2 up only. gmp needs nothing — LiteSpeed
     # compiles it in.
@@ -4296,7 +4299,7 @@ install_ols_packages() {
 
     # --list: the names, for install_packages's one transaction.
     if [[ "${1:-}" == "--list" ]]; then
-        printf '%s\n' "${core[@]}" "${extras[@]}"
+        printf '%s\n' "${core[@]}" "${sites[@]}" "${extras[@]}"
         return 0
     fi
 
@@ -4307,30 +4310,35 @@ install_ols_packages() {
 
     export DEBIAN_FRONTEND=noninteractive
 
-    # lsphp is for the *hosted sites*, not the panel. Installed here so the
-    # first site created does not have to wait for it, and so a box that cannot
-    # provide it fails now — during an install the user is watching — rather
-    # than later inside a queued job.
+    # lsphp is the panel's own PHP on this stack and the hosted sites' too.
+    # Installed here so the first site created does not have to wait for it,
+    # and so a box that cannot provide it fails now — during an install the
+    # user is watching — rather than later inside a queued job.
     #
-    # Not `run`: the extension packages are the known-shaky part (see the note
-    # on configure_ols). A missing -gd should not abort an otherwise good
-    # install, because the panel can install PHP packages itself afterwards.
-    # `-pgsql` alongside `-mysql`, for the same reason the PHP-FPM list above
-    # carries it: the panel can manage a PostgreSQL server, and without the
-    # client extension no site on this stack could connect to a database the
-    # panel had just made for it.
+    # Three calls, because apt fails the whole command if one name is missing:
     #
-    # Checked rather than assumed, because apt fails the whole command if one
-    # package is missing and that would take `-mysql` with it: LiteSpeed's
-    # repository carries lsphpXX-pgsql for every version it ships (8.0–8.4 on
-    # both jammy and noble, verified 2026-09-10 against their Packages index).
-    # A version with no -pgsql would have no -mysql and no interpreter either,
-    # so this line already fails for it.
+    #   * the panel's own set is fatal (review finding R7). Carrying on
+    #     without it only moved the failure to composer or artisan, minutes
+    #     later and far from the cause;
+    #   * the sites' database clients warn. `-pgsql` alongside `-mysql`, for
+    #     the same reason the PHP-FPM list above carries it: the panel can
+    #     manage a PostgreSQL server, and without the client extension no site
+    #     on this stack could connect to a database the panel had just made
+    #     for it. LiteSpeed's repository carries both for every version it
+    #     ships (8.0–8.4 on jammy and noble, verified 2026-09-10 against their
+    #     Packages index);
+    #   * imagick/imap warn, in a call of their own (below).
     say "     → Installing ${lsphp} and its extensions..."
     progress_start "installing ${lsphp}" apt_install
     if ! apt-get install -y "${core[@]}" >>"$LOG_FILE" 2>&1; then
-        warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"
-        warn "check with: apt-cache search lsphp"
+        die "could not install ${lsphp} and the extensions the panel runs on (${core[*]#"${lsphp}-"}).
+     Check what LiteSpeed's repository offers with: apt-cache search ${lsphp}
+     The apt output is in $LOG_FILE."
+    fi
+
+    if ! apt-get install -y "${sites[@]}" >>"$LOG_FILE" 2>&1; then
+        warn "could not install ${sites[*]} — PHP sites on ${lsphp} may not reach MySQL or PostgreSQL"
+        warn "check with: apt-cache search ${lsphp}"
     fi
 
     # A call of their own: in the call above one missing name would take the
