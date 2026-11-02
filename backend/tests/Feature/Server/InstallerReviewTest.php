@@ -93,3 +93,79 @@ describe('R1: the failure report after the admin password is unset', function ()
             ->and($run['out'])->toContain('What to do:');
     });
 });
+
+/**
+ * $source with its absolute paths moved under $root, so a function that writes
+ * /etc/... can be run for real by a user who cannot.
+ *
+ * @param  array<int, string>  $prefixes
+ */
+function reviewRooted(string $source, string $root, array $prefixes): string
+{
+    foreach ($prefixes as $prefix) {
+        $source = str_replace($prefix, $root.$prefix, $source);
+    }
+
+    return $source;
+}
+
+describe('R4: OpenLiteSpeed reloads after its certificate renews', function () {
+    /*
+     * certbot --nginx and --apache reload their server on renewal; certbot
+     * certonly --webroot, the only way to issue on OpenLiteSpeed, has no
+     * installer and reloads nothing. The panel's own certificate renewed on
+     * disk while lshttpd went on serving the old one from memory, and the
+     * panel showed an expired certificate about 30 days after the renewal.
+     */
+    function olsTls(bool $issued): array
+    {
+        $root = reviewDir();
+        $run = reviewBash(reviewRooted(installerFn('configure_tls_ols'), $root, ['/etc/letsencrypt/', '/etc/ssl/']).'
+            run() { "$@"; }
+            certbot_issue() { '.($issued ? 'return 0' : 'return 1').'; }
+            install_ols_certificate() { echo "install_ols_certificate $3"; }
+            openssl() { :; }
+            APP_DIR=/var/www/panel; PANEL_SLUG=panel; PANEL_HOST=panel.example.com; API_HOST=panel.example.com
+            SINGLE_HOST=1; ADMIN_EMAIL=""; DOMAIN=panel.example.com; LOG_FILE=/dev/null
+            configure_tls_ols
+            echo "TLS_STATE=$TLS_STATE"');
+
+        return $run + ['hook' => $root.'/etc/letsencrypt/renewal-hooks/deploy/sv-oss-reload'];
+    }
+
+    it('installs a deploy hook that restarts OpenLiteSpeed', function () {
+        $run = olsTls(issued: true);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('TLS_STATE=letsencrypt')
+            ->and($run['hook'])->toBeFile();
+
+        expect(file_get_contents($run['hook']))->toContain("\n/usr/local/lsws/bin/lswsctrl restart\n")
+            ->and(fileperms($run['hook']) & 0777)->toBe(0755);
+    });
+
+    it('writes the same file the panel writes, so neither undoes the other', function () {
+        // CertbotClient::ensureRenewalHook rewrites this file daily once the
+        // server renews anything; a different name would mean two reloads, a
+        // different body would flap.
+        $run = olsTls(issued: true);
+
+        $reload = implode(' ', (array) config('server.web_server_drivers.openlitespeed.reload_command'));
+        $panel = <<<SH
+        #!/bin/sh
+        # Managed by the panel. Reloads the web server after certbot renews, so
+        # the new certificate is actually served rather than sitting on disk.
+        {$reload}
+        SH;
+
+        expect(file_get_contents($run['hook']))->toBe($panel."\n");
+    });
+
+    it('writes no hook for a self-signed certificate', function () {
+        $run = olsTls(issued: false);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('TLS_STATE=self-signed')
+            ->and($run['hook'])->not->toBeFile();
+    });
+});

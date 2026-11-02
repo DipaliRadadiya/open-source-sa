@@ -253,3 +253,27 @@ describe('what the site actually serves', function () {
             && in_array('127.0.0.1:443', $p->command, true));
     });
 });
+
+it('repairs the renewal hook for a certificate the panel has no row for', function () {
+    // The panel's own certificate on OpenLiteSpeed: issued by install.sh with
+    // certbot certonly --webroot, which reloads nothing on renewal, and never
+    // a row here. Servers installed before install.sh wrote the hook itself
+    // renewed it on disk and kept serving the old one (review finding R4).
+    Process::fake();
+
+    $this->certificate->update(['type' => CertificateType::Custom]);
+
+    $renewal = sys_get_temp_dir().'/sv-renewal-'.bin2hex(random_bytes(4));
+    mkdir($renewal);
+    file_put_contents($renewal.'/panel.example.com.conf', "version = 2.9.0\n");
+    config(['server.certificates.renewal_dir' => $renewal]);
+
+    try {
+        $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+    } finally {
+        exec('rm -rf '.escapeshellarg($renewal));
+    }
+
+    Process::assertRan(fn ($p) => in_array('tee', $p->command, true)
+        && str_contains(implode(' ', $p->command), 'renewal-hooks'));
+});

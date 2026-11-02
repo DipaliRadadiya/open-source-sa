@@ -56,6 +56,9 @@
         <env name="SERVER_APP_SHELL_SYNC" value="false"/>
         <env name="SERVER_APP_SETTLE_SECONDS" value="0"/>
         <env name="SV_AUTO_ISSUE_RETRY_SECONDS" value="0"/>
+        <!-- This machine's own certbot renewals must not decide whether a test
+             server "renews anything" (certificates:refresh-expiry). -->
+        <env name="SV_LETSENCRYPT_RENEWAL_DIR" value="/nonexistent/panel-test-letsencrypt-renewal"/>
         <env name="PANEL_UPDATE_LAUNCH" value="false"/>
         <!-- Creating a Docker site reads its image from the registry, which is
              ON in production (DS-03). Off here so no create test reaches a real

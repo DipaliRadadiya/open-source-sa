@@ -1443,6 +1443,11 @@ return [
 
         'live_dir' => env('SV_LETSENCRYPT_LIVE_DIR', '/etc/letsencrypt/live'),
 
+        // One file per certificate certbot renews, whoever issued it — the
+        // panel's own included, which has no row in the certificates table.
+        // World-readable, unlike live_dir, so the panel can ask without sudo.
+        'renewal_dir' => env('SV_LETSENCRYPT_RENEWAL_DIR', '/etc/letsencrypt/renewal'),
+
         // Where certbot runs its post-renewal commands. The renewal itself is
         // certbot's own systemd timer; without a hook here the new certificate
         // sits on disk while the web server keeps serving the old one from

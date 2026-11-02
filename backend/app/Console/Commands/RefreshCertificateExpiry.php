@@ -72,6 +72,13 @@ class RefreshCertificateExpiry extends Command
             ->where('status', CertificateStatus::Active->value)
             ->exists();
 
+        // Or anything certbot itself renews. The panel's own certificate has
+        // no row: on OpenLiteSpeed install.sh issues it with certonly
+        // --webroot, which reloads nothing, and every server installed before
+        // the installer wrote this hook itself renews it unserved.
+        $renewable = $renewable
+            || ! empty(glob(rtrim((string) config('server.certificates.renewal_dir'), '/').'/*.conf'));
+
         if (! $renewable) {
             return;
         }

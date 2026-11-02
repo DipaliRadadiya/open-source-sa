@@ -5301,6 +5301,23 @@ configure_tls_ols() {
         TLS_STATE="letsencrypt"
         SCHEME="https"
         ok "Let's Encrypt certificate issued"
+
+        # Reload on renewal. certbot --nginx/--apache do that themselves;
+        # certonly --webroot has no installer and reloads nothing, so the
+        # renewed certificate sat on disk while lshttpd kept serving the old
+        # one from memory -- an expired panel certificate a month after the
+        # first renewal. The panel writes this same file, byte for byte
+        # (CertbotClient::ensureRenewalHook), but only once a site certificate
+        # exists; the panel's own has no row. Same name and body, so neither
+        # writer undoes the other.
+        local hook_dir=/etc/letsencrypt/renewal-hooks/deploy
+        run install -d -m 0755 "$hook_dir"
+        printf '%s\n' '#!/bin/sh' \
+            '# Managed by the panel. Reloads the web server after certbot renews, so' \
+            '# the new certificate is actually served rather than sitting on disk.' \
+            '/usr/local/lsws/bin/lswsctrl restart' >"${hook_dir}/sv-oss-reload"
+        run chmod 0755 "${hook_dir}/sv-oss-reload"
+        ok "renewals reload OpenLiteSpeed"
     else
         # Same reasoning as the nginx path: nip.io shares one Let's Encrypt rate
         # limit globally, so failing here is common and must not fail the
