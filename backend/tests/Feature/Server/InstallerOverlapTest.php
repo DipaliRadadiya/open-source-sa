@@ -234,3 +234,29 @@ describe('the end of the install', function () {
             ->and($run['out'])->not->toContain('Panel is ready');
     });
 });
+
+it('keeps needrestart from restarting the queue worker, for good', function () {
+    // Live (2026-11-02): needrestart, run by Ubuntu's updates, restarted the
+    // queue worker while it ran a MariaDB install that was waiting for the
+    // lock those same updates held. The worker drains before it stops, so each
+    // waited for the other until the install gave up.
+    $dir = sys_get_temp_dir().'/installer-nr-'.bin2hex(random_bytes(4));
+    mkdir($dir);
+
+    $run = overlapRun('PANEL_SLUG=panel
+        keep_queue_from_needrestart '.escapeshellarg($dir).'
+        cat '.escapeshellarg($dir.'/panel-queue.conf'), 'keep_queue_from_needrestart');
+    $none = overlapRun('PANEL_SLUG=panel; keep_queue_from_needrestart /nonexistent; echo "RC=$?"', 'keep_queue_from_needrestart');
+    exec('rm -rf '.escapeshellarg($dir));
+
+    expect($run['code'])->toBe(0, $run['out'])
+        ->and($run['out'])->toContain('$nrconf{override_rc}{qr(^\Qpanel-queue.service\E$)} = 0;')
+        ->and($run['out'])->toContain('ok: needrestart leaves the queue worker alone')
+        // Not the install's own temporary guard, which is removed at the end.
+        ->and(installerFn('release_needrestart'))->not->toContain('-queue.conf')
+        // A server without needrestart: nothing written, nothing said.
+        ->and($none['out'])->toBe('RC=0');
+
+    expect(installerFn('install_services'))->toContain('keep_queue_from_needrestart')
+        ->and(installerFn('install_services'))->toContain('--max-time=3600');
+});

@@ -5096,6 +5096,9 @@ CRON
     run systemctl restart ${PANEL_SLUG}-frontend.service
     run systemctl restart ${PANEL_SLUG}-queue.service
     ok "panel, queue worker and scheduler running"
+
+    keep_queue_from_needrestart
+
 }
 
 # ─── Privileges ──────────────────────────────────────────────────────────────
@@ -5621,6 +5624,33 @@ protect_from_needrestart() {
         ok "needrestart will leave ${unit} alone until the install is done"
     else
         NEEDRESTART_GUARD=""
+    fi
+}
+
+# needrestart must never restart the queue worker itself. The worker drains
+# the job it is running before it stops (up to 30 minutes), and a panel job
+# that installs packages is waiting for the very lock Ubuntu's
+# unattended-upgrades holds while its needrestart hook waits for that restart:
+# each waits for the other until the job gives up on the lock and fails. Seen
+# live (2026-11-02): MariaDB installed from the panel right after the install
+# said "done", while Ubuntu's first-boot updates still ran.
+#
+# Nothing is lost: the worker restarts itself every hour (--max-time=3600),
+# which picks up upgraded libraries anyway. Every other service still restarts.
+# Arguments only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
+keep_queue_from_needrestart() {
+    local confd="${1:-/etc/needrestart/conf.d}" unit="${PANEL_SLUG}-queue.service" conf
+
+    [[ -d "$confd" ]] || return 0
+    conf="${confd}/${PANEL_SLUG}-queue.conf"
+    # A literal $nrconf: it is Perl for needrestart, not shell.
+    # shellcheck disable=SC2016
+    if printf '# Written by the Control panel installer: needrestart leaves %s alone; it restarts itself hourly.\n$nrconf{override_rc}{qr(^\\Q%s\\E$)} = 0;\n' \
+        "$unit" "$unit" >"$conf" 2>/dev/null; then
+        ok "needrestart leaves the queue worker alone (it restarts itself every hour)"
+    else
+        warn "could not write ${conf}"
     fi
 }
 
