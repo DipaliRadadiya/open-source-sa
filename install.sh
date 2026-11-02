@@ -5027,6 +5027,15 @@ Environment=PORT=${FRONTEND_PORT}
 # 0.0.0.0 unless told otherwise (bug #15).
 Environment=HOSTNAME=127.0.0.1
 Environment=NODE_ENV=production
+# This account's sudo grant is root-equivalent (see configure_sudoers) and the
+# interface never uses it, so a code-execution bug in Next or a dependency
+# must not be one 'sudo -n sh' away from root. Blocks setuid for this unit only:
+# the queue worker and PHP need the grant and do not get this line. Kept to
+# the one setting with no kernel namespace behind it -- PrivateTmp and
+# ProtectSystem need mount namespaces, which some containers refuse, and a
+# unit that cannot start is a panel with no interface. Must match
+# FrontendUnit::NO_NEW_PRIVILEGES.
+NoNewPrivileges=yes
 StandardOutput=journal
 StandardError=journal
 

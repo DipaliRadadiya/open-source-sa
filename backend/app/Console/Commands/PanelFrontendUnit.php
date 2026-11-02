@@ -7,13 +7,15 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Make the panel's web interface listen on loopback only (bug #15).
+ * Bring the panel's web interface unit up to what install.sh now writes.
  *
- * install.sh now writes `HOSTNAME=127.0.0.1` into the unit; servers installed
- * before that listen on every address. This adds the line to the existing
- * unit and reloads systemd. It does not restart the interface: the updater
+ * Two lines, each added by install.sh after servers were already installed:
+ * `HOSTNAME=127.0.0.1` (bug #15: the interface listened on every address) and
+ * `NoNewPrivileges=yes` (review finding S1: the interface's processes could
+ * use the panel account's root-equivalent sudo grant). This adds whichever is
+ * missing and reloads systemd. It does not restart the interface: the updater
  * and the deploy runbook both restart it straight after, and that restart is
- * when the new address applies.
+ * when the change applies.
  *
  * Runs as root (the unit is root's). Idempotent.
  */
@@ -22,7 +24,7 @@ class PanelFrontendUnit extends Command
     protected $signature = 'panel:frontend-unit
         {--dry-run : Report whether the unit is current, without writing}';
 
-    protected $description = "Make the panel's web interface listen on 127.0.0.1 only";
+    protected $description = "Make the panel's web interface listen on 127.0.0.1 only, without sudo";
 
     public function handle(FrontendUnit $frontend): int
     {
@@ -34,7 +36,7 @@ class PanelFrontendUnit extends Command
             return self::SUCCESS;
         }
 
-        $desired = FrontendUnit::withLoopback((string) file_get_contents($path));
+        $desired = FrontendUnit::desired((string) file_get_contents($path));
 
         if ($desired === null) {
             $this->info("{$path} is up to date.");
@@ -43,7 +45,7 @@ class PanelFrontendUnit extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->line("{$path} would be updated to listen on 127.0.0.1.");
+            $this->line("{$path} would be updated (loopback only, no new privileges).");
 
             return self::SUCCESS;
         }
@@ -65,7 +67,7 @@ class PanelFrontendUnit extends Command
             $this->warn('systemctl daemon-reload failed: '.trim($reload->errorOutput()));
         }
 
-        $this->info("{$path} now listens on 127.0.0.1 (applies at the next restart of the interface).");
+        $this->info("{$path} now listens on 127.0.0.1 without sudo (applies at the next restart of the interface).");
 
         return self::SUCCESS;
     }

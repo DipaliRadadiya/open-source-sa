@@ -260,6 +260,12 @@ class ReleaseUpdateScript
         # by name afterwards, which is the surface an operator already reads.
         note sync_privileges
         {$run}{$php} {$newBackend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
+        # The interface unit, for the same reason and with the same rule: the
+        # legacy flow has its own step for it (configure_frontend_unit) and this
+        # one had none, so a released server never got the loopback line (bug
+        # #15) or NoNewPrivileges (review finding S1). Applies at the restart
+        # below; never fatal.
+        {$run}{$php} {$newBackend}/artisan panel:frontend-unit || echo "WARNING: frontend unit not updated; run 'artisan panel:frontend-unit' as root"
 
         # ---- Past here, failures are visible to users.
 

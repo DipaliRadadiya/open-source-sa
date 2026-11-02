@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Panel\FrontendUnit;
+
 /*
  * install.sh's fixes from the installer review of 2026-11-02
  * (reports/installer-review-20261102.md), each run for real under bash: the
@@ -167,5 +169,50 @@ describe('R4: OpenLiteSpeed reloads after its certificate renews', function () {
         expect($run['code'])->toBe(0, $run['out'])
             ->and($run['out'])->toContain('TLS_STATE=self-signed')
             ->and($run['hook'])->not->toBeFile();
+    });
+});
+
+describe('S1: the web interface cannot use the panel account\'s sudo', function () {
+    /*
+     * The frontend unit runs as APP_USER, whose sudoers grant is
+     * root-equivalent (tee, sh, chown … see configure_sudoers), and nothing
+     * stopped its processes from using it: on a real OpenLiteSpeed install
+     * (2026-11-02) `systemd-run -p User=panel sudo -n id -u` printed 0. A
+     * code-execution bug in Next or any of its dependencies was one command
+     * from root. The interface never needs sudo.
+     */
+    function installedUnits(): array
+    {
+        $root = reviewDir();
+        @mkdir($root.'/etc/systemd/system', 0777, true);
+        @mkdir($root.'/etc/cron.d', 0777, true);
+
+        $run = reviewBash(reviewRooted(installerFn('install_services'), $root, ['/etc/systemd/', '/etc/cron.d/']).'
+            run() { :; }
+            step() { :; }
+            keep_queue_from_needrestart() { :; }
+            APP_DIR=/var/www/panel; APP_USER=panel; PANEL_SLUG=panel; UPDATE_STATE_DIR='.escapeshellarg($root.'/update').'
+            NODE_BIN=/usr/local/bin/node; FRONTEND_PORT=3100; PANEL_PHP_BIN=/usr/bin/php8.4
+            install_services');
+
+        expect($run['code'])->toBe(0, $run['out']);
+
+        return [
+            'frontend' => (string) file_get_contents($root.'/etc/systemd/system/panel-frontend.service'),
+            'queue' => (string) file_get_contents($root.'/etc/systemd/system/panel-queue.service'),
+        ];
+    }
+
+    it('runs the interface with no new privileges', function () {
+        expect(installedUnits()['frontend'])->toMatch('/^\[Service\]\n(?:.*\n)*?NoNewPrivileges=yes$/m');
+    });
+
+    it('leaves the queue worker able to use sudo — it has to', function () {
+        // Every server operation the panel queues escalates through the grant.
+        expect(installedUnits()['queue'])->not->toContain('NoNewPrivileges');
+    });
+
+    it('writes the line exactly as the panel looks for it on existing servers', function () {
+        expect(installedUnits()['frontend'])->toContain("\n".FrontendUnit::NO_NEW_PRIVILEGES."\n");
     });
 });
