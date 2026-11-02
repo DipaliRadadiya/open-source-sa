@@ -5,6 +5,7 @@ use App\Jobs\InstallDatabaseEngine;
 use App\Models\DatabaseConnection;
 use App\Models\RuntimeInstall;
 use App\Models\User;
+use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
@@ -581,6 +582,55 @@ describe('another package install holding the lock (S-09)', function () {
         expect($message)->toContain('Another package install is running')
             ->and($message)->toContain('few minutes')
             ->and($message)->not->toContain('in a moment');
+    });
+
+    it('waits out the lock in the real job and installs, showing the wait as a step', function () {
+        // Found live (2026-11-02): MariaDB installed from the panel right after
+        // the installer finished, while Ubuntu's first-boot updates held the
+        // lock. The job's progress rejected the step its own installer reports
+        // while waiting, and the install failed in seconds instead of waiting.
+        config(['server.apt.lock_attempts' => 5, 'server.apt.lock_delay_ms' => 0]);
+        $seen = [];
+        lockedBox($seen, freeAfter: 2);
+        app(InstallTracker::class)->start('database', 'mariadb', initialStep: 'queued');
+
+        $steps = [];
+        RuntimeInstall::updating(function (RuntimeInstall $install) use (&$steps) {
+            $steps[] = $install->current_step;
+        });
+
+        app()->call([new InstallDatabaseEngine('mariadb'), 'handle']);
+
+        expect($steps)->toContain('waiting_for_package_manager')
+            ->and(collect($seen)->contains(fn ($p) => $p->command === ['systemctl', 'enable', '--now', 'mariadb']))->toBeTrue()
+            // Installed: the transient progress row is gone, not failed.
+            ->and(RuntimeInstall::where('runtime', 'database')->where('version', 'mariadb')->exists())->toBeFalse();
+    });
+
+    it('knows, and has words for, every step an engine installer reports', function () {
+        $reported = [];
+        foreach (glob(app_path('Services/Server/Databases/Installers/*.php')) as $file) {
+            preg_match_all("/report\(\\\$onStep, '([a-z_]+)'\)/", (string) file_get_contents($file), $m);
+            $reported = [...$reported, ...$m[1]];
+        }
+        $reported = array_values(array_unique($reported));
+
+        expect($reported)->toContain('waiting_for_package_manager');
+
+        $row = RuntimeInstall::create([
+            'runtime' => 'database', 'version' => 'mariadb', 'extension' => '',
+            'status' => 'installing', 'started_at' => now(),
+        ]);
+        $progress = new DatabaseInstallProgress($row);
+
+        foreach ($reported as $step) {
+            $progress->step($step);
+            expect($row->fresh()->current_step)->toBe($step);
+
+            foreach (['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru'] as $locale) {
+                expect(trans("database.install_steps.{$step}", [], $locale))->not->toBe("database.install_steps.{$step}", "{$step} has no {$locale} title");
+            }
+        }
     });
 
     it('outlives the lock wait as well as the install', function () {
