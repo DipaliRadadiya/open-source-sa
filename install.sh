@@ -3932,7 +3932,7 @@ GLOBAL
     # from hosted sites by being its own master, and the only account with sudo
     # here is the panel's own — hosted pools run as www-data with no sudo — so
     # this master carries no extra tenant risk.
-    cat >/etc/systemd/system/${PANEL_SLUG}-fpm.service <<UNIT
+    cat >"/etc/systemd/system/${PANEL_SLUG}-fpm.service" <<UNIT
 [Unit]
 Description=Control panel PHP-FPM (dedicated master)
 After=network.target
@@ -5033,7 +5033,7 @@ location / {
 NGINX
 
     if (( SINGLE_HOST )); then
-        cat >/etc/nginx/sites-available/${PANEL_SLUG}.conf <<NGINX
+        cat >"/etc/nginx/sites-available/${PANEL_SLUG}.conf" <<NGINX
 # Managed by the Control panel installer.
 server {
     listen 80;
@@ -5048,7 +5048,7 @@ server {
 }
 NGINX
     else
-        cat >/etc/nginx/sites-available/${PANEL_SLUG}.conf <<NGINX
+        cat >"/etc/nginx/sites-available/${PANEL_SLUG}.conf" <<NGINX
 # Managed by the Control panel installer.
 server {
     listen 80;
@@ -5076,7 +5076,7 @@ NGINX
     fi
 
     nginx_without_ipv6 "/etc/nginx/sites-available/${PANEL_SLUG}.conf"
-    ln -sf /etc/nginx/sites-available/${PANEL_SLUG}.conf /etc/nginx/sites-enabled/${PANEL_SLUG}.conf
+    ln -sf "/etc/nginx/sites-available/${PANEL_SLUG}.conf" "/etc/nginx/sites-enabled/${PANEL_SLUG}.conf"
 
     # Ubuntu's default site is a catch-all on port 80. Left enabled it answers
     # for our hostnames too, depending on which loads first.
@@ -5119,7 +5119,7 @@ configure_apache() {
     # opens with "AH00558: Could not reliably determine the server's fully
     # qualified domain name". Harmless, and noise in every test. Every vhost
     # the panel writes names itself, so this is only the fallback's name.
-    printf 'ServerName %s\n' "$(hostname)" >/etc/apache2/conf-available/${PANEL_SLUG}-servername.conf
+    printf 'ServerName %s\n' "$(hostname)" >"/etc/apache2/conf-available/${PANEL_SLUG}-servername.conf"
     run a2enconf "${PANEL_SLUG}-servername"
 
     local conf="/etc/apache2/sites-available/${PANEL_SLUG}.conf"
@@ -5228,7 +5228,7 @@ CONF
     # ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on
     # servers installed before this.
     mkdir -p /etc/systemd/system/apache2.service.d
-    printf '[Service]\nProtectHome=no\n' >/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf
+    printf '[Service]\nProtectHome=no\n' >"/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf"
     run systemctl daemon-reload
 
     run systemctl enable apache2
@@ -5253,7 +5253,7 @@ install_services() {
     run chmod 750 "$UPDATE_STATE_DIR"
     ok "update state directory: ${UPDATE_STATE_DIR}"
 
-    cat >/etc/systemd/system/${PANEL_SLUG}-frontend.service <<UNIT
+    cat >"/etc/systemd/system/${PANEL_SLUG}-frontend.service" <<UNIT
 [Unit]
 Description=Control panel web interface (Next.js)
 After=network.target
@@ -5294,7 +5294,7 @@ UNIT
 
     # One worker. Server operations are sequential by nature — two workers
     # racing to change the same server is a failure mode, not throughput.
-    cat >/etc/systemd/system/${PANEL_SLUG}-queue.service <<UNIT
+    cat >"/etc/systemd/system/${PANEL_SLUG}-queue.service" <<UNIT
 [Unit]
 Description=Control panel queue worker
 After=network.target
@@ -5337,10 +5337,10 @@ UNIT
 
     # The scheduler tick. Without it the metrics collector never samples and the
     # disk cleaner never runs — features that look built but do nothing.
-    cat >/etc/cron.d/${PANEL_SLUG}-scheduler <<CRON
+    cat >"/etc/cron.d/${PANEL_SLUG}-scheduler" <<CRON
 * * * * * ${APP_USER} ${PANEL_PHP_BIN} ${backend}/artisan schedule:run >> /dev/null 2>&1
 CRON
-    chmod 644 /etc/cron.d/${PANEL_SLUG}-scheduler
+    chmod 644 "/etc/cron.d/${PANEL_SLUG}-scheduler"
 
     run systemctl daemon-reload
     # enable --now only *starts* a stopped unit; on a re-run it is a no-op, and
@@ -5352,10 +5352,10 @@ CRON
     # actually serves what it just built — the installer promises re-runs are
     # safe, so they must also be correct. Same reason the queue worker restarts:
     # it holds the old code in memory until it does.
-    run systemctl enable ${PANEL_SLUG}-frontend.service
-    run systemctl enable ${PANEL_SLUG}-queue.service
-    run systemctl restart ${PANEL_SLUG}-frontend.service
-    run systemctl restart ${PANEL_SLUG}-queue.service
+    run systemctl enable "${PANEL_SLUG}-frontend.service"
+    run systemctl enable "${PANEL_SLUG}-queue.service"
+    run systemctl restart "${PANEL_SLUG}-frontend.service"
+    run systemctl restart "${PANEL_SLUG}-queue.service"
     ok "panel, queue worker and scheduler running"
 
     keep_queue_from_needrestart
@@ -5437,10 +5437,10 @@ configure_sudoers() {
     # socket-activated ssh (Ubuntu 24.04+ default) it may be absent at rest and
     # is wiped on every reboot, so the read fails with "Missing privilege
     # separation directory". A tmpfiles rule recreates it at boot regardless.
-    cat >/etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf <<TMPFILES
+    cat >"/etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf" <<TMPFILES
 d /run/sshd 0755 root root -
 TMPFILES
-    run systemd-tmpfiles --create /etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf
+    run systemd-tmpfiles --create "/etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf"
     ok "sshd runtime directory (/run/sshd) guaranteed at boot"
 }
 
@@ -5869,7 +5869,7 @@ NGINX
     fi
 
     nginx_without_ipv6 "$tls_conf"
-    ln -sf "$tls_conf" /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
+    ln -sf "$tls_conf" "/etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf"
 
     # And plain HTTP only sends visitors to HTTPS, as `certbot --redirect` does
     # with a real certificate: before, the panel went on answering logins on
@@ -5894,7 +5894,7 @@ NGINX
         # this went in a separate file rather than being appended to the working
         # one. Serving plain HTTP beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
-        rm -f /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
+        rm -f "/etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf"
         mv -f "${http_conf}.pre-tls" "$http_conf"
         if nginx -t >>"$LOG_FILE" 2>&1; then
             run systemctl reload-or-restart nginx

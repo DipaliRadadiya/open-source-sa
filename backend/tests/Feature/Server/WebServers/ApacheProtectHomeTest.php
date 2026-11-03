@@ -114,5 +114,5 @@ it('checks the unit once per run, not once per site', function () {
 it('is written by the installer too, with the same setting', function () {
     $script = (string) file_get_contents(dirname(base_path()).'/install.sh');
 
-    expect($script)->toContain("printf '[Service]\\nProtectHome=no\\n' >/etc/systemd/system/apache2.service.d/\${PANEL_SLUG}-site-logs.conf");
+    expect($script)->toContain("printf '[Service]\\nProtectHome=no\\n' >\"/etc/systemd/system/apache2.service.d/\${PANEL_SLUG}-site-logs.conf\"");
 });

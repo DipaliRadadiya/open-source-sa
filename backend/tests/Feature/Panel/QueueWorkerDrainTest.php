@@ -10,7 +10,7 @@ use Tests\Support\QueueDrainUnit;
 function drainFreshUnit(): string
 {
     $install = (string) file_get_contents(base_path('../install.sh'));
-    preg_match('/cat >\/etc\/systemd\/system\/\$\{PANEL_SLUG\}-queue\.service <<UNIT\n(.*?)\nUNIT/s', $install, $match);
+    preg_match('/cat >"\/etc\/systemd\/system\/\$\{PANEL_SLUG\}-queue\.service" <<UNIT\n(.*?)\nUNIT/s', $install, $match);
 
     return strtr($match[1]."\n", [
         '${APP_USER}' => 'panel', '${backend}' => '/var/www/panel/backend', '${PANEL_PHP_BIN}' => '/usr/bin/php8.4',
