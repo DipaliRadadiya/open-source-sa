@@ -4102,7 +4102,9 @@ configure_ols() {
     test_ols_config "$conf"
 
     run systemctl enable lshttpd
-    run systemctl restart lshttpd
+    # Cold, not `systemctl restart`: this run may have moved two listeners
+    # (Default to :80, WebAdmin to 127.0.0.1:7080), see restart_ols_cold.
+    restart_ols_cold
     ok "OpenLiteSpeed serving ${PANEL_HOST}"
 }
 
@@ -4975,8 +4977,9 @@ harden_ols_webadmin() {
     # enables ufw: on a stock Ubuntu box the console answered on every address
     # while this line said it was closed (review finding S5). Nothing of the
     # panel's uses WebAdmin; an operator reaches it through an SSH tunnel.
-    # Applies at the restart configure_ols does next. The panel does the same
-    # for servers installed before this (panel:ols-webadmin).
+    # Applies at the cold restart configure_ols does next (restart_ols_cold;
+    # a graceful one cannot move it). The panel does the same for servers
+    # installed before this (panel:ols-webadmin).
     if [[ -f "$admin_conf" ]]; then
         sed -i -E 's/^([[:space:]]*address[[:space:]]+)[^[:space:]]+:7080[[:space:]]*$/\1127.0.0.1:7080/' "$admin_conf" 2>>"$LOG_FILE" || true
     fi
@@ -4985,6 +4988,106 @@ harden_ols_webadmin() {
     else
         warn "could not bind the WebAdmin console to 127.0.0.1 — :7080 may be reachable from outside; see ${admin_conf}"
     fi
+}
+
+# OpenLiteSpeed stopped, every litespeed process gone, then started again:
+# never the graceful handover `systemctl restart lshttpd` does (finding N1).
+#
+# A graceful restart passes the running server's listening sockets to the new
+# one. When the config has moved a listener to another address on the same
+# port -- harden_ols_webadmin's *:7080 to 127.0.0.1:7080 -- the new server
+# inherits *:7080, cannot bind 127.0.0.1:7080 beside it, and exits:
+#
+#   Can't listen at address adminListener: Address already in use!
+#   ... Fatal error in configuration, exit!
+#
+# systemd then starts it again every few seconds, each time up for about two,
+# until the old server has finished its graceful stop (gracefulRestartTimeout,
+# 300 s). certbot ran inside that window on every fresh OpenLiteSpeed install,
+# so Let's Encrypt timed out and the panel got the self-signed fallback.
+#
+# The unit's own stop is graceful too (ExecStop=lswsctrl delay-stop with
+# KillMode=none), so it returns at once and the old server lingers. So: wait
+# for it, then TERM what is left, then KILL. Waiting alone is not enough --
+# a draining server may hold on for the full 300 s.
+restart_ols_cold() {
+    if (( DRY_RUN )); then
+        printf '     %s$ %s%s\n' "$DIM" "systemctl stop lshttpd && (wait until no litespeed process is left) && systemctl start lshttpd" "$RESET"
+        return 0
+    fi
+
+    local grace="${OLS_STOP_GRACE:-15}"
+
+    run systemctl stop lshttpd
+    if ! wait_for_ols_exit "$grace"; then
+        say "     OpenLiteSpeed is still finishing a graceful stop after ${grace} s; stopping it now"
+        pkill -TERM -x litespeed 2>/dev/null || true
+        if ! wait_for_ols_exit "$grace"; then
+            pkill -KILL -x litespeed 2>/dev/null || true
+            wait_for_ols_exit 5 || die "OpenLiteSpeed would not stop: litespeed processes $(pgrep -d ' ' -x litespeed) are still running.
+     Starting it beside them would hand their listeners to the new server.
+     Stop them and run this again:
+       sudo pkill -KILL -x litespeed"
+        fi
+    fi
+
+    # A unit systemd had stopped restarting (start-limit-hit) refuses a start.
+    systemctl reset-failed lshttpd >/dev/null 2>&1 || true
+    run systemctl start lshttpd
+
+    wait_for_ols_serving 80 || die "OpenLiteSpeed did not stay up on port 80 after starting — see /usr/local/lsws/logs/error.log and journalctl -u lshttpd"
+}
+
+# 0 once no litespeed process is left, 1 if one still is after $1 seconds.
+wait_for_ols_exit() {
+    local limit="$1" waited=0
+
+    while pgrep -x litespeed >/dev/null 2>&1; do
+        (( waited >= limit )) && return 1
+        sleep 1
+        waited=$(( waited + 1 ))
+    done
+    return 0
+}
+
+# 0 once lshttpd is active, listening on every port given, and still the same
+# process ${OLS_SETTLE:-5} s later; 1 after ${OLS_START_TIMEOUT:-60} s. One
+# look is not enough: a server systemd keeps starting again answers for a
+# second or two each time (N1), and a certbot run in that second fails.
+wait_for_ols_serving() {
+    local limit="${OLS_START_TIMEOUT:-60}" settle="${OLS_SETTLE:-5}"
+    local waited=0 pid port
+
+    while (( waited < limit )); do
+        if pid=$(ols_serving_pid "$@"); then
+            sleep "$settle"
+            waited=$(( waited + settle ))
+            [[ "$(ols_serving_pid "$@" || true)" == "$pid" ]] && return 0
+        else
+            sleep 1
+            waited=$(( waited + 1 ))
+        fi
+    done
+
+    for port in "$@"; do
+        ss -ltnpH "sport = :${port}" >>"$LOG_FILE" 2>&1 || true
+    done
+    systemctl status lshttpd --no-pager >>"$LOG_FILE" 2>&1 || true
+    return 1
+}
+
+# lshttpd's main PID when the unit is active and every port given is
+# listening; nothing and 1 otherwise.
+ols_serving_pid() {
+    local pid port
+
+    systemctl is-active --quiet lshttpd || return 1
+    pid="$(systemctl show -p MainPID --value lshttpd 2>/dev/null)"
+    [[ -n "$pid" && "$pid" != 0 ]] || return 1
+    for port in "$@"; do
+        ss -ltnH "sport = :${port}" 2>/dev/null | grep -q . || return 1
+    done
+    printf '%s' "$pid"
 }
 
 configure_nginx() {
@@ -5651,6 +5754,13 @@ configure_tls_ols() {
         args+=(--register-unsafely-without-email)
     fi
 
+    # Let's Encrypt connects to port 80 from outside, and a server that is
+    # not up there turns into "Timeout during connect" and the self-signed
+    # fallback (N1). configure_ols checked already; this is where it counts.
+    if (( ! DRY_RUN )) && ! wait_for_ols_serving 80; then
+        warn "OpenLiteSpeed is not answering on port 80, so Let's Encrypt will probably not reach it"
+    fi
+
     if certbot_issue "${args[@]}"; then
         cert="/etc/letsencrypt/live/${PANEL_HOST}/fullchain.pem"
         key="/etc/letsencrypt/live/${PANEL_HOST}/privkey.pem"
@@ -5788,7 +5898,14 @@ CONF
         rm -f "${target}.pre-tls"
     done
 
+    # Graceful is safe here: the listeners keep their addresses, and 443 is
+    # a new one, so the handover has nothing to collide with (unlike
+    # configure_ols, see restart_ols_cold).
     run systemctl restart lshttpd
+    if ! wait_for_ols_serving 80 443; then
+        warn "OpenLiteSpeed is not answering on ports 80 and 443 after loading the certificate — see /usr/local/lsws/logs/error.log"
+        return
+    fi
     ok "OpenLiteSpeed serving HTTPS for ${PANEL_HOST}"
 }
 

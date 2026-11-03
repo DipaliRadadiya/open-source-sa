@@ -10,6 +10,7 @@ use App\Services\Panel\ReleaseUpdateScript;
 use App\Services\Panel\UpdateScript;
 use App\Support\SshPort;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 
 /*
  * install.sh's fixes from the installer review of 2026-11-02
@@ -136,8 +137,9 @@ describe('R4: OpenLiteSpeed reloads after its certificate renews', function () {
             certbot_issue() { '.($issued ? 'return 0' : 'return 1').'; }
             install_ols_certificate() { echo "install_ols_certificate $3"; }
             openssl() { :; }
+            wait_for_ols_serving() { :; }
             APP_DIR=/var/www/panel; PANEL_SLUG=panel; PANEL_HOST=panel.example.com; API_HOST=panel.example.com
-            SINGLE_HOST=1; ADMIN_EMAIL=""; DOMAIN=panel.example.com; LOG_FILE=/dev/null
+            SINGLE_HOST=1; ADMIN_EMAIL=""; DOMAIN=panel.example.com; LOG_FILE=/dev/null; DRY_RUN=0
             configure_tls_ols
             echo "TLS_STATE=$TLS_STATE"');
 
@@ -490,6 +492,7 @@ describe('R3: a TLS config OpenLiteSpeed rejects is taken back out', function ()
         $run = reviewBash(reviewRooted(installerFnBefore('install_ols_certificate', 'configure_tls'), $root, ['/usr/local/lsws/']).'
             run() { "$@"; }
             systemctl() { echo "systemctl $*"; }
+            wait_for_ols_serving() { echo "wait_for_ols_serving $*"; }
             ols_listener_maps() { echo "  map                     panel panel.example.com"; }
             PANEL_SLUG=panel; PANEL_HOST=panel.example.com; SINGLE_HOST=1; LOG_FILE=/dev/null
             SCHEME=https; TLS_STATE=letsencrypt
@@ -518,7 +521,7 @@ describe('R3: a TLS config OpenLiteSpeed rejects is taken back out', function ()
         $run = olsCertificateRun(test: 0);
 
         expect($run['code'])->toBe(0, $run['out'])
-            ->and($run['out'])->toContain('systemctl restart lshttpd')
+            ->and($run['out'])->toContain("systemctl restart lshttpd\nwait_for_ols_serving 80 443\nok: OpenLiteSpeed serving HTTPS")
             ->and($run['conf'])->toContain('listener Defaultssl {')
             ->and($run['vhconf'])->toContain('vhssl {')
             ->and($run['left'])->toBe([]);
@@ -888,17 +891,25 @@ describe('S5: OpenLiteSpeed\'s WebAdmin console listens on this server only', fu
         $dir = reviewDir();
         config(['server.web_server_drivers.openlitespeed.webadmin_config' => $dir.'/admin_config.conf']);
         file_put_contents($dir.'/admin_config.conf', $shipped);
-        Process::fake();
+        // OpenLiteSpeed gone at the first look after the stop, and on
+        // 127.0.0.1:7080 once started. The restart itself is OlsRestartTest's.
+        Sleep::fake();
+        Process::fake([
+            "'pgrep' *" => Process::result(exitCode: 1),
+            "'ss' *" => Process::result("LISTEN 0 4096 127.0.0.1:7080 0.0.0.0:* users:((\"litespeed\",pid=7,fd=22))\n"),
+            '*' => Process::result(),
+        ]);
 
         $this->artisan('panel:ols-webadmin')->expectsOutputToContain('now listens on 127.0.0.1:7080')->assertSuccessful();
 
         expect((string) file_get_contents($dir.'/admin_config.conf'))->toContain('address               127.0.0.1:7080')
             ->and(decoct(fileperms($dir.'/admin_config.conf') & 0777))->toBe('644');
-        Process::assertRan(fn ($process) => $process->command === ['/usr/local/lsws/bin/lswsctrl', 'restart']);
+        Process::assertRan(fn ($process) => $process->command === ['systemctl', 'start', 'lshttpd']);
+        Process::assertDidntRun(fn ($process) => $process->command === ['/usr/local/lsws/bin/lswsctrl', 'restart']);
 
         // Idempotent: a second run changes nothing and restarts nothing.
         $this->artisan('panel:ols-webadmin')->expectsOutputToContain('is up to date')->assertSuccessful();
-        Process::assertRanTimes(fn ($process) => $process->command === ['/usr/local/lsws/bin/lswsctrl', 'restart'], 1);
+        Process::assertRanTimes(fn ($process) => $process->command === ['systemctl', 'start', 'lshttpd'], 1);
     });
 
     it('panel:ols-webadmin does nothing on a server without OpenLiteSpeed', function () {
@@ -1505,6 +1516,7 @@ describe('R9: a failed config rewrite is not carried on past', function () {
         $run = reviewBash(reviewRooted(installerFnBefore('install_ols_certificate', 'configure_tls'), $root, ['/usr/local/lsws/']).'
             run() { "$@"; }
             systemctl() { echo "systemctl $*"; }
+            wait_for_ols_serving() { echo "wait_for_ols_serving $*"; }
             awk() { [[ $1 != -v ]] || return 2; command awk "$@"; }
             ols_listener_maps() { echo "  map                     panel panel.example.com"; }
             PANEL_SLUG=panel; PANEL_HOST=panel.example.com; SINGLE_HOST=1; LOG_FILE=/dev/null

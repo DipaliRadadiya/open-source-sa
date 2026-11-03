@@ -2,6 +2,9 @@
 
 namespace App\Services\Panel;
 
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
+
 /**
  * OpenLiteSpeed's own WebAdmin console, and the address it listens on.
  *
@@ -15,6 +18,11 @@ namespace App\Services\Panel;
 class OlsWebAdmin
 {
     public const ADDRESS = '127.0.0.1:7080';
+
+    public const UNIT = 'lshttpd';
+
+    /** The name every OpenLiteSpeed server process runs under. */
+    public const PROCESS = 'litespeed';
 
     public function configPath(): string
     {
@@ -32,5 +40,105 @@ class OlsWebAdmin
         $next = preg_replace('/^([ \t]*address[ \t]+)\S+:7080[ \t]*$/m', '${1}'.self::ADDRESS, $config);
 
         return $next === null || $next === $config ? null : $next;
+    }
+
+    /** True when the config asks for the console on 127.0.0.1:7080. */
+    public static function bound(string $config): bool
+    {
+        return preg_match('/^[ \t]*address[ \t]+'.preg_quote(self::ADDRESS, '/').'[ \t]*$/m', $config) === 1;
+    }
+
+    /**
+     * The addresses OpenLiteSpeed itself listens on for :7080 right now, as
+     * `ss` prints them (`0.0.0.0:7080`, `127.0.0.1:7080`, …). Other programs
+     * on the port are not ours to judge, so they are left out.
+     *
+     * @return list<string>
+     */
+    public function liveAddresses(): array
+    {
+        $result = Process::timeout(15)->run(['ss', '-ltnpH', 'sport = :7080']);
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $addresses = [];
+
+        foreach (preg_split('/\R/', trim($result->output())) ?: [] as $line) {
+            $fields = preg_split('/\s+/', trim($line)) ?: [];
+
+            if (isset($fields[3]) && str_contains($line, '"'.self::PROCESS.'"')) {
+                $addresses[] = $fields[3];
+            }
+        }
+
+        return array_values(array_unique($addresses));
+    }
+
+    /**
+     * Stop OpenLiteSpeed, wait until no server process is left, start it.
+     * Null on success, otherwise what went wrong.
+     *
+     * Not `lswsctrl restart`. A graceful restart hands the running server's
+     * listening sockets to the new one, so the new one inherits `*:7080`,
+     * cannot bind 127.0.0.1:7080 beside it, and exits ("Can't listen at
+     * address adminListener: Address already in use … Fatal error in
+     * configuration, exit!"). The old server keeps serving its old config:
+     * the console never moved, and from then on every graceful restart (each
+     * site change) failed the same way. Measured on a real server on
+     * 2026-11-03 (finding N1). install.sh does the same (restart_ols_cold).
+     *
+     * The unit's own stop is graceful too (`lswsctrl delay-stop`,
+     * KillMode=none): it returns at once, and a draining server may linger
+     * for gracefulRestartTimeout (300 s). So: wait, then TERM, then KILL.
+     */
+    public function restartCold(int $grace = 15): ?string
+    {
+        $stop = Process::timeout(60)->run(['systemctl', 'stop', self::UNIT]);
+
+        if ($stop->failed()) {
+            return 'systemctl stop '.self::UNIT.': '.trim($stop->errorOutput());
+        }
+
+        if (! $this->waitForExit($grace)) {
+            Process::timeout(15)->run(['pkill', '-TERM', '-x', self::PROCESS]);
+
+            if (! $this->waitForExit($grace)) {
+                Process::timeout(15)->run(['pkill', '-KILL', '-x', self::PROCESS]);
+
+                if (! $this->waitForExit(5)) {
+                    return self::PROCESS.' processes would not exit, so '.self::UNIT.' was left stopped rather than started beside them';
+                }
+            }
+        }
+
+        // A unit systemd had stopped restarting (start-limit-hit) refuses a start.
+        Process::timeout(15)->run(['systemctl', 'reset-failed', self::UNIT]);
+
+        $start = Process::timeout(60)->run(['systemctl', 'start', self::UNIT]);
+
+        if ($start->failed()) {
+            return 'systemctl start '.self::UNIT.': '.trim($start->errorOutput());
+        }
+
+        return null;
+    }
+
+    /** True once no OpenLiteSpeed process is left; false after $seconds. */
+    private function waitForExit(int $seconds): bool
+    {
+        for ($waited = 0; ; $waited++) {
+            // pgrep: 1 is "no such process"; anything else counts as still there.
+            if (Process::timeout(15)->run(['pgrep', '-x', self::PROCESS])->exitCode() === 1) {
+                return true;
+            }
+
+            if ($waited >= $seconds) {
+                return false;
+            }
+
+            Sleep::for(1)->second();
+        }
     }
 }
