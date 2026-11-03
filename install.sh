@@ -4847,7 +4847,8 @@ register_ols_panel_vhost() {
         inlistener && /^[[:space:]]*map[[:space:]]+Example[[:space:]]/ { next }
         inlistener && /\}/ { inlistener = 0 }
         { print }
-    ' "$conf" >"$tmp80" && mv -f "$tmp80" "$conf"
+    ' "$conf" >"$tmp80" || { rm -f "$tmp80"; die "could not rewrite ${conf} to move the Default listener to :80"; }
+    mv -f "$tmp80" "$conf"
 
     cat >>"$conf" <<CONF
 
@@ -4893,7 +4894,8 @@ CONF
             }
         }
         { print }
-    ' "$conf" >"$tmp" && mv -f "$tmp" "$conf"
+    ' "$conf" >"$tmp" || { rm -f "$tmp"; die "could not add the panel to the Default listener in ${conf}"; }
+    mv -f "$tmp" "$conf"
 
     ok "panel vhost registered for ${PANEL_HOST}"
 }
@@ -5549,7 +5551,11 @@ self_signed_apache() {
         # beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
         run a2dissite "${PANEL_SLUG}-tls"
-        apache2ctl configtest >>"$LOG_FILE" 2>&1 && systemctl reload-or-restart apache2
+        if apache2ctl configtest >>"$LOG_FILE" 2>&1; then
+            run systemctl reload-or-restart apache2
+        else
+            warn "Apache's config still fails its test without the fallback; it keeps running what it loaded — see $LOG_FILE"
+        fi
         TLS_STATE="none"
         SCHEME="http"
     fi
@@ -5644,7 +5650,7 @@ install_ols_certificate() {
     # rejected config does not stop the server that is running; it stops the
     # one that starts after a reboot, and with it the panel and every site
     # (review finding R3).
-    local target backups=()
+    local target backups=() mapped=1
     for target in "$conf" "${vhconfs[@]}"; do
         [[ -f "$target" ]] || continue
         cp -a "$target" "${target}.pre-tls"
@@ -5698,10 +5704,16 @@ CONF
                 }
             }
             { print }
-        ' "$conf" >"$tmp" && mv -f "$tmp" "$conf"
+        ' "$conf" >"$tmp" || { rm -f "$tmp"; mapped=0; warn "could not add the panel to the Defaultssl listener in ${conf}"; }
+        if (( mapped )); then
+            mv -f "$tmp" "$conf"
+        fi
     fi
 
-    if ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
+    # A failed rewrite above is handled as a rejected config: without the map
+    # the certificate is on a listener that never serves the panel (review
+    # finding R9; `awk … && mv` carried on as if it had worked).
+    if (( ! mapped )) || ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
         for target in "${backups[@]}"; do
             mv -f "${target}.pre-tls" "$target"
         done
@@ -5884,7 +5896,11 @@ NGINX
         warn "the self-signed configuration did not validate; staying on HTTP"
         rm -f /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
         mv -f "${http_conf}.pre-tls" "$http_conf"
-        nginx -t >>"$LOG_FILE" 2>&1 && systemctl reload-or-restart nginx
+        if nginx -t >>"$LOG_FILE" 2>&1; then
+            run systemctl reload-or-restart nginx
+        else
+            warn "nginx's config still fails its test without the fallback; it keeps running what it loaded — see $LOG_FILE"
+        fi
         TLS_STATE="none"
         SCHEME="http"
     fi

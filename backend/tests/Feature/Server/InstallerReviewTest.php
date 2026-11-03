@@ -1430,3 +1430,127 @@ describe('R8: a failed copy of the interface\'s assets fails its start', functio
         Process::assertRan(fn ($process) => $process->command === ['systemctl', 'daemon-reload']);
     });
 });
+
+describe('R9: a failed config rewrite is not carried on past', function () {
+    /*
+     * `awk … >"$tmp" && mv -f "$tmp" "$conf"`: under `set -e` a failure on the
+     * left of `&&` neither stops the script nor fires the ERR trap, so a failed
+     * awk left OpenLiteSpeed's config as shipped (the Example vhost, :8088),
+     * a stray .panel-tmp beside it, and the install saying all was well. The
+     * self-signed fallbacks' last-resort `configtest && reload` said nothing
+     * when the config still failed.
+     */
+    $shipped = "listener Default{\n    address                  *:8088\n    secure                   0\n    map                      Example *\n}\n\nvirtualHost Example{\n    vhRoot                   Example/\n}\n";
+
+    // awk that fails only for the call under test: the first rewrite has no
+    // -v, the listener map does.
+    function olsRegister(string $shipped, ?string $failing): array
+    {
+        $dir = reviewDir();
+        file_put_contents($dir.'/httpd_config.conf', $shipped);
+        $fail = match ($failing) {
+            'listener' => '[[ $1 == -v ]] || return 2',
+            'map' => '[[ $1 != -v ]] || return 2',
+            default => ':',
+        };
+
+        $run = reviewBash(installerFnBefore('register_ols_panel_vhost', 'harden_ols_webadmin').'
+            die() { echo "DIE: $*"; exit 1; }
+            awk() { '.$fail.'; command awk "$@"; }
+            ols_listener_maps() { echo "  map                     panel panel.example.com"; }
+            PANEL_SLUG=panel; PANEL_HOST=panel.example.com; SINGLE_HOST=1; APP_DIR=/var/www/panel
+            register_ols_panel_vhost '.escapeshellarg($dir.'/httpd_config.conf').' /usr/local/lsws/conf/vhosts/panel /usr/local/lsws/conf/vhosts/panel-api
+            echo "CONTINUED"');
+
+        return $run + [
+            'conf' => (string) file_get_contents($dir.'/httpd_config.conf'),
+            'temps' => glob($dir.'/*.panel-tmp') ?: [],
+        ];
+    }
+
+    it('registers the panel when both rewrites work', function () use ($shipped) {
+        $run = olsRegister($shipped, null);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('CONTINUED')
+            ->and($run['conf'])->toContain('*:80')
+            ->and($run['conf'])->not->toContain('Example')
+            ->and($run['conf'])->toContain('map                     panel panel.example.com');
+    });
+
+    it('stops the install, with no temp file left, when a rewrite fails', function (string $failing, string $message) use ($shipped) {
+        $run = olsRegister($shipped, $failing);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: '.$message)
+            ->and($run['out'])->not->toContain('CONTINUED')
+            ->and($run['temps'])->toBe([]);
+    })->with([
+        'moving the Default listener' => ['listener', 'could not rewrite'],
+        'mapping the panel into it' => ['map', 'could not add the panel to the Default listener'],
+    ]);
+
+    it('takes the TLS config back out when the Defaultssl map cannot be added', function () {
+        $root = reviewDir();
+        $conf = $root.'/httpd_config.conf';
+        $vhconf = $root.'/vhconf.conf';
+        $before = "listener Defaultssl {\n  address                 *:443\n  secure                  1\n}\n";
+        file_put_contents($conf, $before);
+        file_put_contents($vhconf, "docRoot /var/www/panel/backend/public\n");
+        @mkdir($root.'/usr/local/lsws/bin', 0777, true);
+        file_put_contents($root.'/usr/local/lsws/bin/openlitespeed', "#!/bin/sh\nexit 0\n");
+        chmod($root.'/usr/local/lsws/bin/openlitespeed', 0755);
+
+        $run = reviewBash(reviewRooted(installerFnBefore('install_ols_certificate', 'configure_tls'), $root, ['/usr/local/lsws/']).'
+            run() { "$@"; }
+            systemctl() { echo "systemctl $*"; }
+            awk() { [[ $1 != -v ]] || return 2; command awk "$@"; }
+            ols_listener_maps() { echo "  map                     panel panel.example.com"; }
+            PANEL_SLUG=panel; PANEL_HOST=panel.example.com; SINGLE_HOST=1; LOG_FILE=/dev/null
+            SCHEME=https; TLS_STATE=letsencrypt
+            install_ols_certificate '.escapeshellarg($conf).' '.escapeshellarg($vhconf).' /etc/letsencrypt/live/x/fullchain.pem /etc/letsencrypt/live/x/privkey.pem
+            echo "SCHEME=$SCHEME TLS_STATE=$TLS_STATE"');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('warn: could not add the panel to the Defaultssl listener')
+            ->and($run['out'])->toContain('SCHEME=http TLS_STATE=none')
+            ->and($run['out'])->not->toContain('systemctl restart lshttpd')
+            ->and(file_get_contents($conf))->toBe($before)
+            ->and(file_get_contents($vhconf))->toBe("docRoot /var/www/panel/backend/public\n")
+            ->and(glob($root.'/*.{panel-tmp,pre-tls}', GLOB_BRACE) ?: [])->toBe([]);
+    });
+
+    it('says so when the config still fails after the self-signed fallback is taken out', function (string $webServer) {
+        $root = reviewDir();
+        foreach (['/etc/nginx/sites-available', '/etc/nginx/sites-enabled', '/etc/apache2/sites-available', '/etc/apache2/sites-enabled', '/etc/ssl'] as $dir) {
+            @mkdir($root.$dir, 0777, true);
+        }
+        file_put_contents($root.'/etc/nginx/sites-available/panel.conf', "server {\n    listen 80;\n    location /.well-known/acme-challenge/ { root /var/www/panel/backend/public; }\n    include /etc/nginx/snippets/panel-web.conf;\n}\n");
+        file_put_contents($root.'/etc/apache2/sites-available/panel.conf', "# Managed\n<VirtualHost *:80>\n    ServerName panel.example.com\n</VirtualHost>\n");
+
+        $run = reviewBash(reviewRooted(
+            installerFunctions('have_ipv6', 'nginx_without_ipv6')."\n"
+            .installerFn('self_signed_apache')."\n"
+            .installerFnBefore('configure_tls', 'certbot_issue'),
+            $root,
+            ['/etc/nginx/', '/etc/apache2/', '/etc/ssl/'],
+        ).'
+            run() { "$@"; }
+            step() { :; }
+            have_ipv6() { return 0; }
+            certbot_issue() { return 1; }
+            openssl() { :; }; a2ensite() { :; }; a2dissite() { :; }
+            systemctl() { echo "systemctl $*"; }
+            nginx() { return 1; }; apache2ctl() { return 1; }
+            WANT_SSL=1; WEB_SERVER='.$webServer.'; PANEL_SLUG=panel; PANEL_HOST=panel.example.com; API_HOST=panel.example.com
+            SINGLE_HOST=1; ADMIN_EMAIL=""; DOMAIN=""; APP_DIR=/var/www/panel; LOG_FILE=/dev/null
+            configure_tls
+            echo "TLS_STATE=$TLS_STATE"');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('warn: the self-signed configuration did not validate; staying on HTTP')
+            ->and($run['out'])->toContain('still fails its test without the fallback')
+            ->and($run['out'])->not->toContain('systemctl reload-or-restart')
+            ->and($run['out'])->toContain('TLS_STATE=none');
+    })->with(['nginx', 'apache']);
+});
