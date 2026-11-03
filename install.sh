@@ -5267,8 +5267,10 @@ User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${APP_DIR}/frontend
 # Next's standalone output does not serve its own static assets or public files;
-# they are copied in beside the server it does run.
-ExecStartPre=/bin/sh -c 'mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -a .next/static .next/standalone/.next/static && cp -a public .next/standalone/public 2>/dev/null || true'
+# they are copied in beside the server it does run. Only public/ is optional: a
+# failed copy of the assets fails the start rather than serving pages with no
+# CSS or JS (review finding R8). Must match FrontendUnit::ASSET_COPY.
+ExecStartPre=/bin/sh -c 'mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -a .next/static .next/standalone/.next/static && if [ -d public ]; then cp -a public .next/standalone/public; fi'
 ExecStart=${NODE_BIN} ${APP_DIR}/frontend/.next/standalone/server.js
 Restart=always
 RestartSec=5

@@ -1360,3 +1360,73 @@ describe('S7: the install state file is for administrators only', function () {
             ->and($run['temps'])->toBe([]);
     });
 });
+
+describe('R8: a failed copy of the interface\'s assets fails its start', function () {
+    /*
+     * The frontend unit's ExecStartPre ended in `2>/dev/null || true`, which
+     * covered the whole `&&` chain (`sh -c 'false && true || true'` exits 0):
+     * when copying .next/static failed, the interface started anyway, served
+     * pages with no CSS or JS, and nothing said why.
+     */
+    function assetCopy(bool $static, bool $public): array
+    {
+        $line = collect(explode("\n", installedUnits()['frontend']))
+            ->first(fn (string $l) => str_starts_with($l, 'ExecStartPre='));
+
+        $dir = reviewDir();
+        mkdir($dir.'/.next', 0777, true);
+        if ($static) {
+            mkdir($dir.'/.next/static/chunks', 0777, true);
+            file_put_contents($dir.'/.next/static/chunks/app.js', 'js');
+        }
+        if ($public) {
+            mkdir($dir.'/public');
+            file_put_contents($dir.'/public/favicon.ico', 'ico');
+        }
+
+        exec('cd '.escapeshellarg($dir).' && '.substr((string) $line, strlen('ExecStartPre=')).' 2>&1', $out, $code);
+
+        return [
+            'line' => $line,
+            'code' => $code,
+            'static' => is_file($dir.'/.next/standalone/.next/static/chunks/app.js'),
+            'public' => is_file($dir.'/.next/standalone/public/favicon.ico'),
+        ];
+    }
+
+    it('copies the assets and public/', function () {
+        expect(assetCopy(static: true, public: true))->toMatchArray(['code' => 0, 'static' => true, 'public' => true]);
+    });
+
+    it('starts without public/, which is optional', function () {
+        expect(assetCopy(static: true, public: false))->toMatchArray(['code' => 0, 'static' => true, 'public' => false]);
+    });
+
+    it('fails when the assets cannot be copied', function () {
+        expect(assetCopy(static: false, public: true)['code'])->not->toBe(0);
+    });
+
+    it('writes the line the panel puts on existing servers', function () {
+        expect(assetCopy(static: true, public: true)['line'])->toBe(FrontendUnit::ASSET_COPY);
+    });
+
+    it('replaces the old line on existing servers through panel:frontend-unit, and only that exact line', function () {
+        $unit = "[Service]\nUser=panel\n".FrontendUnit::LEGACY_ASSET_COPY."\nEnvironment=PORT=3100\n".FrontendUnit::LISTEN."\n".FrontendUnit::NO_NEW_PRIVILEGES."\n";
+
+        expect(FrontendUnit::desired($unit))->toBe(str_replace(FrontendUnit::LEGACY_ASSET_COPY, FrontendUnit::ASSET_COPY, $unit))
+            ->and(FrontendUnit::desired(str_replace(FrontendUnit::LEGACY_ASSET_COPY, FrontendUnit::ASSET_COPY, $unit)))->toBeNull()
+            // An operator's own line is theirs.
+            ->and(FrontendUnit::withStrictAssetCopy("[Service]\nExecStartPre=/bin/sh -c 'cp -a .next/static x || true'\n"))->toBeNull();
+
+        $dir = reviewDir();
+        config(['server.applications.systemd_dir' => $dir, 'panel_update.services.frontend' => 'panel-frontend.service']);
+        file_put_contents("{$dir}/panel-frontend.service", $unit);
+        Process::fake();
+
+        $this->artisan('panel:frontend-unit')->assertSuccessful();
+
+        expect(file_get_contents("{$dir}/panel-frontend.service"))->toContain(FrontendUnit::ASSET_COPY)
+            ->not->toContain('|| true');
+        Process::assertRan(fn ($process) => $process->command === ['systemctl', 'daemon-reload']);
+    });
+});

@@ -15,12 +15,22 @@ namespace App\Services\Panel;
  * root-equivalent, and nothing stopped the interface's processes using it —
  * a code-execution bug in Next was `sudo -n sh` away from root. The interface
  * never needs sudo, so `NoNewPrivileges=yes` blocks setuid for this unit.
+ *
+ * Review finding R8: the asset copy before the start ended in `|| true`,
+ * which covered the whole `&&` chain, so a failed copy of `.next/static`
+ * started an interface with no CSS or JS and no error anywhere. Only the
+ * optional `public/` copy may be skipped now.
  */
 class FrontendUnit
 {
     public const LISTEN = 'Environment=HOSTNAME=127.0.0.1';
 
     public const NO_NEW_PRIVILEGES = 'NoNewPrivileges=yes';
+
+    public const ASSET_COPY = "ExecStartPre=/bin/sh -c 'mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -a .next/static .next/standalone/.next/static && if [ -d public ]; then cp -a public .next/standalone/public; fi'";
+
+    /** The line install.sh wrote before R8, the only one replaced. */
+    public const LEGACY_ASSET_COPY = "ExecStartPre=/bin/sh -c 'mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -a .next/static .next/standalone/.next/static && cp -a public .next/standalone/public 2>/dev/null || true'";
 
     public function service(): string
     {
@@ -40,7 +50,7 @@ class FrontendUnit
     {
         $changed = false;
 
-        foreach ([self::withLoopback(...), self::withNoNewPrivileges(...)] as $apply) {
+        foreach ([self::withLoopback(...), self::withNoNewPrivileges(...), self::withStrictAssetCopy(...)] as $apply) {
             $next = $apply($unit);
 
             if ($next !== null) {
@@ -90,5 +100,19 @@ class FrontendUnit
         $rest = substr($unit, $end);
 
         return $body."\n".self::NO_NEW_PRIVILEGES."\n".($rest === '' ? '' : "\n".$rest);
+    }
+
+    /**
+     * The unit with install.sh's old asset copy replaced, or null when it does
+     * not have that exact line: already current, or changed by an operator
+     * (left alone).
+     */
+    public static function withStrictAssetCopy(string $unit): ?string
+    {
+        $legacy = '/^'.preg_quote(self::LEGACY_ASSET_COPY, '/').'$/m';
+
+        return preg_match($legacy, $unit) === 1
+            ? (string) preg_replace_callback($legacy, fn () => self::ASSET_COPY, $unit, 1)
+            : null;
     }
 }
