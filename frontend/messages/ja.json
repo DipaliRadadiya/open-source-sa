@@ -1402,8 +1402,8 @@
         "body": "削除されたか、リンクが古くなっている可能性があります。"
       },
       "server": {
-        "title": "サーバーで問題が発生しました",
-        "body": "変更はありません。しばらくしてからもう一度お試しください。"
+        "title": "パネルがこれを読み込めませんでした",
+        "body": "これはパネル側の問題で、アプリケーションの問題ではありません。変更はありません。しばらくしてからもう一度お試しください。"
       },
       "shape": {
         "title": "パネルがこれを解釈できませんでした",
@@ -4235,7 +4235,8 @@
       "systemUserGeneratePassword": "生成",
       "systemUserPasswordHint": "自動生成されます。保管、変更、削除が可能です。後で「システムユーザー」ページから再確認できます。",
       "systemUserNew": "{username}（新規）",
-      "tablePrefixInvalid": "英字で始め、英字と数字のみを使い、アンダースコアで終えてください（例: jml_）。"
+      "tablePrefixInvalid": "英字で始め、英字と数字のみを使い、アンダースコアで終えてください（例: jml_）。",
+      "runtimeLoadFailed": "インストール済みの {runtime} バージョンを読み込めませんでした。"
     },
     "actions": {
       "label": "操作",
@@ -6889,6 +6890,7 @@
     "skipHint": "後からダッシュボードからセットアップを完了できます。",
     "bannerTitle": "サーバーのセットアップを完了してください。",
     "bannerBody": "{count, plural, other {# 件の推奨コンポーネントが残っています}}。",
+    "bannerBodyNamed": "{count, plural, other {# 件の推奨コンポーネントが残っています（{names}）}}。",
     "bannerAction": "セットアップを完了",
     "bannerDismiss": "閉じる",
     "chooseVersion": "バージョンを選択",

@@ -56,7 +56,8 @@ const CONTAINER_BADGES = {
 };
 
 // Badge and notes are split because the card and table place them differently.
-export function ApplicationStatusBadge({ application }) {
+// `deploying`: the page knows a deploy is queued, which the application payload alone cannot say.
+export function ApplicationStatusBadge({ application, deploying = false }) {
   const t = useTranslations("applications");
 
   // Paused outranks status: `disable()` serves a placeholder page but `status`
@@ -72,7 +73,7 @@ export function ApplicationStatusBadge({ application }) {
 
   // The API reports `provisioning` for a redeploy too, while the site keeps
   // serving its old code.
-  if (isRedeploying(application)) {
+  if (isRedeploying(application) || deploying) {
     return (
       <Badge variant="warning" className="gap-1.5 font-normal">
         <PillDot tone="bg-warning" live />

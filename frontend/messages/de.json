@@ -1402,8 +1402,8 @@
         "body": "Es wurde möglicherweise gelöscht, oder der Link ist veraltet."
       },
       "server": {
-        "title": "Der Server hatte ein Problem",
-        "body": "Nichts hat sich geändert. Versuchen Sie es gleich noch einmal."
+        "title": "Das Panel konnte dies nicht laden",
+        "body": "Das ist ein Problem im Panel, nicht in Ihren Anwendungen. Nichts hat sich geändert. Versuchen Sie es gleich noch einmal."
       },
       "shape": {
         "title": "Das Panel konnte dies nicht lesen",
@@ -4235,7 +4235,8 @@
       "systemUserGeneratePassword": "Erzeugen",
       "systemUserPasswordHint": "Automatisch generiert. Übernehmen, ändern oder löschen – Sie können es später auf der Seite Systembenutzer erneut einsehen.",
       "systemUserNew": "{username} (neu)",
-      "tablePrefixInvalid": "Mit einem Buchstaben beginnen, nur Buchstaben und Ziffern verwenden und mit einem Unterstrich enden (zum Beispiel jml_)."
+      "tablePrefixInvalid": "Mit einem Buchstaben beginnen, nur Buchstaben und Ziffern verwenden und mit einem Unterstrich enden (zum Beispiel jml_).",
+      "runtimeLoadFailed": "Die installierten {runtime}-Versionen konnten nicht gelesen werden."
     },
     "actions": {
       "label": "Aktionen",
@@ -6889,6 +6890,7 @@
     "skipHint": "Sie können die Einrichtung später vom Dashboard aus abschließen.",
     "bannerTitle": "Schließen Sie die Einrichtung Ihres Servers ab.",
     "bannerBody": "{count, plural, one {# empfohlene Komponente fehlt noch} other {# empfohlene Komponenten fehlen noch}}.",
+    "bannerBodyNamed": "{count, plural, one {# empfohlene Komponente fehlt noch: {names}} other {# empfohlene Komponenten fehlen noch: {names}}}.",
     "bannerAction": "Einrichtung abschließen",
     "bannerDismiss": "Ausblenden",
     "chooseVersion": "Version wählen",

@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatBytes } from "@/lib/format/bytes";
 import { ConvertSupervisorDialog } from "@/components/applications/convert-supervisor-dialog";
 import { FACT_LABEL } from "@/lib/theme/facts";
+import { firstDeployPending } from "@/lib/applications/settled";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
@@ -28,7 +29,8 @@ const POLL_MS = 10000;
 
 // A new git site is `active` with a never-started process: "deploy to start",
 // not a fault, so not red.
-export function ProcessCard({ application, canManage = false, className }) {
+// `deploying`: a deploy is queued or running, so a not-yet-started process is not "Stopped".
+export function ProcessCard({ application, canManage = false, deploying = false, className }) {
   const t = useTranslations("applications.process");
   const tApp = useTranslations("applications");
   const format = useFormatter();
@@ -55,7 +57,9 @@ export function ProcessCard({ application, canManage = false, className }) {
       ? "inactive"
       : expected === "running" && rawState !== "active"
         ? "activating"
-        : rawState;
+        : (deploying || firstDeployPending(application)) && rawState === "inactive"
+          ? "activating"
+          : rawState;
   const stateLabel =
     state === "active"
       ? tApp("status.active")

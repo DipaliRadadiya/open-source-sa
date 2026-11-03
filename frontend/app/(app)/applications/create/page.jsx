@@ -108,13 +108,12 @@ export default async function CreateApplicationPage({ searchParams }) {
   return (
     <div className="space-y-6">
       <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
-      {/* A server precondition, not a form field, so it sits above the form
-          rather than in the readiness checklist (which focuses inputs). */}
-      {noDatabaseEngine(engines) ? (
-        <NoDatabaseEngineNotice installing={engineInstalling(engines)} />
-      ) : null}
-
       <CreateApplicationForm
+        // A server precondition, not a form field, so it sits above the form rather than in
+        // the readiness checklist. The form hides it once a type that needs no database is chosen.
+        databaseNotice={
+          noDatabaseEngine(engines) ? <NoDatabaseEngineNotice installing={engineInstalling(engines)} /> : null
+        }
         initialType={prefillType}
         initialDockerSource={initialDockerSource}
         // A marketplace slug is a valid site name, and the temporary domain

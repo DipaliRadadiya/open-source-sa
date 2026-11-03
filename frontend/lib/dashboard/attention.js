@@ -1,3 +1,4 @@
+import { firstDeployPending } from "../applications/settled.js";
 // Derived from the applications list, which has no certificate fields, so plain-http live sites stand in for TLS problems.
 // Ordered by severity.
 const KINDS = [
@@ -27,7 +28,8 @@ const KINDS = [
       Boolean(a.deployed) &&
       Boolean(a.process) &&
       a.process.state !== "active" &&
-      a.process.state !== "activating",
+      a.process.state !== "activating" &&
+      !firstDeployPending(a),
     href: (a) => `/applications/${a.id}/workers`,
   },
   {

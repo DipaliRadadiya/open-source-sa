@@ -1402,8 +1402,8 @@
         "body": "It may have been deleted, or the link may be out of date."
       },
       "server": {
-        "title": "The server had a problem",
-        "body": "Nothing has changed. Try again in a moment."
+        "title": "The panel could not load this",
+        "body": "This is a problem in the panel, not in your applications. Nothing has changed. Try again in a moment."
       },
       "shape": {
         "title": "The panel could not read this",
@@ -4235,7 +4235,8 @@
       "systemUserGeneratePassword": "Generate",
       "systemUserPasswordHint": "Generated for you. Keep it, change it or clear it. You can see it again later on the System Users page.",
       "systemUserNew": "{username} (new)",
-      "tablePrefixInvalid": "Start with a letter, use only letters and numbers, and end with an underscore (for example jml_)."
+      "tablePrefixInvalid": "Start with a letter, use only letters and numbers, and end with an underscore (for example jml_).",
+      "runtimeLoadFailed": "The installed {runtime} versions could not be read."
     },
     "actions": {
       "label": "Actions",
@@ -6889,6 +6890,7 @@
     "skipHint": "You can finish setup later from the dashboard.",
     "bannerTitle": "Finish setting up your server.",
     "bannerBody": "{count, plural, one {# recommended component left} other {# recommended components left}}.",
+    "bannerBodyNamed": "{count, plural, one {# recommended component left: {names}} other {# recommended components left: {names}}}.",
     "bannerAction": "Finish setup",
     "bannerDismiss": "Dismiss",
     "chooseVersion": "Choose a version",

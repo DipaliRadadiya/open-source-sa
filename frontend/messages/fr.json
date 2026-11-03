@@ -1402,8 +1402,8 @@
         "body": "Cela a peut-être été supprimé, ou le lien est peut-être obsolète."
       },
       "server": {
-        "title": "Le serveur a rencontré un problème",
-        "body": "Rien n'a changé. Réessayez dans un instant."
+        "title": "Le panneau n'a pas pu charger ceci",
+        "body": "Le problème vient du panneau, pas de vos applications. Rien n'a changé. Réessayez dans un instant."
       },
       "shape": {
         "title": "Le panneau n'a pas pu lire ceci",
@@ -4235,7 +4235,8 @@
       "systemUserGeneratePassword": "Générer",
       "systemUserPasswordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard sur la page Utilisateurs système.",
       "systemUserNew": "{username} (nouveau)",
-      "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_)."
+      "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_).",
+      "runtimeLoadFailed": "Impossible de lire les versions de {runtime} installées."
     },
     "actions": {
       "label": "Actions",
@@ -6889,6 +6890,7 @@
     "skipHint": "Vous pourrez terminer la configuration plus tard depuis le tableau de bord.",
     "bannerTitle": "Terminez la configuration de votre serveur.",
     "bannerBody": "{count, plural, one {# composant recommandé restant} other {# composants recommandés restants}}.",
+    "bannerBodyNamed": "{count, plural, one {# composant recommandé restant : {names}} other {# composants recommandés restants : {names}}}.",
     "bannerAction": "Terminer la configuration",
     "bannerDismiss": "Ignorer",
     "chooseVersion": "Choisir une version",

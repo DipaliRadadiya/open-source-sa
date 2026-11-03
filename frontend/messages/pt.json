@@ -1402,8 +1402,8 @@
         "body": "Pode ter sido excluído, ou o link pode estar desatualizado."
       },
       "server": {
-        "title": "O servidor teve um problema",
-        "body": "Nada foi alterado. Tente novamente em instantes."
+        "title": "O painel não conseguiu carregar isto",
+        "body": "O problema é do painel, não das suas aplicações. Nada foi alterado. Tente novamente em instantes."
       },
       "shape": {
         "title": "O painel não conseguiu ler isto",
@@ -4235,7 +4235,8 @@
       "systemUserGeneratePassword": "Gerar",
       "systemUserPasswordHint": "Gerada para você. Guarde, altere ou limpe. Você pode vê-la novamente depois na página Usuários do sistema.",
       "systemUserNew": "{username} (novo)",
-      "tablePrefixInvalid": "Comece com uma letra, use apenas letras e números e termine com um sublinhado (por exemplo jml_)."
+      "tablePrefixInvalid": "Comece com uma letra, use apenas letras e números e termine com um sublinhado (por exemplo jml_).",
+      "runtimeLoadFailed": "Não foi possível ler as versões do {runtime} instaladas."
     },
     "actions": {
       "label": "Ações",
@@ -6889,6 +6890,7 @@
     "skipHint": "Você pode terminar o setup depois pelo dashboard.",
     "bannerTitle": "Conclua a configuração do seu servidor.",
     "bannerBody": "{count, plural, one {# componente recomendado restante} other {# componentes recomendados restantes}}.",
+    "bannerBodyNamed": "{count, plural, one {# componente recomendado restante: {names}} other {# componentes recomendados restantes: {names}}}.",
     "bannerAction": "Concluir setup",
     "bannerDismiss": "Dispensar",
     "chooseVersion": "Escolha uma versão",

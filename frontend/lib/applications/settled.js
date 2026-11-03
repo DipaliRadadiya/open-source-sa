@@ -8,7 +8,17 @@ export function isSettled(application) {
   return application?.status === "active" || hasBeenDeployed(application);
 }
 
-/** A live site running a new deploy, rather than one being set up. */
+// A Git site's first deploy is queued while the site already reads `active` with no code and no
+// process yet (~10 s), which read "Stopped". A failed first deploy leaves `failed`.
+export function firstDeployPending(application) {
+  return (
+    application?.status === "active" &&
+    Boolean(application?.repository || application?.repository_url) &&
+    !hasBeenDeployed(application)
+  );
+}
+
+/** A live site running a new deploy, rather than one being set up; or a first deploy still queued. */
 export function isRedeploying(application) {
-  return application?.status === "provisioning" && hasBeenDeployed(application);
+  return (application?.status === "provisioning" && hasBeenDeployed(application)) || firstDeployPending(application);
 }

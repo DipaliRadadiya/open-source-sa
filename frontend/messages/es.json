@@ -1402,8 +1402,8 @@
         "body": "Puede que se haya eliminado, o que el enlace esté obsoleto."
       },
       "server": {
-        "title": "El servidor tuvo un problema",
-        "body": "No ha cambiado nada. Inténtalo de nuevo en un momento."
+        "title": "El panel no pudo cargar esto",
+        "body": "Es un problema del panel, no de tus aplicaciones. No ha cambiado nada. Inténtalo de nuevo en un momento."
       },
       "shape": {
         "title": "El panel no pudo leer esto",
@@ -4235,7 +4235,8 @@
       "systemUserGeneratePassword": "Generar",
       "systemUserPasswordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala. Podrás volver a verla más tarde en la página Usuarios del sistema.",
       "systemUserNew": "{username} (nuevo)",
-      "tablePrefixInvalid": "Empieza con una letra, usa solo letras y números y termina con un guion bajo (por ejemplo jml_)."
+      "tablePrefixInvalid": "Empieza con una letra, usa solo letras y números y termina con un guion bajo (por ejemplo jml_).",
+      "runtimeLoadFailed": "No se pudieron leer las versiones de {runtime} instaladas."
     },
     "actions": {
       "label": "Acciones",
@@ -6889,6 +6890,7 @@
     "skipHint": "Puedes terminar la configuración más tarde desde el panel.",
     "bannerTitle": "Termina de configurar tu servidor.",
     "bannerBody": "{count, plural, one {Queda # componente recomendado} other {Quedan # componentes recomendados}}.",
+    "bannerBodyNamed": "{count, plural, one {Queda # componente recomendado: {names}} other {Quedan # componentes recomendados: {names}}}.",
     "bannerAction": "Terminar configuración",
     "bannerDismiss": "Descartar",
     "chooseVersion": "Elige una versión",

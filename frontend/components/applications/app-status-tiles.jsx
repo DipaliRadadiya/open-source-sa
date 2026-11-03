@@ -94,7 +94,9 @@ export function AppStatusTiles({
 
   if (application.is_disabled) {
     tiles.push({ key: "status", icon: Power, tone: "warning", value: t("paused"), detail: t("health.pausedDetail") });
-  } else if (isRedeploying(application)) {
+  } else if (isRedeploying(application) || deploy?.inFlight) {
+    // A first deploy is queued while the site already reads `active` with no process yet:
+    // that read "Stopped" beside "Issuing certificate" for ~10 s (user report, 3 Nov).
     tiles.push({ key: "status", icon: Power, tone: "info", value: t("deploying"), detail: t("tiles.deployingDetail") });
   } else if (isProcessDown(application)) {
     tiles.push({ key: "status", icon: Power, tone: "destructive", value: t("processStoppedBadge"), detail: t("tiles.stoppedDetail"), href: "#process" });

@@ -396,6 +396,8 @@ function ConfigField({
   // so it never degrades to free text.
   const isChoice = ["select", "enum", "dropdown"].includes(config.type);
   const [reveal, setReveal] = useState(false);
+  // Shown only so the generated value can be copied; typing over it hides it again.
+  const revealedByGenerate = useRef(false);
   // Unique by value: duplicate values make Radix's trigger render both items'
   // text ("8.48.4") and collide on the React key.
   const options = useMemo(() => {
@@ -465,6 +467,7 @@ function ConfigField({
                         shouldValidate: true,
                       });
                       setReveal(true);
+                      revealedByGenerate.current = true;
                     }}
                     className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                   >
@@ -606,8 +609,18 @@ function ConfigField({
               <PasswordInput
                 placeholder={placeholder}
                 show={reveal}
-                onShowChange={setReveal}
+                onShowChange={(next) => {
+                  revealedByGenerate.current = false;
+                  setReveal(next);
+                }}
                 {...field}
+                onChange={(event) => {
+                  field.onChange(event);
+                  if (revealedByGenerate.current) {
+                    revealedByGenerate.current = false;
+                    setReveal(false);
+                  }
+                }}
                 value={field.value ?? ""}
               />
             </FormControl>
@@ -641,10 +654,10 @@ function ConfigField({
           ) : null}
           {isPort ? null : runtimeFailed ? (
             <FormDescription className="text-destructive">
-              {t("loadFailed")}
+              {t("form.runtimeLoadFailed", { runtime: config.source === "php_versions" ? "PHP" : "Node.js" })}
             </FormDescription>
-          ) : isStartCommand && startCommandProblem(field.value) ? (
-            <FormDescription className="flex items-start gap-1.5 text-warning">
+          ) : isStartCommand && startCommandProblem(field.value) && !form.formState.errors?.[config.name] ? (
+            <FormDescription className="flex items-start gap-1.5 text-destructive">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t(`form.startCommand.${startCommandProblem(field.value)}`)}
             </FormDescription>
@@ -724,6 +737,8 @@ export function CreateApplicationForm({
   phpInstallable = [],
   nodeInstallable = [],
   canInstall = {},
+  // Server-rendered "no database engine" banner; shown until a type that needs no database is chosen.
+  databaseNotice = null,
 }) {
   const t = useTranslations("applications");
   // Both refresh actions share one visible label from `common`; only their
@@ -974,6 +989,8 @@ export function CreateApplicationForm({
       // A refused value (pattern, limit shape, or the server's 422 on that field) is not ready.
       const breaksRule =
         (Boolean(rule) && String(value ?? "").trim() !== "" && !rule.pattern.test(String(value).trim())) ||
+        // The API refuses these, so "ready" here was a promise the submit then broke.
+        (config.name === "start_command" && Boolean(startCommandProblem(value))) ||
         breaksDockerLimit(config.name, value) ||
         Boolean(form.formState.errors[config.name]);
       const ready = (!config.required || hasConfigValue(config, value)) && !breaksRule;
@@ -1002,7 +1019,9 @@ export function CreateApplicationForm({
               ? t("form.toggleOn")
               : t("form.toggleOff")
             : ready || breaksRule
-              ? summariseValue(String(value), t)
+              ? // A choice shows its label: the review said "ssr" instead of "Server-side rendering".
+                (config.options?.find((option) => String(option.value) === String(value))?.label ??
+                summariseValue(String(value), t))
               : "—",
         ready,
         // Filled in but refused: "Missing" would be untrue.
@@ -1471,6 +1490,14 @@ export function CreateApplicationForm({
       revealErrors(badPatterns.map((config) => config.name));
       return;
     }
+    const startProblem = visibleFields.some((config) => config.name === "start_command")
+      ? startCommandProblem(values.start_command)
+      : null;
+    if (startProblem) {
+      form.setError("start_command", { type: "manual", message: t(`form.startCommand.${startProblem}`) });
+      revealErrors(["start_command"]);
+      return;
+    }
     const payload = {
       site_type: values.site_type,
       name: values.name.trim(),
@@ -1601,6 +1628,8 @@ export function CreateApplicationForm({
 
   return (
     <Form {...form}>
+      {/* FormProvider renders no element, so the page's space-y spaces this from the form. */}
+      {databaseNotice && (!selected || selected.needs_database) ? databaseNotice : null}
       <form
         ref={formRef}
         onSubmit={(event) =>

@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "@/components/ui/app-link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Sparkles, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,8 +21,10 @@ function readDismissed() {
   }
 }
 
-export function SetupBanner({ remaining }) {
+// `names`: which ones; a bare "2 recommended components left" left users guessing (3 Nov).
+export function SetupBanner({ remaining, names = [] }) {
   const t = useTranslations("setup");
+  const format = useFormatter();
   // A hidden server snapshot keeps hydration matching, so a dismissed banner never flashes in.
   const stored = useSyncExternalStore(subscribeStorage, readDismissed, () => true);
   const [justDismissed, setJustDismissed] = useState(false);
@@ -48,7 +50,11 @@ export function SetupBanner({ remaining }) {
       {/* min-w-48, not min-w-0: flex-1 would shrink it to one word per line instead of wrapping. */}
       <p className="min-w-48 flex-1 text-sm">
         <span className="font-medium">{t("bannerTitle")}</span>{" "}
-        <span className="text-muted-foreground">{t("bannerBody", { count: remaining })}</span>
+        <span className="text-muted-foreground">
+          {names.length
+            ? t("bannerBodyNamed", { count: remaining, names: format.list(names, { type: "conjunction" }) })
+            : t("bannerBody", { count: remaining })}
+        </span>
       </p>
       {/* One flex child so the action and dismiss wrap together. */}
       <div className="ml-auto flex shrink-0 items-center gap-2">

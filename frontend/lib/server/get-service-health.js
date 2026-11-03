@@ -16,6 +16,8 @@ export const getServiceHealth = cache(async function getServiceHealth() {
 
   return {
     total: services.length,
+    // The count is services, not the software tiles beside it, so the names travel with it.
+    names: services.map((service) => service.label),
     // `failed` (crashed) units lead `inactive` (stopped) ones.
     down: [...down].sort((a, b) =>
       a.status === "failed" ? -1 : b.status === "failed" ? 1 : 0,

@@ -42,9 +42,9 @@ export default async function DashboardPage() {
   // Only someone who could act on setup gets the nudge, and only while the
   // recommended set is incomplete.
   const setupResult = can(permissions, "setting", "view") ? await getSetup() : { setup: null };
-  const setupRemaining = setupResult.setup && !setupResult.setup.complete
-    ? setupResult.setup.components.filter((c) => c.recommended && c.state !== "installed").length
-    : 0;
+  const setupLeft = setupResult.setup && !setupResult.setup.complete
+    ? setupResult.setup.components.filter((c) => c.recommended && c.state !== "installed")
+    : [];
 
   // Without `view` the page stays empty rather than redirecting: it is the
   // landing route, so a redirect would loop.
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
         <PageHeader title={t("title")} subtitle={t("subtitle")} />
       )}
 
-      <SetupBanner remaining={setupRemaining} />
+      <SetupBanner remaining={setupLeft.length} names={setupLeft.map((c) => c.title)} />
       <SystemUpdatesNote running={setupResult.setup?.system_updates_running} />
 
       {allowed ? (

@@ -289,10 +289,15 @@ function ServiceHealthLine({ health, down, t }) {
     );
   }
 
+  // A user counted the software tiles (4) against "All 5 services running": the count is
+  // services, so it opens the Services page and names them on hover.
   return (
-    <Badge variant="success" className="gap-1.5 py-1 font-medium">
-      <span aria-hidden className="size-1.5 shrink-0 bg-current" />
-      {t("info.servicesOk", { count: health.total })}
+    <Badge asChild variant="success" className="gap-1.5 py-1 font-medium hover:underline">
+      <Link href="/services" prefetch={false} title={(health.names ?? []).join(", ")}>
+        <span aria-hidden className="size-1.5 shrink-0 bg-current" />
+        {t("info.servicesOk", { count: health.total })}
+        <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+      </Link>
     </Badge>
   );
 }

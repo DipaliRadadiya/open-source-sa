@@ -48,7 +48,7 @@ import { ApplicationOriginBadge } from "@/components/applications/application-or
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
-import { isSettled } from "@/lib/applications/settled";
+import { firstDeployPending, isSettled } from "@/lib/applications/settled";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
 
 export const dynamic = "force-dynamic";
@@ -230,10 +230,15 @@ export default async function ApplicationDetailPage({ params }) {
   const issues = settled && canSeeChecks
     ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true, failed: true }))
     : { issues: [], healthy: true, failed: false };
-  const superseded = localKeysSupersededBy(issues.issues);
+  // The server's "process is stopped" check fires while a first deploy is queued or running.
+  const deployInFlight = Boolean(latestDeploy.latest?.in_flight);
+  const issueList = firstDeployPending(application) || deployInFlight
+    ? issues.issues.filter((issue) => issue.type !== "worker")
+    : issues.issues;
+  const superseded = localKeysSupersededBy(issueList);
 
   const attentionItems = [
-    ...issueItems(issues.issues, id, (type) => t(`attention.issueAction.${type}`)),
+    ...issueItems(issueList, id, (type) => t(`attention.issueAction.${type}`)),
     // The checks did not come back; never read that as "Nothing needs attention".
     issues.failed && { key: "checks", label: t("attention.checksFailed") },
     // Not while the automatic certificate is on its way; see DomainsCard.
@@ -293,7 +298,7 @@ export default async function ApplicationDetailPage({ params }) {
           noneKept: nothingKept(backup.target),
         }
       : null;
-  const deployTile = isGit && canSeeDeployment ? { inFlight: Boolean(latestDeploy.latest?.in_flight) } : null;
+  const deployTile = isGit && canSeeDeployment ? { inFlight: deployInFlight } : null;
 
   const domainsCard = canSeeDomains ? (
     <DomainsCard
@@ -357,7 +362,7 @@ export default async function ApplicationDetailPage({ params }) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight break-words">{application.name}</h1>
-                <ApplicationStatusBadge application={application} />
+                <ApplicationStatusBadge application={application} deploying={Boolean(deployTile?.inFlight)} />
                 {/* The type is the logo tile and the Type fact below; the badge says where it came from. */}
                 <ApplicationOriginBadge origin={application.origin} />
                 {/* Staging copies look like the site they copy; mark them where the name is. */}
@@ -521,7 +526,7 @@ export default async function ApplicationDetailPage({ params }) {
               {protectionCard}
             </div>
           )}
-          {application.has_process ? <ProcessCard application={application} canManage={canManage} /> : null}
+          {application.has_process ? <ProcessCard application={application} canManage={canManage} deploying={deployInFlight} /> : null}
         </>
       )}
     </div>
