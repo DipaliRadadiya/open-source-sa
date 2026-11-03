@@ -1,5 +1,5 @@
 import Link from "@/components/ui/app-link";
-import { getTranslations } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { ChevronRight, ShieldCheck, ShieldOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -10,7 +10,11 @@ export async function ProtectionCard({ application, items }) {
 
   if (items.length === 0) return null;
 
-  const on = items.filter((item) => item.on).length;
+  const onItems = items.filter((item) => item.on);
+  const on = onItems.length;
+  // Named: two users read "1 of 5 on" against four "Off" rows and missed the last one,
+  // "Application folder: Locked" (3 Nov).
+  const format = on ? await getFormatter() : null;
 
   return (
     // Target of the strip's "Review security"; scroll-mt uses the measured
@@ -25,7 +29,9 @@ export async function ProtectionCard({ application, items }) {
         <CardTitle id="security-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           <span className="text-xs font-normal tabular-nums text-muted-foreground">
-            {t("summary", { on, total: items.length })}
+            {on
+              ? t("summaryNamed", { on, total: items.length, names: format.list(onItems.map((item) => item.label), { type: "conjunction" }) })
+              : t("summary", { on, total: items.length })}
           </span>
         </CardTitle>
       </CardHeader>

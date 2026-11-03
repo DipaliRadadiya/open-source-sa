@@ -80,7 +80,8 @@
       "title": "No tienes acceso a {feature}",
       "description": "Tu rol no incluye permiso para ver esto. Pide a un administrador que te lo conceda.",
       "unavailableTitle": "No disponible en este servidor",
-      "unavailableDescription": "Este servidor no se configuró para usarlo, así que aquí no hay nada que gestionar."
+      "unavailableDescription": "Este servidor no se configuró para usarlo, así que aquí no hay nada que gestionar.",
+      "unavailableDatabaseDocker": "En un servidor Docker cada aplicación guarda su base de datos dentro de sus propios contenedores, así que aquí no hay nada que gestionar."
     },
     "serverNavigation": "Menú del servidor",
     "loadingPage": "Cargando la página…",
@@ -2951,7 +2952,8 @@
     "confirmCancel": "Cancelar",
     "confirmSubmit": "Reiniciar servidor",
     "failed": "No se pudo iniciar el reinicio.",
-    "options": "Más opciones"
+    "options": "Más opciones",
+    "waitForInstalls": "Espera primero a que terminen las instalaciones y despliegues en curso, o se cortarán a medias."
   },
   "serverRestart": {
     "goingDown": {
@@ -4102,7 +4104,8 @@
       "stalledBody": "La configuración no ha informado avances desde hace un rato. Puede que siga en marcha: vuelve a comprobarlo o contacta con soporte si sigue así.",
       "checkAgain": "Comprobar de nuevo",
       "startedAgo": "Comenzó {ago}. La mayoría de las aplicaciones están listas en unos minutos; un instalador de un clic tarda más.",
-      "retryFailed": "No se pudo volver a iniciar la configuración."
+      "retryFailed": "No se pudo volver a iniciar la configuración.",
+      "keepsGoing": "Sigue en marcha aunque salgas de esta página."
     },
     "port": {
       "label": "Puerto de la aplicación",
@@ -4236,7 +4239,8 @@
       "systemUserPasswordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala. Podrás volver a verla más tarde en la página Usuarios del sistema.",
       "systemUserNew": "{username} (nuevo)",
       "tablePrefixInvalid": "Empieza con una letra, usa solo letras y números y termina con un guion bajo (por ejemplo jml_).",
-      "runtimeLoadFailed": "No se pudieron leer las versiones de {runtime} instaladas."
+      "runtimeLoadFailed": "No se pudieron leer las versiones de {runtime} instaladas.",
+      "httpsAutomatic": "HTTPS se activa solo después de crearla, en cuanto el dominio apunte a este servidor."
     },
     "actions": {
       "label": "Acciones",
@@ -6063,7 +6067,8 @@
       "description": "Ajustes de protección de esta aplicación.",
       "folder": "Raíz de la aplicación",
       "locked": "Bloqueada",
-      "unlocked": "Sin bloquear"
+      "unlocked": "Sin bloquear",
+      "summaryNamed": "{on} de {total} activas: {names}"
     },
     "backups": {
       "title": "Copias de seguridad",
@@ -6399,7 +6404,9 @@
       "imageSectionHint": "Lo que ejecuta este contenedor y la credencial con la que lo descarga.",
       "saveImage": "Guardar registro",
       "settingsSection": "Red y límites",
-      "settingsSectionHint": "Cómo se conecta este contenedor y cuánto del servidor puede usar."
+      "settingsSectionHint": "Cómo se conecta este contenedor y cuánto del servidor puede usar.",
+      "pulling": "Descargando y volviendo a desplegar…",
+      "pullingHint": "Descargando la imagen y recreando el contenedor. Con una imagen grande puede tardar unos minutos."
     },
     "compose": {
       "title": "Archivo compose",

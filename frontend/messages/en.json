@@ -80,7 +80,8 @@
       "title": "You don't have access to {feature}",
       "description": "Your role doesn't include permission to view this. Ask an administrator to grant it.",
       "unavailableTitle": "Not available on this server",
-      "unavailableDescription": "This server wasn't set up to run it, so there is nothing to manage here."
+      "unavailableDescription": "This server wasn't set up to run it, so there is nothing to manage here.",
+      "unavailableDatabaseDocker": "On a Docker server each application keeps its database inside its own containers, so there is nothing to manage here."
     },
     "serverNavigation": "Server menu",
     "loadingPage": "Loading page…",
@@ -2951,7 +2952,8 @@
     "confirmCancel": "Cancel",
     "confirmSubmit": "Restart server",
     "failed": "Could not start the restart.",
-    "options": "More options"
+    "options": "More options",
+    "waitForInstalls": "Wait for running installs and deploys to finish first, or they are cut off halfway."
   },
   "serverRestart": {
     "goingDown": {
@@ -4102,7 +4104,8 @@
       "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",
       "checkAgain": "Check again",
       "startedAgo": "Started {ago}. Most applications are ready within a few minutes; a one-click installer takes longer.",
-      "retryFailed": "Setup could not be started again."
+      "retryFailed": "Setup could not be started again.",
+      "keepsGoing": "It keeps going if you leave this page."
     },
     "port": {
       "label": "Application port",
@@ -4236,7 +4239,8 @@
       "systemUserPasswordHint": "Generated for you. Keep it, change it or clear it. You can see it again later on the System Users page.",
       "systemUserNew": "{username} (new)",
       "tablePrefixInvalid": "Start with a letter, use only letters and numbers, and end with an underscore (for example jml_).",
-      "runtimeLoadFailed": "The installed {runtime} versions could not be read."
+      "runtimeLoadFailed": "The installed {runtime} versions could not be read.",
+      "httpsAutomatic": "HTTPS turns on by itself after you create it, once the domain points to this server."
     },
     "actions": {
       "label": "Actions",
@@ -6063,7 +6067,8 @@
       "description": "Protection settings for this application.",
       "folder": "Application folder",
       "locked": "Locked",
-      "unlocked": "Not locked"
+      "unlocked": "Not locked",
+      "summaryNamed": "{on} of {total} on: {names}"
     },
     "backups": {
       "title": "Backups",
@@ -6399,7 +6404,9 @@
       "imageSectionHint": "What this container runs, and the credential it pulls with.",
       "saveImage": "Save registry",
       "settingsSection": "Network and limits",
-      "settingsSectionHint": "How this container connects, and how much of the server it may use."
+      "settingsSectionHint": "How this container connects, and how much of the server it may use.",
+      "pulling": "Pulling and redeploying…",
+      "pullingHint": "Downloading the image and recreating the container. This can take a few minutes for a big image."
     },
     "compose": {
       "title": "Compose file",

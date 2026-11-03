@@ -43,6 +43,9 @@ export function RebootRequiredBanner({ canManage }) {
       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium">
         <RotateCcw className="size-4 shrink-0 text-warning" />
         {t("message")}
+        {/* Said always: the jobs list does not include every install (a 1-click app's), so
+            the panel cannot tell for certain that nothing is running (users, 3 Nov). */}
+        <span className="font-normal text-muted-foreground">{t("waitForInstalls")}</span>
       </span>
 
       {canManage ? (
@@ -69,7 +72,7 @@ export function RebootRequiredBanner({ canManage }) {
         icon={Power}
         tone="destructive"
         title={t("confirmTitle")}
-        description={t("confirmDescription")}
+        description={`${t("confirmDescription")} ${t("waitForInstalls")}`}
         cancelLabel={t("confirmCancel")}
         confirmLabel={t("confirmSubmit")}
         pending={pending}

@@ -11,9 +11,13 @@ import { EmptyState } from "@/components/data-table/empty-state";
 // would send the administrator in a circle.
 export async function PermissionDenied({ title, description, feature }) {
   const t = await getTranslations("common.permissionDenied");
-  const unavailable = feature
-    ? unavailableOnServer(feature, (await getServerCapabilities().catch(() => null))?.servingProfiles)
-    : false;
+  const profiles = feature ? (await getServerCapabilities().catch(() => null))?.servingProfiles : null;
+  const unavailable = feature ? unavailableOnServer(feature, profiles) : false;
+  // A Docker server has no database screen on purpose; users asked whether it was (3 Nov).
+  const reason =
+    feature === "database" && Array.isArray(profiles) && profiles.includes("docker")
+      ? t("unavailableDatabaseDocker")
+      : t("unavailableDescription");
 
   if (unavailable) {
     return (
@@ -22,7 +26,7 @@ export async function PermissionDenied({ title, description, feature }) {
         <EmptyState
           icon={Ban}
           title={t("unavailableTitle")}
-          description={t("unavailableDescription")}
+          description={reason}
         />
       </div>
     );

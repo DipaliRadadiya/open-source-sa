@@ -80,7 +80,8 @@
       "title": "Vous n'avez pas accès à {feature}",
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur.",
       "unavailableTitle": "Non disponible sur ce serveur",
-      "unavailableDescription": "Ce serveur n'a pas été configuré pour cela, il n'y a donc rien à gérer ici."
+      "unavailableDescription": "Ce serveur n'a pas été configuré pour cela, il n'y a donc rien à gérer ici.",
+      "unavailableDatabaseDocker": "Sur un serveur Docker, chaque application garde sa base de données dans ses propres conteneurs, il n'y a donc rien à gérer ici."
     },
     "serverNavigation": "Menu du serveur",
     "loadingPage": "Chargement de la page…",
@@ -2951,7 +2952,8 @@
     "confirmCancel": "Annuler",
     "confirmSubmit": "Redémarrer le serveur",
     "failed": "Impossible de lancer le redémarrage.",
-    "options": "Plus d'options"
+    "options": "Plus d'options",
+    "waitForInstalls": "Attendez d'abord la fin des installations et déploiements en cours, sinon ils seront interrompus en plein milieu."
   },
   "serverRestart": {
     "goingDown": {
@@ -4102,7 +4104,8 @@
       "stalledBody": "La configuration n'a pas signalé de progrès depuis un moment. Elle tourne peut-être encore — réessayez, ou contactez le support si cela persiste.",
       "checkAgain": "Vérifier à nouveau",
       "startedAgo": "Démarré il y a {ago}. La plupart des applications sont prêtes en quelques minutes ; un installateur en un clic prend plus de temps.",
-      "retryFailed": "Impossible de relancer la configuration."
+      "retryFailed": "Impossible de relancer la configuration.",
+      "keepsGoing": "L'opération continue si vous quittez cette page."
     },
     "port": {
       "label": "Port de l'application",
@@ -4236,7 +4239,8 @@
       "systemUserPasswordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard sur la page Utilisateurs système.",
       "systemUserNew": "{username} (nouveau)",
       "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_).",
-      "runtimeLoadFailed": "Impossible de lire les versions de {runtime} installées."
+      "runtimeLoadFailed": "Impossible de lire les versions de {runtime} installées.",
+      "httpsAutomatic": "HTTPS s'active tout seul après la création, dès que le domaine pointe vers ce serveur."
     },
     "actions": {
       "label": "Actions",
@@ -6063,7 +6067,8 @@
       "description": "Paramètres de protection pour cette application.",
       "folder": "Racine de l'application",
       "locked": "Verrouillé",
-      "unlocked": "Non verrouillé"
+      "unlocked": "Non verrouillé",
+      "summaryNamed": "{on} sur {total} activées : {names}"
     },
     "backups": {
       "title": "Sauvegardes",
@@ -6399,7 +6404,9 @@
       "imageSectionHint": "Ce que ce conteneur exécute et l'identifiant avec lequel il le récupère.",
       "saveImage": "Enregistrer le registre",
       "settingsSection": "Réseau et limites",
-      "settingsSectionHint": "Comment ce conteneur se connecte et quelle part du serveur il peut utiliser."
+      "settingsSectionHint": "Comment ce conteneur se connecte et quelle part du serveur il peut utiliser.",
+      "pulling": "Récupération et redéploiement…",
+      "pullingHint": "Téléchargement de l'image et recréation du conteneur. Avec une grosse image, cela peut prendre quelques minutes."
     },
     "compose": {
       "title": "Fichier compose",

@@ -12,7 +12,6 @@ import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { StepList } from "@/components/applications/step-list";
 
@@ -112,8 +111,8 @@ export function ProvisioningCard({ application, canManage = false }) {
       </div>
 
       <CardContent className="space-y-4 px-5 py-4">
-        {working && !stalled ? <Progress indeterminate className="h-1.5" /> : null}
-
+        {/* No sweeping bar: a block sliding back and forth read as a percentage going
+            backwards (users, 3 Nov). The spinner and the "Working…" row show it is busy. */}
         {failed && application.reference ? (
           // The reference is copyable: it is what support needs.
           <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -140,7 +139,8 @@ export function ProvisioningCard({ application, canManage = false }) {
           <p className="border-t pt-3 text-xs text-muted-foreground">
             {application.provisioning_started_at_human
               ? t("startedAgo", { ago: application.provisioning_started_at_human })
-              : t("takesMinutes")}
+              : t("takesMinutes")}{" "}
+            {t("keepsGoing")}
           </p>
         ) : null}
 

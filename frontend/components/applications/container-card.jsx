@@ -308,10 +308,17 @@ export function ContainerCard({
                   {canManage ? (
                     <Button type="button" variant="outline" disabled={pulling} onClick={pull}>
                       <RefreshCw className={pulling ? "size-4 animate-spin" : "size-4"} />
-                      {t("pull")}
+                      {pulling ? t("pulling") : t("pull")}
                     </Button>
                   ) : null}
                 </div>
+                {/* The pull runs inside this one request, for minutes on a big image: a spinning
+                    button with no words read as stuck (users, 3 Nov). */}
+                {pulling ? (
+                  <p role="status" className="mt-2 text-xs text-muted-foreground">
+                    {t("pullingHint")}
+                  </p>
+                ) : null}
               </InfoRow>
 
               <FormField

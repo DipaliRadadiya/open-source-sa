@@ -78,13 +78,14 @@ function LastBackupCell({ row, table }) {
       <Link
         href={`/applications/${row.original.id}/backups`}
         prefetch={false}
+        // The title doubles as the description a screen reader adds; a hidden ": Set up
+        // backups" span leaked into the tooltip as ": Set up backups" (users, 3 Nov).
         title={t("backups.setUp")}
         className="flex min-w-0 items-start gap-1.5 text-sm text-destructive"
       >
         <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
         <span className="min-w-0 whitespace-normal break-words leading-snug underline decoration-dotted decoration-destructive/50 underline-offset-4 hover:decoration-solid">
           {t("backups.notSetUp")}
-          <span className="sr-only">: {t("backups.setUp")}</span>
         </span>
       </Link>
     );

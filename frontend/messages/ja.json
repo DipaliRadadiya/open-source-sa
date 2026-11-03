@@ -80,7 +80,8 @@
       "title": "{feature} にアクセスする権限がありません",
       "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。",
       "unavailableTitle": "このサーバーでは利用できません",
-      "unavailableDescription": "このサーバーはこの機能を使う構成になっていないため、ここで管理するものはありません。"
+      "unavailableDescription": "このサーバーはこの機能を使う構成になっていないため、ここで管理するものはありません。",
+      "unavailableDatabaseDocker": "Docker サーバーでは、各アプリケーションが自分のコンテナー内にデータベースを持つため、ここで管理するものはありません。"
     },
     "serverNavigation": "サーバーメニュー",
     "loadingPage": "ページを読み込んでいます…",
@@ -2951,7 +2952,8 @@
     "confirmCancel": "キャンセル",
     "confirmSubmit": "サーバーを再起動",
     "failed": "再起動を開始できませんでした。",
-    "options": "詳細オプション"
+    "options": "詳細オプション",
+    "waitForInstalls": "実行中のインストールやデプロイが終わるまで待ってください。途中で中断されてしまいます。"
   },
   "serverRestart": {
     "goingDown": {
@@ -4102,7 +4104,8 @@
       "stalledBody": "セットアップの進捗がしばらく報告されていません。まだ実行中の可能性があります — 再確認するか、この状態が続く場合はサポートにお問い合わせください。",
       "checkAgain": "再確認",
       "startedAgo": "{ago} に開始しました。ほとんどのアプリケーションは数分以内に準備完了します。ワンクリックインストーラーはもう少し時間がかかります。",
-      "retryFailed": "セットアップを再開できませんでした。"
+      "retryFailed": "セットアップを再開できませんでした。",
+      "keepsGoing": "このページを離れても処理は続きます。"
     },
     "port": {
       "label": "アプリケーションポート",
@@ -4236,7 +4239,8 @@
       "systemUserPasswordHint": "自動生成されます。保管、変更、削除が可能です。後で「システムユーザー」ページから再確認できます。",
       "systemUserNew": "{username}（新規）",
       "tablePrefixInvalid": "英字で始め、英字と数字のみを使い、アンダースコアで終えてください（例: jml_）。",
-      "runtimeLoadFailed": "インストール済みの {runtime} バージョンを読み込めませんでした。"
+      "runtimeLoadFailed": "インストール済みの {runtime} バージョンを読み込めませんでした。",
+      "httpsAutomatic": "作成後、ドメインがこのサーバーを指すと HTTPS は自動で有効になります。"
     },
     "actions": {
       "label": "操作",
@@ -6063,7 +6067,8 @@
       "description": "このアプリケーションの保護設定。",
       "folder": "アプリケーションルート",
       "locked": "ロック済み",
-      "unlocked": "未ロック"
+      "unlocked": "未ロック",
+      "summaryNamed": "{total} 件中 {on} 件がオン：{names}"
     },
     "backups": {
       "title": "バックアップ",
@@ -6399,7 +6404,9 @@
       "imageSectionHint": "このコンテナが実行するものと、取得に使う認証情報です。",
       "saveImage": "レジストリを保存",
       "settingsSection": "ネットワークと制限",
-      "settingsSectionHint": "このコンテナの接続方法と、使用できるサーバーリソースの量です。"
+      "settingsSectionHint": "このコンテナの接続方法と、使用できるサーバーリソースの量です。",
+      "pulling": "取得して再デプロイしています…",
+      "pullingHint": "イメージをダウンロードしてコンテナーを作り直しています。大きなイメージでは数分かかることがあります。"
     },
     "compose": {
       "title": "compose ファイル",

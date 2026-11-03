@@ -1836,10 +1836,13 @@ export function CreateApplicationForm({
                               {t("form.useDomain", { domain: suggestedDomain })}
                             </button>
                           </span>
-                        ) : temporary ? (
-                          t("form.temporaryDomainHint")
                         ) : (
-                          t("form.domainHint")
+                          // No SSL control here: the certificate is issued after create, and
+                          // users went looking for the option (3 Nov).
+                          <>
+                            {temporary ? t("form.temporaryDomainHint") : t("form.domainHint")}{" "}
+                            {t("form.httpsAutomatic")}
+                          </>
                         )}
                       </FormDescription>
 

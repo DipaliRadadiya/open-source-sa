@@ -80,7 +80,8 @@
       "title": "Sie haben keinen Zugriff auf {feature}",
       "description": "Ihre Rolle enthält keine Berechtigung, dies anzusehen. Bitten Sie einen Administrator darum.",
       "unavailableTitle": "Auf diesem Server nicht verfügbar",
-      "unavailableDescription": "Dieser Server wurde nicht dafür eingerichtet, daher gibt es hier nichts zu verwalten."
+      "unavailableDescription": "Dieser Server wurde nicht dafür eingerichtet, daher gibt es hier nichts zu verwalten.",
+      "unavailableDatabaseDocker": "Auf einem Docker-Server behält jede Anwendung ihre Datenbank in ihren eigenen Containern, daher gibt es hier nichts zu verwalten."
     },
     "serverNavigation": "Server-Menü",
     "loadingPage": "Seite wird geladen…",
@@ -2951,7 +2952,8 @@
     "confirmCancel": "Abbrechen",
     "confirmSubmit": "Server neu starten",
     "failed": "Der Neustart konnte nicht gestartet werden.",
-    "options": "Weitere Optionen"
+    "options": "Weitere Optionen",
+    "waitForInstalls": "Warten Sie zuerst, bis laufende Installationen und Deployments fertig sind, sonst brechen sie mittendrin ab."
   },
   "serverRestart": {
     "goingDown": {
@@ -4102,7 +4104,8 @@
       "stalledBody": "Die Einrichtung hat seit einer Weile keinen Fortschritt gemeldet. Möglicherweise läuft sie noch — prüfen Sie erneut oder wenden Sie sich an den Support, wenn es so bleibt.",
       "checkAgain": "Erneut prüfen",
       "startedAgo": "Gestartet {ago}. Die meisten Anwendungen sind in wenigen Minuten fertig; ein Ein-Klick-Installer braucht länger.",
-      "retryFailed": "Die Einrichtung konnte nicht erneut gestartet werden."
+      "retryFailed": "Die Einrichtung konnte nicht erneut gestartet werden.",
+      "keepsGoing": "Es läuft weiter, auch wenn Sie diese Seite verlassen."
     },
     "port": {
       "label": "Anwendungs-Port",
@@ -4236,7 +4239,8 @@
       "systemUserPasswordHint": "Automatisch generiert. Übernehmen, ändern oder löschen – Sie können es später auf der Seite Systembenutzer erneut einsehen.",
       "systemUserNew": "{username} (neu)",
       "tablePrefixInvalid": "Mit einem Buchstaben beginnen, nur Buchstaben und Ziffern verwenden und mit einem Unterstrich enden (zum Beispiel jml_).",
-      "runtimeLoadFailed": "Die installierten {runtime}-Versionen konnten nicht gelesen werden."
+      "runtimeLoadFailed": "Die installierten {runtime}-Versionen konnten nicht gelesen werden.",
+      "httpsAutomatic": "HTTPS wird nach dem Erstellen automatisch aktiviert, sobald die Domain auf diesen Server zeigt."
     },
     "actions": {
       "label": "Aktionen",
@@ -6063,7 +6067,8 @@
       "description": "Schutzeinstellungen für diese Anwendung.",
       "folder": "Anwendungswurzel",
       "locked": "Gesperrt",
-      "unlocked": "Nicht gesperrt"
+      "unlocked": "Nicht gesperrt",
+      "summaryNamed": "{on} von {total} an: {names}"
     },
     "backups": {
       "title": "Backups",
@@ -6399,7 +6404,9 @@
       "imageSectionHint": "Was dieser Container ausführt und mit welchen Anmeldedaten er es abruft.",
       "saveImage": "Registry speichern",
       "settingsSection": "Netzwerk und Limits",
-      "settingsSectionHint": "Wie dieser Container verbunden ist und wie viel vom Server er nutzen darf."
+      "settingsSectionHint": "Wie dieser Container verbunden ist und wie viel vom Server er nutzen darf.",
+      "pulling": "Wird geladen und neu ausgerollt…",
+      "pullingHint": "Das Image wird geladen und der Container neu erstellt. Bei einem großen Image kann das einige Minuten dauern."
     },
     "compose": {
       "title": "Compose-Datei",
