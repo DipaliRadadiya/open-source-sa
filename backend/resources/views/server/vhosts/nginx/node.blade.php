@@ -267,6 +267,25 @@ server {
              until they are complete — that is the whole point of them. --}}
         proxy_buffering off;
         proxy_cache_bypass $http_upgrade;
+
+        {{-- nginx's own "502 Bad Gateway" while the app is down — a restart,
+             a crash, the seconds after a reboot before it listens — becomes
+             a page that says so. Only nginx's own errors: with
+             proxy_intercept_errors left off, a 502/503/504 the app itself
+             sends is passed through untouched. Here rather than at server
+             level, so nothing but the proxy is ever dressed as a restart. --}}
+        error_page 502 503 504 @restarting;
+    }
+
+    {{-- Inline rather than a file: nothing on disk to create, own or lose.
+         The page holds no `'` or `$` (the string's quote, nginx's variables)
+         and no `#`, which the panel's own vhost reader takes for a comment. --}}
+    location @restarting {
+        internal;
+        default_type text/html;
+        add_header Retry-After 10 always;
+        add_header Cache-Control "no-store" always;
+        return 503 '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>This site is restarting</title></head><body style="margin:0;font-family:system-ui,sans-serif;color:rgb(34,34,34);background:rgb(250,250,250)"><main style="max-width:32em;margin:15vh auto;padding:0 1.5em;line-height:1.5"><h1 style="font-size:1.5em;font-weight:600">This site is restarting</h1><p>This site is restarting. Please try again in a moment. If this keeps happening, the site owner should check the application&rsquo;s logs.</p></main></body></html>';
     }
 
     {{-- Version control and dotfiles must never be served. Ahead of the proxy
