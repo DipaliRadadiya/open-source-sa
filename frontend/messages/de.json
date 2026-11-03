@@ -45,7 +45,18 @@
     "breadcrumbApplications": "Anwendungen",
     "applicationContext": {
       "back": "Zurück zu Anwendungen",
-      "visit": "{domain} in neuem Tab öffnen"
+      "visit": "{domain} in neuem Tab öffnen",
+      "switch": "Anwendung wechseln",
+      "switchNamed": "{name}: Anwendung wechseln",
+      "searchPlaceholder": "Anwendungen suchen",
+      "loading": "Anwendungen werden geladen…",
+      "loadFailed": "Die Anwendungen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "noMatch": "Keine Anwendung passt zu „{query}“.",
+      "showingSome": "{shown} von {total} · zum Suchen tippen",
+      "viewAll": "Alle Anwendungen anzeigen",
+      "searching": "Suche läuft…",
+      "found": "{count, plural, =0 {Keine Anwendungen gefunden} one {# Anwendung gefunden} other {# Anwendungen gefunden}}"
     },
     "unsavedTitle": "Ohne Speichern verlassen?",
     "unsavedDescription": "Ihre Änderungen auf dieser Seite wurden nicht gespeichert. Sie gehen verloren.",

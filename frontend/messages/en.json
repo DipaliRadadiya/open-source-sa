@@ -45,7 +45,18 @@
     "breadcrumbApplications": "Applications",
     "applicationContext": {
       "back": "Back to applications",
-      "visit": "Open {domain} in a new tab"
+      "visit": "Open {domain} in a new tab",
+      "switch": "Switch application",
+      "switchNamed": "{name}: switch application",
+      "searchPlaceholder": "Search applications",
+      "loading": "Loading applications…",
+      "loadFailed": "Applications couldn't be loaded.",
+      "retry": "Try again",
+      "noMatch": "No application matches “{query}”.",
+      "showingSome": "Showing {shown} of {total} · type to search",
+      "viewAll": "View all applications",
+      "searching": "Searching…",
+      "found": "{count, plural, =0 {No applications found} one {# application found} other {# applications found}}"
     },
     "unsavedTitle": "Leave without saving?",
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",

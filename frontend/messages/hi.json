@@ -45,7 +45,18 @@
     "breadcrumbApplications": "ऐप्लिकेशन",
     "applicationContext": {
       "back": "ऐप्लिकेशन पर वापस जाएँ",
-      "visit": "{domain} को नए टैब में खोलें"
+      "visit": "{domain} को नए टैब में खोलें",
+      "switch": "ऐप्लिकेशन बदलें",
+      "switchNamed": "{name}: ऐप्लिकेशन बदलें",
+      "searchPlaceholder": "ऐप्लिकेशन खोजें",
+      "loading": "ऐप्लिकेशन लोड हो रहे हैं…",
+      "loadFailed": "ऐप्लिकेशन लोड नहीं हो सके।",
+      "retry": "फिर से कोशिश करें",
+      "noMatch": "“{query}” से कोई ऐप्लिकेशन मेल नहीं खाता।",
+      "showingSome": "{total} में से {shown} दिख रहे हैं · खोजने के लिए टाइप करें",
+      "viewAll": "सभी ऐप्लिकेशन देखें",
+      "searching": "खोज रहे हैं…",
+      "found": "{count, plural, =0 {कोई ऐप्लिकेशन नहीं मिला} one {# ऐप्लिकेशन मिला} other {# ऐप्लिकेशन मिले}}"
     },
     "unsavedTitle": "बिना सहेजे बाहर जाएँ?",
     "unsavedDescription": "इस पेज पर किए गए बदलाव सहेजे नहीं गए हैं। वे खो जाएँगे।",

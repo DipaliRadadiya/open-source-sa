@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useLinkStatus } from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ChevronDown, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronsUpDown, Loader2 } from "lucide-react";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +26,7 @@ import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { SidebarLevelTransition } from "@/components/sections/sidebar-level-transition";
 import { NavIcon } from "@/components/nav-icon";
 import { SidebarServerCard } from "@/components/sections/sidebar-server-card";
+import { ApplicationSwitcher } from "@/components/sections/application-switcher";
 import { can } from "@/lib/permissions/can";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -189,46 +190,46 @@ export function AppSidebar({ items, initialGroups = {} }) {
               </MobileNavLink>
             </SidebarMenuItem>
             <SidebarMenuItem className="relative">
-              <MobileNavLink
-                item={{ href: `/applications/${application.id}`, title: application.name }}
-                built
-                active={false}
+              {/* The card is the application switcher (2 Nov): it opens a searched list of the
+                  server's applications. The Dashboard is the first link below it. */}
+              <SidebarMenuButton
+                asChild
+                tooltip={t("applicationContext.switch")}
                 /* Steel UI (Krishna, 14 Oct): the same green-edged plate as the server card. */
-                className="relative h-auto min-h-20 items-start overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 shadow-none transition-colors hover:border-primary hover:bg-card active:bg-card data-[active=true]:bg-card group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
+                className={cn(NAV_ITEM_CLASS, "relative h-auto min-h-20 items-start overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 shadow-none transition-colors hover:border-primary hover:bg-card active:bg-card data-[active=true]:bg-card data-[state=open]:border-primary group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!")}
               >
-                <Link
-                  href={`/applications/${application.id}`}
-                  prefetch={false}
-                  className="min-w-0 flex-col items-stretch gap-0"
-                >
-                  <span className="relative flex w-full min-w-0 items-center gap-2.5">
-                    {/* On its own tile so the brand mark has a surface against the tint. */}
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0!">
-                      <SiteTypeLogo name={application.site_type} provider={gitProvider} iconDataUri={iconDataUri} size="h-5 w-5" />
+                <ApplicationSwitcher application={application} aria-label={t("applicationContext.switchNamed", { name: application.name })}>
+                  <span className="flex w-full min-w-0 flex-col items-stretch gap-0 text-left">
+                    <span className="relative flex w-full min-w-0 items-center gap-2.5">
+                      {/* On its own tile so the brand mark has a surface against the tint. */}
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0!">
+                        <SiteTypeLogo name={application.site_type} provider={gitProvider} iconDataUri={iconDataUri} size="h-5 w-5" />
+                      </span>
+                      {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
+                          button's LAST span (the domain line), and the rest would overflow. */}
+                      <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+                        <span className="block truncate font-mono text-sm font-semibold text-foreground" title={application.name}>
+                          {application.name}
+                        </span>
+                        {/* Status, then what it is: "Running · WordPress". */}
+                        <span className="mt-1 flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+                          <ApplicationStatusDot application={application} className="shrink-0 [&>span:first-child]:rounded-none" labelClassName="text-xs" />
+                          {application.site_type_title ? (
+                            <span className="truncate">· {application.site_type_title}</span>
+                          ) : null}
+                        </span>
+                      </span>
+                      <ChevronsUpDown className="size-4 shrink-0 self-start text-muted-foreground group-data-[collapsible=icon]:hidden" aria-hidden />
                     </span>
-                    {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
-                        button's LAST span (the domain line), and the rest would overflow. */}
-                    <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="block truncate font-mono text-sm font-semibold text-foreground" title={application.name}>
-                        {application.name}
-                      </span>
-                      {/* Status, then what it is: "Running · WordPress". */}
-                      <span className="mt-1 flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
-                        <ApplicationStatusDot application={application} className="shrink-0 [&>span:first-child]:rounded-none" labelClassName="text-xs" />
-                        {application.site_type_title ? (
-                          <span className="truncate">· {application.site_type_title}</span>
-                        ) : null}
-                      </span>
+                    {/* Its own full-width line, in a box: the domain is often the longest string and
+                        would truncate mid-host beside the name. */}
+                    {/* Right padding keeps the domain clear of the open-site icon drawn over this row. */}
+                    <span className="mt-2.5 block w-full truncate rounded-[2px] border bg-background py-1.5 pr-8 pl-2.5 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                      {application.domain}
                     </span>
                   </span>
-                  {/* Its own full-width line, in a box: the domain is often the longest string and
-                      would truncate mid-host beside the name. */}
-                  {/* Right padding keeps the domain clear of the open-site icon drawn over this row. */}
-                  <span className="mt-2.5 block w-full truncate rounded-[2px] border bg-background py-1.5 pr-8 pl-2.5 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                    {application.domain}
-                  </span>
-                </Link>
-              </MobileNavLink>
+                </ApplicationSwitcher>
+              </SidebarMenuButton>
               {/* Sibling, not child: anchors cannot nest. Only while the site is served
                   (a provisioning site would show a connection error). */}
               {application.status === "active" && application.url ? (

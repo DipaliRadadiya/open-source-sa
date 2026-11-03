@@ -45,7 +45,18 @@
     "breadcrumbApplications": "Applications",
     "applicationContext": {
       "back": "Retour aux applications",
-      "visit": "Ouvrir {domain} dans un nouvel onglet"
+      "visit": "Ouvrir {domain} dans un nouvel onglet",
+      "switch": "Changer d'application",
+      "switchNamed": "{name} : changer d'application",
+      "searchPlaceholder": "Rechercher des applications",
+      "loading": "Chargement des applications…",
+      "loadFailed": "Impossible de charger les applications.",
+      "retry": "Réessayer",
+      "noMatch": "Aucune application ne correspond à « {query} ».",
+      "showingSome": "{shown} sur {total} · tapez pour rechercher",
+      "viewAll": "Voir toutes les applications",
+      "searching": "Recherche…",
+      "found": "{count, plural, =0 {Aucune application trouvée} one {# application trouvée} other {# applications trouvées}}"
     },
     "unsavedTitle": "Quitter sans enregistrer ?",
     "unsavedDescription": "Vos modifications sur cette page n'ont pas été enregistrées. Elles seront perdues.",

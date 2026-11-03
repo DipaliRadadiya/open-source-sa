@@ -207,3 +207,14 @@ export function banApplicationIp(id, ip) {
 export function unbanApplicationIp(id, ip) {
   return api.delete(`/applications/${id}/fail2ban/bans/${encodeURIComponent(ip)}`);
 }
+
+// The application switcher's list: one page, searched on the server by name and domain.
+export function searchApplications(search, { signal } = {}) {
+  return api.get("/applications", { params: { per_page: 20, sort: "name", ...(search ? { search } : {}) }, signal });
+}
+
+// Another application's own nav catalog (filtered by its site type), to keep the section on a switch.
+export async function getApplicationNavCatalog(id) {
+  const res = await api.get("/permissions", { params: { level: "application", application_id: id } });
+  return Array.isArray(res.data?.permissions) ? res.data.permissions : [];
+}
