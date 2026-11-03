@@ -6524,6 +6524,25 @@ LOGIN
 
 # ─── Finish ──────────────────────────────────────────────────────────────────
 
+# The command that swaps the self-signed fallback for a real certificate, for
+# the web server this box runs and every name the fallback covers. It said
+# `certbot --nginx -d <panel>` on every stack, which on Apache is the wrong
+# plugin and in two-host mode leaves the API name out (review finding R12).
+# The Apache fallback is its own site, taken out first as configure_tls does
+# on a re-run; on nginx certbot puts the certificate into the fallback's 443
+# blocks. OpenLiteSpeed has no certbot plugin: the installer wires the
+# certificate in itself.
+certificate_hint() {
+    local names="-d ${PANEL_HOST}"
+    (( SINGLE_HOST )) || names+=" -d ${API_HOST}"
+
+    case "$WEB_SERVER" in
+        nginx)  printf 'sudo certbot --nginx %s' "$names" ;;
+        apache) printf 'sudo a2dissite %s-tls && sudo certbot --apache --redirect %s' "$PANEL_SLUG" "$names" ;;
+        *)      printf 'run this installer again, with the same options' ;;
+    esac
+}
+
 finish() {
     step "Finishing up"
 
@@ -6620,7 +6639,7 @@ finish() {
     if [[ "${TLS_STATE:-none}" == "self-signed" ]]; then
         printf '  Your browser will warn about the certificate. To replace it with a\n'
         printf '  real one once a rate-limit slot frees up:\n'
-        printf '    sudo certbot --nginx -d %s\n\n' "$PANEL_HOST"
+        printf '    %s\n\n' "$(certificate_hint)"
     fi
 
     printf '  Then use the setup page to install a database engine and anything\n'

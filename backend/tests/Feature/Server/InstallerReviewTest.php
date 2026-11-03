@@ -1554,3 +1554,39 @@ describe('R9: a failed config rewrite is not carried on past', function () {
             ->and($run['out'])->toContain('TLS_STATE=none');
     })->with(['nginx', 'apache']);
 });
+
+describe('R12: the final screen names the right way to a real certificate', function () {
+    /*
+     * After a self-signed fallback the last screen said
+     * `sudo certbot --nginx -d <panel host>` on every stack: the wrong plugin
+     * on Apache, nothing that works on OpenLiteSpeed, and without the API
+     * host in two-host mode, which is the default.
+     */
+    function certificateHint(string $webServer, bool $singleHost): string
+    {
+        $run = reviewBash(installerFn('certificate_hint').'
+            WEB_SERVER='.$webServer.'; PANEL_SLUG=panel; PANEL_HOST=panel.1-2-3-4.nip.io; API_HOST=api.1-2-3-4.nip.io
+            SINGLE_HOST='.($singleHost ? 1 : 0).'
+            certificate_hint');
+
+        expect($run['code'])->toBe(0, $run['out']);
+
+        return $run['out'];
+    }
+
+    it('gives each web server its own command, with every name the fallback covers', function (string $webServer, bool $singleHost, string $expected) {
+        expect(certificateHint($webServer, $singleHost))->toBe($expected);
+    })->with([
+        'nginx, two hosts' => ['nginx', false, 'sudo certbot --nginx -d panel.1-2-3-4.nip.io -d api.1-2-3-4.nip.io'],
+        'nginx, one host' => ['nginx', true, 'sudo certbot --nginx -d panel.1-2-3-4.nip.io'],
+        'apache, two hosts' => ['apache', false, 'sudo a2dissite panel-tls && sudo certbot --apache --redirect -d panel.1-2-3-4.nip.io -d api.1-2-3-4.nip.io'],
+        'openlitespeed' => ['openlitespeed', false, 'run this installer again, with the same options'],
+    ]);
+
+    it('is what the final screen prints', function () {
+        preg_match('/^finish\(\) \{\n.*?(?=^[a-z_]+\(\) \{$)/ms', installerSource(), $m);
+
+        expect($m[0] ?? '')->toContain('"$(certificate_hint)"')
+            ->not->toContain('certbot --nginx');
+    });
+});
