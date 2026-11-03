@@ -39,3 +39,17 @@ test("the sidebar card opens it: searched on the server, one page, only when ope
   assert.match(switcher, /if \(!guardNavigation\(href, leave\)\)/);
   assert.match(switcher, /t\("showingSome", \{ shown, total: state\.total \}\)/);
 });
+
+test("unsearched, the current application comes first, even when it is past the first page", async () => {
+  const { switcherRows } = await import("../lib/applications/switcher-list.js");
+  const page = [{ id: 4, name: "aksc" }, { id: 1, name: "phpsite" }, { id: 6, name: "qa-api-01" }];
+  const ids = (rows) => rows.map((row) => row.id);
+  // In the page: moved to the top, not repeated.
+  assert.deepEqual(ids(switcherRows(page, { id: 1, name: "phpsite" }, "")), [1, 4, 6]);
+  // Past the page (wpsc is 32nd of 33): added on top from the card's own data.
+  assert.deepEqual(ids(switcherRows(page, { id: "2", name: "wpsc" }, "")), ["2", 4, 1, 6]);
+  // A search lists the matches as sent; while loading (no rows yet) nothing is added.
+  assert.deepEqual(ids(switcherRows(page, { id: 2 }, "qa")), [4, 1, 6]);
+  assert.deepEqual(switcherRows([], { id: 2 }, null), []);
+  assert.deepEqual(switcherRows([], { id: 2 }, ""), []);
+});

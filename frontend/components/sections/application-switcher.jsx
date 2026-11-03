@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Check, Loader2, Search } from "lucide-react";
 import { searchApplications, getApplicationNavCatalog } from "@/lib/api/applications";
 import { switchTarget } from "@/lib/applications/switch-target";
+import { switcherRows } from "@/lib/applications/switcher-list";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { ApplicationStatusDot } from "@/components/applications/application-status-badge";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,8 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
     rows[next]?.focus();
   }
 
-  const shown = state.applications.length;
+  const visible = switcherRows(state.applications, application, state.query);
+  const shown = visible.length;
   // From the first key until the answer arrives, the pause included: without it the old list just
   // sat there and nothing said a search was running (Krishna, 3 Nov).
   const searching = open && (state.status === "loading" || state.query !== query.trim());
@@ -136,7 +138,7 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
           ) : shown === 0 && state.status === "ready" ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">{t("noMatch", { query: state.query ?? "" })}</p>
           ) : (
-            state.applications.map((item) => {
+            visible.map((item) => {
               const current = String(item.id) === String(application.id);
               return (
                 <div key={item.id} role="listitem">
