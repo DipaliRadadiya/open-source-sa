@@ -125,19 +125,15 @@ class ContainerLiveness
         // a dependency's healthcheck: starting, not failed. One that never
         // starts is named all the same.
         $rank = ['starting' => 1, 'unhealthy' => 2, 'restarting' => 3, 'exited' => 4];
-        $status = null;
+        $shown = fn (array $warning): string => match ($warning['state']) {
+            'unhealthy', 'restarting' => $warning['state'],
+            'created' => 'starting',
+            default => 'exited',
+        };
 
-        foreach ($essential as $warning) {
-            $shown = match ($warning['state']) {
-                'unhealthy', 'restarting' => $warning['state'],
-                'created' => 'starting',
-                default => 'exited',
-            };
-
-            if ($rank[$shown] > ($rank[$status ?? ''] ?? 0)) {
-                $status = $shown;
-            }
-        }
+        // Worst first, so the first warning is the container behind `status`.
+        usort($essential, fn (array $a, array $b): int => $rank[$shown($b)] <=> $rank[$shown($a)]);
+        $status = $essential === [] ? null : $shown($essential[0]);
 
         if ($status === null || $status === 'starting') {
             $status = $this->worstHealth([

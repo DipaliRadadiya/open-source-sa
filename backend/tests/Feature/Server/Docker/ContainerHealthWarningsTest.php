@@ -214,7 +214,14 @@ describe('a one-click app with an optional helper', function () {
             'auth' => ['running', 'Up 1 minute (unhealthy)'],
         ]), 'sv-app-'.$this->application->id);
 
-        expect(healthResource($this->application->fresh())['container_status'])->toBe('unhealthy');
+        $shown = healthResource($this->application->fresh());
+
+        // The container behind the red status comes first.
+        expect($shown['container_status'])->toBe('unhealthy')
+            ->and($shown['health_warnings'])->toBe([
+                ['service' => 'auth', 'state' => 'unhealthy'],
+                ['service' => 'kong', 'state' => 'created'],
+            ]);
     });
 
     it('lists the main problem first, then the helper ones', function () {
