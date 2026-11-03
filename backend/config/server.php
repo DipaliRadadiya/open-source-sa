@@ -2788,6 +2788,9 @@ return [
 
     'sshd_config_dir' => env('SERVER_SSHD_CONFIG_DIR', '/etc/ssh/sshd_config.d'),
 
+    // Read after the drop-ins, for a port set by hand (App\Support\SshPort).
+    'sshd_config_file' => env('SERVER_SSHD_CONFIG_FILE', '/etc/ssh/sshd_config'),
+
     /*
     |--------------------------------------------------------------------------
     | Container login (RC-28)

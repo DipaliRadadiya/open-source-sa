@@ -10,10 +10,15 @@ namespace App\Support;
  * each of them getting it wrong locks somebody out of their own server. It
  * therefore has exactly one source: the managed drop-in the Settings feature
  * writes, falling back to the configured default only when nothing has
- * changed it.
+ * changed it — then the main sshd_config, where people move the port by
+ * hand, and only then the configured default.
  *
  * Reading a default instead of the real value is the same mistake that had
- * fail2ban banning port 22 on a server whose SSH had been moved.
+ * fail2ban banning port 22 on a server whose SSH had been moved. Reading the
+ * drop-ins alone was a quieter form of it: with `Port 2222` in sshd_config
+ * itself, enabling the firewall opened 22 and closed the way in (review
+ * finding R11). install.sh's find_ssh_port asks the same files in the same
+ * order, so the installer's rule and the panel's record agree.
  */
 class SshPort
 {
@@ -21,7 +26,9 @@ class SshPort
     {
         $dir = (string) config('server.sshd_config_dir', '/etc/ssh/sshd_config.d');
 
-        foreach (glob(rtrim($dir, '/').'/*.conf') ?: [] as $file) {
+        $files = [...(glob(rtrim($dir, '/').'/*.conf') ?: []), (string) config('server.sshd_config_file', '/etc/ssh/sshd_config')];
+
+        foreach ($files as $file) {
             if (preg_match('/^\s*Port\s+(\d+)/mi', (string) @file_get_contents($file), $matches) === 1) {
                 return (int) $matches[1];
             }

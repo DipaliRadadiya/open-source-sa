@@ -51,6 +51,8 @@
              would otherwise read this machine's zone. Tests that need a link set
              server.localtime_link themselves. -->
         <env name="SERVER_LOCALTIME_LINK" value="/nonexistent/panel-test-localtime"/>
+        <!-- SshPort reads the main sshd_config after the drop-ins: never the host's own in a test. -->
+        <env name="SERVER_SSHD_CONFIG_FILE" value="/nonexistent/panel-test-sshd_config"/>
         <!-- Off in tests: a cached probe would carry one test's fake server into the next request. ProbeCacheTest turns it on. -->
         <env name="SERVER_PROBE_CACHE_SECONDS" value="0"/>
         <env name="SERVER_APP_SHELL_SYNC" value="false"/>

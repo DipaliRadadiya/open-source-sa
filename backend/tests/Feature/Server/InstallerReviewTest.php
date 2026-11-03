@@ -8,6 +8,7 @@ use App\Services\Panel\PanelPhpBinary;
 use App\Services\Panel\PanelReleases;
 use App\Services\Panel\ReleaseUpdateScript;
 use App\Services\Panel\UpdateScript;
+use App\Support\SshPort;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -926,5 +927,75 @@ describe('S5: OpenLiteSpeed\'s WebAdmin console listens on this server only', fu
 
         expect(UpdateScript::STEPS)->toContain('configure_ols_webadmin')
             ->and(__('panel_update.steps.configure_ols_webadmin'))->not->toBe('panel_update.steps.configure_ols_webadmin');
+    });
+});
+
+describe('R11: the firewall allows the SSH port set in sshd_config itself', function () {
+    /*
+     * configure_firewall read the port from sshd_config.d drop-ins only, and
+     * so did the panel (SshPort). With `Port 2222` in sshd_config itself, the
+     * installer allowed 22 — on a server whose ufw is already on (as on
+     * TeamCompute's images), that is the one rule between the owner and a
+     * lockout the day 22 is closed.
+     */
+    function sshFixture(?string $main, array $dropIns = []): string
+    {
+        $dir = reviewDir();
+        mkdir($dir.'/sshd_config.d');
+        if ($main !== null) {
+            file_put_contents($dir.'/sshd_config', $main);
+        }
+        foreach ($dropIns as $name => $body) {
+            file_put_contents($dir.'/sshd_config.d/'.$name, $body);
+        }
+
+        return $dir;
+    }
+
+    function installerSshPort(string $dir): string
+    {
+        $run = reviewBash(installerFn('find_ssh_port').'
+            find_ssh_port '.escapeshellarg($dir.'/sshd_config').' '.escapeshellarg($dir.'/sshd_config.d'));
+
+        expect($run['code'])->toBe(0, $run['out']);
+
+        return trim($run['out']);
+    }
+
+    $stock = "Include /etc/ssh/sshd_config.d/*.conf\n\n#Port 22\n#AddressFamily any\n";
+    $cases = [
+        'moved in sshd_config' => [str_replace('#Port 22', "Port 2222\nPort 22", $stock), [], '2222'],
+        'a drop-in wins over sshd_config' => [str_replace('#Port 22', 'Port 2222', $stock), ['00-panel.conf' => "Port 2200\n"], '2200'],
+        'the first drop-in by name' => [$stock, ['60-b.conf' => "Port 2300\n", '10-a.conf' => "PasswordAuthentication no\n  port 2301\n"], '2301'],
+        'nothing set' => [$stock, ['50-cloud-init.conf' => "PasswordAuthentication no\n"], '22'],
+        'no sshd_config at all' => [null, [], '22'],
+    ];
+
+    it('reads the port the way sshd does', function (?string $main, array $dropIns, string $port) {
+        expect(installerSshPort(sshFixture($main, $dropIns)))->toBe($port);
+    })->with($cases);
+
+    it('gives the same answer as the panel, so the rule and the record agree', function (?string $main, array $dropIns, string $port) {
+        $dir = sshFixture($main, $dropIns);
+        config(['server.sshd_config_dir' => $dir.'/sshd_config.d', 'server.sshd_config_file' => $dir.'/sshd_config', 'server.ssh_port' => 22]);
+
+        expect((string) SshPort::current())->toBe($port)
+            ->and(installerSshPort($dir))->toBe($port);
+    })->with($cases);
+
+    it('allows that port in ufw', function () use ($stock) {
+        $dir = sshFixture(str_replace('#Port 22', 'Port 2222', $stock));
+
+        $run = reviewBash(installerFunctions('find_ssh_port', 'configure_firewall').'
+            eval "real_$(declare -f find_ssh_port)"
+            find_ssh_port() { real_find_ssh_port '.escapeshellarg($dir.'/sshd_config').' '.escapeshellarg($dir.'/sshd_config.d').'; }
+            step() { :; }; run() { echo "RUN $*"; }
+            ufw() { echo "Status: active"; }
+            APP_USER=panel; APP_DIR=/var/www/panel; PANEL_PHP_BIN=php
+            configure_firewall');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('RUN ufw allow 2222/tcp')
+            ->and($run['out'])->not->toContain('RUN ufw allow 22/tcp');
     });
 });

@@ -5383,6 +5383,39 @@ TMPFILES
 
 # ─── Firewall ────────────────────────────────────────────────────────────────
 
+# The port SSH is actually on, resolved the same way the panel resolves it
+# (App\Support\SshPort): the first `Port` in a sshd_config.d drop-in, else
+# the first in sshd_config itself, else 22. Asking the same question the same
+# way is the point -- this used to hardcode 22 while `firewall:record-defaults`
+# recorded the real port, so on a server whose SSH had been moved the panel's
+# rule list and the box disagreed from the moment of install.
+#
+# sshd_config itself is read too because that is where people move the port by
+# hand. Reading the drop-ins alone allowed 22 on a server listening on 2222,
+# and on a server whose ufw is already on that is the rule which locks the
+# owner out the day port 22 is closed (review finding R11).
+#
+# Deliberately not `sshd -T`, which is more authoritative: it needs /run/sshd
+# to exist, and reading the same files as the panel keeps the two answers
+# identical even where both are wrong. A drop-in is also where the panel
+# *writes* a port change, and Ubuntu includes them before the rest of the main
+# file, so a drop-in still wins.
+#
+# Arguments only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
+find_ssh_port() {
+    local main="${1:-/etc/ssh/sshd_config}" dir="${2:-/etc/ssh/sshd_config.d}" file found
+    for file in "$dir"/*.conf "$main"; do
+        [[ -f "$file" ]] || continue
+        found=$(grep -oPi '^\s*Port\s+\K[0-9]+' "$file" 2>/dev/null | head -1) || true
+        if [[ -n "$found" ]]; then
+            printf '%s\n' "$found"
+            return 0
+        fi
+    done
+    printf '22\n'
+}
+
 configure_firewall() {
     step "Checking the firewall"
 
@@ -5391,28 +5424,8 @@ configure_firewall() {
         return
     fi
 
-    # The port SSH is actually on, resolved the same way the panel resolves it
-    # (App\Support\SshPort): the first `Port` in a sshd_config.d drop-in, else
-    # 22. Asking the same question the same way is the point — this used to
-    # hardcode 22 while `firewall:record-defaults` below recorded the real
-    # port, so on a server whose SSH had been moved the panel's rule list and
-    # the box disagreed from the moment of install.
-    #
-    # Deliberately not `sshd -T`, which is more authoritative: it needs
-    # /run/sshd to exist, and reading the same files as the panel keeps the two
-    # answers identical even where both are wrong. A drop-in is also where the
-    # panel *writes* a port change, so it is the file that matters here.
-    local ssh_port=22
-    local drop_in
-    for drop_in in /etc/ssh/sshd_config.d/*.conf; do
-        [[ -f "$drop_in" ]] || continue
-        local found
-        found=$(grep -oPi '^\s*Port\s+\K[0-9]+' "$drop_in" 2>/dev/null | head -1) || true
-        if [[ -n "$found" ]]; then
-            ssh_port="$found"
-            break
-        fi
-    done
+    local ssh_port
+    ssh_port="$(find_ssh_port)"
 
     # Rules are added but ufw is never enabled here. Enabling a firewall on
     # someone's server as a side effect of an install is how people lose SSH.
