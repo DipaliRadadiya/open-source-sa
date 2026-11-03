@@ -5791,19 +5791,24 @@ configure_tls() {
         return
     fi
 
-    # A separate file rather than appending to the port-80 config, so a later
-    # successful `certbot --nginx` run has an untouched file to edit and this one
-    # can simply be deleted. The 443 blocks include the very same location
-    # snippets the port-80 blocks do — nothing is duplicated, so HTTP and HTTPS
+    # A separate file rather than appending to the port-80 config, so a re-run
+    # can simply delete it, and a later `certbot --nginx` swaps the real
+    # certificate into these 443 blocks. They include the very same location
+    # snippets the port-80 site does — nothing is duplicated, so HTTP and HTTPS
     # cannot end up serving different things.
+    #
+    # TLS 1.2 as the floor, as the panel's site templates and the OpenLiteSpeed
+    # path set it: left out, the block inherits nginx.conf's stock list, which
+    # still names TLS 1.0 and 1.1 (review finding S6).
     local tls_conf=/etc/nginx/sites-available/${PANEL_SLUG}-tls.conf
+    local http_conf=/etc/nginx/sites-available/${PANEL_SLUG}.conf
     local api_locations=/etc/nginx/snippets/${PANEL_SLUG}-api.conf
     local panel_locations=/etc/nginx/snippets/${PANEL_SLUG}-web.conf
 
     if (( SINGLE_HOST )); then
         cat >"$tls_conf" <<NGINX
 # Self-signed fallback, written by the Control panel installer.
-# Delete this file and run: certbot --nginx -d ${PANEL_HOST}
+# For a real certificate run: certbot --nginx -d ${PANEL_HOST}
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
@@ -5812,6 +5817,7 @@ server {
 
     ssl_certificate /etc/ssl/${PANEL_SLUG}/cert.pem;
     ssl_certificate_key /etc/ssl/${PANEL_SLUG}/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     include ${api_locations};
     include ${panel_locations};
@@ -5820,7 +5826,7 @@ NGINX
     else
         cat >"$tls_conf" <<NGINX
 # Self-signed fallback, written by the Control panel installer.
-# Delete this file and run: certbot --nginx -d ${PANEL_HOST} -d ${API_HOST}
+# For a real certificate run: certbot --nginx -d ${PANEL_HOST} -d ${API_HOST}
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
@@ -5830,6 +5836,7 @@ server {
 
     ssl_certificate /etc/ssl/${PANEL_SLUG}/cert.pem;
     ssl_certificate_key /etc/ssl/${PANEL_SLUG}/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     include ${api_locations};
 }
@@ -5842,6 +5849,7 @@ server {
 
     ssl_certificate /etc/ssl/${PANEL_SLUG}/cert.pem;
     ssl_certificate_key /etc/ssl/${PANEL_SLUG}/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     include ${panel_locations};
 }
@@ -5851,7 +5859,18 @@ NGINX
     nginx_without_ipv6 "$tls_conf"
     ln -sf "$tls_conf" /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
 
+    # And plain HTTP only sends visitors to HTTPS, as `certbot --redirect` does
+    # with a real certificate: before, the panel went on answering logins on
+    # port 80 beside the encrypted copy (review finding S6). The ACME location
+    # stays, so certbot can still prove the name later. configure_nginx writes
+    # this file afresh on every run, so a re-run starts from the full site.
+    cp -a "$http_conf" "${http_conf}.pre-tls"
+    sed -i -e '/^    include /d' \
+        -e 's|^\(    location /\.well-known/acme-challenge/ .*\)$|\1\n    location / { return 301 https://$host$request_uri; }|' \
+        "$http_conf"
+
     if nginx -t >>"$LOG_FILE" 2>&1; then
+        rm -f "${http_conf}.pre-tls"
         run systemctl reload-or-restart nginx
         ok "self-signed certificate in place — browsers will warn until a real one is issued"
         TLS_STATE="self-signed"
@@ -5862,6 +5881,7 @@ NGINX
         # one. Serving plain HTTP beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
         rm -f /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
+        mv -f "${http_conf}.pre-tls" "$http_conf"
         nginx -t >>"$LOG_FILE" 2>&1 && systemctl reload-or-restart nginx
         TLS_STATE="none"
         SCHEME="http"

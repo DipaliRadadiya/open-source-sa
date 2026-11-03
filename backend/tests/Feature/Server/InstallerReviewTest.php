@@ -1230,3 +1230,83 @@ describe('R10: a swap file the kernel will not turn off stops the install with t
             ->and($run['out'])->toContain('Nothing has been changed on this server.');
     })->with(['2G', 'abc', '-1', '1e3', '08', '2048 ', '1234567', '$(id)']);
 });
+
+describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirects', function () {
+    /*
+     * When Let's Encrypt failed, the nginx fallback's 443 blocks set no
+     * ssl_protocols, so they took nginx.conf's stock list (TLS 1.0 and 1.1
+     * included), and port 80 went on serving the whole panel, logins and all,
+     * in plain text beside the encrypted copy.
+     */
+    function selfSigned(bool $singleHost, bool $valid): array
+    {
+        $root = reviewDir();
+        foreach (['/etc/nginx/sites-available', '/etc/nginx/sites-enabled', '/etc/nginx/snippets', '/etc/ssl'] as $dir) {
+            @mkdir($root.$dir, 0777, true);
+        }
+
+        $run = reviewBash(reviewRooted(
+            installerFunctions('have_ipv6', 'nginx_without_ipv6')."\n"
+            .installerFnBefore('configure_nginx', 'configure_apache')."\n"
+            .installerFnBefore('configure_tls', 'certbot_issue'),
+            $root,
+            ['/etc/nginx/', '/etc/ssl/'],
+        ).'
+            run() { "$@"; }
+            step() { :; }
+            have_ipv6() { return 0; }
+            certbot_issue() { return 1; }
+            openssl() { :; }; systemctl() { :; }
+            nginx() { '.($valid ? 'return 0' : 'grep -q "return 301" '.escapeshellarg($root).'/etc/nginx/sites-available/panel.conf && return 1; return 0').'; }
+            WANT_SSL=1; WEB_SERVER=nginx; PANEL_SLUG=panel; FRONTEND_PORT=3000
+            PANEL_HOST=panel.example.com; API_HOST='.($singleHost ? 'panel.example.com' : 'api.example.com').'
+            SINGLE_HOST='.($singleHost ? 1 : 0).'; ADMIN_EMAIL=""; DOMAIN=""; APP_DIR=/var/www/panel; LOG_FILE=/dev/null
+            configure_nginx
+            cp '.escapeshellarg($root).'/etc/nginx/sites-available/panel.conf '.escapeshellarg($root).'/http-before.conf
+            configure_tls
+            echo "TLS_STATE=$TLS_STATE"');
+
+        $read = fn (string $path) => is_file($root.$path) ? (string) file_get_contents($root.$path) : null;
+
+        return $run + [
+            'tls' => $read('/etc/nginx/sites-available/panel-tls.conf'),
+            'http' => $read('/etc/nginx/sites-available/panel.conf'),
+            'before' => $read('/http-before.conf'),
+            'enabled' => is_link($root.'/etc/nginx/sites-enabled/panel-tls.conf'),
+            'leftover' => glob($root.'/etc/nginx/sites-available/*.pre-tls') ?: [],
+        ];
+    }
+
+    it('sets TLS 1.2 as the floor on every 443 block', function (bool $singleHost) {
+        $run = selfSigned($singleHost, valid: true);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('TLS_STATE=self-signed')
+            ->and(substr_count((string) $run['tls'], 'ssl_protocols TLSv1.2 TLSv1.3;'))
+            ->toBe(substr_count((string) $run['tls'], 'listen 443 ssl;'))
+            ->toBe($singleHost ? 1 : 2);
+    })->with(['one host' => [true], 'panel and API hosts' => [false]]);
+
+    it('sends plain HTTP to HTTPS and keeps the ACME challenge on port 80', function (bool $singleHost) {
+        $run = selfSigned($singleHost, valid: true);
+        $blocks = substr_count((string) $run['http'], 'server {');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($blocks)->toBe($singleHost ? 1 : 2)
+            ->and($run['http'])->not->toContain('include ')
+            ->and(substr_count((string) $run['http'], 'location / { return 301 https://$host$request_uri; }'))->toBe($blocks)
+            ->and(substr_count((string) $run['http'], 'location /.well-known/acme-challenge/ { root '))->toBe($blocks)
+            ->and($run['leftover'])->toBe([]);
+    })->with(['one host' => [true], 'panel and API hosts' => [false]]);
+
+    it('puts the port-80 site back as it was when nginx rejects the result', function () {
+        $run = selfSigned(false, valid: false);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('TLS_STATE=none')
+            ->and($run['http'])->toBe($run['before'])
+            ->and($run['http'])->toContain('include ')
+            ->and($run['enabled'])->toBeFalse()
+            ->and($run['leftover'])->toBe([]);
+    });
+});
