@@ -5169,6 +5169,40 @@ configure_apache() {
     printf 'ServerName %s\n' "$(hostname)" >"/etc/apache2/conf-available/${PANEL_SLUG}-servername.conf"
     run a2enconf "${PANEL_SLUG}-servername"
 
+    write_apache_panel_site
+
+    run a2ensite "${PANEL_SLUG}"
+
+    # Tested before reloading, exactly as with nginx: a broken config that reaches
+    # a reload takes the web server down, and on this box that includes the panel
+    # you would use to fix it.
+    if ! apache2ctl configtest >>"$LOG_FILE" 2>&1; then
+        die "the generated Apache config failed its own test — see $LOG_FILE"
+    fi
+
+    # Ubuntu 26.04's apache2.service mounts /home read-only for Apache
+    # (ProtectHome=read-only). Every site the panel creates lives in its owner's
+    # home and logs to <site>/logs, which the root master opens at start -- so
+    # the first site's reload failed with "Read-only file system: could not
+    # open error log file" and took Apache down, the panel included. Found on
+    # the 26.04 test server. ReadWritePaths=/home does not lift it (measured);
+    # ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on
+    # servers installed before this.
+    mkdir -p /etc/systemd/system/apache2.service.d
+    printf '[Service]\nProtectHome=no\n' >"/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf"
+    run systemctl daemon-reload
+
+    run systemctl enable apache2
+    # restart, not reload: a running Apache keeps the sandbox it started with,
+    # and a stopped one (the installer's own port-80 advice stops it) cannot be
+    # reloaded at all.
+    run systemctl restart apache2
+    ok "Apache serving ${PANEL_HOST}"
+}
+
+# For configure_apache: the panel's site file, with one vhost or two
+# (SINGLE_HOST).
+write_apache_panel_site() {
     local conf="/etc/apache2/sites-available/${PANEL_SLUG}.conf"
     local api_block panel_block
 
@@ -5256,34 +5290,6 @@ ${panel_block}
 </VirtualHost>
 CONF
     fi
-
-    run a2ensite "${PANEL_SLUG}"
-
-    # Tested before reloading, exactly as with nginx: a broken config that reaches
-    # a reload takes the web server down, and on this box that includes the panel
-    # you would use to fix it.
-    if ! apache2ctl configtest >>"$LOG_FILE" 2>&1; then
-        die "the generated Apache config failed its own test — see $LOG_FILE"
-    fi
-
-    # Ubuntu 26.04's apache2.service mounts /home read-only for Apache
-    # (ProtectHome=read-only). Every site the panel creates lives in its owner's
-    # home and logs to <site>/logs, which the root master opens at start -- so
-    # the first site's reload failed with "Read-only file system: could not
-    # open error log file" and took Apache down, the panel included. Found on
-    # the 26.04 test server. ReadWritePaths=/home does not lift it (measured);
-    # ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on
-    # servers installed before this.
-    mkdir -p /etc/systemd/system/apache2.service.d
-    printf '[Service]\nProtectHome=no\n' >"/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf"
-    run systemctl daemon-reload
-
-    run systemctl enable apache2
-    # restart, not reload: a running Apache keeps the sandbox it started with,
-    # and a stopped one (the installer's own port-80 advice stops it) cannot be
-    # reloaded at all.
-    run systemctl restart apache2
-    ok "Apache serving ${PANEL_HOST}"
 }
 
 install_services() {
