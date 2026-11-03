@@ -131,7 +131,7 @@ describe('R4: OpenLiteSpeed reloads after its certificate renews', function () {
     function olsTls(bool $issued): array
     {
         $root = reviewDir();
-        $run = reviewBash(reviewRooted(installerFn('configure_tls_ols'), $root, ['/etc/letsencrypt/', '/etc/ssl/']).'
+        $run = reviewBash(reviewRooted(installerFunctions('configure_tls_ols', 'make_self_signed_certificate'), $root, ['/etc/letsencrypt/', '/etc/ssl/']).'
             run() { "$@"; }
             certbot_issue() { '.($issued ? 'return 0' : 'return 1').'; }
             install_ols_certificate() { echo "install_ols_certificate $3"; }
@@ -547,7 +547,7 @@ describe('R5: a re-run that gets a real certificate drops the self-signed fallba
             file_put_contents($root.$path, "# Self-signed fallback, written by the Control panel installer.\n");
         }
 
-        $run = reviewBash(reviewRooted(installerFnBefore('configure_tls', 'certbot_issue'), $root, ['/etc/nginx/', '/etc/apache2/', '/etc/ssl/']).'
+        $run = reviewBash(reviewRooted(installerFnBefore('configure_tls', 'certbot_issue')."\n".installerFn('make_self_signed_certificate'), $root, ['/etc/nginx/', '/etc/apache2/', '/etc/ssl/']).'
             run() { "$@"; }
             step() { :; }
             certbot_issue() { echo "certbot $*"; '.($issued ? 'return 0' : 'return 1').'; }
@@ -1248,7 +1248,8 @@ describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirect
         $run = reviewBash(reviewRooted(
             installerFunctions('have_ipv6', 'nginx_without_ipv6')."\n"
             .installerFnBefore('configure_nginx', 'configure_apache')."\n"
-            .installerFnBefore('configure_tls', 'certbot_issue'),
+            .installerFnBefore('configure_tls', 'certbot_issue')."\n"
+            .installerFn('make_self_signed_certificate'),
             $root,
             ['/etc/nginx/', '/etc/ssl/'],
         ).'
@@ -1531,7 +1532,8 @@ describe('R9: a failed config rewrite is not carried on past', function () {
         $run = reviewBash(reviewRooted(
             installerFunctions('have_ipv6', 'nginx_without_ipv6')."\n"
             .installerFn('self_signed_apache')."\n"
-            .installerFnBefore('configure_tls', 'certbot_issue'),
+            .installerFnBefore('configure_tls', 'certbot_issue')."\n"
+            .installerFn('make_self_signed_certificate'),
             $root,
             ['/etc/nginx/', '/etc/apache2/', '/etc/ssl/'],
         ).'
@@ -1588,5 +1590,116 @@ describe('R12: the final screen names the right way to a real certificate', func
 
         expect($m[0] ?? '')->toContain('"$(certificate_hint)"')
             ->not->toContain('certbot --nginx');
+    });
+});
+
+describe('C4: the helpers that replaced duplicated installer code', function () {
+    /*
+     * Clean-up of 2026-11-03: the self-signed certificate was written by two
+     * copies of the same four lines (OpenLiteSpeed's and nginx/Apache's
+     * fallback), the MongoDB key by two copies of the same download, and the
+     * LiteSpeed key's scratch directory was created outside the install's own
+     * temp dir, so a failed download left it behind. Behaviour is unchanged;
+     * these run the helpers for real.
+     */
+    function selfSignedCertificate(): array
+    {
+        $root = reviewDir();
+        $run = reviewBash(reviewRooted(installerFn('make_self_signed_certificate'), $root, ['/etc/ssl/']).'
+            run() { "$@"; }
+            PANEL_SLUG=panel; PANEL_HOST=panel.example.com
+            make_self_signed_certificate
+            make_self_signed_certificate
+            cert='.escapeshellarg($root).'/etc/ssl/panel/cert.pem; key='.escapeshellarg($root).'/etc/ssl/panel/key.pem
+            openssl x509 -in "$cert" -noout -subject
+            openssl x509 -in "$cert" -noout -checkend $((3649 * 86400)) >/dev/null && echo "valid-3649-days"
+            openssl x509 -in "$cert" -noout -checkend $((3651 * 86400)) >/dev/null || echo "gone-by-3651-days"
+            [[ "$(openssl x509 -in "$cert" -noout -pubkey)" == "$(openssl pkey -in "$key" -pubout)" ]] && echo "key-matches-certificate"
+            stat -c "perm %a" "$key"');
+
+        return $run + ['root' => $root];
+    }
+
+    it('writes a ten-year certificate for the panel name, with its key, and can run again', function () {
+        $run = selfSignedCertificate();
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toMatch('/CN ?= ?panel\.example\.com/')
+            ->and($run['out'])->toContain('valid-3649-days')
+            ->and($run['out'])->toContain('gone-by-3651-days')
+            ->and($run['out'])->toContain('key-matches-certificate')
+            ->and($run['out'])->toContain('perm 600')
+            ->and($run['out'])->not->toContain('ERR-TRAP');
+    })->skip(fn () => trim((string) shell_exec('command -v openssl 2>/dev/null')) === '', 'openssl is not installed');
+
+    it('is the only place the installer makes a self-signed certificate', function () {
+        $code = installerCode();
+
+        expect(substr_count($code, 'openssl req -x509'))->toBe(1)
+            ->and(substr_count($code, "\n    make_self_signed_certificate\n"))->toBe(1)
+            ->and(substr_count($code, "\n        make_self_signed_certificate\n"))->toBe(1);
+    });
+
+    function mongodbKey(string $served, int $dry = 0): array
+    {
+        $root = reviewDir();
+        $run = reviewBash(reviewRooted(installerFn('fetch_mongodb_key'), $root, ['/etc/apt/keyrings']).'
+            DRY_RUN='.$dry.'
+            run() { echo "run: $*"; "$@"; }
+            run_progress() { local label="$1"; shift; echo "progress: $label"; "$@"; }
+            die() { echo "DIE: $*"; exit 1; }
+            curl() { echo "curl $*" >&2; local out; while (( $# )); do [[ "$1" == -o ]] && out="$2"; shift; done; printf "%s\n" '.escapeshellarg($served).' >"$out"; }
+            keyring='.escapeshellarg($root).'/etc/apt/keyrings/mongodb-server-7.0.asc
+            fetch_mongodb_key 7.0 "$keyring" "Repairing the MongoDB 7.0 repository signing key"
+            stat -c "perm %a" "$keyring"');
+
+        return $run;
+    }
+
+    it('downloads the key for the series over https, checks it is a key, and makes it world-readable', function () {
+        $run = mongodbKey("-----BEGIN PGP PUBLIC KEY BLOCK-----\nabc\n-----END PGP PUBLIC KEY BLOCK-----");
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('progress: Repairing the MongoDB 7.0 repository signing key')
+            ->and($run['out'])->toContain('--proto =https --proto-redir =https -o ')
+            ->and($run['out'])->toContain('https://pgp.mongodb.com/server-7.0.asc')
+            ->and($run['out'])->toContain('perm 644')
+            ->and($run['out'])->not->toContain('DIE');
+    });
+
+    it('stops when the reply is not a key', function () {
+        $run = mongodbKey('<html>502 Bad Gateway</html>');
+
+        expect($run['code'])->toBe(1)
+            ->and($run['out'])->toContain('DIE: MongoDB 7.0 returned an invalid repository signing key.')
+            ->and($run['out'])->not->toContain('perm ');
+    });
+
+    it('is what both MongoDB repairs use, with their own wording', function () {
+        preg_match('/^repair_panel_mongodb_repository\(\) \{\n.*?^\}\n/ms', installerSource(), $m);
+        $repair = $m[0] ?? '';
+
+        expect(substr_count($repair, 'fetch_mongodb_key'))->toBe(2)
+            ->and($repair)->toContain('"Repairing the MongoDB ${series} repository signing key"')
+            ->and($repair)->toContain('"Restoring the MongoDB ${series} repository signing key"')
+            ->and($repair)->not->toContain('pgp.mongodb.com');
+    });
+
+    it('keeps the LiteSpeed key scratch directory under the install\'s own temp dir', function () {
+        $root = reviewDir();
+        mkdir($root.'/tmp');
+        $run = reviewBash(reviewRooted(installerFn('add_ols_repository'), $root, ['/usr/share/keyrings/', '/etc/apt/sources.list.d/']).'
+            export TMPDIR='.escapeshellarg($root.'/tmp').'
+            RUN_DIR=$(mktemp -d "$TMPDIR/panel-install.XXXXXX"); trap "rm -rf $RUN_DIR" EXIT
+            run() { "$@"; }
+            curl() { return 22; }
+            die() { echo "DIE: $*"; exit 1; }
+            OS_CODENAME=noble; LOG_FILE=/dev/null
+            add_ols_repository');
+
+        // The download failed and the install stopped, as it always did; what
+        // changes is that the scratch directory went with the install's own.
+        expect($run['code'])->not->toBe(0)
+            ->and(glob($root.'/tmp/*'))->toBe([]);
     });
 });

@@ -2377,6 +2377,23 @@ early_work_next() {
 # first package step — stopped with NO_PUBKEY before updated panel code could
 # repair its own file.
 #
+# The signing key for one MongoDB series, as the armored file apt reads
+# straight from signed-by. A reply that is not a key stops the install.
+fetch_mongodb_key() {
+    local series="$1" keyring="$2" label="$3"
+
+    run install -d -m 0755 /etc/apt/keyrings
+    run_progress "$label" \
+        curl -fsSL --proto '=https' --proto-redir '=https' \
+        -o "$keyring" "https://pgp.mongodb.com/server-${series}.asc"
+
+    if (( ! DRY_RUN )) && ! grep -q '^-----BEGIN PGP PUBLIC KEY BLOCK-----$' "$keyring"; then
+        die "MongoDB ${series} returned an invalid repository signing key."
+    fi
+
+    run chmod 0644 "$keyring"
+}
+
 # Touch only the exact MongoDB source/key pattern the panel wrote. An unrelated
 # third-party repository is the server owner's configuration, not ours to
 # rewrite. The old `.gpg` file is left in place; once no source references it,
@@ -2400,16 +2417,7 @@ repair_panel_mongodb_repository() {
         # repaired, covering a download interrupted between the two writes.
         if [[ "$current" == *"https://repo.mongodb.org/apt/ubuntu"* \
               && "$current" == *"signed-by=${old_key}"* ]]; then
-            run install -d -m 0755 /etc/apt/keyrings
-            run_progress "Repairing the MongoDB ${series} repository signing key" \
-                curl -fsSL --proto '=https' --proto-redir '=https' \
-                -o "$keyring" "https://pgp.mongodb.com/server-${series}.asc"
-
-            if (( ! DRY_RUN )) && ! grep -q '^-----BEGIN PGP PUBLIC KEY BLOCK-----$' "$keyring"; then
-                die "MongoDB ${series} returned an invalid repository signing key."
-            fi
-
-            run chmod 0644 "$keyring"
+            fetch_mongodb_key "$series" "$keyring" "Repairing the MongoDB ${series} repository signing key"
             fixed=${current//$old_key/$keyring}
 
             if (( DRY_RUN )); then
@@ -2422,16 +2430,7 @@ repair_panel_mongodb_repository() {
         elif [[ "$current" == *"https://repo.mongodb.org/apt/ubuntu"* \
                 && "$current" == *"signed-by=${keyring}"* \
                 && ! -s "$keyring" ]]; then
-            run install -d -m 0755 /etc/apt/keyrings
-            run_progress "Restoring the MongoDB ${series} repository signing key" \
-                curl -fsSL --proto '=https' --proto-redir '=https' \
-                -o "$keyring" "https://pgp.mongodb.com/server-${series}.asc"
-
-            if (( ! DRY_RUN )) && ! grep -q '^-----BEGIN PGP PUBLIC KEY BLOCK-----$' "$keyring"; then
-                die "MongoDB ${series} returned an invalid repository signing key."
-            fi
-
-            run chmod 0644 "$keyring"
+            fetch_mongodb_key "$series" "$keyring" "Restoring the MongoDB ${series} repository signing key"
             ok "MongoDB ${series} repository key restored"
         fi
     done
@@ -4302,7 +4301,7 @@ add_ols_repository() {
 
     if (( needs_keyring )); then
         local tmpdir i url got
-        tmpdir="$(mktemp -d)"
+        tmpdir="$(mktemp -d "${RUN_DIR:-${TMPDIR:-/tmp}}/litespeed-key.XXXXXX")"
 
         for i in "${!key_urls[@]}"; do
             url="${key_urls[$i]}"
@@ -5516,6 +5515,17 @@ configure_firewall() {
 
 # ─── TLS ─────────────────────────────────────────────────────────────────────
 
+# The self-signed certificate both fallbacks use when Let's Encrypt says no
+# (OpenLiteSpeed's, and nginx's or Apache's): ten years, for the panel's name,
+# where the vhost files already point.
+make_self_signed_certificate() {
+    mkdir -p "/etc/ssl/${PANEL_SLUG}"
+    run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+        -keyout "/etc/ssl/${PANEL_SLUG}/key.pem" \
+        -out "/etc/ssl/${PANEL_SLUG}/cert.pem" \
+        -subj "/CN=${PANEL_HOST}"
+}
+
 # The Apache half of the self-signed fallback. Separate file and separate site so
 # a later successful certbot run edits an untouched config, and so backing this
 # out is one `a2dissite` rather than an unpick.
@@ -5616,11 +5626,7 @@ configure_tls_ols() {
         fi
         say "     falling back to a self-signed certificate so traffic is still encrypted"
 
-        mkdir -p /etc/ssl/${PANEL_SLUG}
-        run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
-            -keyout /etc/ssl/${PANEL_SLUG}/key.pem \
-            -out /etc/ssl/${PANEL_SLUG}/cert.pem \
-            -subj "/CN=${PANEL_HOST}"
+        make_self_signed_certificate
 
         cert="/etc/ssl/${PANEL_SLUG}/cert.pem"
         key="/etc/ssl/${PANEL_SLUG}/key.pem"
@@ -5790,11 +5796,7 @@ configure_tls() {
     fi
 
     say "     falling back to a self-signed certificate so traffic is still encrypted"
-    mkdir -p /etc/ssl/${PANEL_SLUG}
-    run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
-        -keyout /etc/ssl/${PANEL_SLUG}/key.pem \
-        -out /etc/ssl/${PANEL_SLUG}/cert.pem \
-        -subj "/CN=${PANEL_HOST}"
+    make_self_signed_certificate
 
     if [[ "$WEB_SERVER" == "apache" ]]; then
         self_signed_apache
