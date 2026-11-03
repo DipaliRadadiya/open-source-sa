@@ -3455,6 +3455,68 @@ setup_backend() {
     local db="${dir}/database/database.sqlite"
     [[ -f "$db" ]] || : >"$db"
 
+    write_backend_env "$dir" "$scheme" "$db"
+
+    chown -R "${APP_USER}:${APP_USER}" "$dir"
+    chmod -R 775 "${dir}/storage" "${dir}/bootstrap/cache"
+
+    grep -q '^APP_KEY=base64:' "${dir}/.env" \
+        || run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan key:generate --force' -- "$dir" "${PANEL_PHP_BIN}"
+    ok "application key set"
+
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "${PANEL_PHP_BIN}"
+
+    # The first administrator, the moment there is a table to put it in — and
+    # before the frontend is built and the services start, so registration is
+    # closed before anyone can open the panel. The password goes on STDIN, as
+    # the central token does below, and is dropped as soon as it is used.
+    if [[ -n "$PANEL_ADMIN_USERNAME" ]]; then
+        run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:create-admin --username="$3"' \
+            -- "$dir" "${PANEL_PHP_BIN}" "$PANEL_ADMIN_USERNAME" <<<"$PANEL_ADMIN_PASSWORD"
+        PANEL_ADMIN_PASSWORD=""
+        unset PANEL_ADMIN_PASSWORD
+        ok "administrator ${PANEL_ADMIN_USERNAME} ready — registration is closed"
+    fi
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "${PANEL_PHP_BIN}"
+    ok "database migrated and permissions seeded"
+
+    prime_runtime_catalogues "$dir"
+
+    # Tell the panel what we built. It can detect that nginx and PHP are here,
+    # but not whether that was a deliberate `lemp` build or a box somebody
+    # assembled by hand — and the difference matters to the setup page.
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "${PANEL_PHP_BIN}" "$STACK"
+    ok "stack recorded as ${STACK}"
+
+    # Central-management token. Passed in by the central panel's provisioning
+    # flow when this server is being installed on behalf of an existing customer.
+    # The token is stored server-side and the same value is registered with
+    # central so it can call this server's API without any user session.
+    #
+    # Handed to artisan on STDIN, never as an argument: an argument is readable
+    # by every account on the box via `ps` for as long as the command runs, and
+    # run() echoes a failing command into the log. A herestring is visible to
+    # neither, so nothing has to be redacted afterwards.
+    #
+    # The storing is a real artisan command rather than inline PHP. The previous
+    # version was `tinker --execute=` inside a single-quoted `sh -c`, which
+    # passed an empty token (no expansion inside single quotes, and sudo resets
+    # the environment regardless), invalid PHP (`\\'settings\\'` closes the
+    # quote instead of escaping), and ran `php "$2" artisan` where $2 is already
+    # the PHP binary. It had never once worked.
+    if [[ -n "$CENTRAL_TOKEN" ]]; then
+        run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:central-token' \
+            -- "$dir" "${PANEL_PHP_BIN}" <<<"$CENTRAL_TOKEN"
+        ok "central management token stored"
+    fi
+}
+
+# The API's .env, for setup_backend: the URLs, the database, the cache,
+# queue and session drivers, and what the self-updater needs to know about
+# this install. $1 is the backend directory, $2 the scheme, $3 the database.
+write_backend_env() {
+    local dir="$1" scheme="$2" db="$3"
+
     set_env "${dir}/.env" APP_ENV production
     set_env "${dir}/.env" APP_DEBUG false
     set_env "${dir}/.env" APP_URL "${scheme}://${API_HOST}"
@@ -3546,29 +3608,12 @@ setup_backend() {
     # `node` invocation (e.g. the dashboard runtime probe) fails with
     # "node: not found". Pin the absolute binary for server.node_binary.
     set_env "${dir}/.env" SERVER_NODE_BINARY "$NODE_BIN"
+}
 
-    chown -R "${APP_USER}:${APP_USER}" "$dir"
-    chmod -R 775 "${dir}/storage" "${dir}/bootstrap/cache"
-
-    grep -q '^APP_KEY=base64:' "${dir}/.env" \
-        || run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan key:generate --force' -- "$dir" "${PANEL_PHP_BIN}"
-    ok "application key set"
-
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "${PANEL_PHP_BIN}"
-
-    # The first administrator, the moment there is a table to put it in — and
-    # before the frontend is built and the services start, so registration is
-    # closed before anyone can open the panel. The password goes on STDIN, as
-    # the central token does below, and is dropped as soon as it is used.
-    if [[ -n "$PANEL_ADMIN_USERNAME" ]]; then
-        run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:create-admin --username="$3"' \
-            -- "$dir" "${PANEL_PHP_BIN}" "$PANEL_ADMIN_USERNAME" <<<"$PANEL_ADMIN_PASSWORD"
-        PANEL_ADMIN_PASSWORD=""
-        unset PANEL_ADMIN_PASSWORD
-        ok "administrator ${PANEL_ADMIN_USERNAME} ready — registration is closed"
-    fi
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "${PANEL_PHP_BIN}"
-    ok "database migrated and permissions seeded"
+# The two catalogues the panel otherwise fills only on a daily schedule, for
+# setup_backend. $1 is the backend directory.
+prime_runtime_catalogues() {
+    local dir="$1"
 
     # Prime the npm catalogue. `npm_latest` on the Node screen is read from
     # this table, and an empty table is reported as null — which the panel
@@ -3606,34 +3651,6 @@ setup_backend() {
         ok "runtime lifecycle catalogue primed"
     else
         warn "runtime lifecycle catalogue not primed; end-of-life Node versions may be offered until the daily refresh runs"
-    fi
-
-    # Tell the panel what we built. It can detect that nginx and PHP are here,
-    # but not whether that was a deliberate `lemp` build or a box somebody
-    # assembled by hand — and the difference matters to the setup page.
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "${PANEL_PHP_BIN}" "$STACK"
-    ok "stack recorded as ${STACK}"
-
-    # Central-management token. Passed in by the central panel's provisioning
-    # flow when this server is being installed on behalf of an existing customer.
-    # The token is stored server-side and the same value is registered with
-    # central so it can call this server's API without any user session.
-    #
-    # Handed to artisan on STDIN, never as an argument: an argument is readable
-    # by every account on the box via `ps` for as long as the command runs, and
-    # run() echoes a failing command into the log. A herestring is visible to
-    # neither, so nothing has to be redacted afterwards.
-    #
-    # The storing is a real artisan command rather than inline PHP. The previous
-    # version was `tinker --execute=` inside a single-quoted `sh -c`, which
-    # passed an empty token (no expansion inside single quotes, and sudo resets
-    # the environment regardless), invalid PHP (`\\'settings\\'` closes the
-    # quote instead of escaping), and ran `php "$2" artisan` where $2 is already
-    # the PHP binary. It had never once worked.
-    if [[ -n "$CENTRAL_TOKEN" ]]; then
-        run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:central-token' \
-            -- "$dir" "${PANEL_PHP_BIN}" <<<"$CENTRAL_TOKEN"
-        ok "central management token stored"
     fi
 }
 
