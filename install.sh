@@ -1583,7 +1583,7 @@ resolve_hostnames() {
     # The address the outside world sees, which on a NAT'd box is not the one on
     # the interface. Falls back to the local route if the lookup services are
     # unreachable — a wrong-but-present name beats an empty one.
-    local ip=""
+    local ip="" url
     for url in https://api.ipify.org https://ifconfig.me/ip https://icanhazip.com; do
         ip=$(curl -fsS --max-time 5 "$url" 2>/dev/null | tr -d '[:space:]') || ip=""
         [[ "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] && break
@@ -2022,8 +2022,8 @@ configure_swap() {
 # and answer 503 on every request.
 derive_php_runtime() {
     if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
-        LSPHP_COMPACT="${PHP_VERSION//./}"
-        PANEL_PHP_BIN="/usr/local/lsws/lsphp${LSPHP_COMPACT}/bin/php"
+        local lsphp_compact="${PHP_VERSION//./}"
+        PANEL_PHP_BIN="/usr/local/lsws/lsphp${lsphp_compact}/bin/php"
         PANEL_PHP_SAPI="lsapi"
     else
         PANEL_PHP_BIN="/usr/bin/php${PHP_VERSION}"
@@ -3009,7 +3009,7 @@ install_node_body() {
     # its sites on v7's Node (nodesource, /usr/bin/node); /usr/local/bin comes
     # first on PATH, so a link here would move every one of them to this
     # version without a word (operator, 2026-10-07: keep v7's Node).
-    local node_bin_dir
+    local node_bin_dir bin
     node_bin_dir=$(dirname "$NODE_BIN")
     if [[ -x /usr/bin/node ]]; then
         skip "node already on this server ($(/usr/bin/node -v 2>/dev/null)) — not shadowed"
@@ -4289,7 +4289,7 @@ add_ols_repository() {
     # would skip past it forever — which is exactly what happened: the re-run
     # after the fix produced the identical NO_PUBKEY error, because the broken
     # file was still there and still counted as "done".
-    local needs_keyring=0
+    local needs_keyring=0 fpr
     if [[ ! -f "$keyring" ]]; then
         needs_keyring=1
     else
@@ -4301,7 +4301,7 @@ add_ols_repository() {
     fi
 
     if (( needs_keyring )); then
-        local tmpdir i url fpr got
+        local tmpdir i url got
         tmpdir="$(mktemp -d)"
 
         for i in "${!key_urls[@]}"; do
@@ -4440,7 +4440,7 @@ ols_listener_maps() {
 # Next.
 write_ols_vhost() {
     local vhost_dir="$1"
-    local api_context="" front_controller="" doc_root="${APP_DIR}/frontend" index_block=""
+    local api_context="" front_controller="" doc_root="${APP_DIR}/frontend" index_block="" proxy_context=""
 
     # Single-host installs serve the API and the SPA from one name, so this one
     # vhost has to do both. Two-host installs get a separate backend vhost (see
