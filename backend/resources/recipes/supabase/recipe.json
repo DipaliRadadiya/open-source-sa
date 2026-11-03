@@ -115,7 +115,8 @@
         },
         {
             "name": "functions",
-            "role": "worker"
+            "role": "worker",
+            "optional": true
         },
         {
             "name": "db",

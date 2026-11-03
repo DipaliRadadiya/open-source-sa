@@ -269,6 +269,13 @@ class ApplicationResource extends JsonResource
             // badge over a 502 is what this field exists to prevent. A stored
             // `exited` is asked too, the other way round (DS-12).
             'container_status' => $this->liveContainerStatus(),
+            // What is wrong with the app's containers right now, `[{service,
+            // state}]`, read from the same `docker ps`. A one-click app's
+            // optional helpers report here instead of in `container_status`,
+            // and a red status names the container that made it red, listed
+            // first. Always present: `[]` when nothing is wrong, nothing runs,
+            // Docker did not answer, or the site is not a container.
+            'health_warnings' => $this->healthWarnings(),
             // Why the last deploy failed, in words, with the container's own last
             // log lines. Cleared by the next deploy that answers, and not shown
             // once a container that had exited is running again. The log only
@@ -445,8 +452,13 @@ class ApplicationResource extends JsonResource
                 return 'exited';
             }
 
-            return match ($running ? $liveness->health($this->resource) : null) {
+            // The app's main part only: a one-click app's optional helper
+            // reports in `health_warnings`, and a main container stopped next
+            // to running helpers is down, not Running.
+            return match ($running ? $liveness->verdict($this->resource)['status'] ?? null : null) {
                 'unhealthy' => 'unhealthy',
+                'restarting' => 'restarting',
+                'exited' => 'exited',
                 'starting' => 'starting',
                 'healthy' => 'running',
                 default => $stored,
@@ -467,8 +479,10 @@ class ApplicationResource extends JsonResource
             && $this->serving_profile === 'docker'
             && app(ContainerSupervisor::class)->panelRendered($this->resource)
             && $liveness->running($this->resource) === true) {
-            return match ($liveness->health($this->resource)) {
+            return match ($liveness->verdict($this->resource)['status'] ?? null) {
                 'unhealthy' => 'unhealthy',
+                'restarting' => 'restarting',
+                'exited' => 'exited',
                 'starting' => 'starting',
                 default => 'running',
             };
@@ -479,6 +493,18 @@ class ApplicationResource extends JsonResource
         // "answering", so this says what `forgetReadiness()` says after a
         // Start: nothing has been checked since.
         return $this->restarted() ? null : $stored;
+    }
+
+    /**
+     * @return list<array{service: string, state: string}>
+     */
+    private function healthWarnings(): array
+    {
+        if ($this->serving_profile !== 'docker') {
+            return [];
+        }
+
+        return app(ContainerLiveness::class)->verdict($this->resource)['warnings'] ?? [];
     }
 
     /**

@@ -66,4 +66,16 @@ final readonly class Recipe
     {
         return array_values(array_filter($this->services, fn ($s) => $s['role'] === 'app'))[0];
     }
+
+    /**
+     * The services marked `"optional": true`: helpers whose trouble is a
+     * named warning on the app, not a failed app. Every other service is
+     * essential.
+     *
+     * @return list<string>
+     */
+    public function optionalServices(): array
+    {
+        return array_column(array_filter($this->services, fn ($s) => ($s['optional'] ?? false) === true), 'name');
+    }
 }

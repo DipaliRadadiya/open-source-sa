@@ -433,10 +433,18 @@ function fakeLiveProjects(?array $projects): ArrayObject
     Process::fake(function ($process) use ($projects, $ran) {
         $ran[] = $process->command;
 
-        if (in_array('ps', $process->command, true) && in_array('status=running', $process->command, true)) {
+        if (in_array('ps', $process->command, true) && in_array('label=com.docker.compose.project', $process->command, true)) {
+            // `sv-app-N` or `sv-app-N<TAB>status`: one running container,
+            // in the `docker ps -a` columns ContainerLiveness reads.
+            $lines = array_map(function (string $line): string {
+                [$project, $status] = array_pad(explode("\t", $line, 2), 2, 'Up 1 minute');
+
+                return implode("\t", [$project, 'app', '', 'running', $status]);
+            }, $projects ?? []);
+
             return $projects === null
                 ? Process::result(errorOutput: 'Cannot connect to the Docker daemon', exitCode: 1)
-                : Process::result(output: implode("\n", $projects)."\n");
+                : Process::result(output: implode("\n", $lines)."\n");
         }
 
         return Process::result(exitCode: 0);
@@ -479,7 +487,7 @@ it('asks Docker once per request, however many sites are listed', function () {
     readinessResource($this->application->fresh());
     readinessResource($other->fresh());
 
-    expect(collect($ran)->filter(fn ($args) => in_array('status=running', $args, true))->count())->toBe(1);
+    expect(collect($ran)->filter(fn ($args) => in_array('ps', $args, true) && in_array('-a', $args, true))->count())->toBe(1);
 });
 
 it('forgets a passed readiness check once the containers are stopped, started or restarted', function (string $action) {

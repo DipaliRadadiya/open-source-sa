@@ -34,9 +34,10 @@ final class RecipeSchema
             'images.*.tested' => ['present', 'array'],
             'images.*.tested.*' => ['string'],
             'services' => ['required', 'array', 'min:1'],
-            'services.*' => ['array:name,role'],
+            'services.*' => ['array:name,role,optional'],
             'services.*.name' => ['required', 'distinct', 'regex:/^[a-z][a-z0-9_-]{0,30}$/D'],
             'services.*.role' => ['required', Rule::in(['app', 'database', 'cache', 'worker'])],
+            'services.*.optional' => ['sometimes', 'boolean:strict'],
             'container_port' => ['required', 'integer:strict', 'between:1,65535'],
             'memory_floor' => ['nullable', 'string', 'regex:/^\d+(b|k|m|g)?$/iD'],
             'volumes' => ['sometimes', 'array'],
@@ -112,6 +113,10 @@ final class RecipeSchema
             }
         }
         if (count(array_filter($data['services'], fn ($s) => $s['role'] === 'app')) !== 1) {
+            $fail('schema');
+        }
+        // A helper never decides the badge, so the app's own service cannot be one.
+        if (array_filter($data['services'], fn ($s) => $s['role'] === 'app' && ($s['optional'] ?? false) === true) !== []) {
             $fail('schema');
         }
         if (! empty($data['hook']) && ! empty($data['after_install'])) {
