@@ -2791,6 +2791,12 @@ return [
     // Read after the drop-ins, for a port set by hand (App\Support\SshPort).
     'sshd_config_file' => env('SERVER_SSHD_CONFIG_FILE', '/etc/ssh/sshd_config'),
 
+    // Present only when the kernel has IPv6: a host booted with
+    // ipv6.disable=1 has no such file, and an nginx site listening on [::]
+    // fails its config test there (App\Services\Server\WebServers\NginxDriver).
+    // install.sh's have_ipv6 asks the same file.
+    'ipv6_probe_file' => env('SERVER_IPV6_PROBE_FILE', '/proc/net/if_inet6'),
+
     /*
     |--------------------------------------------------------------------------
     | Container login (RC-28)

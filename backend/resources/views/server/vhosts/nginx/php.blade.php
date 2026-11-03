@@ -16,7 +16,9 @@ log_format {{ $waf['logFormat'] }} '$remote_addr - $remote_user [$time_local] "$
      certificate that has expired. --}}
 server {
     listen 80;
+@if ($ipv6)
     listen [::]:80;
+@endif
 
     server_name {{ implode(' ', $serverNames) }};
 
@@ -60,11 +62,15 @@ server {
          `nginx -t` (36 on an 18-site Ubuntu 26.04 box). --}}
 @if ($http2On)
     listen 443 ssl;
+@if ($ipv6)
     listen [::]:443 ssl;
+@endif
     http2 on;
 @else
     listen 443 ssl http2;
+@if ($ipv6)
     listen [::]:443 ssl http2;
+@endif
 @endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
@@ -89,7 +95,9 @@ server {
          SNI match nginx serves the first SSL vhost on the box — another
          customer's application. --}}
     listen 443 ssl;
+@if ($ipv6)
     listen [::]:443 ssl;
+@endif
 @if ($rejectHandshake)
     {{-- nginx 1.19.4+ refuses the handshake before presenting a certificate. --}}
     ssl_reject_handshake on;
@@ -107,7 +115,9 @@ server {
 @endif
 @if (! $forceHttps && $section !== 'ssl')
     listen 80;
+@if ($ipv6)
     listen [::]:80;
+@endif
 @endif
 
     server_name {{ implode(' ', $serverNames) }};
@@ -339,11 +349,15 @@ server {
          for `old` refuses the plaintext hop and never reaches the redirect. --}}
 @if ($http2On)
     listen 443 ssl;
+@if ($ipv6)
     listen [::]:443 ssl;
+@endif
     http2 on;
 @else
     listen 443 ssl http2;
+@if ($ipv6)
     listen [::]:443 ssl http2;
+@endif
 @endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
@@ -352,7 +366,9 @@ server {
 @endif
 @if ($section !== 'ssl')
     listen 80;
+@if ($ipv6)
     listen [::]:80;
+@endif
 @endif
 
     server_name {{ $redirect->domain }};

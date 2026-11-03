@@ -7,7 +7,9 @@
      `default_server` so the order does not matter anyway. --}}
 server {
     listen 80 default_server;
+@if ($ipv6)
     listen [::]:80 default_server;
+@endif
     server_name _;
 
     return 404;
@@ -15,7 +17,9 @@ server {
 
 server {
     listen 443 ssl default_server;
+@if ($ipv6)
     listen [::]:443 ssl default_server;
+@endif
     server_name _;
 
 @if ($rejectHandshake)

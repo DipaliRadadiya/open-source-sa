@@ -9,6 +9,8 @@ class NginxDriver extends AbstractWebServerDriver
 {
     private ?bool $http2Directive = null;
 
+    private ?bool $ipv6 = null;
+
     private ?string $version = null;
 
     public function name(): string
@@ -26,7 +28,23 @@ class NginxDriver extends AbstractWebServerDriver
         return parent::viewData($application, $documentRoot) + [
             'http2On' => $this->supportsHttp2Directive(),
             'rejectHandshake' => $this->rejectsHandshake(),
+            'ipv6' => $this->hasIpv6(),
         ];
+    }
+
+    /**
+     * Whether the templates may listen on `[::]`. On a host booted with
+     * `ipv6.disable=1` there is no AF_INET6 at all, and a single `[::]` listen
+     * fails `nginx -t` with "Address family not supported by protocol", so
+     * every new site stopped at `test_config`. The kernel's IPv6 interface
+     * list exists exactly when IPv6 does (the sysctl switch leaves it, and
+     * binding `[::]` still works there); install.sh's have_ipv6 asks the
+     * same file, so the panel's own vhosts and the sites agree. Asked once
+     * per driver instance: it only changes with a reboot.
+     */
+    public function hasIpv6(): bool
+    {
+        return $this->ipv6 ??= file_exists((string) config('server.ipv6_probe_file', '/proc/net/if_inet6'));
     }
 
     /**
@@ -93,7 +111,7 @@ class NginxDriver extends AbstractWebServerDriver
      */
     protected function catchAllViewData(): array
     {
-        return parent::catchAllViewData() + ['rejectHandshake' => $this->rejectsHandshake()];
+        return parent::catchAllViewData() + ['rejectHandshake' => $this->rejectsHandshake(), 'ipv6' => $this->hasIpv6()];
     }
 
     public function test(): ServerOpsResult
