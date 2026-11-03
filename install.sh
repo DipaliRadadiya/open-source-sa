@@ -2829,6 +2829,12 @@ install_packages() {
         ok "Docker installed ($(docker --version 2>/dev/null || echo 'version unknown'))"
     fi
 
+    ensure_composer
+}
+
+# For install_packages: composer, downloaded only when there is none, and
+# COMPOSER_BIN pointing at whichever one is used.
+ensure_composer() {
     # Whatever composer we end up using, remember *where* it is. The check
     # below asks "is composer installed anywhere", and the install step later
     # used to invoke a hardcoded /usr/local/bin/composer — so on a server that

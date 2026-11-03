@@ -376,7 +376,7 @@ describe('nothing long runs unwatched', function () {
         ['install_ols_packages', 'installing ${lsphp}'],
         ['install_node_body', 'downloading fnm'],
         ['install_node_body', 'downloading Node'],
-        ['install_packages', 'downloading composer'],
+        ['ensure_composer', 'downloading composer'],
         ['fetch_source_body', 'downloading the panel'],
         ['setup_backend', "installing the API's PHP dependencies"],
         ['frontend_deps', "downloading the interface's packages"],

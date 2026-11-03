@@ -212,7 +212,7 @@ describe('the package step', function () {
             systemctl() { rec "systemctl $*"; }; docker() { echo "Docker 1"; }; ln() { rec "ln $*"; }
             composer() { :; }
             '.$extra.'
-            install_packages', 'install_packages', 'run_apt', 'try_apt', 'panel_packages', 'panel_php_packages', 'install_postfix', 'preseed_postfix', 'install_ols_packages');
+            install_packages', 'install_packages', 'run_apt', 'try_apt', 'panel_packages', 'panel_php_packages', 'install_postfix', 'preseed_postfix', 'install_ols_packages', 'ensure_composer');
     }
 
     it('writes every source, refreshes once, then installs everything at once', function () {
