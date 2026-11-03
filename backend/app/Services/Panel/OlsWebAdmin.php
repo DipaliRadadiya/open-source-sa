@@ -102,10 +102,10 @@ class OlsWebAdmin
         }
 
         if (! $this->waitForExit($grace)) {
-            Process::timeout(15)->run(['pkill', '-TERM', '-x', self::PROCESS]);
+            $this->signal('-TERM');
 
             if (! $this->waitForExit($grace)) {
-                Process::timeout(15)->run(['pkill', '-KILL', '-x', self::PROCESS]);
+                $this->signal('-KILL');
 
                 if (! $this->waitForExit(5)) {
                     return self::PROCESS.' processes would not exit, so '.self::UNIT.' was left stopped rather than started beside them';
@@ -125,12 +125,39 @@ class OlsWebAdmin
         return null;
     }
 
+    /**
+     * The PIDs of every OpenLiteSpeed server process.
+     *
+     * `ps -C` and `kill` rather than pgrep/pkill: the same match on the
+     * process name, with binaries the panel is already allowed to run
+     * (server.privilege.binaries), so this widens no grant.
+     *
+     * @return list<int>
+     */
+    private function serverPids(): array
+    {
+        $output = Process::timeout(15)->run(['ps', '-C', self::PROCESS, '-o', 'pid='])->output();
+
+        return array_values(array_filter(
+            array_map('intval', preg_split('/\s+/', trim($output)) ?: []),
+            fn (int $pid) => $pid > 1,
+        ));
+    }
+
+    private function signal(string $signal): void
+    {
+        $pids = $this->serverPids();
+
+        if ($pids !== []) {
+            Process::timeout(15)->run(['kill', $signal, ...array_map('strval', $pids)]);
+        }
+    }
+
     /** True once no OpenLiteSpeed process is left; false after $seconds. */
     private function waitForExit(int $seconds): bool
     {
         for ($waited = 0; ; $waited++) {
-            // pgrep: 1 is "no such process"; anything else counts as still there.
-            if (Process::timeout(15)->run(['pgrep', '-x', self::PROCESS])->exitCode() === 1) {
+            if ($this->serverPids() === []) {
                 return true;
             }
 

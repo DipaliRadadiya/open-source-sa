@@ -184,9 +184,9 @@ describe('N1: install.sh restarts OpenLiteSpeed cold where its listeners move', 
 });
 
 /**
- * The commands the panel runs, in order, against a fake OpenLiteSpeed: pgrep
+ * The commands the panel runs, in order, against a fake OpenLiteSpeed: `ps -C`
  * finds a server for $linger more looks after the stop ('forever' for one that
- * never goes), $endsOn is the pkill signal that ends it, and ss shows the
+ * never goes), $endsOn is the `kill` signal that ends it, and ss shows the
  * console on $before until the start and on $after from then on.
  */
 function fakeOlsServer(int|string $linger = 0, ?string $endsOn = null, string $before = '0.0.0.0:7080', string $after = '127.0.0.1:7080', string $holder = 'litespeed'): object
@@ -209,12 +209,13 @@ function fakeOlsServer(int|string $linger = 0, ?string $endsOn = null, string $b
         return match (true) {
             $command === ['systemctl', 'stop', 'lshttpd'] => tap(Process::result(), fn () => $server->left = $linger),
             $command === ['systemctl', 'start', 'lshttpd'] => tap(Process::result(), fn () => $server->started = true),
-            ($command[0] ?? '') === 'pgrep' => match (true) {
-                $server->left === 'forever' => Process::result("111\n"),
-                $server->left > 0 => tap(Process::result("111\n"), fn () => $server->left--),
+            // `ps -C litespeed -o pid=`: one PID per line; nothing, exit 1, when none.
+            ($command[0] ?? '') === 'ps' => match (true) {
+                $server->left === 'forever' => Process::result(" 111\n 112\n"),
+                $server->left > 0 => tap(Process::result(" 111\n 112\n"), fn () => $server->left--),
                 default => Process::result(exitCode: 1),
             },
-            ($command[0] ?? '') === 'pkill' => tap(Process::result(), function () use ($server, $command, $endsOn) {
+            ($command[0] ?? '') === 'kill' => tap(Process::result(), function () use ($server, $command, $endsOn) {
                 if ($command[1] === $endsOn) {
                     $server->left = 0;
                 }
@@ -256,15 +257,17 @@ describe('N1: panel:ols-webadmin restarts OpenLiteSpeed cold', function () {
         $start = array_search('systemctl start lshttpd', $commands, true);
         $gone = array_key_last(array_filter(
             array_slice($commands, 0, (int) $start, true),
-            fn (string $c) => $c === 'pgrep -x litespeed',
+            fn (string $c) => $c === 'ps -C litespeed -o pid=',
         ));
 
         expect($commands)->not->toContain('/usr/local/lsws/bin/lswsctrl restart')
             ->and($stop)->toBeInt()
             ->and($start)->toBeInt()
-            ->and(array_slice($commands, (int) $stop + 1, 4))->toBe(array_fill(0, 4, 'pgrep -x litespeed'))
+            ->and(array_slice($commands, (int) $stop + 1, 4))->toBe(array_fill(0, 4, 'ps -C litespeed -o pid='))
             ->and($gone)->toBeLessThan($start)
-            ->and($commands)->not->toContain('pkill -TERM -x litespeed');
+            ->and(implode("\n", $commands))->not->toContain('kill ')
+            // No pgrep/pkill: the panel has no grant for them (PrivilegedBinaryCoverageTest).
+            ->and(implode("\n", $commands))->not->toContain('pgrep');
         Sleep::assertSleptTimes(3);
     });
 
@@ -273,14 +276,15 @@ describe('N1: panel:ols-webadmin restarts OpenLiteSpeed cold', function () {
         $term = fakeOlsServer(linger: 'forever', endsOn: '-TERM');
         $this->artisan('panel:ols-webadmin')->expectsOutputToContain('now listens on 127.0.0.1:7080 only')->assertSuccessful();
 
-        expect($term->commands)->toContain(['pkill', '-TERM', '-x', 'litespeed'])
-            ->and($term->commands)->not->toContain(['pkill', '-KILL', '-x', 'litespeed']);
+        // The server's own PIDs, through `kill`.
+        expect($term->commands)->toContain(['kill', '-TERM', '111', '112'])
+            ->and($term->commands)->not->toContain(['kill', '-KILL', '111', '112']);
 
         webAdminConfig($shipped);
         $kill = fakeOlsServer(linger: 'forever', endsOn: '-KILL');
         $this->artisan('panel:ols-webadmin')->expectsOutputToContain('now listens on 127.0.0.1:7080 only')->assertSuccessful();
 
-        expect($kill->commands)->toContain(['pkill', '-TERM', '-x', 'litespeed'], ['pkill', '-KILL', '-x', 'litespeed'], ['systemctl', 'start', 'lshttpd']);
+        expect($kill->commands)->toContain(['kill', '-TERM', '111', '112'], ['kill', '-KILL', '111', '112'], ['systemctl', 'start', 'lshttpd']);
     });
 
     it('leaves OpenLiteSpeed stopped and says so when it will not exit, rather than starting beside it', function () use ($shipped) {

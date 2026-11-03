@@ -895,7 +895,7 @@ describe('S5: OpenLiteSpeed\'s WebAdmin console listens on this server only', fu
         // 127.0.0.1:7080 once started. The restart itself is OlsRestartTest's.
         Sleep::fake();
         Process::fake([
-            "'pgrep' *" => Process::result(exitCode: 1),
+            "'ps' *" => Process::result(exitCode: 1),
             "'ss' *" => Process::result("LISTEN 0 4096 127.0.0.1:7080 0.0.0.0:* users:((\"litespeed\",pid=7,fd=22))\n"),
             '*' => Process::result(),
         ]);
