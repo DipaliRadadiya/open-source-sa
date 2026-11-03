@@ -807,6 +807,12 @@ validate_inputs() {
         || "$REPO_URL" =~ ^/[^[:space:]]+$ ]] \
         || input_refused "--repo must be a git URL (https://, ssh://, user@host:path) or an absolute path. Got: ${REPO_URL}"
 
+    # A size in MB for fallocate (configure_swap). 0 means leave swap alone.
+    if [[ -n "${PANEL_SWAP_MB:-}" ]]; then
+        [[ "$PANEL_SWAP_MB" =~ ^(0|[1-9][0-9]{0,5})$ ]] \
+            || input_refused "PANEL_SWAP_MB must be a whole number of MB, like 2048 (0 leaves swap alone). Got: ${PANEL_SWAP_MB}"
+    fi
+
     # The slug names units, vhosts, files under /etc and the login script.
     [[ "$PANEL_SLUG" =~ ^[a-z][a-z0-9-]{0,31}$ ]] \
         || input_refused "PANEL_SLUG must be lower-case letters, digits and '-', starting with a letter (at most 32). Got: ${PANEL_SLUG}"
@@ -1966,7 +1972,18 @@ configure_swap() {
     fi
 
     if [[ -e "$swapfile" ]]; then
-        swapoff "$swapfile" 2>/dev/null || true
+        # Off first, and only if it is on: swapoff fails on a file that is not
+        # active, which is fine. When the kernel refuses for an active one
+        # (what it holds does not fit back into RAM), that failure used to be
+        # thrown away, and the install died one line later on "rm -f
+        # /swapfile-panel" -- the kernel will not unlink an active swap file
+        # either -- with nothing in the log saying why (review finding R10,
+        # reproduced on a real server). Say the real reason, before touching
+        # anything.
+        if (( ours_mb > 0 )) && ! swapoff "$swapfile" >>"$LOG_FILE" 2>&1; then
+            die "could not turn off ${swapfile} to resize it (usually: what it holds does not fit back into RAM).
+     Nothing has been deleted; its output is in ${LOG_FILE}. Free some memory or run with PANEL_SWAP_MB=0 to leave swap alone, then run this installer again."
+        fi
         run rm -f "$swapfile"
     fi
 

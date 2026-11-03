@@ -1153,3 +1153,80 @@ describe('R13: a failed install gives needrestart its unit back', function () {
             ->and($run['left'])->toBe([]);
     });
 });
+
+describe('R10: a swap file the kernel will not turn off stops the install with the reason', function () {
+    /*
+     * configure_swap ran `swapoff "$swapfile" 2>/dev/null || true` and then
+     * `rm -f`. When the kernel refuses swapoff (what the file holds does not
+     * fit back into RAM), the review expected the file to be deleted while in
+     * use. On a real server (kernel 6.8) the kernel refused the unlink too, so
+     * nothing was lost, but the install died on "rm -f /swapfile-panel" with
+     * swapoff's "Cannot allocate memory" thrown away. PANEL_SWAP_MB went into
+     * arithmetic and fallocate unchecked.
+     */
+    function swapResize(int $ours, bool $swapoffWorks): array
+    {
+        $dir = reviewDir();
+        file_put_contents($dir.'/swapfile-panel', 'in use');
+
+        $run = reviewBash(installerFunctions('swap_to_add_mb', 'configure_swap').'
+            step() { :; }; run() { echo "RUN: $*"; }
+            die() { echo "DIE: $*"; exit 1; }
+            # fd 9 is the real stdout: configure_swap sends swapoff to the log.
+            exec 9>&1
+            swapoff() { echo "SWAPOFF $*" >&9; '.($swapoffWorks ? 'return 0' : 'echo "swapoff: $1: swapoff failed: Cannot allocate memory" >&2; return 255').'; }
+            req_ram_mb() { echo 3915; }; req_swap_mb() { echo '.$ours.'; }; req_our_swap_mb() { echo '.$ours.'; }
+            PANEL_SWAPFILE='.escapeshellarg($dir.'/swapfile-panel').'; LOG_FILE=/dev/null; SWAP_UNAVAILABLE=0
+            # PANEL_SWAP_MB sets the size, so the sizing constants are not read.
+            BUILD_MEMORY_MB=4096; MINIMUM_SWAP_MB=1024; SWAP_TOLERANCE_MB=64
+            PANEL_SWAP_MB=2048
+            set +e
+            (configure_swap) 2>&1 | grep -v "/etc/fstab"
+            echo "EXIT ${PIPESTATUS[0]}"');
+
+        return $run + ['kept' => is_file($dir.'/swapfile-panel')];
+    }
+
+    it('stops, and deletes nothing, when the kernel will not turn the swap file off', function () {
+        $run = swapResize(1023, false);
+
+        expect($run['out'])->toContain('DIE: could not turn off')
+            ->and($run['out'])->toContain('Nothing has been deleted')
+            ->and($run['out'])->not->toContain('RUN: rm -f')
+            ->and($run['out'])->not->toContain('RUN: fallocate')
+            ->and($run['out'])->toContain('EXIT 1')
+            ->and($run['kept'])->toBeTrue();
+    });
+
+    it('turns it off, then replaces it, when the kernel lets it go', function () {
+        $run = swapResize(1023, true);
+
+        expect($run['out'])->toContain('SWAPOFF')
+            ->and($run['out'])->toContain('RUN: rm -f')
+            ->and($run['out'])->toContain('RUN: fallocate -l 2048M')
+            ->and($run['out'])->toContain('ok: 2048 MB swap active');
+    });
+
+    it('replaces a swap file that is not on without asking swapoff', function () {
+        $run = swapResize(0, false);
+
+        expect($run['out'])->not->toContain('SWAPOFF')
+            ->and($run['out'])->not->toContain('DIE')
+            ->and($run['out'])->toContain('RUN: fallocate -l 2048M')
+            ->and($run['out'])->toContain('ok: 2048 MB swap active');
+    });
+
+    it('accepts a whole number of MB in PANEL_SWAP_MB', function (string $mb) {
+        $run = inputsRun([], ['PANEL_SWAP_MB' => $mb]);
+
+        expect($run['code'])->toBe(0, $run['out'])->and($run['out'])->toContain('ACCEPTED');
+    })->with(['0', '512', '2048', '65536']);
+
+    it('refuses anything else before changing anything', function (string $mb) {
+        $run = inputsRun([], ['PANEL_SWAP_MB' => $mb]);
+
+        expect($run['code'])->toBe(1, $run['out'])
+            ->and($run['out'])->toContain('DIE: PANEL_SWAP_MB must be a whole number of MB')
+            ->and($run['out'])->toContain('Nothing has been changed on this server.');
+    })->with(['2G', 'abc', '-1', '1e3', '08', '2048 ', '1234567', '$(id)']);
+});
