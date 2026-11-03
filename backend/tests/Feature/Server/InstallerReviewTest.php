@@ -1105,3 +1105,51 @@ describe('P1: nginx installs and starts on a host without IPv6', function () {
             ->and(installerSource())->toMatch('/^configure_nginx\(\) \{\n(?:(?!^[a-z_]+\(\) \{$).)*rm -f \/etc\/nginx\/sites-enabled\/default/ms');
     });
 });
+
+describe('R13: a failed install gives needrestart its unit back', function () {
+    /*
+     * protect_from_needrestart writes a conf.d drop-in naming the unit the
+     * install runs as (Central's systemd-run), and only finish() removed it.
+     * On a real server whose install failed, the drop-in was still there
+     * afterwards, and needrestart went on skipping that unit's name.
+     */
+    function needrestartExit(string $failure): array
+    {
+        $dir = reviewDir();
+        mkdir($dir.'/confd');
+        file_put_contents($dir.'/cgroup', "0::/system.slice/panel-install.service\n");
+
+        $run = reviewBash(installerFunctions('protect_from_needrestart', 'release_needrestart', 'on_exit').'
+            progress_stop() { :; }
+            die() { echo "DIE: $*"; exit 1; }
+            PANEL_SLUG=panel; NEEDRESTART_GUARD=""; RUN_DIR=$(mktemp -d)
+            trap on_exit EXIT
+            protect_from_needrestart '.escapeshellarg($dir.'/cgroup').' '.escapeshellarg($dir.'/confd').'
+            ls '.escapeshellarg($dir.'/confd').'
+            '.$failure);
+
+        return $run + ['left' => array_values(array_diff(scandir($dir.'/confd'), ['.', '..']))];
+    }
+
+    it('removes the guard when the install dies or a command fails', function (string $failure) {
+        $run = needrestartExit($failure);
+
+        expect($run['code'])->not->toBe(0)
+            // It was there while the install ran...
+            ->and($run['out'])->toContain('zz-panel-install.conf')
+            // ...and is gone once it stopped.
+            ->and($run['left'])->toBe([]);
+    })->with([
+        'die' => ['die "npm run build failed"'],
+        'a failing command under set -e' => ['false'],
+    ]);
+
+    it('still exits cleanly after a successful install has already released it', function () {
+        $run = needrestartExit('release_needrestart; echo FINISHED');
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('FINISHED')
+            ->and($run['out'])->not->toContain('ERR-TRAP')
+            ->and($run['left'])->toBe([]);
+    });
+});

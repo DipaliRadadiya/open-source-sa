@@ -650,9 +650,14 @@ try_apt() {
     return "$rc"
 }
 
-# The EXIT trap: no ticker outlives the install, and the run directory goes.
+# The EXIT trap: no ticker outlives the install, the run directory goes, and
+# needrestart gets this unit back. finish() released that only on success, so
+# a failed install left needrestart skipping this unit's name until the next
+# run that succeeded (review finding R13; seen live after a failed install).
+# release_needrestart is safe to run twice.
 on_exit() {
     progress_stop
+    release_needrestart
     [[ -n "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
     return 0
 }
