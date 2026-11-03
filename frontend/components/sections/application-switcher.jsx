@@ -169,11 +169,10 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t px-3 py-2 text-xs text-muted-foreground">
-          <span className="min-w-0 truncate">
-            {state.status === "ready" && state.total > shown ? t("showingSome", { shown, total: state.total }) : null}
-          </span>
-          <Link href="/applications" prefetch={false} onClick={close} className="shrink-0 font-medium text-primary hover:underline">
+        {/* Wraps instead of truncating: beside the link, "type to search" was cut to "ty…". */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t px-3 py-2 text-xs text-muted-foreground">
+          {state.status === "ready" && state.total > shown ? <span>{t("showingSome", { shown, total: state.total })}</span> : null}
+          <Link href="/applications" prefetch={false} onClick={close} className="ml-auto shrink-0 font-medium text-primary hover:underline">
             {t("viewAll")}
           </Link>
         </div>
