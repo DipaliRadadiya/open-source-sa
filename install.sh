@@ -5879,6 +5879,8 @@ NGINX
     # stays, so certbot can still prove the name later. configure_nginx writes
     # this file afresh on every run, so a re-run starts from the full site.
     cp -a "$http_conf" "${http_conf}.pre-tls"
+    # $host and $request_uri are nginx's, not the shell's.
+    # shellcheck disable=SC2016
     sed -i -e '/^    include /d' \
         -e 's|^\(    location /\.well-known/acme-challenge/ .*\)$|\1\n    location / { return 301 https://$host$request_uri; }|' \
         "$http_conf"
