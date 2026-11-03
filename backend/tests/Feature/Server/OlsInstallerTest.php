@@ -141,9 +141,11 @@ it('creates them before the config that names them is tested', function () {
 
     $create = strpos($body, 'ensure_ols_context_paths');
     $write = strpos($body, 'write_ols_vhost');
-    $test = strpos($body, 'openlitespeed -t');
+    // The test itself lives in test_ols_config, called from configure_ols.
+    $test = strpos($body, 'test_ols_config "$conf"');
 
-    expect($create)->toBeInt()
+    expect(implode("\n", installerFunction('test_ols_config')))->toContain('/usr/local/lsws/bin/openlitespeed -t')
+        ->and($create)->toBeInt()
         ->and($write)->toBeInt()
         ->and($test)->toBeInt()
         ->and($create)->toBeLessThan($write)

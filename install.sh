@@ -4043,6 +4043,50 @@ configure_ols() {
 
     install_ols_packages
 
+    prepare_ols_panel_runtime
+
+    local conf="/usr/local/lsws/conf/httpd_config.conf"
+    local vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}"
+    local api_vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api"
+
+    [[ -f "$conf" ]] || die "OpenLiteSpeed installed but ${conf} is missing — see $LOG_FILE"
+
+    # Back up before touching the file every future site also depends on. The
+    # panel does the same on every edit (see OlsSharedConfig); the installer is
+    # the one write that happens before the panel exists to do it.
+    [[ -f "${conf}.preinstall" ]] || run cp -f "$conf" "${conf}.preinstall"
+    # And this run's own copy, which is the one restored below. .preinstall is
+    # the file as OpenLiteSpeed shipped it, from the FIRST run: on a re-run the
+    # live file also holds every site the panel has registered since
+    # (OlsSharedConfig), and restoring .preinstall deleted them all from the
+    # web server (review finding R6).
+    run cp -f "$conf" "${conf}.pre-run"
+
+    run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
+
+    ensure_ols_context_paths
+    ensure_ols_dynamic_response_limit "$conf"
+
+    write_ols_vhost "$vhost_dir"
+
+    if (( ! SINGLE_HOST )); then
+        run mkdir -p "$api_vhost_dir" "${api_vhost_dir}/logs"
+        write_ols_api_vhost "$api_vhost_dir"
+    fi
+
+    register_ols_panel_vhost "$conf" "$vhost_dir" "$api_vhost_dir"
+    harden_ols_webadmin
+
+    test_ols_config "$conf"
+
+    run systemctl enable lshttpd
+    run systemctl restart lshttpd
+    ok "OpenLiteSpeed serving ${PANEL_HOST}"
+}
+
+# For configure_ols: the panel's LSAPI socket directory (now and after a
+# reboot) and the panel's own PHP settings.
+prepare_ols_panel_runtime() {
     # The panel's LSAPI socket directory, and the reason it is not /tmp/lshttpd
     # with everyone else's.
     #
@@ -4108,38 +4152,12 @@ PANELINI
     printf 'd /run/%s 0750 %s %s -\n' "$PANEL_SLUG" "$OLS_USER" "$APP_USER" \
         >"/etc/tmpfiles.d/${PANEL_SLUG}.conf"
     run systemd-tmpfiles --create "/etc/tmpfiles.d/${PANEL_SLUG}.conf"
+}
 
-    local conf="/usr/local/lsws/conf/httpd_config.conf"
-    local vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}"
-    local api_vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api"
-
-    [[ -f "$conf" ]] || die "OpenLiteSpeed installed but ${conf} is missing — see $LOG_FILE"
-
-    # Back up before touching the file every future site also depends on. The
-    # panel does the same on every edit (see OlsSharedConfig); the installer is
-    # the one write that happens before the panel exists to do it.
-    [[ -f "${conf}.preinstall" ]] || run cp -f "$conf" "${conf}.preinstall"
-    # And this run's own copy, which is the one restored below. .preinstall is
-    # the file as OpenLiteSpeed shipped it, from the FIRST run: on a re-run the
-    # live file also holds every site the panel has registered since
-    # (OlsSharedConfig), and restoring .preinstall deleted them all from the
-    # web server (review finding R6).
-    run cp -f "$conf" "${conf}.pre-run"
-
-    run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
-
-    ensure_ols_context_paths
-    ensure_ols_dynamic_response_limit "$conf"
-
-    write_ols_vhost "$vhost_dir"
-
-    if (( ! SINGLE_HOST )); then
-        run mkdir -p "$api_vhost_dir" "${api_vhost_dir}/logs"
-        write_ols_api_vhost "$api_vhost_dir"
-    fi
-
-    register_ols_panel_vhost "$conf" "$vhost_dir" "$api_vhost_dir"
-    harden_ols_webadmin
+# For configure_ols: test the config it wrote; on a rejection restore the
+# copy taken at the start of this run and stop. $1 is httpd_config.conf.
+test_ols_config() {
+    local conf="$1"
 
     # Tested before restarting, exactly as with nginx and Apache: a broken
     # config that reaches a restart takes the web server down, and on this box
@@ -4185,10 +4203,6 @@ PANELINI
 
         die "OpenLiteSpeed rejected the generated config; the file as it was before this run has been restored — see $LOG_FILE"
     fi
-
-    run systemctl enable lshttpd
-    run systemctl restart lshttpd
-    ok "OpenLiteSpeed serving ${PANEL_HOST}"
 }
 
 # The directories the vhost's static contexts point at, created before the
