@@ -526,11 +526,11 @@ class UpdateScript
         {$run}{$php} {$backend}/artisan panel:frontend-unit || echo "WARNING: frontend unit not updated; run 'artisan panel:frontend-unit' as root"
 
         # Review finding S5: OpenLiteSpeed's WebAdmin console answered on every
-        # address of servers installed before install.sh bound it to
-        # 127.0.0.1. Rewrites its listener and restarts OpenLiteSpeed
+        # address of servers installed before install.sh bound it to the
+        # loopback address. Rewrites its listener and restarts OpenLiteSpeed
         # (graceful); nothing to do on nginx or Apache. Never fatal.
         note configure_ols_webadmin
-        {$run}{$php} {$backend}/artisan panel:ols-webadmin || echo "WARNING: WebAdmin console not bound to 127.0.0.1; run 'artisan panel:ols-webadmin' as root"
+        {$run}{$php} {$backend}/artisan panel:ols-webadmin || echo "WARNING: WebAdmin console still listens on every address; run 'artisan panel:ols-webadmin' as root"
 
         note restart_services
         # The checkout keeps the same backend path. A graceful reload can keep

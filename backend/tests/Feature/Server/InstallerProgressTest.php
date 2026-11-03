@@ -201,10 +201,11 @@ describe('the ticker process', function () {
         $run = progressRun('LOG_FILE=$(mktemp); now_s() { date +%s; }; ubuntu_updates_running() { return 1; }
             report_failure() { echo "FAILED: $1"; }
             '.installerDie().'
+            NEEDRESTART_GUARD=""
             trap on_exit EXIT
             progress_start "testing" heartbeat
             echo "$PROGRESS_PID" >'.escapeshellarg($pidFile).'
-            die "it broke"', ...[...TICKER_FUNCTIONS, 'progress_start', 'progress_stop', 'on_exit']);
+            die "it broke"', ...[...TICKER_FUNCTIONS, 'progress_start', 'progress_stop', 'release_needrestart', 'on_exit']);
 
         usleep(300000);
         $pid = (int) trim((string) file_get_contents($pidFile));

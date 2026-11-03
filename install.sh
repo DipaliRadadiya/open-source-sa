@@ -5078,7 +5078,7 @@ server {
 NGINX
     fi
 
-    nginx_without_ipv6 /etc/nginx/sites-available/${PANEL_SLUG}.conf
+    nginx_without_ipv6 "/etc/nginx/sites-available/${PANEL_SLUG}.conf"
     ln -sf /etc/nginx/sites-available/${PANEL_SLUG}.conf /etc/nginx/sites-enabled/${PANEL_SLUG}.conf
 
     # Ubuntu's default site is a catch-all on port 80. Left enabled it answers

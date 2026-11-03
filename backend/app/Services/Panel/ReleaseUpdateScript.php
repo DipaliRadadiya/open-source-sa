@@ -266,9 +266,9 @@ class ReleaseUpdateScript
         # #15) or NoNewPrivileges (review finding S1). Applies at the restart
         # below; never fatal.
         {$run}{$php} {$newBackend}/artisan panel:frontend-unit || echo "WARNING: frontend unit not updated; run 'artisan panel:frontend-unit' as root"
-        # OpenLiteSpeed's WebAdmin console onto 127.0.0.1 (review finding S5),
+        # OpenLiteSpeed's WebAdmin console onto loopback (review finding S5),
         # as configure_ols_webadmin does in the legacy flow. Never fatal.
-        {$run}{$php} {$newBackend}/artisan panel:ols-webadmin || echo "WARNING: WebAdmin console not bound to 127.0.0.1; run 'artisan panel:ols-webadmin' as root"
+        {$run}{$php} {$newBackend}/artisan panel:ols-webadmin || echo "WARNING: WebAdmin console still listens on every address; run 'artisan panel:ols-webadmin' as root"
 
         # ---- Past here, failures are visible to users.
 
