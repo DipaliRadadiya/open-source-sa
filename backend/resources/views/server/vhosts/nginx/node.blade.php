@@ -273,8 +273,10 @@ server {
              a page that says so. Only nginx's own errors: with
              proxy_intercept_errors left off, a 502/503/504 the app itself
              sends is passed through untouched. Here rather than at server
-             level, so nothing but the proxy is ever dressed as a restart. --}}
-        error_page 502 503 504 @restarting;
+             level, so nothing but the proxy is ever dressed as a restart.
+             `=503` because without it nginx keeps the original code: live,
+             the page went out as a 502, and Retry-After belongs to a 503. --}}
+        error_page 502 503 504 =503 @restarting;
     }
 
     {{-- Inline rather than a file: nothing on disk to create, own or lose.

@@ -117,7 +117,7 @@ it('answers nginx\'s own gateway errors with the restarting page in every proxie
             $proxied++;
 
             expect(substr_count($block, 'location @restarting {'))->toBe(1)
-                ->and(substr_count($block, 'error_page 502 503 504 @restarting;'))->toBe(1)
+                ->and(substr_count($block, 'error_page 502 503 504 =503 @restarting;'))->toBe(1)
                 ->and($block)->toContain(
                     'internal;',
                     'default_type text/html;',
@@ -152,7 +152,7 @@ it('leaves the page on the proxy only, never on the rest of the server', functio
 
     // Inside `location /`, after proxy_pass: a 503 from anything else nginx
     // does for this site is not dressed as a restart.
-    expect($config)->toMatch('/location \/ \{\n\s+proxy_pass [^}]*error_page 502 503 504 @restarting;\n\s+\}/');
+    expect($config)->toMatch('/location \/ \{\n\s+proxy_pass [^}]*error_page 502 503 504 =503 @restarting;\n\s+\}/');
 });
 
 it('still reads as one site to the panel\'s own vhost reader', function () {
@@ -173,7 +173,7 @@ it('gives an existing proxied site the page on sites:resync', function () {
     $site = restartingSite('node');
     // What the site was written with before: everything but the page.
     $onDisk = (string) preg_replace(
-        '/\n\s*error_page 502 503 504 @restarting;|\n    location @restarting \{.*?\n    \}/s',
+        '/\n\s*error_page 502 503 504 =503 @restarting;|\n    location @restarting \{.*?\n    \}/s',
         '',
         implode("\n", restartingFiles($site)),
     );
@@ -200,7 +200,7 @@ it('gives an existing proxied site the page on sites:resync', function () {
     expect($result['updated'])->toBe(1)
         ->and($result['failed'])->toBe([])
         ->and($written)->toHaveCount(1)
-        ->and($written[0])->toContain('error_page 502 503 504 @restarting;', 'location @restarting {');
+        ->and($written[0])->toContain('error_page 502 503 504 =503 @restarting;', 'location @restarting {');
 });
 
 it('puts an existing site back as it was when nginx refuses the new config', function () {
