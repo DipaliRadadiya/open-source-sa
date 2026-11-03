@@ -4838,7 +4838,10 @@ CONF
 # OpenLiteSpeed ships a second control panel of its own on :7080, and a default
 # vhost on :8088. Neither is something this installer should leave running
 # unattended on someone's server.
+# The argument is only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
 harden_ols_webadmin() {
+    local admin_conf="${1:-/usr/local/lsws/admin/conf/admin_config.conf}"
     # A random WebAdmin password, printed nowhere. The operator can set their
     # own with /usr/local/lsws/admin/misc/admpass.sh; what matters here is that
     # the shipped default does not survive the install.
@@ -4854,10 +4857,21 @@ harden_ols_webadmin() {
         fi
     fi
 
-    # 7080 is left off the firewall allow-list on purpose (configure_firewall
-    # opens 22/80/443 only), so on a box with ufw enabled it is unreachable
-    # from outside regardless of the password above.
-    ok "WebAdmin console on :7080 is not opened in the firewall"
+    # Bound to this server only. Leaving 7080 off the firewall allow-list
+    # (configure_firewall) kept nothing out, because the installer never
+    # enables ufw: on a stock Ubuntu box the console answered on every address
+    # while this line said it was closed (review finding S5). Nothing of the
+    # panel's uses WebAdmin; an operator reaches it through an SSH tunnel.
+    # Applies at the restart configure_ols does next. The panel does the same
+    # for servers installed before this (panel:ols-webadmin).
+    if [[ -f "$admin_conf" ]]; then
+        sed -i -E 's/^([[:space:]]*address[[:space:]]+)[^[:space:]]+:7080[[:space:]]*$/\1127.0.0.1:7080/' "$admin_conf" 2>>"$LOG_FILE" || true
+    fi
+    if [[ -f "$admin_conf" ]] && grep -qE '^[[:space:]]*address[[:space:]]+127\.0\.0\.1:7080$' "$admin_conf"; then
+        ok "WebAdmin console on :7080 listens on this server only (ssh -L 7080:127.0.0.1:7080 to use it)"
+    else
+        warn "could not bind the WebAdmin console to 127.0.0.1 — :7080 may be reachable from outside; see ${admin_conf}"
+    fi
 }
 
 configure_nginx() {

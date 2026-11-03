@@ -1073,6 +1073,9 @@ return [
             */
             'lsapi_max_requests' => (int) env('SERVER_OLS_LSAPI_MAX_REQUESTS', 5000),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
+            // OpenLiteSpeed's own WebAdmin console, which the panel binds to
+            // 127.0.0.1 (review finding S5; panel:ols-webadmin).
+            'webadmin_config' => env('SERVER_OLS_WEBADMIN_CONFIG', '/usr/local/lsws/admin/conf/admin_config.conf'),
 
             /*
             | The account lsws drops to, used only as a fallback: the real

@@ -1,6 +1,14 @@
 <?php
 
+use App\Models\PanelUpdate;
 use App\Services\Panel\FrontendUnit;
+use App\Services\Panel\OlsWebAdmin;
+use App\Services\Panel\PanelLayout;
+use App\Services\Panel\PanelPhpBinary;
+use App\Services\Panel\PanelReleases;
+use App\Services\Panel\ReleaseUpdateScript;
+use App\Services\Panel\UpdateScript;
+use Illuminate\Support\Facades\Process;
 
 /*
  * install.sh's fixes from the installer review of 2026-11-02
@@ -817,5 +825,106 @@ describe('R7: OpenLiteSpeed stops at once if the panel\'s own PHP cannot be inst
             'lsphp84', 'lsphp84-common', 'lsphp84-mysql', 'lsphp84-pgsql', 'lsphp84-curl', 'lsphp84-intl',
             'lsphp84-sqlite3', 'lsphp84-redis', 'lsphp84-igbinary', 'lsphp84-opcache', 'lsphp84-imagick', 'lsphp84-imap',
         ]);
+    });
+});
+
+describe('S5: OpenLiteSpeed\'s WebAdmin console listens on this server only', function () {
+    /*
+     * harden_ols_webadmin said ":7080 is not opened in the firewall", but
+     * the installer never enables ufw, so on a stock Ubuntu box the console
+     * answered on every address (`ss` showed *:7080 on a real install,
+     * 2026-11-03). Now its listener is bound to 127.0.0.1.
+     */
+    $shipped = "accessControl {\n  allow                 ALL\n}\nlistener adminListener{\n  address               *:7080\n  secure                1\n  keyFile               \$SERVER_ROOT/admin/conf/webadmin.key\n}\n";
+
+    function webAdminRun(?string $config): array
+    {
+        $dir = reviewDir();
+        if ($config !== null) {
+            file_put_contents($dir.'/admin_config.conf', $config);
+        }
+
+        $run = reviewBash(installerFn('harden_ols_webadmin').'
+            LOG_FILE=/dev/null
+            harden_ols_webadmin '.escapeshellarg($dir.'/admin_config.conf').'
+            echo "CONTINUED"');
+
+        return $run + ['config' => (string) @file_get_contents($dir.'/admin_config.conf')];
+    }
+
+    it('binds the console to 127.0.0.1 and says so', function () use ($shipped) {
+        $run = webAdminRun($shipped);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['config'])->toBe(str_replace('*:7080', '127.0.0.1:7080', $shipped))
+            ->and($run['out'])->toContain('ok: WebAdmin console on :7080 listens on this server only')
+            ->and($run['out'])->not->toContain('not opened in the firewall');
+    });
+
+    it('binds an IPv6 or 0.0.0.0 listener too, and changes nothing else', function (string $address) use ($shipped) {
+        $run = webAdminRun(str_replace('*:7080', $address, $shipped));
+
+        expect($run['config'])->toBe(str_replace('*:7080', '127.0.0.1:7080', $shipped));
+    })->with(['[ANY]:7080', '0.0.0.0:7080', '127.0.0.1:7080']);
+
+    it('warns rather than claiming the port is closed when it cannot bind it', function () use ($shipped) {
+        $moved = webAdminRun(str_replace('*:7080', '*:9090', $shipped));
+        $missing = webAdminRun(null);
+
+        expect($moved['config'])->toContain('*:9090')
+            ->and($moved['out'])->toContain('warn: could not bind the WebAdmin console to 127.0.0.1')
+            ->and($moved['out'])->toContain('CONTINUED')
+            ->and($missing['out'])->toContain('warn: could not bind the WebAdmin console to 127.0.0.1');
+    });
+
+    it('rewrites the file the same way the panel does for existing servers', function () use ($shipped) {
+        expect(OlsWebAdmin::desired($shipped))->toBe(webAdminRun($shipped)['config'])
+            ->and(OlsWebAdmin::desired(str_replace('*:7080', '127.0.0.1:7080', $shipped)))->toBeNull()
+            ->and(OlsWebAdmin::desired(str_replace('*:7080', '*:9090', $shipped)))->toBeNull();
+    });
+
+    it('panel:ols-webadmin rebinds an existing server and restarts OpenLiteSpeed', function () use ($shipped) {
+        $dir = reviewDir();
+        config(['server.web_server_drivers.openlitespeed.webadmin_config' => $dir.'/admin_config.conf']);
+        file_put_contents($dir.'/admin_config.conf', $shipped);
+        Process::fake();
+
+        $this->artisan('panel:ols-webadmin')->expectsOutputToContain('now listens on 127.0.0.1:7080')->assertSuccessful();
+
+        expect((string) file_get_contents($dir.'/admin_config.conf'))->toContain('address               127.0.0.1:7080')
+            ->and(decoct(fileperms($dir.'/admin_config.conf') & 0777))->toBe('644');
+        Process::assertRan(fn ($process) => $process->command === ['/usr/local/lsws/bin/lswsctrl', 'restart']);
+
+        // Idempotent: a second run changes nothing and restarts nothing.
+        $this->artisan('panel:ols-webadmin')->expectsOutputToContain('is up to date')->assertSuccessful();
+        Process::assertRanTimes(fn ($process) => $process->command === ['/usr/local/lsws/bin/lswsctrl', 'restart'], 1);
+    });
+
+    it('panel:ols-webadmin does nothing on a server without OpenLiteSpeed', function () {
+        config(['server.web_server_drivers.openlitespeed.webadmin_config' => reviewDir().'/absent.conf']);
+        Process::fake();
+
+        $this->artisan('panel:ols-webadmin')->expectsOutputToContain('nothing to change')->assertSuccessful();
+        Process::assertNothingRan();
+    });
+
+    it('reaches existing servers through both updaters, as root, without failing the update', function () {
+        $update = new PanelUpdate(['id' => 1, 'from_commit' => str_repeat('a', 40)]);
+        $layout = new PanelLayout('/var/www/panel/current/backend');
+        $scripts = [
+            app(UpdateScript::class)->render($update, '1.0.17'),
+            (new ReleaseUpdateScript($layout, new PanelReleases($layout), new PanelPhpBinary))->render($update, '1.0.2'),
+        ];
+
+        foreach ($scripts as $script) {
+            $line = collect(explode("\n", $script))->first(fn (string $l) => str_contains($l, 'artisan panel:ols-webadmin'));
+
+            expect($line)->not->toBeNull()
+                ->and($line)->toContain('|| echo "WARNING')
+                ->and($line)->not->toContain('sudo -u');
+        }
+
+        expect(UpdateScript::STEPS)->toContain('configure_ols_webadmin')
+            ->and(__('panel_update.steps.configure_ols_webadmin'))->not->toBe('panel_update.steps.configure_ols_webadmin');
     });
 });
