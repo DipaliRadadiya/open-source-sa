@@ -2649,6 +2649,45 @@ POSTFIX_STATE=""
 #   2. one refresh;
 #   3. one install of every package (panel_packages);
 #   4. straight after, the non-fatal ones: Postfix, lsphp's extensions.
+# A host booted with ipv6.disable=1 has no IPv6 socket family at all, and
+# nginx refuses to start on any `listen [::]` there ("socket() [::]:80 failed
+# (97: Address family not supported by protocol)"). /proc/net/if_inet6 exists
+# exactly when the kernel has IPv6; the sysctl disable_ipv6 switch leaves it,
+# and leaves binding to [::] working (review finding P1, checked on a real
+# server).
+# The argument is only for the tests; the installer calls it with none.
+have_ipv6() {
+    [[ -e "${1:-/proc/net/if_inet6}" ]]
+}
+
+# The nginx files the installer writes, without their [::] listens when the
+# host has no IPv6. certbot --nginx then adds no IPv6 listen of its own either:
+# it mirrors the server block's existing listens.
+nginx_without_ipv6() {
+    have_ipv6 || sed -i '/^[[:space:]]*listen[[:space:]]\+\[::\]/d' "$@"
+}
+
+# Ubuntu's nginx package starts nginx as it installs, with a default site that
+# listens on [::]:80, so on a host with no IPv6 the package itself fails to
+# configure and the install stops at "Installing packages" before any file of
+# ours exists. Its postinst only links that site when nothing is at
+# sites-enabled/default yet, so a comment-only file there lets nginx start;
+# configure_nginx deletes it, as it deletes the stock site. A link there is the
+# stock site from an earlier failed run, and is replaced the same way.
+# Arguments only for the tests; the installer calls it with none.
+# shellcheck disable=SC2120
+make_room_for_nginx_without_ipv6() {
+    local inet6="${1:-/proc/net/if_inet6}" enabled="${2:-/etc/nginx/sites-enabled}"
+    [[ "$WEB_SERVER" == "nginx" ]] || return 0
+    have_ipv6 "$inet6" && return 0
+    [[ ! -e "${enabled}/default" || -L "${enabled}/default" ]] || return 0
+    mkdir -p "$enabled"
+    rm -f "${enabled}/default"
+    printf '# This host has no IPv6, and the default site listens on [::]:80.\n# Kept out by the Control panel installer; configure_nginx removes this file.\n' \
+        >"${enabled}/default"
+    say "     no IPv6 on this host: keeping nginx's default [::]:80 site out"
+}
+
 install_packages() {
     step "Installing packages"
 
@@ -2694,6 +2733,8 @@ install_packages() {
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
         mapfile -t -O "${#optional[@]}" optional < <(install_ols_packages --list)
     fi
+
+    (( DRY_RUN )) || make_room_for_nginx_without_ipv6
 
     wait_for_apt_lock
     EARLY_WORK=0
@@ -5015,6 +5056,7 @@ server {
 NGINX
     fi
 
+    nginx_without_ipv6 /etc/nginx/sites-available/${PANEL_SLUG}.conf
     ln -sf /etc/nginx/sites-available/${PANEL_SLUG}.conf /etc/nginx/sites-enabled/${PANEL_SLUG}.conf
 
     # Ubuntu's default site is a catch-all on port 80. Left enabled it answers
@@ -5784,6 +5826,7 @@ server {
 NGINX
     fi
 
+    nginx_without_ipv6 "$tls_conf"
     ln -sf "$tls_conf" /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
 
     if nginx -t >>"$LOG_FILE" 2>&1; then

@@ -208,6 +208,7 @@ describe('the package step', function () {
             install_source_tools() { rec "source-tools"; }
             add_package_sources() { rec "sources"; }
             ensure_php_available() { rec "php-candidate"; }
+            make_room_for_nginx_without_ipv6() { :; }
             systemctl() { rec "systemctl $*"; }; docker() { echo "Docker 1"; }; ln() { rec "ln $*"; }
             composer() { :; }
             '.$extra.'

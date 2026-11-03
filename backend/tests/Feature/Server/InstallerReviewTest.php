@@ -999,3 +999,109 @@ describe('R11: the firewall allows the SSH port set in sshd_config itself', func
             ->and($run['out'])->not->toContain('RUN ufw allow 22/tcp');
     });
 });
+
+describe('P1: nginx installs and starts on a host without IPv6', function () {
+    /*
+     * On a server booted with ipv6.disable=1 (no AF_INET6 at all), main
+     * stopped at "Installing packages": Ubuntu's nginx package starts nginx
+     * with its default site, which listens on [::]:80, and nginx failed with
+     * "socket() [::]:80 failed (97: Address family not supported by
+     * protocol)". The installer's own vhosts had the same `listen [::]`
+     * lines. The sysctl disable_ipv6 switch does not reproduce it — binding
+     * [::] still works there — which is why the check is /proc/net/if_inet6.
+     */
+    $vhost = "server {\n    listen 80;\n    listen [::]:80;\n    server_name panel.example.com;\n}\nserver {\n    listen 443 ssl;\n    listen [::]:443 ssl;\n}\n";
+
+    it('takes the [::] listens out of the installer\'s nginx files only when there is no IPv6', function (bool $ipv6, string $expected) use ($vhost) {
+        $dir = reviewDir();
+        file_put_contents($dir.'/panel.conf', $vhost);
+        file_put_contents($dir.'/panel-tls.conf', $vhost);
+        if ($ipv6) {
+            touch($dir.'/if_inet6');
+        }
+
+        $run = reviewBash(installerFunctions('have_ipv6', 'nginx_without_ipv6').'
+            eval "real_$(declare -f have_ipv6)"
+            have_ipv6() { real_have_ipv6 '.escapeshellarg($dir.'/if_inet6').'; }
+            nginx_without_ipv6 '.escapeshellarg($dir.'/panel.conf').' '.escapeshellarg($dir.'/panel-tls.conf').'
+            echo "CONTINUED"');
+
+        expect($run['out'])->toContain('CONTINUED')
+            ->and(file_get_contents($dir.'/panel.conf'))->toBe($expected)
+            ->and(file_get_contents($dir.'/panel-tls.conf'))->toBe($expected);
+    })->with([
+        'no IPv6' => [false, "server {\n    listen 80;\n    server_name panel.example.com;\n}\nserver {\n    listen 443 ssl;\n}\n"],
+        'IPv6' => [true, $vhost],
+    ]);
+
+    it('runs on both files the installer writes, before nginx tests them', function () {
+        foreach (['configure_nginx', 'configure_tls'] as $fn) {
+            // Up to the next function: both hold heredocs with a `}` in column 0.
+            preg_match('/^'.$fn.'\(\) \{\n.*?(?=^[a-z_]+\(\) \{$)/ms', installerSource(), $m);
+            $code = $m[0] ?? '';
+
+            expect($code)->toContain('nginx_without_ipv6')
+                ->and(strpos($code, 'nginx_without_ipv6'))->toBeLessThan(strpos($code, 'nginx -t'));
+        }
+    });
+
+    function nginxRoom(string $webServer, bool $ipv6, ?string $existing): array
+    {
+        $dir = reviewDir();
+        mkdir($dir.'/sites-available');
+        file_put_contents($dir.'/sites-available/default', "server { listen [::]:80 default_server; }\n");
+        if ($ipv6) {
+            touch($dir.'/if_inet6');
+        }
+        if ($existing === 'link') {
+            mkdir($dir.'/sites-enabled');
+            symlink($dir.'/sites-available/default', $dir.'/sites-enabled/default');
+        } elseif ($existing !== null) {
+            mkdir($dir.'/sites-enabled');
+            file_put_contents($dir.'/sites-enabled/default', $existing);
+        }
+
+        $run = reviewBash(installerFunctions('have_ipv6', 'make_room_for_nginx_without_ipv6').'
+            WEB_SERVER='.escapeshellarg($webServer).'
+            make_room_for_nginx_without_ipv6 '.escapeshellarg($dir.'/if_inet6').' '.escapeshellarg($dir.'/sites-enabled').'
+            echo "CONTINUED"');
+
+        $default = $dir.'/sites-enabled/default';
+
+        return $run + [
+            'default' => is_link($default) ? 'link' : (is_file($default) ? (string) file_get_contents($default) : null),
+            'stock' => (string) file_get_contents($dir.'/sites-available/default'),
+        ];
+    }
+
+    it('keeps the package\'s [::]:80 default site out before nginx is installed', function (?string $existing) {
+        $run = nginxRoom('nginx', false, $existing);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['out'])->toContain('CONTINUED')
+            ->and($run['default'])->not->toBeNull()
+            ->and($run['default'])->not->toBe('link')
+            ->and($run['default'])->not->toMatch('/^\s*(listen|server)\b/m')
+            // The package's own file is left as it ships.
+            ->and($run['stock'])->toContain('[::]:80');
+    })->with(['fresh server' => [null], 'the stock link from an earlier failed run' => ['link']]);
+
+    it('leaves the default site alone with IPv6, on another web server, or when it is a real file', function (string $webServer, bool $ipv6, ?string $existing, ?string $expected) {
+        $run = nginxRoom($webServer, $ipv6, $existing);
+
+        expect($run['code'])->toBe(0, $run['out'])
+            ->and($run['default'])->toBe($expected);
+    })->with([
+        'IPv6 present' => ['nginx', true, null, null],
+        'apache' => ['apache', false, null, null],
+        'openlitespeed' => ['openlitespeed', false, null, null],
+        'operator file' => ['nginx', false, "server { listen 80; }\n", "server { listen 80; }\n"],
+    ]);
+
+    it('does it before the one big package transaction, and configure_nginx removes it again', function () {
+        $packages = installerFn('install_packages');
+
+        expect(strpos($packages, 'make_room_for_nginx_without_ipv6'))->toBeLessThan(strpos($packages, 'apt-get install'))
+            ->and(installerSource())->toMatch('/^configure_nginx\(\) \{\n(?:(?!^[a-z_]+\(\) \{$).)*rm -f \/etc\/nginx\/sites-enabled\/default/ms');
+    });
+});
