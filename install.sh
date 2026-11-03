@@ -6286,7 +6286,15 @@ save_install_state() {
                 printf 'PHP_BIN=%s\n' "$PANEL_PHP_BIN"
                 printf 'VERSION=%s\n' "$(one_line "$(installed_version)")"
             fi
-        } >"$tmp" && chmod 0644 "$tmp" && mv -f "$tmp" "${INSTALL_STATE_DIR}/state" || rm -f "$tmp"
+        } >"$tmp" || { rm -f "$tmp"; exit 0; }
+
+        # Administrators only (the sudo group), as the login script shows it: a
+        # failure reason can quote a command line, and a site's own SSH user
+        # has no business reading it (review finding S7; it was 0644). The
+        # group is best effort: without one the file stays root's alone, and
+        # the login status shows to root only rather than to everybody.
+        chgrp sudo "$tmp" 2>/dev/null || true
+        chmod 0640 "$tmp" && mv -f "$tmp" "${INSTALL_STATE_DIR}/state" || rm -f "$tmp"
     ) >/dev/null 2>&1 || true
 }
 

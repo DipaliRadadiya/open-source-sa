@@ -1310,3 +1310,53 @@ describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirect
             ->and($run['leftover'])->toBe([]);
     });
 });
+
+describe('S7: the install state file is for administrators only', function () {
+    /*
+     * The login script shows the install's status to root and the sudo group
+     * only, but the file it reads was 0644: any account on the box, a site's
+     * own SSH user included, could read the failure reason, which can quote a
+     * command line.
+     */
+    function stateFile(bool $chgrpWorks): array
+    {
+        $dir = reviewDir();
+
+        $run = reviewBash(installerFunctions('save_install_state', 'one_line', 'branding_name', 'panel_units', 'installed_version').'
+            send_progress() { :; }
+            chgrp() { echo "chgrp $*" >>'.escapeshellarg($dir.'/calls').'; '.($chgrpWorks ? 'return 0' : 'return 1').'; }
+            LOGIN_STATUS=1; INSTALL_STATE_DIR='.escapeshellarg($dir).'
+            STEP_NO=3; STEP_TOTAL=9; CURRENT_STEP="Installing packages"; INSTALL_STARTED=1; LOG_FILE=/var/log/panel-install.log; FRESH_CHECK=passed
+            save_install_state failed "RUN FAILED: some command --with=arguments"
+            echo "CONTINUED"');
+
+        $state = $dir.'/state';
+
+        return $run + [
+            'calls' => is_file($dir.'/calls') ? (string) file_get_contents($dir.'/calls') : '',
+            'mode' => is_file($state) ? fileperms($state) & 0777 : null,
+            'state' => is_file($state) ? (string) file_get_contents($state) : '',
+            'temps' => glob($dir.'/.state.*') ?: [],
+        ];
+    }
+
+    it('writes it 0640, group sudo', function () {
+        $run = stateFile(chgrpWorks: true);
+
+        expect($run['out'])->toContain('CONTINUED')
+            ->and($run['calls'])->toMatch('/^chgrp sudo \S+\/\.state\.\w+$/m')
+            ->and($run['mode'])->toBe(0640)
+            ->and($run['state'])->toContain("STATE=failed\n")
+            ->and($run['state'])->toContain("REASON=RUN FAILED: some command --with=arguments\n")
+            ->and($run['temps'])->toBe([]);
+    });
+
+    it('still writes it, readable by its owner only, when there is no sudo group', function () {
+        $run = stateFile(chgrpWorks: false);
+
+        expect($run['out'])->toContain('CONTINUED')
+            ->and($run['mode'])->toBe(0640)
+            ->and($run['state'])->toContain("STATE=failed\n")
+            ->and($run['temps'])->toBe([]);
+    });
+});
