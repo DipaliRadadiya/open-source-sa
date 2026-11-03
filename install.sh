@@ -3987,27 +3987,21 @@ configure_web_server() {
 
 # ─── OpenLiteSpeed ───────────────────────────────────────────────────────────
 #
-# NOT YET RUN ON REAL HARDWARE, but no longer guesswork: the config syntax and
-# every path below were checked on 2026-09-01 against the openlitespeed 1.9.2
-# package for Ubuntu 26.04 (resolute), by extracting the .deb rather than
-# trusting LiteSpeed's docs. Settled that way:
+# The config syntax and every path below were first checked on 2026-09-01
+# against the openlitespeed 1.9.2 package for Ubuntu 26.04 (resolute), by
+# extracting the .deb rather than trusting LiteSpeed's docs, and the installer
+# has since run on real servers. Settled that way:
 #
-#   * `fcgi` IS a valid external-app type. OLS's own admin definitions list
-#     lsapi|proxy|fcgi|fcgiauth|scgi|servlet|uwsgi, so running the panel on
-#     PHP-FPM is supported. (The panel's php.blade.php used to claim otherwise;
-#     that comment was wrong and has been corrected.)
-#   * `add fcgi:<name> php` takes ONE colon, matching the shipped
+#   * `add lsapi:<name> php` takes ONE colon, matching the shipped
 #     `add lsapi:lsphp php`. The `type::name` form with two colons is only for
-#     a load balancer's worker list.
+#     a load balancer's worker list. (`fcgi` is also a valid external-app type,
+#     so PHP-FPM would work too; the panel does not use it, see below.)
 #   * A proxy context is `type proxy` + `handler <extprocessor name>`, per the
 #     OLS-specific attribute definition.
 #   * lsphp extensions are NOT missing. There are no -gd/-xml/-zip/-mbstring
 #     packages because they are compiled statically into lsphp84 — its Depends
 #     carry libfreetype6/libjpeg8/libpng16/libwebp7 (gd), libonig5 (mbstring)
 #     and libxml2-16 (xml), and the .deb ships no .so files at all.
-#
-# What is still unproven is behaviour: that these files, being syntactically
-# right, actually serve the panel. A path existing is not a config working.
 #
 # The panel runs on LSPHP, not PHP-FPM, and one binary does both jobs.
 #
@@ -4053,7 +4047,7 @@ configure_ols() {
     #   [panel-lsphp]: Failed to lock pid file for [/run/panel/lsphp.sock]:
     #   Permission denied ... Can not start this external application.
     #
-    # The rule is the one configure_fpm already states forty lines up -- the
+    # The rule is the one configure_fpm states for its socket owner -- the
     # web server has to be able to write to the socket. Under fpm that lands on
     # listen.owner, because fpm creates the socket. Under LSAPI the server
     # creates it, so it lands on the directory instead. Same rule, different
@@ -4240,8 +4234,9 @@ ensure_ols_dynamic_response_limit() {
     if grep -qE "^[[:space:]]*maxDynRespSize" "$conf"; then
         run sed -i -E "s|^([[:space:]]*)maxDynRespSize[[:space:]]+\\S+[[:space:]]*$|\\1maxDynRespSize               ${want}|" "$conf"
     else
-        # Absent rather than wrong: append inside the top-level block, which is
-        # where every other server-wide directive in this file lives.
+        # Absent rather than wrong: append it at the end of the file. The
+        # server-wide directives in httpd_config.conf sit outside any block,
+        # so the end of the file is as good a place as any.
         printf 'maxDynRespSize               %s\n' "$want" >>"$conf"
     fi
 
@@ -4421,11 +4416,6 @@ install_ols_packages() {
     ok "Installing ${lsphp} and its extensions ($((SECONDS - started))s)"
 }
 
-# The panel's own vhconf.conf.
-#
-# Deliberately NOT built from the panel's php.blade.php template: that one is
-# for hosted sites and runs them on lsphp with per-site suEXEC. The panel is a
-# different animal — PHP-FPM over an fcgi external app, plus a proxy to Next.
 # The listener `map` lines, one per virtual host, newline-terminated.
 #
 # nginx and Apache give the API its own server block on ${API_HOST}.
@@ -4442,6 +4432,12 @@ ols_listener_maps() {
     (( SINGLE_HOST )) || printf '  map                     %s-api %s\n' "$PANEL_SLUG" "$API_HOST"
 }
 
+# The panel's own vhconf.conf.
+#
+# Deliberately NOT built from the panel's php.blade.php template: that one is
+# for hosted sites and runs them on lsphp with per-site suEXEC. The panel is a
+# different animal — the same lsphp over an lsapi external app, plus a proxy to
+# Next.
 write_ols_vhost() {
     local vhost_dir="$1"
     local api_context="" front_controller="" doc_root="${APP_DIR}/frontend" index_block=""
@@ -4622,9 +4618,9 @@ CONF
 #
 # nginx and Apache both do this: ${API_HOST} gets its own server block serving
 # the whole of backend/public, and ${PANEL_HOST} gets one that only proxies to
-# Next. OpenLiteSpeed was the odd one out, running both roles through a single
-# vhost -- which left the API hostname mapped to nothing at all until the
-# previous commit, and still left ${API_HOST}/docs/api-reference reaching Next.
+# Next. OpenLiteSpeed used to be the odd one out, running both roles through a
+# single vhost -- which left the API hostname mapped to nothing at all, and
+# sent ${API_HOST}/docs/api-reference to Next.
 #
 # Splitting them also removes the rewrite collision for free: with no proxy
 # context in this vhost, the front-controller rule can be a plain virtual-host
@@ -4786,7 +4782,7 @@ CONF
 # add, replace and remove are all "parse the region, change one entry, render it
 # back". A panel vhost written inside that region would be treated as an
 # ordinary site and regenerated from vhostBlock()'s generic template the first
-# time any real site was provisioned, losing the fcgi and proxy contexts above
+# time any real site was provisioned, losing the lsapi and proxy contexts above
 # and taking the panel down with it. Written outside, the panel's own entry is
 # copied through untouched exactly like a user's hand-written config.
 register_ols_panel_vhost() {
@@ -4900,9 +4896,9 @@ CONF
     ok "panel vhost registered for ${PANEL_HOST}"
 }
 
-# OpenLiteSpeed ships a second control panel of its own on :7080, and a default
-# vhost on :8088. Neither is something this installer should leave running
-# unattended on someone's server.
+# OpenLiteSpeed ships a second control panel of its own, WebAdmin on :7080,
+# which this binds to the server itself (S5) and gives a random password.
+# The Default listener on :8088 is handled in register_ols_panel_vhost, not here.
 # The argument is only for the tests; the installer calls it with none.
 # shellcheck disable=SC2120
 harden_ols_webadmin() {
