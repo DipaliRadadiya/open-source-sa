@@ -10,6 +10,7 @@ use App\Actions\Server\Application\DeleteApplicationDockerResources;
 use App\Actions\Server\Application\DeprovisionApplication;
 use App\Actions\Server\Application\DisableApplication;
 use App\Actions\Server\Application\EnableApplication;
+use App\Actions\Server\Application\RestartContainerApplication;
 use App\Actions\Server\Application\RunApplicationProcess;
 use App\Actions\Server\Application\UpdateApplication;
 use App\Actions\Server\SystemUser\DeleteSystemUser;
@@ -237,22 +238,32 @@ class ApplicationController extends Controller
      * Refused for an application that has none: a PHP site has no process to
      * act on, and reporting success for a no-op would teach the user that the
      * button does something.
+     *
+     * A Docker application has no process of its own either, but it has
+     * containers, and restarting them is the one thing here that means
+     * something for it. Start and stop stay refused: for a container app those
+     * are Pause and Resume.
      */
     public function process(
         Application $application,
         string $action,
         ProcessSupervisor $supervisor,
         RunApplicationProcess $run,
+        RestartContainerApplication $restartContainers,
     ): JsonResponse {
         abort_unless(in_array($action, RunApplicationProcess::ACTIONS, true), 404);
 
-        abort_unless(
-            $supervisor->runs($application),
-            422,
-            __('errors/application.no_process', ['name' => $application->name]),
-        );
+        if ($action === 'restart' && $application->serving_profile === 'docker') {
+            $result = $restartContainers->execute($application->load('systemUser'));
+        } else {
+            abort_unless(
+                $supervisor->runs($application),
+                422,
+                __('errors/application.no_process', ['name' => $application->name]),
+            );
 
-        $result = $run->execute($application->load('systemUser'), $action);
+            $result = $run->execute($application->load('systemUser'), $action);
+        }
 
         if ($result->failed()) {
             return response()->json([

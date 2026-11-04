@@ -1240,6 +1240,8 @@ Start / stop / restart the site's own process (Node apps only). `{action}` = `st
 
 `422` if the app has no process (PHP sites).
 
+**Docker apps** (`serving_profile: "docker"` — one-click recipes and plain images): `restart` runs `docker compose restart` on all of the app's containers, in place (no pull, no recreate; volumes and data are kept) and answers `200` only once at least one container is running again. `start` and `stop` stay `422` — for a container app those are Pause and Resume. `restart` is refused with `422` and a localized `message` while the app is not `active` yet (pending, provisioning, failed), while it is paused, and when Docker does not answer on the server; nothing is touched in those cases. A restart that ran but left nothing running is a `500` with a `reference`. Recorded in the activity log as `application.process_restart`.
+
 **Response `200`:** `{"application": {...}}`
 
 `500 {"message": "…", "reference": "…"}` on failure.

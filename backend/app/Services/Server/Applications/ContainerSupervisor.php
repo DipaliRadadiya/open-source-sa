@@ -1168,6 +1168,53 @@ class ContainerSupervisor
     }
 
     /**
+     * Restart every container in place, and fail if nothing is up afterwards.
+     *
+     * `compose restart` exits 0 for a service that was stopped and stays
+     * stopped, so the exit code alone says nothing about the application being
+     * back. A failure here carries the reference of the `ps` that found nothing
+     * running, which is the log entry worth reading.
+     */
+    public function restartAndConfirm(Application $application, string $documentRoot): ServerOpsResult
+    {
+        $restarted = $this->restart($application, $documentRoot);
+
+        if ($restarted->failed()) {
+            return $restarted;
+        }
+
+        $ps = $this->compose(
+            $application,
+            $documentRoot,
+            ['ps', '--status', 'running', '--quiet'],
+            'compose_ps',
+            timeout: self::QUERY_TIMEOUT,
+        );
+
+        if ($ps->answered && trim($ps->output()) !== '') {
+            return $restarted;
+        }
+
+        return new ServerOpsResult(ok: false, reference: $ps->reference, result: $ps->result);
+    }
+
+    /**
+     * Is the Docker daemon answering at all?
+     *
+     * Asked before touching a container so that "Docker is down" reaches the
+     * person as that, instead of as a failed restart with a reference they
+     * cannot act on. The same question `panel:doctor` asks.
+     */
+    public function daemonAnswers(): bool
+    {
+        return $this->serverOps->run(
+            ['docker', 'info', '--format', '{{.ServerVersion}}'],
+            ['feature' => 'application', 'op' => 'docker_info'],
+            timeout: self::QUERY_TIMEOUT,
+        )->ok;
+    }
+
+    /**
      * Drop what the last readiness check saw once the containers have been
      * started, stopped or restarted without one (DS-09). `running` from the
      * deploy before a Stop is a green badge over a 502; no check at all is
