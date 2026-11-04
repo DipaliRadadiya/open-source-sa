@@ -1,6 +1,6 @@
 /**
- * What a container site is doing, in the four words the badge uses:
- * `starting` | `running` | `restarting` | `failed`, or null when there is
+ * What a container site is doing, in the words the badge uses:
+ * `starting` | `running` | `degraded` | `restarting` | `failed`, or null when there is
  * nothing container-specific to say (not a container, one-click apps, sites
  * deployed before the readiness check existed).
  *
@@ -15,10 +15,26 @@ export function containerState(application) {
   // `unhealthy`: the image's own HEALTHCHECK fails (DS-14).
   if (application.last_failure || checked === "exited" || checked === "not_answering" || checked === "unhealthy") return "failed";
   if (application.status === "failed") return "failed";
-  if (checked === "running") return "running";
+  // The main part answers but a helper (e.g. Supabase's Edge Functions) does not: yellow, not green.
+  if (checked === "running") return healthWarnings(application).length ? "degraded" : "running";
   // The image's HEALTHCHECK has no verdict yet (DS-14).
   if (checked === "starting") return "starting";
   return null;
+}
+
+/** The API's `health_warnings`, always an array. */
+export function healthWarnings(application) {
+  return Array.isArray(application?.health_warnings) ? application.health_warnings : [];
+}
+
+/**
+ * "functions (unhealthy), kong (stopped)": service names as they are, states worded through
+ * `helperState.*`, an unknown future code shown raw. `t` is the `applications` translator.
+ */
+export function describeWarnings(warnings, t) {
+  return warnings
+    .map(({ service, state }) => `${service} (${t.has(`helperState.${state}`) ? t(`helperState.${state}`) : state})`)
+    .join(", ");
 }
 
 /** A container that is down right now, with a stored reason to show. */

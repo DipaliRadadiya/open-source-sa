@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "Process failed",
-      "processStopped": "Process stopped"
+      "processStopped": "Process stopped",
+      "helperUnhealthy": "{count, plural, one {Needs attention: {services}} other {Need attention: {services}}}",
+      "mainUnhealthy": "Not working: {service} ({state})",
+      "alsoAffected": "Also: {services}"
     },
     "sourceLabel": "Source",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "Starting",
-      "restarting": "Restarting"
+      "restarting": "Restarting",
+      "degraded": "Running with warnings"
     },
     "containerFailure": {
       "title": "The container isn't answering",
@@ -6658,7 +6662,10 @@
       "paused": "Paused",
       "pausedDetail": "Visitors see a holding page until you resume it.",
       "https": "HTTPS is on",
-      "httpsDetail": "Visitors get a secure connection."
+      "httpsDetail": "Visitors get a secure connection.",
+      "degraded": "Online, with warnings",
+      "degradedDetail": "The app answers, but {services} needs attention.",
+      "containerDownDetail": "A container of this application is not running, so visitors may get an error."
     },
     "tiles": {
       "status": "Status",
@@ -6736,6 +6743,17 @@
         "startFailed": "The update couldn't be started.",
         "checkFailed": "The versions couldn't be checked."
       }
+    },
+    "helperState": {
+      "unhealthy": "unhealthy",
+      "restarting": "restarting",
+      "exited": "stopped",
+      "created": "not started",
+      "paused": "paused"
+    },
+    "healthWarnings": {
+      "item": "The {service} container is {state}.",
+      "action": "Open container"
     }
   },
   "panelUpdate": {

@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "Processo falhou",
-      "processStopped": "Processo parado"
+      "processStopped": "Processo parado",
+      "helperUnhealthy": "{count, plural, one {Precisa de atenção: {services}} other {Precisam de atenção: {services}}}",
+      "mainUnhealthy": "Não funciona: {service} ({state})",
+      "alsoAffected": "Também: {services}"
     },
     "sourceLabel": "Origem",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "Iniciando",
-      "restarting": "Reiniciando"
+      "restarting": "Reiniciando",
+      "degraded": "Em execução com avisos"
     },
     "containerFailure": {
       "title": "O contentor não está respondendo",
@@ -6658,7 +6662,10 @@
       "paused": "Em pausa",
       "pausedDetail": "Os visitantes veem uma página de espera até você retomá-la.",
       "https": "HTTPS está ativado",
-      "httpsDetail": "Os visitantes recebem uma conexão segura."
+      "httpsDetail": "Os visitantes recebem uma conexão segura.",
+      "degraded": "Online, com avisos",
+      "degradedDetail": "A aplicação responde, mas {services} precisa de atenção.",
+      "containerDownDetail": "Um contêiner desta aplicação não está em execução, então os visitantes podem ver um erro."
     },
     "tiles": {
       "status": "Status",
@@ -6736,6 +6743,17 @@
         "startFailed": "Não foi possível iniciar a atualização.",
         "checkFailed": "Não foi possível verificar as versões."
       }
+    },
+    "helperState": {
+      "unhealthy": "com falha",
+      "restarting": "reiniciando",
+      "exited": "parado",
+      "created": "não iniciado",
+      "paused": "pausado"
+    },
+    "healthWarnings": {
+      "item": "O contêiner {service} está {state}.",
+      "action": "Abrir contêiner"
     }
   },
   "panelUpdate": {

@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "プロセスが失敗しました",
-      "processStopped": "プロセスが停止しました"
+      "processStopped": "プロセスが停止しました",
+      "helperUnhealthy": "{count, plural, other {要確認: {services}}}",
+      "mainUnhealthy": "動作していません: {service}（{state}）",
+      "alsoAffected": "ほかに: {services}"
     },
     "sourceLabel": "ソース",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "開始中",
-      "restarting": "再起動中"
+      "restarting": "再起動中",
+      "degraded": "警告ありで実行中"
     },
     "containerFailure": {
       "title": "コンテナが応答していません",
@@ -6658,7 +6662,10 @@
       "paused": "一時停止中",
       "pausedDetail": "再開するまで、訪問者には待機ページが表示されます。",
       "https": "HTTPS が有効です",
-      "httpsDetail": "訪問者は安全な接続を利用できます。"
+      "httpsDetail": "訪問者は安全な接続を利用できます。",
+      "degraded": "オンライン（警告あり）",
+      "degradedDetail": "アプリは応答していますが、{services} の確認が必要です。",
+      "containerDownDetail": "このアプリケーションのコンテナーが動いていないため、訪問者にエラーが表示される場合があります。"
     },
     "tiles": {
       "status": "状態",
@@ -6736,6 +6743,17 @@
         "startFailed": "更新を開始できませんでした。",
         "checkFailed": "バージョンを確認できませんでした。"
       }
+    },
+    "helperState": {
+      "unhealthy": "異常",
+      "restarting": "再起動中",
+      "exited": "停止",
+      "created": "未起動",
+      "paused": "一時停止中"
+    },
+    "healthWarnings": {
+      "item": "{service} コンテナーは{state}です。",
+      "action": "コンテナーを開く"
     }
   },
   "panelUpdate": {

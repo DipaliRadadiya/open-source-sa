@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "प्रोसेस विफल",
-      "processStopped": "प्रोसेस रुका हुआ"
+      "processStopped": "प्रोसेस रुका हुआ",
+      "helperUnhealthy": "{count, plural, one {ध्यान देने की ज़रूरत: {services}} other {ध्यान देने की ज़रूरत: {services}}}",
+      "mainUnhealthy": "काम नहीं कर रहा: {service} ({state})",
+      "alsoAffected": "साथ ही: {services}"
     },
     "sourceLabel": "स्रोत",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "शुरू हो रहा है",
-      "restarting": "रीस्टार्ट हो रहा है"
+      "restarting": "रीस्टार्ट हो रहा है",
+      "degraded": "चेतावनियों के साथ चल रहा है"
     },
     "containerFailure": {
       "title": "कंटेनर जवाब नहीं दे रहा है",
@@ -6658,7 +6662,10 @@
       "paused": "रोका गया",
       "pausedDetail": "जब तक आप इसे फिर से शुरू नहीं करते, विज़िटर को होल्डिंग पेज दिखता है।",
       "https": "HTTPS चालू है",
-      "httpsDetail": "विज़िटर को सुरक्षित कनेक्शन मिलता है।"
+      "httpsDetail": "विज़िटर को सुरक्षित कनेक्शन मिलता है।",
+      "degraded": "ऑनलाइन, चेतावनियों के साथ",
+      "degradedDetail": "ऐप जवाब दे रहा है, लेकिन {services} पर ध्यान देने की ज़रूरत है।",
+      "containerDownDetail": "इस ऐप्लिकेशन का एक कंटेनर नहीं चल रहा, इसलिए विज़िटर को एरर दिख सकता है।"
     },
     "tiles": {
       "status": "स्थिति",
@@ -6736,6 +6743,17 @@
         "startFailed": "अपडेट शुरू नहीं हो सका।",
         "checkFailed": "वर्शन जाँचे नहीं जा सके।"
       }
+    },
+    "helperState": {
+      "unhealthy": "अस्वस्थ",
+      "restarting": "रीस्टार्ट हो रहा है",
+      "exited": "बंद",
+      "created": "शुरू नहीं हुआ",
+      "paused": "रुका हुआ"
+    },
+    "healthWarnings": {
+      "item": "{service} कंटेनर {state} है।",
+      "action": "कंटेनर खोलें"
     }
   },
   "panelUpdate": {

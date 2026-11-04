@@ -6,6 +6,7 @@ import { ArchiveRestore, ArrowRight, ChevronRight, Cpu, FileCode, Lock, Power, R
 import { cn } from "@/lib/utils";
 import { isRedeploying } from "@/lib/applications/settled";
 import { isProcessDown } from "@/components/applications/application-status-badge";
+import { containerState, describeWarnings, healthWarnings } from "@/lib/applications/container-state";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";
 
 // Steel UI (Krishna's prototype, 14 Oct): the icon sits in a square edged in its tone.
@@ -91,6 +92,8 @@ export function AppStatusTiles({
   const t = useTranslations("applications");
 
   const tiles = [];
+  const container = containerState(application);
+  const warnings = healthWarnings(application);
 
   if (application.is_disabled) {
     tiles.push({ key: "status", icon: Power, tone: "warning", value: t("paused"), detail: t("health.pausedDetail") });
@@ -100,6 +103,20 @@ export function AppStatusTiles({
     tiles.push({ key: "status", icon: Power, tone: "info", value: t("deploying"), detail: t("tiles.deployingDetail") });
   } else if (isProcessDown(application)) {
     tiles.push({ key: "status", icon: Power, tone: "destructive", value: t("processStoppedBadge"), detail: t("tiles.stoppedDetail"), href: "#process" });
+  } else if (container === "failed" || container === "restarting") {
+    // A container app whose main part is down read "Online" here; name the container that made it red.
+    const [main] = warnings;
+    tiles.push({
+      key: "status",
+      icon: Power,
+      tone: "destructive",
+      value: t(container === "restarting" ? "containerState.restarting" : "status.failed"),
+      detail: main
+        ? t("markers.mainUnhealthy", { service: main.service, state: t.has(`helperState.${main.state}`) ? t(`helperState.${main.state}`) : main.state })
+        : t("health.containerDownDetail"),
+    });
+  } else if (container === "degraded") {
+    tiles.push({ key: "status", icon: Power, tone: "warning", value: t("health.degraded"), detail: t("health.degradedDetail", { services: describeWarnings(warnings, t) }) });
   } else {
     tiles.push({ key: "status", icon: Power, tone: "success", value: t("health.online"), detail: t("health.onlineDetail") });
   }

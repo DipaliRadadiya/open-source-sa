@@ -5,7 +5,7 @@ import { CircleAlert, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROVISION_STEPS, provisionStepLabel } from "@/lib/applications/provision-steps";
 import { isRedeploying } from "@/lib/applications/settled";
-import { containerState } from "@/lib/applications/container-state";
+import { containerState, describeWarnings, healthWarnings } from "@/lib/applications/container-state";
 import { Badge } from "@/components/ui/badge";
 
 /* Kept out of `applications-table.jsx` so the sidebar does not pull DataTable into the shell bundle. */
@@ -51,6 +51,7 @@ function PillDot({ tone, live = false }) {
 // Container states that differ from `status`; `running` reads the same as `active`.
 const CONTAINER_BADGES = {
   starting: { variant: "warning", key: "containerState.starting" },
+  degraded: { variant: "warning", key: "containerState.degraded" },
   restarting: { variant: "destructive", key: "containerState.restarting" },
   failed: { variant: "destructive", key: "status.failed" },
 };
@@ -164,7 +165,13 @@ export function ApplicationStatusNotes({ application, className }) {
   const provisioning =
     (application.status === "pending" || application.status === "provisioning") && application.steps?.length;
   const reference = application.status === "failed" && application.reference;
-  if (!provisioning && !reference && !processDown && !deployFailed) return null;
+  // Containers that need attention: a helper while the main part works (yellow), or the main
+  // container that made it red, named first. Raw service names, worded states.
+  const container = containerState(application);
+  const warnings = healthWarnings(application);
+  const helperNote = (container === "degraded" || container === "starting") && warnings.length > 0;
+  const mainNote = (container === "failed" || container === "restarting") && warnings.length > 0;
+  if (!provisioning && !reference && !processDown && !deployFailed && !helperNote && !mainNote) return null;
   return (
     <div className={cn("space-y-1", className)}>
       {/* The API sends raw step identifiers; show labels. Wraps rather than
@@ -211,6 +218,24 @@ export function ApplicationStatusNotes({ application, className }) {
         <p className={cn(NOTE_TAG, "bg-warning-soft text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning")}>
           <TriangleAlert className="mt-0.5 size-3 shrink-0" />
           {t("tiles.deployFailed")}
+        </p>
+      ) : null}
+      {mainNote ? (
+        <p className={cn(NOTE_TAG, "bg-destructive-soft text-destructive")}>
+          <CircleAlert className="mt-0.5 size-3 shrink-0" />
+          <span>
+            {t("markers.mainUnhealthy", {
+              service: warnings[0].service,
+              state: t.has(`helperState.${warnings[0].state}`) ? t(`helperState.${warnings[0].state}`) : warnings[0].state,
+            })}
+            {warnings.length > 1 ? <> · {t("markers.alsoAffected", { services: describeWarnings(warnings.slice(1), t) })}</> : null}
+          </span>
+        </p>
+      ) : null}
+      {helperNote ? (
+        <p className={cn(NOTE_TAG, "bg-warning-soft text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning")}>
+          <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+          {t("markers.helperUnhealthy", { count: warnings.length, services: describeWarnings(warnings, t) })}
         </p>
       ) : null}
     </div>

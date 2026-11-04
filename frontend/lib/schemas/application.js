@@ -296,6 +296,9 @@ export const applicationSchema = z.object({
   registry_id: z.number().nullish(),
   // The last deploy's readiness check; null when none ran (one-click apps, older sites).
   container_status: z.string().nullish(),
+  // Containers that need attention, main part first, then optional helpers (max 10). `[]` when all
+  // is well. `state` is a code worded here; unknown future codes are shown raw.
+  health_warnings: z.array(z.object({ service: z.string(), state: z.string() })).catch([]),
   // `log` and `last_line` are null for someone without `app_log`.
   last_failure: z
     .object({

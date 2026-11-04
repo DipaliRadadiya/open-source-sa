@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "Сбой процесса",
-      "processStopped": "Процесс остановлен"
+      "processStopped": "Процесс остановлен",
+      "helperUnhealthy": "{count, plural, one {Требует внимания: {services}} few {Требуют внимания: {services}} many {Требуют внимания: {services}} other {Требуют внимания: {services}}}",
+      "mainUnhealthy": "Не работает: {service} ({state})",
+      "alsoAffected": "Также: {services}"
     },
     "sourceLabel": "Источник",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "Запуск",
-      "restarting": "Перезапуск"
+      "restarting": "Перезапуск",
+      "degraded": "Работает с предупреждениями"
     },
     "containerFailure": {
       "title": "Контейнер не отвечает",
@@ -6658,7 +6662,10 @@
       "paused": "Приостановлено",
       "pausedDetail": "Пока вы не возобновите работу, посетители видят страницу-заглушку.",
       "https": "HTTPS включён",
-      "httpsDetail": "Посетители получают защищённое соединение."
+      "httpsDetail": "Посетители получают защищённое соединение.",
+      "degraded": "В сети, есть предупреждения",
+      "degradedDetail": "Приложение отвечает, но {services} требует внимания.",
+      "containerDownDetail": "Один из контейнеров этого приложения не работает, поэтому посетители могут увидеть ошибку."
     },
     "tiles": {
       "status": "Статус",
@@ -6736,6 +6743,17 @@
         "startFailed": "Не удалось запустить обновление.",
         "checkFailed": "Не удалось проверить версии."
       }
+    },
+    "helperState": {
+      "unhealthy": "неисправен",
+      "restarting": "перезапускается",
+      "exited": "остановлен",
+      "created": "не запущен",
+      "paused": "приостановлен"
+    },
+    "healthWarnings": {
+      "item": "Контейнер {service}: {state}.",
+      "action": "Открыть контейнер"
     }
   },
   "panelUpdate": {

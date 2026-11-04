@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "Processus en échec",
-      "processStopped": "Processus arrêté"
+      "processStopped": "Processus arrêté",
+      "helperUnhealthy": "{count, plural, one {À vérifier : {services}} other {À vérifier : {services}}}",
+      "mainUnhealthy": "Ne fonctionne pas : {service} ({state})",
+      "alsoAffected": "Aussi : {services}"
     },
     "sourceLabel": "Source",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "Démarrage",
-      "restarting": "Redémarrage"
+      "restarting": "Redémarrage",
+      "degraded": "En exécution avec avertissements"
     },
     "containerFailure": {
       "title": "Le conteneur ne répond pas",
@@ -6658,7 +6662,10 @@
       "paused": "En pause",
       "pausedDetail": "Les visiteurs voient une page d'attente jusqu'à la reprise.",
       "https": "HTTPS est activé",
-      "httpsDetail": "Les visiteurs bénéficient d'une connexion sécurisée."
+      "httpsDetail": "Les visiteurs bénéficient d'une connexion sécurisée.",
+      "degraded": "En ligne, avec avertissements",
+      "degradedDetail": "L'application répond, mais {services} demande votre attention.",
+      "containerDownDetail": "Un conteneur de cette application ne tourne pas, les visiteurs peuvent donc voir une erreur."
     },
     "tiles": {
       "status": "Statut",
@@ -6736,6 +6743,17 @@
         "startFailed": "La mise à jour n’a pas pu démarrer.",
         "checkFailed": "Les versions n’ont pas pu être vérifiées."
       }
+    },
+    "helperState": {
+      "unhealthy": "en échec",
+      "restarting": "en redémarrage",
+      "exited": "arrêté",
+      "created": "non démarré",
+      "paused": "en pause"
+    },
+    "healthWarnings": {
+      "item": "Le conteneur {service} est {state}.",
+      "action": "Ouvrir le conteneur"
     }
   },
   "panelUpdate": {

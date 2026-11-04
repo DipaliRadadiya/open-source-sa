@@ -21,7 +21,7 @@ import {
 } from "@/lib/applications/get-application-domains";
 import { ProvisioningCard } from "@/components/applications/provisioning-card";
 import { ContainerFailurePanel } from "@/components/applications/container-failure-panel";
-import { hasContainerFailure } from "@/lib/applications/container-state";
+import { containerState, hasContainerFailure, healthWarnings } from "@/lib/applications/container-state";
 import { FirstRunCredentials } from "@/components/applications/first-run-credentials";
 import { ContainerAccessCard } from "@/components/applications/container-access-card";
 import { showsContainerAccess } from "@/lib/applications/container-access";
@@ -269,6 +269,18 @@ export default async function ApplicationDetailPage({ params }) {
       action: t("attention.setUpBackups"),
       href: `/applications/${id}/backups`,
     },
+    // One line per container that needs attention (main part first), linked to its Container page.
+    // Not while starting: an install lists services as "not started" for a few minutes.
+    ...(["degraded", "failed", "restarting"].includes(containerState(application)) ? healthWarnings(application) : []).map((warning) => ({
+      key: `container-${warning.service}`,
+      label: t("healthWarnings.item", {
+        service: warning.service,
+        state: t.has(`helperState.${warning.state}`) ? t(`helperState.${warning.state}`) : warning.state,
+      }),
+      ...(can(appPermissions, "app_container", "view", "application")
+        ? { action: t("healthWarnings.action"), href: `/applications/${id}/container` }
+        : null),
+    })),
     // Switched-off protections are deliberately not findings: each is a per-site choice.
   ]
     .filter(Boolean)

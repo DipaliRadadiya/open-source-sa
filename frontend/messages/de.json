@@ -4561,7 +4561,10 @@
     },
     "markers": {
       "processFailed": "Prozess fehlgeschlagen",
-      "processStopped": "Prozess gestoppt"
+      "processStopped": "Prozess gestoppt",
+      "helperUnhealthy": "{count, plural, one {Braucht Aufmerksamkeit: {services}} other {Brauchen Aufmerksamkeit: {services}}}",
+      "mainUnhealthy": "Funktioniert nicht: {service} ({state})",
+      "alsoAffected": "Außerdem: {services}"
     },
     "sourceLabel": "Quelle",
     "deployment": {
@@ -6517,7 +6520,8 @@
     },
     "containerState": {
       "starting": "Wird gestartet",
-      "restarting": "Startet neu"
+      "restarting": "Startet neu",
+      "degraded": "Läuft mit Warnungen"
     },
     "containerFailure": {
       "title": "Der Container antwortet nicht",
@@ -6658,7 +6662,10 @@
       "paused": "Pausiert",
       "pausedDetail": "Besucher sehen eine Platzhalterseite, bis Sie sie fortsetzen.",
       "https": "HTTPS ist aktiv",
-      "httpsDetail": "Besucher erhalten eine sichere Verbindung."
+      "httpsDetail": "Besucher erhalten eine sichere Verbindung.",
+      "degraded": "Online, mit Warnungen",
+      "degradedDetail": "Die Anwendung antwortet, aber {services} braucht Aufmerksamkeit.",
+      "containerDownDetail": "Ein Container dieser Anwendung läuft nicht, daher sehen Besucher womöglich einen Fehler."
     },
     "tiles": {
       "status": "Status",
@@ -6736,6 +6743,17 @@
         "startFailed": "Das Update konnte nicht gestartet werden.",
         "checkFailed": "Die Versionen konnten nicht geprüft werden."
       }
+    },
+    "helperState": {
+      "unhealthy": "fehlerhaft",
+      "restarting": "startet neu",
+      "exited": "gestoppt",
+      "created": "nicht gestartet",
+      "paused": "pausiert"
+    },
+    "healthWarnings": {
+      "item": "Der Container {service} ist {state}.",
+      "action": "Container öffnen"
     }
   },
   "panelUpdate": {
