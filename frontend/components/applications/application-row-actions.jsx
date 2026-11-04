@@ -31,6 +31,7 @@ import {
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { PauseApplicationDialog } from "@/components/applications/pause-application-dialog";
+import { RestartContainersDialog } from "@/components/applications/restart-containers-dialog";
 import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
 import { useMagicLogin } from "@/components/applications/use-magic-login";
 
@@ -81,6 +82,7 @@ export function ApplicationRowActions({
   }
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
+  const [restartOpen, setRestartOpen] = useState(false);
   const [resuming, setResuming] = useState(false);
 
   const href = `/applications/${application.id}`;
@@ -88,6 +90,14 @@ export function ApplicationRowActions({
   const canRetry = application.status === "failed";
   const showRetry = canManage && canRetry;
   const pauseAction = pauseControl(application, { canManage });
+  // Docker apps have no process card; their restart lives here. The API refuses it
+  // while paused or not yet running, so say why instead of offering a 422.
+  const showRestart = canManage && application.serving_profile === "docker";
+  const restartHint = application.is_disabled
+    ? t("restart.pausedHint")
+    : application.status !== "active"
+      ? t("restart.notReadyHint")
+      : null;
 
   if (!showNavigation && !showRetry && !canManage) return null;
 
@@ -221,6 +231,17 @@ export function ApplicationRowActions({
           {canManage ? (
             <>
               {showNavigation || showRetry || showMagicLogin ? <DropdownMenuSeparator /> : null}
+              {showRestart ? (
+                <MenuItemHint hint={restartHint}>
+                  <DropdownMenuItem
+                    disabled={Boolean(restartHint)}
+                    onSelect={() => { openingDialog.current = true; setRestartOpen(true); }}
+                  >
+                    <RotateCw className="size-4" />
+                    {t("restart.action")}
+                  </DropdownMenuItem>
+                </MenuItemHint>
+              ) : null}
               {/* Kept out of the destructive group: pausing is reversible. See
                   `pauseControl` for which control appears. */}
               {pauseAction === "resume" ? (
@@ -269,6 +290,14 @@ export function ApplicationRowActions({
         open={pauseOpen}
         onOpenChange={setPauseOpen}
       />
+
+      {showRestart ? (
+        <RestartContainersDialog
+          application={application}
+          open={restartOpen}
+          onOpenChange={setRestartOpen}
+        />
+      ) : null}
 
       <DeleteApplicationDialog
         application={application}

@@ -6754,6 +6754,20 @@
     "healthWarnings": {
       "item": "Le conteneur {service} est {state}.",
       "action": "Ouvrir le conteneur"
+    },
+    "restart": {
+      "action": "Redémarrer",
+      "title": "Redémarrer {name} ?",
+      "description": "Tous les conteneurs de cette application redémarrent sur place.",
+      "keeps": "Rien n'est supprimé ni retéléchargé. Les données, volumes et réglages restent tels quels.",
+      "brief": "L'application est indisponible quelques secondes, le temps que ses conteneurs redémarrent.",
+      "confirm": "Redémarrer",
+      "restarting": "Redémarrage…",
+      "cancel": "Annuler",
+      "restarted": "{name} a été redémarrée.",
+      "failed": "Nous n'avons pas pu redémarrer l'application.",
+      "pausedHint": "Réactivez d'abord l'application.",
+      "notReadyHint": "Disponible une fois l'application en cours d'exécution."
     }
   },
   "panelUpdate": {

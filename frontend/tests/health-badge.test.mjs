@@ -66,3 +66,16 @@ test("badge, notes, tile and attention lines use them", () => {
   const page = read("app/(app)/applications/[application]/page.jsx");
   assert.match(page, /\["degraded", "failed", "restarting"\]\.includes\(containerState\(application\)\) \? healthWarnings\(application\) : \[\]/);
 });
+
+// 4 Nov: the backend restarts a Docker app's containers through process/restart.
+// Docker apps have no process card, so the ⋯ menu carries it.
+test("Docker apps get Restart in the ⋯ menu, greyed with a reason while paused or not running", () => {
+  const menu = fs.readFileSync(new URL("../components/applications/application-row-actions.jsx", import.meta.url), "utf8");
+  const dialog = fs.readFileSync(new URL("../components/applications/restart-containers-dialog.jsx", import.meta.url), "utf8");
+  assert.match(menu, /showRestart = canManage && application\.serving_profile === "docker"/);
+  assert.match(menu, /application\.is_disabled\s*\?\s*t\("restart\.pausedHint"\)/);
+  assert.match(menu, /application\.status !== "active"\s*\?\s*t\("restart\.notReadyHint"\)/);
+  assert.match(menu, /disabled=\{Boolean\(restartHint\)\}/);
+  assert.match(dialog, /controlApplicationProcess\(application\.id, "restart"\)/);
+  assert.match(dialog, /setError\(apiMessage\(requestError, t\("failed"\)\)\)/);
+});

@@ -6754,6 +6754,20 @@
     "healthWarnings": {
       "item": "The {service} container is {state}.",
       "action": "Open container"
+    },
+    "restart": {
+      "action": "Restart",
+      "title": "Restart {name}?",
+      "description": "All of this application's containers restart in place.",
+      "keeps": "Nothing is deleted or downloaded again. Data, volumes and settings stay as they are.",
+      "brief": "The application is unavailable for a few seconds while its containers come back up.",
+      "confirm": "Restart",
+      "restarting": "Restarting…",
+      "cancel": "Cancel",
+      "restarted": "{name} was restarted.",
+      "failed": "We couldn't restart the application.",
+      "pausedHint": "Resume the application first.",
+      "notReadyHint": "Available once the application is running."
     }
   },
   "panelUpdate": {

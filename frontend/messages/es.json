@@ -6754,6 +6754,20 @@
     "healthWarnings": {
       "item": "El contenedor {service} está {state}.",
       "action": "Abrir contenedor"
+    },
+    "restart": {
+      "action": "Reiniciar",
+      "title": "¿Reiniciar {name}?",
+      "description": "Todos los contenedores de esta aplicación se reinician en su sitio.",
+      "keeps": "No se elimina ni se vuelve a descargar nada. Los datos, volúmenes y ajustes se quedan como están.",
+      "brief": "La aplicación no estará disponible durante unos segundos mientras sus contenedores vuelven a arrancar.",
+      "confirm": "Reiniciar",
+      "restarting": "Reiniciando…",
+      "cancel": "Cancelar",
+      "restarted": "{name} se ha reiniciado.",
+      "failed": "No pudimos reiniciar la aplicación.",
+      "pausedHint": "Primero reanuda la aplicación.",
+      "notReadyHint": "Disponible cuando la aplicación esté en ejecución."
     }
   },
   "panelUpdate": {

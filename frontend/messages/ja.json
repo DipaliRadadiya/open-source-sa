@@ -6754,6 +6754,20 @@
     "healthWarnings": {
       "item": "{service} コンテナーは{state}です。",
       "action": "コンテナーを開く"
+    },
+    "restart": {
+      "action": "再起動",
+      "title": "{name} を再起動しますか？",
+      "description": "このアプリケーションのすべてのコンテナがその場で再起動します。",
+      "keeps": "何も削除・再ダウンロードされません。データ、ボリューム、設定はそのまま残ります。",
+      "brief": "コンテナが起動し直すまで、アプリケーションは数秒間利用できません。",
+      "confirm": "再起動",
+      "restarting": "再起動中…",
+      "cancel": "キャンセル",
+      "restarted": "{name} を再起動しました。",
+      "failed": "アプリケーションを再起動できませんでした。",
+      "pausedHint": "先にアプリケーションを再開してください。",
+      "notReadyHint": "アプリケーションの実行後に利用できます。"
     }
   },
   "panelUpdate": {
