@@ -6493,15 +6493,15 @@ A policy listed in `unsafe_policies` (the `allkeys-*` ones, whenever the panel's
 
 ```json
 {"php": {
-  "default": "8.4", "panel_version": "8.4",
+  "default": "8.4", "default_full_version": "8.4.14", "panel_version": "8.4",
   "versions": [{
-    "version": "8.4", "path": "/usr/bin/php8.4", "is_default": true,
+    "version": "8.4", "full_version": "8.4.14", "path": "/usr/bin/php8.4", "is_default": true,
     "source": "apt", "in_use_by_panel": true, "in_use_by": 0,
     "service": "php8.4-fpm", "ini_path": "/etc/php/8.4/fpm/php.ini",
     "missing_packages": [],
     "status": "ready", "started_at": null, "reason": null, "message": null, "reference": null
   }, {
-    "version": "8.3", "status": "installing", "started_at": "29-07-2026 05:20:11"
+    "version": "8.3", "full_version": null, "status": "installing", "started_at": "29-07-2026 05:20:11"
   }],
   "installable": [{"version": "8.5", "lifecycle": {"status": "active", "eol_date": "2027-01-01"}}]
 }}
@@ -6511,7 +6511,18 @@ A policy listed in `unsafe_policies` (the `allkeys-*` ones, whenever the panel's
 
 **`failed` rows persist** until retried. `reason`: `package_not_found | apt_lock | no_space | network | worker | enable_failed | unknown`. `message` is localised. `reference` locates raw apt output.
 
-**`installing` and `removing` rows have no other fields** — the requested filesystem state is still changing.
+**`installing` and `removing` rows have no other fields** (apart from `full_version`, always `null` there) — the requested filesystem state is still changing.
+
+**`full_version`** (added 2026-11-04) is the exact version of the installed interpreter — `"8.4.14"` where `version` is the minor line `"8.4"`. Use it for display (e.g. `8.4.14`), and keep using `version` as the identifier everywhere else (`/php/versions/{version}`, `php_version` on sites).
+
+- Present on **every** row, and **`null`** when it is not known: the row is `installing`, `removing` or `failed`; the version's CLI binary is not installed (an FPM package can exist without `php-cli`); or the binary did not answer within 3 s, exited non-zero or printed something that is not a version. The response is never slowed or failed by it — fall back to `version`.
+- Read from the interpreter itself (`<path> -n -r 'echo PHP_VERSION;'`, `path` being the row's own, so `/usr/bin/php8.4` on nginx/Apache and `/usr/local/lsws/lsphp84/bin/php` on OpenLiteSpeed). `-n` skips php.ini, so a broken ini cannot pollute the answer. No sudo.
+- A distribution's packaging suffix is dropped (`8.1.2-1ubuntu2.14` → `8.1.2`); a real pre-release marker is kept (`8.5.0RC1`, `8.5.0beta2`). An answer whose minor line differs from the row's `version` is discarded as `null`.
+- Cached per binary (path + size + mtime), so an upgrade is picked up immediately and polling the screen costs nothing; a failed read is remembered for 60 s only.
+
+**`default_full_version`** (added 2026-11-04) is `full_version` of the default row — `null` when there is no default or its `full_version` is `null`.
+
+Not offered for `installable` entries: nothing is installed to ask yet.
 
 🔴 **`missing_packages` — a version that is present but not usable. Needs UI.**
 

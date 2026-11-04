@@ -3,6 +3,7 @@
 namespace App\Services\Server\Php;
 
 use App\Contracts\PhpStack;
+use App\Enums\InstallStatus;
 use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\PinnedSites;
 use App\Services\Runtime\RuntimeProgress;
@@ -29,6 +30,7 @@ class PhpOverview
         private LifecycleCatalog $lifecycle,
         private RuntimeProgress $progress,
         private PhpStack $stack,
+        private PhpFullVersion $fullVersions,
     ) {}
 
     /**
@@ -80,10 +82,25 @@ class PhpOverview
             ], $this->runtime->installable()),
         );
 
+        $default = $this->runtime->default();
+
+        $versions = array_map(fn (array $row) => [
+            ...$row,
+            // `8.4.14` where `version` is `8.4`. Only for a version that is
+            // settled: apt may be rewriting the binary of one that is
+            // installing or being removed, and a failed one has no answer worth
+            // trusting. Null otherwise — and for a version whose binary would
+            // not say — so the key is on every row, as `status` is.
+            'full_version' => ($row['status'] ?? null) === InstallStatus::Ready->value && isset($row['path'])
+                ? $this->fullVersions->read($row['path'], $row['version'])
+                : null,
+        ], $progress['versions']);
+
         return [
-            'default' => $this->runtime->default(),
+            'default' => $default,
+            'default_full_version' => collect($versions)->firstWhere('version', $default)['full_version'] ?? null,
             'panel_version' => $this->runtime->panelVersion(),
-            'versions' => $progress['versions'],
+            'versions' => $versions,
             'installable' => $progress['installable'],
             'lifecycle_available' => ! $this->lifecycle->isStale(),
         ];
