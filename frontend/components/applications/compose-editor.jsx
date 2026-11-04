@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { FileCode2, FolderLock, Loader2, Network, RefreshCw, RotateCcw, ShieldCheck } from "lucide-react";
 import { saveContainerCompose } from "@/lib/api/docker";
 import { apiMessage } from "@/lib/api/error-message";
+import { containerRedeployInFlight } from "@/lib/applications/settled";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,6 +65,9 @@ export function ComposeEditor({
   const [generated, setGenerated] = useState(initialGenerated);
 
   const dirty = contents !== initialCompose;
+  // The API answers 409 to a save while a Pull and redeploy runs.
+  const redeploying = containerRedeployInFlight(application);
+  const tr = useTranslations("applications.redeploy");
 
   async function save() {
     setSaving(true);
@@ -225,6 +229,7 @@ export function ComposeEditor({
               size="sm"
               disabled={
                 saving ||
+                redeploying ||
                 !dirty ||
                 contents.trim() === "" ||
                 (generated && !acknowledged)
@@ -233,7 +238,9 @@ export function ComposeEditor({
               disabledReason={
                 saving
                   ? null
-                  : !dirty
+                  : redeploying
+                    ? tr("busy")
+                    : !dirty
                     ? tc("nothingToSave")
                     : contents.trim() === ""
                       ? tc("enterAValue")

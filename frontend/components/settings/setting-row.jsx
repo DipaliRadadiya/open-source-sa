@@ -149,6 +149,8 @@ export function SectionActions({
   pending,
   onDiscard,
   canManage,
+  // Something else holds the card for now (e.g. a job running on this item).
+  blockedReason = null,
 }) {
   const t = useTranslations("settings.common");
   // Named by its own Save label — unique per card, and already translated.
@@ -156,7 +158,7 @@ export function SectionActions({
 
   // Whatever is standing in the way, or null once the button is live. Ordered
   // by which one the user can do something about.
-  const reason = !canManage ? t("readOnly") : !isDirty ? t("nothingToSave") : null;
+  const reason = !canManage ? t("readOnly") : blockedReason ?? (!isDirty ? t("nothingToSave") : null);
 
   return (
     <>

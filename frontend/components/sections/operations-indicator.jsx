@@ -19,6 +19,8 @@ import {
   Upload,
   XCircle,
   Clock,
+  Container,
+  PackagePlus,
 } from "lucide-react";
 import { apiStampUtc, listOperations } from "@/lib/api/operations";
 import { isActive, operationsResponseSchema } from "@/lib/schemas/operation";
@@ -38,6 +40,8 @@ const ICONS = {
   clone: Copy,
   staging: FlaskConical,
   deployment: Rocket,
+  application_install: PackagePlus,
+  container_redeploy: Container,
   database_export: Download,
   database_import: Upload,
   runtime_install: Cpu,

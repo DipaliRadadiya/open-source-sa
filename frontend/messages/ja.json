@@ -6411,8 +6411,7 @@
       "saveImage": "レジストリを保存",
       "settingsSection": "ネットワークと制限",
       "settingsSectionHint": "このコンテナの接続方法と、使用できるサーバーリソースの量です。",
-      "pulling": "取得して再デプロイしています…",
-      "pullingHint": "イメージをダウンロードしてコンテナーを作り直しています。大きなイメージでは数分かかることがあります。"
+      "pulling": "取得して再デプロイしています…"
     },
     "compose": {
       "title": "compose ファイル",
@@ -6769,6 +6768,16 @@
       "failed": "アプリケーションを再起動できませんでした。",
       "pausedHint": "先にアプリケーションを再開してください。",
       "notReadyHint": "アプリケーションの実行後に利用できます。"
+    },
+    "redeploy": {
+      "busy": "「取得して再デプロイ」を実行中です。完了するまでお待ちください。",
+      "started": "「取得して再デプロイ」を開始しました。完了するとこのページが更新されます。",
+      "runningHint": "イメージをダウンロードし、コンテナを作り直しています。このページを離れても続行されます。",
+      "succeeded": "イメージを取得し、コンテナを作り直しました。",
+      "failed": "「取得して再デプロイ」に失敗しました。",
+      "lastFailed": "前回の「取得して再デプロイ」は失敗しました: {reason}",
+      "lastFailedPlain": "前回の「取得して再デプロイ」は失敗しました。",
+      "reference": "参照: {reference}"
     }
   },
   "panelUpdate": {
@@ -8313,7 +8322,9 @@
       "runtime_install": "ソフトウェアのインストール",
       "sync": "サーバー同期",
       "security_update": "セキュリティ更新",
-      "panel_update": "パネルの更新"
+      "panel_update": "パネルの更新",
+      "application_install": "アプリケーションのインストール",
+      "container_redeploy": "取得して再デプロイ"
     }
   }
 }

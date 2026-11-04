@@ -36,7 +36,11 @@ export default async function ApplicationLayout({ children, params }) {
       <ApplicationNav items={items} application={result?.application ?? null} gitProvider={gitProvider} iconDataUri={iconDataUri} />
       {name ? <PageCrumb href={`/applications/${application}`}>{name}</PageCrumb> : null}
       {result?.application ? (
-        <ApplicationStatusWatcher id={result.application.id} status={result.application.status} />
+        <ApplicationStatusWatcher
+          id={result.application.id}
+          status={result.application.status}
+          redeploy={result.application.container_redeploy ?? null}
+        />
       ) : null}
       {orphaned ? (
         <SystemUserMissing

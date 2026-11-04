@@ -6411,8 +6411,7 @@
       "saveImage": "Guardar registro",
       "settingsSection": "Red y límites",
       "settingsSectionHint": "Cómo se conecta este contenedor y cuánto del servidor puede usar.",
-      "pulling": "Descargando y volviendo a desplegar…",
-      "pullingHint": "Descargando la imagen y recreando el contenedor. Con una imagen grande puede tardar unos minutos."
+      "pulling": "Descargando y volviendo a desplegar…"
     },
     "compose": {
       "title": "Archivo compose",
@@ -6769,6 +6768,16 @@
       "failed": "No pudimos reiniciar la aplicación.",
       "pausedHint": "Primero reanuda la aplicación.",
       "notReadyHint": "Disponible cuando la aplicación esté en ejecución."
+    },
+    "redeploy": {
+      "busy": "Se está ejecutando Descargar y volver a desplegar. Espera a que termine.",
+      "started": "Se inició Descargar y volver a desplegar. Esta página se actualiza cuando termine.",
+      "runningHint": "Descargando la imagen y recreando el contenedor. Sigue en marcha aunque salgas de esta página.",
+      "succeeded": "Se descargó la imagen y se recreó el contenedor.",
+      "failed": "Falló Descargar y volver a desplegar.",
+      "lastFailed": "El último Descargar y volver a desplegar falló: {reason}",
+      "lastFailedPlain": "El último Descargar y volver a desplegar falló.",
+      "reference": "Referencia: {reference}"
     }
   },
   "panelUpdate": {
@@ -8313,7 +8322,9 @@
       "runtime_install": "Instalación de software",
       "sync": "Sincronización del servidor",
       "security_update": "Actualizaciones de seguridad",
-      "panel_update": "Actualización del panel"
+      "panel_update": "Actualización del panel",
+      "application_install": "Instalación de aplicación",
+      "container_redeploy": "Descargar y volver a desplegar"
     }
   }
 }

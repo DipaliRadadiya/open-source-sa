@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { enableApplication, retryProvisioning } from "@/lib/api/applications";
 import { pauseControl } from "@/lib/applications/pause-control";
+import { containerRedeployInFlight } from "@/lib/applications/settled";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,11 +94,14 @@ export function ApplicationRowActions({
   // Docker apps have no process card; their restart lives here. The API refuses it
   // while paused or not yet running, so say why instead of offering a 422.
   const showRestart = canManage && application.serving_profile === "docker";
+  const redeploying = containerRedeployInFlight(application);
   const restartHint = application.is_disabled
     ? t("restart.pausedHint")
     : application.status !== "active"
       ? t("restart.notReadyHint")
-      : null;
+      : redeploying
+        ? t("redeploy.busy")
+        : null;
 
   if (!showNavigation && !showRetry && !canManage) return null;
 
@@ -266,10 +270,17 @@ export function ApplicationRowActions({
                   {t("pause.action")}
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem variant="destructive" onSelect={() => { openingDialog.current = true; setDeleteOpen(true); }}>
-                <Trash2 className="size-4" />
-                {t("actions.delete")}
-              </DropdownMenuItem>
+              {/* The API answers 503 to a delete while a Pull and redeploy runs. */}
+              <MenuItemHint hint={redeploying ? t("redeploy.busy") : null}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={redeploying}
+                  onSelect={() => { openingDialog.current = true; setDeleteOpen(true); }}
+                >
+                  <Trash2 className="size-4" />
+                  {t("actions.delete")}
+                </DropdownMenuItem>
+              </MenuItemHint>
             </>
           ) : null}
         </DropdownMenuContent>

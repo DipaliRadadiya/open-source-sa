@@ -6411,8 +6411,7 @@
       "saveImage": "Guardar registo",
       "settingsSection": "Rede e limites",
       "settingsSectionHint": "Como este contentor se liga e quanto do servidor pode usar.",
-      "pulling": "Obtendo e reimplantando…",
-      "pullingHint": "Baixando a imagem e recriando o contêiner. Com uma imagem grande, isso pode levar alguns minutos."
+      "pulling": "Obtendo e reimplantando…"
     },
     "compose": {
       "title": "Ficheiro compose",
@@ -6759,9 +6758,9 @@
     "restart": {
       "action": "Reiniciar",
       "title": "Reiniciar {name}?",
-      "description": "Todos os contêineres desta aplicação são reiniciados no lugar.",
+      "description": "Todos os contentores desta aplicação são reiniciados no lugar.",
       "keeps": "Nada é excluído nem baixado de novo. Dados, volumes e configurações continuam como estão.",
-      "brief": "A aplicação fica indisponível por alguns segundos enquanto os contêineres voltam a funcionar.",
+      "brief": "A aplicação fica indisponível por alguns segundos enquanto os contentores voltam a funcionar.",
       "confirm": "Reiniciar",
       "restarting": "Reiniciando…",
       "cancel": "Cancelar",
@@ -6769,6 +6768,16 @@
       "failed": "Não foi possível reiniciar a aplicação.",
       "pausedHint": "Retome a aplicação primeiro.",
       "notReadyHint": "Disponível quando a aplicação estiver em execução."
+    },
+    "redeploy": {
+      "busy": "Um Obter e reimplantar está em execução. Aguarde até terminar.",
+      "started": "Obter e reimplantar iniciado. Esta página é atualizada quando terminar.",
+      "runningHint": "Baixando a imagem e recriando o contentor. Continua em execução mesmo se você sair desta página.",
+      "succeeded": "A imagem foi obtida e o contentor recriado.",
+      "failed": "Obter e reimplantar falhou.",
+      "lastFailed": "O último Obter e reimplantar falhou: {reason}",
+      "lastFailedPlain": "O último Obter e reimplantar falhou.",
+      "reference": "Referência: {reference}"
     }
   },
   "panelUpdate": {
@@ -8313,7 +8322,9 @@
       "runtime_install": "Instalação de software",
       "sync": "Sincronização do servidor",
       "security_update": "Atualizações de segurança",
-      "panel_update": "Atualização do painel"
+      "panel_update": "Atualização do painel",
+      "application_install": "Instalação de aplicação",
+      "container_redeploy": "Obter e reimplantar"
     }
   }
 }

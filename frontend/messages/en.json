@@ -6411,8 +6411,7 @@
       "saveImage": "Save registry",
       "settingsSection": "Network and limits",
       "settingsSectionHint": "How this container connects, and how much of the server it may use.",
-      "pulling": "Pulling and redeploying…",
-      "pullingHint": "Downloading the image and recreating the container. This can take a few minutes for a big image."
+      "pulling": "Pulling and redeploying…"
     },
     "compose": {
       "title": "Compose file",
@@ -6769,6 +6768,16 @@
       "failed": "We couldn't restart the application.",
       "pausedHint": "Resume the application first.",
       "notReadyHint": "Available once the application is running."
+    },
+    "redeploy": {
+      "busy": "A Pull and redeploy is running. Wait until it finishes.",
+      "started": "Pull and redeploy started. This page updates when it's done.",
+      "runningHint": "Downloading the image and recreating the container. It keeps running if you leave this page.",
+      "succeeded": "The image was pulled and the container recreated.",
+      "failed": "Pull and redeploy failed.",
+      "lastFailed": "The last Pull and redeploy failed: {reason}",
+      "lastFailedPlain": "The last Pull and redeploy failed.",
+      "reference": "Reference: {reference}"
     }
   },
   "panelUpdate": {
@@ -8313,7 +8322,9 @@
       "runtime_install": "Software install",
       "sync": "Server sync",
       "security_update": "Security updates",
-      "panel_update": "Panel update"
+      "panel_update": "Panel update",
+      "application_install": "Application install",
+      "container_redeploy": "Pull and redeploy"
     }
   }
 }

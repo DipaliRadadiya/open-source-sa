@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CircleAlert, FileText, Loader2, Plug, RotateCw, SlidersHorizontal } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import { cn } from "@/lib/utils";
+import { containerRedeployInFlight } from "@/lib/applications/settled";
 import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
 import { retryProvisioning } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
@@ -69,9 +70,10 @@ export function ContainerFailurePanel({
       return;
     }
     try {
-      await pullContainerImage(application.id);
+      // 202: queued, and the layout's watcher reports how it ended. An older API answers 200, done.
+      const res = await pullContainerImage(application.id);
       await refreshAndWait();
-      toast.success(t("fixed"));
+      toast.success(res.status === 202 ? t("queued") : t("fixed"));
     } catch (error) {
       // The new reason is on the site now; show it, not the old one.
       await refreshAndWait();
@@ -126,11 +128,14 @@ export function ContainerFailurePanel({
     if (await run("dialog", () => applyPort(port))) setDialogOpen(false);
   }
 
-  const working = busy !== null;
+  // A Pull and redeploy on the queue holds every fix here: the API answers 409 to each.
+  const redeploying = containerRedeployInFlight(application);
+  const working = busy !== null || redeploying;
   const title = application.container_status === "restarting" ? t("titleRestarting") : t("title");
   const usePort = fixPort && canManageContainer;
   const hasActions = canManageContainer || canEditEnv || canSeeLogs || canRedeploy;
-  const waiting = working && !firstDeploy;
+  // The readiness wait of this page's own click; a queued redeploy shows on its button.
+  const waiting = busy !== null && !firstDeploy;
   // No empty body under the header band when there is no log to show.
   const hasBody = canSeeLogs || waiting;
 
@@ -194,8 +199,8 @@ export function ContainerFailurePanel({
                 onClick={() => run("redeploy", redeploy)}
                 disabled={working}
               >
-                {busy === "redeploy" ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
-                {busy === "redeploy" ? t("redeploying") : t("redeploy")}
+                {busy === "redeploy" || redeploying ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
+                {busy === "redeploy" || redeploying ? t("redeploying") : t("redeploy")}
               </Button>
             ) : null}
           </div>

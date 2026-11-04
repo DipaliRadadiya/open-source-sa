@@ -6411,8 +6411,7 @@
       "saveImage": "Enregistrer le registre",
       "settingsSection": "Réseau et limites",
       "settingsSectionHint": "Comment ce conteneur se connecte et quelle part du serveur il peut utiliser.",
-      "pulling": "Récupération et redéploiement…",
-      "pullingHint": "Téléchargement de l'image et recréation du conteneur. Avec une grosse image, cela peut prendre quelques minutes."
+      "pulling": "Récupération et redéploiement…"
     },
     "compose": {
       "title": "Fichier compose",
@@ -6769,6 +6768,16 @@
       "failed": "Nous n'avons pas pu redémarrer l'application.",
       "pausedHint": "Réactivez d'abord l'application.",
       "notReadyHint": "Disponible une fois l'application en cours d'exécution."
+    },
+    "redeploy": {
+      "busy": "Un « Récupérer et redéployer » est en cours. Attendez qu'il se termine.",
+      "started": "« Récupérer et redéployer » a démarré. Cette page se met à jour une fois terminé.",
+      "runningHint": "Téléchargement de l'image et recréation du conteneur. Cela continue même si vous quittez cette page.",
+      "succeeded": "L’image a été récupérée et le conteneur recréé.",
+      "failed": "« Récupérer et redéployer » a échoué.",
+      "lastFailed": "Le dernier « Récupérer et redéployer » a échoué : {reason}",
+      "lastFailedPlain": "Le dernier « Récupérer et redéployer » a échoué.",
+      "reference": "Référence : {reference}"
     }
   },
   "panelUpdate": {
@@ -8313,7 +8322,9 @@
       "runtime_install": "Installation de logiciel",
       "sync": "Synchronisation du serveur",
       "security_update": "Mises à jour de sécurité",
-      "panel_update": "Mise à jour du panneau"
+      "panel_update": "Mise à jour du panneau",
+      "application_install": "Installation d'application",
+      "container_redeploy": "Récupérer et redéployer"
     }
   }
 }

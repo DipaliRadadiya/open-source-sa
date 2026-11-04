@@ -18,6 +18,10 @@ export function operationHref(operation, { canOpenApplications }) {
       return app("staging");
     case "deployment":
       return app("deployment");
+    case "application_install":
+      return appId && canOpenApplications ? `/applications/${appId}` : null;
+    case "container_redeploy":
+      return app("container");
     case "database_export":
     case "database_import":
       return subject.id ? `/databases/${subject.id}` : "/databases";

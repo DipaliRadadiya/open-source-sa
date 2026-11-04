@@ -134,6 +134,17 @@ export const applicationIssuesResponseSchema = z.object({
   healthy: z.boolean().default(true),
 });
 
+// Pull and redeploy runs in the background; `in_flight` is the persisted "Redeploying".
+export const containerRedeploySchema = z.object({
+  id: z.number().nullish(),
+  status: z.string().nullish(),
+  in_flight: z.boolean().catch(false),
+  failed_step: z.string().nullish(),
+  failed_reason_title: z.string().nullish(),
+  reference: z.string().nullish(),
+  finished_at_human: z.string().nullish(),
+});
+
 export const applicationSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -299,6 +310,8 @@ export const applicationSchema = z.object({
   // Containers that need attention, main part first, then optional helpers (max 10). `[]` when all
   // is well. `state` is a code worded here; unknown future codes are shown raw.
   health_warnings: z.array(z.object({ service: z.string(), state: z.string() })).catch([]),
+  // The newest Pull and redeploy of a Docker site; null for other sites and before the first.
+  container_redeploy: containerRedeploySchema.nullish().catch(null),
   // `log` and `last_line` are null for someone without `app_log`.
   last_failure: z
     .object({

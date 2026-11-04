@@ -95,7 +95,7 @@ test("every new Environment string exists in every locale", () => {
 
 test("an open application page re-renders when its deploy or setup ends", () => {
   const layout = read(`${APP}/layout.jsx`);
-  assert.match(layout, /<ApplicationStatusWatcher id=\{result\.application\.id\} status=\{result\.application\.status\} \/>/);
+  assert.match(layout, /<ApplicationStatusWatcher\s+id=\{result\.application\.id\}\s+status=\{result\.application\.status\}/);
   const watcher = read("components/applications/application-status-watcher.jsx");
   assert.match(watcher, /const inFlight = status === "pending" \|\| status === "provisioning";/);
   // Polls the status alone and refreshes once, on a change — not every tick.

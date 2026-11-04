@@ -6,6 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { containerRedeployFailure, containerRedeployInFlight } from "@/lib/applications/settled";
 import { Network, KeyRound, RefreshCw, Gauge, FileCode, Package, HardDrive } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
@@ -92,6 +93,10 @@ export function ContainerCard({
   const [savingImage, setSavingImage] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [pulling, setPulling] = useState(false);
+  const tr = useTranslations("applications.redeploy");
+  const lastRedeploy = application.container_redeploy ?? null;
+  const redeploying = containerRedeployInFlight(application);
+  const redeployFailure = containerRedeployFailure(lastRedeploy, t("pullFailed"));
 
   // The registry saves with the image card, the rest with the network card: each card
   // saves only its own fields (every field is optional on the PUT).
@@ -265,9 +270,10 @@ export function ContainerCard({
   async function pull() {
     setPulling(true);
     try {
-      await pullContainerImage(application.id);
+      // 202: queued, and the layout's watcher reports how it ended. An older API answers 200, done.
+      const res = await pullContainerImage(application.id);
       await refreshAndWait();
-      toast.success(t("pulled"));
+      toast.success(res.status === 202 ? tr("started") : t("pulled"));
     } catch (error) {
       toast.error(apiMessage(error, t("pullFailed")));
     } finally {
@@ -295,6 +301,7 @@ export function ContainerCard({
                   pending={savingImage}
                   onDiscard={() => imageForm.reset(imageDefaults)}
                   canManage={canManage}
+                  blockedReason={redeploying ? tr("busy") : null}
                 />
               }
             >
@@ -306,17 +313,21 @@ export function ContainerCard({
                     {application.image || (ownCompose ? t("ownCompose.title") : t("noImage"))}
                   </code>
                   {canManage ? (
-                    <Button type="button" variant="outline" disabled={pulling} onClick={pull}>
-                      <RefreshCw className={pulling ? "size-4 animate-spin" : "size-4"} />
-                      {pulling ? t("pulling") : t("pull")}
+                    <Button type="button" variant="outline" disabled={pulling || redeploying} onClick={pull}>
+                      <RefreshCw className={pulling || redeploying ? "size-4 animate-spin" : "size-4"} />
+                      {pulling || redeploying ? t("pulling") : t("pull")}
                     </Button>
                   ) : null}
                 </div>
-                {/* The pull runs inside this one request, for minutes on a big image: a spinning
-                    button with no words read as stuck (users, 3 Nov). */}
-                {pulling ? (
+                {/* Minutes on a big image: a spinning button with no words read as stuck (users, 3 Nov). */}
+                {pulling || redeploying ? (
                   <p role="status" className="mt-2 text-xs text-muted-foreground">
-                    {t("pullingHint")}
+                    {tr("runningHint")}
+                  </p>
+                ) : lastRedeploy?.status === "failed" ? (
+                  <p role="status" className="mt-2 text-xs text-destructive">
+                    {redeployFailure ? tr("lastFailed", { reason: redeployFailure }) : tr("lastFailedPlain")}
+                    {lastRedeploy.reference ? ` ${tr("reference", { reference: lastRedeploy.reference })}` : null}
                   </p>
                 ) : null}
               </InfoRow>
@@ -388,6 +399,7 @@ export function ContainerCard({
                       pending={savingSettings}
                       onDiscard={() => form.reset(defaults)}
                       canManage={canManage}
+                      blockedReason={redeploying ? tr("busy") : null}
                     />
                   }
                 >
@@ -429,6 +441,7 @@ export function ContainerCard({
                       pending={savingSettings}
                       onDiscard={() => form.reset(defaults)}
                       canManage={canManage}
+                      blockedReason={redeploying ? tr("busy") : null}
                     />
                   }
                 >

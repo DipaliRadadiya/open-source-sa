@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import { processSchema } from "@/lib/schemas/application";
+import { containerRedeploySchema, processSchema } from "@/lib/schemas/application";
 
 export function createApplication(payload) {
   return api.post("/applications", payload);
@@ -185,6 +185,12 @@ export function lockApplicationRoot(id) {
 export async function getApplicationStatus(id) {
   const res = await api.get(`/applications/${id}`);
   return res.data?.application?.status ?? null;
+}
+
+export async function getContainerRedeploy(id) {
+  const res = await api.get(`/applications/${id}`);
+  const parsed = containerRedeploySchema.nullish().safeParse(res.data?.application?.container_redeploy);
+  return parsed.success ? (parsed.data ?? null) : null;
 }
 
 // No process-only endpoint: the application read is the one that asks systemd.

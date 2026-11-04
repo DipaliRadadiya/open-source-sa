@@ -6411,8 +6411,7 @@
       "saveImage": "Registry speichern",
       "settingsSection": "Netzwerk und Limits",
       "settingsSectionHint": "Wie dieser Container verbunden ist und wie viel vom Server er nutzen darf.",
-      "pulling": "Wird geladen und neu ausgerollt…",
-      "pullingHint": "Das Image wird geladen und der Container neu erstellt. Bei einem großen Image kann das einige Minuten dauern."
+      "pulling": "Wird geladen und neu ausgerollt…"
     },
     "compose": {
       "title": "Compose-Datei",
@@ -6769,6 +6768,16 @@
       "failed": "Die Anwendung konnte nicht neu gestartet werden.",
       "pausedHint": "Setzen Sie die Anwendung zuerst fort.",
       "notReadyHint": "Verfügbar, sobald die Anwendung läuft."
+    },
+    "redeploy": {
+      "busy": "„Laden und neu ausrollen“ läuft. Warten Sie, bis es fertig ist.",
+      "started": "„Laden und neu ausrollen“ wurde gestartet. Diese Seite aktualisiert sich, wenn es fertig ist.",
+      "runningHint": "Das Image wird geladen und der Container neu erstellt. Es läuft weiter, auch wenn Sie diese Seite verlassen.",
+      "succeeded": "Das Image wurde geladen und der Container neu erstellt.",
+      "failed": "„Laden und neu ausrollen“ ist fehlgeschlagen.",
+      "lastFailed": "Das letzte „Laden und neu ausrollen“ ist fehlgeschlagen: {reason}",
+      "lastFailedPlain": "Das letzte „Laden und neu ausrollen“ ist fehlgeschlagen.",
+      "reference": "Referenz: {reference}"
     }
   },
   "panelUpdate": {
@@ -8313,7 +8322,9 @@
       "runtime_install": "Software-Installation",
       "sync": "Server-Sync",
       "security_update": "Sicherheitsupdates",
-      "panel_update": "Panel-Update"
+      "panel_update": "Panel-Update",
+      "application_install": "Anwendungsinstallation",
+      "container_redeploy": "Laden und neu ausrollen"
     }
   }
 }

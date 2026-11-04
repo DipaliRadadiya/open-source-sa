@@ -18,7 +18,21 @@ export function firstDeployPending(application) {
   );
 }
 
+// A Docker site's Pull and redeploy keeps `status` active while it runs in the background.
+export function containerRedeployInFlight(application) {
+  return Boolean(application?.container_redeploy?.in_flight);
+}
+
+// Localized reason when the API names one; a failed pull is worded even without it.
+export function containerRedeployFailure(run, pullFailedText) {
+  return run?.failed_reason_title ?? (run?.failed_step === "image_pull" ? pullFailedText : null);
+}
+
 /** A live site running a new deploy, rather than one being set up; or a first deploy still queued. */
 export function isRedeploying(application) {
-  return (application?.status === "provisioning" && hasBeenDeployed(application)) || firstDeployPending(application);
+  return (
+    (application?.status === "provisioning" && hasBeenDeployed(application)) ||
+    firstDeployPending(application) ||
+    containerRedeployInFlight(application)
+  );
 }

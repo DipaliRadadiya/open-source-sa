@@ -17,9 +17,10 @@ test("install progress: no sweeping bar that reads as a percentage; it says the 
 
 test("Pull and redeploy says what it is doing while the request runs", () => {
   const card = read("components/applications/container-card.jsx");
-  assert.match(card, /\{pulling \? t\("pulling"\) : t\("pull"\)\}/);
-  assert.match(card, /\{pulling \? \(\s*<p role="status" className="mt-2 text-xs text-muted-foreground">\s*\{t\("pullingHint"\)\}/);
-  each((m) => m.applications.container.pulling && m.applications.container.pullingHint);
+  // 4 Nov: the redeploy runs on the queue, so the words follow the server's state too.
+  assert.match(card, /\{pulling \|\| redeploying \? t\("pulling"\) : t\("pull"\)\}/);
+  assert.match(card, /\{pulling \|\| redeploying \? \(\s*<p role="status" className="mt-2 text-xs text-muted-foreground">\s*\{tr\("runningHint"\)\}/);
+  each((m) => m.applications.container.pulling && m.applications.redeploy.runningHint);
 });
 
 test("the create form says HTTPS turns on by itself", () => {
