@@ -147,16 +147,17 @@ export function RunsCell({ row }) {
         ) : null}
         {/* Falls back to the backup's own timestamp, not "Never": the runner's
             crash path does not write `last_run_at`. */}
-        <span className="truncate text-sm tabular-nums">
+        <span className="text-sm whitespace-normal tabular-nums">
           {lastBackup?.created_at_human ?? target.last_backup_at_human ?? t("neverRunShort")}
         </span>
       </div>
       {/* `is_due` outranks the timestamp: a new target's first backup runs on
           the next tick while `next_run_at` still names tomorrow. */}
+      {/* Wraps, not cut: in a fixed-width column "Próxima: en 11 horas" lost its end. */}
       {target.is_due ? (
-        <p className="truncate text-xs text-muted-foreground">{t("runsShortly")}</p>
+        <p className="text-xs whitespace-normal text-muted-foreground">{t("runsShortly")}</p>
       ) : target.next_run_at_human ? (
-        <p className="truncate text-xs tabular-nums text-muted-foreground">
+        <p className="text-xs whitespace-normal tabular-nums text-muted-foreground">
           {t("nextRun", { when: target.next_run_at_human })}
         </p>
       ) : null}
@@ -266,9 +267,8 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
     {
       accessorKey: "application.name",
       header: t("columns.site"),
-      // max-w-0 lets the name and domain truncate; without it their full width
-      // set the column and the table needed 1,100px in French.
-      meta: { className: "w-[28%] max-w-0" },
+      // Takes what the fixed columns leave; max-w-0 lets the name and domain truncate.
+      meta: { className: "max-w-0" },
       cell: SiteCell,
     },
     // Headers may wrap so long translations don't widen the columns.
@@ -279,7 +279,7 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
     { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: "w-28" }, cell: TypeCell },
     { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
     { id: "storage", header: wrapping(t("columns.storage")), meta: { className: "w-32" }, cell: StorageCell },
-    { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: "w-36" }, cell: RunsCell },
+    { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: "w-40" }, cell: RunsCell },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("columns.actions")}</span>,
@@ -291,6 +291,8 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
   return (
     <DataTable
       bare={bare}
+      // Binding widths: the databases table below uses the same ones and must line up.
+      fixedLayout
       columns={columns}
       data={rows}
       emptyMessage={t("noMatches")}

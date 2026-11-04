@@ -21,6 +21,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   const [query, setQuery] = useState("");
   const minimal = user?.applications ?? []; // list gives id + name only
   const [apps, setApps] = useState(null); // null = loading
+  const [detailFailed, setDetailFailed] = useState(false);
 
   // Fetch full detail on open (domain/status live on the detail endpoint). Falls
   // back to the minimal list data if the fetch fails.
@@ -32,7 +33,11 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
         (res) =>
           active && setApps(res.data?.system_user?.applications ?? minimal),
       )
-      .catch(() => active && setApps(minimal));
+      .catch(() => {
+        if (!active) return;
+        setApps(minimal);
+        setDetailFailed(true);
+      });
     return () => {
       active = false;
     };
@@ -44,6 +49,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   function handleOpenChange(next) {
     if (!next) {
       setApps(null);
+      setDetailFailed(false);
       setQuery("");
     }
     onOpenChange?.(next);
@@ -100,6 +106,8 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
             <EmptyState compact icon={AppWindow} badge={null} title={t("detail.noApplications")} />
           ) : (
             <div className="space-y-3">
+              {/* Without the detail read the rows are names only; say so rather than look complete. */}
+              {detailFailed ? <p role="status" className="text-xs text-muted-foreground">{t("appsDetailFailed")}</p> : null}
               {shown.length >= SEARCH_FROM ? (
                 <LocalSearchInput value={query} onChange={setQuery} placeholder={ta("searchPlaceholder")} className="sm:max-w-none" />
               ) : null}
@@ -131,10 +139,9 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                             {/* The same words as the Applications page, as a dot: a badge on every row took half the width. */}
                             {app.status ? <ApplicationStatusDot application={app} className="mt-0.5 shrink-0" /> : null}
                           </span>
+                          {/* A long domain wraps to a second line rather than being cut: a tooltip never opens on a phone. */}
                           {app.domain ? (
-                            <HoverHint content={app.domain}>
-                              <span className="block truncate font-mono text-xs text-muted-foreground">{app.domain}</span>
-                            </HoverHint>
+                            <span className="block break-all font-mono text-xs text-muted-foreground">{app.domain}</span>
                           ) : loading ? (
                             <Skeleton className="mt-1.5 h-3 w-28" />
                           ) : null}

@@ -192,3 +192,17 @@ test("databases on their own share the applications table's columns, actions and
   assert.match(card, /<DatabaseCards \{\.\.\.listProps\} \/>/);
   assert.match(read("app/(app)/backups/page.jsx"), /canManage=\{can\(permissions, "database", "manage"\)\}/);
 });
+
+// 4 Nov: with auto layout the widths were hints, so at 1280 (and in Spanish) the databases
+// table drifted up to 11px from the applications table above it.
+test("both backup tables use binding, identical column widths", () => {
+  const apps = read("components/backups/coverage-table.jsx");
+  const dbs = read("components/backups/database-coverage-card.jsx");
+  for (const src of [apps, dbs]) {
+    assert.match(src, /<DataTable[\s\S]{0,200}fixedLayout/);
+    for (const w of ["w-28", "w-32", "w-40", "w-44 text-right"]) assert.match(src, new RegExp(`className: "${w}"`));
+  }
+  assert.doesNotMatch(apps + dbs, /w-\[28%\]/);
+  // The next-run line wraps inside the fixed column rather than losing its end.
+  assert.match(apps, /<p className="text-xs whitespace-normal tabular-nums text-muted-foreground">\s*\{t\("nextRun"/);
+});

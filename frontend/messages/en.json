@@ -218,6 +218,7 @@
       "shell": "Login shell"
     },
     "appsSubtitle": "Applications this user owns and runs.",
+    "appsDetailFailed": "Domains and status couldn't be loaded. Close and open this again to retry.",
     "sshForm": {
       "add": "Add SSH key",
       "title": "SSH keys",

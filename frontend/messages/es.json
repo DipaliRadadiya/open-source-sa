@@ -218,6 +218,7 @@
       "shell": "Shell de inicio de sesión"
     },
     "appsSubtitle": "Aplicaciones que este usuario posee y ejecuta.",
+    "appsDetailFailed": "No se pudieron cargar los dominios ni el estado. Cierra y vuelve a abrir para reintentarlo.",
     "sshForm": {
       "add": "Añadir clave SSH",
       "title": "Claves SSH",

@@ -218,6 +218,7 @@
       "shell": "Shell de login"
     },
     "appsSubtitle": "Aplicações que este usuário possui e executa.",
+    "appsDetailFailed": "Não foi possível carregar os domínios e o estado. Feche e abra de novo para tentar outra vez.",
     "sshForm": {
       "add": "Adicionar chave SSH",
       "title": "Chaves SSH",

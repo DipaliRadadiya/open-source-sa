@@ -218,6 +218,7 @@
       "shell": "Shell de connexion"
     },
     "appsSubtitle": "Applications que cet utilisateur détient et exécute.",
+    "appsDetailFailed": "Impossible de charger les domaines et le statut. Fermez puis rouvrez pour réessayer.",
     "sshForm": {
       "add": "Ajouter une clé SSH",
       "title": "Clés SSH",

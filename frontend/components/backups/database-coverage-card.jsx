@@ -235,17 +235,19 @@ function DatabaseTable({ rows, options, canOpenDatabases, canManage, onBackUpNow
   const t = useTranslations("backups.databases");
   const tc = useTranslations("backups.coverage");
   const columns = [
-    { id: "database", header: t("columns.database"), meta: { className: "w-[28%] max-w-0" }, cell: NameCell },
+    { id: "database", header: t("columns.database"), meta: { className: "max-w-0" }, cell: NameCell },
     { id: "engine", header: wrapping(t("columns.engine")), meta: { className: "w-28" }, cell: EngineCell },
     { id: "schedule", header: wrapping(tc("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
     { id: "storage", header: wrapping(tc("columns.storage")), meta: { className: "w-32" }, cell: StorageCell },
-    { id: "runs", header: wrapping(tc("columns.lastRun")), meta: { className: "w-36" }, cell: RunsCell },
+    { id: "runs", header: wrapping(tc("columns.lastRun")), meta: { className: "w-40" }, cell: RunsCell },
     { id: "actions", header: () => <span className="sr-only">{tc("columns.actions")}</span>, meta: { className: "w-44 text-right" }, cell: ActionsCell },
   ];
 
   return (
     <DataTable
       bare
+      // Fixed widths, as in the applications table above, so the two line up at every width.
+      fixedLayout
       columns={columns}
       data={rows}
       rowId={(row) => String(row.database.id)}

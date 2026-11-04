@@ -218,6 +218,7 @@
       "shell": "Anmelde-Shell"
     },
     "appsSubtitle": "Anwendungen, die dieser Benutzer besitzt und ausführt.",
+    "appsDetailFailed": "Domains und Status konnten nicht geladen werden. Schließen und erneut öffnen, um es noch einmal zu versuchen.",
     "sshForm": {
       "add": "SSH-Schlüssel hinzufügen",
       "title": "SSH-Schlüssel",

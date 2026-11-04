@@ -507,7 +507,9 @@ test("Backups overview: the table only shows when the widest locale fits, and it
   assert.match(table, /header: wrapping\(t\("columns\.typeShort"\)\)/);
   assert.match(table, /header: wrapping\(t\("columns\.storage"\)\)/);
   assert.doesNotMatch(table, /StackedHeader/);
-  assert.match(table, /meta: \{ className: "w-\[28%\] max-w-0" \}/);
+  // 4 Nov: fixed layout; the name takes what the fixed columns leave (704px of them), so the
+  // databases table below lines up and names still truncate rather than widen the table.
+  assert.match(table, /meta: \{ className: "max-w-0" \}/);
   assert.doesNotMatch(table, /accessorKey: "state"/);
 });
 

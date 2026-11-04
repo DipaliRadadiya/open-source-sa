@@ -89,4 +89,8 @@ test("the applications popup is one column with logos, status dots and a search 
   assert.match(dialog, /shown\.length >= SEARCH_FROM \?/);
   assert.match(dialog, /ta\("noMatch", \{ query: query\.trim\(\) \}\)/);
   assert.match(dialog, /line-clamp-2/);
+  // A tooltip never opens on a phone, so a long domain wraps instead of being cut.
+  // A failed detail read leaves names only, and says so.
+  assert.match(dialog, /\{detailFailed \? <p role="status" className="text-xs text-muted-foreground">\{t\("appsDetailFailed"\)\}<\/p> : null\}/);
+  assert.match(dialog, /block break-all font-mono text-xs text-muted-foreground">\{app\.domain\}/);
 });
