@@ -77,3 +77,16 @@ test("Services: the locked boot switch explains itself on a tap too", () => {
   const src = read("components/services/service-boot-switch.jsx");
   assert.match(src, /<ReasonTooltip reason=\{canToggle \? null : t\("noPermission"\)\}>\{control\}<\/ReasonTooltip>/);
 });
+
+// Krishna, 4 Nov: the popup's two narrow columns cut every domain and broke long names
+// into six lines. One column with the app's logo, a status dot and a search for long lists.
+test("the applications popup is one column with logos, status dots and a search for long lists", () => {
+  const dialog = su("system-user-apps-dialog.jsx");
+  assert.doesNotMatch(dialog, /sm:grid-cols-2/);
+  assert.match(dialog, /<ul className="divide-y overflow-hidden rounded-lg border">/);
+  assert.match(dialog, /<SiteTypeLogo name=\{app\.site_type\}/);
+  assert.match(dialog, /<ApplicationStatusDot application=\{app\}/);
+  assert.match(dialog, /shown\.length >= SEARCH_FROM \?/);
+  assert.match(dialog, /ta\("noMatch", \{ query: query\.trim\(\) \}\)/);
+  assert.match(dialog, /line-clamp-2/);
+});
