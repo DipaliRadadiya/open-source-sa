@@ -2517,6 +2517,8 @@
       "filterAll": "All",
       "filterOn": "On",
       "filterOff": "Off",
+      "stateOn": "On",
+      "stateOff": "Off",
       "panelNeedsShort": "Needed by the panel",
       "driftWebOnly": "On for websites, off for the command line",
       "driftCliOnly": "On for the command line, off for websites",

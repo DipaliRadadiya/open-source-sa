@@ -2517,6 +2517,8 @@
       "filterAll": "Tout",
       "filterOn": "Activé",
       "filterOff": "Désactivé",
+      "stateOn": "Activée",
+      "stateOff": "Désactivée",
       "panelNeedsShort": "Nécessaire pour le panel",
       "driftWebOnly": "Activée pour les sites, désactivée en ligne de commande",
       "driftCliOnly": "Activée en ligne de commande, désactivée pour les sites",

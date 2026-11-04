@@ -2517,6 +2517,8 @@
       "filterAll": "सभी",
       "filterOn": "चालू",
       "filterOff": "बंद",
+      "stateOn": "चालू",
+      "stateOff": "बंद",
       "panelNeedsShort": "पैनल को इसकी ज़रूरत है",
       "driftWebOnly": "वेबसाइटों के लिए चालू, कमांड लाइन के लिए बंद",
       "driftCliOnly": "कमांड लाइन के लिए चालू, वेबसाइटों के लिए बंद",

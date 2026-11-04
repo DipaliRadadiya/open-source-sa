@@ -2517,6 +2517,8 @@
       "filterAll": "Alle",
       "filterOn": "Aktiv",
       "filterOff": "Inaktiv",
+      "stateOn": "An",
+      "stateOff": "Aus",
       "panelNeedsShort": "Vom Panel benötigt",
       "driftWebOnly": "Für Websites aktiv, für die Kommandozeile inaktiv",
       "driftCliOnly": "Für die Kommandozeile aktiv, für Websites inaktiv",

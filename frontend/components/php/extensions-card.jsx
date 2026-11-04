@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ChevronDown, Info, Loader2, SearchX, TriangleAlert, Puzzle } from "lucide-react";
+import { ChevronDown, Info, Loader2, Lock, SearchX, TriangleAlert, Puzzle } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { setPhpExtension } from "@/lib/api/php";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
+import { cn } from "@/lib/utils";
 
 // `sapis` only drifts after a manual `phpenmod`/`phpdismod`. Returns a translation key or null.
 function driftOf(extension) {
@@ -170,14 +171,19 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             <ul aria-label={t("extensions.title")} className="-mr-px -mb-px grid grid-cols-1 @xl/ext:grid-cols-2 @6xl/ext:grid-cols-3">
                 {shown.map((extension) => {
                   const required = panelRequired.includes(extension.name);
+                  // Its own install still running: switching off then was undone a second later
+                  // by the install's last step, while the row already said "Off" (4 Nov, .111).
+                  const installing = extension.status === "installing";
                   // One at a time: each switch runs apt, and a second run would fail on the lock.
                   const reason = !canManage
                     ? t("noPermission")
                     : required
                       ? t("extensions.panelNeeds")
-                      : pending && pending.name !== extension.name
-                        ? t("extensions.waitForOther", { name: pending.name })
-                        : null;
+                      : installing
+                        ? t("extensions.waitForOther", { name: extension.name })
+                        : pending && pending.name !== extension.name
+                          ? t("extensions.waitForOther", { name: pending.name })
+                          : null;
 
                   return (
                     <li key={extension.name} className="flex items-center justify-between gap-4 border-r border-b px-4 py-2.5">
@@ -259,15 +265,36 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                               </span>
                             </span>
                           ) : null}
-                          <ReasonTooltip reason={reason}>
-                            <Switch
-                              checked={extension.enabled}
-                              onCheckedChange={() => toggle(extension)}
-                              disabled={Boolean(reason) || pending?.name === extension.name}
-                              aria-label={t("extensions.toggle", { name: extension.name })}
-                              aria-busy={pending?.name === extension.name || undefined}
-                            />
-                          </ReasonTooltip>
+                          {required ? (
+                            // Said, not hidden behind a hover: a faded switch read as broken (users, 4 Nov).
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground" title={t("extensions.panelNeeds")}>
+                              <Lock className="size-3.5 shrink-0" aria-hidden />
+                              {t("extensions.panelNeedsShort")}
+                            </span>
+                          ) : (
+                            <>
+                              {/* The word as well as the colour: on and off differed only by shade in dark mode. */}
+                              {pending?.name === extension.name ? null : (
+                                <span aria-hidden className={cn("min-w-7 text-right text-xs font-medium whitespace-nowrap", installing ? "text-muted-foreground" : extension.enabled ? "text-primary" : "text-muted-foreground")}>
+                                  {installing
+                                    ? t("extensions.installingNow")
+                                    : extension.enabled
+                                      ? t("extensions.stateOn")
+                                      : t("extensions.stateOff")}
+                                </span>
+                              )}
+                              <ReasonTooltip reason={reason}>
+                                <Switch
+                                  size="lg"
+                                  checked={extension.enabled}
+                                  onCheckedChange={() => toggle(extension)}
+                                  disabled={Boolean(reason) || pending?.name === extension.name}
+                                  aria-label={t("extensions.toggle", { name: extension.name })}
+                                  aria-busy={pending?.name === extension.name || undefined}
+                                />
+                              </ReasonTooltip>
+                            </>
+                          )}
                         </span>
                         )}
 

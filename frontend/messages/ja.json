@@ -2517,6 +2517,8 @@
       "filterAll": "すべて",
       "filterOn": "オン",
       "filterOff": "オフ",
+      "stateOn": "オン",
+      "stateOff": "オフ",
       "panelNeedsShort": "パネルが必要",
       "driftWebOnly": "ウェブサイトではオン、コマンドラインではオフ",
       "driftCliOnly": "コマンドラインではオン、ウェブサイトではオフ",
