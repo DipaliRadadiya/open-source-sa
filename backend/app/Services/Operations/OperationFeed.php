@@ -2,6 +2,7 @@
 
 namespace App\Services\Operations;
 
+use App\Models\ApplicationRun;
 use App\Models\Backup;
 use App\Models\DatabaseExport;
 use App\Models\DatabaseImport;
@@ -91,7 +92,9 @@ class OperationFeed
         $state = self::STATE[$status] ?? 'running';
 
         // A staging run whose worker died reports itself failed (RC-16).
-        if ($row instanceof StagingRun && $row->isStranded()) {
+        // So does a container redeploy's (D5); an install's is closed with
+        // its site by StrandedProvisioning.
+        if (($row instanceof StagingRun || $row instanceof ApplicationRun) && $row->isStranded()) {
             $state = 'failed';
         }
 
@@ -138,6 +141,15 @@ class OperationFeed
                 'subject' => fn (SiteClone $c) => self::application($c->sourceApplication)],
             ['kind' => 'staging', 'model' => StagingRun::class, 'permission' => 'app_staging', 'step' => 'kind', 'with' => ['application:id,name'],
                 'subject' => fn (StagingRun $s) => self::application($s->application)],
+            // D3 (2026-11-04): an install of any site type — create and Retry
+            // setup both run ProvisionApplication — and a container Pull and
+            // redeploy. One table, read twice, like `runtime_install`.
+            ['kind' => 'application_install', 'model' => ApplicationRun::class, 'permission' => 'application', 'step' => 'failed_step', 'with' => ['application:id,name'],
+                'scope' => fn (Builder $q) => $q->where('kind', ApplicationRun::INSTALL),
+                'subject' => fn (ApplicationRun $r) => self::application($r->application)],
+            ['kind' => 'container_redeploy', 'model' => ApplicationRun::class, 'permission' => 'app_container', 'step' => 'failed_step', 'with' => ['application:id,name'],
+                'scope' => fn (Builder $q) => $q->where('kind', ApplicationRun::CONTAINER_REDEPLOY),
+                'subject' => fn (ApplicationRun $r) => self::application($r->application)],
             ['kind' => 'deployment', 'model' => Deployment::class, 'permission' => 'app_deployment', 'step' => 'failed_step', 'with' => ['application:id,name'],
                 'subject' => fn (Deployment $d) => self::application($d->application)],
             ['kind' => 'database_export', 'model' => DatabaseExport::class, 'permission' => 'database', 'step' => null,

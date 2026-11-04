@@ -7,6 +7,7 @@ use App\Jobs\InstallIonCubeLoader;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Jobs\InstallSupervisor;
+use App\Jobs\RedeployContainerApplication;
 use App\Jobs\RemovePhpVersion;
 use App\Jobs\RunBackup;
 use App\Jobs\RunRestore;
@@ -107,7 +108,9 @@ it('keeps the jobs that size themselves inside it too', function (string $connec
     // that change and this one. Asserted on the instances rather than on the
     // config key, so a job that stops reading the key is caught too.
     expect((new RunBackup(1))->timeout)->toBeLessThan($retryAfter)
-        ->and((new RunRestore(1, 1))->timeout)->toBeLessThan($retryAfter);
+        ->and((new RunRestore(1, 1))->timeout)->toBeLessThan($retryAfter)
+        // Pull and redeploy (D5): `compose pull` + `compose up`.
+        ->and((new RedeployContainerApplication(1))->timeout)->toBeLessThan($retryAfter);
 })->with(['database', 'redis', 'beanstalkd']);
 
 // Every job that runs apt through ServerOps::apt(), which waits out a lock

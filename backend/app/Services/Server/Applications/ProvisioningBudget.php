@@ -70,6 +70,16 @@ class ProvisioningBudget
     }
 
     /**
+     * Pull and redeploy (D5): `compose pull` and `compose up` in sequence, each
+     * under the Docker command timeout, plus the readiness check and the
+     * override write that the overhead already allows for.
+     */
+    public function forContainerRedeploy(): int
+    {
+        return $this->overhead() + 2 * (int) config('server.docker.command_timeout', 600);
+    }
+
+    /**
      * The largest budget any job can ask for, for the bound `retry_after` has
      * to clear. Derived from the installer list, so adding a slower app raises
      * it (and trips the test that checks the queue config) instead of silently
@@ -77,7 +87,7 @@ class ProvisioningBudget
      */
     public function longest(): int
     {
-        $timeouts = [$this->forDeploy()];
+        $timeouts = [$this->forDeploy(), $this->forContainerRedeploy()];
 
         foreach (array_keys((array) config('server.installers', [])) as $siteType) {
             $timeouts[] = $this->forSiteType((string) $siteType);

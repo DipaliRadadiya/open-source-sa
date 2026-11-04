@@ -9,12 +9,14 @@ use App\Enums\DomainType;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
+use App\Models\ApplicationRun;
 use App\Models\SystemUser;
 use App\Rules\ContainerMountPath;
 use App\Rules\SupportedNodeVersion;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\ApplicationRuns;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\Php\ServerDefaultPhp;
@@ -226,7 +228,10 @@ class CreateApplication
         }
 
         // Provisioning is long enough that the request must not wait for it;
-        // the client polls the application's status.
+        // the client polls the application's status, and Background jobs
+        // reads the install run opened here (D3).
+        app(ApplicationRuns::class)->open($application, ApplicationRun::INSTALL, Auth::id());
+
         ProvisionApplication::dispatch($application->id, Auth::id());
 
         return $application->fresh(['systemUser']);

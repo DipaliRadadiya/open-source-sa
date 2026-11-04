@@ -5,7 +5,6 @@ namespace App\Actions\Server\Application;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
-use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerSupervisor;
 
@@ -21,27 +20,33 @@ use App\Services\Server\Applications\ContainerSupervisor;
 class PullContainerImage
 {
     public function __construct(
-        private ActivityLogger $activityLogger,
         private ContainerSupervisor $containers,
         private ApplicationProvisioner $provisioner,
     ) {}
 
-    public function execute(Application $application): Application
+    /**
+     * The refusals, on their own so the request can give them before anything
+     * is queued (D5). Asked again by `execute()` when the job runs: the site can
+     * be paused or start provisioning in the meantime.
+     */
+    public function assertPullable(Application $application): void
     {
         abort_unless(
             $application->status === ApplicationStatus::Active && $application->disabled_at === null,
             422,
             __('errors/application.container_not_running'),
         );
+    }
 
-        // Recorded BEFORE the pull, not after. A pull that fails, times out, or
-        // takes the site down is the one somebody will be looking for in the log,
-        // and an entry written only on success is an entry missing exactly then.
-        $this->activityLogger->log('application.container_pulled', $application, [
-            'name' => $application->name,
-            'image' => $application->image,
-            'registry_id' => $application->registry_id,
-        ]);
+    /**
+     * Run by the queued job (`RedeployContainerApplication`). The activity
+     * entry is written by `StartContainerRedeploy` when the redeploy is asked
+     * for — still before the pull, and with the person who asked as its actor,
+     * which a queue worker does not have.
+     */
+    public function execute(Application $application): Application
+    {
+        $this->assertPullable($application);
 
         // Cleared first, so a row that failed last time does not keep showing
         // yesterday's reason beside today's success.
@@ -53,10 +58,10 @@ class PullContainerImage
                 $this->provisioner->documentRoot($application),
             );
         } catch (ProvisioningFailedException $e) {
-            // Recorded on the row, not only thrown. The provisioning JOB does this
-            // for every other failure, and this endpoint is synchronous — so
-            // without it the card beside the button shows a healthy site while the
-            // pull that just failed is reported only by a toast that clears itself.
+            // Recorded on the row, not only thrown — and on the application, not
+            // only on the run: the failure card beside the button reads these, so
+            // without them it shows a healthy site while the pull that just failed
+            // is reported nowhere the person who pressed it is looking.
             //
             // Found on a real box: a rejected credential returned a bare 500
             // "Server Error" and left `failed_reason` null, which is exactly the

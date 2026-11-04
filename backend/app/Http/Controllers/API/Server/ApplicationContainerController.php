@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
-use App\Actions\Server\Application\PullContainerImage;
+use App\Actions\Server\Application\StartContainerRedeploy;
 use App\Actions\Server\Application\UpdateContainerCompose;
 use App\Actions\Server\Application\UpdateContainerSettings;
 use App\Actions\Server\SystemUser\DisableContainerLogin;
@@ -13,11 +13,13 @@ use App\Http\Requests\Server\Application\EnableContainerLoginRequest;
 use App\Http\Requests\Server\Application\UpdateComposeRequest;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
 use App\Http\Resources\ApplicationResource;
+use App\Http\Resources\ApplicationRunResource;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Recipes\RecipeCredentials;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ApplicationRuns;
 use App\Services\Server\Applications\ContainerAccess;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\DnsVerifier;
@@ -277,6 +279,8 @@ class ApplicationContainerController extends Controller
             __('errors/application.not_a_container'),
         );
 
+        $this->refuseWhileRedeploying($application);
+
         try {
             $updated = $action->execute($application, (string) $request->validated('compose'));
         } catch (ProvisioningFailedException $e) {
@@ -310,12 +314,15 @@ class ApplicationContainerController extends Controller
      * nothing. It is also the only way a private image can be updated at all,
      * since a rebuild of the site is the alternative.
      *
-     * Synchronous, like the settings endpoint above, and for the same reason: the
-     * caller should get the pull's real failure rather than a 202 and a site that
-     * quietly stayed where it was. A large image on a slow link is covered by the
-     * command timeout, not by a queue.
+     * Queued (D5, 2026-11-04), unlike the settings and compose saves: a pull is
+     * a download of any size, and while it ran inside this request nothing
+     * recorded it — a reload mid-pull showed a site with nothing happening, and
+     * Background jobs stayed empty. 202 with the run; the pull's real failure
+     * (reason, step, reference) lands on that run and on the application,
+     * which the screen polls. Refusals that need no pull — not a container,
+     * not running, a redeploy already under way — still answer here.
      */
-    public function pull(Application $application, PullContainerImage $action): JsonResponse
+    public function pull(Application $application, StartContainerRedeploy $action): JsonResponse
     {
         abort_unless(
             $application->serving_profile === 'docker',
@@ -323,26 +330,12 @@ class ApplicationContainerController extends Controller
             __('errors/application.not_a_container'),
         );
 
-        try {
-            $pulled = $action->execute($application);
-        } catch (ProvisioningFailedException $e) {
-            // 422 with the reason, not a 500 with "Server Error". The step and the
-            // reference are what support needs; the titled reason is what the
-            // person pressing the button needs, and a wrong credential is their
-            // problem to fix rather than a server fault to report.
-            return response()->json([
-                'message' => $e->reason !== null
-                    ? __('application.failure_reason.'.$e->reason)
-                    : __('errors/application.container_pull_failed'),
-                'step' => $e->step,
-                'reason' => $e->reason,
-                'reference' => $e->reference,
-            ], 422);
-        }
+        $run = $action->execute($application);
 
         return response()->json([
-            'application' => ApplicationResource::make($pulled)->resolve(),
-        ]);
+            'application' => ApplicationResource::make($application->fresh(['systemUser', 'registry', 'latestContainerRedeploy']))->resolve(),
+            'redeploy' => ApplicationRunResource::make($run)->resolve(),
+        ], 202);
     }
 
     /**
@@ -366,6 +359,8 @@ class ApplicationContainerController extends Controller
             422,
             __('errors/application.not_a_container'),
         );
+
+        $this->refuseWhileRedeploying($application);
 
         try {
             $updated = $action->execute(
@@ -393,5 +388,18 @@ class ApplicationContainerController extends Controller
         return response()->json([
             'application' => ApplicationResource::make($updated)->resolve(),
         ]);
+    }
+
+    /**
+     * A settings or compose save runs its own `compose up`; while a Pull and
+     * redeploy is under way that would race the one in its job (D5).
+     */
+    private function refuseWhileRedeploying(Application $application): void
+    {
+        abort_if(
+            app(ApplicationRuns::class)->redeployInFlight($application) !== null,
+            409,
+            __('errors/application.container_redeploy_running', ['name' => $application->name]),
+        );
     }
 }

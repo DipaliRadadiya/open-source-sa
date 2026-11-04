@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ApplicationRuns;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ServerOpsResult;
 
@@ -27,6 +28,7 @@ class RestartContainerApplication
         private ActivityLogger $activityLogger,
         private ContainerSupervisor $containers,
         private ApplicationProvisioner $provisioner,
+        private ApplicationRuns $runs,
     ) {}
 
     public function execute(Application $application): ServerOpsResult
@@ -43,6 +45,14 @@ class RestartContainerApplication
             $application->disabled_at !== null,
             422,
             __('errors/application.container_restart_paused', $name),
+        );
+
+        // A Pull and redeploy is recreating these containers right now (D5): a
+        // restart under it would act on the old ones or on half-made new ones.
+        abort_if(
+            $this->runs->redeployInFlight($application) !== null,
+            409,
+            __('errors/application.container_restart_redeploying', $name),
         );
 
         abort_unless(

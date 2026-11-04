@@ -8,8 +8,10 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
+use App\Models\ApplicationRun;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ApplicationRuns;
 use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -80,6 +82,13 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
             'provisioning_started_at' => now(),
         ]);
 
+        // What Background jobs lists (D3): the row opened where this job was
+        // queued, or a new one for a job queued before such rows existed.
+        // Resolved here rather than injected: tests and callers run this
+        // handle() directly with the two services it always had.
+        $runs = app(ApplicationRuns::class);
+        $run = $runs->startInstall($application, $this->actorId);
+
         try {
             $steps = $provisioner->provision($application);
 
@@ -91,6 +100,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
                 // nothing reads it again. Kept on failure, for Retry setup.
                 'install_secrets' => null,
             ]);
+
+            $runs->succeed($run);
 
             $activityLogger->log('application.provisioned', $application, [
                 'name' => $application->name,
@@ -110,6 +121,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
                 'failed_reason' => $e->reason,
                 'reference' => $e->reference,
             ]);
+
+            $runs->fail($run, $e->step, $e->reason, $e->reference);
 
             $activityLogger->log('application.provision_failed', $application, [
                 'name' => $application->name,
@@ -170,6 +183,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
             ]);
 
         if ($updated === 1) {
+            app(ApplicationRuns::class)->failOpen($this->applicationId, ApplicationRun::INSTALL, 'worker', $reference);
+
             $application = Application::find($this->applicationId);
             app(ActivityLogger::class)->log('application.provision_failed', $application, [
                 'name' => $application?->name,

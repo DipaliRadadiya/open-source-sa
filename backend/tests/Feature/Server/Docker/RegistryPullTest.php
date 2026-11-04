@@ -327,23 +327,26 @@ it('pulls and reports the site back', function () {
     $ran = [];
     recordPull($ran);
 
+    // 202 since D5: the pull runs on the queue (`sync` here, so it has run).
     $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
         ->postJson('/api/applications/'.$this->application->id.'/container/pull')
-        ->assertOk()
-        ->assertJsonPath('application.registry_id', $this->registry->id);
+        ->assertStatus(202)
+        ->assertJsonPath('application.registry_id', $this->registry->id)
+        ->assertJsonPath('redeploy.status', 'succeeded');
 
     expect(composeCall($ran, 'pull'))->not->toBeNull();
 });
 
 /*
- * The endpoint's failure shape. Found on a real box, not here: the classifier was
- * asserted from the supervisor and nothing checked that the ENDPOINT surfaced it,
- * so a rejected credential answered a bare 500 "Server Error" and left the row
+ * The failure shape. Found on a real box, not here: the classifier was asserted
+ * from the supervisor and nothing checked that the ENDPOINT surfaced it, so a
+ * rejected credential answered a bare 500 "Server Error" and left the row
  * claiming the site was fine — which is the uninformative failure this whole
- * feature exists to replace.
+ * feature exists to replace. Since D5 the pull is queued, so the reason lands on
+ * the redeploy run the screen polls instead of in the response.
  */
 
-it('answers 422 with the reason, not 500 with nothing', function () {
+it('records the reason on the run, not 500 with nothing', function () {
     $ran = [];
     recordPull($ran, fn () => Process::result(
         output: '',
@@ -353,13 +356,15 @@ it('answers 422 with the reason, not 500 with nothing', function () {
 
     $response = $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
         ->postJson('/api/applications/'.$this->application->id.'/container/pull')
-        ->assertStatus(422)
-        ->assertJsonPath('reason', 'registry_credentials_rejected');
+        ->assertStatus(202)
+        ->assertJsonPath('redeploy.status', 'failed')
+        ->assertJsonPath('redeploy.failed_reason', 'registry_credentials_rejected');
 
     // The titled reason, so the person who pressed the button is told what to fix
     // rather than being handed a log reference and a shrug.
-    expect($response->json('message'))->toBe(__('application.failure_reason.registry_credentials_rejected'))
-        ->and($response->json('reference'))->not->toBeEmpty();
+    expect($response->json('redeploy.failed_reason_title'))->toBe(__('application.failure_reason.registry_credentials_rejected'))
+        ->and($response->json('redeploy.reference'))->not->toBeEmpty()
+        ->and($response->json('application.container_redeploy.in_flight'))->toBeFalse();
 });
 
 it('records the failure on the row, so the card does not claim the site is fine', function () {
@@ -375,7 +380,8 @@ it('records the failure on the row, so the card does not claim the site is fine'
 
     $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
         ->postJson('/api/applications/'.$this->application->id.'/container/pull')
-        ->assertStatus(422);
+        ->assertStatus(202)
+        ->assertJsonPath('redeploy.failed_step', 'image_pull');
 
     expect($this->application->fresh()->failed_reason)->toBe('registry_auth')
         ->and($this->application->fresh()->failed_step)->toBe('image_pull');
@@ -390,7 +396,7 @@ it('clears a previous failure when a pull succeeds', function () {
 
     $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
         ->postJson('/api/applications/'.$this->application->id.'/container/pull')
-        ->assertOk();
+        ->assertStatus(202);
 
     expect($this->application->fresh()->failed_reason)->toBeNull()
         ->and($this->application->fresh()->failed_step)->toBeNull();

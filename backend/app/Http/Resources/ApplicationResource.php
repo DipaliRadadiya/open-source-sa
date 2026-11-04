@@ -396,6 +396,13 @@ class ApplicationResource extends JsonResource
             // relation without calling back, which skipped the `last_commit`
             // fallback for every site with no recorded checkout.
             'code_on_disk' => $this->when($this->resource->relationLoaded('latestCheckout'), fn () => $this->codeOnDisk()),
+            // The newest Pull and redeploy of a container site, or null (D5).
+            // `in_flight` is the persisted "Redeploying": the site stays
+            // `active` while it runs, because it keeps serving until the
+            // container is recreated. Eager-loaded on the list.
+            'container_redeploy' => $this->resource->serving_profile === 'docker' && $this->resource->latestContainerRedeploy !== null
+                ? ApplicationRunResource::make($this->resource->latestContainerRedeploy)->resolve()
+                : null,
             'last_deployed_at' => $this->last_deployed_at?->format('d-m-Y H:i:s'),
             'last_deployed_at_human' => $this->last_deployed_at?->diffForHumans(),
             // Quote this to support; the technical detail is in the server-ops

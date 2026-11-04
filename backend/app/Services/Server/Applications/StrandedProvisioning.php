@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Enums\ApplicationStatus;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\ApplicationRun;
 use App\Services\ActivityLogger;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -67,6 +68,8 @@ class StrandedProvisioning
         if ($updated !== 1) {
             return false;
         }
+
+        app(ApplicationRuns::class)->failOpen($application->id, ApplicationRun::INSTALL, 'worker', $reference);
 
         Log::error('provisioning job never finished; marked failed', [
             'reference' => $reference,

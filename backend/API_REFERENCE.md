@@ -531,7 +531,7 @@ Unauthenticated. (The example here was out of date; corrected 2026-10-20.)
 ### GET `/operations`
 **Auth:** any signed-in user — the list is cut down to the kinds their role can see. **Throttle:** `progress` (polled). Added 2026-10-20 (RC-20).
 
-Backups, restores, clones, staging runs, deployments, PHP/Node installs, database imports and exports, syncs, security updates and panel updates — running now, and finished within the last `hours` (default 24, max 168). Newest first, at most 100 rows (50 per kind).
+Backups, restores, clones, staging runs, deployments, application installs, container Pull and redeploys, PHP/Node installs, database imports and exports, syncs, security updates and panel updates — running now, and finished within the last `hours` (default 24, max 168). Newest first, at most 100 rows (50 per kind).
 
 **Query:** `?active=1` — only queued and running work (what a header indicator polls) · `?hours=48` · `?finished_after=22-10-2026 17:55:00` — with `active=1`, also the work that finished after that moment (pass the time of your previous poll), so a job that started and ended between two polls still reaches you as `done`/`failed` (RC-36, 2026-10-22). Same `d-m-Y H:i:s` format as every date here; at most a day back, else `422`. `meta.running` still counts only waiting/running rows.
 
@@ -546,11 +546,13 @@ Backups, restores, clones, staging runs, deployments, PHP/Node installs, databas
  "meta": {"running": 1, "hours": 24}}
 ```
 
-- **`state`** is one word for every kind: `waiting` | `running` | `done` | `failed`. **`status`** is the kind's own word (`verified`, `completed`, `succeeded`, `ready`, …) for display. A staging run whose worker died reads `failed`.
-- **`kind`**: `backup` · `restore` · `clone` · `staging` · `deployment` · `database_export` · `database_import` · `runtime_install` · `sync` · `security_update` · `panel_update`.
+- **`state`** is one word for every kind: `waiting` | `running` | `done` | `failed`. **`status`** is the kind's own word (`verified`, `completed`, `succeeded`, `ready`, …) for display. A staging run or a container redeploy whose worker died reads `failed`.
+- **`kind`**: `backup` · `restore` · `clone` · `staging` · `deployment` · `application_install` · `container_redeploy` · `database_export` · `database_import` · `runtime_install` · `sync` · `security_update` · `panel_update`.
+- **`application_install`** (2026-11-04, D3): one row per install of a site of **any** type — creating it and every Retry setup (`POST …/provision`). `waiting` from the moment it is queued, `running` while the install job runs, then `done`/`failed`; a failed one carries `step` (the failed step) and `reference`. It stays `done` when a later deploy fails the site. Statuses `queued` · `running` · `succeeded` · `failed`. Subject: the application.
+- **`container_redeploy`** (2026-11-04, D5): one row per Pull and redeploy (`POST …/container/pull`), same statuses and `step`/`reference` on failure (`image_pull`, `container_start`, `container_exited`, `container_not_answering`, …, `container_not_running` when the site was paused or stopped before the worker got to it, `worker` when the job died). Subject: the application.
 - **`subject`**: `{"type": "application"|"database"|"server", "id", "name"}` — link a row to the screen that owns it. Server-wide jobs have `id: null`; a runtime install names the version (`"PHP 8.3"`).
 - **`step`**: the current step where the kind records one (restore, clone, import, install, panel update), the failed step for a deployment, `push`/`pull` for a staging run; else `null`.
-- **Who sees what:** each kind needs the permission its own screen needs — `backup` (backups, restores), `app_clone`, `app_staging`, `app_deployment`, `database` (imports, exports), `php` / `node` (installs), `sync`, `setting` (security updates); panel updates are administrators only.
+- **Who sees what:** each kind needs the permission its own screen needs — `backup` (backups, restores), `app_clone`, `app_staging`, `app_deployment`, `application` (application installs), `app_container` (container redeploys), `database` (imports, exports), `php` / `node` (installs), `sync`, `setting` (security updates); panel updates are administrators only.
 - `meta.running` counts the `waiting` + `running` rows in the answer.
 
 ---
@@ -1240,7 +1242,7 @@ Start / stop / restart the site's own process (Node apps only). `{action}` = `st
 
 `422` if the app has no process (PHP sites).
 
-**Docker apps** (`serving_profile: "docker"` — one-click recipes and plain images): `restart` runs `docker compose restart` on all of the app's containers, in place (no pull, no recreate; volumes and data are kept) and answers `200` only once at least one container is running again. `start` and `stop` stay `422` — for a container app those are Pause and Resume. `restart` is refused with `422` and a localized `message` while the app is not `active` yet (pending, provisioning, failed), while it is paused, and when Docker does not answer on the server; nothing is touched in those cases. A restart that ran but left nothing running is a `500` with a `reference`. Recorded in the activity log as `application.process_restart`.
+**Docker apps** (`serving_profile: "docker"` — one-click recipes and plain images): `restart` runs `docker compose restart` on all of the app's containers, in place (no pull, no recreate; volumes and data are kept) and answers `200` only once at least one container is running again. `start` and `stop` stay `422` — for a container app those are Pause and Resume. `restart` is refused with `422` and a localized `message` while the app is not `active` yet (pending, provisioning, failed), while it is paused, and when Docker does not answer on the server, and with **`409`** (`errors/application.container_restart_redeploying`) while a Pull and redeploy of the app is queued or running (2026-11-04); nothing is touched in those cases. A restart that ran but left nothing running is a `500` with a `reference`. Recorded in the activity log as `application.process_restart`.
 
 **Response `200`:** `{"application": {...}}`
 
@@ -1413,6 +1415,8 @@ place to hide one file.
 Delete the application record. Optionally delete its data.
 
 **Request body (all optional):** `{"remove_files": false, "remove_databases": false}`
+
+`503` `errors/server.busy` while the site is provisioning, and (2026-11-04) while a container Pull and redeploy of it is queued or running — the job would otherwise bring its containers back after the delete.
 
 **`remove_docker_images`** (2026-10-29, Docker sites only): also remove the images the site's containers ran, once its containers are gone — but only images **no other container on the server uses** (running or stopped), and never with `--force`, so Docker itself refuses one still in use. **On by default for a user with `docker` manage**, off (and not removed) for one without; sending `true` without that permission is a `403`, like `remove_docker_resources`. Send `false` to keep them. What was removed and what was kept, with the reason (`image:mysql:8.0:used-by-…`), is in the `application.docker_resources_removed` activity row.
 
@@ -7261,7 +7265,7 @@ Response `201`: `{ application, warnings: [] }`. `warnings` is always a list of 
 
 ### Readiness check, `container_status`, `last_failure`
 
-After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked until anything answers HTTP on `127.0.0.1:<app_port>` — **any status counts** — or until `DOCKER_READINESS_TIMEOUT` seconds (90) of wall-clock time have passed, capped at 150 (DS-09). The cap bounds the check, not the request: the wait and the diagnostics after it (`compose ps`/`logs`, at most 30 s each) stay inside the panel's 300 s request timeout, but the `compose up` and pull before it may take up to `DOCKER_COMMAND_TIMEOUT` (600 s) because an image can be gigabytes (the first install, which runs in the queued provisioning job rather than a request, gives that `compose up` `DOCKER_INSTALL_TIMEOUT` instead: 1200 s, for every one-click app and every Container-tab site, RC-20) — so on a slow pull the synchronous `PUT …/container` or Pull can still end in a gateway timeout. PHP normally carries on past the gateway and stores the outcome on the site, so re-read the application rather than treating a timeout as a failure (DS-12). A container that exits fails at once. One that keeps restarting with nothing answering fails after `DOCKER_READINESS_RESTART_GRACE` seconds (30) — except in a pasted compose file, whose services may restart while they wait for each other: there it fails only at the deadline. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure. `seconds` in a `container_not_answering` failure is the time actually waited. A pasted compose file has no single container port, so its message names none rather than the host port.
+After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked until anything answers HTTP on `127.0.0.1:<app_port>` — **any status counts** — or until `DOCKER_READINESS_TIMEOUT` seconds (90) of wall-clock time have passed, capped at 150 (DS-09). The cap bounds the check, not the request: the wait and the diagnostics after it (`compose ps`/`logs`, at most 30 s each) stay inside the panel's 300 s request timeout, but the `compose up` and pull before it may take up to `DOCKER_COMMAND_TIMEOUT` (600 s) because an image can be gigabytes (the first install, which runs in the queued provisioning job rather than a request, gives that `compose up` `DOCKER_INSTALL_TIMEOUT` instead: 1200 s, for every one-click app and every Container-tab site, RC-20) — so on a slow pull the synchronous `PUT …/container` can still end in a gateway timeout (Pull and redeploy is queued since 2026-11-04 and cannot). PHP normally carries on past the gateway and stores the outcome on the site, so re-read the application rather than treating a timeout as a failure (DS-12). A container that exits fails at once. One that keeps restarting with nothing answering fails after `DOCKER_READINESS_RESTART_GRACE` seconds (30) — except in a pasted compose file, whose services may restart while they wait for each other: there it fails only at the deadline. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure. `seconds` in a `container_not_answering` failure is the time actually waited. A pasted compose file has no single container port, so its message names none rather than the host port.
 
 **An image with its own `HEALTHCHECK` is judged by it instead (DS-14).** `healthy` passes, `unhealthy` fails at once with `container_unhealthy`, and while Docker still says `starting` the panel does not request `/` at all — Docker's check is already asking, and a second requester during a first boot is what left Kanboard's lazy migration half applied (DS-11). If the check is still `starting` at the deadline, one request to `/` decides: an answer passes the deploy with `container_status: starting`, which the live read below turns into `running` or `unhealthy` once Docker has a verdict. Images without a healthcheck are checked exactly as before.
 
@@ -7289,6 +7293,22 @@ On the application:
   "last_line": "…", "log": "<last 50 lines>", "at": "2026-10-07T18:40:00+00:00" }
 ```
 `message` is in the viewer's locale. `log` and `last_line` (and the last line in `message`) only for users with `app_log` view; otherwise `null`. The failure is also on `failed_step` / `failed_reason` (see the table above).
+
+### POST `/applications/{application}/container/pull` — Pull and redeploy
+**Permission:** `app_container` (manage). **Throttle:** 6/min.
+
+`compose pull`, then `compose up -d --remove-orphans` on the new image, then the readiness check — what a floating tag or a private image needs to actually move. **Queued since 2026-11-04 (D5):** it ran inside the request (19 s for a small image, minutes for a large one) and recorded nothing while it ran. It now answers at once:
+
+**Response `202`:** `{"application": {...}, "redeploy": {"id": 7, "kind": "container_redeploy", "status": "queued", "in_flight": true, "failed_step": null, "failed_reason": null, "failed_reason_title": null, "reference": null, "created_at": "04-11-2026 12:00:00", "started_at": null, "finished_at": null, "finished_at_human": null}}`
+
+The same object is on the application as **`container_redeploy`** (newest redeploy of a Docker site; `null` for other sites and before the first one), on `GET /applications/{id}`, the list, and every other response that returns the application. Poll the application while `container_redeploy.in_flight` is `true` — that is the persisted "Redeploying"; `status` stays `active` (the site serves until its container is recreated). `status`: `queued` → `running` → `succeeded` | `failed`. A failure carries `failed_step`, `failed_reason` (+ `failed_reason_title`, localized) and `reference` — the same values as the old `422` body — and is also written to the application's own `failed_step` / `failed_reason`, as before. A run whose worker died reads `status: failed`, `failed_step: worker`, `in_flight: false`, and no longer blocks anything. Also listed in `GET /operations` as kind `container_redeploy`. The activity entry `application.container_pulled` is written when the redeploy is accepted, with the requesting user.
+
+Refused, with nothing queued:
+- `422` `errors/application.not_a_container` — not a Docker site.
+- `422` `errors/application.container_not_running` — not `active` (pending, provisioning, failed) or paused.
+- `409` `errors/application.container_redeploy_running` — a redeploy of this site is already queued or running.
+
+While a redeploy is queued or running, these also answer `409` with `errors/application.container_redeploy_running`: `PUT …/container` (settings) and `PUT …/container/compose`; `POST …/process/restart` answers `409` `errors/application.container_restart_redeploying`; `DELETE /applications/{id}` answers `503` `errors/server.busy`.
 
 ---
 

@@ -28,12 +28,14 @@ use App\Http\Resources\AppSidebarResource;
 use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\ApplicationRun;
 use App\Models\Backup;
 use App\Models\Permission;
 use App\Models\Restore;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\AdoptedSiteConfig;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ApplicationRuns;
 use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
@@ -62,7 +64,7 @@ class ApplicationController extends Controller
             // every row, and the alternative to loading it here is a query per
             // application. Loaded on the list as well as `show()` so the two
             // cannot disagree about whether the field exists.
-            ->with('systemUser', 'botRules')
+            ->with('systemUser', 'botRules', 'latestContainerRedeploy')
             // Exact matches on indexed columns; the enum and the site-type list
             // are validated in the request, so anything reaching here is real.
             // A paused site is `active` in the column, so Running has to
@@ -133,7 +135,7 @@ class ApplicationController extends Controller
         // So reloading the page and pressing save deleted every custom rule
         // the site had.
         return response()->json([
-            'application' => ApplicationResource::make($application->load('systemUser', 'botRules', 'latestCheckout'))->resolve(),
+            'application' => ApplicationResource::make($application->load('systemUser', 'botRules', 'latestCheckout', 'latestContainerRedeploy'))->resolve(),
         ]);
     }
 
@@ -166,6 +168,10 @@ class ApplicationController extends Controller
         // `failed_reason` too: it was added after this line was written, and a
         // retried site that then succeeded went on showing the old reason.
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'failed_reason' => null, 'reference' => null]);
+
+        // Opened here, like a deployment row, so Background jobs shows the
+        // retry as waiting before a worker picks it up (D3).
+        app(ApplicationRuns::class)->open($application, ApplicationRun::INSTALL, Auth::id());
 
         ProvisionApplication::dispatch($application->id, Auth::id());
 
@@ -364,6 +370,7 @@ class ApplicationController extends Controller
         DeleteApplicationDatabases $databases,
         DeleteApplicationDockerResources $dockerResources,
         StrandedProvisioning $stranded,
+        ApplicationRuns $runs,
         AdoptedSiteConfig $adopted,
         CertificateLock $certificates,
     ): JsonResponse {
@@ -396,6 +403,10 @@ class ApplicationController extends Controller
             }
 
             abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
+
+            // A Pull and redeploy still running would `compose up` this site's
+            // containers again after the delete removed them (D5).
+            abort_if($runs->redeployInFlight($application) !== null, 503, __('errors/server.busy'));
 
             // Its backups are archived on delete; one still being written, or a
             // restore still replacing the site, would finish against nothing.

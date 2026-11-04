@@ -487,6 +487,24 @@ class Application extends Model
             : null;
     }
 
+    public function runs(): HasMany
+    {
+        return $this->hasMany(ApplicationRun::class);
+    }
+
+    /**
+     * The newest Pull and redeploy of a container site (D5): what the app
+     * screen reads to show "Redeploying" across a reload, and how the last one
+     * ended.
+     */
+    public function latestContainerRedeploy(): HasOne
+    {
+        return $this->hasOne(ApplicationRun::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where('kind', ApplicationRun::CONTAINER_REDEPLOY),
+        );
+    }
+
     /**
      * The newest deploy that got as far as checking out a commit — the code
      * that is on disk now, whether or not that deploy went on to succeed.
