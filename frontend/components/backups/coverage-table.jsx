@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Cells are module-level components: flexRender treats a cell function's identity
 // as the component type, so one defined in render remounts every time.
@@ -40,14 +41,13 @@ function SiteCell({ row }) {
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 items-center gap-2">
-        <Link
+        <HoverHint content={application.name}><Link
           prefetch={false}
           href={`/applications/${application.id}/backups`}
-          title={application.name}
           className="truncate font-medium underline-offset-4 hover:underline"
         >
           {application.name}
-        </Link>
+        </Link></HoverHint>
         {application.is_staging ? (
           <Badge variant="secondary" className="shrink-0 text-xs">
             {t("staging")}
@@ -173,12 +173,11 @@ function BackupStatusDot({ status, label }) {
         ? "bg-destructive"
         : "bg-primary";
   return (
-    <span
+    <HoverHint content={label}><span
       className={cn("size-1.5 shrink-0 rounded-full", tone)}
       role="img"
       aria-label={label}
-      title={label}
-    />
+    /></HoverHint>
   );
 }
 

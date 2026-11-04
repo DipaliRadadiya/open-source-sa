@@ -27,6 +27,7 @@ import {
   Form,
   FormField,
 } from "@/components/ui/form";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // `deploy_script` comes back filled from the build command even when unset;
 // `deploy_script_customised` marks a real one and decides whether Reset is offered.
@@ -265,14 +266,13 @@ function TokenList({ label, tokens, values, onInsert }) {
           <Fragment key={token}>
             <dt className="min-w-0">
               {onInsert ? (
-                <button
+                <HoverHint content={token}><button
                   type="button"
                   onClick={() => onInsert(token)}
-                  title={token}
                   className="rounded bg-background px-1.5 py-0.5 font-mono text-xs ring-1 ring-inset ring-border transition-colors hover:bg-primary/10 hover:text-primary hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   {token}
-                </button>
+                </button></HoverHint>
               ) : (
                 <code className="rounded bg-background px-1.5 py-0.5 font-mono text-xs ring-1 ring-inset ring-border">
                   {token}

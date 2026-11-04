@@ -46,6 +46,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 /**
  * Networks and volumes on this server, as two lists built like every other list in
@@ -428,9 +429,9 @@ function VolumeName({ volume, appName }) {
           it truncates from the left; <bdi> keeps the leading "/" where it belongs. */}
       {volume.mountpoint ? (
         <span className="mt-0.5 flex min-w-0 items-center gap-1">
-          <code className="min-w-0 truncate font-mono text-xs text-muted-foreground" dir="rtl" title={volume.mountpoint}>
+          <HoverHint content={volume.mountpoint}><code className="min-w-0 truncate font-mono text-xs text-muted-foreground" dir="rtl">
             <bdi dir="ltr">{volume.mountpoint}</bdi>
-          </code>
+          </code></HoverHint>
           <CopyButton value={volume.mountpoint} label={t("volumes.copyPath")} className="size-6" />
         </span>
       ) : null}

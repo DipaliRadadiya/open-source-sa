@@ -136,11 +136,11 @@ test("every cell that can hold a long value can also shrink", () => {
   // value that can be longer than its column.
   const owner = table.slice(table.indexOf("function OwnerCell"), table.indexOf("function OwnerCell") + 400);
   assert.match(owner, /block truncate/, "OwnerCell truncates inline, so it never truncates");
-  assert.match(owner, /title=\{value\}/, "OwnerCell clips without saying what it clipped");
+  assert.match(owner, /content=\{value\}/, "OwnerCell clips without saying what it clipped");
   // Runs on and Last backup wrap instead: a cut "Node.js 24.…" or "Nicht gesch…" said
   // nothing (7 Oct). Runs on is one plain line with no logo, the exact version as a title.
   const runsOn = table.slice(table.indexOf("function RunsOnCell"), table.indexOf("function LastBackupCell"));
-  assert.match(runsOn, /title=\{runtimeLabel\(runtime, t, tDocker, \{ full: true \}\)\}/);
+  assert.match(runsOn, /content=\{runtimeLabel\(runtime, t, tDocker, \{ full: true \}\)\}/);
   assert.match(runsOn, /whitespace-normal break-words/);
   assert.doesNotMatch(runsOn, /<img|Container/);
   const lastBackup = table.slice(table.indexOf("function LastBackupCell"), table.indexOf("function OwnerCell"));
@@ -151,7 +151,7 @@ test("every cell that can hold a long value can also shrink", () => {
   // …and "Not set up" links to the Backups tab, where "Set up backups" is.
   assert.match(lastBackup, /href=\{`\/applications\/\$\{row\.original\.id\}\/backups`\}/);
 
-  assert.match(table, /<span className="truncate" title=\{row\.original\.name\}>/);
+  assert.match(table, /<HoverHint content=\{row\.original\.name\}><span className="truncate">/);
 });
 
 test("the badges wrap under the name instead of squeezing it", () => {

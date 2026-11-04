@@ -96,7 +96,7 @@ test("the owner cell can actually truncate", () => {
   assert.match(cell, /min-w-0 truncate/, "each name must be able to truncate");
   assert.match(
     cell,
-    /title=/,
+    /<HoverHint content=/,
     "a truncated owner must still be readable in full",
   );
 });

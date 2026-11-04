@@ -4,16 +4,16 @@ import { ArrowRight, ArrowUpCircle, CircleX, Terminal, TriangleAlert } from "luc
 import { cn } from "@/lib/utils";
 import { MAX_NAMES, summarizeAttention } from "@/lib/admin/attention-summary";
 import { updateAttention } from "@/lib/admin/dashboard-facts";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // One slim line per kind of problem (at most three), linking to its detail page: the
 // same rows as the server dashboard's attention panel.
 function Row({ tone, icon: Icon, title, summary, action, href }) {
   return (
     <li>
-      <Link
+      <HoverHint content={summary ?? undefined}><Link
         href={href}
         prefetch={false}
-        title={summary ?? undefined}
         className="group flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-card px-3 py-2.5 shadow-e1 ring-1 ring-border/70 transition-colors hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span
@@ -40,7 +40,7 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
           {action}
           <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>
-      </Link>
+      </Link></HoverHint>
     </li>
   );
 }

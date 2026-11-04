@@ -60,7 +60,7 @@ test("the destination column is only hidden where it does not fit", () => {
   // overflowed by 270px at 1024 even with the Site column gone.
   assert.doesNotMatch(TABLE, /className: "hidden w-\d+ xl:table-cell"/, "the column pins a width again");
   // Truncated on a laptop, so the full name has to be reachable somehow.
-  assert.match(TABLE, /title=\{name\}/, "a truncated destination name can no longer be read in full");
+  assert.match(TABLE, /content=\{name\}/, "a truncated destination name can no longer be read in full");
 });
 
 test("the field is declared rather than surviving on passthrough", () => {

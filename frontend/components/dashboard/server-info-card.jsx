@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortVersion } from "@/lib/databases/short-version";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
 const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
@@ -67,7 +68,7 @@ function Fact({ label, value, mono }) {
 
 function SoftwareChip({ mark, name, version, title }) {
   return (
-    <li title={title} className={cn(CELL, "flex items-center gap-3 px-4 py-3")}>
+    <HoverHint content={title}><li className={cn(CELL, "flex items-center gap-3 px-4 py-3")}>
       <span
         aria-hidden
         className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-[2px] border bg-muted/40 px-1 font-mono text-xs font-semibold tracking-[0.04em] text-[var(--primary-700,var(--primary))] dark:text-primary"
@@ -80,7 +81,7 @@ function SoftwareChip({ mark, name, version, title }) {
           <span className="block truncate font-mono text-xs text-muted-foreground">{version}</span>
         ) : null}
       </span>
-    </li>
+    </li></HoverHint>
   );
 }
 
@@ -293,11 +294,11 @@ function ServiceHealthLine({ health, down, t }) {
   // services, so it opens the Services page and names them on hover.
   return (
     <Badge asChild variant="success" className="gap-1.5 py-1 font-medium hover:underline">
-      <Link href="/services" prefetch={false} title={(health.names ?? []).join(", ")}>
+      <HoverHint content={(health.names ?? []).join(", ")}><Link href="/services" prefetch={false}>
         <span aria-hidden className="size-1.5 shrink-0 bg-current" />
         {t("info.servicesOk", { count: health.total })}
         <ChevronRight className="size-3.5 shrink-0" aria-hidden />
-      </Link>
+      </Link></HoverHint>
     </Badge>
   );
 }

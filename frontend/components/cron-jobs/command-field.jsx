@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 const CUSTOM = "custom";
 // Examples are commands, so not translated. The PHP one only where a PHP template fits.
@@ -257,7 +258,7 @@ export function CommandField({
                     <SelectItem key={application.id} value={String(application.id)}>
                       {/* Stacked: a fixed label column would widen the dropdown past the dialog. */}
                       <span className="flex min-w-0 flex-col items-start gap-0.5 py-0.5">
-                        <span className="truncate" title={application.name}>{application.name}</span>
+                        <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>
                         <span className="truncate font-mono text-xs text-muted-foreground">
                           {application.path}
                         </span>

@@ -2,6 +2,7 @@
 import * as React from "react"
 import { cva } from "class-variance-authority";
 import { useTranslations } from "next-intl";
+import { HoverHint } from "@/components/ui/hover-hint";
 import { Slot } from "radix-ui"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -279,13 +280,12 @@ function SidebarRail({
   const label = useToggleLabel()
 
   return (
-    <button
+    <HoverHint content={label}><button
       data-sidebar="rail"
       data-slot="sidebar-rail"
       aria-label={label}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title={label}
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
@@ -295,7 +295,7 @@ function SidebarRail({
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
         className
       )}
-      {...props} />
+      {...props} /></HoverHint>
   );
 }
 

@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // `ready`, or a missing `status` (older responses), renders nothing.
 
@@ -23,9 +24,9 @@ export function RuntimeStatusBadge({ version, namespace, className }) {
   const state = versionState(version);
   if (removeFailed(version)) {
     return (
-      <Badge variant="destructive" className={cn("font-normal", className)} title={version.message ?? undefined}>
+      <HoverHint content={version.message ?? undefined}><Badge variant="destructive" className={cn("font-normal", className)}>
         {t("versions.statusRemoveFailed")}
-      </Badge>
+      </Badge></HoverHint>
     );
   }
   if (!state) return null;

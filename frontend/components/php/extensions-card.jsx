@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // `sapis` only drifts after a manual `phpenmod`/`phpdismod`. Returns a translation key or null.
 function driftOf(extension) {
@@ -267,10 +268,10 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                           ) : null}
                           {required ? (
                             // Said, not hidden behind a hover: a faded switch read as broken (users, 4 Nov).
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground" title={t("extensions.panelNeeds")}>
+                            <HoverHint content={t("extensions.panelNeeds")}><span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Lock className="size-3.5 shrink-0" aria-hidden />
                               {t("extensions.panelNeedsShort")}
-                            </span>
+                            </span></HoverHint>
                           ) : (
                             <>
                               {/* The word as well as the colour: on and off differed only by shade in dark mode. */}

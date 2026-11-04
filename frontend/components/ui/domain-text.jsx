@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { splitDomain } from "@/lib/format/domain";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Truncates the subdomain, keeping the registrable domain visible; `title` holds the full value.
 export function DomainText({ domain, className }) {
@@ -8,18 +9,18 @@ export function DomainText({ domain, className }) {
 
   if (!head) {
     return (
-      <span className={cn("truncate", className)} title={value}>
+      <HoverHint content={value}><span className={cn("truncate", className)}>
         {value}
-      </span>
+      </span></HoverHint>
     );
   }
 
   return (
-    <span className={cn("flex min-w-0 items-baseline", className)} title={value}>
+    <HoverHint content={value}><span className={cn("flex min-w-0 items-baseline", className)}>
       {/* min-w-0 lets the head shrink below its content width. */}
       <span className="min-w-0 truncate">{head}</span>
       {/* shrink-0: the tail never gives up space. */}
       <span className="shrink-0">{tail}</span>
-    </span>
+    </span></HoverHint>
   );
 }

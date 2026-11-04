@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Caution } from "@/components/ui/caution";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // A failed redeploy leaves the old code serving, so the card reports the last successful deploy.
 export function SourceCard({ application, gitAccounts = [], canDeploy = false, canSeeDeployment = true, deployInFlight = false, className }) {
@@ -164,7 +165,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
         <dl className={cn(FACT_GRID, "@xs:grid-cols-2 @2xl:grid-cols-4")}>
           <div className={FACT_CELL}>
             <dt className={FACT_LABEL}>{t("repository")}</dt>
-            <dd className="truncate font-mono text-[13px] font-medium" title={repository ?? undefined}>
+            <HoverHint content={repository ?? undefined}><dd className="truncate font-mono text-[13px] font-medium">
               {repoUrl ? (
                 <a href={repoUrl} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
                   {repoName}
@@ -172,7 +173,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
               ) : (
                 (repoName ?? "—")
               )}
-            </dd>
+            </dd></HoverHint>
           </div>
           <div className={FACT_CELL}>
             <dt className={FACT_LABEL}>{t("branch")}</dt>
@@ -182,7 +183,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             <div className={FACT_CELL}>
               <dt className={FACT_LABEL}>{t("commit")}</dt>
               <dd className="flex flex-wrap items-center gap-1.5">
-                <span className="font-mono text-[13px] font-medium" title={commit}>{commit.slice(0, 7)}</span>
+                <HoverHint content={commit}><span className="font-mono text-[13px] font-medium">{commit.slice(0, 7)}</span></HoverHint>
                 {incomplete ? (
                   <Badge variant="warning" className="font-normal">
                     {t("notFullyDeployed")}

@@ -20,6 +20,7 @@ import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { SORT_COOKIE, serializeSort, writePref } from "@/lib/files/view-prefs";
 import { measuredSize, sizeSortKey } from "@/lib/files/folder-sizes";
 import { FileSize } from "@/components/applications/files/file-size";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Cells are module-level so flexRender's identity stays stable across re-renders
 // (see workers-table.jsx).
@@ -94,9 +95,9 @@ function NameCell({ row, table }) {
         className="flex min-w-0 items-center gap-2 rounded font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-4 shrink-0 text-primary" />
-        <span className={FILE_NAME} title={file.name}>
+        <HoverHint content={file.name}><span className={FILE_NAME}>
           {file.name}
-        </span>
+        </span></HoverHint>
       </Link>
     );
   }
@@ -117,9 +118,9 @@ function NameCell({ row, table }) {
             ) : (
               <Link2 className="size-4 shrink-0" />
             )}
-            <span className={FILE_NAME} title={file.name}>
+            <HoverHint content={file.name}><span className={FILE_NAME}>
               {file.name}
-            </span>
+            </span></HoverHint>
             {/* Shown inline: a link's name says nothing about what it is, and a dangling one
                 looks like a working one. */}
             {file.link_target ? (
@@ -142,9 +143,9 @@ function NameCell({ row, table }) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
         <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
-        <span className={FILE_NAME} title={file.name}>
+        <HoverHint content={file.name}><span className={FILE_NAME}>
           {file.name}
-        </span>
+        </span></HoverHint>
       </span>
     );
   }
@@ -158,9 +159,9 @@ function NameCell({ row, table }) {
       className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
-      <span className={FILE_NAME} title={file.name}>
+      <HoverHint content={file.name}><span className={FILE_NAME}>
         {file.name}
-      </span>
+      </span></HoverHint>
     </button>
   );
 }
@@ -183,7 +184,7 @@ function SizeCell({ row, table }) {
       <Skeleton className="ml-auto h-3.5 w-12" />
     ) : (
       // Not measured is not zero.
-      <span className="text-muted-foreground" title={t("sizes.notMeasured")}>—</span>
+      <HoverHint content={t("sizes.notMeasured")}><span className="text-muted-foreground">—</span></HoverHint>
     );
   }
   return <FileSize bytes={measured.size} className="tabular-nums text-muted-foreground" />;
@@ -224,13 +225,12 @@ function OwnerCell({ row }) {
   // Stacked owner over group, like Permissions, so it needs only the longer name's
   // width; `truncate` with the full value on hover is the last resort.
   return (
-    <span
+    <HoverHint content={file.group ? `${file.owner}:${file.group}` : file.owner}><span
       className="flex min-w-0 flex-col gap-0.5 font-mono text-xs text-muted-foreground"
-      title={file.group ? `${file.owner}:${file.group}` : file.owner}
     >
       <span className="min-w-0 truncate">{file.owner}</span>
       {file.group ? <span className="min-w-0 truncate">{file.group}</span> : null}
-    </span>
+    </span></HoverHint>
   );
 }
 

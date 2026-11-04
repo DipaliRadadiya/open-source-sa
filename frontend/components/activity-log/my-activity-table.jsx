@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { typeBadgeClass, typeLabel } from "@/lib/activity-log/labels";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // API timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); null when
 // invalid so the tooltip is skipped instead of showing "Invalid Date".
@@ -61,7 +62,7 @@ function UserCell({ row }) {
   const t = useTranslations("activity");
   const u = row.original.user;
   return u ? (
-    <span className="block truncate" title={`@${u.username}`}>@{u.username}</span>
+    <HoverHint content={`@${u.username}`}><span className="block truncate">@{u.username}</span></HoverHint>
   ) : (
     <span className="text-muted-foreground">{t("system")}</span>
   );

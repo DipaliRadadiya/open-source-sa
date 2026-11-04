@@ -171,7 +171,7 @@ test("folder sizes load with the listing, no click per folder", () => {
   const sizeCell = tableSrc.slice(tableSrc.indexOf("function SizeCell"), tableSrc.indexOf("function ModifiedCell"));
   // Unmeasured is a dash, never 0; while loading, a placeholder.
   assert.match(sizeCell, /folderSizes\?\.loading \? \(\s*<Skeleton/);
-  assert.match(sizeCell, /t\("sizes\.notMeasured"\)\}>—</);
+  assert.match(sizeCell, /<HoverHint content=\{t\("sizes\.notMeasured"\)\}><span className="text-muted-foreground">—</);
 });
 
 test("an empty folder explains itself and offers the way in, without a second blue button", () => {

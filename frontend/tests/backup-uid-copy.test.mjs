@@ -51,6 +51,6 @@ test("it asks the same question the Download button asks", () => {
 test("the destination name itself is unaffected", () => {
   // Only the copy button is conditional — which bucket a failed backup was
   // aimed at is still worth knowing, and is the first thing to check.
-  assert.match(table, /<span className="truncate text-sm" title=\{name\}>/);
+  assert.match(table, /<HoverHint content=\{name\}><span className="truncate text-sm">/);
   assert.match(table, /if \(!name\) return/);
 });

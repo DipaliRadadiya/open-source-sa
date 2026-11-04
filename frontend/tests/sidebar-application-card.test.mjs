@@ -61,7 +61,7 @@ test("the collapsed rail hides everything but the mark", () => {
    * button's LAST span, here the domain — the name and status overflowed the
    * 32px square by 14px. Both halves need saying explicitly.
    */
-  assert.match(sidebar, /group-data-\[collapsible=icon\]:hidden">\s*\n\s*<span className="block truncate font-mono text-sm font-semibold text-foreground"/);
+  assert.match(sidebar, /group-data-\[collapsible=icon\]:hidden">\s*\n\s*<HoverHint content=\{application\.name\}><span className="block truncate font-mono text-sm font-semibold text-foreground"/);
   // The domain line, matched by what this test is ABOUT — that it collapses.
   // It used to pin the whole class string including `text-[11px]`, so raising
   // the panel's 12px type floor failed a test that has nothing to say about

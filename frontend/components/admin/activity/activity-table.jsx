@@ -8,6 +8,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { typeLabel } from "@/lib/activity-log/labels";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
  * component type, so an inline cell remounts on every render of this table. */
@@ -24,7 +25,7 @@ function UserCell({ row }) {
   const t = useTranslations("activity");
   const u = row.original.user;
   return u ? (
-    <span className="block truncate" title={`@${u.username}`}>@{u.username}</span>
+    <HoverHint content={`@${u.username}`}><span className="block truncate">@{u.username}</span></HoverHint>
   ) : (
     <span className="text-muted-foreground">{t("system")}</span>
   );

@@ -30,18 +30,20 @@ const tableCode = strip(table);
 const cardsCode = strip(cards);
 const { locales } = await import("../i18n/routing.js");
 
-test("the Type column is gone; Runs on (PHP, Node.js, Docker, static) stands in its place", () => {
+test("the Type column is gone; Runs on (PHP, Node.js, Docker, static) is a line under the status", () => {
   assert.doesNotMatch(tableCode, /function TypeCell/, "TypeCell should be gone, not orphaned");
   assert.doesNotMatch(tableCode, /columns\.type/);
   assert.doesNotMatch(tableCode, /SortHeader col="site_type"/);
   // 7 Oct (Krishna): PHP alone said nothing for Node and static sites.
-  assert.match(tableCode, /\{ id: "runsOn", header: t\("columns\.runsOn"\)/);
   assert.match(tableCode, /function RunsOnCell/);
+  // 4 Nov (Krishna): its own column left Application 211px at 1280; now it sits under the badge.
+  assert.doesNotMatch(tableCode, /id: "runsOn"/);
+  assert.match(tableCode, /<ApplicationStatusBadge application=\{row\.original\} \/>\s*<RunsOnCell row=\{row\} \/>/);
 });
 
-test("a site with nothing to report shows a dash in the table", () => {
-  // The same em-dash OwnerCell uses, so an empty cell looks the same everywhere.
-  assert.match(tableCode, /if \(!runtime\) return <span className="text-muted-foreground">—<\/span>;/);
+test("a site with nothing to report adds no line under its status", () => {
+  // Inside the status cell a dash would read as a second, empty status.
+  assert.match(tableCode, /if \(!runtime\) return null;/);
 });
 
 test("...but the card omits it rather than dashing it", () => {
@@ -68,7 +70,7 @@ test("the logo names the type in the table, and stays silent everywhere else", (
   assert.match(logo, /label = null/);
   assert.match(logo, /role=\{label \? "img" : undefined\}/);
   assert.match(logo, /aria-label=\{label \?\? undefined\}/);
-  assert.match(logo, /title=\{label \?\? undefined\}/);
+  assert.match(logo, /content=\{label \?\? undefined\}/);
   // The name is on the wrapper, not the <img>: two of the three branches are
   // not images (the provider mark and the Globe2 fallback).
   assert.match(logo, /<img src=\{logo\} alt="" aria-hidden/);

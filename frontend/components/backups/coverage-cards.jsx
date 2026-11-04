@@ -13,6 +13,7 @@ import { ActionIcon } from "@/components/ui/action-icon";
 import { DomainText } from "@/components/ui/domain-text";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Phone layout: a table would scroll sideways and hide the action button.
 
@@ -55,14 +56,13 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
           <CardListItem key={application.id}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <Link
+                <HoverHint content={application.name}><Link
                   prefetch={false}
                   href={`/applications/${application.id}/backups`}
-                  title={application.name}
                   className="block truncate font-medium underline-offset-4 hover:underline"
                 >
                   {application.name}
-                </Link>
+                </Link></HoverHint>
                 <DomainText domain={application.domain} className="text-xs text-muted-foreground" />
               </div>
               {/* No badge where the card already says it, as in the table: "Manual only"

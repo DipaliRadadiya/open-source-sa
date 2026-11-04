@@ -11,6 +11,7 @@ import { CardIcon } from "@/components/ui/card-icon";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // A filter only once the list is long enough to need one.
 const FILTER_FROM = 8;
@@ -144,7 +145,7 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
                   <td className="max-w-0 px-3 py-2.5 sm:px-5">
                     <span className="flex min-w-0 items-center gap-2">
                       <Table2 className="hidden size-4 shrink-0 text-muted-foreground sm:block" aria-hidden />
-                      <span className="truncate font-mono font-medium" title={table.name}>{table.name}</span>
+                      <HoverHint content={table.name}><span className="truncate font-mono font-medium">{table.name}</span></HoverHint>
                     </span>
                   </td>
                   {/* InnoDB row counts are estimates; labelled as such below. */}

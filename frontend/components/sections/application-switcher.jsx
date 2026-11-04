@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // The sidebar's application card opens this (tester request, 2 Nov): another application without
 // going back to the list. The list is one searched page, not the list page's pagination: in a
@@ -154,8 +155,8 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
                       <SiteTypeLogo name={item.site_type} size="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-foreground" title={item.name}>{item.name}</span>
-                      <span className="block truncate font-mono text-xs text-muted-foreground" title={item.domain}>{item.domain}</span>
+                      <HoverHint content={item.name}><span className="block truncate text-sm font-medium text-foreground">{item.name}</span></HoverHint>
+                      <HoverHint content={item.domain}><span className="block truncate font-mono text-xs text-muted-foreground">{item.domain}</span></HoverHint>
                     </span>
                     {going === item.id ? (
                       <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" aria-hidden />

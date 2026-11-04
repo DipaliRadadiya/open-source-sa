@@ -26,6 +26,7 @@ import { DatabasesCards } from "@/components/databases/databases-cards";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 import { DatabaseRowActions } from "@/components/databases/database-row-actions";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 /* Cells are module-level: inline cell functions remount every cell on each search keystroke. */
 
@@ -36,9 +37,8 @@ const COMPACT = "px-3";
 
 function NameCell({ row }) {
   return (
-    <Link
+    <HoverHint content={row.original.name}><Link
       href={`/databases/${row.original.id}`}
-      title={row.original.name}
       // Primary colour plus chevron, so the link does not rely on colour alone. The chevron
       // always shows: with no Manage button in the row, the name is the way in (Krishna, 15 Oct).
       // A usual name shows in full; past 13.5rem it ellipsises, so a long one cannot
@@ -48,7 +48,7 @@ function NameCell({ row }) {
     >
       <span className="max-w-54 truncate">{row.original.name}</span>
       <ChevronRight className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-    </Link>
+    </Link></HoverHint>
   );
 }
 
@@ -85,14 +85,13 @@ function ApplicationCell({ database, applications, canOpenApplications, onAttach
   if (application?.name) {
     // A link only for a reader who may open the application.
     return canOpenApplications ? (
-      <Link
+      <HoverHint content={application.name}><Link
         href={`/applications/${application.id}`}
         prefetch={false}
-        title={application.name}
         className="break-words underline-offset-4 hover:underline"
       >
         {application.name}
-      </Link>
+      </Link></HoverHint>
     ) : (
       <span className="break-words">{application.name}</span>
     );
@@ -131,9 +130,9 @@ function UsersCell({ row }) {
 
   if (count === 0) {
     return (
-      <span className="tabular-nums text-muted-foreground" title={t("columns.noUsers")}>
+      <HoverHint content={t("columns.noUsers")}><span className="tabular-nums text-muted-foreground">
         0
-      </span>
+      </span></HoverHint>
     );
   }
   return <span className="tabular-nums">{count}</span>;

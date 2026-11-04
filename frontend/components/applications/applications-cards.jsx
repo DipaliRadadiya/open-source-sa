@@ -13,6 +13,7 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { gitProviderFor } from "@/lib/applications/git-provider";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Narrow-screen sites list; the badge shares the facts line so the name fits at 320px.
 export function ApplicationsCards({
@@ -47,7 +48,7 @@ export function ApplicationsCards({
                   // White like the desktop list: green means "OK" in the steel UI (Krishna, 14 Oct).
                   className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
                 >
-                  <span className="truncate" title={application.name}>{application.name}</span>
+                  <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>
                   <ChevronRight className="size-3.5 shrink-0" />
                 </Link>
                 {/* A copy and its source have near-identical names. */}

@@ -30,7 +30,7 @@ test("a row the panel needs shows a lock and the reason, not a faded switch", ()
   const card = read("components/php/extensions-card.jsx");
   assert.match(card, /\{required \? \(/);
   assert.match(card, /<Lock className="size-3\.5 shrink-0" aria-hidden \/>\s*\{t\("extensions\.panelNeedsShort"\)\}/);
-  assert.match(card, /title=\{t\("extensions\.panelNeeds"\)\}/);
+  assert.match(card, /<HoverHint content=\{t\("extensions\.panelNeeds"\)\}>/);
 });
 
 test("a switch is locked while its own install runs, and says so", () => {

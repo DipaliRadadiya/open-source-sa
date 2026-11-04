@@ -19,7 +19,7 @@ test("the schema keeps version and package_version, and reads an older API witho
 test("the version follows the unit name in the table and on phones, dpkg's string on hover", () => {
   const label = read("components/services/service-version.jsx");
   assert.match(label, /if \(!version\) return null;/);
-  assert.match(label, /title=\{packageVersion \? t\("packageVersion", \{ version: packageVersion \}\) : undefined\}/);
+  assert.match(label, /content=\{packageVersion \? t\("packageVersion", \{ version: packageVersion \}\) : undefined\}/);
   // On the unit line, not beside the name: there it split "PostgreSQL 16.15" in the narrow column.
   assert.match(read("components/services/services-table.jsx"), /\{unit\}\s*<ServiceVersion version=\{version\} packageVersion=\{packageVersion\} \/>/);
   assert.match(read("components/services/services-cards.jsx"), /\{service\.unit\}\s*<ServiceVersion version=\{service\.version\} packageVersion=\{service\.package_version\} \/>/);

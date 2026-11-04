@@ -39,6 +39,7 @@ import {
   APPLICATION_STATUSES,
 } from "@/components/applications/application-status-badge";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 
 /* Cells at module level: flexRender treats an inline cell as a new component type,
@@ -51,18 +52,19 @@ import { applicationIconDataUri } from "@/lib/applications/application-icon";
 // PHP or Node.js with its version, a container, or plain files; the logo first so
 // the column scans by shape.
 // One plain line, no logo (Krishna, 7 Oct): the Application column already shows the logo.
+// Under the status badge since 4 Nov (Krishna): its own column left Application 211px at 1280,
+// cutting every domain short. Nothing at all where it does not apply.
 function RunsOnCell({ row }) {
   const t = useTranslations("applications");
   const tDocker = useTranslations("docker");
   const runtime = runtimeOf(row.original);
-  if (!runtime) return <span className="text-muted-foreground">—</span>;
+  if (!runtime) return null;
   return (
-    <span
-      className="block whitespace-normal break-words tabular-nums text-muted-foreground"
-      title={runtimeLabel(runtime, t, tDocker, { full: true })}
+    <HoverHint content={runtimeLabel(runtime, t, tDocker, { full: true })}><span
+      className="block w-fit whitespace-normal break-words text-xs tabular-nums text-muted-foreground"
     >
       {runtimeLabel(runtime, t, tDocker)}
-    </span>
+    </span></HoverHint>
   );
 }
 
@@ -75,19 +77,18 @@ function LastBackupCell({ row, table }) {
     // "Not set up" is itself the way out, to the Backups tab and its "Set up backups"
     // button. A second line for the link made every row three or four lines tall.
     return (
-      <Link
+      <HoverHint content={t("backups.setUp")}><Link
         href={`/applications/${row.original.id}/backups`}
         prefetch={false}
         // The title doubles as the description a screen reader adds; a hidden ": Set up
         // backups" span leaked into the tooltip as ": Set up backups" (users, 3 Nov).
-        title={t("backups.setUp")}
         className="flex min-w-0 items-start gap-1.5 text-sm text-destructive"
       >
         <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
         <span className="min-w-0 whitespace-normal break-words leading-snug underline decoration-dotted decoration-destructive/50 underline-offset-4 hover:decoration-solid">
           {t("backups.notSetUp")}
         </span>
-      </Link>
+      </Link></HoverHint>
     );
   }
   let text, title, tone = "text-muted-foreground";
@@ -102,19 +103,19 @@ function LastBackupCell({ row, table }) {
     text = standing.when ?? t("backups.never");
   }
   return (
-    <span className={`flex min-w-0 items-start gap-1.5 text-sm ${tone}`} title={title}>
+    <HoverHint content={title}><span className={`flex min-w-0 items-start gap-1.5 text-sm ${tone}`}>
       <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
       <span className="min-w-0 whitespace-normal break-words leading-snug">{text}</span>
-    </span>
+    </span></HoverHint>
   );
 }
 
 function OwnerCell({ row }) {
   const value = row.original.system_user?.username ?? "—";
   return (
-    <span className="block truncate text-sm text-muted-foreground" title={value}>
+    <HoverHint content={value}><span className="block truncate text-sm text-muted-foreground">
       {value}
-    </span>
+    </span></HoverHint>
   );
 }
 
@@ -185,7 +186,7 @@ function ActionsCell({ row, table }) {
 
 function NameCell({ row, missingDatabase = false, gitProvider = null, iconDataUri }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3">{/* On its own tile, so marks of every shape line up. */}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} iconDataUri={iconDataUri} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3">{/* On its own tile, so marks of every shape line up. */}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} iconDataUri={iconDataUri} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><HoverHint content={row.original.name}><span className="truncate">{row.original.name}</span></HoverHint><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -193,6 +194,7 @@ function StatusCell({ row }) {
   return (
     <div className="space-y-1">
       <ApplicationStatusBadge application={row.original} />
+      <RunsOnCell row={row} />
       <ApplicationStatusNotes application={row.original} />
     </div>
   );
@@ -230,8 +232,9 @@ function Filters({ statusOptions, typeOptions, t }) {
 // each breakpoint (704px at 1024, 960px at 1280, 1215px at 1536), measured 7 Oct:
 // Status 162px (de "Fehlgeschlagen", ru "Приостановлено"; since 30 Oct no pill is longer: fr "Redémarre
 // en boucle" (204px) became "Redémarrage", like en "Restarting"; de "fehlgeschlagen" deploy tag 148px),
-// Last backup 132px (pt), Runs on 120px (ru), Size 93px (es "Tamaño" + sort arrow),
-// System user 131px (de "Systembenutzer", one word that cannot wrap).
+// Last backup 132px (pt), Size 93px (es "Tamaño" + sort arrow),
+// System user 131px (de "Systembenutzer", one word that cannot wrap). Runs on is a line under the
+// status badge since 4 Nov, which gave Application its 125px (Krishna: domains were cut short).
 // Every fact column stays on one line (29 Oct: a two-line "41 minutes ago" beside one-line
 // cells read as unaligned); the ⋯ column gave up the room, as it holds a single 32px button.
 // Columns join as the table widens: System user and Size from xl, Created from 2xl (Krishna: System
@@ -239,9 +242,8 @@ function Filters({ statusOptions, typeOptions, t }) {
 // the others are at their measured floors (Last backup 178px, fr "Manuel uniquement").
 const COLUMN_WIDTHS = {
   withBackups: {
-    name: "w-[33%] xl:w-[22%] 2xl:w-[25%]",
+    name: "w-[50%] xl:w-[35%] 2xl:w-[35%]",
     status: "w-[24%] xl:w-[17%] 2xl:w-[14%]",
-    runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
     lastBackup: "w-[19%] xl:w-[19%] 2xl:w-[15%]",
     owner: "hidden xl:table-cell xl:w-[14%] 2xl:w-[11%]",
     size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
@@ -249,9 +251,8 @@ const COLUMN_WIDTHS = {
     actions: "w-[7%] xl:w-[5%]",
   },
   withoutBackups: {
-    name: "w-[52%] xl:w-[41%] 2xl:w-[38%]",
+    name: "w-[69%] xl:w-[54%] 2xl:w-[48%]",
     status: "w-[24%] xl:w-[17%] 2xl:w-[14%]",
-    runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
     owner: "hidden xl:table-cell xl:w-[14%] 2xl:w-[15%]",
     size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
     created: "hidden 2xl:table-cell 2xl:w-[10%]",
@@ -317,7 +318,6 @@ function ApplicationsList({
       // the name: beside it, PHP's short value read as part of the domain (7 Oct).
       { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={applicationIconDataUri(row.original, siteTypes)} /> },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: widths.status, sortKey: "status" }, cell: StatusCell },
-      { id: "runsOn", header: t("columns.runsOn"), meta: { className: `${widths.runsOn} h-auto min-h-10 whitespace-normal` }, cell: RunsOnCell },
       ...(withBackups ? [{ id: "lastBackup", header: t("columns.lastBackup"), meta: { className: `${widths.lastBackup} h-auto min-h-10 whitespace-normal` }, cell: LastBackupCell }] : []),
       // Sized for the widest locale's header (ru). Wraps below xl; `h-auto min-h-11`
       // because TableHead fixes 44px.

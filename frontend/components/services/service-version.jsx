@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // The installed version after the unit name ("nginx · 1.24.0"); dpkg's own string on hover.
 // Beside the friendly name it broke "PostgreSQL 16.15" across lines in the table's narrow column.
@@ -11,12 +12,11 @@ export function ServiceVersion({ version, packageVersion }) {
   return (
     <>
       {" "}
-      <span
+      <HoverHint content={packageVersion ? t("packageVersion", { version: packageVersion }) : undefined}><span
         className="whitespace-nowrap tabular-nums"
-        title={packageVersion ? t("packageVersion", { version: packageVersion }) : undefined}
       >
         · {version}
-      </span>
+      </span></HoverHint>
     </>
   );
 }

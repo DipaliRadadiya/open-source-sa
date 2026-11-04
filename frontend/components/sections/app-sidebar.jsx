@@ -29,6 +29,7 @@ import { SidebarServerCard } from "@/components/sections/sidebar-server-card";
 import { ApplicationSwitcher } from "@/components/sections/application-switcher";
 import { can } from "@/lib/permissions/can";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HoverHint } from "@/components/ui/hover-hint";
 import {
   Sidebar,
   SidebarContent,
@@ -208,9 +209,9 @@ export function AppSidebar({ items, initialGroups = {} }) {
                       {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
                           button's LAST span (the domain line), and the rest would overflow. */}
                       <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
-                        <span className="block truncate font-mono text-sm font-semibold text-foreground" title={application.name}>
+                        <HoverHint content={application.name}><span className="block truncate font-mono text-sm font-semibold text-foreground">
                           {application.name}
-                        </span>
+                        </span></HoverHint>
                         {/* Status, then what it is: "Running · WordPress". */}
                         <span className="mt-1 flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
                           <ApplicationStatusDot application={application} className="shrink-0 [&>span:first-child]:rounded-none" labelClassName="text-xs" />

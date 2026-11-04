@@ -67,6 +67,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 /** Common values, so most edits are a pick rather than typing. */
 const UPLOAD_SIZES = ["8M", "32M", "64M", "128M", "256M", "512M"];
@@ -1061,12 +1062,12 @@ function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
       <Icon className="size-3.5 shrink-0 text-muted-foreground/70" />
       <span className="text-muted-foreground">{label}</span>
       {pending ? (
-        <span className="flex items-center gap-1 font-medium tabular-nums" title={unsavedLabel}>
+        <HoverHint content={unsavedLabel}><span className="flex items-center gap-1 font-medium tabular-nums">
           <span className="text-muted-foreground line-through decoration-muted-foreground/50">{saved}</span>
           <span aria-hidden className="text-muted-foreground">→</span>
           <span className="text-warning">{value}</span>
           <span className="sr-only">({unsavedLabel})</span>
-        </span>
+        </span></HoverHint>
       ) : (
         <span className="font-medium tabular-nums text-foreground">{value}</span>
       )}

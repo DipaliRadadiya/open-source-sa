@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Folder, ChevronRight } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useServerPath } from "@/components/applications/files/files-root-context";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 function href(appId, segments, upTo) {
   const path = segments.slice(0, upTo).join("/");
@@ -39,12 +40,11 @@ export function FileBreadcrumb({ appId, path }) {
           <span key={i} className="flex shrink-0 items-center gap-1">
             <ChevronRight className="size-3.5 text-muted-foreground/60" />
             {seg === null ? (
-              <span
+              <HoverHint content={segments.slice(0, hiddenCount).join("/")}><span
                 className="px-1 py-0.5 text-muted-foreground"
-                title={segments.slice(0, hiddenCount).join("/")}
               >
                 …
-              </span>
+              </span></HoverHint>
             ) : isLast ? (
               <span className="max-w-40 truncate px-1 py-0.5 font-medium sm:max-w-64">{seg}</span>
             ) : (

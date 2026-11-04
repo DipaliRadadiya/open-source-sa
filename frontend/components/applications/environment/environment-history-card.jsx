@@ -32,6 +32,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Key names only. Values load on demand from backup files for `manage` users,
 // never from the activity log. Restore returns the file to its state before the change.
@@ -238,9 +239,9 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
               </span>
             </p>
             {/* The exact time on hover; the readable one on screen. */}
-            <p className="text-xs text-muted-foreground" title={entry.created_at ?? undefined}>
+            <HoverHint content={entry.created_at ?? undefined}><p className="text-xs text-muted-foreground">
               {entry.created_at_human}
-            </p>
+            </p></HoverHint>
             {/* Inside this column so on a phone the keys stay with the sentence, above the wrapped buttons. */}
             {keys.length ? (
               <div className="flex flex-wrap gap-1.5 pt-1.5">

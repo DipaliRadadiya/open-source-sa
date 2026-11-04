@@ -36,6 +36,7 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { apiMessage } from "@/lib/api/error-message";
 import { banAgeSeconds } from "@/lib/fail2ban/ban-age";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // 10: on a phone each ban is a card, and more strands the paging controls.
 const PAGE_SIZE = 10;
@@ -84,7 +85,7 @@ export function BanAge({ ban }) {
   const now = useNow();
   const age = banAgeSeconds(ban);
   if (age === null) return ban.banned_at || "—";
-  return <span title={ban.banned_at}>{format.relativeTime(now.getTime() - age * 1000, now)}</span>;
+  return <HoverHint content={ban.banned_at}><span>{format.relativeTime(now.getTime() - age * 1000, now)}</span></HoverHint>;
 }
 
 // No timing reported (older fail2ban) is Unknown, never "permanent"; dated without expiry is Permanent.

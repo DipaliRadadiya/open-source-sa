@@ -3,6 +3,7 @@ import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Server } from "lucide-react";
 import { getServerIdentity } from "@/lib/api/server-metrics";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 const KEY = "panel.server-identity";
 const TTL_MS = 10 * 60 * 1000;
@@ -58,9 +59,9 @@ export function SidebarServerCard() {
         <Server className="size-4" aria-hidden />
       </span>
       <span className="relative min-w-0 flex-1">
-        <span className="block truncate font-mono text-sm font-semibold" title={identity.hostname}>
+        <HoverHint content={identity.hostname}><span className="block truncate font-mono text-sm font-semibold">
           {identity.hostname}
-        </span>
+        </span></HoverHint>
         <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
           <span aria-hidden className="size-1.5 shrink-0 bg-primary" />
           <span className="truncate">

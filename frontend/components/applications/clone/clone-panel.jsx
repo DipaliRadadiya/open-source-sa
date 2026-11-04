@@ -64,6 +64,7 @@ import {
   CloneProgress,
   CloneNextSteps,
 } from "@/components/applications/clone/clone-progress";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 export function CloneApplicationPanel({
   application,
@@ -397,12 +398,11 @@ export function CloneApplicationPanel({
           <dl className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.source")}</dt>
-              <dd
+              <HoverHint content={application.name}><dd
                 className="min-w-0 truncate font-medium"
-                title={application.name}
               >
                 {application.name}
-              </dd>
+              </dd></HoverHint>
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.domain")}</dt>

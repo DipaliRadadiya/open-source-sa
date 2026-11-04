@@ -9,6 +9,7 @@ import { parseApiWallClock } from "@/lib/format/api-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Restoring first backs up the current version, so a wrong pick is undoable.
 export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpenChange, onRestored }) {
@@ -82,9 +83,9 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
               )}
             >
               {/* The saved time distinguishes versions; the `.bak-…` file name is kept for hover. */}
-              <span className="min-w-0 text-sm" title={backup.name}>
+              <HoverHint content={backup.name}><span className="min-w-0 text-sm">
                 {when ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }) : backup.name}
-              </span>
+              </span></HoverHint>
               {active ? <Check className="size-4 shrink-0 text-primary" /> : null}
             </button>
           );

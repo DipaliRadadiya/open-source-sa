@@ -44,7 +44,7 @@ test("the sidebar toggle names itself in the reader's language, in both places",
   assert.match(src, /function useToggleLabel\(\)/);
   assert.match(src, /<span className="sr-only">\{label\}<\/span>/);
   assert.match(src, /aria-label=\{label\}/);
-  assert.match(src, /title=\{label\}/);
+  assert.match(src, /content=\{label\}/);
   for (const locale of LOCALES) {
     for (const key of ["expandSidebar", "collapseSidebar"]) {
       assert.ok(messages[locale].common[key]?.trim(), `${locale} common.${key}`);

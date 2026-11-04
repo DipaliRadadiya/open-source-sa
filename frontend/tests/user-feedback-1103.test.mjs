@@ -37,7 +37,7 @@ test("'All N services running' opens Services and names them", () => {
   const card = read("components/dashboard/server-info-card.jsx");
   const health = read("lib/server/get-service-health.js");
   assert.match(health, /names: services\.map\(\(service\) => service\.label\)/);
-  assert.match(card, /<Link href="\/services" prefetch=\{false\} title=\{\(health\.names \?\? \[\]\)\.join\(", "\)\}>/);
+  assert.match(card, /<HoverHint content=\{\(health\.names \?\? \[\]\)\.join\(", "\)\}><Link href="\/services" prefetch=\{false\}>/);
 });
 
 test("a queued first deploy reads Deploying, not Stopped", () => {

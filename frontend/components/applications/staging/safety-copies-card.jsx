@@ -9,6 +9,7 @@ import { restoreStagingSafetyCopy } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { formatBytes } from "@/lib/format/bytes";
 import { useRefresh } from "@/hooks/use-refresh";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // The undo for a database push: each push saves the live database first. Restoring one
 // saves the current database too, so a restore is itself undoable.
@@ -52,10 +53,10 @@ export function SafetyCopiesCard({ appId, copies, ns = "safetyCopies" }) {
               <DatabaseBackup className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <div className="min-w-48 flex-1">
                 <p className="text-sm font-medium">{when(copy)}</p>
-                <p className="truncate font-mono text-xs text-muted-foreground" title={copy.name}>
+                <HoverHint content={copy.name}><p className="truncate font-mono text-xs text-muted-foreground">
                   {copy.name}
                   {formatBytes(copy.size_bytes, format) ? ` · ${formatBytes(copy.size_bytes, format)}` : ""}
-                </p>
+                </p></HoverHint>
               </div>
               <Button variant="outline" size="sm" onClick={() => { setError(null); setTarget(copy); }}>
                 <History className="size-4" />

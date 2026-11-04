@@ -11,6 +11,7 @@ import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
 import { measuredSize } from "@/lib/files/folder-sizes";
 import { FileSize } from "@/components/applications/files/file-size";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // `folderSizes` is the table's too, so phones show the same folder sizes.
 export function FilesCards({
@@ -60,44 +61,41 @@ export function FilesCards({
               )}
               <div className="min-w-0">
                 {file.type === "dir" ? (
-                  <Link
+                  <HoverHint content={file.name}><Link
                     href={`/applications/${appId}/files?path=${encodeURIComponent(file.path)}`}
                     prefetch={false}
                     className={cn("block font-medium hover:underline", FILE_NAME)}
-                    title={file.name}
                   >
                     {file.name}
-                  </Link>
+                  </Link></HoverHint>
                 ) : file.type === "symlink" ? (
-                  <span
+                  <HoverHint content={file.link_target ?? undefined}><span
                     className={cn(
                       "block truncate font-medium",
                       file.link_broken ? "text-destructive" : "text-muted-foreground",
                     )}
                     // Inline would push the name out of a narrow row, so the target is in the native
                     // tooltip.
-                    title={file.link_target ?? undefined}
                   >
                     {file.name}
                     {file.link_target ? (
                       <span className="font-mono text-xs text-muted-foreground"> → {file.link_target}</span>
                     ) : null}
-                  </span>
+                  </span></HoverHint>
                 ) : (
                   // w-full beside `block`: a <button> sizes to its content, so `truncate` would not clip.
                   !canManage || !canOpenFile(file.name) ? (
-                    <span className={cn("block w-full font-medium", FILE_NAME)} title={file.name}>
+                    <HoverHint content={file.name}><span className={cn("block w-full font-medium", FILE_NAME)}>
                       {file.name}
-                    </span>
+                    </span></HoverHint>
                   ) : (
-                    <button
+                    <HoverHint content={file.name}><button
                       type="button"
                       onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
                       className={cn("block w-full text-left font-medium hover:underline", FILE_NAME)}
-                      title={file.name}
                     >
                       {file.name}
-                    </button>
+                    </button></HoverHint>
                   )
                 )}
                 {/* Two lines: size and age, then owner and mode, each token unbreakable (one
@@ -111,7 +109,7 @@ export function FilesCards({
                     // A span, not <Skeleton> (a div), inside this <p>.
                     <span className="inline-block h-3 w-10 animate-pulse rounded-md bg-muted align-middle" />
                   ) : (
-                    <span title={t("sizes.notMeasured")}>—</span>
+                    <HoverHint content={t("sizes.notMeasured")}><span>—</span></HoverHint>
                   )}
                   {file.modified_at_human ? (
                     <>
@@ -127,12 +125,11 @@ export function FilesCards({
                       <span className="whitespace-nowrap">{[file.owner, file.group].filter(Boolean).join(":")}</span>
                     ) : null}
                     {file.mode ? (
-                      <span
+                      <HoverHint content={file.mode}><span
                         className={cn("whitespace-nowrap", isWorldWritable(file.mode) && "font-medium text-destructive")}
-                        title={file.mode}
                       >
                         {symbolicMode(file.mode, file.type) ?? file.mode}
-                      </span>
+                      </span></HoverHint>
                     ) : null}
                   </p>
                 ) : null}

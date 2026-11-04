@@ -43,7 +43,9 @@ const { ServiceStatusBadge } = load("components/services/service-status-badge.js
 const html = (props) => renderToStaticMarkup(React.createElement(ServiceStatusBadge, props));
 const opening = (value) => value.slice(0, value.indexOf(">") + 1);
 
-const { ServiceVersion } = load("components/services/service-version.jsx", { "next-intl": { useTranslations: () => t } });
+// The tooltip renders no element of its own; the stand-in marks its text on the child instead.
+const HoverHint = ({ content, children }) => (content ? React.cloneElement(children, { "data-hint": content }) : children);
+const { ServiceVersion } = load("components/services/service-version.jsx", { "next-intl": { useTranslations: () => t }, "@/components/ui/hover-hint": { HoverHint } });
 
 let captured;
 const { ServicesTable } = load("components/services/services-table.jsx", {
@@ -143,7 +145,7 @@ test("long names can wrap while units and retry information remain intact", () =
   assert.ok(installed.includes("php8.4-fpm"));
   const versioned = cell("label", { key: "redis", label: "Redis", unit: "redis-server", state: "installed", version: "7.0.15", package_version: "5:7.0.15-1ubuntu0.24.04.5" });
   // The space before the span is the break point; the version itself never splits.
-  assert.match(versioned, /redis-server <span class="whitespace-nowrap tabular-nums" title="[^"]+">· (<!-- -->)?7\.0\.15<\/span>/);
+  assert.match(versioned, /redis-server <span class="whitespace-nowrap tabular-nums" data-hint="[^"]+">· (<!-- -->)?7\.0\.15<\/span>/);
   assert.ok(!cell("label", { key: "postfix", label: "Postfix", unit: "postfix", state: "installed", version: null }).includes("·"));
   const failed = cell("label", { key: "php", label: "PHP", state: "install_failed", install_reason: "package", install_message: "Package missing", retryable: true });
   assert.ok(failed.includes("Package missing"));

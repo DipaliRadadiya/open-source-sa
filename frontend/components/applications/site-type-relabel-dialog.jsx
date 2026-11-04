@@ -8,21 +8,21 @@ import { changeApplicationSiteType } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // `min-w-0` + `truncate` so a long title shortens instead of pushing the arrow off-centre.
 function TypeSide({ name, title, iconDataUri, emphasis = false }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
       <SiteTypeLogo name={name} iconDataUri={iconDataUri} size="h-6 w-8" />
-      <span
+      <HoverHint content={title}><span
         className={cn(
           "truncate text-sm",
           emphasis ? "font-medium text-foreground" : "text-muted-foreground",
         )}
-        title={title}
       >
         {title}
-      </span>
+      </span></HoverHint>
     </span>
   );
 }

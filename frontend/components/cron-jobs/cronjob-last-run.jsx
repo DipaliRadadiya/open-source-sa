@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { serverTimeToEpoch } from "@/lib/cron-jobs/schedule";
 import { runDuration } from "@/lib/cron-jobs/run-duration";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 const VARIANT = { succeeded: "success", failed: "destructive", interrupted: "warning", running: "muted" };
 
@@ -68,9 +69,9 @@ export function CronjobLastRun({ job }) {
       </div>
       {/* Two lines, not "when · took": one line made the column too wide for the table at 1280px. */}
       {when ? (
-        <span className="text-xs whitespace-nowrap text-muted-foreground" title={at} suppressHydrationWarning>
+        <HoverHint content={at}><span className="text-xs whitespace-nowrap text-muted-foreground" suppressHydrationWarning>
           {when}
-        </span>
+        </span></HoverHint>
       ) : null}
       {took ? <span className="-mt-1 text-xs whitespace-nowrap text-muted-foreground">{t("took", { duration: took })}</span> : null}
     </div>

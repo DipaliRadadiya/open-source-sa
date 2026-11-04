@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { ArrowRight, CircleX, GitBranch, LockOpen, Power, Rocket, ServerCrash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 const KIND_STYLE = {
   failed: { icon: CircleX, tone: "destructive" },
@@ -23,8 +24,7 @@ const TONE = {
 // leads to the page that explains it in full.
 function Row({ icon: Icon, tone, title, detail, names, href, action }) {
   return (
-    <li
-      title={detail}
+    <HoverHint content={detail}><li
       // Wraps: when the text would get under 16rem the link drops below it, instead of
       // squeezing the title to three lines (German, phones).
       className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-card px-3 py-2.5 ring-1 ring-border/70"
@@ -37,9 +37,9 @@ function Row({ icon: Icon, tone, title, detail, names, href, action }) {
       <div className="min-w-0 flex-1 basis-64">
         <p className="text-sm leading-snug font-medium break-words">{title}</p>
         {names ? (
-          <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={names}>
+          <HoverHint content={names}><p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
             {names}
-          </p>
+          </p></HoverHint>
         ) : null}
         <span className="sr-only">{detail}</span>
       </div>
@@ -53,7 +53,7 @@ function Row({ icon: Icon, tone, title, detail, names, href, action }) {
           <ArrowRight className="size-3.5" aria-hidden />
         </Link>
       ) : null}
-    </li>
+    </li></HoverHint>
   );
 }
 

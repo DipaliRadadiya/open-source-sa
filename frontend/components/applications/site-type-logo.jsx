@@ -3,6 +3,7 @@ import { Globe2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { siteTypeLogo } from "@/lib/applications/site-type-logo";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Fixed `h-7 w-12` slot so text beside the logo starts at the same x on every row.
 // `label` only where the mark is the sole indication; most marks do not spell their name.
@@ -10,9 +11,8 @@ export function SiteTypeLogo({ name, provider, iconDataUri, className, size = "h
   const logo = iconDataUri || siteTypeLogo(name);
 
   return (
-    <span
+    <HoverHint content={label ?? undefined}><span
       className={cn("flex shrink-0 items-center justify-center", size, className)}
-      title={label ?? undefined}
       // The name goes on the wrapper, not the <img>: two of the three branches below
       // are not images. The image stays aria-hidden so nothing is announced twice.
       role={label ? "img" : undefined}
@@ -34,6 +34,6 @@ export function SiteTypeLogo({ name, provider, iconDataUri, className, size = "h
           <Globe2 className="size-4" />
         </span>
       )}
-    </span>
+    </span></HoverHint>
   );
 }

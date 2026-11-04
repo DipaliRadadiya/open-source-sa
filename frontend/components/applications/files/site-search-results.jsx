@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { fileIconFor, isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // The name's ::after spans the <li>; its `truncate` does not clip it, as the containing block is outside.
 const STRETCH = "after:absolute after:inset-0 after:rounded-xl";
@@ -120,9 +121,9 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
                 ) : (
                   // Nothing to open: see the note in files-table.
                   !openable ? (
-                    <span className="block w-full truncate font-medium" title={file.name}>
+                    <HoverHint content={file.name}><span className="block w-full truncate font-medium">
                       {file.name}
-                    </span>
+                    </span></HoverHint>
                   ) : (
                     <button
                       type="button"

@@ -43,6 +43,7 @@ import {
 import { WebRootDialog } from "@/components/applications/web-root-dialog";
 import { NodeVersionDialog } from "@/components/applications/node-version-dialog";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // Facts that do not apply to the site type are left out, not shown as "—".
 // Full class strings for Tailwind; 3 or 4 columns keeps the last row full (6 or 8 facts).
@@ -68,7 +69,8 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
       {/* One menu when the tile has several actions (probe, set type by hand). */}
       {menu?.length ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          {/* Outside the trigger: inside it, the trigger's props would land on the tooltip, not the button. */}
+          <HoverHint content={menuLabel}><DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="outline"
@@ -76,7 +78,6 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
               /* `menuBusy` too: a menu action has no Review button to show it is running. */
               disabled={menuBusy || action?.busy}
               aria-label={menuLabel}
-              title={menuLabel}
               className="size-7 shrink-0"
             >
               {menuBusy || action?.busy ? (
@@ -85,7 +86,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
                 <MoreHorizontal className="size-3.5" />
               )}
             </Button>
-          </DropdownMenuTrigger>
+          </DropdownMenuTrigger></HoverHint>
           <DropdownMenuContent align="end">
             {menu.map((item) => (
               <DropdownMenuItem key={item.key} onSelect={item.onSelect}>
@@ -100,13 +101,12 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
       {/* `text` gives an actionable finding a labelled button; optional probes stay an icon. */}
       {action ? (
         action.text ? (
-          <Button
+          <HoverHint content={action.label}><Button
             type="button"
             variant="outline"
             size="sm"
             onClick={action.onClick}
             disabled={action.busy}
-            title={action.label}
             className="h-7 shrink-0"
           >
             {action.busy ? (
@@ -115,16 +115,15 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
               <action.icon className="size-3.5" />
             )}
             {action.text}
-          </Button>
+          </Button></HoverHint>
         ) : (
-          <Button
+          <HoverHint content={action.label}><Button
             type="button"
             variant="outline"
             size="icon-sm"
             onClick={action.onClick}
             disabled={action.busy}
             aria-label={action.label}
-            title={action.label}
             className="size-7 shrink-0"
           >
             {action.busy ? (
@@ -133,7 +132,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
               // Defaults to the ruler (Measure); Detect brings its own icon.
               <action.icon className="size-3.5" />
             )}
-          </Button>
+          </Button></HoverHint>
         )
       ) : null}
       {onEdit ? (
@@ -159,12 +158,11 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
       <div className={`group/fact min-w-0 px-5 py-3 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)] ${wide ? "col-span-2 xl:col-span-1" : ""}`}>
         <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
         <dd className="flex min-h-7 min-w-0 items-center gap-2">
-          <span
+          <HoverHint content={typeof value === "string" ? value : undefined}><span
             className={`min-w-0 truncate text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
-            title={typeof value === "string" ? value : undefined}
           >
             {value}
-          </span>
+          </span></HoverHint>
           {/* Steel UI (Krishna, 14 Oct): with a mouse, the buttons appear when the pointer
               is on this fact, for a cleaner header. They stay visible on touch screens (no
               hover there), for keyboard focus, while a menu is open and while busy. Hidden
@@ -185,12 +183,11 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
         <div className="flex min-w-0 items-center gap-3">
           <Icon className="size-4 shrink-0 text-muted-foreground" />
           <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
-          <span
+          <HoverHint content={typeof value === "string" ? value : undefined}><span
             className={`min-w-0 flex-1 truncate text-right text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
-            title={typeof value === "string" ? value : undefined}
           >
             {value}
-          </span>
+          </span></HoverHint>
           {controls}
         </div>
         {noteNode ? <div className="ps-7">{noteNode}</div> : null}

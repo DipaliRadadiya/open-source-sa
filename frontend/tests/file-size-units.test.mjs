@@ -66,7 +66,7 @@ test("every file-manager size is built from bytes, not the backend's 1024 label"
 
 test("hovering a size shows the exact bytes, translated", () => {
   const source = read("components/applications/files/file-size.jsx");
-  assert.match(source, /title=\{bytes >= 1000 \? t\("exactBytes", \{ bytes \}\)/);
+  assert.match(source, /content=\{bytes >= 1000 \? t\("exactBytes", \{ bytes \}\)/);
   for (const locale of ["en", "es", "de", "fr", "hi", "pt", "ja", "ru"]) {
     const messages = JSON.parse(read(`messages/${locale}.json`));
     assert.match(messages.applications.files.exactBytes, /^\{bytes, plural, /, locale);

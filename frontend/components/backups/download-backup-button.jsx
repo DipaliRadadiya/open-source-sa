@@ -9,6 +9,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { PrepareDownloadDialog } from "@/components/backups/prepare-download-dialog";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // The presigned link expires in five minutes, so fetch on click; never render it, as
 // the URL is the credential.
@@ -75,17 +76,16 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
     {/* Only the blocked state gets the wrapper: `ReasonTooltip` makes its span
         focusable, which would add a second tab stop to an enabled button. */}
     <ReasonTooltip reason={blocker}>
-      <Button
+      <HoverHint content={blocker ? undefined : size ? t("hintWithSize", { size }) : t("hint")}><Button
         variant="outline"
         size={label ? "sm" : "icon-sm"}
         disabled={Boolean(blocker) || pending}
         onClick={download}
-        title={blocker ? undefined : size ? t("hintWithSize", { size }) : t("hint")}
         aria-label={label ? undefined : t("label")}
       >
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
         {label ? t("label") : null}
-      </Button>
+      </Button></HoverHint>
     </ReasonTooltip>
     {preparing ? (
       <PrepareDownloadDialog

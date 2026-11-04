@@ -50,7 +50,7 @@ test("only a fragment is rendered, because this column has no fixed width", () =
    */
   assert.match(code, /text\.slice\(0, 8\)/);
   assert.match(code, /<CopyButton value=\{uid\}/);
-  assert.match(code, /title=\{uid\}/);
+  assert.match(code, /content=\{uid\}/);
 });
 
 test("it still only appears when an archive exists", () => {

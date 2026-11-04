@@ -21,6 +21,7 @@ import { ActionIcon } from "@/components/ui/action-icon";
 import { restoreBlocker } from "@/lib/backups/restore-blocker";
 import { backupTypeLabel } from "@/lib/backups/type-label";
 import { backupSubject } from "@/lib/backups/backup-subject";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 /* Every backup that has run, as the same table the overview uses. */
 
@@ -123,15 +124,15 @@ function DestinationCell({ row }) {
   // `title` suffices: this column only renders on pointer-sized screens. Never the full uid: 36 mono chars overflow.
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
-      <span className="truncate text-sm" title={name}>
+      <HoverHint content={name}><span className="truncate text-sm">
         {name}
-      </span>
+      </span></HoverHint>
       {/* A failed upload still has a uid that matches nothing. Same predicate as Download. */}
       {uid && backupHasArchive(row.original.status) ? (
         <span className="flex min-w-0 items-center gap-0.5">
-          <span className="truncate font-mono text-xs text-muted-foreground" title={uid}>
+          <HoverHint content={uid}><span className="truncate font-mono text-xs text-muted-foreground">
             {uidFragment(uid)}
-          </span>
+          </span></HoverHint>
           <CopyButton value={uid} label={t("copyUid")} className="size-6 shrink-0" />
         </span>
       ) : null}

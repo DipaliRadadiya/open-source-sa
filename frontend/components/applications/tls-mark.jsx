@@ -1,5 +1,6 @@
 import { ShieldCheck, ShieldOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // The server sets `https` only when the certificate is servable and covers the
 // primary domain; the list payload has no certificate field.
@@ -15,15 +16,14 @@ export function TlsMark({ application, label, className }) {
   const Icon = secure ? ShieldCheck : ShieldOff;
 
   return (
-    <Icon
+    <HoverHint content={label}><Icon
       role="img"
       aria-label={label}
-      title={label}
       className={cn(
         "size-3.5 shrink-0",
         secure ? "text-success" : "text-muted-foreground",
         className,
       )}
-    />
+    /></HoverHint>
   );
 }

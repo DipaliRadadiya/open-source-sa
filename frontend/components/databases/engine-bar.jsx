@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 // EngineBar owns the install lifecycle: closing the confirmation must not hide queued work.
 // Adds the name when the logo lacks one (PostgreSQL's elephant); `size` matches wordmark height.
@@ -94,9 +95,7 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
       {/* Installing and failed keep their words so they stand out. */}
       <div className="flex flex-wrap items-center gap-2">
         {running.map((engine) => (
-          <span
-            key={engine.engine}
-            title={engine.version ?? undefined}
+          <HoverHint key={engine.engine} content={engine.version ?? undefined}><span
             className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2.5 py-1.5"
           >
             <span
@@ -109,7 +108,7 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
                 {shortVersion(engine.version)}
               </span>
             ) : null}
-          </span>
+          </span></HoverHint>
         ))}
 
         {installing.map((engine) => (
