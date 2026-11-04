@@ -60,6 +60,8 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
       );
       if (verdict.ok) toast.success(t("replacedAndTested"));
       else toast.error(verdict.message, { duration: 10000 });
+      // The card shows the stored verdict: refresh so it is this test's, not the old credentials'.
+      if (!verdict.notRun) await refreshAndWait();
     } catch (error) {
       handleValidationError(error, form, { fallback: t("failed") });
     }

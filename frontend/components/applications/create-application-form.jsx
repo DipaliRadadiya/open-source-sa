@@ -741,6 +741,8 @@ export function CreateApplicationForm({
   databaseNotice = null,
 }) {
   const t = useTranslations("applications");
+  const [revealUserPassword, setRevealUserPassword] = useState(false);
+  const userPasswordGenerated = useRef(false);
   // Both refresh actions share one visible label from `common`; only their
   // accessible names differ.
   const tCommon = useTranslations("common");
@@ -1999,24 +2001,43 @@ export function CreateApplicationForm({
                             <PasswordInput
                               autoComplete="new-password"
                               placeholder={t("form.systemUserPasswordPlaceholder")}
+                              show={revealUserPassword}
+                              onShowChange={(next) => {
+                                userPasswordGenerated.current = false;
+                                setRevealUserPassword(next);
+                              }}
                               {...field}
+                              onChange={(event) => {
+                                field.onChange(event);
+                                if (userPasswordGenerated.current) {
+                                  userPasswordGenerated.current = false;
+                                  setRevealUserPassword(false);
+                                }
+                              }}
                             />
                           </FormControl>
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="sm"
-                            className="absolute top-0 right-0 h-auto p-0 text-xs"
-                            onClick={() =>
-                              form.setValue("system_user_password", generatePassword(), {
-                                shouldDirty: true,
-                                shouldValidate: true,
-                              })
-                            }
-                          >
-                            <Sparkles className="size-3" />
-                            {t("form.systemUserGeneratePassword")}
-                          </Button>
+                          {/* Like the admin passwords: a generated value is shown, with a copy button, so it
+                              can be kept before Create. It was filled in hidden, with no way to copy it. */}
+                          <div className="absolute top-0 right-0 flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs"
+                              onClick={() => {
+                                form.setValue("system_user_password", generatePassword(), {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                                setRevealUserPassword(true);
+                                userPasswordGenerated.current = true;
+                              }}
+                            >
+                              <Sparkles className="size-3" />
+                              {t("form.systemUserGeneratePassword")}
+                            </Button>
+                            {field.value ? <CopyButton value={String(field.value)} className="size-6" /> : null}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}

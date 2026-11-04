@@ -84,6 +84,9 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
         const verdict = await probeDestination(created.id, t("testFailed"), t("testNotRun"));
         if (verdict.ok) toast.success(t("testPassed"));
         else toast.error(verdict.message, { duration: 10000 });
+        // The test is recorded on the destination: without a refresh its card kept saying
+        // "Never tested" until a reload (4 Nov QA).
+        if (!verdict.notRun) await refreshAndWait();
       }
     } catch (error) {
       handleValidationError(error, form, { fallback: t("failed") });
