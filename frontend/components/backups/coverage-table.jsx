@@ -67,7 +67,7 @@ function SiteCell({ row }) {
   );
 }
 
-function StatusCell({ row }) {
+export function StatusCell({ row }) {
   const t = useTranslations("backups.coverage");
   const meta = COVERAGE_STATE[row.original.state];
   const Icon = meta.icon;

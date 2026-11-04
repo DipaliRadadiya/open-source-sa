@@ -7872,11 +7872,11 @@
     },
     "databases": {
       "title": "Bases de données indépendantes",
-      "description": "Les bases de données qui ne font partie d'aucune application. Elles sont sauvegardées selon leur propre planification, réglée dans l'onglet Sauvegardes de chaque base.",
-      "manage": "Gérer",
+      "description": "Les bases de données qui ne font partie d'aucune application. Chacune a sa propre planification de sauvegarde.",
       "loadFailed": "Impossible de lire quelles bases de données sont sauvegardées.",
       "columns": {
-        "database": "Base de données"
+        "database": "Base de données",
+        "engine": "Moteur"
       },
       "notSetUpLine": "Non configurée — cette base de données n'est pas sauvegardée."
     },

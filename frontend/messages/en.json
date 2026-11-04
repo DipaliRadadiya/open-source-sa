@@ -7872,11 +7872,11 @@
     },
     "databases": {
       "title": "Databases on their own",
-      "description": "Databases that aren't part of an application. They are backed up on their own schedule, set on each database's Backups tab.",
-      "manage": "Manage",
+      "description": "Databases that aren't part of an application. Each one has its own backup schedule.",
       "loadFailed": "Couldn't read which databases are backed up.",
       "columns": {
-        "database": "Database"
+        "database": "Database",
+        "engine": "Engine"
       },
       "notSetUpLine": "Not set up — this database is not being backed up."
     },

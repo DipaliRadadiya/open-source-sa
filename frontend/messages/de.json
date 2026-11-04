@@ -7872,11 +7872,11 @@
     },
     "databases": {
       "title": "Eigenständige Datenbanken",
-      "description": "Datenbanken, die zu keiner Anwendung gehören. Sie werden nach eigenem Zeitplan gesichert, eingestellt im Tab „Backups“ der jeweiligen Datenbank.",
-      "manage": "Verwalten",
+      "description": "Datenbanken, die zu keiner Anwendung gehören. Jede hat ihren eigenen Backup-Zeitplan.",
       "loadFailed": "Es konnte nicht gelesen werden, welche Datenbanken gesichert werden.",
       "columns": {
-        "database": "Datenbank"
+        "database": "Datenbank",
+        "engine": "Engine"
       },
       "notSetUpLine": "Nicht eingerichtet — diese Datenbank wird nicht gesichert."
     },

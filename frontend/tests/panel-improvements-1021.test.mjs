@@ -130,7 +130,7 @@ test("Backups overview lists standalone databases and links each to its Backups 
   });
   assert.equal(parsed.backup_targets[0].backup_target, null);
   const card = read("components/backups/database-coverage-card.jsx");
-  assert.match(card, /href=\{`\/databases\/\$\{row\.original\.database\.id\}\?tab=backups`\}/);
+  assert.match(card, /href=\{`\/databases\/\$\{database\.id\}\?tab=backups`\}/);
   assert.match(card, /t\("notSetUpLine"\)/);
   assert.match(card, /canOpenDatabases \?/);
   const page = read("app/(app)/backups/page.jsx");
@@ -176,4 +176,19 @@ test("the database list names the attached application from the list itself", as
   const { databaseSchema } = await import("../lib/schemas/database.js");
   assert.equal(databaseSchema.parse({ id: 1, name: "x", engine: "mariadb", application_id: 19, application_name: "akaunting" }).application_name, "akaunting");
   assert.match(read("app/(app)/databases/page.jsx"), /canOpenApplications=\{can\(permissions, "application", "view"\)\}/);
+});
+
+// Krishna, 4 Nov: the databases section lines up with the applications table above it,
+// has the same Run backup + ⋯ actions, and turns into cards on a phone like the apps.
+test("databases on their own share the applications table's columns, actions and phone cards", () => {
+  const card = read("components/backups/database-coverage-card.jsx");
+  const apps = read("components/backups/coverage-table.jsx");
+  const widths = (src) => [...src.matchAll(/meta: \{ className: "(w-[^"]+)" \}/g)].map((m) => m[1]);
+  assert.deepEqual(widths(card), widths(apps));
+  assert.match(card, /runDatabaseBackupNow\(databaseId\)/);
+  assert.match(card, /href=\{`\/backups\/history\?database=\$\{database\.id\}`\}/);
+  assert.match(card, /ReasonTooltip reason=\{canManage \? null : td\("noPermission"\)\}/);
+  assert.match(card, /<ListCard from="c900"/);
+  assert.match(card, /<DatabaseCards \{\.\.\.listProps\} \/>/);
+  assert.match(read("app/(app)/backups/page.jsx"), /canManage=\{can\(permissions, "database", "manage"\)\}/);
 });

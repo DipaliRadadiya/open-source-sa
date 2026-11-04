@@ -7872,11 +7872,11 @@
     },
     "databases": {
       "title": "Bases de datos independientes",
-      "description": "Bases de datos que no forman parte de ninguna aplicación. Se respaldan con su propia programación, configurada en la pestaña Copias de seguridad de cada base de datos.",
-      "manage": "Gestionar",
+      "description": "Bases de datos que no forman parte de ninguna aplicación. Cada una tiene su propia programación de copias de seguridad.",
       "loadFailed": "No se pudo leer qué bases de datos tienen copia de seguridad.",
       "columns": {
-        "database": "Base de datos"
+        "database": "Base de datos",
+        "engine": "Motor"
       },
       "notSetUpLine": "Sin configurar: no se respalda esta base de datos."
     },

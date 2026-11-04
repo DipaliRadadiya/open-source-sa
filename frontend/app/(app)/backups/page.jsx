@@ -35,6 +35,7 @@ export default async function BackupsPage() {
       coverage={databaseCoverage}
       options={backupOptions}
       canOpenDatabases={can(permissions, "database", "view")}
+      canManage={can(permissions, "database", "manage")}
     />
   );
 

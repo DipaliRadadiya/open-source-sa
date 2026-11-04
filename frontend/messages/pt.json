@@ -7872,11 +7872,11 @@
     },
     "databases": {
       "title": "Bancos de dados independentes",
-      "description": "Bancos de dados que não fazem parte de nenhuma aplicação. São copiados conforme o próprio agendamento, definido na aba Backups de cada banco de dados.",
-      "manage": "Gerenciar",
+      "description": "Bancos de dados que não fazem parte de nenhuma aplicação. Cada um tem o próprio agendamento de backup.",
       "loadFailed": "Não foi possível ler quais bancos de dados têm backup.",
       "columns": {
-        "database": "Banco de dados"
+        "database": "Banco de dados",
+        "engine": "Engine"
       },
       "notSetUpLine": "Não configurado — este banco de dados não está sendo copiado."
     },
