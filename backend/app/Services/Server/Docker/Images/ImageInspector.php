@@ -168,30 +168,33 @@ class ImageInspector
         $env = $this->environment($image, (array) ($runtime['Env'] ?? []));
         $workdir = (string) ($runtime['WorkingDir'] ?? '');
 
+        // Keyed by code so the sentence and its code can never fall out of step:
+        // `warnings` is what the user reads, `warning_codes` is what a client
+        // switches on without parsing a translated sentence (RC-32).
         $warnings = [];
         $required = array_column(array_filter($env, fn (array $item): bool => $item['required']), 'key');
         $empty = array_column(array_filter($env, fn (array $item): bool => ! $item['required'] && $item['default'] === ''), 'key');
 
         if ($required !== []) {
-            $warnings[] = __('docker.image.warning_required_env', ['keys' => implode(', ', $required)]);
+            $warnings['required_env'] = __('docker.image.warning_required_env', ['keys' => implode(', ', $required)]);
         }
 
         if ($empty !== []) {
-            $warnings[] = __('docker.image.warning_empty_env', ['keys' => implode(', ', $empty)]);
+            $warnings['empty_env'] = __('docker.image.warning_empty_env', ['keys' => implode(', ', $empty)]);
         }
 
         if (! $hasBuild) {
-            $warnings[] = __('docker.image.warning_no_build', ['architecture' => 'linux/'.$architecture]);
+            $warnings['no_build'] = __('docker.image.warning_no_build', ['architecture' => 'linux/'.$architecture]);
         }
 
         if ($size >= (int) config('server.docker.images.large_bytes', 1024 ** 3)) {
-            $warnings[] = __('docker.image.warning_large', ['size' => $this->humanSize($size)]);
+            $warnings['large'] = __('docker.image.warning_large', ['size' => $this->humanSize($size)]);
         }
 
         if ($confidence === 'none') {
-            $warnings[] = __('docker.image.warning_no_port');
+            $warnings['no_port'] = __('docker.image.warning_no_port');
         } elseif (count($ports) > 1) {
-            $warnings[] = __('docker.image.warning_several_ports', ['ports' => implode(', ', $ports), 'port' => $port]);
+            $warnings['several_ports'] = __('docker.image.warning_several_ports', ['ports' => implode(', ', $ports), 'port' => $port]);
         }
 
         return [
@@ -209,7 +212,8 @@ class ImageInspector
             'size_bytes' => $size,
             'architectures' => $architectures,
             'uses_app_dir' => $this->usesAppDir($config, $workdir),
-            'warnings' => $warnings,
+            'warnings' => array_values($warnings),
+            'warning_codes' => array_keys($warnings),
         ];
     }
 

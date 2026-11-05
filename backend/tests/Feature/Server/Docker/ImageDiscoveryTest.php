@@ -193,7 +193,7 @@ it('inspects a Hub image through its manifest list and returns the DS-02 contrac
     $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=neosmemo/memos:0.31.0')->assertOk();
 
     expect($response->json())->toHaveKeys(['image', 'digest', 'found', 'exposed_ports', 'suggested_port', 'port_confidence',
-        'volumes', 'suggested_volumes', 'env', 'workdir', 'user', 'size_bytes', 'architectures', 'uses_app_dir', 'warnings'])
+        'volumes', 'suggested_volumes', 'env', 'workdir', 'user', 'size_bytes', 'architectures', 'uses_app_dir', 'warnings', 'warning_codes'])
         ->and($response->json('image'))->toBe('neosmemo/memos:0.31.0')
         ->and($response->json('found'))->toBeTrue()
         ->and($response->json('digest'))->toStartWith('sha256:')
@@ -213,7 +213,8 @@ it('inspects a Hub image through its manifest list and returns the DS-02 contrac
         // The attestation entry is not an architecture.
         ->and($response->json('architectures'))->toBe(['arm64', 'amd64', 'arm/v7'])
         ->and($response->json('uses_app_dir'))->toBeFalse()
-        ->and($response->json('warnings'))->toBe([]);
+        ->and($response->json('warnings'))->toBe([])
+        ->and($response->json('warning_codes'))->toBe([]);
 
     // Anonymous pull token, scoped to this repository, from Hub's own realm.
     Http::assertSent(fn (Request $r): bool => str_starts_with($r->url(), 'https://auth.docker.io/token')
@@ -435,6 +436,47 @@ it('warns about a large download', function () {
 
     $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=acme/big:1')
         ->assertOk()->assertJsonPath('warnings', [__('docker.image.warning_large', ['size' => '31 MB'])]);
+});
+
+it('gives every warning a code beside its sentence, in the same order (RC-32)', function () {
+    // All five that can occur together: postgres is a documented required
+    // setting, `EXTRA=` is an empty one, the only build is arm64, the download
+    // is over the threshold, and nothing declares a port.
+    config(['server.docker.images.large_bytes' => 1]);
+    imgRegistry(['docker.io/library/postgres:18' => ['index' => [
+        'arm64' => imgConfig(['Env' => ['EXTRA=']], [], 'arm64'),
+    ]]]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=postgres:18')->assertOk();
+
+    expect($response->json('warning_codes'))->toBe(['required_env', 'empty_env', 'no_build', 'large', 'no_port'])
+        ->and($response->json('warnings'))->toHaveCount(5)
+        ->and($response->json('warnings.0'))->toBe(__('docker.image.warning_required_env', ['keys' => 'POSTGRES_PASSWORD']))
+        ->and($response->json('warnings.1'))->toBe(__('docker.image.warning_empty_env', ['keys' => 'EXTRA']))
+        ->and($response->json('warnings.2'))->toBe(__('docker.image.warning_no_build', ['architecture' => 'linux/amd64']))
+        ->and($response->json('warnings.4'))->toBe(__('docker.image.warning_no_port'));
+});
+
+it('codes the several-ports warning, and keeps the sentences unchanged', function () {
+    imgRegistry(['docker.io/acme/twoports:1' => imgConfig(['ExposedPorts' => ['80/tcp' => [], '9000/tcp' => []]])]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=acme/twoports:1')->assertOk();
+
+    expect($response->json('warning_codes'))->toBe(['several_ports'])
+        ->and($response->json('warnings'))->toBe([__('docker.image.warning_several_ports', ['ports' => '80, 9000', 'port' => 80])]);
+});
+
+it('sends the same codes whatever language the sentences are in (RC-32)', function () {
+    config(['server.docker.images.large_bytes' => 1]);
+    imgRegistry(['docker.io/acme/big:1' => imgConfig(['ExposedPorts' => ['80/tcp' => []]])]);
+
+    $english = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=acme/big:1')->assertOk();
+    Cache::flush();
+    $german = $this->withHeaders(imgAs() + ['Accept-Language' => 'de'])->getJson('/api/docker/images/inspect?image=acme/big:1')->assertOk();
+
+    expect($english->json('warning_codes'))->toBe(['large'])
+        ->and($german->json('warning_codes'))->toBe(['large'])
+        ->and($german->json('warnings.0'))->not->toBe($english->json('warnings.0'));
 });
 
 /*

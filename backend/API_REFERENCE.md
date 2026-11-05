@@ -7238,7 +7238,7 @@ The image is resolved for **this server's architecture**. A manifest list is nar
   "volumes": ["/var/opt/memos"], "suggested_volumes": [ { "path": "/var/opt/memos", "name": "memos-data" } ],
   "env": [ { "key": "TZ", "default": "UTC", "required": false }, { "key": "MEMOS_PORT", "default": "5230", "required": false } ],
   "workdir": "/var/opt/memos", "user": "", "size_bytes": 26239339, "architectures": ["arm64", "amd64", "arm/v7"],
-  "uses_app_dir": false, "warnings": [] }
+  "uses_app_dir": false, "warnings": [], "warning_codes": [] }
 ```
 - `exposed_ports`: TCP ports from `EXPOSE`. UDP is left out because nginx cannot proxy to it.
 - `suggested_port` and `port_confidence`:
@@ -7259,6 +7259,18 @@ The image is resolved for **this server's architecture**. A manifest list is nar
   - a download of 1 GB or more
   - no declared port
   - several ports
+- **`warning_codes`** (added 2026-11-05, RC-32): one code per entry in `warnings`, **same length and same order**, so `warning_codes[i]` names `warnings[i]`. They do not depend on the language, so a client can switch on them instead of parsing a sentence. `warnings` is unchanged. The codes, in the order the sentences are produced:
+
+  | code | when |
+  |---|---|
+  | `required_env` | settings the image will not start without (`server.docker.images.required_env`) |
+  | `empty_env` | settings the image ships empty |
+  | `no_build` | no build for this server's architecture |
+  | `large` | download of 1 GB or more |
+  | `no_port` | no declared port and none known |
+  | `several_ports` | several declared ports (never together with `no_port`) |
+
+  Not found (`found: false`) answers carry neither field.
 
 Not found, `200`:
 ```json
