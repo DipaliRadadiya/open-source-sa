@@ -4999,7 +4999,8 @@
         "reason": {
           "not_found": "存在しません",
           "exists": "移動先にすでに何かがあります",
-          "failed": "サーバーに拒否されました"
+          "failed": "サーバーに拒否されました",
+          "into_itself": "それ自体の中には移動もコピーもできません"
         },
         "deleteDescriptionPermanent": "これらはサーバーから即座に完全に削除されます。元に戻せません。",
         "deleteSubmitForever": "完全に削除",

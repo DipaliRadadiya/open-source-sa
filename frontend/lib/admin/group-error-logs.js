@@ -37,6 +37,8 @@ export function groupErrorLogs(entries = []) {
         kind,
         feature: entry.feature ?? null,
         operation: entry.operation ?? null,
+        featureLabel: entry.feature_label ?? null,
+        operationLabel: entry.operation_label ?? null,
         exitCode: entry.exit_code ?? null,
         exception: entry.exception ?? null,
         exceptionShort: shortException(entry.exception),
@@ -68,7 +70,7 @@ export function groupErrorLogs(entries = []) {
   );
 }
 
-/** Plain-text search across the group's exception, route, method, status, feature and operation. */
+/** Plain-text search across the group's exception, route, method, status, feature and operation (ids and names). */
 export function groupMatches(group, query) {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
@@ -80,6 +82,8 @@ export function groupMatches(group, query) {
     group.status,
     group.feature,
     group.operation,
+    group.featureLabel,
+    group.operationLabel,
   ]
     .filter(Boolean)
     .some((field) => String(field).toLowerCase().includes(needle));

@@ -4999,7 +4999,8 @@
         "reason": {
           "not_found": "Não está mais lá",
           "exists": "Já existe algo no destino",
-          "failed": "O servidor recusou a operação"
+          "failed": "O servidor recusou a operação",
+          "into_itself": "Não pode ser movida nem copiada para dentro de si mesma"
         },
         "deleteDescriptionPermanent": "Estes itens são destruídos no servidor imediatamente. Isso não pode ser desfeito.",
         "deleteSubmitForever": "Excluir permanentemente",

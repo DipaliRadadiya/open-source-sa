@@ -76,7 +76,7 @@ export function ErrorGroupRow({ group, now }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-medium leading-tight">
               {isOperation
-                ? t("operationTitle", { operation: group.operation ?? t("unknownOperation") })
+                ? t("operationTitle", { operation: group.operationLabel ?? group.operation ?? t("unknownOperation") })
                 : group.exceptionShort ?? t("unknownException")}
             </p>
             {group.status ? (
@@ -99,12 +99,12 @@ export function ErrorGroupRow({ group, now }) {
           </div>
 
           {/* Where it happened (a route pattern for API failures, the feature for
-              operations; backend identifiers, so mono) and when, on one line. */}
+              operations, by name when the API sends one; identifiers stay mono) and when, on one line. */}
           <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-muted-foreground">
             {isOperation ? (
-              <span className="break-all">
-                {group.feature ?? t("unknownFeature")}
-                {group.operation ? ` · ${group.operation}` : null}
+              <span className={cn("break-all", group.featureLabel || group.operationLabel ? "font-sans" : null)}>
+                {group.featureLabel ?? group.feature ?? t("unknownFeature")}
+                {group.operationLabel ?? group.operation ? ` · ${group.operationLabel ?? group.operation}` : null}
               </span>
             ) : (
               <>

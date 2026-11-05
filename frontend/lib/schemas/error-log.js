@@ -14,6 +14,9 @@ export const errorLogEntrySchema = z
     user_id: z.number().int().nullish(),
     feature: z.string().nullish(),
     operation: z.string().nullish(),
+    // `feature` and `operation` in plain words, translated; null when absent.
+    feature_label: z.string().nullish(),
+    operation_label: z.string().nullish(),
     exit_code: z.number().int().nullish(),
     error: z.string().nullish(),
     file: z.string().nullish(),

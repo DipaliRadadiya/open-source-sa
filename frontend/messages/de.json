@@ -4999,7 +4999,8 @@
         "reason": {
           "not_found": "Nicht mehr vorhanden",
           "exists": "Am Ziel liegt schon etwas",
-          "failed": "Der Server hat es abgelehnt"
+          "failed": "Der Server hat es abgelehnt",
+          "into_itself": "Kann nicht in sich selbst verschoben oder kopiert werden"
         },
         "deleteDescriptionPermanent": "Diese werden auf dem Server sofort vernichtet. Das lässt sich nicht zurücknehmen.",
         "deleteSubmitForever": "Endgültig löschen",

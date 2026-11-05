@@ -4999,7 +4999,8 @@
         "reason": {
           "not_found": "N'existe plus",
           "exists": "Quelque chose est déjà à la destination",
-          "failed": "Le serveur a refusé"
+          "failed": "Le serveur a refusé",
+          "into_itself": "Impossible de le déplacer ou de le copier dans lui-même"
         },
         "deleteDescriptionPermanent": "Ces éléments sont détruits sur le serveur immédiatement. C'est irréversible.",
         "deleteSubmitForever": "Supprimer définitivement",

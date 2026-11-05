@@ -15,7 +15,7 @@ export function bulkResult(data, paths) {
 
 // Any newer backend reason is shown verbatim.
 export function failureReason(reason, t) {
-  return ["not_found", "exists", "failed"].includes(reason)
+  return ["not_found", "exists", "failed", "into_itself"].includes(reason)
     ? t(`bulk.reason.${reason}`)
     : reason;
 }
