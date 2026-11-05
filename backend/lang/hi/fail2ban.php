@@ -29,5 +29,5 @@ return [
         'disallowed_setting' => 'एप्लिकेशन jail में ":setting" सेटिंग की अनुमति नहीं है। अनुमत: :allowed।',
     ],
     // FB-wp: the default filter is WordPress's.
-    'app_default_filter_wordpress_only' => 'डिफ़ॉल्ट नियम केवल WordPress के विफल लॉगिन पकड़ते हैं। :type के लिए अभी ऐसे नियम नहीं हैं, इसलिए जब तक आप इस एप्लिकेशन के लॉगिन पेज के लिए नियम नहीं जोड़ते, यह jail किसी को बैन नहीं करता।',
+    'app_default_filter_wordpress_only' => 'इस एप्लिकेशन के लिए अभी कोई लॉगिन नियम नहीं है, इसलिए किसी को बैन नहीं किया जाता। इसके लॉगिन पेज के लिए एक नियम जोड़ें।',
 ];

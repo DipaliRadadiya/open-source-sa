@@ -254,7 +254,7 @@ it('says the default filter is WordPress\'s on any other site type (FB-wp)', fun
     $this->withHeaders(appFail2banHeaders())->getJson(appFail2banUrl())
         ->assertOk()
         ->assertJsonPath('filter_scope', 'wordpress_only')
-        ->assertJsonPath('filter_note', __('fail2ban.app_default_filter_wordpress_only', ['type' => __('application.types.joomla.title')]));
+        ->assertJsonPath('filter_note', 'This application has no login rule yet, so nobody is banned. Add a rule for its login page.');
 });
 
 it('has nothing to warn about on WordPress', function () {

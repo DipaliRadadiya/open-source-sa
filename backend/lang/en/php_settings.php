@@ -32,7 +32,7 @@ return [
         ],
         'strict' => [
             'title' => 'Strict',
-            'description' => 'Adds process, user and socket inspection on top of the recommended list. Matches typical shared-hosting hardening, and may break an application that uses the sockets extension.',
+            'description' => 'Blocks more functions. Safer, but can break some applications.',
         ],
     ],
 

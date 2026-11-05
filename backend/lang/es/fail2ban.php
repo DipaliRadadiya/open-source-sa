@@ -29,5 +29,5 @@ return [
         'disallowed_setting' => 'El ajuste ":setting" no está permitido en la jaula de una aplicación. Permitidos: :allowed.',
     ],
     // FB-wp: the default filter is WordPress's.
-    'app_default_filter_wordpress_only' => 'Las reglas predeterminadas solo detectan inicios de sesión fallidos de WordPress. :type aún no tiene reglas así, por lo que esta jaula no bloquea a nadie hasta que añada una regla para la página de inicio de sesión de esta aplicación.',
+    'app_default_filter_wordpress_only' => 'Esta aplicación aún no tiene una regla de inicio de sesión, por lo que no se bloquea a nadie. Añada una regla para su página de inicio de sesión.',
 ];

@@ -23,7 +23,7 @@ return [
         ],
         'strict' => [
             'title' => 'Estricto',
-            'description' => 'Añade inspección de procesos, usuarios y sockets sobre la lista recomendada. Equivale al endurecimiento habitual del alojamiento compartido y puede romper una aplicación que use la extensión sockets.',
+            'description' => 'Bloquea más funciones. Es más seguro, pero puede romper algunas aplicaciones.',
         ],
     ],
 

@@ -29,5 +29,5 @@ return [
         'disallowed_setting' => 'A definição ":setting" não é permitida na jail de uma aplicação. Permitidas: :allowed.',
     ],
     // FB-wp: the default filter is WordPress's.
-    'app_default_filter_wordpress_only' => 'As regras predefinidas só detetam inícios de sessão falhados do WordPress. :type ainda não tem regras assim, por isso esta jail não bane ninguém até adicionar uma regra para a página de início de sessão desta aplicação.',
+    'app_default_filter_wordpress_only' => 'Esta aplicação ainda não tem uma regra de início de sessão, por isso ninguém é banido. Adicione uma regra para a sua página de início de sessão.',
 ];

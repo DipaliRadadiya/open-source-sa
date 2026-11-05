@@ -54,7 +54,7 @@ class SiteRootLockCheck implements DoctorCheck
         if ($unlocked === [] && $unknown === []) {
             return [
                 'status' => 'pass',
-                'detail' => $total === 0 ? __('doctor.details.roots_none') : __('doctor.details.roots_locked', ['count' => $total]),
+                'detail' => $total === 0 ? __('doctor.details.roots_none') : trans_choice('doctor.details.roots_locked', $total, ['count' => $total]),
                 'fix' => null,
             ];
         }

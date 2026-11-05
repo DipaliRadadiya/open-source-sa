@@ -30,5 +30,5 @@ return [
         'disallowed_setting' => 'The setting ":setting" is not allowed in an application jail. Allowed: :allowed.',
     ],
     // FB-wp: the default filter is WordPress's.
-    'app_default_filter_wordpress_only' => 'The default rules only catch failed WordPress logins. :type has no such rules yet, so this jail bans nobody until you add a rule for this application’s own login page.',
+    'app_default_filter_wordpress_only' => 'This application has no login rule yet, so nobody is banned. Add a rule for its login page.',
 ];

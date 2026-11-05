@@ -49,7 +49,7 @@ class HomeAccessCheck implements DoctorCheck
         if ($open === []) {
             return [
                 'status' => 'pass',
-                'detail' => $total === 0 ? __('doctor.details.home_none') : __('doctor.details.home_closed', ['count' => $total]),
+                'detail' => $total === 0 ? __('doctor.details.home_none') : trans_choice('doctor.details.home_closed', $total, ['count' => $total]),
                 'fix' => null,
             ];
         }

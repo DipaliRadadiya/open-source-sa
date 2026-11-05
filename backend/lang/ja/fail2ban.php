@@ -29,5 +29,5 @@ return [
         'disallowed_setting' => 'アプリケーションの jail では設定「:setting」は使用できません。使用可能: :allowed。',
     ],
     // FB-wp: the default filter is WordPress's.
-    'app_default_filter_wordpress_only' => '既定のルールは WordPress のログイン失敗だけを検出します。:type にはまだそのようなルールがないため、このアプリのログインページ用のルールを追加するまで、この jail は誰もブロックしません。',
+    'app_default_filter_wordpress_only' => 'このアプリにはまだログイン用のルールがないため、誰もブロックされません。ログインページ用のルールを追加してください。',
 ];

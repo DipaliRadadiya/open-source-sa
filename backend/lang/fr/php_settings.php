@@ -23,7 +23,7 @@ return [
         ],
         'strict' => [
             'title' => 'Strict',
-            'description' => 'Ajoute l\'inspection des processus, des utilisateurs et des sockets à la liste recommandée. Correspond au durcissement habituel de l\'hébergement mutualisé et peut casser une application utilisant l\'extension sockets.',
+            'description' => 'Bloque davantage de fonctions. Plus sûr, mais peut empêcher certaines applications de fonctionner.',
         ],
     ],
 

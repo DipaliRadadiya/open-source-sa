@@ -114,9 +114,7 @@ class ApplicationFail2banController extends Controller
 
         return [
             'filter_scope' => 'wordpress_only',
-            'filter_note' => __('fail2ban.app_default_filter_wordpress_only', [
-                'type' => __('application.types.'.$application->site_type.'.title'),
-            ]),
+            'filter_note' => __('fail2ban.app_default_filter_wordpress_only'),
         ];
     }
 

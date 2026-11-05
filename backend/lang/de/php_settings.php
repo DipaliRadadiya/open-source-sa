@@ -23,7 +23,7 @@ return [
         ],
         'strict' => [
             'title' => 'Streng',
-            'description' => 'Ergänzt die empfohlene Liste um Prozess-, Benutzer- und Socket-Abfragen. Entspricht der üblichen Härtung im Shared Hosting und kann Websites beeinträchtigen, die die Sockets-Erweiterung nutzen.',
+            'description' => 'Sperrt mehr Funktionen. Sicherer, kann aber manche Anwendungen beeinträchtigen.',
         ],
     ],
 

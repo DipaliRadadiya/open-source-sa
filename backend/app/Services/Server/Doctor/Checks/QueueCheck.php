@@ -37,7 +37,7 @@ class QueueCheck implements DoctorCheck
             // nothing.
             return [
                 'status' => 'pass',
-                'detail' => __('doctor.details.queue_driver', ['driver' => config('queue.default')]),
+                'detail' => __('doctor.details.queue_driver', ['driver' => $this->driverName((string) config('queue.default'))]),
                 'fix' => null,
             ];
         }
@@ -82,5 +82,13 @@ class QueueCheck implements DoctorCheck
             'detail' => __('doctor.details.queue_ok', ['count' => $pending]),
             'fix' => null,
         ];
+    }
+
+    private function driverName(string $driver): string
+    {
+        return match ($driver) {
+            'sqs' => 'SQS',
+            default => ucfirst($driver),
+        };
     }
 }
