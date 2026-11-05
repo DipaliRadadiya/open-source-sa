@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class ApiErrorLogResource extends JsonResource
 {
@@ -23,7 +24,9 @@ class ApiErrorLogResource extends JsonResource
             'reference' => $this['context']['reference'] ?? null,
             'user_id' => $this['context']['user_id'] ?? $this['context']['actor_id'] ?? null,
             'feature' => $this['context']['feature'] ?? null,
+            'feature_label' => $this->label('features', $this['context']['feature'] ?? null),
             'operation' => $this['context']['op'] ?? null,
+            'operation_label' => $this->label('operations', $this['context']['op'] ?? null),
             'exit_code' => $this['context']['exit_code'] ?? null,
             // The command itself. Already redacted where it was written --
             // ServerOps runs every command line through CommandRedactor before
@@ -37,6 +40,26 @@ class ApiErrorLogResource extends JsonResource
             'attempts' => $this['context']['attempts'] ?? null,
             'error' => $this->errorSummary(),
         ];
+    }
+
+    /**
+     * A readable name for a `feature` or `op` identifier, in the viewer's language.
+     *
+     * Dotted ops (`git.clone`) are nested in the language file, so a name that
+     * lands on a group or on nothing falls back to the identifier spelled out.
+     */
+    private function label(string $group, mixed $name): ?string
+    {
+        if (! is_string($name) || $name === '') {
+            return null;
+        }
+
+        $key = "error_log.{$group}.{$name}";
+        $label = trans($key);
+
+        return is_string($label) && $label !== $key
+            ? $label
+            : Str::ucfirst(str_replace(['_', '.', '-'], ' ', $name));
     }
 
     /**

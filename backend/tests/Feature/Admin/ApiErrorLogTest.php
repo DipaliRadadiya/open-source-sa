@@ -507,3 +507,93 @@ it('still records an exception that rendered a 5xx, with that status', function 
         Request::create('/api/fail2ban', 'GET'),
     );
 });
+
+/*
+ * The log records `pm2_jlist_user` and `staging_dump_list` for whoever reads
+ * the server-ops file. The admin screen shows words; the identifiers stay in
+ * `operation` / `feature` for anyone who searches the log.
+ */
+function errorLogEntryWith(array $context): array
+{
+    File::put(test()->logDir.'/server-ops.log', json_encode([
+        'message' => 'server operation',
+        'context' => $context + ['status' => 500],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-11-05T09:00:00+00:00',
+    ]).PHP_EOL);
+
+    $token = User::factory()->admin()->create()->createToken('test')->plainTextToken;
+
+    return test()->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/error-logs')
+        ->assertOk()
+        ->json('error_logs.0');
+}
+
+it('names the operation and the feature in words and keeps the raw identifiers', function (string $op, string $label) {
+    $entry = errorLogEntryWith(['feature' => 'application', 'op' => $op]);
+
+    expect($entry['operation'])->toBe($op)
+        ->and($entry['operation_label'])->toBe($label)
+        ->and($entry['feature'])->toBe('application')
+        ->and($entry['feature_label'])->toBe('Application');
+})->with([
+    'database query' => ['query', 'Database query'],
+    'pm2 listing' => ['pm2_jlist_user', 'List PM2 processes'],
+    'staging copies' => ['staging_dump_list', 'List staging database copies'],
+    'nested dotted op' => ['git.fetch', 'Fetch from Git remote'],
+    'installer step' => ['installer.extract', 'Unpack application files'],
+]);
+
+it('names a feature written with underscores', function () {
+    $entry = errorLogEntryWith(['feature' => 'disk_cleaner', 'op' => 'clean']);
+
+    expect($entry['feature_label'])->toBe('Disk cleaner')
+        ->and($entry['operation_label'])->toBe('Clean up disk space');
+});
+
+it('spells out an operation or feature it has no name for instead of leaving it blank', function () {
+    $entry = errorLogEntryWith(['feature' => 'brand_new_thing', 'op' => 'do_the_thing.now']);
+
+    expect($entry['feature_label'])->toBe('Brand new thing')
+        ->and($entry['operation_label'])->toBe('Do the thing now');
+});
+
+it('does not return an array when an operation names a group of nested labels', function () {
+    $entry = errorLogEntryWith(['feature' => 'application', 'op' => 'git']);
+
+    expect($entry['operation_label'])->toBeString()->toBe('Git');
+});
+
+it('gives null labels, not empty strings, when the entry has no feature or operation', function () {
+    $entry = errorLogEntryWith([]);
+
+    expect($entry['feature'])->toBeNull()
+        ->and($entry['feature_label'])->toBeNull()
+        ->and($entry['operation'])->toBeNull()
+        ->and($entry['operation_label'])->toBeNull();
+});
+
+it('names background failures written by the log writer', function () {
+    $entry = errorLogEntryWith(['feature' => 'queue', 'op' => 'job.failed']);
+
+    expect($entry['feature_label'])->toBe('Background job')
+        ->and($entry['operation_label'])->toBe('Background job failed');
+});
+
+it('names the operation in the language the administrator asked for', function () {
+    File::put($this->logDir.'/server-ops.log', json_encode([
+        'message' => 'server operation',
+        'context' => ['status' => 500, 'feature' => 'application', 'op' => 'pm2_jlist_user'],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-11-05T09:00:00+00:00',
+    ]).PHP_EOL);
+    $token = User::factory()->admin()->create()->createToken('test')->plainTextToken;
+
+    $this->withHeaders(['Authorization' => "Bearer {$token}", 'Accept-Language' => 'de'])
+        ->getJson('/api/admin/error-logs')
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.operation', 'pm2_jlist_user')
+        ->assertJsonPath('error_logs.0.operation_label', 'PM2-Prozesse auflisten')
+        ->assertJsonPath('error_logs.0.feature_label', 'Anwendung');
+});
