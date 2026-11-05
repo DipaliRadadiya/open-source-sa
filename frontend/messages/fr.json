@@ -1791,8 +1791,8 @@
       "badgeFailing": "{count} en échec",
       "badgeBanned": "Bannissements : {count}",
       "about": {
-        "sshd": "Surveille les connexions SSH à ce serveur. Une adresse qui se trompe trop souvent de mot de passe ou de clé est bannie, selon les limites des Règles de bannissement.",
-        "recidive": "Surveille les autres jails. Une adresse bannie 3 fois en une journée est bannie de tous les services de ce serveur pendant une semaine."
+        "sshd": "Bannit une adresse qui se trompe trop souvent de mot de passe ou de clé SSH.",
+        "recidive": "Une adresse bannie 3 fois en une journée est bannie de tous les services pendant une semaine."
       }
     },
     "lockout": {
@@ -1868,13 +1868,13 @@
       "findtime": "Compté sur (secondes)",
       "findtimeHint": "Les tentatives plus anciennes sont oubliées : les devinettes lentes ne s'accumulent pas.",
       "maxretry": "Tentatives erronées autorisées",
-      "maxretryHint": "Combien de fois une adresse peut se tromper avant d'être bannie. Au moins 2 — une faute de frappe est fréquente.",
+      "maxretryHint": "Essais ratés permis avant un bannissement. Au moins 2.",
       "permanent": "Pour toujours",
       "currentSeconds": "{seconds} secondes (actuellement)",
       "ignore": "Ne jamais bannir",
       "ignoreHint": "Les adresses de cette liste sont exclues des bannissements de Fail2ban.",
       "saveRules": "Enregistrer les règles de bannissement",
-      "ignoreDraftHint": "Ajouter et retirer s'appliquent immédiatement. Fail2ban est rechargé à chaque fois, ce qui prend quelques secondes.",
+      "ignoreDraftHint": "Les modifications s'appliquent en quelques secondes.",
       "inputLabel": "Adresse IP ou plage, comme 203.0.113.0/24",
       "ignoreEmpty": "Rien ici pour l'instant.",
       "ipPlaceholder": "203.0.113.5 ou 203.0.113.0/24",
@@ -1905,7 +1905,7 @@
       "findtimeRange": "Saisissez un nombre entier de secondes de 30 à 86400 (un jour).",
       "previewTitle": "Aperçu de la règle",
       "previewInvalid": "Saisissez des valeurs valides pour les tentatives et la période afin de prévisualiser la règle.",
-      "previewHint": "Aperçu des valeurs sélectionnées. Enregistrer les règles de bannissement applique les modifications.",
+      "previewHint": "Enregistrez les règles de bannissement pour appliquer ces valeurs.",
       "entriesCount": "{count, plural, one {# entrée} other {# entrées}}"
     },
     "tabs": {
@@ -2163,7 +2163,7 @@
       "timezone": "Fuseau horaire",
       "timezoneHint": "Les tâches planifiées et les horodatages des journaux suivent cette horloge.",
       "ntp": "Corriger l'horloge automatiquement",
-      "ntpHint": "Recommandé. Une horloge qui dérive fait tourner les tâches en retard et fausse les heures des journaux.",
+      "ntpHint": "Recommandé. Garde les tâches planifiées et les heures des journaux justes.",
       "saved": "Paramètres du serveur enregistrés.",
       "localTime": "Maintenant : {time}",
       "save": "Enregistrer les détails du serveur",
@@ -2405,7 +2405,7 @@
         "turnedOff": "Redémarrage planifié désactivé.",
         "optionsFailedHint": "Les options de planification sont indisponibles. Rechargez la page pour réessayer.",
         "when": "Exécute",
-        "whenHint": "Heure du serveur ({timezone}). Planifié quelques minutes après l'heure pour éviter de chevaucher d'autres tâches cron.",
+        "whenHint": "Heure du serveur ({timezone}). S'exécute quelques minutes après l'heure.",
         "serverTime": "heure du serveur",
         "next": "Prochain redémarrage : {when}",
         "notScheduled": "Non planifié",
@@ -2468,7 +2468,7 @@
       "usedByNone": "Aucune application n'utilise encore cette version.",
       "makeDefault": "Définir par défaut",
       "remove": "Retirer",
-      "defaultHint": "La version par défaut est présélectionnée pour les nouvelles applications et exécute la commande php (terminal et tâches cron). Les applications existantes gardent la version qu’elles utilisent déjà.",
+      "defaultHint": "Les nouvelles applications démarrent sur la version par défaut. La commande php l’utilise aussi.",
       "defaultSet": "PHP {version} est maintenant la version par défaut.",
       "defaultFailed": "Cette version n'a pas pu être définie par défaut.",
       "removed": "PHP {version} supprimé.",
@@ -2765,7 +2765,7 @@
       "usedByNone": "Aucune application n'utilise encore cette version.",
       "makeDefault": "Définir par défaut",
       "remove": "Retirer",
-      "defaultHint": "La version par défaut est présélectionnée pour les nouvelles applications et exécute les commandes node, npm et npx. Les applications existantes gardent la version qu’elles utilisent déjà.",
+      "defaultHint": "Les nouvelles applications démarrent sur la version par défaut. Les commandes node, npm et npx l’utilisent aussi.",
       "defaultSet": "Node.js {version} est désormais la version par défaut.",
       "defaultFailed": "Cette version n'a pas pu être définie par défaut.",
       "removed": "Node.js {version} supprimée.",
@@ -5288,7 +5288,7 @@
       "enable": "Exiger un mot de passe",
       "enableHint": "Les visiteurs doivent se connecter avec les identifiants ci-dessous avant de pouvoir consulter l'application.",
       "whenToUseTitle": "Quand l'utiliser",
-      "whenToUseBody": "Idéal pour une application de préproduction, une refonte en cours ou un aperçu client que vous ne voulez pas voir apparaître avant le lancement. Désactivez-le quand l'application est prête pour le public.",
+      "whenToUseBody": "Idéal pour la préproduction et les aperçus clients. Désactivez-le au lancement.",
       "warning": "Cela verrouille toute l'application : les moteurs de recherche et les contrôles de disponibilité sont aussi bloqués tant qu'ils n'ont pas les identifiants.",
       "unencrypted": "Cette application n’a pas de certificat SSL : le mot de passe est donc envoyé en clair. <link>Ajoutez un certificat</link> pour le protéger.",
       "credentialsNote": "Ceci crée un identifiant de connexion dédié à cette application — distinct de votre compte {brand}. Les visiteurs verront l'invite de connexion native du navigateur, pas une page stylée.",
@@ -5409,7 +5409,7 @@
       "pageSubtitle": "Repoussez les attaques courantes avant qu'elles n'atteignent cette application.",
       "loadFailed": "Impossible de charger ces données.",
       "provisioning": "Cette application est encore en cours de configuration. Le pare-feu sera disponible une fois en service.",
-      "explainer": "Le pare-feu inspecte chaque requête à la recherche de schémas d'attaque, et peut les repousser avant que votre application n'exécute du code.",
+      "explainer": "Bloque les requêtes qui ressemblent à des attaques avant qu'elles n'atteignent votre application.",
       "openlitespeed": "Ce serveur tourne sous OpenLiteSpeed, où ces règles ne sont pas encore appliquées. Vos paramètres sont enregistrés, mais rien n'est vérifié tant que la prise en charge n'est pas livrée.",
       "enable": "Protéger cette application",
       "statusOff": "Désactivé",
@@ -5419,7 +5419,7 @@
       "watchingHint": "Les requêtes suspectes sont enregistrées, mais toujours laissées passer.",
       "blockingHint": "Les requêtes suspectes sont refusées.",
       "whenToUseTitle": "Quand l'utiliser",
-      "whenToUseBody": "Vaut le coup d'être activé pour toute application publique. Commencez par surveiller quelques jours — vous verrez si cela aurait bloqué quoi que ce soit de réel avant qu'il ne commence à bloquer.",
+      "whenToUseBody": "Vaut le coup pour toute application publique. Surveillez d'abord quelques jours, puis passez au blocage.",
       "modeLabel": "Que faire d'une requête suspecte ?",
       "modeDetectHint": "Rien n'est bloqué. Les correspondances sont écrites dans un journal pour vérifier d'abord les erreurs.",
       "modeEnforceHint": "Les requêtes correspondantes sont refusées immédiatement. Basculez dessus une fois la surveillance propre.",
@@ -5765,7 +5765,7 @@
         "runtime": "Version et mémoire",
         "limits": "Limites de requêtes"
       },
-      "advancedNote": "Ces réglages modifient le fonctionnement de PHP-FPM pour cette application. Les valeurs par défaut conviennent à presque toutes les applications — ne les changez que si vous savez pourquoi.",
+      "advancedNote": "La plupart des applications n'en ont jamais besoin. Ne les changez que si vous savez pourquoi.",
       "presetsCustom": "Personnalisé — ne correspond à aucun des préréglages ci-dessus.",
       "reset": "Réinitialiser",
       "resetDone": "Valeur par défaut rétablie.",
@@ -5816,7 +5816,7 @@
       "provisioning": "Cette application est encore en cours de configuration. La protection pourra être ajoutée une fois terminée.",
       "empty": {
         "title": "Fail2ban n'est pas configuré",
-        "body": "Personne ne surveille le journal d'accès de cette application, une adresse peut donc deviner des mots de passe aussi longtemps qu'elle le souhaite. La configuration vous donne une base que vous pouvez modifier.",
+        "body": "Rien n'empêche encore de deviner les mots de passe sur cette application. Configurez-le pour bannir les récidivistes.",
         "action": "Configurer Fail2ban"
       },
       "state": {
@@ -5888,7 +5888,7 @@
       "manageAction": "Ouvrir l'application de préproduction",
       "empty": {
         "title": "Pas encore de copie de préproduction",
-        "body": "Une application de préproduction est une copie complète de cette application sur son propre domaine — un endroit pour tester une extension, un thème ou une mise à jour avant que vos visiteurs ne la voient.",
+        "body": "Une copie complète de cette application sur son propre domaine. Testez-y d'abord extensions, thèmes et mises à jour.",
         "action": "Créer une application de préproduction"
       },
       "push": {
@@ -6501,7 +6501,7 @@
       "portDetected": "détecté dans l'image",
       "portGuessed": "notre meilleure estimation pour cette image",
       "portChange": "Modifier",
-      "portAsk": "Cette image n'indique pas sur quel port elle écoute. Consultez sa documentation pour connaître le port de sa page web, par exemple 8080 ou 3000.",
+      "portAsk": "Cette image n'indique pas son port. Consultez sa documentation : c'est souvent 8080 ou 3000.",
       "portChangeWarning": "Ne changez ceci que si l'app utilise vraiment un autre port. L'image indique {port} ; avec un mauvais port, votre domaine affiche une page d'erreur.",
       "portUseDetected": "Utiliser {port}",
       "portOthers": "L'image ouvre aussi : {ports}",

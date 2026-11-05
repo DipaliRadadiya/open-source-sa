@@ -1791,8 +1791,8 @@
       "badgeFailing": "{count} Fehler",
       "badgeBanned": "{count} gesperrt",
       "about": {
-        "sshd": "Überwacht SSH-Anmeldungen an diesem Server. Eine Adresse, die Passwort oder Schlüssel zu oft falsch eingibt, wird gesperrt – nach den Grenzen unter Sperrregeln.",
-        "recidive": "Überwacht die anderen Jails. Eine Adresse, die an einem Tag 3-mal gesperrt wird, wird eine Woche lang für alle Dienste dieses Servers gesperrt."
+        "sshd": "Sperrt eine Adresse, die Passwort oder Schlüssel für SSH zu oft falsch eingibt.",
+        "recidive": "Eine Adresse, die an einem Tag 3-mal gesperrt wird, ist eine Woche lang für alle Dienste gesperrt."
       }
     },
     "lockout": {
@@ -1868,13 +1868,13 @@
       "findtime": "Gezählt innerhalb (Sekunden)",
       "findtimeHint": "Ältere Versuche werden vergessen, damit langsames Raten sich nie summiert.",
       "maxretry": "Erlaubte Fehlversuche",
-      "maxretryHint": "Wie oft eine Adresse falsch liegen darf, bevor sie gesperrt wird. Mindestens 2 — einer ist meist ein Tippfehler.",
+      "maxretryHint": "Erlaubte Fehlversuche vor einer Sperre. Mindestens 2.",
       "permanent": "Für immer",
       "currentSeconds": "{seconds} Sekunden (aktuell)",
       "ignore": "Diese nie sperren",
       "ignoreHint": "Adressen auf dieser Liste sind von Fail2ban-Sperren ausgenommen.",
       "saveRules": "Sperrregeln speichern",
-      "ignoreDraftHint": "Hinzufügen und Entfernen gelten sofort. Fail2ban wird dabei jedes Mal neu geladen, das dauert einige Sekunden.",
+      "ignoreDraftHint": "Änderungen gelten nach wenigen Sekunden.",
       "inputLabel": "IP-Adresse oder Bereich, z. B. 203.0.113.0/24",
       "ignoreEmpty": "Hier ist noch nichts.",
       "ipPlaceholder": "203.0.113.5 oder 203.0.113.0/24",
@@ -1905,7 +1905,7 @@
       "findtimeRange": "Geben Sie eine ganze Zahl an Sekunden von 30 bis 86400 (ein Tag) ein.",
       "previewTitle": "Regelvorschau",
       "previewInvalid": "Geben Sie gültige Werte für Versuche und Zeitraum ein, um die Regel anzuzeigen.",
-      "previewHint": "Vorschau der ausgewählten Werte. Sperrregeln speichern übernimmt Änderungen.",
+      "previewHint": "Speichern Sie die Sperrregeln, um diese Werte zu übernehmen.",
       "entriesCount": "{count, plural, one {# Eintrag} other {# Einträge}}"
     },
     "tabs": {
@@ -2163,7 +2163,7 @@
       "timezone": "Zeitzone",
       "timezoneHint": "Geplante Jobs und Zeitstempel in Protokollen folgen dieser Uhr.",
       "ntp": "Uhr automatisch korrigieren",
-      "ntpHint": "Empfohlen. Eine abweichende Uhr lässt geplante Jobs zu spät laufen und macht Protokollzeiten falsch.",
+      "ntpHint": "Empfohlen. Hält geplante Jobs und Protokollzeiten korrekt.",
       "saved": "Servereinstellungen gespeichert.",
       "localTime": "Jetzt: {time}",
       "save": "Serverdaten speichern",
@@ -2405,7 +2405,7 @@
         "turnedOff": "Geplanter Neustart deaktiviert.",
         "optionsFailedHint": "Zeitplanoptionen sind nicht verfügbar. Laden Sie die Seite neu, um es erneut zu versuchen.",
         "when": "Ausführung",
-        "whenHint": "Serverzeit ({timezone}). Wird ein paar Minuten nach der vollen Stunde ausgeführt, um Kollisionen mit anderen Cronjobs zu vermeiden.",
+        "whenHint": "Serverzeit ({timezone}). Läuft ein paar Minuten nach der vollen Stunde.",
         "serverTime": "Serverzeit",
         "next": "Nächster Neustart: {when}",
         "notScheduled": "Nicht geplant",
@@ -2468,7 +2468,7 @@
       "usedByNone": "Noch keine Anwendung nutzt diese Version.",
       "makeDefault": "Als Standard festlegen",
       "remove": "Entfernen",
-      "defaultHint": "Die Standardversion wird für neue Anwendungen vorausgewählt und führt den php-Befehl aus (Terminal und Cronjobs). Bestehende Anwendungen behalten ihre bisherige Version.",
+      "defaultHint": "Neue Anwendungen starten mit der Standardversion. Auch der php-Befehl nutzt sie.",
       "defaultSet": "PHP {version} ist jetzt der Standard.",
       "defaultFailed": "Diese Version konnte nicht als Standard festgelegt werden.",
       "removed": "PHP {version} entfernt.",
@@ -2765,7 +2765,7 @@
       "usedByNone": "Noch keine Anwendung nutzt diese Version.",
       "makeDefault": "Als Standard festlegen",
       "remove": "Entfernen",
-      "defaultHint": "Die Standardversion wird für neue Anwendungen vorausgewählt und führt die Befehle node, npm und npx aus. Bestehende Anwendungen behalten ihre bisherige Version.",
+      "defaultHint": "Neue Anwendungen starten mit der Standardversion. Auch die Befehle node, npm und npx nutzen sie.",
       "defaultSet": "Node.js {version} ist jetzt der Standard.",
       "defaultFailed": "Diese Version konnte nicht als Standard festgelegt werden.",
       "removed": "Node.js {version} entfernt.",
@@ -5288,7 +5288,7 @@
       "enable": "Passwort verlangen",
       "enableHint": "Besucher müssen sich mit den Daten unten anmelden, bevor sie die Anwendung sehen können.",
       "whenToUseTitle": "Wann Sie das nutzen",
-      "whenToUseBody": "Gut für eine Staging-Anwendung, ein laufendes Redesign oder eine Kundenvorschau, die vor dem Start nicht gefunden werden soll. Schalten Sie es ab, sobald die Anwendung für die Öffentlichkeit bereit ist.",
+      "whenToUseBody": "Gut für Staging und Kundenvorschauen. Schalten Sie es zum Start ab.",
       "warning": "Das sperrt die ganze Anwendung — auch Suchmaschinen und Uptime-Prüfungen sind blockiert, bis sie die Zugangsdaten erhalten.",
       "unencrypted": "Diese Anwendung hat kein SSL-Zertifikat, daher wird das Passwort unverschlüsselt übertragen. <link>Fügen Sie ein Zertifikat hinzu</link>, um es zu schützen.",
       "credentialsNote": "Das erstellt einen neuen Login nur für diese Anwendung — getrennt von Ihrem {brand}-Konto. Besucher sehen die schlichte Anmeldeaufforderung ihres Browsers, keine gestaltete Seite.",
@@ -5409,7 +5409,7 @@
       "pageSubtitle": "Weist verbreitete Angriffe ab, bevor sie diese Anwendung erreichen.",
       "loadFailed": "Das konnte nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Die Firewall steht bereit, sobald sie läuft.",
-      "explainer": "Die Firewall prüft jede Anfrage auf Muster, die bei Angriffen vorkommen, und kann sie abweisen, bevor Ihre Anwendung Code ausführt.",
+      "explainer": "Blockiert Anfragen, die nach Angriffen aussehen, bevor sie Ihre Anwendung erreichen.",
       "openlitespeed": "Auf diesem Server läuft OpenLiteSpeed, wo diese Regeln noch nicht angewendet werden. Ihre Einstellungen werden gespeichert, geprüft wird aber nichts, bis die Unterstützung dafür kommt.",
       "enable": "Diese Anwendung schützen",
       "statusOff": "Aus",
@@ -5419,7 +5419,7 @@
       "watchingHint": "Verdächtige Anfragen werden aufgezeichnet, aber weiterhin durchgelassen.",
       "blockingHint": "Verdächtige Anfragen werden abgewiesen.",
       "whenToUseTitle": "Wann Sie das nutzen",
-      "whenToUseBody": "Für jede öffentliche Anwendung lohnt es sich. Beginnen Sie einige Tage mit dem Beobachten — so sehen Sie, ob es etwas Echtes gestoppt hätte, bevor es zu blockieren beginnt.",
+      "whenToUseBody": "Für jede öffentliche Anwendung lohnt es sich. Erst einige Tage beobachten, dann auf Blockieren umstellen.",
       "modeLabel": "Was soll mit einer verdächtigen Anfrage passieren?",
       "modeDetectHint": "Es wird nichts blockiert. Treffer werden in ein Protokoll geschrieben, damit Sie zuerst auf Fehlalarme prüfen können.",
       "modeEnforceHint": "Passende Anfragen werden sofort abgewiesen. Wechseln Sie hierher, sobald das Beobachten sauber aussieht.",
@@ -5765,7 +5765,7 @@
         "runtime": "Version und Speicher",
         "limits": "Anfragelimits"
       },
-      "advancedNote": "Diese ändern, wie PHP-FPM diese Anwendung betreibt. Die Standardwerte passen für fast jede Anwendung — ändern Sie sie nur, wenn Sie wissen, warum.",
+      "advancedNote": "Die meisten Anwendungen brauchen das nie. Ändern Sie es nur, wenn Sie wissen, warum.",
       "presetsCustom": "Eigene — keine der Voreinstellungen oben.",
       "reset": "Zurücksetzen",
       "resetDone": "Zurück auf den Standard.",
@@ -5816,7 +5816,7 @@
       "provisioning": "Diese Anwendung wird noch eingerichtet. Schutz lässt sich hinzufügen, sobald das fertig ist.",
       "empty": {
         "title": "Fail2ban ist nicht eingerichtet",
-        "body": "Niemand beobachtet das Zugriffsprotokoll dieser Anwendung, eine Adresse kann also beliebig lange Passwörter erraten. Beim Einrichten bekommen Sie eine Startkonfiguration, die Sie bearbeiten können.",
+        "body": "Noch hält nichts das Erraten von Passwörtern bei dieser Anwendung auf. Richten Sie es ein, um Wiederholungstäter zu sperren.",
         "action": "Fail2ban einrichten"
       },
       "state": {
@@ -5888,7 +5888,7 @@
       "manageAction": "Staging-Anwendung öffnen",
       "empty": {
         "title": "Noch keine Staging-Kopie",
-        "body": "Eine Staging-Anwendung ist eine vollständige Kopie dieser Anwendung unter einer eigenen Domain — ein Ort, um ein Plugin, ein Theme oder ein Update auszuprobieren, bevor Ihre Besucher es sehen.",
+        "body": "Eine vollständige Kopie dieser Anwendung unter eigener Domain. Probieren Sie Plugins, Themes und Updates zuerst dort aus.",
         "action": "Staging-Anwendung erstellen"
       },
       "push": {
@@ -6501,7 +6501,7 @@
       "portDetected": "aus dem Image erkannt",
       "portGuessed": "unsere beste Schätzung für dieses Image",
       "portChange": "Ändern",
-      "portAsk": "Dieses Image gibt nicht an, auf welchem Port es lauscht. Sehen Sie in seiner Dokumentation nach, auf welchem Port die Webseite bereitgestellt wird, etwa 8080 oder 3000.",
+      "portAsk": "Dieses Image nennt keinen Port. Sehen Sie in der Dokumentation nach — oft ist es 8080 oder 3000.",
       "portChangeWarning": "Ändern Sie das nur, wenn die App wirklich einen anderen Port nutzt. Das Image nennt {port}; ein falscher Port bedeutet, dass Ihre Domain eine Fehlerseite zeigt.",
       "portUseDetected": "{port} verwenden",
       "portOthers": "Das Image öffnet außerdem: {ports}",

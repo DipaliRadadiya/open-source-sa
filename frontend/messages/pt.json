@@ -1791,8 +1791,8 @@
       "badgeFailing": "{count} falhando",
       "badgeBanned": "Bloqueios: {count}",
       "about": {
-        "sshd": "Monitora os logins SSH neste servidor. Um endereço que erra a senha ou a chave vezes demais é bloqueado, conforme os limites em Regras de bloqueio.",
-        "recidive": "Monitora os outros jails. Um endereço bloqueado 3 vezes em um dia é bloqueado em todos os serviços deste servidor por uma semana."
+        "sshd": "Bloqueia um endereço que erra a senha ou a chave SSH vezes demais.",
+        "recidive": "Um endereço bloqueado 3 vezes em um dia é bloqueado em todos os serviços por uma semana."
       }
     },
     "lockout": {
@@ -1868,13 +1868,13 @@
       "findtime": "Contado dentro de (segundos)",
       "findtimeHint": "Tentativas mais antigas são esquecidas, então tentativas lentas nunca se acumulam.",
       "maxretry": "Tentativas erradas permitidas",
-      "maxretryHint": "Quantas vezes um endereço pode errar antes de ser banido. Pelo menos 2 — uma geralmente é um erro de digitação.",
+      "maxretryHint": "Tentativas erradas permitidas antes do bloqueio. Pelo menos 2.",
       "permanent": "Para sempre",
       "currentSeconds": "{seconds} segundos (agora)",
       "ignore": "Nunca banir estes",
       "ignoreHint": "Os endereços desta lista ficam excluídos dos bloqueios do Fail2ban.",
       "saveRules": "Salvar regras de bloqueio",
-      "ignoreDraftHint": "Adicionar e remover valem na hora. O Fail2ban é recarregado a cada vez, o que leva alguns segundos.",
+      "ignoreDraftHint": "As alterações valem em poucos segundos.",
       "inputLabel": "Endereço IP ou intervalo, como 203.0.113.0/24",
       "ignoreEmpty": "Nada aqui ainda.",
       "ipPlaceholder": "203.0.113.5 ou 203.0.113.0/24",
@@ -1905,7 +1905,7 @@
       "findtimeRange": "Use um número inteiro de segundos de 30 a 86400 (um dia).",
       "previewTitle": "Prévia da regra",
       "previewInvalid": "Informe valores válidos de tentativas e período para visualizar a regra.",
-      "previewHint": "Prévia dos valores selecionados. Salvar regras de bloqueio aplica as alterações.",
+      "previewHint": "Salve as regras de bloqueio para aplicar estes valores.",
       "entriesCount": "{count, plural, one {# entrada} other {# entradas}}"
     },
     "tabs": {
@@ -2163,7 +2163,7 @@
       "timezone": "Fuso horário",
       "timezoneHint": "Tarefas agendadas e horários dos logs seguem este relógio.",
       "ntp": "Corrigir o relógio automaticamente",
-      "ntpHint": "Recomendado. Um relógio que atrasa faz tarefas agendadas rodarem tarde e os logs ficarem com horário errado.",
+      "ntpHint": "Recomendado. Mantém tarefas agendadas e horários dos logs corretos.",
       "saved": "Configurações do servidor salvas.",
       "localTime": "Agora: {time}",
       "save": "Salvar detalhes do servidor",
@@ -2405,7 +2405,7 @@
         "turnedOff": "Reinício agendado desativado.",
         "optionsFailedHint": "As opções de agendamento estão indisponíveis. Recarregue a página para tentar novamente.",
         "when": "Executa",
-        "whenHint": "Horário do servidor ({timezone}). Agendado alguns minutos após a hora para evitar colisão com outros cron jobs.",
+        "whenHint": "Horário do servidor ({timezone}). Roda alguns minutos após a hora.",
         "serverTime": "horário do servidor",
         "next": "Próximo reinício: {when}",
         "notScheduled": "Sem agendamento",
@@ -2468,7 +2468,7 @@
       "usedByNone": "Nenhuma aplicação usa esta versão ainda.",
       "makeDefault": "Tornar padrão",
       "remove": "Remover",
-      "defaultHint": "A versão padrão é pré-selecionada para novas aplicações e executa o comando php (terminal e tarefas cron). As aplicações existentes mantêm a versão que já usam.",
+      "defaultHint": "Novas aplicações começam na versão padrão. O comando php também a usa.",
       "defaultSet": "PHP {version} agora é o padrão.",
       "defaultFailed": "Não foi possível tornar essa versão a padrão.",
       "removed": "PHP {version} removido.",
@@ -2765,7 +2765,7 @@
       "usedByNone": "Nenhuma aplicação usa esta versão ainda.",
       "makeDefault": "Tornar padrão",
       "remove": "Remover",
-      "defaultHint": "A versão padrão é pré-selecionada para novas aplicações e executa os comandos node, npm e npx. As aplicações existentes mantêm a versão que já usam.",
+      "defaultHint": "Novas aplicações começam na versão padrão. Os comandos node, npm e npx também a usam.",
       "defaultSet": "Node.js {version} agora é o padrão.",
       "defaultFailed": "Não foi possível tornar essa versão a padrão.",
       "removed": "Node.js {version} removido.",
@@ -5288,7 +5288,7 @@
       "enable": "Exigir senha",
       "enableHint": "Os visitantes devem fazer login com as credenciais abaixo antes de visualizar a aplicação.",
       "whenToUseTitle": "Quando usar isso",
-      "whenToUseBody": "Bom para uma aplicação de staging, um redesign em andamento ou uma prévia de cliente que você não quer que seja encontrada antes do lançamento. Desative quando a aplicação estiver pronta para o público.",
+      "whenToUseBody": "Bom para staging e prévias de clientes. Desative no lançamento.",
       "warning": "Isso bloqueia toda a aplicação, por isso os motores de busca e as verificações de disponibilidade também ficam bloqueados até receberem o acesso.",
       "unencrypted": "Esta aplicação não tem certificado SSL, então a senha é enviada sem criptografia. <link>Adicione um certificado</link> para protegê-la.",
       "credentialsNote": "Isso cria um novo login apenas para esta aplicação — separado da sua conta {brand}. Os visitantes verão o prompt de login nativo do próprio navegador, e não uma página estilizada.",
@@ -5409,7 +5409,7 @@
       "pageSubtitle": "Bloqueie ataques comuns antes que cheguem a esta aplicação.",
       "loadFailed": "Não foi possível carregar isso.",
       "provisioning": "Esta aplicação ainda está sendo configurada. O firewall estará disponível quando terminar.",
-      "explainer": "O firewall inspeciona cada requisição em busca de padrões usados em ataques e pode bloqueá-las antes que sua aplicação execute qualquer código.",
+      "explainer": "Bloqueia requisições que parecem ataques antes que cheguem à sua aplicação.",
       "openlitespeed": "Este servidor roda OpenLiteSpeed, onde essas regras ainda não são aplicadas. Suas configurações estão salvas, mas nada é verificado até que o suporte seja disponibilizado.",
       "enable": "Proteger esta aplicação",
       "statusOff": "Desligado",
@@ -5419,7 +5419,7 @@
       "watchingHint": "Requisições suspeitas são registradas, mas ainda são permitidas.",
       "blockingHint": "Requisições suspeitas são recusadas.",
       "whenToUseTitle": "Quando usar isso",
-      "whenToUseBody": "Vale ativar em qualquer aplicação pública. Comece monitorando por alguns dias — assim você vê se teria bloqueado algo real antes de começar a bloquear.",
+      "whenToUseBody": "Vale ativar em qualquer aplicação pública. Monitore por alguns dias e depois passe a bloquear.",
       "modeLabel": "O que fazer com uma requisição suspeita?",
       "modeDetectHint": "Nada é bloqueado. As correspondências são gravadas em um log para você verificar erros primeiro.",
       "modeEnforceHint": "Requisições correspondentes são recusadas imediatamente. Mude para esta opção quando a monitoração estiver limpa.",
@@ -5765,7 +5765,7 @@
         "runtime": "Versão e memória",
         "limits": "Limites de requisição"
       },
-      "advancedNote": "Estas opções mudam como o PHP-FPM roda esta aplicação. Os padrões servem para quase todas as aplicações — altere apenas se souber o motivo.",
+      "advancedNote": "A maioria das aplicações nunca precisa disso. Altere apenas se souber o motivo.",
       "presetsCustom": "Personalizado — não é um dos predefinições acima.",
       "reset": "Redefinir",
       "resetDone": "Voltou ao padrão.",
@@ -5816,7 +5816,7 @@
       "provisioning": "Esta aplicação ainda está sendo configurada. A proteção pode ser adicionada quando terminar.",
       "empty": {
         "title": "Fail2ban não configurado",
-        "body": "Ninguém está vigiando o log de acesso desta aplicação, então um endereço pode ficar tentando senhas à vontade. Configurar oferece uma configuração inicial que você pode editar.",
+        "body": "Nada impede ainda a adivinhação de senhas nesta aplicação. Configure para bloquear quem insiste.",
         "action": "Configurar Fail2ban"
       },
       "state": {
@@ -5888,7 +5888,7 @@
       "manageAction": "Abrir aplicação de staging",
       "empty": {
         "title": "Ainda não há cópia de staging",
-        "body": "Uma aplicação de staging é uma cópia completa desta em seu próprio domínio — um lugar para testar um plugin, tema ou atualização antes que seus visitantes vejam.",
+        "body": "Uma cópia completa desta aplicação em seu próprio domínio. Teste plugins, temas e atualizações lá primeiro.",
         "action": "Criar aplicação de staging"
       },
       "push": {
@@ -6501,7 +6501,7 @@
       "portDetected": "detectada na imagem",
       "portGuessed": "nossa melhor estimativa para esta imagem",
       "portChange": "Alterar",
-      "portAsk": "Esta imagem não informa em qual porta escuta. Consulte a documentação dela para ver a porta da página web, como 8080 ou 3000.",
+      "portAsk": "Esta imagem não informa a porta. Veja a documentação — geralmente é 8080 ou 3000.",
       "portChangeWarning": "Altere só se a app usar de fato outra porta. A imagem indica {port}; uma porta errada faz o seu domínio mostrar uma página de erro.",
       "portUseDetected": "Usar {port}",
       "portOthers": "A imagem também abre: {ports}",

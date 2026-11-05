@@ -1791,8 +1791,8 @@
       "badgeFailing": "{count} failing",
       "badgeBanned": "{count} banned",
       "about": {
-        "sshd": "Watches SSH logins to this server. An address that gets the password or key wrong too many times is banned, using the limits under Ban rules.",
-        "recidive": "Watches the other jails. An address banned 3 times in one day is banned from every service on this server for a week."
+        "sshd": "Bans an address that gets the SSH password or key wrong too many times.",
+        "recidive": "An address banned 3 times in a day is banned from every service for a week."
       }
     },
     "lockout": {
@@ -1868,13 +1868,13 @@
       "findtime": "Counted within (seconds)",
       "findtimeHint": "Older tries are forgotten, so slow guessing never adds up.",
       "maxretry": "Wrong tries allowed",
-      "maxretryHint": "How many times an address can get it wrong before it is banned. At least 2 — one is usually a typo.",
+      "maxretryHint": "Wrong tries allowed before a ban. At least 2.",
       "permanent": "Forever",
       "currentSeconds": "{seconds} seconds (now)",
       "ignore": "Never ban these",
       "ignoreHint": "Addresses on this list are excluded from Fail2ban bans.",
       "saveRules": "Save ban rules",
-      "ignoreDraftHint": "Add and remove take effect straight away. Fail2ban reloads each time, which takes a few seconds.",
+      "ignoreDraftHint": "Changes apply within a few seconds.",
       "inputLabel": "IP address or range, like 203.0.113.0/24",
       "ignoreEmpty": "Nothing here yet.",
       "ipPlaceholder": "203.0.113.5 or 203.0.113.0/24",
@@ -1905,7 +1905,7 @@
       "findtimeRange": "Use a whole number of seconds from 30 to 86400 (one day).",
       "previewTitle": "Rule preview",
       "previewInvalid": "Enter valid attempt and window values to preview this rule.",
-      "previewHint": "Preview of selected values. Save ban rules applies any changes.",
+      "previewHint": "Save ban rules to apply these values.",
       "entriesCount": "{count, plural, one {# entry} other {# entries}}"
     },
     "tabs": {
@@ -2163,7 +2163,7 @@
       "timezone": "Timezone",
       "timezoneHint": "Scheduled jobs and log timestamps follow this clock.",
       "ntp": "Correct the clock automatically",
-      "ntpHint": "Recommended. A clock that drifts makes scheduled jobs run late and log times wrong.",
+      "ntpHint": "Recommended. Keeps scheduled jobs and log times right.",
       "saved": "Server settings saved.",
       "localTime": "Now: {time}",
       "save": "Save server details",
@@ -2405,7 +2405,7 @@
         "turnedOff": "Scheduled restart turned off.",
         "optionsFailedHint": "Scheduling options are unavailable. Reload the page to retry.",
         "when": "Runs",
-        "whenHint": "Server time ({timezone}). Scheduled a few minutes past the hour to avoid colliding with other cron jobs.",
+        "whenHint": "Server time ({timezone}). Runs a few minutes past the hour.",
         "serverTime": "server time",
         "next": "Next restart: {when}",
         "notScheduled": "Not scheduled",
@@ -2468,7 +2468,7 @@
       "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "The default version is preselected for new applications and runs the php command (terminal and cron jobs). Existing applications keep the version they already use.",
+      "defaultHint": "New applications start on the default version. The php command uses it too.",
       "defaultSet": "PHP {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "PHP {version} removed.",
@@ -2765,7 +2765,7 @@
       "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "The default version is preselected for new applications and runs the node, npm and npx commands. Existing applications keep the version they already use.",
+      "defaultHint": "New applications start on the default version. The node, npm and npx commands use it too.",
       "defaultSet": "Node.js {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "Node.js {version} removed.",
@@ -5288,7 +5288,7 @@
       "enable": "Require a password",
       "enableHint": "Visitors must sign in with the credentials below before they can view the application.",
       "whenToUseTitle": "When to use this",
-      "whenToUseBody": "Good for a staging application, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the application is ready for the public.",
+      "whenToUseBody": "Good for staging sites and client previews. Turn it off at launch.",
       "warning": "This locks the whole application, so search engines and uptime checks are blocked too until they're given the login.",
       "unencrypted": "This application has no SSL certificate, so the password is sent unencrypted. <link>Add a certificate</link> to protect it.",
       "credentialsNote": "This creates a new login just for this application — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
@@ -5409,7 +5409,7 @@
       "pageSubtitle": "Turn away common attacks before they reach this application.",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This application is still being set up. The firewall will be available once it's running.",
-      "explainer": "The firewall inspects every request for patterns used in attacks, and can turn them away before your application runs any code.",
+      "explainer": "Blocks requests that look like attacks before they reach your application.",
       "openlitespeed": "This server runs OpenLiteSpeed, where these rules aren't applied yet. Your settings are saved, but nothing is checked until support for it ships.",
       "enable": "Protect this application",
       "statusOff": "Off",
@@ -5419,7 +5419,7 @@
       "watchingHint": "Suspicious requests are recorded, but still allowed through.",
       "blockingHint": "Suspicious requests are refused.",
       "whenToUseTitle": "When to use this",
-      "whenToUseBody": "Worth turning on for any public application. Start by watching for a few days — that way you can see whether it would have stopped anything real before it starts blocking.",
+      "whenToUseBody": "Worth turning on for any public application. Watch for a few days first, then switch to blocking.",
       "modeLabel": "What should happen to a suspicious request?",
       "modeDetectHint": "Nothing is blocked. Matches are written to a log so you can check for mistakes first.",
       "modeEnforceHint": "Matching requests are refused immediately. Switch to this once watching looks clean.",
@@ -5765,7 +5765,7 @@
         "runtime": "Version and memory",
         "limits": "Request limits"
       },
-      "advancedNote": "These change how PHP-FPM runs this application. The defaults suit almost every application — change them only if you know why.",
+      "advancedNote": "Most applications never need these. Change them only if you know why.",
       "presetsCustom": "Custom — not one of the presets above.",
       "reset": "Reset",
       "resetDone": "Back to the default.",
@@ -5816,7 +5816,7 @@
       "provisioning": "This application is still being set up. Protection can be added once it finishes.",
       "empty": {
         "title": "Fail2ban is not set up",
-        "body": "Nothing is watching this application's access log, so an address can keep guessing passwords as long as it likes. Setting it up gives you a starting configuration you can edit.",
+        "body": "Nothing stops password guessing on this application yet. Set it up to ban repeat offenders.",
         "action": "Set up Fail2ban"
       },
       "state": {
@@ -5888,7 +5888,7 @@
       "manageAction": "Open staging application",
       "empty": {
         "title": "No staging copy yet",
-        "body": "A staging application is a full copy of this one on its own domain — somewhere to try a plugin, a theme or an update before your visitors see it.",
+        "body": "A full copy of this application on its own domain. Try plugins, themes and updates there first.",
         "action": "Create staging application"
       },
       "push": {
@@ -6501,7 +6501,7 @@
       "portDetected": "detected from the image",
       "portGuessed": "our best guess for this image",
       "portChange": "Change",
-      "portAsk": "This image doesn't say which port it listens on. Check its documentation for the port its web page is served on, such as 8080 or 3000.",
+      "portAsk": "This image doesn't say its port. Check its docs — it's often 8080 or 3000.",
       "portChangeWarning": "Only change this if the app really uses another port. The image says {port}; a wrong port means your domain shows an error page.",
       "portUseDetected": "Use {port}",
       "portOthers": "The image also opens: {ports}",

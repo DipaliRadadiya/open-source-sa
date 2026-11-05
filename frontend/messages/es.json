@@ -1791,8 +1791,8 @@
       "badgeFailing": "{count} fallando",
       "badgeBanned": "Bloqueos: {count}",
       "about": {
-        "sshd": "Vigila los inicios de sesión SSH en este servidor. Una dirección que falla la contraseña o la clave demasiadas veces se bloquea, según los límites de Reglas de bloqueo.",
-        "recidive": "Vigila las demás jaulas. Una dirección bloqueada 3 veces en un día queda bloqueada en todos los servicios de este servidor durante una semana."
+        "sshd": "Bloquea una dirección que falla demasiadas veces la contraseña o la clave SSH.",
+        "recidive": "Una dirección bloqueada 3 veces en un día queda bloqueada en todos los servicios durante una semana."
       }
     },
     "lockout": {
@@ -1868,13 +1868,13 @@
       "findtime": "Contados dentro de (segundos)",
       "findtimeHint": "Los intentos más antiguos se olvidan, así que adivinar despacio nunca suma.",
       "maxretry": "Intentos fallidos permitidos",
-      "maxretryHint": "Cuántas veces puede equivocarse una dirección antes de ser bloqueada. Al menos 2 — uno suele ser una errata.",
+      "maxretryHint": "Intentos fallidos permitidos antes de bloquear. Al menos 2.",
       "permanent": "Para siempre",
       "currentSeconds": "{seconds} segundos (ahora)",
       "ignore": "Nunca bloquear estas",
       "ignoreHint": "Las direcciones de esta lista quedan excluidas de los bloqueos de Fail2ban.",
       "saveRules": "Guardar reglas de bloqueo",
-      "ignoreDraftHint": "Añadir y quitar se aplican al momento. Fail2ban se recarga cada vez, lo que tarda unos segundos.",
+      "ignoreDraftHint": "Los cambios se aplican en unos segundos.",
       "inputLabel": "Dirección IP o rango, como 203.0.113.0/24",
       "ignoreEmpty": "Aquí no hay nada todavía.",
       "ipPlaceholder": "203.0.113.5 o 203.0.113.0/24",
@@ -1905,7 +1905,7 @@
       "findtimeRange": "Usa un número entero de segundos entre 30 y 86400 (un día).",
       "previewTitle": "Vista previa de la regla",
       "previewInvalid": "Introduce valores válidos de intentos y período para ver la regla.",
-      "previewHint": "Vista previa de los valores seleccionados. Guardar reglas de bloqueo aplica los cambios.",
+      "previewHint": "Guarda las reglas de bloqueo para aplicar estos valores.",
       "entriesCount": "{count, plural, one {# entrada} other {# entradas}}"
     },
     "tabs": {
@@ -2163,7 +2163,7 @@
       "timezone": "Zona horaria",
       "timezoneHint": "Las tareas programadas y las marcas de tiempo siguen este reloj.",
       "ntp": "Corregir el reloj automáticamente",
-      "ntpHint": "Recomendado. Un reloj desviado hace que las tareas programadas se retrasen y que las horas de los registros sean erróneas.",
+      "ntpHint": "Recomendado. Mantiene correctas las tareas programadas y las horas de los registros.",
       "saved": "Ajustes del servidor guardados.",
       "localTime": "Ahora: {time}",
       "save": "Guardar datos del servidor",
@@ -2405,7 +2405,7 @@
         "turnedOff": "Reinicio programado desactivado.",
         "optionsFailedHint": "Las opciones de programación no están disponibles. Recarga la página.",
         "when": "Se ejecuta",
-        "whenHint": "Hora del servidor ({timezone}). Programado unos minutos después de la hora para no coincidir con otras tareas cron.",
+        "whenHint": "Hora del servidor ({timezone}). Se ejecuta unos minutos después de la hora.",
         "serverTime": "hora del servidor",
         "next": "Próximo reinicio: {when}",
         "notScheduled": "Sin programar",
@@ -2468,7 +2468,7 @@
       "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
-      "defaultHint": "La versión predeterminada se preselecciona para las nuevas aplicaciones y ejecuta el comando php (terminal y tareas cron). Las aplicaciones existentes conservan la versión que ya usan.",
+      "defaultHint": "Las nuevas aplicaciones empiezan con la versión predeterminada. El comando php también la usa.",
       "defaultSet": "PHP {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "PHP {version} eliminada.",
@@ -2765,7 +2765,7 @@
       "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
-      "defaultHint": "La versión predeterminada se preselecciona para las nuevas aplicaciones y ejecuta los comandos node, npm y npx. Las aplicaciones existentes conservan la versión que ya usan.",
+      "defaultHint": "Las nuevas aplicaciones empiezan con la versión predeterminada. Los comandos node, npm y npx también la usan.",
       "defaultSet": "Node.js {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "Node.js {version} eliminada.",
@@ -5288,7 +5288,7 @@
       "enable": "Exigir una contraseña",
       "enableHint": "Los visitantes deberán iniciar sesión con las credenciales de abajo antes de poder ver la aplicación.",
       "whenToUseTitle": "Cuándo usar esto",
-      "whenToUseBody": "Útil para una aplicación en pruebas, un rediseño en curso o una vista previa para un cliente que no quieres que se encuentre antes del lanzamiento. Desactívalo cuando la aplicación esté lista para el público.",
+      "whenToUseBody": "Útil para entornos de pruebas y vistas previas para clientes. Desactívalo al lanzar.",
       "warning": "Esto bloquea toda la aplicación, así que los buscadores y los monitores de disponibilidad también quedan bloqueados hasta que tengan el acceso.",
       "unencrypted": "Esta aplicación no tiene certificado SSL, así que la contraseña se envía sin cifrar. <link>Añade un certificado</link> para protegerla.",
       "credentialsNote": "Esto crea un inicio de sesión nuevo solo para esta aplicación, independiente de tu cuenta de {brand}. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
@@ -5409,7 +5409,7 @@
       "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a esta aplicación.",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Esta aplicación todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
-      "explainer": "El cortafuegos revisa cada solicitud en busca de patrones usados en ataques y puede rechazarla antes de que tu aplicación ejecute código.",
+      "explainer": "Bloquea las solicitudes que parecen ataques antes de que lleguen a tu aplicación.",
       "openlitespeed": "Este servidor usa OpenLiteSpeed, donde estas reglas aún no se aplican. Tus ajustes se guardan, pero no se revisa nada hasta que llegue la compatibilidad.",
       "enable": "Proteger esta aplicación",
       "statusOff": "Desactivado",
@@ -5419,7 +5419,7 @@
       "watchingHint": "Las solicitudes sospechosas se registran, pero se dejan pasar.",
       "blockingHint": "Las solicitudes sospechosas se rechazan.",
       "whenToUseTitle": "Cuándo usar esto",
-      "whenToUseBody": "Conviene activarlo en cualquier aplicación pública. Empieza observando unos días: así verás si habría bloqueado algo legítimo antes de que empiece a bloquear.",
+      "whenToUseBody": "Conviene activarlo en cualquier aplicación pública. Observa unos días primero y luego pasa a bloquear.",
       "modeLabel": "¿Qué hacer con una solicitud sospechosa?",
       "modeDetectHint": "No se bloquea nada. Las coincidencias se escriben en un registro para que primero revises si hay errores.",
       "modeEnforceHint": "Las solicitudes coincidentes se rechazan de inmediato. Cambia a esto cuando la observación se vea limpia.",
@@ -5765,7 +5765,7 @@
         "runtime": "Versión y memoria",
         "limits": "Límites por petición"
       },
-      "advancedNote": "Esto cambia cómo PHP-FPM ejecuta esta aplicación. Los valores por defecto sirven para casi todas las aplicaciones: cámbialos solo si sabes por qué.",
+      "advancedNote": "La mayoría de las aplicaciones nunca los necesitan. Cámbialos solo si sabes por qué.",
       "presetsCustom": "Personalizado: no coincide con ninguno de los ajustes anteriores.",
       "reset": "Restablecer",
       "resetDone": "Se ha restablecido el valor predeterminado.",
@@ -5816,7 +5816,7 @@
       "provisioning": "Esta aplicación aún se está creando. La protección se puede añadir cuando termine.",
       "empty": {
         "title": "Fail2ban no está configurado",
-        "body": "Nada vigila el registro de acceso de esta aplicación, así que una dirección puede seguir probando contraseñas indefinidamente. Al configurarla obtienes una configuración inicial que puedes editar.",
+        "body": "Todavía nada impide adivinar contraseñas en esta aplicación. Configúralo para bloquear a quien insista.",
         "action": "Configurar Fail2ban"
       },
       "state": {
@@ -5888,7 +5888,7 @@
       "manageAction": "Abrir aplicación de pruebas",
       "empty": {
         "title": "Todavía no hay copia de pruebas",
-        "body": "Una aplicación de pruebas es una copia completa de esta en su propio dominio: un lugar donde probar un plugin, un tema o una actualización antes de que la vean tus visitantes.",
+        "body": "Una copia completa de esta aplicación en su propio dominio. Prueba ahí primero plugins, temas y actualizaciones.",
         "action": "Crear aplicación de pruebas"
       },
       "push": {
@@ -6501,7 +6501,7 @@
       "portDetected": "detectado en la imagen",
       "portGuessed": "nuestra mejor estimación para esta imagen",
       "portChange": "Cambiar",
-      "portAsk": "Esta imagen no indica en qué puerto escucha. Consulta su documentación para saber en qué puerto sirve su página web, como 8080 o 3000.",
+      "portAsk": "Esta imagen no indica su puerto. Mira su documentación: suele ser 8080 o 3000.",
       "portChangeWarning": "Cámbialo solo si la app usa de verdad otro puerto. La imagen indica {port}; con un puerto equivocado, tu dominio muestra una página de error.",
       "portUseDetected": "Usar {port}",
       "portOthers": "La imagen también abre: {ports}",
