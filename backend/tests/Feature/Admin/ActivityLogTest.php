@@ -148,10 +148,11 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         // `docker_database` and `registry` come from the Docker stack, `wp_cli` from
-        // main. Listed rather than left out, because this endpoint builds the filter
-        // dropdowns from these keys — a type missing from the list is activity that
-        // exists in the table and cannot be filtered to.
-        ->assertJsonPath('types', ['application', 'backup', 'build_tools', 'central', 'cronjob', 'database', 'disk_cleaner', 'docker_database', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'registry', 'role', 'server', 'service', 'setting', 'storage_destination', 'sync', 'system_user', 'user', 'wp_cli']);
+        // main, `addon` from Central installing the paid addons. Listed rather than
+        // left out, because this endpoint builds the filter dropdowns from these
+        // keys — a type missing from the list is activity that exists in the table
+        // and cannot be filtered to.
+        ->assertJsonPath('types', ['addon', 'application', 'backup', 'build_tools', 'central', 'cronjob', 'database', 'disk_cleaner', 'docker_database', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'registry', 'role', 'server', 'service', 'setting', 'storage_destination', 'sync', 'system_user', 'user', 'wp_cli']);
 
     // `all` is the deduped union of every type's verbs — asserted as that
     // relationship rather than as a literal count.

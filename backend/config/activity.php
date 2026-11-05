@@ -84,6 +84,8 @@ return [
         ],
 
         'server' => [
+            // The paid addon binaries Central installs and removes.
+            'addon',
             'application',
             'backup',
             // The compiler toolchain. A fact about what this machine can

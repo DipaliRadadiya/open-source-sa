@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\Addons\AddonController;
+use App\Http\Controllers\API\Server\Addons\AddonInstallController;
 use App\Http\Controllers\API\Server\Addons\InsightsAddonController;
 use App\Http\Controllers\API\Server\Addons\ObjectCacheProController;
 use App\Http\Controllers\API\Server\Addons\WordPressAddonController;
@@ -25,6 +26,14 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('central.only')->prefix('central/addons')->group(function (): void {
     Route::get('/', [AddonController::class, 'index']);
     Route::get('/runs/{run}', [AddonController::class, 'run']);
+
+    // ── Installing and removing the binaries (202 + run) ─────────────────────
+    Route::post('{addon}/install', [AddonInstallController::class, 'store'])
+        ->whereIn('addon', ['wp-toolkit', 'log-monitoring-suite'])
+        ->middleware('throttle:10,1');
+    Route::delete('{addon}', [AddonInstallController::class, 'destroy'])
+        ->whereIn('addon', ['wp-toolkit', 'log-monitoring-suite'])
+        ->middleware('throttle:10,1');
 
     // ── WP Toolkit ───────────────────────────────────────────────────────────
     Route::prefix('applications/{application}/wordpress')->group(function (): void {

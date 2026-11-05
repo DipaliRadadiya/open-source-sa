@@ -19,6 +19,18 @@ use RuntimeException;
  *   object_cache_redis_unavailable 409  this server's Redis cannot give a site
  *                                       an isolated account (not running,
  *                                       older than 6, or no password)
+ *
+ * Installing and removing an addon (AddonInstaller):
+ *
+ *   addon_busy                409  an install or remove of it is already running
+ *   addon_signing_key_missing 503  no signing key is configured; nothing is installed unsigned
+ *   addon_download_failed     502  the file could not be fetched, or was too large
+ *   addon_checksum_mismatch   422  the file is not the one the SHA-256 names
+ *   addon_signature_invalid   422  the signature does not verify against the key
+ *   addon_not_executable      422  the file is not a Linux executable (ELF)
+ *   addon_disk_low            422  too little free space for the addon's data
+ *   addon_install_failed      500  a step on the server failed; everything was rolled back
+ *   addon_remove_failed       500  a step of the removal failed
  */
 class AddonException extends RuntimeException
 {
@@ -30,6 +42,15 @@ class AddonException extends RuntimeException
         'addon_bad_output' => 502,
         'addon_timed_out' => 504,
         'object_cache_redis_unavailable' => 409,
+        'addon_busy' => 409,
+        'addon_signing_key_missing' => 503,
+        'addon_download_failed' => 502,
+        'addon_checksum_mismatch' => 422,
+        'addon_signature_invalid' => 422,
+        'addon_not_executable' => 422,
+        'addon_disk_low' => 422,
+        'addon_install_failed' => 500,
+        'addon_remove_failed' => 500,
     ];
 
     /**

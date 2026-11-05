@@ -31,6 +31,12 @@ abstract class AddonCli
 
     abstract protected function binary(): string;
 
+    /** Where the binary is installed. */
+    public function path(): string
+    {
+        return $this->binary();
+    }
+
     /** Working directory to start the binary in, or null for any. */
     protected function workdir(): ?string
     {

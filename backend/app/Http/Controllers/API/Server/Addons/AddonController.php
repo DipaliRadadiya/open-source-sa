@@ -10,7 +10,8 @@ use App\Services\Addons\WpToolkit;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Which addon binaries this server has, and the queued runs Central polls.
+ * Which addon binaries this server has, how they are doing, and the queued
+ * runs Central polls.
  * Central-only (`central.only`).
  */
 class AddonController extends Controller
@@ -25,6 +26,11 @@ class AddonController extends Controller
                 'label' => $addon->label(),
                 'installed' => $addon->installed(),
                 'version' => $addon->version(),
+                // An install, update or removal is queued or running.
+                'installing' => AddonRun::lifecycleInProgress($addon->name()) !== null,
+                // Whether ingestion is actually happening (timers, last fetch,
+                // database size, retention).
+                ...($addon === $logMonitoring ? $logMonitoring->health() : []),
             ];
         }
 

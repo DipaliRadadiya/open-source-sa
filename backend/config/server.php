@@ -834,7 +834,28 @@ return [
         ],
         'log_monitoring_suite' => [
             'binary' => env('ADDON_LOG_MONITORING_SUITE_BINARY', '/usr/local/bin/log-monitoring-suite'),
+            // 0755, not 0700: the panel starts the binary with this as its
+            // working directory, and the chdir happens as the panel's own
+            // account, before sudo. The .env inside is 0600.
             'workdir' => env('ADDON_LOG_MONITORING_SUITE_WORKDIR', '/etc/log-monitoring-suite'),
+            // Its SQLite database, root-only (0700).
+            'data_dir' => env('ADDON_LOG_MONITORING_SUITE_DATA_DIR', '/var/lib/log-monitoring-suite'),
+            // The fetch and prune timers (its docs/INTEGRATION.md §7a).
+            'units_dir' => env('ADDON_LOG_MONITORING_SUITE_UNITS_DIR', '/etc/systemd/system'),
+            // `logs:fetch` refuses to run with this little free on the
+            // database's filesystem, so an install below it would sit there
+            // ingesting nothing.
+            'min_free_bytes' => 5 * 1024 * 1024 * 1024,
+            'retention_days' => [7, 14, 30],
+            'default_retention_days' => 7,
+            // v7's insighthub-agent. It ingests the same access logs, so it is
+            // removed before this one is installed — data included (decided
+            // 2026-10-02: v8 starts fresh).
+            'v7' => [
+                'service' => 'insighthub.service',
+                'unit_files' => ['/lib/systemd/system/insighthub.service', '/etc/systemd/system/insighthub.service'],
+                'directories' => ['/insighthub', '/var/log/insighthub'],
+            ],
             // Every report starts the binary and opens its database, so the
             // same chart asked for twice within this window is answered once.
             'cache_seconds' => (int) env('ADDON_LOG_MONITORING_SUITE_CACHE_SECONDS', 300),
@@ -843,6 +864,20 @@ return [
         // longer is queued and polled instead (AddonRun).
         'sync_timeout' => 55,
         'async_timeout' => 1800,
+
+        // Installing and removing the binaries (POST/DELETE /central/addons/{addon}).
+        //
+        // Central sends a URL, a SHA-256 and an Ed25519 signature over the
+        // file's bytes. The URL must be on Central's own host; the signature
+        // is checked against this key (base64, 32 bytes). No key, no install:
+        // a checksum alone only proves the file is the one the request named.
+        'signing_public_key' => env('ADDON_SIGNING_PUBLIC_KEY'),
+        'download_max_bytes' => (int) env('ADDON_DOWNLOAD_MAX_BYTES', 209715200),
+        'install_timeout' => 1800,
+        // An install or remove still queued or running after this long is
+        // taken to be stranded (a worker that died with it) and no longer
+        // holds the next one off.
+        'lifecycle_stranded_seconds' => 10800,
     ],
 
     /*

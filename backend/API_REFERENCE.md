@@ -7502,7 +7502,7 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 
 ## Central — Paid Addons (WP Toolkit, Log Monitoring Suite)
 
-**Central only.** Every route below answers **404 to anyone but Central** (administrators included) and is reached with `Authorization: Bearer <central token>`. The OSS panel does not offer these features itself. The addon binaries (`/usr/local/bin/wp-toolkit`, `/usr/local/bin/log-monitoring-suite`) are installed by Central and check their own licence against ServerAvatar on every run — the panel holds no licence logic.
+**Central only.** Every route below answers **404 to anyone but Central** (administrators included) and is reached with `Authorization: Bearer <central token>`. The OSS panel does not offer these features itself. The addon binaries (`/usr/local/bin/wp-toolkit`, `/usr/local/bin/log-monitoring-suite`) are installed by Central through this panel (`POST /central/addons/{addon}/install`, below) and check their own licence against ServerAvatar on every run — the panel holds no licence logic.
 
 **Answers.** A synchronous route returns the addon's own JSON **unchanged** (`{"status":"success","message":…, …}`, same keys as the v7 agent routes). A route marked *queued* returns **`202`** with a run: `{"data":{"id","application_id","addon","command","status":"queued|running|succeeded|failed","http_status","result","created_at","started_at","finished_at"}}`; poll `GET /central/addons/runs/{id}` until `status` is `succeeded` or `failed`. `result` then holds what the synchronous call would have returned, and `http_status` its status.
 
@@ -7516,11 +7516,56 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 | 422 | `addon_command_failed` | The addon ran and refused; its own error fields are under `addon` (e.g. `addon.message`, Log Monitoring Suite's `addon.field`) |
 | 502 | `addon_bad_output` | It printed something that is not its JSON |
 | 504 | `addon_timed_out` | It did not finish (55 s for direct calls, 30 min for queued runs) |
+| 409 | `addon_busy` | An install or remove of this addon is already queued or running |
+| 503 | `addon_signing_key_missing` | Install only: no usable `ADDON_SIGNING_PUBLIC_KEY` on this server — nothing is installed unsigned |
+| 502 | `addon_download_failed` | Install run: the file could not be fetched, or is over 200 MB |
+| 422 | `addon_checksum_mismatch` | Install run: the file is not the one `sha256` names |
+| 422 | `addon_signature_invalid` | Install run: `signature` does not verify against the server's key |
+| 422 | `addon_not_executable` | Install run: the file is not a Linux (ELF) executable |
+| 422 | `addon_disk_low` | Install run, Log Monitoring Suite: 5 GiB or less free for its data |
+| 500 | `addon_install_failed` | Install run: a step on the server failed (`message` names it and the server-ops log reference); everything the run changed was undone |
+| 500 | `addon_remove_failed` | Remove run: a step failed (named in `message`) |
 
 Plain `422` with `errors` is ordinary request validation. WordPress routes on a non-WordPress or not-yet-active site answer `404`.
 
 ### GET `/central/addons`
-`{"addons":[{"name":"wp-toolkit","label":"WP Toolkit","installed":true,"version":"…"},{"name":"log-monitoring-suite","label":"Log Monitoring Suite","installed":false,"version":null}]}`
+`{"addons":[{"name":"wp-toolkit","label":"WP Toolkit","installed":true,"version":"…","installing":false},{"name":"log-monitoring-suite","label":"Log Monitoring Suite","installed":true,"version":"…","installing":false,"timers_active":true,"last_fetch_at":"2026-11-05T09:15:42+00:00","data_bytes":52428800,"retention_days":7}]}`
+
+| Field | Meaning |
+|---|---|
+| `installing` | An install, update or removal of this addon is queued or running |
+| `timers_active` | Log Monitoring Suite only: both its fetch and prune timers are active. `false` means no new access logs are being read, whatever the reports say |
+| `last_fetch_at` | When the last `logs:fetch` run finished (ISO 8601), or `null` if it never has |
+| `data_bytes` | Size of its data directory (`/var/lib/log-monitoring-suite`), or `null` |
+| `retention_days` | Days of access logs kept (`7`, `14` or `30`), read from the prune unit, or `null` |
+
+The Log Monitoring Suite fields are `false`/`null` while it is not installed. Reading them runs `systemctl show` and `du`, never the addon itself.
+
+### POST `/central/addons/{addon}/install` — *queued*
+`{addon}` is `wp-toolkit` or `log-monitoring-suite` (anything else → `404`). Installs the binary, or replaces the installed one (an update). Throttled to 10/min.
+
+| Field | Rules |
+|---|---|
+| `version` | required, ≤ 64 chars, `[A-Za-z0-9][A-Za-z0-9.+_-]*` — recorded in the result and the activity log |
+| `url` | required, **https on the host of the panel's `CENTRAL_URL`** (else `422`, nothing queued). Redirects are followed only over https |
+| `sha256` | required, 64 hex characters, of the file's bytes |
+| `signature` | required, base64 of a 64-byte **Ed25519 signature over the file's raw bytes**, checked against `ADDON_SIGNING_PUBLIC_KEY` (base64 public key in the panel's `.env`) |
+| `retention_days` | Log Monitoring Suite only (prohibited for wp-toolkit): `7`, `14` or `30`, default `7` |
+
+`202` with the run (`command: "install"`, `application_id: null`). What the run does, in order — any failure after the download undoes everything it changed and the run fails:
+1. Download to the panel's storage (≤ 200 MB), verify the SHA-256, the signature and the ELF header. The download is always deleted.
+2. Log Monitoring Suite: refuse with ≤ 5 GiB free on its data filesystem (`logs:fetch` itself refuses below that).
+3. Log Monitoring Suite: if v7's insighthub agent is present, `systemctl disable --now insighthub.service` and delete its units, `/insighthub` and `/var/log/insighthub`. **Not undone** if the install then fails — v8 does not use its data.
+4. `install -m 0755 -o root -g root` to the binary's path. On an update the old binary is kept beside it until the end and put back on failure.
+5. Log Monitoring Suite: working directory `/etc/log-monitoring-suite` (root, 0755) with its `.env` (0600: sqlite, absolute `DB_DATABASE`), data directory `/var/lib/log-monitoring-suite` (root, 0700), `schema:migrate`, then four units in `/etc/systemd/system`: `log-monitoring-suite-fetch.{service,timer}` (every 15 minutes, `RandomizedDelaySec=60`, `Persistent=true`) and `log-monitoring-suite-prune.{service,timer}` (daily, `logs:prune --days=<retention_days>`), both with `WorkingDirectory=` the working directory; `daemon-reload`, `enable --now` both timers. The addon's own refusal (e.g. `403 addon_licence_required` from `schema:migrate`) is the run's result.
+6. Log Monitoring Suite: register every active site (on an update, only those not registered yet). A site the addon refuses does not fail the install; it is listed in `result.sites.failed`.
+
+Result on success: `{"status":"success","action":"installed|updated","version":"…","reported_version":"<binary --version>","v7_removed":bool,"retention_days":7,"sites":{"registered":3,"failed":[{"application_id":5,"message":"…"}]}}` (the last three for Log Monitoring Suite only). Activity: `addon.installed` / `addon.updated` / `addon.install_failed`.
+
+`409 addon_busy` while another install or remove of the same addon is queued or running (one left over three hours by a dead worker no longer counts). `503 addon_signing_key_missing` when the server has no key — checked before queueing, and again in the run.
+
+### DELETE `/central/addons/{addon}` — *queued*
+Removes the addon. wp-toolkit: the binary. Log Monitoring Suite: disables and stops its timers, deletes the four units, `daemon-reload`, then the binary, the working directory and **the data directory with all its data**, and clears every site's registration. Removing an addon that is not installed succeeds. `202` with the run (`command: "remove"`); result `{"status":"success","action":"removed"}`. Throttled to 10/min; `409 addon_busy` as above. Activity: `addon.removed` / `addon.remove_failed`.
 
 ### GET `/central/addons/runs/{run}`
 A queued run (shape above).
