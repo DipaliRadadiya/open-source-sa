@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
+import { AppWindow, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -135,22 +137,33 @@ export function UsedByCell({ version, namespace, label }) {
               {t("table.usedByCount", { count: usedBy })}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-64 p-3">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
+          <PopoverContent align="start" className="w-72 gap-0 p-0">
+            <p className="border-b px-3 py-2.5 text-sm font-medium">
               {t("table.usedByTitle", { version: version.version })}
             </p>
-            <ul className="flex flex-wrap gap-1.5">
+            {/* One name per line, as in the System Users applications list: wrapped grey chips
+                all looked alike (Krishna, 5 Nov). The API sends names only, so each opens
+                the Applications list searched for it. */}
+            <ul className="max-h-72 divide-y overflow-y-auto">
               {sites.map((site) => (
-                <li key={site} className="rounded-md bg-muted px-2 py-0.5 text-xs">
-                  {site}
+                <li key={site}>
+                  <Link
+                    href={`/applications?search=${encodeURIComponent(site)}`}
+                    prefetch={false}
+                    className="group flex min-w-0 items-center gap-2.5 px-3 py-2 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+                  >
+                    <AppWindow className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="min-w-0 flex-1 text-sm [overflow-wrap:anywhere]">{site}</span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-colors group-hover:text-foreground" aria-hidden />
+                  </Link>
                 </li>
               ))}
-              {version.sites_truncated && usedBy > sites.length ? (
-                <li className="px-1 py-0.5 text-xs text-muted-foreground">
-                  {t("versions.moreCount", { count: usedBy - sites.length })}
-                </li>
-              ) : null}
             </ul>
+            {version.sites_truncated && usedBy > sites.length ? (
+              <p className="border-t bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                {t("versions.moreCount", { count: usedBy - sites.length })}
+              </p>
+            ) : null}
           </PopoverContent>
         </Popover>
       )}
