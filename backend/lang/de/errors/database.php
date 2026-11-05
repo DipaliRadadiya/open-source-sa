@@ -54,7 +54,8 @@ return [
     // MySQL/MariaDB root password (2026-10-17).
     'root_engine_not_installed' => ':engine ist auf diesem Server nicht installiert.',
     'root_password_busy' => 'Das Root-Passwort wird bereits geändert. Warten Sie einen Moment und versuchen Sie es erneut.',
-    'root_unreachable' => 'Das Panel konnte sich nicht als root bei :engine anmelden — weder als root-Konto des Servers noch mit einem gespeicherten Root-Passwort. Speichern Sie das aktuelle Root-Passwort unter Datenbankverbindungen und versuchen Sie es erneut.',
+    'root_unreachable' => 'Das Panel konnte sich nicht als root bei :engine anmelden — weder als root-Konto des Servers noch mit einem gespeicherten Root-Passwort. Geben Sie das aktuelle Root-Passwort ein, um es zu ändern.',
+    'root_server_unreachable' => ':engine hat nicht geantwortet, daher wurde das Root-Passwort nicht geändert. Prüfen Sie, ob :engine läuft, und versuchen Sie es erneut.',
     'root_password_policy' => 'Der Datenbankserver hat dieses Passwort wegen seiner Passwortrichtlinie abgelehnt. Verwenden Sie ein längeres Passwort mit Groß- und Kleinbuchstaben, Ziffern und einem Sonderzeichen.',
     'root_password_not_applied' => 'Das neue Root-Passwort konnte nicht bestätigt werden, daher wurde die vorherige Anmeldung von root wiederhergestellt. Es wurde nichts geändert.',
     'root_password_characters' => 'Das Passwort darf keine Zeilenumbrüche oder anderen Steuerzeichen enthalten.',

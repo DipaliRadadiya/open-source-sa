@@ -52,7 +52,7 @@ class DatabaseConnectionController extends Controller
     {
         abort_unless(in_array($engine, ['mysql', 'mariadb'], true), 404);
 
-        $connection = $action->execute($engine, $request->password());
+        $connection = $action->execute($engine, $request->password(), $request->currentPassword());
 
         return response()->json([$engine => DatabaseConnectionResource::make($connection)->resolve()]);
     }

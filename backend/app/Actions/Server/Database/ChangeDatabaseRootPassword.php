@@ -3,6 +3,7 @@
 namespace App\Actions\Server\Database;
 
 use App\Exceptions\Server\Database\DatabaseOperationException;
+use App\Exceptions\Server\Database\RootAccessRefusedException;
 use App\Models\DatabaseConnection;
 use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
@@ -18,8 +19,14 @@ use Illuminate\Validation\ValidationException;
  * Set, change or reset the MySQL/MariaDB root password (v7's "change root
  * password", 2026-10-17; Adarsh: users can change or reset it).
  *
- * The old password is never needed: the panel reaches root as OS root over the
- * socket, or with the stored root password where socket login is gone.
+ * The old password is normally not needed: the panel reaches root as OS root
+ * over the socket, or with the stored root password where socket login is
+ * gone. Where both fail — a server moved from v7 whose root has a password the
+ * panel never stored — the user may give root's current password (RC-26). It
+ * is tried last, only for this change, and never stored or logged: like the
+ * stored one it travels in a 0600 option file (SqlRootAccess), never on argv
+ * or in SQL. Without it the answer is `root_unreachable`, which is the
+ * dialog's cue to ask for it.
  *
  * What it must not break:
  *
@@ -50,7 +57,12 @@ class ChangeDatabaseRootPassword
         private ActivityLogger $activityLogger,
     ) {}
 
-    public function execute(string $engine, string $password): DatabaseConnection
+    /**
+     * @param  string|null  $currentPassword  root's current password, tried only
+     *                                        when socket login and the stored
+     *                                        password both fail
+     */
+    public function execute(string $engine, string $password, ?string $currentPassword = null): DatabaseConnection
     {
         if (! $this->installers->installer($engine)->installed()) {
             throw ValidationException::withMessages([
@@ -67,20 +79,31 @@ class ChangeDatabaseRootPassword
         }
 
         try {
-            return $this->change($engine, $password);
+            return $this->change($engine, $password, $currentPassword === null || $currentPassword === '' ? [] : [$currentPassword]);
         } finally {
             $lock->release();
         }
     }
 
-    private function change(string $engine, string $password): DatabaseConnection
+    /**
+     * @param  list<string>  $current  root's current password, when the user gave it
+     */
+    private function change(string $engine, string $password, array $current): DatabaseConnection
     {
-        $version = $this->query($engine, 'SELECT VERSION();', 'root_version');
+        $version = $this->query($engine, 'SELECT VERSION();', 'root_version', $current);
 
         if ($version->failed()) {
-            throw ValidationException::withMessages([
-                'engine' => [__('errors/database.root_unreachable', ['engine' => $this->label($engine)])],
-            ]);
+            // Not a refusal — the server did not answer, or the client did not
+            // run. No password would help, so none is asked for.
+            if (! $this->refused($version)) {
+                throw ValidationException::withMessages([
+                    'engine' => [__('errors/database.root_server_unreachable', ['engine' => $this->label($engine)])],
+                ]);
+            }
+
+            throw $current === []
+                ? RootAccessRefusedException::needsCurrentPassword($this->label($engine))
+                : RootAccessRefusedException::wrongCurrentPassword();
         }
 
         $mariadb = stripos($version->output(), 'mariadb') !== false;
@@ -91,6 +114,7 @@ class ChangeDatabaseRootPassword
             $engine,
             ($mariadb ? '' : 'SET SESSION print_identified_with_as_hex = ON; ')."SHOW CREATE USER 'root'@'localhost';",
             'root_snapshot',
+            $current,
         );
         $previous = trim($snapshot->output());
 
@@ -103,7 +127,7 @@ class ChangeDatabaseRootPassword
             ? "ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD({$literal}) OR unix_socket; FLUSH PRIVILEGES;"
             : "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY {$literal}; FLUSH PRIVILEGES;";
 
-        $applied = $this->query($engine, $alter, 'root_password');
+        $applied = $this->query($engine, $alter, 'root_password', $current);
 
         if ($applied->failed()) {
             // MySQL's validate_password component, when someone installed it.
@@ -118,7 +142,7 @@ class ChangeDatabaseRootPassword
         }
 
         if (! $this->check->works($engine, $password)) {
-            $this->restore($engine, $previous, $password);
+            $this->restore($engine, $previous, [$password, ...$current]);
 
             throw ValidationException::withMessages([
                 'password' => [__('errors/database.root_password_not_applied')],
@@ -140,11 +164,15 @@ class ChangeDatabaseRootPassword
         return $connection->refresh();
     }
 
-    /** Put root's previous login back, reaching it any way that still works. */
-    private function restore(string $engine, string $previous, string $newPassword): void
+    /**
+     * Put root's previous login back, reaching it any way that still works.
+     *
+     * @param  list<string>  $passwords  the new password first, then the current one
+     */
+    private function restore(string $engine, string $previous, array $passwords): void
     {
         $sql = preg_replace('/^CREATE USER/', 'ALTER USER', $previous).'; FLUSH PRIVILEGES;';
-        $result = $this->root->run($engine, $sql, 'root_password_restore', passwords: [$newPassword]);
+        $result = $this->root->run($engine, $sql, 'root_password_restore', passwords: $passwords);
 
         if ($result->failed()) {
             Log::channel('server-ops')->critical('Root password change could not be undone', [
@@ -156,9 +184,24 @@ class ChangeDatabaseRootPassword
         }
     }
 
-    private function query(string $engine, string $sql, string $op): ServerOpsResult
+    /**
+     * @param  list<string>  $passwords  tried after the socket and the stored password
+     */
+    private function query(string $engine, string $sql, string $op, array $passwords = []): ServerOpsResult
     {
-        return $this->root->run($engine, $sql, $op, ['--batch', '--skip-column-names', '--raw']);
+        return $this->root->run($engine, $sql, $op, ['--batch', '--skip-column-names', '--raw'], $passwords);
+    }
+
+    /**
+     * Did the server answer "no" (SQLSTATE 28000, access denied)? That is the
+     * one failure a password can fix; "can't connect" and a missing client are
+     * not.
+     */
+    private function refused(ServerOpsResult $result): bool
+    {
+        $error = $result->errorOutput();
+
+        return str_contains($error, '(28000)') || stripos($error, 'Access denied') !== false;
     }
 
     private function label(string $engine): string

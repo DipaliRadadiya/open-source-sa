@@ -6,7 +6,10 @@ use App\Models\User;
 use App\Services\Server\Databases\SqlPasswordCheck;
 use App\Services\Server\Databases\SqlRootAccess;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -32,6 +35,12 @@ final class RootLogin
 
     public static string $applyError = '';
 
+    /** The server is down: every client call fails to connect. */
+    public static bool $down = false;
+
+    /** @var list<string> passwords tried from an option file, in order */
+    public static array $tried = [];
+
     /** @var list<string> */
     public static array $statements = [];
 
@@ -45,6 +54,8 @@ final class RootLogin
         self::$password = null;
         self::$applyFails = false;
         self::$applyError = '';
+        self::$down = false;
+        self::$tried = [];
         self::$statements = [];
         self::$argv = [];
     }
@@ -69,11 +80,16 @@ function fakeRootServer(string $flavor = 'mariadb', bool $installed = true): voi
             return Process::result();
         }
 
+        if (RootLogin::$down) {
+            return Process::result(errorOutput: "ERROR 2002 (HY000): Can't connect to local server through socket '/run/mysqld/mysqld.sock' (2)", exitCode: 1);
+        }
+
         // Signed in? Over the socket as OS root, or with a password from the
         // option file — read while it exists, as the real client would.
         $file = collect($cmd)->first(fn ($arg) => str_starts_with($arg, '--defaults-extra-file='));
         if ($file !== null) {
             preg_match('/password="(.*)"/', (string) @file_get_contents(substr($file, strlen('--defaults-extra-file='))), $m);
+            RootLogin::$tried[] = isset($m[1]) ? stripslashes($m[1]) : '';
             $in = isset($m[1]) && RootLogin::$password !== null && stripslashes($m[1]) === RootLogin::$password;
         } else {
             $in = RootLogin::$socket;
@@ -131,12 +147,20 @@ function rootAuth(?User $user = null): array
     return ['Authorization' => 'Bearer '.($user ?? test()->admin)->createToken('t')->plainTextToken];
 }
 
-function changeRoot(string $engine, string $password, ?string $confirm = null, ?User $user = null)
+function changeRoot(string $engine, string $password, ?string $confirm = null, ?User $user = null, ?string $current = null)
 {
     return test()->withHeaders(rootAuth($user))->putJson("/api/databases/connections/{$engine}/root-password", [
         'password' => $password,
         'password_confirmation' => $confirm ?? $password,
+        ...($current !== null ? ['current_password' => $current] : []),
     ]);
+}
+
+function storeRootPassword(string $engine, string $password): void
+{
+    $connection = DatabaseConnection::firstOrCreate(['engine' => $engine], ['connection_type' => 'socket', 'username' => 'root']);
+    $connection->root_password = $password;
+    $connection->save();
 }
 
 beforeEach(function () {
@@ -241,16 +265,166 @@ it('puts root\'s previous login back and stores nothing when the new password do
     expect(ActivityLog::where('action', 'root_password_changed')->exists())->toBeFalse();
 });
 
-it('says plainly when root cannot be reached at all, and changes nothing', function () {
+it('asks for root\'s current password when root refuses the panel every other way, and changes nothing', function () {
     fakeRootServer('mysql');
     RootLogin::$socket = false;
     RootLogin::$password = 'set-by-someone-else';
 
     changeRoot('mysql', 'Correct-horse-42')
         ->assertStatus(422)
-        ->assertJsonPath('errors.engine.0', __('errors/database.root_unreachable', ['engine' => 'MySQL']));
+        ->assertJsonPath('reason', 'root_unreachable')
+        ->assertJsonPath('errors.current_password.0', __('errors/database.root_unreachable', ['engine' => 'MySQL']));
 
-    expect(RootLogin::$password)->toBe('set-by-someone-else');
+    expect(RootLogin::$password)->toBe('set-by-someone-else')
+        ->and(collect(RootLogin::$statements)->contains(fn ($sql) => str_contains($sql, 'ALTER USER')))->toBeFalse()
+        ->and(DatabaseConnection::where('engine', 'mysql')->value('root_password'))->toBeNull();
+});
+
+it('does not ask for a password when the server is not answering at all', function (?string $current) {
+    fakeRootServer('mysql');
+    RootLogin::$down = true;
+
+    changeRoot('mysql', 'Correct-horse-42', current: $current)
+        ->assertStatus(422)
+        ->assertJsonMissingPath('reason')
+        ->assertJsonPath('errors.engine.0', __('errors/database.root_server_unreachable', ['engine' => 'MySQL']));
+})->with(['no current password' => [null], 'with one' => ['whatever-it-is-1']]);
+
+describe('root\'s current password, when nothing else gets in (RC-26)', function () {
+    it('is not needed, and not tried, while socket login works', function () {
+        fakeRootServer('mariadb');
+
+        changeRoot('mariadb', 'Correct-horse-42', current: 'Not-even-right-1')->assertOk();
+
+        expect(RootLogin::$password)->toBe('Correct-horse-42')
+            ->and(RootLogin::$tried)->toBe([]);
+    });
+
+    it('is not needed, and not tried, while the stored password works', function () {
+        fakeRootServer('mysql');
+        RootLogin::$socket = false;
+        RootLogin::$password = 'stored-root-pw';
+        storeRootPassword('mysql', 'stored-root-pw');
+
+        changeRoot('mysql', 'Correct-horse-42', current: 'Not-even-right-1')->assertOk();
+
+        expect(RootLogin::$password)->toBe('Correct-horse-42')
+            ->and(RootLogin::$tried)->not->toContain('Not-even-right-1')
+            ->and(DatabaseConnection::where('engine', 'mysql')->first()->root_password)->toBe('Correct-horse-42');
+    });
+
+    it('gets the panel in when socket login and the stored password both fail, and the new password is stored', function () {
+        fakeRootServer('mysql');
+        RootLogin::$socket = false;
+        RootLogin::$password = 'from-v7-panel';
+        storeRootPassword('mysql', 'stale-stored-one');
+
+        changeRoot('mysql', 'Correct-horse-42', current: 'from-v7-panel')
+            ->assertOk()
+            ->assertJsonPath('mysql.has_root_password', true);
+
+        expect(RootLogin::$password)->toBe('Correct-horse-42')
+            // The stored one first; the current one only after it failed.
+            ->and(RootLogin::$tried[0])->toBe('stale-stored-one')
+            ->and(RootLogin::$tried)->toContain('from-v7-panel')
+            ->and(DatabaseConnection::where('engine', 'mysql')->first()->root_password)->toBe('Correct-horse-42');
+
+        // And from now on the stored one is enough.
+        RootLogin::$tried = [];
+        changeRoot('mysql', 'Correct-horse-43')->assertOk();
+        expect(RootLogin::$password)->toBe('Correct-horse-43');
+    });
+
+    it('refuses a wrong one with its own reason, and changes nothing', function () {
+        fakeRootServer('mysql');
+        RootLogin::$socket = false;
+        RootLogin::$password = 'the-real-one';
+
+        changeRoot('mysql', 'Correct-horse-42', current: 'a-wrong-one-123')
+            ->assertStatus(422)
+            ->assertJsonPath('reason', 'current_password_wrong')
+            ->assertJsonPath('errors.current_password.0', __('errors/database.root_password_wrong'));
+
+        expect(RootLogin::$password)->toBe('the-real-one')
+            ->and(collect(RootLogin::$statements)->contains(fn ($sql) => str_contains($sql, 'ALTER USER')))->toBeFalse()
+            ->and(DatabaseConnection::where('engine', 'mysql')->value('root_password'))->toBeNull();
+        expect(ActivityLog::where('action', 'root_password_changed')->exists())->toBeFalse();
+    });
+
+    it('can still put root\'s previous login back with it when the new password does not take', function () {
+        fakeRootServer('mysql');
+        RootLogin::$socket = false;
+        RootLogin::$password = 'from-v7-panel';
+        app(SqlPasswordCheck::class)->broken = true;
+
+        changeRoot('mysql', 'Correct-horse-42', current: 'from-v7-panel')
+            ->assertStatus(422)
+            ->assertJsonPath('errors.password.0', __('errors/database.root_password_not_applied'));
+
+        expect(collect(RootLogin::$statements)->last())->toStartWith('ALTER USER `root`@`localhost`')
+            ->and(DatabaseConnection::where('engine', 'mysql')->value('root_password'))->toBeNull();
+    });
+
+    it('never stores it, logs it, or puts it on a command line or in the activity log', function () {
+        fakeRootServer('mysql');
+        RootLogin::$socket = false;
+        RootLogin::$password = 'Current-secret-55';
+        $dir = sys_get_temp_dir().'/root-pw-'.getmypid();
+        File::ensureDirectoryExists($dir);
+        config(['server.databases.auth_file_dir' => $dir]);
+
+        $logged = [];
+        Event::listen(MessageLogged::class, function (MessageLogged $event) use (&$logged) {
+            $logged[] = $event->message.' '.json_encode($event->context);
+        });
+
+        // Refused once (wrong), then accepted.
+        changeRoot('mysql', 'Correct-horse-42', current: 'Current-secret-66')->assertStatus(422);
+        changeRoot('mysql', 'Correct-horse-42', current: 'Current-secret-55')->assertOk();
+
+        expect($logged)->not->toBeEmpty();
+        foreach ($logged as $line) {
+            expect($line)->not->toContain('Current-secret');
+        }
+        foreach (RootLogin::$argv as $argv) {
+            expect(implode(' ', $argv))->not->toContain('Current-secret');
+        }
+        foreach (RootLogin::$statements as $sql) {
+            expect($sql)->not->toContain('Current-secret');
+        }
+        expect(json_encode(ActivityLog::all()->toArray()))->not->toContain('Current-secret')
+            ->and(json_encode(DB::table('database_connections')->get()))->not->toContain('Current-secret')
+            ->and(DatabaseConnection::where('engine', 'mysql')->first()->root_password)->toBe('Correct-horse-42');
+        // The option files are gone once used.
+        expect(File::files($dir))->toBe([]);
+        File::deleteDirectory($dir);
+    });
+
+    it('is refused to a user who may only view databases, even with it', function () {
+        fakeRootServer('mysql');
+        RootLogin::$socket = false;
+        RootLogin::$password = 'from-v7-panel';
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'database', view: true, manage: false);
+
+        changeRoot('mysql', 'Correct-horse-42', user: $viewer, current: 'from-v7-panel')->assertForbidden();
+
+        expect(RootLogin::$statements)->toBe([])
+            ->and(RootLogin::$password)->toBe('from-v7-panel');
+    });
+
+    it('validates it', function (mixed $current) {
+        fakeRootServer('mysql');
+
+        changeRoot('mysql', 'Correct-horse-42', current: $current)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('current_password');
+
+        expect(RootLogin::$statements)->toBe([]);
+    })->with([
+        'newline' => ["from-v7\npanel"],
+        'too long' => [str_repeat('a', 129)],
+    ]);
 });
 
 it('refuses an engine that is not installed', function () {

@@ -4472,9 +4472,13 @@ Optional `root_password` (MySQL/MariaDB): root's **current** password, for a ser
 ### PUT `/databases/connections/{engine}/root-password`
 **Permission:** `database` (manage) · **Throttle:** 5/min · **Engines:** `mysql`, `mariadb` (others `404`)
 
-Set, change or reset the MySQL/MariaDB root password. The old password is not asked for: the panel reaches root as the server's own root account, or with the stored root password.
+Set, change or reset the MySQL/MariaDB root password. The old password is normally not needed: the panel reaches root as the server's own root account, or with the stored root password.
 
-**Request:** `{"password": "…", "password_confirmation": "…"}` — 12–128 characters, no line breaks or control characters. Quotes and spaces are fine (v7 refused them).
+**Request:** `{"password": "…", "password_confirmation": "…", "current_password": "…"}` — `password` 12–128 characters, no line breaks or control characters. Quotes and spaces are fine (v7 refused them).
+
+**`current_password`** (optional, 2026-11-05, RC-26) — root's current password, for a server whose root has a password the panel never stored (moved from v7) and no socket login. Tried **last**, only when socket login and the stored root password both fail; ignored otherwise. Never stored, never logged, not in the activity entry: it reaches the client only in a 0600 option file that is deleted after the sign-in, never on a command line or in SQL. At most 128 characters, no control characters. What *is* stored on success is the new `password`, as always.
+
+**Dialog flow:** send without `current_password`. Only if the answer is `422` with `reason: "root_unreachable"`, show a "Current root password" field and send again with it. `reason: "current_password_wrong"` means that password did not sign root in either — keep the field open, show `errors.current_password`.
 
 **Response `200`:** `{"mariadb": { …connection…, "has_root_password": true }}`
 
@@ -4484,7 +4488,7 @@ What happens on the server:
 - The new password is proved by signing in with it; only then is it stored (encrypted). If it does not work, root's previous login is put back and nothing is stored.
 - The panel's own admin account (`panel_…`) is not changed. Activity: `database.root_password_changed` (a security event), never the password.
 
-**Errors:** `422 errors.engine` — engine not installed, root unreachable (no socket login and no working stored password: save root's current password first), or a change already running · `422 errors.password` — validation, the server's password policy (MySQL `validate_password`), or the new password could not be confirmed (previous login restored) · `500 {message, reference}` — the server refused the change, or restoring the previous login failed.
+**Errors:** `422 {message, reason: "root_unreachable", errors.current_password}` — root refused socket login and the stored password (and no `current_password` was sent): ask for it · `422 {message, reason: "current_password_wrong", errors.current_password}` — the `current_password` sent did not sign root in either; nothing changed · `422 errors.engine` — engine not installed, the server did not answer at all (no `reason`; a password would not help, so none is asked for), or a change already running · `422 errors.current_password` (no `reason`) — validation · `422 errors.password` — validation, the server's password policy (MySQL `validate_password`), or the new password could not be confirmed (previous login restored) · `500 {message, reference}` — the server refused the change, or restoring the previous login failed.
 
 ---
 

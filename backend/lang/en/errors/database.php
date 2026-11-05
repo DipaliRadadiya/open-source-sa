@@ -54,7 +54,8 @@ return [
     // MySQL/MariaDB root password (2026-10-17).
     'root_engine_not_installed' => ':engine is not installed on this server.',
     'root_password_busy' => 'The root password is already being changed. Wait a moment and try again.',
-    'root_unreachable' => 'The panel could not sign in to :engine as root — neither as the server\'s root account nor with a saved root password. Save root\'s current password under Database connections, then try again.',
+    'root_unreachable' => 'The panel could not sign in to :engine as root — neither as the server\'s root account nor with a saved root password. Enter root\'s current password to change it.',
+    'root_server_unreachable' => ':engine did not answer, so the root password was not changed. Check that :engine is running, then try again.',
     'root_password_policy' => 'The database server refused this password because of its password policy. Use a longer password with upper- and lower-case letters, digits and a symbol.',
     'root_password_not_applied' => 'The new root password could not be confirmed, so root\'s previous login was put back. Nothing was changed.',
     'root_password_characters' => 'The password cannot contain line breaks or other control characters.',

@@ -54,7 +54,8 @@ return [
     // MySQL/MariaDB root password (2026-10-17).
     'root_engine_not_installed' => ':engine はこのサーバーにインストールされていません。',
     'root_password_busy' => 'root パスワードはすでに変更中です。しばらく待ってから再試行してください。',
-    'root_unreachable' => 'パネルは :engine に root としてサインインできませんでした（サーバーの root アカウントとしても、保存済みの root パスワードでも）。データベース接続で root の現在のパスワードを保存してから、再試行してください。',
+    'root_unreachable' => 'パネルは :engine に root としてサインインできませんでした（サーバーの root アカウントとしても、保存済みの root パスワードでも）。変更するには root の現在のパスワードを入力してください。',
+    'root_server_unreachable' => ':engine が応答しなかったため、root パスワードは変更されませんでした。:engine が動作していることを確認してから、再試行してください。',
     'root_password_policy' => 'データベースサーバーがパスワードポリシーによりこのパスワードを拒否しました。大文字・小文字・数字・記号を含む、より長いパスワードを使用してください。',
     'root_password_not_applied' => '新しい root パスワードを確認できなかったため、root の以前のログイン設定に戻しました。何も変更されていません。',
     'root_password_characters' => 'パスワードに改行やその他の制御文字を含めることはできません。',
