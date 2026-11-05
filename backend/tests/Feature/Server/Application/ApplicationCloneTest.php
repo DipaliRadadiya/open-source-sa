@@ -589,6 +589,19 @@ it('does not re-harden a clone whose source had relaxed the list', function () {
         ->not->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
 });
 
+it('carries the provisioned-list record onto the clone so it is judged by the same list (RC-3)', function () {
+    fakeCloneServer();
+
+    $source = phpSourceApp(['disable_functions' => 'exec,system']);
+    $source->phpSettings->forceFill(['provisioned_disable_functions' => 'exec,system,passthru'])->save();
+
+    $clone = Application::find(runClone($source->fresh(), 'shop-clone.test')->target_application_id)
+        ->fresh(['phpSettings']);
+
+    expect($clone->phpSettings->disable_functions)->toBe('exec,system')
+        ->and($clone->phpSettings->provisioned_disable_functions)->toBe('exec,system,passthru');
+});
+
 it('keeps an explicitly empty list empty on the clone', function () {
     // An empty string is an answer, not an absence — "this site disables
     // nothing", set by someone who meant it. `empty()` instead of a null

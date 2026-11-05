@@ -370,6 +370,13 @@ class ApplicationProvisioner
                 // re-harden the one site whose owner had explicitly said no.
                 if ($settings->disable_functions === null) {
                     $settings->disable_functions = ApplicationPhpSettings::strictDisabledFunctionsFor((string) $application->site_type);
+
+                    // What the site was given, kept apart from what it has now
+                    // so "changed" (RC-3) is judged against this and not against
+                    // a preset that a later release may have moved. Written only
+                    // alongside the list it describes: a clone arrives with its
+                    // source's pair and keeps it.
+                    $settings->provisioned_disable_functions = $settings->disable_functions;
                 }
 
                 // open_basedir on for a site the panel creates, as v7 does

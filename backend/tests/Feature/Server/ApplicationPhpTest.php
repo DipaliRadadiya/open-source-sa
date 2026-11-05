@@ -18,6 +18,7 @@ use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -1567,6 +1568,76 @@ it('does not call disable_functions changed when it is the list the site was pro
     ApplicationPhpSettings::where('application_id', $this->application->id)->update(['disable_functions' => 'exec,system']);
 
     $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
+});
+
+/*
+ * RC-3, second half. The check above compares with the strict list of *this*
+ * release, so a site provisioned by a release whose list differed (the cleaned
+ * list, the Nextcloud exceptions) read "changed" without anyone touching it.
+ * A site now keeps the list it was provisioned with and is compared with that.
+ */
+/** A site as provisioning leaves it: the list in force, and the list it was given. */
+function provisionedWith(string $list): ApplicationPhpSettings
+{
+    fakePhpServer();
+    serverRam(2 * 1024 ** 3);
+    test()->actingAs(test()->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+    $settings = ApplicationPhpSettings::firstOrNew(['application_id' => test()->application->id]);
+    $settings->forceFill(['disable_functions' => $list, 'provisioned_disable_functions' => $list])->save();
+
+    return $settings;
+}
+
+it('compares disable_functions with the list the site was provisioned with, not today\'s preset', function () {
+    // What an older release gave this site: today's strict list minus two names,
+    // so it equals neither today's list nor null.
+    $provisioned = implode(',', array_slice(explode(',', ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS), 2));
+    $settings = provisionedWith($provisioned);
+
+    // Untouched: not changed.
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', false);
+
+    // The owner allows one more function: changed.
+    $this->actingAs($this->admin)->putJson(phpUrl(), ['disable_functions' => implode(',', array_slice(explode(',', $provisioned), 1))])
+        ->assertOk();
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
+
+    // The owner puts the list it was provisioned with back, in another order
+    // and spacing: not changed.
+    $this->actingAs($this->admin)->putJson(phpUrl(), ['disable_functions' => implode(', ', array_reverse(explode(',', $provisioned)))])
+        ->assertOk();
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', false);
+
+    // Changed again, then reset the way the screen does it (null): not changed.
+    $this->actingAs($this->admin)->putJson(phpUrl(), ['disable_functions' => 'exec,system'])->assertOk();
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
+
+    $this->actingAs($this->admin)->putJson(phpUrl(), ['disable_functions' => null])->assertOk();
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', false);
+
+    // A save never rewrites the record of what the site was provisioned with.
+    expect($settings->fresh()->provisioned_disable_functions)->toBe($provisioned);
+});
+
+it('cannot be told what the provisioned list was through the settings endpoint', function () {
+    provisionedWith('exec');
+
+    $this->actingAs($this->admin)->putJson(phpUrl(), ['disable_functions' => 'system', 'provisioned_disable_functions' => 'system'])
+        ->assertOk();
+
+    expect(ApplicationPhpSettings::where('application_id', $this->application->id)->first()->provisioned_disable_functions)->toBe('exec');
+    $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
+});
+
+it('has a migration for the provisioned list that can be rolled back', function () {
+    $migration = require database_path('migrations/2026_11_05_000001_add_provisioned_disable_functions_to_application_php_settings.php');
+
+    $migration->down();
+    expect(Schema::hasColumn('application_php_settings', 'provisioned_disable_functions'))->toBeFalse();
+
+    $migration->up();
+    expect(Schema::hasColumn('application_php_settings', 'provisioned_disable_functions'))->toBeTrue();
 });
 
 it('does not call a value changed when it is the default (PHP-ob)', function () {

@@ -492,6 +492,47 @@ it('disables the strict function list on a new PHP site', function () {
         ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
 });
 
+it('keeps a record of the list a new PHP site was provisioned with (RC-3)', function () {
+    // "Changed" is judged against this, not against whatever the preset says
+    // in a later release.
+    $app = provisionApp();
+
+    expect($app->phpSettings->provisioned_disable_functions)
+        ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS)
+        ->and($app->phpSettings->provisioned_disable_functions)->toBe($app->phpSettings->disable_functions);
+
+    $this->withHeaders(provisionHeaders())->getJson("/api/applications/{$app->id}/php")
+        ->assertOk()
+        ->assertJsonPath('php.overridden.disable_functions', false);
+});
+
+it('records the Nextcloud list for a Nextcloud site and does not call it changed (RC-3)', function () {
+    $app = provisionApp(['site_type' => 'nextcloud']);
+
+    expect($app->phpSettings->provisioned_disable_functions)
+        ->toBe(ApplicationPhpSettings::strictDisabledFunctionsFor('nextcloud'))
+        ->not->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
+
+    $this->withHeaders(provisionHeaders())->getJson("/api/applications/{$app->id}/php")
+        ->assertJsonPath('php.overridden.disable_functions', false);
+});
+
+it('does not rewrite the record or the list of a site that already has them (a clone, a re-provision)', function () {
+    $app = makeApp();
+    ApplicationPhpSettings::forceCreate([
+        'application_id' => $app->id,
+        'disable_functions' => 'exec,system',
+        'provisioned_disable_functions' => 'exec,system,popen',
+    ]);
+
+    Process::fake();
+    (new ProvisionApplication($app->id))->handle(app(ApplicationProvisioner::class), app(ActivityLogger::class));
+
+    $settings = $app->fresh(['phpSettings'])->phpSettings;
+    expect($settings->disable_functions)->toBe('exec,system')
+        ->and($settings->provisioned_disable_functions)->toBe('exec,system,popen');
+});
+
 it('turns open_basedir on for a new PHP site, as v7 does', function () {
     // The column defaults to off, so the model's default alone never reached
     // a real site — caught on a live server, not by a unit test.

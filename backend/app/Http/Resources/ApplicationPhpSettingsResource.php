@@ -179,14 +179,21 @@ class ApplicationPhpSettingsResource extends JsonResource
             $flags[$key] = $stored !== null && $stored !== '' && $normal($stored) !== $normal($defaults[$key]);
         }
 
-        // RC-3: a new site is provisioned with its type's strict list, which
-        // the generic default (null) never equals, so every untouched site
-        // read "changed". The list it was given is its default. Compared as a
-        // set: order and spacing are not a change.
+        // RC-3: a new site is provisioned with a list of its own, which the
+        // generic default (null) never equals, so every untouched site read
+        // "changed". The list it was given is its default: the one recorded at
+        // provisioning, not today's preset, which a later release may have
+        // moved. A site provisioned before the record existed falls back to the
+        // preset for its type. Compared as a set: order and spacing are not a
+        // change.
         $functions = fn (mixed $value): array => collect(explode(',', (string) $value))
             ->map(fn (string $name): string => trim($name))->filter()->unique()->sort()->values()->all();
 
-        if ($flags['disable_functions'] && $functions($settings->disable_functions) === $functions(ApplicationPhpSettings::strictDisabledFunctionsFor($siteType))) {
+        $provisioned = filled($settings->provisioned_disable_functions)
+            ? $settings->provisioned_disable_functions
+            : ApplicationPhpSettings::strictDisabledFunctionsFor($siteType);
+
+        if ($flags['disable_functions'] && $functions($settings->disable_functions) === $functions($provisioned)) {
             $flags['disable_functions'] = false;
         }
 
