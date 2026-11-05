@@ -81,7 +81,9 @@
       "description": "Tu rol no incluye permiso para ver esto. Pide a un administrador que te lo conceda.",
       "unavailableTitle": "No disponible en este servidor",
       "unavailableDescription": "Este servidor no se configuró para usarlo, así que aquí no hay nada que gestionar.",
-      "unavailableDatabaseDocker": "En un servidor Docker cada aplicación guarda su base de datos dentro de sus propios contenedores, así que aquí no hay nada que gestionar."
+      "unavailableDatabaseDocker": "En un servidor Docker cada aplicación guarda su base de datos dentro de sus propios contenedores, así que aquí no hay nada que gestionar.",
+      "notForTypeTitle": "No se usa en esta aplicación",
+      "notForTypeDescription": "Esta página no se aplica a este tipo de aplicación."
     },
     "serverNavigation": "Menú del servidor",
     "loadingPage": "Cargando la página…",
@@ -263,7 +265,7 @@
     },
     "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado.",
     "sshNotEnforced": {
-      "body": "Los interruptores SSH aún no están activos: todos los usuarios pueden entrar por SSH hasta que se guarde Acceso y seguridad.",
+      "body": "Los interruptores SSH no funcionan hasta que guardes Acceso y seguridad. Hasta entonces, todos los usuarios pueden entrar por SSH.",
       "action": "Abrir Acceso y seguridad"
     },
     "sshViaSudo": "Los usuarios con sudo siempre pueden entrar por SSH. Desactiva sudo para controlar el SSH aquí.",
@@ -1594,7 +1596,7 @@
   },
   "services": {
     "title": "Servicios",
-    "subtitle": "Servidor web, base de datos y otras unidades instaladas en este servidor.",
+    "subtitle": "Servidor web, base de datos y otros servicios instalados en este servidor.",
     "loadFailed": "No se pudieron leer los servicios de este servidor. No se ha iniciado ni detenido nada.",
     "protectedHint": "Este servicio ejecuta el propio panel, así que no se puede detener ni desactivar desde aquí.",
     "noPermission": "Tu rol no incluye Servicio con acceso de gestión. Pide a un administrador que te lo conceda.",
@@ -1866,7 +1868,7 @@
       "bantime": "Bloqueada durante",
       "bantimeHint": "Cuánto tarda esa dirección en poder intentarlo otra vez.",
       "findtime": "Contados dentro de (segundos)",
-      "findtimeHint": "Los intentos más antiguos se olvidan, así que adivinar despacio nunca suma.",
+      "findtimeHint": "Los intentos fallidos más antiguos se olvidan.",
       "maxretry": "Intentos fallidos permitidos",
       "maxretryHint": "Intentos fallidos permitidos antes de bloquear. Al menos 2.",
       "permanent": "Para siempre",
@@ -2709,7 +2711,7 @@
     },
     "common": {
       "title": "Ajustes comunes",
-      "description": "Se aplica a toda aplicación en PHP {version} que no defina los suyos.",
+      "description": "Las aplicaciones con sus propios ajustes de PHP los conservan.",
       "appliesNote": "Se guarda en php.ini y PHP lo comprueba antes de aplicarlo.",
       "saveAction": "Guardar ajustes de PHP",
       "saved": "Ajustes de PHP {version} guardados.",
@@ -2725,7 +2727,7 @@
     "subtitle": "Las versiones de Node.js en este servidor.",
     "table": {
       "title": "Versiones instaladas",
-      "description": "Versiones de Node.js que el panel instaló en este servidor.",
+      "description": "Instala, quita y elige la versión predeterminada.",
       "colVersion": "Versión",
       "colSupport": "Soporte",
       "colNpm": "npm",
@@ -3828,7 +3830,7 @@
       "provisioning": "Los registros aparecen cuando la aplicación termina de configurarse.",
       "loadFailed": "No pudimos cargar los registros.",
       "sourcesLabel": "Fuente de registro",
-      "proxyHint": "Estos son los registros del proxy inverso — la salida de tu aplicación está en «Salida de la aplicación».",
+      "proxyHint": "Estos son los registros del servidor web — la salida de tu aplicación está en «Salida de la aplicación».",
       "empty": {
         "badge": "vacío"
       },
@@ -3971,7 +3973,7 @@
     "noPermission": "Tu rol no incluye Aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
     "create": "Crear aplicación",
     "createTitle": "Crear aplicación",
-    "createSubtitle": "Elige qué ejecutar y proporciona solo la configuración necesaria.",
+    "createSubtitle": "Elige una app y rellena unos pocos datos.",
     "chooseType": "Elige un tipo de aplicación",
     "unavailable": "No disponible",
     "requires": "Requiere {runtime}",
@@ -4133,9 +4135,9 @@
     },
     "guided": {
       "stageType": "Elige una aplicación",
-      "stageConfigure": "Configura lo esencial",
+      "stageConfigure": "Añadir datos",
       "stageReview": "Revisa y crea",
-      "typeHint": "Elige el punto de partida para tu proyecto. Podrás ajustar la configuración avanzada más adelante.",
+      "typeHint": "Elige un punto de partida. Podrás cambiar los ajustes avanzados más adelante.",
       "moreOnDocker": "Hay más aplicaciones disponibles como 1-Click Recetas en servidores instalados con Docker.",
       "configureHint": "Solo se muestran los campos que esta aplicación necesita.",
       "reviewTitle": "Listo para crear",
@@ -4156,7 +4158,7 @@
     "form": {
       "detailsTitle": "Detalles de la aplicación",
       "detailsHint": "Cada aplicación necesita un propietario, nombre y dominio.",
-      "chooseTypeHint": "Elige un tipo de aplicación para mostrar sus campos de configuración.",
+      "chooseTypeHint": "Elige un tipo de aplicación para ver sus campos.",
       "toggleOn": "Activado",
       "toggleOff": "Desactivado",
       "namePlaceholder": "p. ej., portal-cliente",
@@ -5883,7 +5885,7 @@
       "pageSubtitle": "Una copia de esta aplicación que puedes romper sin que nadie lo note.",
       "loadFailed": "No pudimos comprobar el área de pruebas de esta aplicación.",
       "provisioning": "Esta aplicación aún se está creando. Podrás hacer una copia de pruebas cuando termine.",
-      "unsupported": "El área de pruebas solo está disponible para aplicaciones WordPress. Esta es una aplicación {type}.",
+      "unsupported": "El área de pruebas solo es para aplicaciones WordPress.",
       "noPermission": "Tu rol no incluye Área de pruebas de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "manageAction": "Abrir aplicación de pruebas",
       "empty": {
@@ -6090,7 +6092,7 @@
       "folder": "Raíz de la aplicación",
       "locked": "Bloqueada",
       "unlocked": "Sin bloquear",
-      "summaryNamed": "{on} de {total} activas: {names}"
+      "summaryNamed": "{on} de {total} protecciones activas: {names}"
     },
     "backups": {
       "title": "Copias de seguridad",

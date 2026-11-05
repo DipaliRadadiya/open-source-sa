@@ -81,7 +81,9 @@
       "description": "Ihre Rolle enthält keine Berechtigung, dies anzusehen. Bitten Sie einen Administrator darum.",
       "unavailableTitle": "Auf diesem Server nicht verfügbar",
       "unavailableDescription": "Dieser Server wurde nicht dafür eingerichtet, daher gibt es hier nichts zu verwalten.",
-      "unavailableDatabaseDocker": "Auf einem Docker-Server behält jede Anwendung ihre Datenbank in ihren eigenen Containern, daher gibt es hier nichts zu verwalten."
+      "unavailableDatabaseDocker": "Auf einem Docker-Server behält jede Anwendung ihre Datenbank in ihren eigenen Containern, daher gibt es hier nichts zu verwalten.",
+      "notForTypeTitle": "Für diese Anwendung nicht verwendet",
+      "notForTypeDescription": "Diese Seite gilt nicht für diesen Anwendungstyp."
     },
     "serverNavigation": "Server-Menü",
     "loadingPage": "Seite wird geladen…",
@@ -263,7 +265,7 @@
     },
     "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
     "sshNotEnforced": {
-      "body": "Die SSH-Schalter sind noch nicht aktiv – jeder Benutzer kann sich über SSH anmelden, bis Zugang & Sicherheit gespeichert ist.",
+      "body": "Die SSH-Schalter wirken erst, wenn Sie Zugang & Sicherheit speichern. Bis dahin kann sich jeder Benutzer über SSH anmelden.",
       "action": "Zugang & Sicherheit öffnen"
     },
     "sshViaSudo": "Sudo-Benutzer können sich immer über SSH anmelden. Schalten Sie sudo aus, um SSH hier zu steuern.",
@@ -1594,7 +1596,7 @@
   },
   "services": {
     "title": "Dienste",
-    "subtitle": "Webserver, Datenbank und weitere Einheiten, die auf diesem Server installiert sind.",
+    "subtitle": "Webserver, Datenbank und weitere Dienste, die auf diesem Server installiert sind.",
     "loadFailed": "Die Dienste auf diesem Server konnten nicht gelesen werden. Es wurde nichts gestartet oder gestoppt.",
     "protectedHint": "Dieser Dienst betreibt das Panel selbst und kann daher hier nicht gestoppt oder deaktiviert werden.",
     "noPermission": "Ihre Rolle enthält nicht „Dienst“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
@@ -1866,7 +1868,7 @@
       "bantime": "Gesperrt für",
       "bantimeHint": "Wie lange, bis diese Adresse es wieder versuchen darf.",
       "findtime": "Gezählt innerhalb (Sekunden)",
-      "findtimeHint": "Ältere Versuche werden vergessen, damit langsames Raten sich nie summiert.",
+      "findtimeHint": "Ältere Fehlversuche werden vergessen.",
       "maxretry": "Erlaubte Fehlversuche",
       "maxretryHint": "Erlaubte Fehlversuche vor einer Sperre. Mindestens 2.",
       "permanent": "Für immer",
@@ -2709,7 +2711,7 @@
     },
     "common": {
       "title": "Allgemeine Einstellungen",
-      "description": "Gilt für jede Anwendung auf PHP {version}, die keine eigenen Werte setzt.",
+      "description": "Anwendungen mit eigenen PHP-Einstellungen behalten diese.",
       "appliesNote": "Wird in php.ini gespeichert und vorher von PHP geprüft.",
       "saveAction": "PHP-Einstellungen speichern",
       "saved": "Einstellungen für PHP {version} gespeichert.",
@@ -2725,7 +2727,7 @@
     "subtitle": "Die Node.js-Versionen auf diesem Server.",
     "table": {
       "title": "Installierte Versionen",
-      "description": "Node.js-Versionen, die das Panel auf diesem Server installiert hat.",
+      "description": "Versionen installieren, entfernen und die Standardversion wählen.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colNpm": "npm",
@@ -3828,7 +3830,7 @@
       "provisioning": "Protokolle erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "loadFailed": "Die Protokolle konnten nicht geladen werden.",
       "sourcesLabel": "Protokollquelle",
-      "proxyHint": "Das sind die Protokolle des Reverse Proxy — die eigene Ausgabe Ihrer Anwendung steht unter „Anwendungsausgabe“.",
+      "proxyHint": "Das sind die Protokolle des Webservers — die eigene Ausgabe Ihrer Anwendung steht unter „Anwendungsausgabe“.",
       "empty": {
         "badge": "leer"
       },
@@ -3971,7 +3973,7 @@
     "noPermission": "Ihre Rolle enthält nicht „Anwendung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "create": "Anwendung erstellen",
     "createTitle": "Anwendung erstellen",
-    "createSubtitle": "Wählen Sie, was laufen soll, und geben Sie nur die Konfiguration an, die es braucht.",
+    "createSubtitle": "Wählen Sie eine App und füllen Sie ein paar Angaben aus.",
     "chooseType": "Anwendungstyp wählen",
     "unavailable": "Nicht verfügbar",
     "requires": "Erfordert {runtime}",
@@ -4133,9 +4135,9 @@
     },
     "guided": {
       "stageType": "Anwendung wählen",
-      "stageConfigure": "Grundangaben",
+      "stageConfigure": "Angaben ergänzen",
       "stageReview": "Prüfen und erstellen",
-      "typeHint": "Wählen Sie den Ausgangspunkt für Ihr Projekt. Die erweiterte Konfiguration können Sie später anpassen.",
+      "typeHint": "Wählen Sie einen Ausgangspunkt. Erweiterte Einstellungen können Sie später ändern.",
       "moreOnDocker": "Weitere Apps gibt es als 1-Click Rezepte auf Servern, die mit Docker installiert wurden.",
       "configureHint": "Es werden nur die Felder gezeigt, die diese Anwendung braucht.",
       "reviewTitle": "Bereit zum Erstellen",
@@ -4156,7 +4158,7 @@
     "form": {
       "detailsTitle": "Angaben zur Anwendung",
       "detailsHint": "Jede Anwendung braucht einen Besitzer, einen Namen und eine Domain.",
-      "chooseTypeHint": "Wählen Sie einen Anwendungstyp, um seine Konfigurationsfelder einzublenden.",
+      "chooseTypeHint": "Wählen Sie einen Anwendungstyp, um seine Felder zu sehen.",
       "toggleOn": "Aktiviert",
       "toggleOff": "Deaktiviert",
       "namePlaceholder": "z. B. kundenportal",
@@ -5883,7 +5885,7 @@
       "pageSubtitle": "Eine Kopie dieser Anwendung, die Sie kaputt machen können, ohne dass es jemand merkt.",
       "loadFailed": "Der Staging-Bereich dieser Anwendung konnte nicht geprüft werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Eine Staging-Kopie lässt sich anlegen, sobald das fertig ist.",
-      "unsupported": "Staging gibt es nur für WordPress-Anwendungen. Diese ist eine {type}-Anwendung.",
+      "unsupported": "Staging gibt es nur für WordPress-Anwendungen.",
       "noPermission": "Ihre Rolle enthält nicht „Staging-Bereich“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "manageAction": "Staging-Anwendung öffnen",
       "empty": {
@@ -6090,7 +6092,7 @@
       "folder": "Anwendungswurzel",
       "locked": "Gesperrt",
       "unlocked": "Nicht gesperrt",
-      "summaryNamed": "{on} von {total} an: {names}"
+      "summaryNamed": "{on} von {total} Schutzfunktionen an: {names}"
     },
     "backups": {
       "title": "Backups",

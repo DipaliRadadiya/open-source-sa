@@ -81,7 +81,9 @@
       "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。",
       "unavailableTitle": "このサーバーでは利用できません",
       "unavailableDescription": "このサーバーはこの機能を使う構成になっていないため、ここで管理するものはありません。",
-      "unavailableDatabaseDocker": "Docker サーバーでは、各アプリケーションが自分のコンテナー内にデータベースを持つため、ここで管理するものはありません。"
+      "unavailableDatabaseDocker": "Docker サーバーでは、各アプリケーションが自分のコンテナー内にデータベースを持つため、ここで管理するものはありません。",
+      "notForTypeTitle": "このアプリケーションでは使用しません",
+      "notForTypeDescription": "このページはこの種類のアプリケーションには適用されません。"
     },
     "serverNavigation": "サーバーメニュー",
     "loadingPage": "ページを読み込んでいます…",
@@ -263,7 +265,7 @@
     },
     "loadFailed": "システムユーザーを読み込めませんでした。変更や削除は行われていません。",
     "sshNotEnforced": {
-      "body": "SSH スイッチはまだ有効ではありません。アクセスとセキュリティを保存するまで、すべてのユーザーが SSH でサインインできます。",
+      "body": "SSH のオン／オフは、アクセスとセキュリティを保存するまで機能しません。それまでは、すべてのユーザーが SSH でサインインできます。",
       "action": "アクセスとセキュリティを開く"
     },
     "sshViaSudo": "sudo ユーザーは常に SSH でサインインできます。ここで SSH を制御するには sudo をオフにしてください。",
@@ -1594,7 +1596,7 @@
   },
   "services": {
     "title": "サービス",
-    "subtitle": "このサーバーにインストールされている Web サーバー、データベース、その他のユニットです。",
+    "subtitle": "このサーバーにインストールされている Web サーバー、データベース、その他のサービスです。",
     "loadFailed": "このサーバーのサービスを読み込めませんでした。起動や停止は行われていません。",
     "protectedHint": "このサービス自体はパネルを実行しているため、ここから停止や無効化はできません。",
     "noPermission": "現在のロールには Service への Manage 権限が含まれていません。管理者に付与を依頼してください。",
@@ -1866,7 +1868,7 @@
       "bantime": "ブロック時間",
       "bantimeHint": "そのアドレスが再度接続できるようになるまでの時間です。",
       "findtime": "カウントする期間(秒)",
-      "findtimeHint": "古い試行は忘れられるため、ゆっくりとした推測では閾値に達しません。",
+      "findtimeHint": "これより古い誤りは数えません。",
       "maxretry": "許容される誤入力回数",
       "maxretryHint": "ブロックまでに許す誤り回数。2以上。",
       "permanent": "無期限",
@@ -2709,7 +2711,7 @@
     },
     "common": {
       "title": "共通設定",
-      "description": "独自の値を設定していない PHP {version} のすべてのアプリケーションに適用されます。",
+      "description": "独自の PHP 設定があるアプリケーションは、その設定のままです。",
       "appliesNote": "php.ini に保存され、適用前に PHP が検証します。",
       "saveAction": "PHP 設定を保存",
       "saved": "PHP {version} の設定を保存しました。",
@@ -2725,7 +2727,7 @@
     "subtitle": "このサーバー上の Node.js バージョンです。",
     "table": {
       "title": "インストール済みのバージョン",
-      "description": "パネルがこのサーバーにインストールした Node.js バージョンです。",
+      "description": "バージョンのインストール、削除、デフォルトの選択ができます。",
       "colVersion": "バージョン",
       "colSupport": "サポート",
       "colNpm": "npm",
@@ -3828,7 +3830,7 @@
       "provisioning": "アプリケーションのセットアップが終わると、ログが表示されます。",
       "loadFailed": "ログを読み込めませんでした。",
       "sourcesLabel": "ログソース",
-      "proxyHint": "これらはリバースプロキシのログです。アプリケーション自体の出力は「アプリケーション出力」にあります。",
+      "proxyHint": "これらは Web サーバーのログです。アプリケーション自体の出力は「アプリケーション出力」にあります。",
       "empty": {
         "badge": "空"
       },
@@ -3971,7 +3973,7 @@
     "noPermission": "あなたのロールには Application の Manage 権限がありません。管理者に依頼して付与してもらってください。",
     "create": "アプリケーションを作成",
     "createTitle": "アプリケーションを作成",
-    "createSubtitle": "実行するものを選び、必要な設定だけを入力します。",
+    "createSubtitle": "アプリを選んで、いくつかの項目を入力するだけです。",
     "chooseType": "アプリケーションの種類を選択",
     "unavailable": "利用不可",
     "requires": "{runtime} が必要",
@@ -4133,11 +4135,11 @@
     },
     "guided": {
       "stageType": "アプリケーションを選択",
-      "stageConfigure": "基本設定",
+      "stageConfigure": "詳細を入力",
       "stageReview": "確認して作成",
-      "typeHint": "プロジェクトの開始点を選んでください。詳細な設定は後から調整できます。",
+      "typeHint": "開始点を選んでください。詳細な設定は後から変更できます。",
       "moreOnDocker": "Docker でインストールしたサーバーでは、1-Click レシピとしてさらに多くのアプリを利用できます。",
-      "configureHint": "このアプリケーションに必要な項目のみが表示されます。",
+      "configureHint": "このアプリケーションに必要な項目だけが表示されます。",
       "reviewTitle": "作成の準備ができました",
       "reviewHint": "{brand} がアプリケーションの設定を作成し、次の画面で進捗を表示します。",
       "selected": "選択済み",
@@ -4156,7 +4158,7 @@
     "form": {
       "detailsTitle": "アプリケーションの詳細",
       "detailsHint": "すべてのアプリケーションにはオーナー、名前、ドメインが必要です。",
-      "chooseTypeHint": "アプリケーションの種類を選ぶと設定項目が表示されます。",
+      "chooseTypeHint": "アプリケーションの種類を選ぶと項目が表示されます。",
       "toggleOn": "有効",
       "toggleOff": "無効",
       "namePlaceholder": "例: customer-portal",
@@ -5883,7 +5885,7 @@
       "pageSubtitle": "誰にも気づかれずに壊せる、このアプリケーションのコピーです。",
       "loadFailed": "このアプリケーションのステージング環境を確認できませんでした。",
       "provisioning": "このアプリケーションは現在セットアップ中です。完了後にステージングコピーを作成できます。",
-      "unsupported": "ステージングは WordPress アプリケーションでのみ利用可能です。このアプリケーションは {type} アプリケーションです。",
+      "unsupported": "ステージングは WordPress アプリケーション専用です。",
       "noPermission": "このアプリケーションに対するステージング環境の管理権限がロールに含まれていません。管理者に付与を依頼してください。",
       "manageAction": "ステージングアプリケーションを開く",
       "empty": {
@@ -6090,7 +6092,7 @@
       "folder": "アプリケーションルート",
       "locked": "ロック済み",
       "unlocked": "未ロック",
-      "summaryNamed": "{total} 件中 {on} 件がオン：{names}"
+      "summaryNamed": "{total} 件中 {on} 件の保護がオン：{names}"
     },
     "backups": {
       "title": "バックアップ",

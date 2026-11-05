@@ -22,6 +22,7 @@ import { DestinationHealth } from "@/components/backups/destination-health";
 import { CoverageTable, sortCoverage } from "@/components/backups/coverage-table";
 import { CoverageCards } from "@/components/backups/coverage-cards";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
+import { timezoneLabel } from "@/lib/format/timezone";
 
 // How long a "Run backup" press keeps the page polling on its own: long enough
 // for the queue to pick the job up, short enough to stop if it never starts.
@@ -160,7 +161,7 @@ export function CoverageCard({
       {scheduleTimezone ? (
         <span className="flex items-center gap-1.5">
           <Clock className="size-3.5 shrink-0" />
-          {t("timesShownIn", { timezone: scheduleTimezone })}
+          {t("timesShownIn", { timezone: timezoneLabel(scheduleTimezone) })}
         </span>
       ) : null}
     </div>

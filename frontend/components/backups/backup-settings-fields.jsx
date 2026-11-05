@@ -46,6 +46,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { timezoneLabel } from "@/lib/format/timezone";
 
 // Offered, not applied: excluding `vendor` breaks apps that need it at runtime.
 const SUGGESTED_FILE_EXCLUDES = ["node_modules", ".git", "vendor", "storage/logs", "*.log"];
@@ -402,7 +403,7 @@ export function BackupSettingsFields({
                   {scheduleTimezone ? (
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="size-3.5 shrink-0" />
-                      {t("scheduleTimeZone", { timezone: scheduleTimezone })}
+                      {t("scheduleTimeZone", { timezone: timezoneLabel(scheduleTimezone) })}
                     </p>
                   ) : null}
                   <FormMessage />

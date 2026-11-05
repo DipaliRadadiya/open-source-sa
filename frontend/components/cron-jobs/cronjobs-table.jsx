@@ -15,6 +15,7 @@ import { CronjobPhpNote } from "@/components/cron-jobs/cronjob-php-note";
 import { CronjobsCards } from "@/components/cron-jobs/cronjobs-cards";
 import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
 import { hasRunHistory } from "@/lib/cron-jobs/run-duration";
+import { timezoneLabel } from "@/lib/format/timezone";
 
 // Labels from the API's own preset list; deliberately not a cron-to-prose library.
 function scheduleLabel(expression, presets) {
@@ -189,7 +190,7 @@ export function CronjobsTable({
     {
       accessorKey: "next_run_at",
       // The timezone is stated once, in the column header it applies to.
-      header: () => <Head>{timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}</Head>,
+      header: () => <Head>{timezone ? t("columns.nextRunIn", { timezone: timezoneLabel(timezone) }) : t("columns.nextRun")}</Head>,
       cell: NextRunCell,
     },
     ...(historySupported ? [{ id: "last_run", header: () => <Head>{t("lastRun.column")}</Head>, cell: LastRunCell }] : []),

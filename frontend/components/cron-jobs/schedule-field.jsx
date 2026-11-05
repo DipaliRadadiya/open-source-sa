@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { timezoneLabel } from "@/lib/format/timezone";
 
 const CUSTOM = "custom";
 
@@ -179,7 +180,7 @@ export function ScheduleField({ form, presets, timezone }) {
       {timezone ? (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="size-3.5 shrink-0" />
-          {t("form.serverTimeNote", { timezone })}
+          {t("form.serverTimeNote", { timezone: timezoneLabel(timezone) })}
         </p>
       ) : null}
     </div>

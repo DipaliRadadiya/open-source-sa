@@ -10,6 +10,7 @@ import {
   CronjobSchedule,
 } from "@/components/cron-jobs/cronjobs-table";
 import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
+import { timezoneLabel } from "@/lib/format/timezone";
 
 // Narrow-screen layout: the command gets the wide line under the name.
 export function CronjobsCards({
@@ -66,7 +67,7 @@ export function CronjobsCards({
               <CronjobSchedule job={job} presets={schedulePresets} />
             </CardFactStacked>
             {/* The label carries the timezone, like the table's column header. */}
-            <CardFactStacked label={timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}>
+            <CardFactStacked label={timezone ? t("columns.nextRunIn", { timezone: timezoneLabel(timezone) }) : t("columns.nextRun")}>
               <CronjobNextRun job={job} />
             </CardFactStacked>
             {historySupported ? (

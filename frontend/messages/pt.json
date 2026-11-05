@@ -81,7 +81,9 @@
       "description": "Sua função não inclui permissão para ver isto. Peça a um administrador para conceder.",
       "unavailableTitle": "Não disponível neste servidor",
       "unavailableDescription": "Este servidor não foi configurado para isso, então não há nada para gerenciar aqui.",
-      "unavailableDatabaseDocker": "Em um servidor Docker, cada aplicação mantém seu banco de dados dentro dos próprios contêineres, então não há nada para gerenciar aqui."
+      "unavailableDatabaseDocker": "Em um servidor Docker, cada aplicação mantém seu banco de dados dentro dos próprios contêineres, então não há nada para gerenciar aqui.",
+      "notForTypeTitle": "Não usado nesta aplicação",
+      "notForTypeDescription": "Esta página não se aplica a este tipo de aplicação."
     },
     "serverNavigation": "Menu do servidor",
     "loadingPage": "Carregando a página…",
@@ -263,7 +265,7 @@
     },
     "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos.",
     "sshNotEnforced": {
-      "body": "As chaves SSH ainda não estão ativas — qualquer usuário consegue entrar via SSH até que Acesso e segurança seja salvo.",
+      "body": "As chaves SSH só funcionam depois que você salvar Acesso e segurança. Até lá, qualquer usuário consegue entrar via SSH.",
       "action": "Abrir Acesso e segurança"
     },
     "sshViaSudo": "Usuários com sudo sempre conseguem fazer login via SSH. Desligue o sudo para controlar o SSH aqui.",
@@ -1594,7 +1596,7 @@
   },
   "services": {
     "title": "Serviços",
-    "subtitle": "Servidor web, banco de dados e outras unidades instaladas neste servidor.",
+    "subtitle": "Servidor web, banco de dados e outros serviços instalados neste servidor.",
     "loadFailed": "Não foi possível ler os serviços deste servidor. Nada foi iniciado nem parado.",
     "protectedHint": "Este serviço roda o próprio painel, então não pode ser parado nem desativado por aqui.",
     "noPermission": "Seu papel não inclui Serviço com acesso Gerenciar. Peça a um administrador para conceder.",
@@ -1866,7 +1868,7 @@
       "bantime": "Banido por",
       "bantimeHint": "Quanto tempo até esse endereço poder tentar novamente.",
       "findtime": "Contado dentro de (segundos)",
-      "findtimeHint": "Tentativas mais antigas são esquecidas, então tentativas lentas nunca se acumulam.",
+      "findtimeHint": "Tentativas erradas mais antigas são esquecidas.",
       "maxretry": "Tentativas erradas permitidas",
       "maxretryHint": "Tentativas erradas permitidas antes do bloqueio. Pelo menos 2.",
       "permanent": "Para sempre",
@@ -2709,7 +2711,7 @@
     },
     "common": {
       "title": "Configurações comuns",
-      "description": "Vale para todas as aplicações no PHP {version} que não definem os próprios valores.",
+      "description": "Aplicações com configurações de PHP próprias as mantêm.",
       "appliesNote": "Guardado no php.ini e verificado pelo PHP antes de ser aplicado.",
       "saveAction": "Guardar configurações do PHP",
       "saved": "Configurações do PHP {version} guardadas.",
@@ -2725,7 +2727,7 @@
     "subtitle": "As versões do Node.js neste servidor.",
     "table": {
       "title": "Versões instaladas",
-      "description": "Versões do Node.js instaladas pelo painel neste servidor.",
+      "description": "Instale, remova e escolha a versão padrão.",
       "colVersion": "Versão",
       "colSupport": "Suporte",
       "colNpm": "npm",
@@ -3828,7 +3830,7 @@
       "provisioning": "Os logs aparecem quando a aplicação terminar de ser configurada.",
       "loadFailed": "Não foi possível carregar os logs.",
       "sourcesLabel": "Origem do log",
-      "proxyHint": "Estes são os logs do reverse proxy — a saída da sua aplicação está em \"Saída da aplicação\".",
+      "proxyHint": "Estes são os logs do servidor web — a saída da sua aplicação está em \"Saída da aplicação\".",
       "empty": {
         "badge": "vazio"
       },
@@ -3971,7 +3973,7 @@
     "noPermission": "Seu papel não inclui acesso de Gerência em Aplicações. Peça a um administrador para conceder.",
     "create": "Criar aplicação",
     "createTitle": "Criar aplicação",
-    "createSubtitle": "Escolha o que rodar e informe apenas a configuração necessária.",
+    "createSubtitle": "Escolha um app e preencha alguns dados.",
     "chooseType": "Escolha um tipo de aplicação",
     "unavailable": "Indisponível",
     "requires": "Requer {runtime}",
@@ -4133,11 +4135,11 @@
     },
     "guided": {
       "stageType": "Escolher aplicação",
-      "stageConfigure": "Configurar o essencial",
+      "stageConfigure": "Adicionar dados",
       "stageReview": "Revisar e criar",
-      "typeHint": "Escolha o ponto de partida do seu projeto. Você poderá ajustar a configuração avançada depois.",
+      "typeHint": "Escolha um ponto de partida. Você pode alterar as configurações avançadas depois.",
       "moreOnDocker": "Há mais aplicações disponíveis como 1-Click Receitas em servidores instalados com Docker.",
-      "configureHint": "Apenas os campos exigidos por esta aplicação são exibidos.",
+      "configureHint": "Apenas os campos de que esta aplicação precisa são exibidos.",
       "reviewTitle": "Pronto para criar",
       "reviewHint": "{brand} criará a configuração da aplicação e mostrará o progresso na próxima tela.",
       "selected": "Selecionado",
@@ -4156,7 +4158,7 @@
     "form": {
       "detailsTitle": "Detalhes da aplicação",
       "detailsHint": "Toda aplicação precisa de um dono, nome e domínio.",
-      "chooseTypeHint": "Escolha um tipo de aplicação para exibir os campos de configuração.",
+      "chooseTypeHint": "Escolha um tipo de aplicação para ver os campos.",
       "toggleOn": "Ativado",
       "toggleOff": "Desativado",
       "namePlaceholder": "ex.: portal-do-cliente",
@@ -5883,7 +5885,7 @@
       "pageSubtitle": "Uma cópia desta aplicação onde você pode quebrar tudo sem ninguém perceber.",
       "loadFailed": "Não foi possível verificar a área de staging desta aplicação.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Uma cópia de staging pode ser feita quando terminar.",
-      "unsupported": "Staging está disponível apenas para aplicações WordPress. Esta é uma aplicação {type}.",
+      "unsupported": "Staging é só para aplicações WordPress.",
       "noPermission": "Seu papel não inclui Área de Staging para esta aplicação com acesso de Gerenciar. Peça a um administrador para concedê-lo.",
       "manageAction": "Abrir aplicação de staging",
       "empty": {
@@ -6090,7 +6092,7 @@
       "folder": "Raiz da aplicação",
       "locked": "Bloqueada",
       "unlocked": "Não bloqueada",
-      "summaryNamed": "{on} de {total} ativas: {names}"
+      "summaryNamed": "{on} de {total} proteções ativas: {names}"
     },
     "backups": {
       "title": "Backups",

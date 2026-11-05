@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { RunStatusBadge, useRunDuration } from "@/components/cron-jobs/cronjob-last-run";
+import { timezoneLabel } from "@/lib/format/timezone";
 
 const POLL_MS = 5000;
 
@@ -88,7 +89,7 @@ export function RunHistorySheet({ job, open, onOpenChange, canViewLogs = false }
             {t("title")}
           </SheetTitle>
           <SheetDescription>
-            {state?.timezone ? t("description", { name: job.name, timezone: state.timezone }) : t("descriptionNoZone", { name: job.name })}
+            {state?.timezone ? t("description", { name: job.name, timezone: timezoneLabel(state.timezone) }) : t("descriptionNoZone", { name: job.name })}
           </SheetDescription>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button type="button" variant="outline" size="sm" disabled={loading} onClick={reload}>

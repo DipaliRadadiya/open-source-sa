@@ -69,7 +69,7 @@ export default async function ApplicationContainerPage({ params }) {
   // Granted only for container site types, so a missing grant means this screen
   // should not exist for this site rather than that the user lacks a right.
   if (!can(appPermissions, "app_container", "view", "application")) {
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} typeFeature />;
   }
 
   const application = result.application;

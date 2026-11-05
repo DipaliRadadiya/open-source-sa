@@ -81,7 +81,9 @@
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur.",
       "unavailableTitle": "Non disponible sur ce serveur",
       "unavailableDescription": "Ce serveur n'a pas été configuré pour cela, il n'y a donc rien à gérer ici.",
-      "unavailableDatabaseDocker": "Sur un serveur Docker, chaque application garde sa base de données dans ses propres conteneurs, il n'y a donc rien à gérer ici."
+      "unavailableDatabaseDocker": "Sur un serveur Docker, chaque application garde sa base de données dans ses propres conteneurs, il n'y a donc rien à gérer ici.",
+      "notForTypeTitle": "Non utilisé pour cette application",
+      "notForTypeDescription": "Cette page ne s'applique pas à ce type d'application."
     },
     "serverNavigation": "Menu du serveur",
     "loadingPage": "Chargement de la page…",
@@ -263,7 +265,7 @@
     },
     "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
     "sshNotEnforced": {
-      "body": "Les interrupteurs SSH ne sont pas encore actifs : tous les utilisateurs peuvent se connecter en SSH tant qu'Accès et sécurité n'est pas enregistré.",
+      "body": "Les interrupteurs SSH ne fonctionnent pas tant que vous n'avez pas enregistré Accès et sécurité. D'ici là, tous les utilisateurs peuvent se connecter en SSH.",
       "action": "Ouvrir Accès et sécurité"
     },
     "sshViaSudo": "Les utilisateurs sudo peuvent toujours se connecter en SSH. Désactivez sudo pour contrôler le SSH ici.",
@@ -1594,7 +1596,7 @@
   },
   "services": {
     "title": "Services",
-    "subtitle": "Serveur web, base de données et autres unités installés sur ce serveur.",
+    "subtitle": "Serveur web, base de données et autres services installés sur ce serveur.",
     "loadFailed": "Les services de ce serveur n'ont pas pu être lus. Rien n'a été démarré ni arrêté.",
     "protectedHint": "Ce service fait fonctionner le panneau lui-même, il ne peut donc pas être arrêté ni désactivé d'ici.",
     "noPermission": "Votre rôle n'inclut pas l'accès Gérer pour Service. Demandez à un administrateur de l'accorder.",
@@ -1866,7 +1868,7 @@
       "bantime": "Bannie pendant",
       "bantimeHint": "Durée avant que cette adresse puisse réessayer.",
       "findtime": "Compté sur (secondes)",
-      "findtimeHint": "Les tentatives plus anciennes sont oubliées : les devinettes lentes ne s'accumulent pas.",
+      "findtimeHint": "Les essais ratés plus anciens sont oubliés.",
       "maxretry": "Tentatives erronées autorisées",
       "maxretryHint": "Essais ratés permis avant un bannissement. Au moins 2.",
       "permanent": "Pour toujours",
@@ -2709,7 +2711,7 @@
     },
     "common": {
       "title": "Paramètres courants",
-      "description": "S'applique à chaque application sous PHP {version} qui ne définit pas les siennes.",
+      "description": "Les applications qui ont leurs propres réglages PHP les gardent.",
       "appliesNote": "Enregistré dans php.ini et vérifié par PHP avant d'être appliqué.",
       "saveAction": "Enregistrer les paramètres PHP",
       "saved": "Paramètres de PHP {version} enregistrés.",
@@ -2725,7 +2727,7 @@
     "subtitle": "Les versions Node.js sur ce serveur.",
     "table": {
       "title": "Versions installées",
-      "description": "Versions de Node.js installées par le panneau sur ce serveur.",
+      "description": "Installez, supprimez et choisissez la version par défaut.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colNpm": "npm",
@@ -3828,7 +3830,7 @@
       "provisioning": "Les journaux apparaissent dès que l'application a fini d'être préparée.",
       "loadFailed": "Impossible de charger les journaux.",
       "sourcesLabel": "Source du journal",
-      "proxyHint": "Voici les journaux du reverse proxy — la sortie de votre application se trouve sous « Sortie de l'application ».",
+      "proxyHint": "Voici les journaux du serveur web — la sortie de votre application se trouve sous « Sortie de l'application ».",
       "empty": {
         "badge": "vide"
       },
@@ -3971,7 +3973,7 @@
     "noPermission": "Votre rôle n'inclut pas l'accès en gestion aux applications. Demandez à un administrateur de l'accorder.",
     "create": "Créer une application",
     "createTitle": "Créer une application",
-    "createSubtitle": "Choisissez ce qu'il faut exécuter, puis fournissez uniquement la configuration nécessaire.",
+    "createSubtitle": "Choisissez une app, puis remplissez quelques informations.",
     "chooseType": "Choisir un type d'application",
     "unavailable": "Indisponible",
     "requires": "Nécessite {runtime}",
@@ -4133,11 +4135,11 @@
     },
     "guided": {
       "stageType": "Choisir l'application",
-      "stageConfigure": "Configurer l'essentiel",
+      "stageConfigure": "Ajouter les informations",
       "stageReview": "Vérifier et créer",
-      "typeHint": "Choisissez le point de départ de votre projet. Vous pourrez ajuster la configuration avancée plus tard.",
+      "typeHint": "Choisissez un point de départ. Vous pourrez modifier les réglages avancés plus tard.",
       "moreOnDocker": "D'autres applications sont disponibles en 1-Click Recettes sur les serveurs installés avec Docker.",
-      "configureHint": "Seuls les champs requis par cette application sont affichés.",
+      "configureHint": "Seuls les champs nécessaires à cette application sont affichés.",
       "reviewTitle": "Prêt à créer",
       "reviewHint": "{brand} créera la configuration de l'application et affichera la progression sur l'écran suivant.",
       "selected": "Sélectionné",
@@ -4156,7 +4158,7 @@
     "form": {
       "detailsTitle": "Détails de l'application",
       "detailsHint": "Toute application a besoin d'un propriétaire, d'un nom et d'un domaine.",
-      "chooseTypeHint": "Choisissez un type d'application pour afficher ses champs de configuration.",
+      "chooseTypeHint": "Choisissez un type d'application pour voir ses champs.",
       "toggleOn": "Activé",
       "toggleOff": "Désactivé",
       "namePlaceholder": "p. ex. portail-client",
@@ -5883,7 +5885,7 @@
       "pageSubtitle": "Une copie de cette application que vous pouvez casser sans que personne ne s'en aperçoive.",
       "loadFailed": "Impossible de vérifier la zone de préproduction de cette application.",
       "provisioning": "Cette application est encore en cours de configuration. Une copie de préproduction pourra être créée une fois terminée.",
-      "unsupported": "La préproduction est uniquement disponible pour les applications WordPress. Celle-ci est une application {type}.",
+      "unsupported": "La préproduction est réservée aux applications WordPress.",
       "noPermission": "Votre rôle n'inclut pas Zone de préproduction pour cette application avec l'accès Gérer. Demandez à un administrateur de l'accorder.",
       "manageAction": "Ouvrir l'application de préproduction",
       "empty": {
@@ -6090,7 +6092,7 @@
       "folder": "Racine de l'application",
       "locked": "Verrouillé",
       "unlocked": "Non verrouillé",
-      "summaryNamed": "{on} sur {total} activées : {names}"
+      "summaryNamed": "{on} protections sur {total} activées : {names}"
     },
     "backups": {
       "title": "Sauvegardes",

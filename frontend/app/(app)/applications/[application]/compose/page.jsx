@@ -69,7 +69,7 @@ export default async function ApplicationComposePage({ params }) {
   // means this screen should not exist for this site — a PHP site reaching it by
   // URL is told no rather than shown an empty editor.
   if (!can(appPermissions, "app_compose", "view", "application")) {
-    return <PermissionDenied title={t("title")} />;
+    return <PermissionDenied title={t("title")} typeFeature />;
   }
 
   const canManage = can(appPermissions, "app_compose", "manage", "application");

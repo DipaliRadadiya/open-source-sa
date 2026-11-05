@@ -37,7 +37,7 @@ export default async function ApplicationPhpPage({ params }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_php", "view", "application")) {
-    return <PermissionDenied title={t("pageTitle")} />;
+    return <PermissionDenied title={t("pageTitle")} typeFeature />;
   }
 
   const canManage = can(appPermissions, "app_php", "manage", "application");

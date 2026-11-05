@@ -66,7 +66,7 @@ test("the timezone is named once, outside the table", () => {
    */
   assert.match(parent, /const scheduleZones = new Set\(rows\.map\(\(row\) => row\.target\?\.timezone\)\.filter\(Boolean\)\)/);
   assert.match(parent, /scheduleZones\.size === 1 \? \[\.\.\.scheduleZones\]\[0\] : null/);
-  assert.match(parent, /t\("timesShownIn", \{ timezone: scheduleTimezone \}\)/);
+  assert.match(parent, /t\("timesShownIn", \{ timezone: timezoneLabel\(scheduleTimezone\) \}\)/);
 
   // The rejected route must not come back — it is invisible in a green build.
   assert.doesNotMatch(table, /columns\.scheduleIn/);

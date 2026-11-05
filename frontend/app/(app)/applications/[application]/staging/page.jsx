@@ -73,7 +73,7 @@ export default async function ApplicationStagingPage({ params }) {
         </div>
       ) : staging.status === 404 ? (
         // Staging is WordPress-only; other site types answer 404, which is not an error.
-        <Unsupported>{t("unsupported", { type: application.site_type_title ?? application.site_type })}</Unsupported>
+        <Unsupported>{t("unsupported")}</Unsupported>
       ) : staging.failed ? (
         <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} message={staging.message} debug={staging.debug} />
       ) : (
@@ -100,7 +100,7 @@ function TypeNotSupported({ application, t }) {
   return (
     <div className="space-y-6">
       <PageHeader title={t("pageTitle")} subtitle={t("pageSubtitle")} />
-      <Unsupported>{t("unsupported", { type: application.site_type_title ?? application.site_type })}</Unsupported>
+      <Unsupported>{t("unsupported")}</Unsupported>
     </div>
   );
 }
