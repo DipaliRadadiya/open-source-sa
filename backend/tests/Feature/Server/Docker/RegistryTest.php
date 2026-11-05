@@ -422,3 +422,22 @@ it('has every status and error reason translated in all eight locales', function
         }
     }
 });
+
+it('points the registry help at Integrations → Docker Registries in every locale (RC-29)', function () {
+    // The help used to send people to "the Docker page, under Registry
+    // credentials" — a screen that no longer exists. They live in the sidebar
+    // under Integrations, whose own labels are the source of truth here, so the
+    // sentence cannot name a menu the sidebar spells differently.
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $help = __('application.help.registry_id', [], $locale);
+        $label = __('nav.registry', [], $locale);
+
+        expect($help)->not->toBe('application.help.registry_id');
+
+        $this->assertStringContainsString($label, $help, "{$locale} help does not name the '{$label}' menu");
+    }
+
+    expect(__('application.help.registry_id', [], 'en'))
+        ->toContain('Integrations → Docker Registries')
+        ->not->toContain('Registry credentials');
+});

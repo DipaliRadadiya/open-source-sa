@@ -6,6 +6,8 @@ use App\Models\Application;
 use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\Docker\NetworkIsolation;
 use App\Services\Server\ServerOps;
+use App\Support\CommandRedactor;
+use Illuminate\Support\Str;
 
 /**
  * Decides whether a compose file somebody pasted is safe to run here.
@@ -28,6 +30,9 @@ use App\Services\Server\ServerOps;
  */
 class ComposeValidator
 {
+    /** Most characters of Docker's own error quoted back to the user, ellipsis included. */
+    private const ERROR_LIMIT = 300;
+
     /**
      * Service keys that hand over the host, whatever else the file says.
      *
@@ -87,12 +92,19 @@ class ComposeValidator
      */
     public function validate(string $compose, string $documentRoot): array
     {
-        $parsed = $this->parse($compose, $documentRoot);
+        $dockerError = null;
+        $parsed = $this->parse($compose, $documentRoot, $dockerError);
 
         if ($parsed === null) {
             return [
                 'ok' => false,
-                'errors' => [__('errors/application.compose_unparsable')],
+                // Docker's own words, because the log that used to hold them is
+                // not one the user can open (RC-29). Nothing to quote — a
+                // refused sudo grant, a timeout — gets the sentence without it
+                // rather than "…compose file: " followed by silence.
+                'errors' => [$dockerError === null
+                    ? __('errors/application.compose_unparsable_generic')
+                    : __('errors/application.compose_unparsable', ['error' => $dockerError])],
                 'resolved' => null,
                 'compose' => $compose,
                 'rewrote_ports' => false,
@@ -492,9 +504,10 @@ class ComposeValidator
     }
 
     /**
+     * @param  string|null  $dockerError  Set to Docker's short, redacted complaint when it refused the file.
      * @return array<string, mixed>|null
      */
-    private function parse(string $compose, string $documentRoot): ?array
+    private function parse(string $compose, string $documentRoot, ?string &$dockerError = null): ?array
     {
         $result = $this->serverOps->run(
             ['docker', 'compose', '-f', '-', 'config', '--format', 'json'],
@@ -512,11 +525,58 @@ class ComposeValidator
         );
 
         if (! $result->answered) {
+            // A refused grant puts sudo's complaint on stderr, not Docker's —
+            // showing it would blame the user's file for the panel's setup.
+            $dockerError = $result->denied ? null : $this->shortError($result->errorOutput());
+
             return null;
         }
 
         $decoded = json_decode($result->output(), true);
 
         return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Docker's complaint reduced to something safe to put in a 422.
+     *
+     * `docker compose config` echoes values back in some messages — a bad
+     * `$` in an environment value is reported with the whole value, and a type
+     * mismatch quotes the offending scalar — and a pasted file is where
+     * passwords live. So the shapes known to carry a value are masked on top
+     * of what CommandRedactor already catches, and the result is capped.
+     *
+     * Warning lines are dropped: `docker compose` prints a `WARN` for a
+     * deprecated `version:` key ahead of the real error, and quoting that
+     * would send the user to fix the wrong thing.
+     */
+    private function shortError(string $stderr): ?string
+    {
+        $lines = [];
+
+        foreach (preg_split('/\R/', $stderr) ?: [] as $line) {
+            $line = trim(preg_replace('/\e\[[0-9;]*m/', '', $line) ?? $line);
+
+            if ($line === '' || preg_match('/^(?:WARN|time=\S+\s+level=warn)/i', $line)) {
+                continue;
+            }
+
+            $line = CommandRedactor::line($line);
+            $line = preg_replace(
+                [
+                    '/(invalid interpolation format for [^:]+:\s*)".*"/',
+                    '/(cannot unmarshal !!\w+ )`.*`/',
+                    '/(\bcontains )\S.*?(, which is an invalid type)/',
+                ],
+                ['$1"[REDACTED]"', '$1`[REDACTED]`', '$1[REDACTED]$2'],
+                $line,
+            ) ?? $line;
+
+            $lines[] = $line;
+        }
+
+        $message = trim(preg_replace('/\s+/u', ' ', implode(' ', $lines)) ?? '');
+
+        return $message === '' ? null : Str::limit($message, self::ERROR_LIMIT - 1, '…');
     }
 }

@@ -40,6 +40,36 @@ function composeOps(array $resolved, bool $answered = true): ServerOps
     return $ops;
 }
 
+/**
+ * A ServerOps whose `docker compose config` refused the file: exit 1, nothing on
+ * stdout, Docker's complaint on stderr — what a real parse failure looks like, as
+ * opposed to {@see composeOps()} with `answered: false`, which carries no text.
+ */
+function composeFailure(string $stderr, bool $denied = false): ServerOps
+{
+    $process = Mockery::mock(ProcessResult::class);
+    $process->shouldReceive('output')->andReturn('');
+    $process->shouldReceive('errorOutput')->andReturn($stderr);
+    $process->shouldReceive('exitCode')->andReturn(1);
+
+    $ops = Mockery::mock(ServerOps::class);
+    $ops->shouldReceive('run')->andReturn(new ServerOpsResult(
+        ok: false,
+        reference: 'r',
+        result: $process,
+        denied: $denied,
+        answered: false,
+    ));
+
+    return $ops;
+}
+
+/** The sentence a refused file answers with, for the error text Docker gave. */
+function unparsableError(string $stderr, bool $denied = false): string
+{
+    return (new ComposeValidator(composeFailure($stderr, $denied)))->validate('x', ROOT)['errors'][0];
+}
+
 /** A ServerOps that answers each successive `config` call from a list. */
 function composeOpsSequence(array $documents): ServerOps
 {
@@ -189,8 +219,111 @@ it('refuses a file Docker itself cannot read', function () {
 
     $verdict = (new ComposeValidator($ops))->validate('not: [valid', ROOT);
 
+    // Docker said nothing we can quote, so the sentence stands without a colon
+    // and an empty tail.
     expect($verdict['ok'])->toBeFalse()
-        ->and($verdict['errors'][0])->toBe(__('errors/application.compose_unparsable'));
+        ->and($verdict['errors'][0])->toBe(__('errors/application.compose_unparsable_generic'));
+});
+
+it('shows Docker\'s own parse error instead of pointing at a log the user cannot open (RC-29)', function () {
+    $error = unparsableError("yaml: line 3: did not find expected key\n");
+
+    expect($error)->toBe(__('errors/application.compose_unparsable', ['error' => 'yaml: line 3: did not find expected key']))
+        ->and($error)->toContain('did not find expected key')
+        ->and($error)->not->toContain('operations log');
+});
+
+it('quotes the error, not the warnings Docker prints ahead of it', function () {
+    $error = unparsableError(
+        "time=\"2026-11-05T10:00:00Z\" level=warning msg=\"the attribute `version` is obsolete\"\n"
+        ."WARN[0000] /home/shop/compose.yml: `version` is obsolete\n"
+        ."services.web.ports must be a list\n"
+    );
+
+    expect($error)->toContain('services.web.ports must be a list')
+        ->and($error)->not->toContain('obsolete');
+});
+
+it('keeps every line of a multi-line complaint, on one line', function () {
+    $error = unparsableError("yaml: unmarshal errors:\n  line 4: mapping key \"image\" already defined at line 3\n");
+
+    expect($error)->toContain('yaml: unmarshal errors: line 4: mapping key "image" already defined at line 3')
+        ->and($error)->not->toContain("\n");
+});
+
+it('falls back to the plain sentence when Docker only printed warnings', function () {
+    expect(unparsableError("WARN[0000] `version` is obsolete\n"))
+        ->toBe(__('errors/application.compose_unparsable_generic'));
+});
+
+it('does not blame the file for a refused sudo grant', function () {
+    // sudo's complaint is on stderr, and it is the panel's setup, not the user's
+    // YAML. Quoting it would send them hunting through a file that is fine.
+    $error = unparsableError("sudo: a password is required\n", denied: true);
+
+    expect($error)->toBe(__('errors/application.compose_unparsable_generic'))
+        ->and($error)->not->toContain('password');
+});
+
+it('redacts a secret Docker echoes back in its complaint', function (string $stderr, string $secret, string $kept) {
+    $error = unparsableError($stderr);
+
+    expect($error)->not->toContain($secret)
+        ->and($error)->toContain('[REDACTED]')
+        ->and($error)->toContain($kept);
+})->with([
+    'interpolation value' => [
+        'invalid interpolation format for services.web.environment.DB_PASSWORD: "s3cr3tVal$ue". You may need to escape any $ with another $.',
+        's3cr3tVal',
+        'services.web.environment.DB_PASSWORD',
+    ],
+    'yaml scalar' => [
+        "yaml: unmarshal errors:\n  line 7: cannot unmarshal !!str `hunter2hunter2` into int",
+        'hunter2hunter2',
+        'cannot unmarshal !!str',
+    ],
+    'invalid type' => [
+        'services.web.environment.API_TOKEN contains {"k": "t0kenValue"}, which is an invalid type, it should be a string, number, or a null',
+        't0kenValue',
+        'which is an invalid type',
+    ],
+    'url credentials' => [
+        'failed to resolve https://deploy:pa55w0rdXYZ@git.example.com/stack.yml: unauthorized',
+        'pa55w0rdXYZ',
+        'git.example.com',
+    ],
+    'key=value' => [
+        'error resolving DB_PASSWORD=abc123def for services.db',
+        'abc123def',
+        'services.db',
+    ],
+]);
+
+it('caps Docker\'s complaint at 300 characters', function () {
+    $error = unparsableError('yaml: '.str_repeat('é', 2000));
+
+    $quoted = trim(substr($error, strlen('Docker could not read this compose file:')));
+
+    expect(mb_strlen($quoted))->toBeLessThanOrEqual(300)
+        ->and($quoted)->toEndWith('…')
+        ->and($quoted)->toStartWith('yaml: ééé');
+});
+
+it('shows the same Docker error in every locale', function () {
+    foreach (['en', 'es', 'fr', 'de', 'hi', 'ja', 'pt', 'ru'] as $locale) {
+        app()->setLocale($locale);
+
+        $this->assertStringContainsString(
+            'yaml: line 3: did not find expected key',
+            unparsableError('yaml: line 3: did not find expected key'),
+            "error not shown in {$locale}",
+        );
+
+        expect(__('errors/application.compose_unparsable', ['error' => 'E'], $locale))
+            ->not->toBe('errors/application.compose_unparsable');
+    }
+
+    app()->setLocale('en');
 });
 
 it('refuses a file with no services, which would run nothing', function () {
@@ -241,7 +374,7 @@ it('reports one problem once, however many services repeat it', function () {
 
 it('translates every refusal in every locale', function () {
     foreach (['en', 'es', 'fr', 'de', 'hi', 'ja', 'pt', 'ru'] as $locale) {
-        foreach (['compose_unparsable', 'compose_no_services', 'compose_bind_outside', 'compose_port_public'] as $key) {
+        foreach (['compose_unparsable', 'compose_unparsable_generic', 'compose_no_services', 'compose_bind_outside', 'compose_port_public'] as $key) {
             expect(__("errors/application.{$key}", [], $locale))
                 ->not->toBe("errors/application.{$key}", "{$key} missing in {$locale}");
         }

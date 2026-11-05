@@ -267,6 +267,38 @@ it('refuses an empty file rather than treating it as "generate one"', function (
         ->assertJsonValidationErrors('compose');
 });
 
+it('tells the user what Docker could not read, not where a log is (RC-29)', function () {
+    // The refusal used to end "the error from Docker itself is in the server
+    // operations log" — a log nobody using the editor can open. The 422 now
+    // carries Docker's own line, so the person who typed the mistake can see it.
+    Process::fake(function ($process) {
+        $args = $process->command;
+
+        while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
+            array_shift($args);
+        }
+
+        if (($args[0] ?? '') === 'docker' && in_array('config', $args, true)) {
+            return Process::result(errorOutput: "WARN[0000] `version` is obsolete\nyaml: line 3: did not find expected key\n", exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $response = $this->withHeaders(composeHeaders())
+        ->putJson(composeUrl(), ['compose' => "services:\n  app: [\n"])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('compose');
+
+    $message = $response->json('errors.compose.0');
+
+    expect($message)->toBe(__('errors/application.compose_unparsable', ['error' => 'yaml: line 3: did not find expected key']))
+        ->and($message)->not->toContain('operations log')
+        ->and($message)->not->toContain('obsolete');
+
+    expect($this->application->fresh()->compose)->toBeNull();
+});
+
 it('rolls back to the previous file when the new one will not come up', function () {
     // The case this action exists for. `up` exits non-zero — a bad entrypoint, a
     // tag that is not there — and the site must not be left down holding the text
