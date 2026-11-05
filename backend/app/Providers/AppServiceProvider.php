@@ -23,6 +23,7 @@ use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Setup\Components\BuildToolsComponent;
 use App\Services\Server\Setup\Components\DatabaseComponent;
+use App\Services\Server\Setup\Components\DockerComponent;
 use App\Services\Server\Setup\Components\Fail2banComponent;
 use App\Services\Server\Setup\Components\NodeComponent;
 use App\Services\Server\Setup\Components\PhpComponent;
@@ -132,6 +133,9 @@ class AppServiceProvider extends ServiceProvider
         // the database first because it is what blocks a first real site.
         $this->app->bind(SetupCatalog::class, fn ($app) => new SetupCatalog(
             [
+                // First on the stack that exists to run it; the other rows are about what
+                // runs on top, and without this one none of them can.
+                $app->make(DockerComponent::class),
                 $app->make(DatabaseComponent::class),
                 $app->make(PhpComponent::class),
                 $app->make(NodeComponent::class),

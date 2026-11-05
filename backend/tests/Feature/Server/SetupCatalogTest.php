@@ -34,8 +34,42 @@ function fakeBareServer(): void
         in_array('fnm', $process->command, true) => Process::result(exitCode: 1),
         ($process->command[0] ?? '') === 'which' => Process::result(exitCode: 1),
         ($process->command[0] ?? '') === 'dpkg-query' => Process::result(output: 'unknown ok not-installed'),
+        // No Docker either: the catch-all below answers 0 to `command -v`, which
+        // would put a Docker row on every bare server.
+        isDockerPresenceProbe($process) => Process::result(exitCode: 1),
         default => Process::result(exitCode: 0),
     });
+}
+
+function isDockerPresenceProbe($process): bool
+{
+    return str_contains(implode(' ', (array) $process->command), "command -v 'docker'");
+}
+
+/** A server whose Docker answers `docker info` with a version. */
+function fakeDockerServer(?string $version = '27.3.1', bool $present = true): void
+{
+    Process::fake(fn ($process) => match (true) {
+        isDockerPresenceProbe($process) => Process::result(exitCode: $present ? 0 : 1),
+        ($process->command[0] ?? '') === 'mysql' => Process::result(errorOutput: "can't connect", exitCode: 1),
+        in_array('fnm', $process->command, true) => Process::result(exitCode: 1),
+        ($process->command[0] ?? '') === 'which' => Process::result(exitCode: 1),
+        ($process->command[0] ?? '') === 'dpkg-query' => Process::result(output: 'unknown ok not-installed'),
+        in_array('docker', (array) $process->command, true) && in_array('info', (array) $process->command, true) => $version === null ? Process::result(errorOutput: 'Cannot connect to the Docker daemon', exitCode: 1) : Process::result(output: $version."\n"),
+        default => Process::result(exitCode: 0),
+    });
+}
+
+function recordStackForSetup(string $stack): void
+{
+    ServerCapability::query()->delete();
+    ServerCapability::create([
+        'stack' => $stack, 'web_server' => 'nginx',
+        'capabilities' => $stack === 'docker'
+            ? ['php' => true, 'node' => false, 'serving_profiles' => ['docker']]
+            : ['php' => true, 'node' => false],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
 }
 
 function fetchSetup(): array
@@ -287,3 +321,65 @@ it('refuses a second install while one is still running (FS-A5)', function (stri
     'fail2ban' => ['/api/fail2ban/install', 'fail2ban', 'errors/fail2ban.already_installing'],
     'build tools' => ['/api/build-tools/install', 'build_tools', 'errors/build-tools.already_installing'],
 ]);
+
+it('lists Docker as an installed component, with its version, on a Docker-stack server (RC-34)', function () {
+    recordStackForSetup('docker');
+    fakeDockerServer('27.3.1');
+
+    $setup = fetchSetup();
+    $docker = collect($setup['components'])->firstWhere('key', 'docker');
+
+    expect($docker)->not->toBeNull()
+        ->and($docker['state'])->toBe('installed')
+        ->and($docker['detail'])->toBe('Docker 27.3.1')
+        ->and($docker['title'])->toBe('Docker')
+        ->and($docker['description'])->not->toBeEmpty()
+        ->and($docker['recommended'])->toBeFalse()
+        ->and($docker['action'])->toBeNull()
+        ->and($docker['options'])->toBe([]);
+
+    // First: it is what the other rows on this stack run on.
+    expect($setup['components'][0]['key'])->toBe('docker');
+});
+
+it('still lists Docker on a Docker-stack server that has lost it, as pending', function () {
+    recordStackForSetup('docker');
+    fakeDockerServer(present: false);
+
+    $docker = collect(fetchSetup()['components'])->firstWhere('key', 'docker');
+
+    expect($docker['state'])->toBe('pending')
+        ->and($docker['detail'])->toBeNull()
+        ->and($docker['action'])->toBeNull();
+});
+
+it('lists Docker with no version while the daemon is not answering', function () {
+    recordStackForSetup('docker');
+    fakeDockerServer(version: null);
+
+    $docker = collect(fetchSetup()['components'])->firstWhere('key', 'docker');
+
+    expect($docker['state'])->toBe('installed')
+        ->and($docker['detail'])->toBeNull();
+});
+
+it('lists Docker on another stack only when it is installed there', function () {
+    fakeDockerServer('26.1.4');
+    $docker = collect(fetchSetup()['components'])->firstWhere('key', 'docker');
+
+    expect($docker['state'])->toBe('installed')
+        ->and($docker['detail'])->toBe('Docker 26.1.4');
+
+    fakeDockerServer(present: false);
+
+    expect(collect(fetchSetup()['components'])->pluck('key'))->not->toContain('docker');
+});
+
+it('keeps Docker out of the recommended set, so existing servers do not become incomplete', function () {
+    // Counting it would mark every existing server's setup unfinished overnight.
+    recordStackForSetup('docker');
+    fakeDockerServer(present: false);
+
+    expect(collect(fetchSetup()['components'])->where('recommended', true)->pluck('key'))
+        ->not->toContain('docker');
+});

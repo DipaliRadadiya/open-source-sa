@@ -21,6 +21,10 @@ return [
             'title' => 'Node.js',
             'description' => 'Gerenciado com fnm, para que as aplicações fixem a própria versão.',
         ],
+        'docker' => [
+            'title' => 'Docker',
+            'description' => 'O motor de contêineres em que este servidor executa seus aplicativos. O instalador o deixa instalado.',
+        ],
         'redis' => [
             'title' => 'Redis',
             'description' => 'Usado para o cache do painel. Sem ele, o painel recorre ao banco de dados: funciona, mas é mais lento.',

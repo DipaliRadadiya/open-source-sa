@@ -21,6 +21,10 @@ return [
             'title' => 'Node.js',
             'description' => 'Managed with fnm, so applications can pin their own version.',
         ],
+        'docker' => [
+            'title' => 'Docker',
+            'description' => 'The container engine this server runs its applications on. Put in place by the installer.',
+        ],
         'redis' => [
             'title' => 'Redis',
             'description' => 'Used for the panel cache. Without it the panel falls back to the database, which works but is slower.',

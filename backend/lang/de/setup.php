@@ -21,6 +21,10 @@ return [
             'title' => 'Node.js',
             'description' => 'Mit fnm verwaltet, damit Websites ihre eigene Version festlegen können.',
         ],
+        'docker' => [
+            'title' => 'Docker',
+            'description' => 'Die Container-Engine, auf der dieser Server seine Anwendungen ausführt. Der Installer richtet sie ein.',
+        ],
         'redis' => [
             'title' => 'Redis',
             'description' => 'Wird für den Panel-Cache verwendet. Ohne Redis nutzt das Panel die Datenbank — das funktioniert, ist aber langsamer.',

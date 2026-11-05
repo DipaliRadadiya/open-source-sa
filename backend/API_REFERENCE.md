@@ -6843,6 +6843,13 @@ The same component list as the Services page — one read drives both screens.
 
 The `wp_cli` component (WP-CLI) is `recommended: false`, so it never affects `complete`. Its `action` is `POST /api/wp-cli/install`.
 
+The **`docker`** component (added 2026-11-05, RC-34) is listed on a server whose recorded stack is `docker` (even if the engine has gone missing, when it reads `pending`), and on any other stack that has the `docker` binary installed. It is the first row. Same shape as every other row:
+```json
+{"key": "docker", "title": "Docker", "description": "The container engine this server runs its applications on. Put in place by the installer.",
+ "state": "installed", "detail": "Docker 27.3.1", "recommended": false, "action": null, "options": []}
+```
+`state` is `installed` when the binary exists, `pending` when it does not. `detail` is `"Docker <version>"` read from the daemon (`docker info`), or `null` while the daemon is not answering. `action` is `null`: the installer owns Docker and the panel cannot install it. `recommended: false`, so it never affects `complete`. `title` and `description` are localized (all 8 locales); the client no longer needs to add a row of its own.
+
 **`system_updates_running`** (boolean, added 2026-11-02) is `true` while Ubuntu is installing its own updates (unattended-upgrades: `apt-daily.service` or `apt-daily-upgrade.service` running, or an `unattended-upgrade` process). The installer now reports "installed" as soon as the panel works, and on a server that booted minutes ago Ubuntu's first-boot updates usually go on for a few more minutes. Anything installed from this page meanwhile (a database engine, a PHP version, fail2ban…) waits for them before it starts, so its row stays `installing` longer than usual. Show a note while it is `true`, e.g. *"Ubuntu is still finishing its security updates in the background (usually a few minutes). Installing new software may take a few extra minutes until it's done."* Read-only, no sudo; re-read on every poll, so it turns `false` by itself once the updates finish.
 
 ---
