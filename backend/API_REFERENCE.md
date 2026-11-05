@@ -7022,6 +7022,14 @@ Rows are ordered by `name` without case bias.
 
 The list response also carries **`google_oauth_redirect_uri`** at the top level: the address to paste into the Google OAuth client *when creating it*, before any `google_drive_oauth` destination exists.
 
+It also carries **`local`** (2026-11-05, RC-39): where a `local` ("this server") destination may live, and the folder the Add-storage form should start with. Read these instead of repeating them in the client — they are the same values the panel validates `config.path` against.
+
+```json
+"local": {"allowed_roots": ["/var/backups", "/mnt", "/media"], "default_path": "/var/backups/panel"}
+```
+
+`allowed_roots` have no trailing slash. A path must be *inside* one of them, never a root itself.
+
 **`config` on a *response* is addressing detail only, never credentials** — bucket/region/endpoint for S3, host/port/root for FTP and SFTP. It is not the same set of keys you send; secrets are silently absent rather than masked, because reading them would mean decrypting them into the response.
 
 **`status` distinguishes three states, and the third one matters:** `never_tested` · `connected` · `failed`. `last_test_success` is deliberately nullable — never-asked is not the same as asked-and-failed, and rendering a red cross for an untested destination would be a lie. Drive the badge off `status`, not off the boolean.

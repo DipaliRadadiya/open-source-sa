@@ -67,7 +67,7 @@ class StorageDestinationController extends Controller
         ]);
     }
 
-    public function index(GoogleOauthRedirect $redirect): JsonResponse
+    public function index(GoogleOauthRedirect $redirect, LocalBackupFolder $local): JsonResponse
     {
         $destinations = ListSort::caseInsensitive(StorageDestination::query(), 'name')->get();
 
@@ -81,6 +81,14 @@ class StorageDestinationController extends Controller
             // per-destination endpoint would only hand it over after the setup
             // step that needs it.
             'google_oauth_redirect_uri' => $redirect->redirectUri(),
+
+            // Where a "this server" destination may live, and what the form
+            // starts with (RC-39). The rule is the panel's, so the form reads
+            // it from here instead of keeping a copy that drifts from it.
+            'local' => [
+                'allowed_roots' => $local->roots(),
+                'default_path' => (string) config('server.backups.local.default_path', '/var/backups/panel'),
+            ],
         ]);
     }
 

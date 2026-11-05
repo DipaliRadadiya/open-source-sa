@@ -218,6 +218,35 @@ describe('saving a destination: the folder', function () {
     });
 });
 
+/*
+ * RC-39: the Add-storage form takes the roots and the starting folder from the
+ * panel, so the form cannot drift from the rule it is checked against.
+ */
+it('lists where a folder on this server may go, and the default, beside the destinations', function () {
+    config([
+        'server.backups.local.allowed_roots' => ['/var/backups/', '/mnt', '/media'],
+        'server.backups.local.default_path' => '/var/backups/panel',
+    ]);
+
+    $this->getJson('/api/integrations/storage/destinations')
+        ->assertOk()
+        ->assertJsonPath('local', [
+            'allowed_roots' => ['/var/backups', '/mnt', '/media'],
+            'default_path' => '/var/backups/panel',
+        ])
+        ->assertJsonStructure(['storage_destinations', 'google_oauth_redirect_uri']);
+});
+
+it('shows the roots to a user who can only view storage', function () {
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'storage');
+    $this->actingAs($viewer);
+
+    $this->getJson('/api/integrations/storage/destinations')
+        ->assertOk()
+        ->assertJsonPath('local.allowed_roots', ["{$this->base}/backups", "{$this->base}/mnt"]);
+});
+
 describe('testing a destination', function () {
 
     it('reports the free space when the folder is ready', function () {
