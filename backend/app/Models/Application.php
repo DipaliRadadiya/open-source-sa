@@ -737,6 +737,19 @@ class Application extends Model
         return $this->site_mount_path ?: ContainerMountPath::LEGACY_SITE_MOUNT;
     }
 
+    /**
+     * Does a stored compose file decide what this container runs?
+     *
+     * True for a 1-Click Recipe app (the panel rendered its file at install), a
+     * pasted file, and a simple site whose generated file was taken over on the
+     * Compose File page. The supervisor renders the stored text and ignores the
+     * structured port, network and volume fields — the same test `contents()` makes.
+     */
+    public function hasOwnCompose(): bool
+    {
+        return trim((string) $this->compose) !== '';
+    }
+
     public function publicHtmlPath(): string
     {
         return $this->rootPath().'/public_html';

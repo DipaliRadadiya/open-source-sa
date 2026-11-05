@@ -28,6 +28,15 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class UpdateContainerRequest extends FormRequest
 {
+    /**
+     * The fields the compose file decides for a site that runs its own.
+     *
+     * Not `memory_limit`, `cpu_limit` or `registry_id`: the panel's compose
+     * override applies the limits to the file's services, and the registry
+     * credential is used for the pull whatever the file says.
+     */
+    private const COMPOSE_OWNED_FIELDS = ['container_port', 'docker_network', 'volume_mounts'];
+
     public function authorize(): bool
     {
         $user = $this->user();
@@ -59,7 +68,7 @@ class UpdateContainerRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             // The port inside the container, which is what nginx is proxied
             // to. Not `app_port`: that is the host-side port the panel
             // allocated, and conflating the two publishes a container on a
@@ -141,6 +150,110 @@ class UpdateContainerRequest extends FormRequest
                 new ContainerMountPath($this->route('application')?->siteMountPath()),
             ],
         ];
+
+        // A site that runs its own compose file takes none of these three from
+        // the row, so there is nothing to validate and nothing to save: they are
+        // dropped here (an unchanged echo is then simply ignored) and a changed
+        // value is refused in `after()`.
+        if ($this->ownsCompose()) {
+            foreach (self::COMPOSE_OWNED_FIELDS as $field) {
+                unset($rules[$field]);
+            }
+
+            unset($rules['volume_mounts.*.volume'], $rules['volume_mounts.*.path']);
+        }
+
+        return $rules;
+    }
+
+    private function ownsCompose(): bool
+    {
+        return $this->route('application')?->hasOwnCompose() === true;
+    }
+
+    /**
+     * Which of the compose-owned fields this request tries to change.
+     *
+     * "Changed" is judged against the row, because the form sends the current
+     * value of a field back on a save and that must stay harmless.
+     *
+     * @return list<string>
+     */
+    private function changedComposeOwnedFields(): array
+    {
+        $application = $this->route('application');
+
+        if (! $this->ownsCompose()) {
+            return [];
+        }
+
+        $changed = [];
+
+        if ($this->exists('container_port')) {
+            $sent = $this->input('container_port');
+            $same = (is_int($sent) || (is_string($sent) && ctype_digit($sent)))
+                && (int) $sent === (int) $application->container_port;
+
+            if (! $same) {
+                $changed[] = 'container_port';
+            }
+        }
+
+        if ($this->exists('docker_network')) {
+            $sent = $this->input('docker_network');
+            $same = ($sent === null || is_string($sent))
+                && (($sent === '' ? null : $sent) === ($application->docker_network ?: null));
+
+            if (! $same) {
+                $changed[] = 'docker_network';
+            }
+        }
+
+        if ($this->exists('volume_mounts')) {
+            $sent = $this->input('volume_mounts');
+
+            if ($this->mountKeys($sent ?? []) !== $this->mountKeys((array) ($application->volume_mounts ?? []), true)) {
+                $changed[] = 'volume_mounts';
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
+     * A mount list as a sorted list of `volume path` keys, or null when it is not
+     * a list of pairs. Order is not a change: the file decides what is mounted.
+     * Stored entries without both halves are skipped the way the renderer skips
+     * them; a sent one is a difference.
+     *
+     * @return list<string>|null
+     */
+    private function mountKeys(mixed $mounts, bool $stored = false): ?array
+    {
+        if (! is_array($mounts)) {
+            return null;
+        }
+
+        $keys = [];
+
+        foreach ($mounts as $mount) {
+            $volume = is_array($mount) ? ($mount['volume'] ?? null) : null;
+            $path = is_array($mount) ? ($mount['path'] ?? null) : null;
+
+            if (! is_string($volume) || ! is_string($path) || $volume === '' || $path === '') {
+                if ($stored) {
+                    continue;
+                }
+
+                return null;
+            }
+
+            $keys[] = $volume."\0".$path;
+        }
+
+        sort($keys);
+
+        return $keys;
     }
 
     /**
@@ -152,6 +265,17 @@ class UpdateContainerRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                foreach ($this->changedComposeOwnedFields() as $field) {
+                    $validator->errors()->add($field, __('errors/application.container_fields_owned_by_compose'));
+                }
+            },
+            function (Validator $validator): void {
+                // Dropped with the rules above: a site on its own compose file
+                // saves no mounts, so two at one path is not a mistake it can make.
+                if ($this->ownsCompose()) {
+                    return;
+                }
+
                 $mounts = (array) $this->input('volume_mounts', []);
                 $seen = [];
 

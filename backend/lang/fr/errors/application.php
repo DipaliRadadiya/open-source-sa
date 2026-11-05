@@ -51,6 +51,7 @@ return [
     'container_restart_docker_down' => 'Docker ne répond pas sur ce serveur, « :name » n’a donc pas été redémarré. Vérifiez que le service Docker est en cours d’exécution.',
     'container_pull_failed' => 'L’image n’a pas pu être récupérée. Référence :reference.',
     'container_apply_failed' => 'Les réglages ont été enregistrés, mais le conteneur n’a pas pu être démarré avec eux. Référence :reference.',
+    'container_fields_owned_by_compose' => 'Le fichier de configuration propre à cette application définit ses ports, son réseau et ses volumes ; ils ne peuvent donc pas être modifiés ici.',
     'compose_apply_failed' => 'Le fichier compose n’a pas pu être appliqué ; l’application a été remise sur celui qu’elle utilisait auparavant. Référence :reference.',
     'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez l’application sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
