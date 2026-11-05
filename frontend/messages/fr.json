@@ -7312,6 +7312,7 @@
       },
       "runsShortly": "S'exécute bientôt",
       "notSetUpLine": "Non configurée — rien n'est sauvegardé sur cette application.",
+      "notSetUpListHint": "Rien n'est sauvegardé sur ces applications.",
       "needsDestination": "Aucune destination de stockage n'est encore configurée. Ajoutez-en une via Intégrations → Stockage.",
       "timesShownIn": "Heures affichées en {timezone}",
       "minutePast": "à :{minute} de chaque heure"
@@ -7902,7 +7903,8 @@
         "database": "Base de données",
         "engine": "Moteur"
       },
-      "notSetUpLine": "Non configurée — cette base de données n'est pas sauvegardée."
+      "notSetUpLine": "Non configurée — cette base de données n'est pas sauvegardée.",
+      "notSetUpListHint": "Ces bases de données ne sont pas sauvegardées."
     },
     "subjectFilter": {
       "all": "Toutes les applications et bases de données",

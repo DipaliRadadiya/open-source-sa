@@ -7312,6 +7312,7 @@
       },
       "runsShortly": "Se ejecuta en breve",
       "notSetUpLine": "Sin configurar: no se respalda nada de esta aplicación.",
+      "notSetUpListHint": "No se respalda nada de estas aplicaciones.",
       "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero.",
       "timesShownIn": "Horas mostradas en {timezone}",
       "minutePast": "a los :{minute} de cada hora"
@@ -7902,7 +7903,8 @@
         "database": "Base de datos",
         "engine": "Motor"
       },
-      "notSetUpLine": "Sin configurar: no se respalda esta base de datos."
+      "notSetUpLine": "Sin configurar: no se respalda esta base de datos.",
+      "notSetUpListHint": "No se respaldan estas bases de datos."
     },
     "subjectFilter": {
       "all": "Todas las aplicaciones y bases de datos",

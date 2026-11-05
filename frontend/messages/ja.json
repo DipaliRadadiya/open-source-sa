@@ -7312,6 +7312,7 @@
       },
       "runsShortly": "まもなく実行",
       "notSetUpLine": "未設定 — このアプリケーションのバックアップはまだ行われていません。",
+      "notSetUpListHint": "これらのアプリケーションのバックアップはまだ行われていません。",
       "needsDestination": "ストレージ先がまだ設定されていません。まず連携 → ストレージから追加してください。",
       "timesShownIn": "表示時刻は {timezone} です",
       "minutePast": "毎時 :{minute}"
@@ -7902,7 +7903,8 @@
         "database": "データベース",
         "engine": "エンジン"
       },
-      "notSetUpLine": "未設定 — このデータベースはバックアップされていません。"
+      "notSetUpLine": "未設定 — このデータベースはバックアップされていません。",
+      "notSetUpListHint": "これらのデータベースはバックアップされていません。"
     },
     "subjectFilter": {
       "all": "すべてのアプリケーションとデータベース",

@@ -7312,6 +7312,7 @@
       },
       "runsShortly": "Runs shortly",
       "notSetUpLine": "Not set up — nothing on this application is being backed up.",
+      "notSetUpListHint": "Nothing on these applications is being backed up.",
       "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first.",
       "timesShownIn": "Times shown in {timezone}",
       "minutePast": ":{minute} past each hour"
@@ -7902,7 +7903,8 @@
         "database": "Database",
         "engine": "Engine"
       },
-      "notSetUpLine": "Not set up — this database is not being backed up."
+      "notSetUpLine": "Not set up — this database is not being backed up.",
+      "notSetUpListHint": "These databases are not being backed up."
     },
     "subjectFilter": {
       "all": "All applications and databases",

@@ -48,9 +48,12 @@ test("the phone layout gets the hour too", () => {
   // This column went a month without the hour because nothing went back to it.
   // The cards falling behind the table is the same failure one layout over.
   assert.match(cards, /import \{ scheduleWhen \}/);
-  assert.match(cards, /value=\{scheduleFact\(target\)\}/);
-  // Not set up: one line, as in the table, not four facts each saying "not set" (8 Oct).
-  assert.match(cards, /\{!target \? \([\s\S]{0,200}t\("notSetUpLine"\)/);
+  // 5 Nov: a label-on-top fact, so the schedule is the child rather than a `value`.
+  assert.match(cards, /\{scheduleFact\(target\)\}\s*<\/CoverageFact>/);
+  // Not set up: not four facts each saying "not set" (8 Oct); since 5 Nov one thin row each,
+  // all in one list, instead of a card each.
+  assert.match(cards, /const notSetUp = rows\.filter\(\(row\) => !row\.target\);/);
+  assert.match(cards, /<NotSetUpList[\s\S]{0,300}<NotSetUpRow/);
 });
 
 test("the timezone is named once, outside the table", () => {

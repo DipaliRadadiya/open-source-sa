@@ -7312,6 +7312,7 @@
       },
       "runsShortly": "Executa em breve",
       "notSetUpLine": "Não configurado — nada desta aplicação está sendo copiado.",
+      "notSetUpListHint": "Nada destas aplicações está sendo copiado.",
       "needsDestination": "Nenhum destino de armazenamento configurado ainda. Adicione um em Integrações → Armazenamento primeiro.",
       "timesShownIn": "Horários exibidos em {timezone}",
       "minutePast": "aos :{minute} de cada hora"
@@ -7902,7 +7903,8 @@
         "database": "Banco de dados",
         "engine": "Engine"
       },
-      "notSetUpLine": "Não configurado — este banco de dados não está sendo copiado."
+      "notSetUpLine": "Não configurado — este banco de dados não está sendo copiado.",
+      "notSetUpListHint": "Estes bancos de dados não estão sendo copiados."
     },
     "subjectFilter": {
       "all": "Todas as aplicações e bancos de dados",

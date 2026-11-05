@@ -7312,6 +7312,7 @@
       },
       "runsShortly": "Läuft in Kürze",
       "notSetUpLine": "Nicht eingerichtet — von dieser Anwendung wird nichts gesichert.",
+      "notSetUpListHint": "Von diesen Anwendungen wird nichts gesichert.",
       "needsDestination": "Es ist noch kein Speicherziel eingerichtet. Fügen Sie zuerst eines unter Integrationen → Speicher hinzu.",
       "timesShownIn": "Zeiten in {timezone}",
       "minutePast": ":{minute} nach jeder vollen Stunde"
@@ -7902,7 +7903,8 @@
         "database": "Datenbank",
         "engine": "Engine"
       },
-      "notSetUpLine": "Nicht eingerichtet — diese Datenbank wird nicht gesichert."
+      "notSetUpLine": "Nicht eingerichtet — diese Datenbank wird nicht gesichert.",
+      "notSetUpListHint": "Diese Datenbanken werden nicht gesichert."
     },
     "subjectFilter": {
       "all": "Alle Anwendungen und Datenbanken",

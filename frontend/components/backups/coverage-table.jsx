@@ -40,11 +40,13 @@ function SiteCell({ row }) {
 
   return (
     <div className="min-w-0">
-      <div className="flex min-w-0 items-center gap-2">
+      {/* The badges wrap under the name rather than squeeze it: "wpsc (Staging)" lost its end
+          beside a long French "PRÉPRODUCTION" (4 Nov). Only a name longer than the cell truncates. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         <HoverHint content={application.name}><Link
           prefetch={false}
           href={`/applications/${application.id}/backups`}
-          className="truncate font-medium underline-offset-4 hover:underline"
+          className="max-w-full shrink-0 truncate font-medium underline-offset-4 hover:underline"
         >
           {application.name}
         </Link></HoverHint>

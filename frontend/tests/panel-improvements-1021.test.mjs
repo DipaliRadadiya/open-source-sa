@@ -206,3 +206,24 @@ test("both backup tables use binding, identical column widths", () => {
   // The next-run line wraps inside the fixed column rather than losing its end.
   assert.match(apps, /<p className="text-xs whitespace-normal tabular-nums text-muted-foreground">\s*\{t\("nextRun"/);
 });
+
+// 5 Nov (Krishna: "do both"): in French the backup cards cut the schedule and next run on a
+// tablet, and a long badge squeezed "wpsc (Staging)" in the table.
+test("backup cards share one frame: who, four aligned facts, one action row; not set up is a list", () => {
+  const parts = read("components/backups/coverage-card-parts.jsx");
+  // Labels and values of a pair sit on shared rows, so a wrapping label never staggers its neighbour.
+  assert.match(parts, /row-span-2 grid grid-rows-subgrid/);
+  assert.match(parts, /mt-auto flex items-center justify-end gap-1 border-t/);
+  assert.match(parts, /text-xs break-all text-muted-foreground/);
+  for (const f of ["components/backups/coverage-cards.jsx", "components/backups/database-coverage-card.jsx"]) {
+    const src = read(f);
+    assert.equal((src.match(/<CoverageFact\b/g) ?? []).length, 4, `${f}: four facts`);
+    assert.match(src, /<CoverageCardActions/);
+    assert.match(src, /<NotSetUpList[\s\S]{0,300}<NotSetUpRow/);
+    assert.doesNotMatch(src, /<CardFacts?\b|block truncate[^"]*">\{(lastBackup|next)/);
+  }
+  for (const f of ["components/backups/coverage-table.jsx", "components/backups/database-coverage-card.jsx"]) {
+    assert.match(read(f), /flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1/);
+    assert.match(read(f), /max-w-full shrink-0 truncate font-medium/);
+  }
+});

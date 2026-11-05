@@ -21,7 +21,8 @@ import { HoverHint } from "@/components/ui/hover-hint";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ListCard } from "@/components/data-table/list-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
-import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
+import { CardList } from "@/components/data-table/card-list";
+import { CoverageCard, CoverageCardActions, CoverageFact, NotSetUpList, NotSetUpRow } from "@/components/backups/coverage-card-parts";
 import { BackupStatusBadge } from "@/components/backups/backup-status-badge";
 import { RunsCell, ScheduleCell, StatusCell, StorageCell } from "@/components/backups/coverage-table";
 
@@ -112,14 +113,14 @@ function NameCell({ row, table }) {
   const { database, state } = row.original;
   const { canOpenDatabases } = table.options.meta;
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       <HoverHint content={database.name}>
         {canOpenDatabases ? (
-          <Link prefetch={false} href={`/databases/${database.id}?tab=backups`} className="truncate font-medium underline-offset-4 hover:underline">
+          <Link prefetch={false} href={`/databases/${database.id}?tab=backups`} className="max-w-full shrink-0 truncate font-medium underline-offset-4 hover:underline">
             {database.name}
           </Link>
         ) : (
-          <span className="truncate font-medium">{database.name}</span>
+          <span className="max-w-full shrink-0 truncate font-medium">{database.name}</span>
         )}
       </HoverHint>
       {/* As on the application rows: no badge where the row already says it. */}
@@ -173,28 +174,6 @@ function DatabaseActions({ row, canOpenDatabases, canManage, onBackUpNow, busy, 
       </Button>
     </ReasonTooltip>
   );
-
-  if (stacked) {
-    return (
-      <div className="mt-auto flex flex-wrap justify-end gap-2">
-        {run}
-        <Button size="sm" variant="ghost" asChild>
-          <Link href={`/backups/history?database=${database.id}`} prefetch={false}>
-            <History className="size-4" />
-            {tc("viewBackups")}
-          </Link>
-        </Button>
-        {canOpenDatabases ? (
-          <Button size="sm" variant="ghost" asChild>
-            <Link href={settings} prefetch={false}>
-              <Settings2 className="size-4" />
-              {tc("manage")}
-            </Link>
-          </Button>
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <div className="flex items-center justify-end gap-1">
@@ -265,71 +244,98 @@ function DatabaseCards({ rows, options, canOpenDatabases, canManage, onBackUpNow
   const t = useTranslations("backups.databases");
   const tc = useTranslations("backups.coverage");
   const tb = useTranslations("backups");
+  const td = useTranslations("databases");
+  const tn = useTranslations("applications.backups");
   const format = useFormatter();
   const engineName = useEngineName();
 
+  // The same frame as the application cards above: protected ones as cards, the rest as rows.
+  const configured = rows.filter((row) => row.target);
+  const notSetUp = rows.filter((row) => !row.target);
+  const settingsHref = (database) => (canOpenDatabases ? `/databases/${database.id}?tab=backups` : null);
+
   return (
-    <CardList>
-      {rows.map((row) => {
-        const { database, target, state, lastBackup } = row;
-        const when = target ? scheduleWhen(target, options, format) : null;
-        const next = target?.is_due ? tc("runsShortly") : target?.next_run_at_human ? tc("nextRun", { when: target.next_run_at_human }) : null;
-        const busy = busyIds.includes(database.id);
+    <div className="space-y-3">
+      {configured.length ? (
+        <CardList>
+          {configured.map((row) => {
+            const { database, target, state, lastBackup } = row;
+            const when = scheduleWhen(target, options, format);
+            const next = target.is_due ? tc("runsShortly") : target.next_run_at_human ? tc("nextRun", { when: target.next_run_at_human }) : null;
+            const busy = busyIds.includes(database.id);
 
-        return (
-          <CardListItem key={database.id}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                {canOpenDatabases ? (
-                  <Link prefetch={false} href={`/databases/${database.id}?tab=backups`} className="block truncate font-medium underline-offset-4 hover:underline">
-                    {database.name}
-                  </Link>
-                ) : (
-                  <span className="block truncate font-medium">{database.name}</span>
-                )}
-                {database.engine ? <span className="block text-xs text-muted-foreground">{engineName(database.engine)}</span> : null}
-              </div>
-              {state === "paused" || state === "unprotected" ? null : (
-                <span className="shrink-0">
-                  <StatusCell row={{ original: row }} />
-                </span>
-              )}
-            </div>
-
-            {!target ? (
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
-                <p className="min-w-48 flex-1 text-sm text-muted-foreground">{t("notSetUpLine")}</p>
-                <DatabaseActions row={row} canOpenDatabases={canOpenDatabases} canManage={canManage} onBackUpNow={onBackUpNow} busy={busy} stacked />
-              </div>
-            ) : (
-              <>
-                <CardFacts>
-                  <CardFact
-                    label={tc("columns.schedule")}
-                    className={state === "paused" ? "[&>dd]:font-medium [&>dd]:text-warning" : undefined}
-                    value={[
-                      frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency })),
-                      when?.minute ? tc("minutePast", { minute: when.minute }) : when?.time,
-                      tc("keeps", { count: target.retention_count }),
-                    ].filter(Boolean).join(" · ")}
+            return (
+              <CoverageCard
+                key={database.id}
+                title={
+                  <HoverHint content={database.name}>
+                    {canOpenDatabases ? (
+                      <Link prefetch={false} href={settingsHref(database)} className="block truncate font-medium underline-offset-4 hover:underline">
+                        {database.name}
+                      </Link>
+                    ) : (
+                      <span className="block truncate font-medium">{database.name}</span>
+                    )}
+                  </HoverHint>
+                }
+                badge={state === "paused" || state === "unprotected" ? null : <StatusCell row={{ original: row }} />}
+                actions={
+                  <CoverageCardActions
+                    historyHref={`/backups/history?database=${database.id}`}
+                    settingsHref={settingsHref(database)}
+                    run={
+                      <ReasonTooltip reason={canManage ? null : td("noPermission")}>
+                        <Button size="sm" variant="outline" disabled={!canManage || busy} onClick={() => onBackUpNow(database.id, database.name)}>
+                          <ActionIcon icon={PlayCircle} pending={busy} className="size-4" />
+                          {tc("runBackup")}
+                        </Button>
+                      </ReasonTooltip>
+                    }
                   />
-                  <CardFact label={tc("columns.storage")} value={target.storage_destination_name ?? tc("placeholders.storage")} />
-                  <CardFact label={tc("columns.lastRun")}>
-                    {lastBackup && (BACKUP_IN_FLIGHT.includes(lastBackup.status) || lastBackup.status === "failed") ? (
-                      <span className="mb-1 block">
-                        <BackupStatusBadge backup={lastBackup} />
-                      </span>
-                    ) : null}
-                    <span className="block truncate">{lastBackup?.created_at_human ?? target.last_backup_at_human ?? tc("neverRunShort")}</span>
-                    {next ? <span className="block truncate text-xs text-muted-foreground">{next}</span> : null}
-                  </CardFact>
-                </CardFacts>
-                <DatabaseActions row={row} canOpenDatabases={canOpenDatabases} canManage={canManage} onBackUpNow={onBackUpNow} busy={busy} stacked />
-              </>
-            )}
-          </CardListItem>
-        );
-      })}
-    </CardList>
+                }
+              >
+                <CoverageFact label={t("columns.engine")}>{engineName(database.engine) ?? "—"}</CoverageFact>
+                <CoverageFact label={tc("columns.schedule")} className={state === "paused" ? "[&>dd]:font-medium [&>dd]:text-warning" : undefined}>
+                  {[
+                    frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency })),
+                    when?.minute ? tc("minutePast", { minute: when.minute }) : when?.time,
+                    tc("keeps", { count: target.retention_count }),
+                  ].filter(Boolean).join(" · ")}
+                </CoverageFact>
+                <CoverageFact label={tc("columns.storage")}>
+                  <span className="break-words">{target.storage_destination_name ?? tc("placeholders.storage")}</span>
+                </CoverageFact>
+                <CoverageFact label={tc("columns.lastRun")}>
+                  {lastBackup && (BACKUP_IN_FLIGHT.includes(lastBackup.status) || lastBackup.status === "failed") ? (
+                    <span className="mb-1 block">
+                      <BackupStatusBadge backup={lastBackup} />
+                    </span>
+                  ) : null}
+                  <span className="block">{lastBackup?.created_at_human ?? target.last_backup_at_human ?? tc("neverRunShort")}</span>
+                  {next ? <span className="block text-xs text-muted-foreground">{next}</span> : null}
+                </CoverageFact>
+              </CoverageCard>
+            );
+          })}
+        </CardList>
+      ) : null}
+
+      {notSetUp.length ? (
+        <NotSetUpList
+          title={<>{tn("notSetUp")}<span className="ms-2 font-normal tabular-nums text-muted-foreground">{notSetUp.length}</span></>}
+          description={t("notSetUpListHint")}
+        >
+          {notSetUp.map((row) => (
+            <NotSetUpRow
+              key={row.database.id}
+              name={row.database.name}
+              href={settingsHref(row.database)}
+              subtitle={engineName(row.database.engine)}
+              action={<DatabaseActions row={row} canOpenDatabases={canOpenDatabases} canManage={canManage} onBackUpNow={onBackUpNow} busy={false} stacked />}
+            />
+          ))}
+        </NotSetUpList>
+      ) : null}
+    </div>
   );
 }
