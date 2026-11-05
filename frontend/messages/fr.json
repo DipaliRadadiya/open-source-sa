@@ -6535,7 +6535,9 @@
       "publicImage": "Image publique (sans identifiant)",
       "checking": "Vérification…",
       "composeLabel": "Fichier compose",
-      "composeHelp": "Les ports ne s'ouvrent que sur ce serveur, et les dossiers restent dans celui de cette application."
+      "composeHelp": "Les ports ne s'ouvrent que sur ce serveur, et les dossiers restent dans celui de cette application.",
+      "prerelease": "Préversion",
+      "prereleaseHelp": "C'est une version de test (préversion), pas une version stable."
     },
     "containerState": {
       "starting": "Démarrage",

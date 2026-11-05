@@ -190,9 +190,10 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
             setTag((current) => current || "latest");
             return;
           }
-          const recommended = parsed.data.recommended ?? parsed.data.tags[0].name;
+          // No recommendation (only pre-releases): preselect the newest, but never call it recommended or stable.
+          const recommended = parsed.data.recommended ?? "";
           setTags({ state: "ready", list: parsed.data.tags, recommended });
-          setTag((current) => current || recommended);
+          setTag((current) => current || recommended || parsed.data.tags[0].name);
         })
         .catch((error) => {
           if (!requestState(error)) return;
@@ -587,6 +588,8 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                     <span className="font-mono">{item.name}</span>
                     {item.name === tags.recommended ? (
                       <Badge className="ms-2 shrink-0 font-normal">{t("recommended")}</Badge>
+                    ) : item.prerelease ? (
+                      <Badge variant="outline" className="ms-2 shrink-0 font-normal">{t("prerelease")}</Badge>
                     ) : null}
                   </SelectItem>
                 ))}
@@ -604,7 +607,13 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
           )}
           <p className="text-sm text-muted-foreground">
             {/* "We picked…" only when it did: not for a version typed or chosen by hand. */}
-            {tag === "latest" ? t("latestWarning") : tag && tag === tags.recommended ? t("versionHelp") : null}
+            {tag === "latest"
+              ? t("latestWarning")
+              : tag && tag === tags.recommended
+                ? t("versionHelp")
+                : tags.list.some((item) => item.name === tag && item.prerelease)
+                  ? t("prereleaseHelp")
+                  : null}
           </p>
         </div>
         </div>

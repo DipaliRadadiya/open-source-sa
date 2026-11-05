@@ -6535,7 +6535,9 @@
       "publicImage": "Öffentliches Image (ohne Anmeldung)",
       "checking": "Wird geprüft…",
       "composeLabel": "Compose-Datei",
-      "composeHelp": "Ports sind nur auf diesem Server offen, und Ordner bleiben im Ordner dieser Anwendung."
+      "composeHelp": "Ports sind nur auf diesem Server offen, und Ordner bleiben im Ordner dieser Anwendung.",
+      "prerelease": "Vorabversion",
+      "prereleaseHelp": "Das ist eine Testversion (Pre-Release), keine stabile."
     },
     "containerState": {
       "starting": "Wird gestartet",

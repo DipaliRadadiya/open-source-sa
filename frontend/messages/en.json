@@ -6535,7 +6535,9 @@
       "publicImage": "Public image (no login)",
       "checking": "Checking…",
       "composeLabel": "Compose file",
-      "composeHelp": "Ports open on this server only, and folders stay inside this application's folder."
+      "composeHelp": "Ports open on this server only, and folders stay inside this application's folder.",
+      "prerelease": "Pre-release",
+      "prereleaseHelp": "This is a test version (pre-release), not a stable one."
     },
     "containerState": {
       "starting": "Starting",

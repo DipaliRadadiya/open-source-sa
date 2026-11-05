@@ -274,6 +274,8 @@ export const imageTagsResponseSchema = z.object({
         name: z.string(),
         updated_at: z.string().nullish(),
         stable: z.boolean().default(false),
+        // -ea, -rc, -beta…: never `recommended`, which is null when only these exist.
+        prerelease: z.boolean().default(false),
       }),
     )
     .default([]),

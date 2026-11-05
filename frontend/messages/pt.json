@@ -6535,7 +6535,9 @@
       "publicImage": "Imagem pública (sem login)",
       "checking": "Verificando…",
       "composeLabel": "Ficheiro compose",
-      "composeHelp": "As portas só abrem neste servidor e as pastas ficam dentro da pasta desta aplicação."
+      "composeHelp": "As portas só abrem neste servidor e as pastas ficam dentro da pasta desta aplicação.",
+      "prerelease": "Pré-lançamento",
+      "prereleaseHelp": "Esta é uma versão de teste (pré-lançamento), não uma estável."
     },
     "containerState": {
       "starting": "Iniciando",
