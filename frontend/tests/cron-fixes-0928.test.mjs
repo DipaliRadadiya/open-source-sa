@@ -89,8 +89,11 @@ test("CJ-6 + preview + badge + hint", () => {
   assert.match(read("components/cron-jobs/command-field.jsx"), /t\.rich\("form\.commandHint"/);
 });
 
-test("CJ-7: a per_page the list refuses shows as 10, not a blank box", () => {
-  assert.match(read("components/data-table/per-page-select.jsx"), /PER_PAGE_OPTIONS\.includes\(Number\(fromUrl\)\) \? fromUrl : String\(PER_PAGE_OPTIONS\[0\]\)/);
+test("CJ-7: a per_page the list refuses shows a size on offer, not a blank box", () => {
+  // Since 5 Nov the fallback is the size the list was served with (the remembered one), still only an offered size.
+  const src = read("components/data-table/per-page-select.jsx");
+  assert.match(src, /const served = PER_PAGE_OPTIONS\.includes\(Number\(fallback\)\) \? String\(fallback\) : String\(PER_PAGE_OPTIONS\[0\]\);/);
+  assert.match(src, /PER_PAGE_OPTIONS\.includes\(Number\(fromUrl\)\) \? fromUrl : served/);
 });
 
 test("layout: table only from xl, where its seven columns fit", () => {

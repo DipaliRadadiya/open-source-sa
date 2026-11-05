@@ -12,6 +12,7 @@ import { FormModal } from "@/components/ui/form-modal";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Pager } from "@/components/data-table/pager";
 import { PerPageSelect } from "@/components/data-table/per-page-select";
+import { readPerPage } from "@/lib/tables/per-page-cookie";
 import { apiMessage } from "@/lib/api/error-message";
 import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 
@@ -74,7 +75,9 @@ export function HistoryDialog({ everyone = false, variant = "outline" }) {
         variant={variant}
         onClick={() => {
           setOpen(true);
-          load(1, perPage);
+          const remembered = readPerPage();
+          setPerPage(remembered);
+          load(1, remembered);
         }}
       >
         <History className="size-4" />

@@ -11,14 +11,17 @@ export const listMetaSchema = z.object({
 // The page sizes the API accepts (others are a 422, not a clamp).
 export const LIST_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
+// Cookie holding the page size last picked on any list.
+export const PER_PAGE_COOKIE = "list_per_page";
+
 export const EMPTY_LIST_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
 // Takes the serialised string so `cache` can dedupe. `filters` maps page URL keys to `filter[…]` keys.
-export function listQuery(query = "", { filters = {}, sort = true } = {}) {
+export function listQuery(query = "", { filters = {}, sort = true, defaultPerPage = 10 } = {}) {
   const params = new URLSearchParams(query);
   const perPage = LIST_PER_PAGE_OPTIONS.includes(Number(params.get("per_page")))
     ? Number(params.get("per_page"))
-    : 10;
+    : defaultPerPage;
 
   const out = {
     search: params.get("search")?.trim() || undefined,

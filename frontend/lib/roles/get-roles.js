@@ -1,6 +1,7 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { read } from "@/lib/api/read";
 import { rolesResponseSchema } from "@/lib/schemas/role";
+import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
 // Asks for the API's maximum page size, or only the first page is offered.
@@ -21,7 +22,7 @@ export async function getRoles() {
 
 export async function getRolesPage(query = "") {
   const result = await read("/admin/roles", rolesResponseSchema, {
-    searchParams: listQuery(query),
+    searchParams: listQuery(query, { defaultPerPage: await rememberedPerPage() }),
   });
   return {
     roles: result.data?.roles ?? [],

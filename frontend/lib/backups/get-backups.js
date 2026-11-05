@@ -19,16 +19,17 @@ import {
   restoresResponseSchema,
   databaseBackupTargetsResponseSchema,
 } from "@/lib/schemas/backup";
+import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
 // How long a finished restore keeps its banner (and its Undo) across reloads.
 const FINISHED_RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Held to the selector's values (the API 422s above 100). An absent value must
 // still resolve to a number: the backend defaults to 20, `PerPageSelect` shows 10.
-function perPage(value) {
+// A number is the caller's own size (e.g. the 5 latest restores); a URL value falls back to the remembered one.
+async function perPage(value) {
   if (typeof value === "number") return value;
-  if (value === undefined || value === null) return PER_PAGE_OPTIONS[0];
-  return PER_PAGE_OPTIONS.includes(Number(value)) ? Number(value) : PER_PAGE_OPTIONS[0];
+  return perPageFrom(value);
 }
 
 // Paginated by the server: the table grows without bound.
@@ -56,7 +57,7 @@ async function listBackups(path, searchParams) {
   const result = await read(path, backupsResponseSchema, {
     searchParams: {
         page: searchParams.page,
-        per_page: perPage(searchParams.per_page),
+        per_page: await perPage(searchParams.per_page),
         "filter[application_id]": searchParams.application,
         "filter[database_id]": searchParams.database,
         // `false` leaves archived ones out (History); a URL value is ignored.
@@ -111,7 +112,7 @@ export async function getRestores(searchParams = {}) {
   const result = await read("/restores", restoresResponseSchema, {
     searchParams: {
       page: searchParams.page,
-      per_page: perPage(searchParams.per_page),
+      per_page: await perPage(searchParams.per_page),
       "filter[application_id]": searchParams.application,
       "filter[database_id]": searchParams.database,
       "filter[status]": oneOf(searchParams.status, RESTORE_STATUSES),

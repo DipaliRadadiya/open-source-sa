@@ -26,7 +26,7 @@ export function DataTablePagination({ meta }) {
 
   return (
     <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-      {showPerPage ? <PerPageSelect label={t("perPage")} /> : null}
+      {showPerPage ? <PerPageSelect label={t("perPage")} fallback={meta.per_page} /> : null}
       {showPager ? (
         <Pager
           page={page}

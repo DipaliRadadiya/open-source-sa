@@ -10,6 +10,7 @@ import {
   siteTypesResponseSchema,
   wafOptionsResponseSchema,
 } from "@/lib/schemas/application";
+import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 import { applicationPhpResponseSchema } from "@/lib/schemas/php-settings";
 import { applicationBansResponseSchema, applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
@@ -20,7 +21,7 @@ import { applicationUpdateResponseSchema } from "@/lib/schemas/application-updat
 // Search, filters and sort run in the API. A stale filter value is a 422, not an empty list.
 export const getApplications = cache(async function getApplications(query = "") {
   const result = await read("/applications", applicationsResponseSchema, {
-    searchParams: listQuery(query, { filters: { status: "status", site_type: "site_type" } }),
+    searchParams: listQuery(query, { filters: { status: "status", site_type: "site_type" }, defaultPerPage: await rememberedPerPage() }),
   });
 
   return {

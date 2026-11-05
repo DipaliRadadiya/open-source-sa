@@ -6,6 +6,7 @@ import {
   untrackedResponseSchema,
   connectionsResponseSchema,
 } from "@/lib/schemas/database";
+import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 import { countByApplication } from "@/lib/backups/database-availability";
 
@@ -24,7 +25,7 @@ export const getEngines = cache(async function getEngines() {
 export const getDatabases = cache(async function getDatabases(query = "") {
   const { data, failed, status, failure, message, debug } = await read("/databases", databasesResponseSchema, {
     // `attached` must be 0/1: Laravel's `boolean` rule 422s "true"/"false".
-    searchParams: listQuery(query, { filters: { engine: "engine", attached: "attached" } }),
+    searchParams: listQuery(query, { filters: { engine: "engine", attached: "attached" }, defaultPerPage: await rememberedPerPage() }),
   });
   return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed, status, failure, message, debug };
 });

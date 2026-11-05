@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 import { hasKeepChoice, keepOptions } from "@/lib/disk-cleaner/keep-days";
 import { KeepProvider } from "@/components/disk-cleaner/keep-context";
+import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function DiskCleanerPage({ searchParams }) {
   // History pages through the URL like every other list; the backend allows 10/20/50/100.
   const query = await searchParams;
   const runsPage = Math.max(1, Number.parseInt(query?.page, 10) || 1);
-  const perPage = [10, 20, 50, 100].includes(Number(query?.per_page)) ? Number(query.per_page) : 10;
+  const perPage = await perPageFrom(query?.per_page);
 
   const [{ data, failed, status, failure, message }, schedule, { runs, meta }] = await Promise.all([
     getDiskCleaner(),

@@ -1,13 +1,12 @@
 import { read } from "@/lib/api/read";
-import { usersResponseSchema, PER_PAGE_OPTIONS } from "@/lib/schemas/user";
+import { usersResponseSchema } from "@/lib/schemas/user";
+import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
 const EMPTY_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
 // Through `read` so a failure reports `failed` instead of an empty list reading as "No users yet".
 export async function getUsers(searchParams = {}) {
-  const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
-    ? Number(searchParams.per_page)
-    : 10;
+  const perPage = await perPageFrom(searchParams.per_page);
   const page = Math.max(1, Number(searchParams.page) || 1);
   // Only the two values the API defines; anything else is dropped.
   const isAdmin =

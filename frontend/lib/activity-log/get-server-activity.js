@@ -1,14 +1,12 @@
 import { read } from "@/lib/api/read";
 import { ACTIVITY_KINDS, activityResponseSchema } from "@/lib/schemas/activity";
+import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 const EMPTY_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
 /** Account events (logins, roles, users) are not in it; those stay personal. */
 export async function getServerActivity(searchParams = {}) {
-  const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
-    ? Number(searchParams.per_page)
-    : 10;
+  const perPage = await perPageFrom(searchParams.per_page);
   const page = Math.max(1, Number(searchParams.page) || 1);
 
   const result = await read("/server/activity-log", activityResponseSchema, {

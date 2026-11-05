@@ -1,6 +1,7 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { read } from "@/lib/api/read";
 import { systemUsersResponseSchema } from "@/lib/schemas/application";
+import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
 // Requests the API maximum, since `/system-users` pages at ten. Past 100 accounts the
@@ -26,7 +27,7 @@ export async function getSystemUsers() {
 /** A picker needs every account; a table needs one page. */
 export async function getSystemUsersPage(query = "") {
   const result = await read("/system-users", systemUsersResponseSchema, {
-    searchParams: listQuery(query),
+    searchParams: listQuery(query, { defaultPerPage: await rememberedPerPage() }),
   });
   return {
     users: result.data?.system_users ?? [],

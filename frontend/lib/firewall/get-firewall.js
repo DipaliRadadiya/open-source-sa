@@ -6,6 +6,7 @@ import {
   firewallPresetsResponseSchema,
   firewallRulesResponseSchema,
 } from "@/lib/schemas/firewall";
+import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 
 // Only a real failure sets `failed` (an off firewall is a valid answer), so "couldn't
 // ask" never renders as "unprotected".
@@ -22,6 +23,7 @@ export async function getFirewallRules(searchParams = {}) {
   const query = new URLSearchParams(searchParams).toString();
   const params = listQuery(query, {
     filters: { enabled: "enabled", action: "action", origin: "origin" },
+    defaultPerPage: await rememberedPerPage(),
   });
 
   const allowed = {

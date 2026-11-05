@@ -1,7 +1,7 @@
 import { read } from "@/lib/api/read";
 import { myActivityResponseSchema } from "@/lib/schemas/account";
+import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 const EMPTY = {
   activity_log: [],
   meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
@@ -19,9 +19,7 @@ const failedWith = (result) => ({
 
 // Returns a safe empty result on failure.
 export async function getMyActivity(searchParams = {}, scope) {
-  const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
-    ? Number(searchParams.per_page)
-    : 10;
+  const perPage = await perPageFrom(searchParams.per_page);
   const page = Math.max(1, Number(searchParams.page) || 1);
 
   // No filter[user_id]: the endpoint is always scoped to the caller, and

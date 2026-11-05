@@ -1,7 +1,7 @@
 import { read } from "@/lib/api/read";
 import { cronjobsResponseSchema } from "@/lib/schemas/cronjob";
+import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
-const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 // Exactly what the Status dropdown writes; anything else is not a filter.
 const ACTIVE_VALUES = ["true", "false"];
 // `failed` separates "no cron jobs" from "couldn't ask"; otherwise the empty state
@@ -23,9 +23,7 @@ const failedWith = (result) => ({
 
 // `user` is a system-user id (numeric) or a bare OS username: different filters server-side.
 export async function getCronjobs(searchParams = {}) {
-  const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
-    ? Number(searchParams.per_page)
-    : 10;
+  const perPage = await perPageFrom(searchParams.per_page);
   const page = Math.max(1, Number(searchParams.page) || 1);
 
   const user = searchParams.user?.trim();
