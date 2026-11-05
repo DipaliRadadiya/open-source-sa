@@ -66,6 +66,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
      */
     private const MAINTENANCE_DATABASE = 'postgres';
 
+    /** What `env` exits with when the client program is not installed. */
+    private const CLIENT_MISSING = 127;
+
     public function __construct(
         private DatabaseConnection $connection,
         private ServerOps $serverOps,
@@ -83,14 +86,14 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
     public function available(): bool
     {
-        return $this->run('SELECT 1;')->ok;
+        return $this->run('SELECT 1;', probe: true)->ok;
     }
 
     public function version(): ?string
     {
         // `server_version` rather than `version()`: the latter is a sentence
         // including the compiler and platform, and the screen wants a number.
-        $result = $this->run('SHOW server_version;');
+        $result = $this->run('SHOW server_version;', probe: true);
 
         return $result->ok ? (trim($result->output()) ?: null) : null;
     }
@@ -1261,9 +1264,16 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
         }
     }
 
-    private function run(string $sql): ServerOpsResult
+    /**
+     * `$probe` is only for the "is it here?" questions (available, version).
+     * Exit 127 is `env` finding no psql: PostgreSQL is not installed, the
+     * answer is "no", and it is not a failed server command. Until 2026-11-05
+     * it was logged as one on every read of /setup, /server/facts and
+     * /databases/engines, and filled the Error Log of servers without it.
+     */
+    private function run(string $sql, bool $probe = false): ServerOpsResult
     {
-        return $this->runIn(self::MAINTENANCE_DATABASE, $sql);
+        return $this->runIn(self::MAINTENANCE_DATABASE, $sql, $probe);
     }
 
     /**
@@ -1284,7 +1294,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
      * neither reaches argv, where anything is readable in /proc for the life of
      * the process.
      */
-    private function runIn(string $database, string $sql): ServerOpsResult
+    private function runIn(string $database, string $sql, bool $probe = false): ServerOpsResult
     {
         $client = (string) config("server.databases.engines.{$this->engine()}.client", 'psql');
         $passFile = $this->writePassFile();
@@ -1302,6 +1312,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
                 60,
                 $sql,
                 env: ['PGPASSFILE' => $passFile],
+                expectedExitCodes: $probe ? [self::CLIENT_MISSING] : [],
             );
         } finally {
             @unlink($passFile);

@@ -10,7 +10,9 @@ use App\Services\Server\Php\Stacks\FpmPhpStack;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\ServerOps;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Psr\Log\LoggerInterface;
 
 /**
  * PostgreSQL is a separate driver from MySQL, not a dialect of it.
@@ -630,5 +632,39 @@ describe('a restore gives the database back to its users', function () {
         pgEngine()->restore('shop_db', pgDump("CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;\nCREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public;\n"));
 
         expect(implode(' ', loadCommand()))->not->toContain('SET ROLE');
+    });
+});
+
+describe('a server without PostgreSQL (2026-11-05)', function () {
+    // `env` exits 127 when psql is not installed. Before this, every read of
+    // /setup, /server/facts and /databases/engines logged that as a failed
+    // command, and it filled the Error Log of servers without PostgreSQL.
+    beforeEach(function () {
+        Process::fake(['*' => Process::result(exitCode: 127, errorOutput: "env: 'psql': No such file or directory")]);
+        $this->logger = Mockery::spy(LoggerInterface::class);
+        Log::shouldReceive('channel')->with('server-ops')->andReturn($this->logger);
+    });
+
+    it('answers "no version" without an error in the log', function () {
+        expect(pgEngine()->version())->toBeNull();
+
+        $this->logger->shouldHaveReceived('info')->once()->with('server operation', Mockery::on(
+            fn (array $context): bool => $context['op'] === 'query' && $context['exit_code'] === 127 && $context['expected_exit'] === true,
+        ));
+        $this->logger->shouldNotHaveReceived('error');
+    });
+
+    it('answers "not available" without an error in the log', function () {
+        expect(pgEngine()->available())->toBeFalse();
+
+        $this->logger->shouldNotHaveReceived('error');
+    });
+
+    it('still logs a real operation that fails the same way as an error', function () {
+        expect(pgEngine()->listDatabases())->toBe([]);
+
+        $this->logger->shouldHaveReceived('error')->once()->with('server operation', Mockery::on(
+            fn (array $context): bool => $context['op'] === 'query' && $context['expected_exit'] === false,
+        ));
     });
 });

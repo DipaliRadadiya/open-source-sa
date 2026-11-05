@@ -617,7 +617,8 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
                 ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'query'],
                 60,
                 $sql, // statements over stdin — never on argv
-                expectedExitCodes: $probe ? [1] : [],
+                // 127: `env` found no client, so the engine is not installed (2026-11-05).
+                expectedExitCodes: $probe ? [1, 127] : [],
             );
         } finally {
             @unlink($authFile);
