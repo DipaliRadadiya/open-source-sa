@@ -44,6 +44,16 @@ class PhpSiteType extends AbstractSiteType
         return [...parent::features(), 'app_worker'];
     }
 
+    /**
+     * The plain starting point for anyone bringing their own code, so it
+     * sits under Popular next to Git (Dipali, 2026-11-05). It stays in the
+     * Development category too: Popular is a filter, not a category.
+     */
+    public function popular(): bool
+    {
+        return true;
+    }
+
     public function icon(): string
     {
         return 'code';
