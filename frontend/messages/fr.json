@@ -1161,7 +1161,6 @@
       "up": "Actif depuis {time}",
       "viewLogs": "Voir les journaux",
       "welcome": "Mettons votre premier site web en ligne",
-      "greeting": "Bon retour, {name}",
       "running": "Votre serveur fonctionne"
     },
     "start": {
@@ -1188,6 +1187,20 @@
         "body": "Une copie régulière des fichiers et de la base de données, pour pouvoir réparer une erreur."
       },
       "afterApp": "Après l'étape 2"
+    },
+    "overview": {
+      "label": "Vue d'ensemble du serveur",
+      "firewall": {
+        "on": "Activé",
+        "off": "Désactivé",
+        "exposed": "Ne bloque rien",
+        "unknown": "Inconnu",
+        "onHint": "Le trafic non autorisé est bloqué",
+        "offHint": "Rien n'est bloqué",
+        "exposedHint": "Le trafic non autorisé passe",
+        "unknownHint": "Lecture impossible"
+      },
+      "firewallRules": "{count, plural, one {# règle} other {# règles}}"
     }
   },
   "cronJobs": {
@@ -4294,7 +4307,10 @@
       "port": "Port de l'application",
       "containerPort": "Port du conteneur",
       "proxyPort": "Proxy du panneau : {port}",
-      "description": "Type, utilisateur système et emplacement de cette application."
+      "description": "Type, utilisateur système et emplacement de cette application.",
+      "copyUsername": "Copier le nom d'utilisateur",
+      "copyPassword": "Copier le mot de passe",
+      "noPasswordSaved": "Aucun mot de passe n'est enregistré pour cet utilisateur système. Définissez-en un sur la page Utilisateurs système."
     },
     "process": {
       "title": "Processus",

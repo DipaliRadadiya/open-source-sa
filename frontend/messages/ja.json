@@ -1161,7 +1161,6 @@
       "up": "稼働時間 {time}",
       "viewLogs": "ログを表示",
       "welcome": "最初のウェブサイトを公開しましょう",
-      "greeting": "おかえりなさい、{name}さん",
       "running": "サーバーは稼働しています"
     },
     "start": {
@@ -1188,6 +1187,20 @@
         "body": "ファイルとデータベースを定期的にコピーして、ミスを元に戻せるようにします。"
       },
       "afterApp": "ステップ2の後"
+    },
+    "overview": {
+      "label": "サーバーの概要",
+      "firewall": {
+        "on": "オン",
+        "off": "オフ",
+        "exposed": "ブロックなし",
+        "unknown": "不明",
+        "onHint": "許可されていない通信はブロックされます",
+        "offHint": "何もブロックされていません",
+        "exposedHint": "許可されていない通信も通過します",
+        "unknownHint": "読み取れませんでした"
+      },
+      "firewallRules": "{count, plural, other {# 件のルール}}"
     }
   },
   "cronJobs": {
@@ -4294,7 +4307,10 @@
       "port": "アプリケーションポート",
       "containerPort": "コンテナポート",
       "proxyPort": "パネルのプロキシ: {port}",
-      "description": "種類、システムユーザー、アプリケーションが公開されている場所です。"
+      "description": "種類、システムユーザー、アプリケーションが公開されている場所です。",
+      "copyUsername": "ユーザー名をコピー",
+      "copyPassword": "パスワードをコピー",
+      "noPasswordSaved": "このシステムユーザーにはパスワードが保存されていません。システムユーザーのページで設定してください。"
     },
     "process": {
       "title": "プロセス",

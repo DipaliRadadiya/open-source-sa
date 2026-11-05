@@ -1,21 +1,9 @@
-import { useEffect, useState } from "react";
+import { HoverHint } from "@/components/ui/hover-hint";
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Server } from "lucide-react";
-import { getServerIdentity } from "@/lib/api/server-metrics";
-import { HoverHint } from "@/components/ui/hover-hint";
-
-const KEY = "panel.server-identity";
-const TTL_MS = 10 * 60 * 1000;
-
-function cached() {
-  try {
-    const entry = JSON.parse(sessionStorage.getItem(KEY) ?? "null");
-    return entry && Date.now() - entry.at < TTL_MS ? entry.value : null;
-  } catch {
-    return null;
-  }
-}
+import { CopyButton } from "@/components/ui/copy-button";
+import { useServerIdentity } from "@/hooks/use-server-identity";
 
 // Which machine this is, at the top of the server menu. `/server/facts` runs
 // commands on the server, so it is asked once per tab every ten minutes, not
@@ -23,53 +11,42 @@ function cached() {
 // name or a hard-coded "Online" would be worse than no card.
 export function SidebarServerCard() {
   const t = useTranslations("common");
-  const [identity, setIdentity] = useState(null);
-
-  useEffect(() => {
-    let live = true;
-    const hit = cached();
-    // One path for both: a cached answer resolves at once, a miss asks the server.
-    (hit ? Promise.resolve(hit) : getServerIdentity())
-      .then((value) => {
-        if (!live || !value?.hostname) return;
-        setIdentity(value);
-        if (hit) return;
-        try {
-          sessionStorage.setItem(KEY, JSON.stringify({ at: Date.now(), value }));
-        } catch {
-          // Private mode: the card still shows, it is just asked again next time.
-        }
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, []);
+  const td = useTranslations("serverDashboard");
+  const identity = useServerIdentity();
 
   if (!identity) return null;
 
   return (
-    <Link
-      href="/dashboard"
-      prefetch={false}
-      // Steel UI (prototype): a green-edged plate rather than a banner.
-      className="relative flex items-center gap-3 overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-data-[collapsible=icon]:hidden"
-    >
+    // A plate with one link stretched over it and the IP's copy button above that link: a button
+    // inside an <a> is invalid and would also navigate.
+    <div className="relative flex items-center gap-3 overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 transition-colors has-[a:hover]:border-primary group-data-[collapsible=icon]:hidden">
       <span className="relative flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 text-[var(--primary-700,var(--primary))] dark:text-primary">
         <Server className="size-4" aria-hidden />
       </span>
       <span className="relative min-w-0 flex-1">
-        <HoverHint content={identity.hostname}><span className="block truncate font-mono text-sm font-semibold">
-          {identity.hostname}
-        </span></HoverHint>
-        <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+        {/* One line, cut at the end (Krishna, 5 Nov): the breadcrumb carries the whole name, and
+            hovering the card shows it. */}
+        <span className="block truncate font-mono text-sm font-semibold">{identity.hostname}</span>
+        <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
           <span aria-hidden className="size-1.5 shrink-0 bg-primary" />
-          <span className="truncate">
-            {t("serverOnline")}
-            {identity.ip ? ` · ${identity.ip}` : ""}
-          </span>
+          {t("serverOnline")}
         </span>
+        {identity.ip ? (
+          // Its own line, no leading dot, with a copy button (Krishna, 5 Nov).
+          <span className="mt-0.5 flex items-center gap-1 font-mono text-xs text-muted-foreground">
+            <span className="min-w-0 truncate">{identity.ip}</span>
+            <CopyButton value={identity.ip} label={td("info.copyIp")} className="relative z-20 size-5 [&_svg]:size-3" />
+          </span>
+        ) : null}
       </span>
-    </Link>
+      <HoverHint content={identity.hostname} side="right">
+        <Link
+          href="/dashboard"
+          prefetch={false}
+          aria-label={identity.hostname}
+          className="absolute inset-0 z-10 rounded-[2px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        />
+      </HoverHint>
+    </div>
   );
 }

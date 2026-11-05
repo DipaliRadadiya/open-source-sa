@@ -4,7 +4,6 @@ import { CircleAlert, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortVersion } from "@/lib/databases/short-version";
 import { HoverHint } from "@/components/ui/hover-hint";
@@ -41,23 +40,13 @@ const CELL = "min-w-0 bg-card shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_
 function Fact({ label, value, mono }) {
   return (
     <div className={cn(CELL, "px-4 py-3")}>
-      <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
+      {/* Normal case (user feedback, 5 Nov): small uppercase mono labels were hard to scan.
+          Mono stays for values like kernels and versions. */}
+      <dt className="text-[13px] font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1 flex min-w-0 items-center gap-1">
         {value ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                tabIndex={0}
-                className={cn(
-                  "truncate text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                  mono && "font-mono tracking-tight",
-                )}
-              >
-                {value}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-sm break-all">{value}</TooltipContent>
-          </Tooltip>
+          // Wraps rather than cuts: the CPU model lost its end ("Gold 6138 CPU …").
+          <span className={cn("text-sm font-medium break-words", mono && "font-mono tracking-tight")}>{value}</span>
         ) : (
           <span className="text-sm font-medium">—</span>
         )}
@@ -293,12 +282,16 @@ function ServiceHealthLine({ health, down, t }) {
   // A user counted the software tiles (4) against "All 5 services running": the count is
   // services, so it opens the Services page and names them on hover.
   return (
-    <Badge asChild variant="success" className="gap-1.5 py-1 font-medium hover:underline">
-      <HoverHint content={(health.names ?? []).join(", ")}><Link href="/services" prefetch={false}>
-        <span aria-hidden className="size-1.5 shrink-0 bg-current" />
-        {t("info.servicesOk", { count: health.total })}
-        <ChevronRight className="size-3.5 shrink-0" aria-hidden />
-      </Link></HoverHint>
-    </Badge>
+    // The hint outside the badge: inside, the badge's classes landed on the hint component and
+    // were dropped, so it rendered as bare text whose arrow fell onto a line of its own.
+    <HoverHint content={(health.names ?? []).join(", ")}>
+      <Badge asChild variant="success" className="gap-1.5 py-1 font-medium whitespace-nowrap hover:underline">
+        <Link href="/services" prefetch={false}>
+          <span aria-hidden className="size-1.5 shrink-0 bg-current" />
+          {t("info.servicesOk", { count: health.total })}
+          <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+        </Link>
+      </Badge>
+    </HoverHint>
   );
 }

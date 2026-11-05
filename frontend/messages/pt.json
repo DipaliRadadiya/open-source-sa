@@ -1161,7 +1161,6 @@
       "up": "Ativo há {time}",
       "viewLogs": "Ver logs",
       "welcome": "Vamos colocar seu primeiro site no ar",
-      "greeting": "Bem-vindo de volta, {name}",
       "running": "Seu servidor está funcionando"
     },
     "start": {
@@ -1188,6 +1187,20 @@
         "body": "Uma cópia regular de arquivos e banco de dados, para que um erro possa ser desfeito."
       },
       "afterApp": "Após a etapa 2"
+    },
+    "overview": {
+      "label": "Visão geral do servidor",
+      "firewall": {
+        "on": "Ligado",
+        "off": "Desligado",
+        "exposed": "Não bloqueia",
+        "unknown": "Desconhecido",
+        "onHint": "O tráfego não permitido é bloqueado",
+        "offHint": "Nada está sendo bloqueado",
+        "exposedHint": "O tráfego não permitido é liberado",
+        "unknownHint": "Não foi possível ler"
+      },
+      "firewallRules": "{count, plural, one {# regra} other {# regras}}"
     }
   },
   "cronJobs": {
@@ -4294,7 +4307,10 @@
       "port": "Porta da aplicação",
       "containerPort": "Porta do contentor",
       "proxyPort": "Proxy do painel: {port}",
-      "description": "Tipo, usuário do sistema e onde esta aplicação fica."
+      "description": "Tipo, usuário do sistema e onde esta aplicação fica.",
+      "copyUsername": "Copiar nome de usuário",
+      "copyPassword": "Copiar senha",
+      "noPasswordSaved": "Nenhuma senha está salva para este usuário do sistema. Defina uma na página Usuários do sistema."
     },
     "process": {
       "title": "Processo",

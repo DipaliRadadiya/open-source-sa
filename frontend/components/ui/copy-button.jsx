@@ -16,7 +16,8 @@ const RESET_MS = 1500;
 
 // Only failure toasts: a clipboard write can be refused (insecure context, denied permission).
 // `outlined`: drawn as a bordered button (beside other buttons), so it takes the steel button look.
-export function CopyButton({ value, label, className, text = false, outlined = false }) {
+// `icon`: a different glyph where two copy buttons sit side by side (username and password).
+export function CopyButton({ value, label, className, text = false, outlined = false, icon: Icon = Copy }) {
   const t = useTranslations("common");
   const [copied, setCopied] = useState(false);
 
@@ -71,7 +72,7 @@ export function CopyButton({ value, label, className, text = false, outlined = f
           {copied ? (
             <Check className="size-3.5 text-success" />
           ) : (
-            <Copy className="size-3.5" />
+            <Icon className="size-3.5" />
           )}
         </button>
       </TooltipTrigger>

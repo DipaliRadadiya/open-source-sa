@@ -28,8 +28,10 @@ function UsageTile({ label, value, ringValue, hint, sub, percent, loading, statu
   return (
     <div className="min-w-0 bg-card p-4 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]">
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <p className="font-mono text-xs font-medium tracking-[0.1em] break-words text-muted-foreground uppercase">{label}</p>
-        {status && !loading ? (
+        <p className="text-[13px] font-medium break-words text-muted-foreground">{label}</p>
+        {/* A level word only when it needs a look (user feedback, 5 Nov): five permanent
+            "Normal" chips were noise and hid the one that mattered. The bar keeps its colour. */}
+        {status && !loading && status.key !== "normal" && status.key !== "unknown" ? (
           <Badge variant={STATUS_VARIANT[status.key] ?? "muted"}>
             <span aria-hidden className="size-1.5 bg-current" />
             {status.label}

@@ -12,7 +12,6 @@ const CHIP = "inline-flex h-6 items-center rounded-[2px] px-2 font-mono text-xs 
 // The page's h1. Says in one line whether anything is wrong, so the rest of
 // the page is detail rather than the place you find out.
 export async function DashboardHero({
-  userName = null,
   facts,
   health,
   findings = [],
@@ -50,36 +49,32 @@ export async function DashboardHero({
   const ip = facts?.public_ip ?? facts?.ip;
 
   return (
+    // One compact status bar (user feedback, 5 Nov): the drawing and the large headline took
+    // prime space; the counts and checks that matter now sit right below instead.
     <section className="relative overflow-hidden rounded-2xl bg-hero">
       <div className="bg-hero-grid pointer-events-none absolute inset-0" />
-      {/* Drafting-sheet corner brackets (prototype). */}
+      {/* Drafting-sheet corner brackets (prototype; Krishna, 5 Nov: keep them). */}
       <span aria-hidden className="pointer-events-none absolute top-1.5 left-1.5 size-4 border-t-2 border-l-2 border-primary" />
       <span aria-hidden className="pointer-events-none absolute right-1.5 bottom-1.5 size-4 border-r-2 border-b-2 border-primary" />
-      {/* One compact row (Krishna, 6 Oct): the drawing leads the words on the left,
-          the buttons stand alone on the right. Chips share the summary line. */}
-      <div className="relative flex items-center gap-6 px-5 py-6 md:px-8">
-        {/* -my so the drawing never sets the banner's height. */}
+      <div className="relative flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4 md:px-6">
+        {/* Small, beside the words (Krishna, 5 Nov): the server keeps its picture without taking
+            the row. Decorative; hidden on a phone. */}
         <PanelServer
           total={applications ? applications.length : null}
           online={online}
           alert={down > 0}
-          className="pointer-events-none hidden h-28 w-auto shrink-0 sm:block"
+          className="pointer-events-none -my-2 hidden h-16 w-auto shrink-0 sm:block"
         />
-        {/* Words and buttons wrap inside their own box, so on a narrow screen the
-            buttons drop under the words rather than under the drawing. */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-4">
         <div className="min-w-0 flex-1 basis-72">
-          {userName ? (
-            <p className="flex items-center gap-2 truncate font-mono text-xs font-medium tracking-[0.12em] text-[var(--hero-muted)] uppercase">
-              <span aria-hidden className="size-1.5 shrink-0 bg-primary" />
-              {t("hero.greeting", { name: userName })}
-            </p>
-          ) : null}
-          <h1 className="mt-0.5 flex items-center gap-2 text-xl font-semibold tracking-tight text-balance md:text-2xl">
-            {down ? <CircleAlert className="size-6 shrink-0" aria-hidden /> : null}
+          <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-balance">
+            {down ? (
+              <CircleAlert className="size-5 shrink-0 text-destructive" aria-hidden />
+            ) : (
+              <span aria-hidden className={`size-2 shrink-0 ${health || applications ? "bg-primary" : "bg-muted-foreground"}`} />
+            )}
             {title}
           </h1>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
             {summary ? <p className="text-sm text-[var(--hero-muted)]">{summary}</p> : null}
             {/* No OS chip: it is on the sidebar card and in Server information. */}
             {facts?.uptime?.human ? <span className={CHIP}>{t("hero.up", { time: facts.uptime.human })}</span> : null}
@@ -116,7 +111,6 @@ export async function DashboardHero({
             ) : null}
           </div>
         ) : null}
-        </div>
       </div>
     </section>
   );

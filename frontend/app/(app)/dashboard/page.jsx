@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import { ShieldOff } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { getPermissions } from "@/lib/permissions/get-permissions";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { getServerHistory } from "@/lib/server/get-server-history";
@@ -20,6 +19,8 @@ import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section"
 import { ServerInfoCard } from "@/components/dashboard/server-info-card";
 import { AttentionPanel } from "@/components/dashboard/attention-panel";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
+import { getDashboardOverview } from "@/lib/dashboard/get-overview";
 import { ProcessesCard } from "@/components/dashboard/processes-card";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -31,12 +32,10 @@ export async function generateMetadata() {
 }
 
 export default async function DashboardPage() {
-  const [permissions, t, tDenied, user] = await Promise.all([
+  const [permissions, t, tDenied] = await Promise.all([
     getPermissions(),
     getTranslations("serverDashboard"),
     getTranslations("common.permissionDenied"),
-    // Cached: the layout already asked.
-    getCurrentUser().catch(() => null),
   ]);
 
   // Only someone who could act on setup gets the nudge, and only while the
@@ -57,7 +56,7 @@ export default async function DashboardPage() {
   const canViewDatabases = can(permissions, "database", "view");
   // History is the last 24 hours at five-minute samples, so fetched once per
   // render rather than polled.
-  const [facts, processResult, health, history, appResult, engineResult] = allowed
+  const [facts, processResult, health, history, appResult, engineResult, overview] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
@@ -69,8 +68,14 @@ export default async function DashboardPage() {
         canViewApplications ? getAllApplications() : Promise.resolve(null),
         // Without database `view` the engine chips are simply omitted.
         canViewDatabases ? getEngines() : Promise.resolve({ engines: [] }),
+        getDashboardOverview({
+          databases: canViewDatabases,
+          cronjobs: can(permissions, "cronjob", "view"),
+          systemUsers: can(permissions, "system_user", "view"),
+          firewall: can(permissions, "firewall", "view"),
+        }),
       ])
-    : [null, { data: [], failed: false }, null, [], null, { engines: [] }];
+    : [null, { data: [], failed: false }, null, [], null, { engines: [] }, null];
 
   // A failed read must never become "no sites" or "everything is fine".
   const known = Boolean(appResult && !appResult.failed);
@@ -86,7 +91,6 @@ export default async function DashboardPage() {
       {/* The banner is the page heading; without `view` there is nothing for it to report. */}
       {allowed ? (
         <DashboardHero
-          userName={user?.name ?? null}
           facts={facts}
           health={health}
           findings={attention}
@@ -97,6 +101,15 @@ export default async function DashboardPage() {
       ) : (
         <PageHeader title={t("title")} subtitle={t("subtitle")} />
       )}
+
+      {allowed && overview ? (
+        // Right under the status bar: what is on this server, and whether the firewall is on.
+        <DashboardOverview
+          applications={canViewApplications ? (known ? applications : null) : undefined}
+          overview={overview}
+          canManageFirewall={can(permissions, "firewall", "manage")}
+        />
+      ) : null}
 
       <SetupBanner remaining={setupLeft.length} names={setupLeft.map((c) => c.title)} />
       <SystemUpdatesNote running={setupResult.setup?.system_updates_running} />

@@ -446,6 +446,7 @@ export default async function ApplicationDetailPage({ params }) {
             <SiteFactsCard
               application={application}
               canManage={canManage}
+              canManageSystemUsers={can(permissions, "system_user", "manage")}
               // Type titles arrive translated on the catalog, not from the message files.
               siteTypes={siteTypes.siteTypes}
               nodeVersions={installedNodeVersions(node.data)}

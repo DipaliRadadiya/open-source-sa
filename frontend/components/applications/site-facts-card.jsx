@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import {
   FolderTree,
   HardDrive,
   Hexagon,
+  KeyRound,
   Package,
   Loader2,
   Pencil,
@@ -22,6 +23,7 @@ import {
   User,
 } from "lucide-react";
 import { detectApplicationSiteType, measureApplicationSize } from "@/lib/api/applications";
+import { getSystemUserDetail } from "@/lib/api/system-users";
 import {
   canDetectSiteType,
   narrowingTargets,
@@ -55,7 +57,7 @@ function factColumns(count) {
   return FACT_COLUMNS[4];
 }
 
-function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false, wide = false }) {
+function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCopy = null, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false, wide = false }) {
   const noteNode = note ? (
     // Not truncated: a filename or refusal is the content.
     <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
@@ -65,7 +67,16 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
   const controls = (
     <>
       {/* Outlined, like every other button: as bare icons they read as decoration (7 Oct). */}
-      {copy ? <CopyButton value={String(copyValue)} outlined className="border border-border/80 bg-card shadow-xs" /> : null}
+      {copy ? <CopyButton value={String(copyValue)} label={extraCopy?.firstLabel} outlined className="border border-border/80 bg-card shadow-xs" /> : null}
+      {/* A second value behind the same fact (the owner's password beside its username); greyed
+          with the reason when there is none to copy. */}
+      {extraCopy?.value ? (
+        <CopyButton value={extraCopy.value} label={extraCopy.label} icon={extraCopy.icon} outlined className="border border-border/80 bg-card shadow-xs" />
+      ) : extraCopy?.reason ? (
+        <Button type="button" variant="outline" size="icon-sm" disabled disabledReason={extraCopy.reason} aria-label={extraCopy.label} className="size-7 shrink-0">
+          <extraCopy.icon className="size-3.5" />
+        </Button>
+      ) : null}
       {/* One menu when the tile has several actions (probe, set type by hand). */}
       {menu?.length ? (
         <DropdownMenu>
@@ -215,7 +226,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, onEdit,
 
 // `strip`: no card, just the facts in a row, for the application header (Krishna, 7 Oct:
 // the details are what people open this page for, so they lead it).
-export function SiteFactsCard({ application, canManage = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, columns = null, list = false, strip = false, className }) {
+export function SiteFactsCard({ application, canManage = false, canManageSystemUsers = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, columns = null, list = false, strip = false, className }) {
   const t = useTranslations("applications");
   const format = useFormatter();
   const [editingWebRoot, setEditingWebRoot] = useState(false);
@@ -224,6 +235,21 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   const nodeSwitching = nodeChange?.status === "switching";
   const nodeRange = siteTypes.find((type) => type.name === application.site_type)?.node_version_range ?? null;
   const [measuring, setMeasuring] = useState(false);
+  // Read when the card mounts, never put in the server-rendered page.
+  // undefined until read (nothing shown), null when none is saved, else the password.
+  const [ownerPassword, setOwnerPassword] = useState(undefined);
+  const ownerId = application.system_user?.id ?? null;
+  useEffect(() => {
+    if (!canManageSystemUsers || !ownerId) return undefined;
+    let live = true;
+    getSystemUserDetail(ownerId)
+      .then((res) => live && setOwnerPassword(res.data?.system_user?.password ?? null))
+      // Unread is not "none saved": leave the button out rather than claim there is none.
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [canManageSystemUsers, ownerId]);
   const [detecting, setDetecting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   // True through the request and the re-read that shows its result.
@@ -404,7 +430,25 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       menu: typeMenu,
       menuBusy: probing,
     },
-    { icon: User, label: t("columns.owner"), value: application.system_user?.username, mono: true },
+    // Copyable for SFTP/SSH login, as in the previous panel (user feedback, 5 Nov). The password
+    // only for someone who may manage system users; the API withholds it from everyone else.
+    {
+      icon: User,
+      label: t("columns.owner"),
+      value: application.system_user?.username,
+      mono: true,
+      copy: true,
+      extraCopy: canManageSystemUsers && ownerPassword !== undefined
+        ? {
+            value: ownerPassword,
+            label: t("facts.copyPassword"),
+            firstLabel: t("facts.copyUsername"),
+            icon: KeyRound,
+            // Accounts made outside the panel, or before it stored passwords, have none saved.
+            reason: ownerPassword ? null : t("facts.noPasswordSaved"),
+          }
+        : { firstLabel: t("facts.copyUsername") },
+    },
     {
       icon: FolderTree,
       label: t("facts.webRoot"),

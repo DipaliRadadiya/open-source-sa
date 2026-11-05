@@ -447,9 +447,9 @@
  * beat the utility classes on shared slots, so the whole look lives in this one
  * block and the branch can be judged, or dropped, without touching components.
  */
-/* Small uppercase mono labels: table headings, sidebar groups, the breadcrumb. */
+/* Small uppercase mono labels: table headings and the breadcrumb. Sidebar groups left this
+   rule on 5 Nov (user feedback: hard to scan); they keep the sidebar's own 13px sans. */
 [data-slot="table-head"],
-[data-sidebar="group-label"],
 [data-slot="breadcrumb-list"] {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 12px;

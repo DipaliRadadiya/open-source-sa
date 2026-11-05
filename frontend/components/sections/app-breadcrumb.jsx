@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { findActiveNavItem, navTitle, resolveNavItems } from "@/lib/navigation";
 import { usePageCrumb } from "@/components/sections/page-crumb";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
+import { HoverHint } from "@/components/ui/hover-hint";
+import { useServerIdentity } from "@/hooks/use-server-identity";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,6 +18,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+
+// A hostname reads as typed: not in the trail's uppercase, and cut (with a hover hint) rather
+// than allowed to push the page name out.
+const HOSTNAME = "max-w-48 normal-case tracking-normal sm:max-w-64";
 
 // Ordering follows the URL: `/applications/13/php` → Applications › Shop › PHP Settings.
 export function AppBreadcrumb({ items }) {
@@ -26,6 +32,9 @@ export function AppBreadcrumb({ items }) {
   const applicationId = params?.application;
   // Set by the application layout (the site name) or by a detail page (a record).
   const { crumb } = usePageCrumb();
+  // The server's own name as the root (Krishna, 5 Nov), so the sidebar card may cut it;
+  // "Server" until the name is known.
+  const identity = useServerIdentity();
 
   // Inside an application the server-level "Applications" item also matches the
   // path, so match against that panel's items only.
@@ -55,7 +64,8 @@ export function AppBreadcrumb({ items }) {
   } else {
     trail.push({
       key: "root",
-      label: t("breadcrumbServer"),
+      label: identity?.hostname ?? t("breadcrumbServer"),
+      hostname: Boolean(identity?.hostname),
       // The root points at the dashboard, so on the dashboard it is not a link.
       href: pathname === "/dashboard" ? undefined : "/dashboard",
     });
@@ -94,11 +104,11 @@ export function AppBreadcrumb({ items }) {
                 {isLast ? (
                   // Foreground against muted ancestors marks "you are here"; bold would compete with
                   // the h1.
-                  <BreadcrumbPage className={cn("truncate font-medium", item.mono && "font-mono")}>
+                  <BreadcrumbPage className={cn("truncate font-medium", item.mono && "font-mono", item.hostname && HOSTNAME)}>
                     {item.label}
                   </BreadcrumbPage>
                 ) : item.href ? (
-                  <BreadcrumbLink asChild>
+                  <HoverHint content={item.hostname ? item.label : null}><BreadcrumbLink asChild>
                     <Link
                       href={item.href}
                       onClick={(event) => {
@@ -107,13 +117,16 @@ export function AppBreadcrumb({ items }) {
                       className={cn(
                         "truncate rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         item.mono && "font-mono",
+                        item.hostname && HOSTNAME,
                       )}
                     >
                       {item.label}
                     </Link>
-                  </BreadcrumbLink>
+                  </BreadcrumbLink></HoverHint>
                 ) : (
-                  <span className={cn("truncate", item.mono && "font-mono")}>{item.label}</span>
+                  <HoverHint content={item.hostname ? item.label : null}>
+                    <span className={cn("truncate", item.mono && "font-mono", item.hostname && HOSTNAME)}>{item.label}</span>
+                  </HoverHint>
                 )}
               </BreadcrumbItem>
             </Fragment>

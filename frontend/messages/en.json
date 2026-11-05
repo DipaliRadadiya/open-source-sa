@@ -1161,7 +1161,6 @@
       "up": "Up {time}",
       "viewLogs": "View logs",
       "welcome": "Let's get your first website online",
-      "greeting": "Welcome back, {name}",
       "running": "Your server is running"
     },
     "start": {
@@ -1188,6 +1187,20 @@
         "body": "A regular copy of files and database, so a mistake can be undone."
       },
       "afterApp": "After step 2"
+    },
+    "overview": {
+      "label": "Server overview",
+      "firewall": {
+        "on": "On",
+        "off": "Off",
+        "exposed": "Not blocking",
+        "unknown": "Unknown",
+        "onHint": "Unlisted traffic is blocked",
+        "offHint": "Nothing is being blocked",
+        "exposedHint": "Unlisted traffic is let in",
+        "unknownHint": "Couldn't be read"
+      },
+      "firewallRules": "{count, plural, one {# rule} other {# rules}}"
     }
   },
   "cronJobs": {
@@ -4294,7 +4307,10 @@
       "port": "Application port",
       "containerPort": "Container port",
       "proxyPort": "Panel proxy: {port}",
-      "description": "Type, system user and where this application lives."
+      "description": "Type, system user and where this application lives.",
+      "copyUsername": "Copy username",
+      "copyPassword": "Copy password",
+      "noPasswordSaved": "No password is saved for this system user. Set one on the System Users page."
     },
     "process": {
       "title": "Process",

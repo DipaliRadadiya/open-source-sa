@@ -1161,7 +1161,6 @@
       "up": "Läuft seit {time}",
       "viewLogs": "Protokolle ansehen",
       "welcome": "Bringen wir Ihre erste Website online",
-      "greeting": "Willkommen zurück, {name}",
       "running": "Ihr Server läuft"
     },
     "start": {
@@ -1188,6 +1187,20 @@
         "body": "Eine regelmäßige Kopie von Dateien und Datenbank, damit sich ein Fehler rückgängig machen lässt."
       },
       "afterApp": "Nach Schritt 2"
+    },
+    "overview": {
+      "label": "Serverübersicht",
+      "firewall": {
+        "on": "An",
+        "off": "Aus",
+        "exposed": "Blockiert nichts",
+        "unknown": "Unbekannt",
+        "onHint": "Nicht erlaubter Verkehr wird blockiert",
+        "offHint": "Es wird nichts blockiert",
+        "exposedHint": "Nicht erlaubter Verkehr wird durchgelassen",
+        "unknownHint": "Konnte nicht gelesen werden"
+      },
+      "firewallRules": "{count, plural, one {# Regel} other {# Regeln}}"
     }
   },
   "cronJobs": {
@@ -4294,7 +4307,10 @@
       "port": "Anwendungs-Port",
       "containerPort": "Container-Port",
       "proxyPort": "Panel-Proxy: {port}",
-      "description": "Typ, Systembenutzer und wo diese Anwendung liegt."
+      "description": "Typ, Systembenutzer und wo diese Anwendung liegt.",
+      "copyUsername": "Benutzernamen kopieren",
+      "copyPassword": "Passwort kopieren",
+      "noPasswordSaved": "Für diesen Systembenutzer ist kein Passwort gespeichert. Legen Sie eines auf der Seite Systembenutzer fest."
     },
     "process": {
       "title": "Prozess",
