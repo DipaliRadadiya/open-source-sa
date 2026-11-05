@@ -1113,7 +1113,7 @@ class FileBrowser
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
         $target = $this->resolve($application, $targetPath);
-        $this->refuseIntoItself($source, $target, 'target');
+        $this->refuseIntoItself($sourceStat['type'], $source, $target, 'target');
         $this->assertDestination($application, dirname($target), 'target', dirname($targetPath));
         $this->refuseExisting($application, $target, 'target');
 
@@ -1137,7 +1137,7 @@ class FileBrowser
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
         $target = $this->resolve($application, $targetPath);
-        $this->refuseIntoItself($source, $target, 'target');
+        $this->refuseIntoItself($sourceStat['type'], $source, $target, 'target');
         $this->assertDestination($application, dirname($target), 'target', dirname($targetPath));
         $this->refuseExisting($application, $target, 'target');
 
@@ -2084,8 +2084,14 @@ class FileBrowser
      * refuse it, and the refusal surfaced as a 500. A sibling whose name only
      * starts the same (`a` to `ab/x`) is a different folder and is allowed.
      */
-    private function refuseIntoItself(string $source, string $target, string $field): void
+    private function refuseIntoItself(string $type, string $source, string $target, string $field): void
     {
+        // A file cannot hold anything: `f` to `f/x` keeps its existing
+        // "that is not a folder" answer.
+        if ($type !== 'd') {
+            return;
+        }
+
         // The same path is left to refuseExisting(): "already exists" is the
         // truer answer for renaming something to its own name.
         if ($target !== rtrim($source, '/') && self::isInside($target, $source)) {

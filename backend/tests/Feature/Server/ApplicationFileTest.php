@@ -2293,6 +2293,15 @@ describe('moving or copying a folder into itself', function () {
             ->assertJsonPath('reason', 'path_exists');
     });
 
+    it('keeps the "not a folder" answer for a file moved below itself', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'a/inside.txt', 'target' => 'a/inside.txt/x'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'destination_not_directory');
+    });
+
     it('skips a selected folder that would land inside itself, and moves the rest', function () {
         fakeFileBrowserServer();
 
