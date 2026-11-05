@@ -624,7 +624,7 @@ it('ranks Hub tags: exact versions first, newest first, then variants, then movi
         // The release candidate is newer and still not recommended.
         ->and($response->json('recommended'))->toBe('0.31.0')
         ->and(array_column($response->json('tags'), 'name'))->toBe(['0.31.0', '0.31', '0.30.0', '0.31.0-alpine', 'latest', 'canary', '0.32.0-rc1', 'sha-abc123'])
-        ->and($response->json('tags.0'))->toBe(['name' => '0.31.0', 'updated_at' => '2026-10-01T00:00:00Z', 'stable' => true])
+        ->and($response->json('tags.0'))->toBe(['name' => '0.31.0', 'updated_at' => '2026-10-01T00:00:00Z', 'stable' => true, 'prerelease' => false])
         ->and($response->json('tags.4.stable'))->toBeFalse();
 });
 
@@ -789,6 +789,108 @@ it('still reads -prerelease and -testing as pre-releases (DS-12)', function () {
         ->and($tags['1.2.3-testing'])->toBeFalse()
         ->and($tags['1.2.3-testing2'])->toBeFalse()
         ->and($tags['1.2.3-trixie'])->toBeTrue();
+});
+
+/**
+ * Hub tag rows for `imgTagSources()`, newest first.
+ *
+ * @param  list<string>  $names
+ * @return list<array<string, string>>
+ */
+function imgHubTags(array $names): array
+{
+    return array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
+        $names,
+    );
+}
+
+it('never recommends a pre-release, and flags it in the list (RC-33)', function () {
+    // The shape of Hub's openjdk list: an early-access build is the newest
+    // number, and it was "the newest stable".
+    imgTagSources([], ['library/openjdk' => imgHubTags([
+        '28-ea-oraclelinux9', '28-ea-jdk-slim', '27-jdk-oraclelinux9', '25-jdk-oraclelinux9', '21-jdk-oraclelinux9',
+    ])]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=openjdk')->assertOk();
+    $tags = collect($response->json('tags'))->keyBy('name');
+
+    expect($response->json('recommended'))->toBe('27-jdk-oraclelinux9')
+        ->and($tags['28-ea-oraclelinux9']['prerelease'])->toBeTrue()
+        ->and($tags['28-ea-oraclelinux9']['stable'])->toBeFalse()
+        ->and($tags['28-ea-jdk-slim']['prerelease'])->toBeTrue()
+        ->and($tags['27-jdk-oraclelinux9']['prerelease'])->toBeFalse()
+        ->and($tags['27-jdk-oraclelinux9']['stable'])->toBeTrue()
+        // The response keeps its shape: the new flag is the only addition.
+        ->and(array_keys($response->json()))->toBe(['image', 'recommended', 'tags'])
+        ->and(array_keys($response->json('tags.0')))->toBe(['name', 'updated_at', 'stable', 'prerelease']);
+});
+
+it('reads every pre-release marker, in every form it is written', function () {
+    $markers = [
+        '1.0.0-ea', '28-ea+5', '28-ea', '2.0.0-rc1', '2.0.0-rc.1', '2.0.0-rc', '2.0.0rc1', '3.0-beta', '3.0-beta2', '3.0.0-alpha.1',
+        '4.1-dev', '4.1-devel', '1.5.0-nightly', '1.5.0-nightly.20261002', '6.0-preview', '6.0-preview3', '7.0.0-SNAPSHOT',
+        '8.0.0-canary.4', '9.0-edge', '10.1-test', '10.1_test', '11.0.0-unstable', '2.2.2-RC1', 'nightly', 'edge', 'beta',
+    ];
+
+    imgTagSources([], ['acme/markers' => imgHubTags([...$markers, '1.0.0'])]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/markers&limit=100')->assertOk();
+    $tags = collect($response->json('tags'))->keyBy('name');
+
+    foreach ($markers as $marker) {
+        expect($tags[$marker]['prerelease'])->toBeTrue($marker.' is a pre-release')
+            ->and($tags[$marker]['stable'])->toBeFalse($marker.' is not stable');
+    }
+
+    expect($response->json('recommended'))->toBe('1.0.0')
+        ->and($tags['1.0.0']['prerelease'])->toBeFalse();
+});
+
+it('does not read a marker inside a longer word, or a stable name, as a pre-release', function () {
+    $stable = [
+        'latest', 'stable', 'lts', 'release', 'alpine', 'bookworm', 'header', 'trixie',
+        '3.20-alpine', '3.2.1-nextcloud', '3.2.1-devuan', '3.2.1-contest', '3.2.1-edgeless', '3.2.1-header',
+        '22.04', '1.4.2-bookworm', '2.7.6-ls312', '1.0.0-release',
+        // A commit hash holds `ea` between digits; it is not early access.
+        '2024.10.22-3ea5f2c', 'sha-3ea5f2c',
+    ];
+
+    imgTagSources([], ['acme/stableish' => imgHubTags($stable)]);
+
+    $tags = collect($this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/stableish&limit=100')->assertOk()->json('tags'))
+        ->pluck('prerelease', 'name');
+
+    foreach ($stable as $name) {
+        expect($tags[$name])->toBeFalse($name.' is not a pre-release');
+    }
+});
+
+it('recommends nothing when an image publishes only pre-releases', function () {
+    imgTagSources([], ['acme/preonly' => imgHubTags(['28-ea', '28-ea-jdk', 'nightly', '2.0.0-rc1', 'edge', '3.0-beta2'])]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/preonly')->assertOk();
+
+    expect($response->json('recommended'))->toBeNull()
+        ->and($response->json('tags'))->toHaveCount(6)
+        ->and(array_unique(array_column($response->json('tags'), 'prerelease')))->toBe([true]);
+});
+
+it('skips a newer pre-release for the newest stable tag, and leaves the order of stable tags alone', function () {
+    imgTagSources([], [
+        'acme/mixed' => imgHubTags(['2.0.0-rc1', '1.9.0', '1.10.0', '1.10.0-ea', '1.9.1', '1.9.1-alpine', 'latest']),
+        'acme/dateless' => imgHubTags(['nightly', 'weekly', 'edge']),
+    ]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/mixed')->assertOk();
+
+    expect($response->json('recommended'))->toBe('1.10.0')
+        // Versions newest first, then the variant, then the rest in the order they came.
+        ->and(array_column($response->json('tags'), 'name'))->toBe(['1.10.0', '1.9.1', '1.9.0', '1.9.1-alpine', '2.0.0-rc1', '1.10.0-ea', 'latest']);
+
+    // No version and no stable name: Hub's newest tag that is not a pre-release.
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/dateless')
+        ->assertOk()->assertJsonPath('recommended', 'weekly');
 });
 
 it('keeps no state between images on one ImageTags (DS-12)', function () {

@@ -7198,14 +7198,18 @@ Offline: `{"results": [], "offline": true}`. `verified_publisher` is always `fal
 Throttle: 30/min. `limit` 1–100. Tags are ordered like this:
 1. Plain version numbers, newest first. `0.31.0` comes before `0.31`.
 2. Variants such as `1.31.6-alpine`, `3.2.1-nextcloud`.
-3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`-rc1`, `-beta`, `-devel` — whole words only), most recently updated first.
+3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`28-ea`, `-rc1`, `-beta`, `-devel`), most recently updated first.
 
 A date-shaped version (`2021.11.28`) beside plain ones is ranked after them, unless the registry's dates show the date tags are the newer scheme. An image that only publishes dates (Home Assistant) is ranked normally.
 
-`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version, a dotted one (`4.140.0`) before a bare number (`39`, code-server's Fedora build). If there is none, it is `latest`, `stable`, `release` or `lts`, then Hub's most recently pushed tag unless it is a pre-release, and otherwise **`null`** (the form asks). `recommended` is always one of the returned `tags`, even when it ranks past `limit`. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
+`stable` is `true` for groups 1 and 2. `prerelease` is `true` for a tag that carries a pre-release marker (below), and is never `true` together with `stable`. `recommended` is the newest plain version, a dotted one (`4.140.0`) before a bare number (`39`, code-server's Fedora build). If there is none, it is `latest`, `stable`, `release` or `lts`, then Hub's most recently pushed tag that is not a pre-release, and otherwise **`null`** (the form asks). A pre-release is **never** recommended: an image that publishes only pre-releases gets `recommended: null`, with the tags still listed.
+
+A tag is a pre-release when it contains, as a separate word (case-insensitive), one of: `ea`, `alpha`, `beta`, `rc`, `dev`, `devel`, `pre`, `prerelease`, `preview`, `nightly`, `snapshot`, `canary`, `test`, `testing`, `edge`, `unstable`, `next`, `insider`. Words end at `-`, `.`, `_`, `+` and where digits meet letters, so `rc1`, `beta2`, `1.2.0-rc.1`, `1.2.0rc1` and `28-ea+5` are pre-releases (openjdk's `28-ea-oraclelinux9` is Java early access), while `alpine`, `bookworm`, `latest`, `stable`, `lts`, `release`, `header`, `3.2.1-nextcloud` and `3.2.1-devuan` are not: a marker inside a longer word does not count. `devel` counts (the development branch). A run of 7 or more hex digits is a commit hash and is not split, so `2024.10.22-3ea5f2c` is not early access.
+
+`recommended` is always one of the returned `tags`, even when it ranks past `limit`. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
 ```json
 { "image": "ghcr.io/usememos/memos", "recommended": "0.31.0",
-  "tags": [ { "name": "0.31.0", "updated_at": null, "stable": true }, { "name": "0.31", "updated_at": null, "stable": true } ] }
+  "tags": [ { "name": "0.31.0", "updated_at": null, "stable": true, "prerelease": false }, { "name": "0.31", "updated_at": null, "stable": true, "prerelease": false } ] }
 ```
 Unknown image: `tags: []`, `recommended: null`. Registry unreachable: the same, plus `"offline": true`.
 

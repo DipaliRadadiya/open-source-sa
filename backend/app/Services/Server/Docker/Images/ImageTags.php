@@ -23,15 +23,24 @@ use Illuminate\Support\Facades\Http;
 class ImageTags
 {
     /**
-     * Words that make a version-looking tag a pre-release or a moving target.
+     * Words that make a tag a pre-release or a moving target.
      *
-     * Whole words only (DS-09): unanchored, `3.2.1-nextcloud` read as "next"
-     * and `-devuan` as "dev", and real stable variants were listed as
-     * pre-releases. A number may follow directly — `rc1`, `beta2`. The longer
-     * forms are words of their own (DS-12): anchored, `pre` and `test` no
-     * longer reached `-prerelease` and `-testing`.
+     * A tag is read as words, never as substrings (DS-09): unanchored,
+     * `3.2.1-nextcloud` read as "next" and `-devuan` as "dev", and real stable
+     * variants were listed as pre-releases. Words end at `- . _ +` and at a
+     * digit/letter boundary, so `rc1`, `beta2`, `1.2.0-rc.1`, `1.2.0rc1` and
+     * `28-ea+5` all carry their marker, while `header`, `release` and
+     * `bookworm` stay one word each (DS-12: `pre` and `test` must not reach
+     * `-prerelease` / `-testing` as prefixes, so those are words of their own).
+     *
+     * `ea` is Java's early-access build (`28-ea-oraclelinux9`, RC-33).
+     * `devel` is kept: it names the development branch, not a release.
+     * `latest`, `stable`, `lts` and OS or variant names are not markers.
      */
-    private const UNSTABLE = '/(?:^|[-_.+])(?:alpha|beta|rc|dev|devel|pre|prerelease|preview|nightly|snapshot|canary|test|testing|edge|unstable|next|insider)(?=\d|[-_.+]|$)/i';
+    private const PRERELEASE_WORDS = [
+        'ea', 'alpha', 'beta', 'rc', 'dev', 'devel', 'pre', 'prerelease', 'preview', 'nightly',
+        'snapshot', 'canary', 'test', 'testing', 'edge', 'unstable', 'next', 'insider',
+    ];
 
     /** Moving tags worth recommending when an image publishes no version, best first. */
     private const STABLE_NAMES = ['latest', 'stable', 'release', 'lts'];
@@ -39,7 +48,7 @@ class ImageTags
     public function __construct(private RegistryClient $registry) {}
 
     /**
-     * @return array{image: string, recommended: string|null, tags: list<array{name: string, updated_at: string|null, stable: bool}>, offline?: bool}
+     * @return array{image: string, recommended: string|null, tags: list<array{name: string, updated_at: string|null, stable: bool, prerelease: bool}>, offline?: bool}
      */
     public function list(ImageReference $image, ?Registry $credential, int $limit): array
     {
@@ -174,7 +183,7 @@ class ImageTags
      * try them last without them leaking into the response.
      *
      * @param  list<array{name: string, updated_at: string|null}>  $raw
-     * @return array{0: list<array{name: string, updated_at: string|null, stable: bool}>, 1: array<string, true>}
+     * @return array{0: list<array{name: string, updated_at: string|null, stable: bool, prerelease: bool}>, 1: array<string, true>}
      */
     private function rank(array $raw): array
     {
@@ -185,12 +194,12 @@ class ImageTags
             $version = $this->version($tag['name']);
 
             if ($version === null) {
-                $rest[] = $tag + ['stable' => false];
+                $rest[] = $tag + ['stable' => false, 'prerelease' => $this->isPrerelease($tag['name'])];
 
                 continue;
             }
 
-            $versioned[] = ['tag' => $tag + ['stable' => true], 'parts' => $version['parts'], 'pure' => $version['pure'], 'index' => $index];
+            $versioned[] = ['tag' => $tag + ['stable' => true, 'prerelease' => false], 'parts' => $version['parts'], 'pure' => $version['pure'], 'index' => $index];
         }
 
         usort($versioned, function (array $a, array $b): int {
@@ -237,7 +246,7 @@ class ImageTags
      * tag beside real versions is far more often a leftover than the future.
      * An image that only publishes dates — Home Assistant — is left alone.
      *
-     * @param  list<array{tag: array{name: string, updated_at: string|null, stable: bool}, parts: list<int>, pure: bool, index: int}>  $versioned
+     * @param  list<array{tag: array{name: string, updated_at: string|null, stable: bool, prerelease: bool}, parts: list<int>, pure: bool, index: int}>  $versioned
      * @return list<string>
      */
     private function datedLosers(array $versioned): array
@@ -294,7 +303,7 @@ class ImageTags
 
         $suffix = $match[2] ?? '';
 
-        if ($suffix !== '' && preg_match(self::UNSTABLE, $suffix) === 1) {
+        if ($suffix !== '' && $this->isPrerelease($suffix)) {
             return null;
         }
 
@@ -317,7 +326,7 @@ class ImageTags
      * at next month. Falls back to `latest`/`stable`, then to Hub's most
      * recently pushed tag, then to nothing.
      *
-     * @param  list<array{name: string, updated_at: string|null, stable: bool}>  $tags
+     * @param  list<array{name: string, updated_at: string|null, stable: bool, prerelease: bool}>  $tags
      * @param  array<string, true>  $demoted  from `rank()`
      */
     private function recommended(array $tags, array $demoted): ?string
@@ -366,15 +375,45 @@ class ImageTags
 
         // Nothing is a version and nothing says it is the stable one. Hub
         // lists the most recently pushed first, which is a reasonable guess
-        // unless it is a pre-release; a registry's `tags/list` is sorted by
-        // NAME, and the alphabetically first tag is no recommendation at all —
-        // it put `alpha` above `stable` (DS-09). The picker then asks.
-        $first = $tags[0] ?? null;
+        // once pre-releases are skipped (RC-33: `28-ea-oraclelinux9` was
+        // "the newest stable"); a registry's `tags/list` is sorted by NAME,
+        // and the alphabetically first tag is no recommendation at all — it
+        // put `alpha` above `stable` (DS-09). A list of nothing but
+        // pre-releases recommends nothing. The picker then asks.
+        foreach ($tags as $tag) {
+            if ($tag['updated_at'] === null) {
+                return null;
+            }
 
-        if ($first === null || $first['updated_at'] === null || preg_match(self::UNSTABLE, '-'.$first['name']) === 1) {
-            return null;
+            if (! $tag['prerelease']) {
+                return $tag['name'];
+            }
         }
 
-        return $first['name'];
+        return null;
+    }
+
+    /**
+     * Whether a tag names a pre-release or a moving development build.
+     *
+     * Read word by word (see PRERELEASE_WORDS). A run of 7 or more hex digits
+     * is a commit hash (`2024.10.22-3ea5f2c`) and is not split at its
+     * digit/letter boundaries, or the `ea` inside it would read as early access.
+     */
+    private function isPrerelease(string $tag): bool
+    {
+        foreach (preg_split('/[^a-z0-9]+/i', $tag, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $segment) {
+            if (preg_match('/^g?[0-9a-f]{7,40}$/i', $segment) === 1) {
+                continue;
+            }
+
+            foreach (preg_split('/(?<=\d)(?=[a-z])|(?<=[a-z])(?=\d)/i', $segment) ?: [] as $word) {
+                if (in_array(strtolower($word), self::PRERELEASE_WORDS, true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
