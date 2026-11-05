@@ -24,7 +24,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { CardList } from "@/components/data-table/card-list";
 import { CoverageCard, CoverageCardActions, CoverageFact, NotSetUpList, NotSetUpRow } from "@/components/backups/coverage-card-parts";
 import { BackupStatusBadge } from "@/components/backups/backup-status-badge";
-import { RunsCell, ScheduleCell, StatusCell, StorageCell } from "@/components/backups/coverage-table";
+import { COVERAGE_WIDTHS, RunsCell, ScheduleCell, StatusCell, StorageCell } from "@/components/backups/coverage-table";
 
 const JUST_STARTED_MS = 90_000;
 
@@ -209,17 +209,16 @@ const wrapping = (label) => function WrappingHeader() {
   return <span className="whitespace-normal">{label}</span>;
 };
 
-// Widths copied from CoverageTable, column for column.
 function DatabaseTable({ rows, options, canOpenDatabases, canManage, onBackUpNow, busyIds }) {
   const t = useTranslations("backups.databases");
   const tc = useTranslations("backups.coverage");
   const columns = [
     { id: "database", header: t("columns.database"), meta: { className: "max-w-0" }, cell: NameCell },
-    { id: "engine", header: wrapping(t("columns.engine")), meta: { className: "w-28" }, cell: EngineCell },
-    { id: "schedule", header: wrapping(tc("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
-    { id: "storage", header: wrapping(tc("columns.storage")), meta: { className: "w-32" }, cell: StorageCell },
-    { id: "runs", header: wrapping(tc("columns.lastRun")), meta: { className: "w-40" }, cell: RunsCell },
-    { id: "actions", header: () => <span className="sr-only">{tc("columns.actions")}</span>, meta: { className: "w-44 text-right" }, cell: ActionsCell },
+    { id: "engine", header: wrapping(t("columns.engine")), meta: { className: COVERAGE_WIDTHS.kind }, cell: EngineCell },
+    { id: "schedule", header: wrapping(tc("columns.schedule")), meta: { className: COVERAGE_WIDTHS.schedule }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
+    { id: "storage", header: wrapping(tc("columns.storage")), meta: { className: COVERAGE_WIDTHS.storage }, cell: StorageCell },
+    { id: "runs", header: wrapping(tc("columns.lastRun")), meta: { className: COVERAGE_WIDTHS.runs }, cell: RunsCell },
+    { id: "actions", header: () => <span className="sr-only">{tc("columns.actions")}</span>, meta: { className: `${COVERAGE_WIDTHS.actions} text-right` }, cell: ActionsCell },
   ];
 
   return (

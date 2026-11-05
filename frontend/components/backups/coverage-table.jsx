@@ -262,6 +262,16 @@ function ActionsCell({ row, table }) {
   );
 }
 
+// Shared with the databases table so the two line up. The fixed columns grow on wide
+// cards; otherwise the name column takes all the spare room (Krishna, 5 Nov).
+export const COVERAGE_WIDTHS = {
+  kind: "w-28 @min-[1050px]:w-32 @min-[1180px]:w-36",
+  schedule: "w-32 @min-[1050px]:w-36 @min-[1180px]:w-40",
+  storage: "w-32 @min-[1050px]:w-40 @min-[1180px]:w-44",
+  runs: "w-40 @min-[1050px]:w-48 @min-[1180px]:w-52",
+  actions: "w-44",
+};
+
 export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, bare = false }) {
   const t = useTranslations("backups.coverage");
 
@@ -278,14 +288,14 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
     // as cramped); dropping the Status column made the room.
     // "Type", not "Backup type": on this page it can only mean that, and the long
     // form wrapped to two lines at 1280.
-    { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: "w-28" }, cell: TypeCell },
-    { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
-    { id: "storage", header: wrapping(t("columns.storage")), meta: { className: "w-32" }, cell: StorageCell },
-    { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: "w-40" }, cell: RunsCell },
+    { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: COVERAGE_WIDTHS.kind }, cell: TypeCell },
+    { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: COVERAGE_WIDTHS.schedule }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
+    { id: "storage", header: wrapping(t("columns.storage")), meta: { className: COVERAGE_WIDTHS.storage }, cell: StorageCell },
+    { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: COVERAGE_WIDTHS.runs }, cell: RunsCell },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("columns.actions")}</span>,
-      meta: { className: "w-44 text-right" },
+      meta: { className: `${COVERAGE_WIDTHS.actions} text-right` },
       cell: ActionsCell,
     },
   ];

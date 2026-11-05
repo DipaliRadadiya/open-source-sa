@@ -200,8 +200,12 @@ test("both backup tables use binding, identical column widths", () => {
   const dbs = read("components/backups/database-coverage-card.jsx");
   for (const src of [apps, dbs]) {
     assert.match(src, /<DataTable[\s\S]{0,200}fixedLayout/);
-    for (const w of ["w-28", "w-32", "w-40", "w-44 text-right"]) assert.match(src, new RegExp(`className: "${w}"`));
+    for (const c of ["kind", "schedule", "storage", "runs"]) assert.match(src, new RegExp(`className: COVERAGE_WIDTHS\\.${c} \\}`));
+    assert.match(src, /className: `\$\{COVERAGE_WIDTHS\.actions\} text-right`/);
   }
+  // One set of widths, defined once, so the two tables cannot drift apart again.
+  assert.match(apps, /export const COVERAGE_WIDTHS = \{/);
+  assert.doesNotMatch(dbs, /COVERAGE_WIDTHS = /);
   assert.doesNotMatch(apps + dbs, /w-\[28%\]/);
   // The next-run line wraps inside the fixed column rather than losing its end.
   assert.match(apps, /<p className="text-xs whitespace-normal tabular-nums text-muted-foreground">\s*\{t\("nextRun"/);
@@ -225,5 +229,15 @@ test("backup cards share one frame: who, four aligned facts, one action row; not
   for (const f of ["components/backups/coverage-table.jsx", "components/backups/database-coverage-card.jsx"]) {
     assert.match(read(f), /flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1/);
     assert.match(read(f), /max-w-full shrink-0 truncate font-medium/);
+  }
+});
+
+// 5 Nov (Krishna): on a wide card the name column took all the spare room while
+// Engine/Schedule/Storage/Last run stayed cramped. The fixed columns now grow with the card.
+test("the fixed backup columns grow on wide cards", () => {
+  const apps = read("components/backups/coverage-table.jsx");
+  for (const c of ["kind", "schedule", "storage", "runs"]) {
+    const line = apps.match(new RegExp(`  ${c}: "([^"]+)"`))?.[1] ?? "";
+    assert.match(line, /^w-\d+ @min-\[1050px\]:w-\d+ @min-\[1180px\]:w-\d+$/, c);
   }
 });
