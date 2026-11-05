@@ -40,16 +40,26 @@ class AddonPackage
         return is_string($key) && strlen($key) === SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ? $key : null;
     }
 
+    /** False only in test mode (config `server.addons.require_signature`). */
+    public static function signatureRequired(): bool
+    {
+        return (bool) config('server.addons.require_signature');
+    }
+
     /**
      * Download to `$to` and verify it. The caller deletes `$to`, verified or not.
      *
      * @throws AddonException
      */
-    public function fetch(AddonCli $addon, string $url, string $sha256, string $signature, string $to): void
+    public function fetch(AddonCli $addon, string $url, string $sha256, ?string $signature, string $to): void
     {
         // Checked first, and before the download: no key means no install, so
-        // there is nothing to fetch.
-        $key = self::signingKey() ?? throw AddonException::of('addon_signing_key_missing', $addon->label());
+        // there is nothing to fetch. Test mode excepted.
+        $key = self::signingKey();
+
+        if ($key === null && self::signatureRequired()) {
+            throw AddonException::of('addon_signing_key_missing', $addon->label());
+        }
 
         $this->download($addon, $url, $to);
 
@@ -57,14 +67,18 @@ class AddonPackage
             throw AddonException::of('addon_checksum_mismatch', $addon->label());
         }
 
-        $signature = base64_decode($signature, true);
+        // Test mode skips the signature only when there is nothing to check:
+        // no signature sent, or no key to check it against.
+        if (self::signatureRequired() || ($key !== null && $signature !== null && $signature !== '')) {
+            $decoded = base64_decode((string) $signature, true);
 
-        // Ed25519 signs the message itself, not a digest of it, so the whole
-        // file is read. It is size-capped above, and the PHP CLI the queue
-        // runs under has no memory limit by default.
-        if (! is_string($signature) || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES
-            || ! sodium_crypto_sign_verify_detached($signature, (string) file_get_contents($to), $key)) {
-            throw AddonException::of('addon_signature_invalid', $addon->label());
+            // Ed25519 signs the message itself, not a digest of it, so the whole
+            // file is read. It is size-capped above, and the PHP CLI the queue
+            // runs under has no memory limit by default.
+            if (! is_string($decoded) || strlen($decoded) !== SODIUM_CRYPTO_SIGN_BYTES
+                || ! sodium_crypto_sign_verify_detached($decoded, (string) file_get_contents($to), (string) $key)) {
+                throw AddonException::of('addon_signature_invalid', $addon->label());
+            }
         }
 
         if ((string) @file_get_contents($to, length: 4) !== self::ELF_MAGIC) {

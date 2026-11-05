@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Addons;
 
+use App\Services\Addons\AddonPackage;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,8 @@ class InstallAddonRequest extends FormRequest
             'version' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9][A-Za-z0-9.+_-]*$/'],
             'url' => ['required', 'string', 'max:2048', 'url', $this->onCentral(...)],
             'sha256' => ['required', 'string', 'regex:/^[0-9a-fA-F]{64}$/'],
-            'signature' => ['required', 'string', 'max:128', $this->ed25519Signature(...)],
+            // Optional only in test mode (AddonPackage::signatureRequired()).
+            'signature' => [AddonPackage::signatureRequired() ? 'required' : 'nullable', 'string', 'max:128', $this->ed25519Signature(...)],
             // How long access logs are kept. Log Monitoring Suite only.
             'retention_days' => [
                 Rule::prohibitedIf($this->route('addon') !== 'log-monitoring-suite'),

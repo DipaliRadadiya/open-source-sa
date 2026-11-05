@@ -29,7 +29,7 @@ class StartAddonLifecycle
     {
         // Refused now rather than queued to fail: with no key, no install can
         // ever succeed on this server.
-        if ($command === AddonRun::INSTALL && AddonPackage::signingKey() === null) {
+        if ($command === AddonRun::INSTALL && AddonPackage::signatureRequired() && AddonPackage::signingKey() === null) {
             throw AddonException::of('addon_signing_key_missing', $addon->label());
         }
 

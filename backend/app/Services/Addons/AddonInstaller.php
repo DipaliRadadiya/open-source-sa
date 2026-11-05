@@ -54,7 +54,7 @@ class AddonInstaller
     /**
      * Install the binary Central offers, or replace the installed one with it.
      *
-     * @param  array{version: string, url: string, sha256: string, signature: string, retention_days?: int|null}  $package
+     * @param  array{version: string, url: string, sha256: string, signature?: string|null, retention_days?: int|null}  $package
      * @return array<string, mixed> what Central reads in the run's result
      *
      * @throws AddonException
@@ -71,7 +71,7 @@ class AddonInstaller
         $update = $addon->installed();
 
         try {
-            $this->package->fetch($addon, $package['url'], $package['sha256'], $package['signature'], $download);
+            $this->package->fetch($addon, $package['url'], $package['sha256'], $package['signature'] ?? null, $download);
 
             $lms = $addon instanceof LogMonitoringSuite;
 

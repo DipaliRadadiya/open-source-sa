@@ -41,6 +41,7 @@ beforeEach(function () {
     config([
         'central.url' => 'https://central.test',
         'server.addons.signing_public_key' => base64_encode(sodium_crypto_sign_publickey($keys)),
+        'server.addons.require_signature' => true,
         'server.addons.wp_toolkit.binary' => "{$dir}/bin/wp-toolkit",
         'server.addons.log_monitoring_suite.binary' => "{$dir}/bin/log-monitoring-suite",
         'server.addons.log_monitoring_suite.workdir' => "{$dir}/etc-lms",
@@ -315,6 +316,54 @@ it('fails closed in the job too, if the key is gone by the time it runs', functi
         ->and(AddonRun::find($run)->result['code'])->toBe('addon_signing_key_missing')
         ->and(file_exists("{$this->dir}/bin/wp-toolkit"))->toBeFalse();
 });
+
+describe('test mode (require_signature off)', function () {
+    beforeEach(function () {
+        config(['server.addons.require_signature' => false, 'server.addons.signing_public_key' => null]);
+    });
+
+    it('installs with no key and no signature', function () {
+        $body = installBody($this->binary);
+        unset($body['signature']);
+
+        installAddon('wp-toolkit', $body)
+            ->assertStatus(202)
+            ->assertJsonPath('data.status', 'succeeded');
+
+        expect(file_get_contents("{$this->dir}/bin/wp-toolkit"))->toBe($this->binary);
+    });
+
+    it('still refuses a download that does not match its checksum', function () {
+        fakeAddonDownload("\x7fELF".random_bytes(256));
+
+        installAddon('wp-toolkit', installBody($this->binary, ['signature' => null]))
+            ->assertStatus(202)
+            ->assertJsonPath('data.result.code', 'addon_checksum_mismatch');
+
+        expect(file_exists("{$this->dir}/bin/wp-toolkit"))->toBeFalse();
+    });
+
+    it('still checks a signature that is sent when a key is set', function () {
+        config(['server.addons.signing_public_key' => base64_encode(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair()))]);
+
+        installAddon('wp-toolkit', installBody($this->binary))
+            ->assertStatus(202)
+            ->assertJsonPath('data.result.code', 'addon_signature_invalid');
+
+        expect(file_exists("{$this->dir}/bin/wp-toolkit"))->toBeFalse();
+    });
+});
+
+it('requires a signature in the request when signatures are required', function () {
+    $body = installBody($this->binary);
+    unset($body['signature']);
+
+    installAddon('wp-toolkit', $body)->assertJsonValidationErrors('signature');
+});
+
+it('is in test mode by default until launch', function () {
+    expect((require base_path('config/server.php'))['addons']['require_signature'])->toBeFalse();
+})->skip(fn () => getenv('ADDON_REQUIRE_SIGNATURE') !== false, 'ADDON_REQUIRE_SIGNATURE is set in this environment');
 
 it('refuses a download that does not match, is not signed by Central, or is not a program', function (Closure $tamper, string $code) {
     [$bytes, $body] = $tamper($this->binary, $this->secretKey);

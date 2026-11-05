@@ -7517,7 +7517,7 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 | 502 | `addon_bad_output` | It printed something that is not its JSON |
 | 504 | `addon_timed_out` | It did not finish (55 s for direct calls, 30 min for queued runs) |
 | 409 | `addon_busy` | An install or remove of this addon is already queued or running |
-| 503 | `addon_signing_key_missing` | Install only: no usable `ADDON_SIGNING_PUBLIC_KEY` on this server — nothing is installed unsigned |
+| 503 | `addon_signing_key_missing` | Install only, when `ADDON_REQUIRE_SIGNATURE=true`: no usable `ADDON_SIGNING_PUBLIC_KEY` on this server — nothing is installed unsigned |
 | 502 | `addon_download_failed` | Install run: the file could not be fetched, or is over 200 MB |
 | 422 | `addon_checksum_mismatch` | Install run: the file is not the one `sha256` names |
 | 422 | `addon_signature_invalid` | Install run: `signature` does not verify against the server's key |
@@ -7549,7 +7549,7 @@ The Log Monitoring Suite fields are `false`/`null` while it is not installed. Re
 | `version` | required, ≤ 64 chars, `[A-Za-z0-9][A-Za-z0-9.+_-]*` — recorded in the result and the activity log |
 | `url` | required, **https on the host of the panel's `CENTRAL_URL`** (else `422`, nothing queued). Redirects are followed only over https |
 | `sha256` | required, 64 hex characters, of the file's bytes |
-| `signature` | required, base64 of a 64-byte **Ed25519 signature over the file's raw bytes**, checked against `ADDON_SIGNING_PUBLIC_KEY` (base64 public key in the panel's `.env`) |
+| `signature` | required, base64 of a 64-byte **Ed25519 signature over the file's raw bytes**, checked against `ADDON_SIGNING_PUBLIC_KEY` (base64 public key in the panel's `.env`). **Test mode** (`ADDON_REQUIRE_SIGNATURE=false`, the default until launch, 2026-11-05): optional, and no key is needed; a signature that is sent is still checked when a key is set, and the SHA-256 is always checked |
 | `retention_days` | Log Monitoring Suite only (prohibited for wp-toolkit): `7`, `14` or `30`, default `7` |
 
 `202` with the run (`command: "install"`, `application_id: null`). What the run does, in order — any failure after the download undoes everything it changed and the run fails:

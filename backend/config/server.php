@@ -872,6 +872,11 @@ return [
         // is checked against this key (base64, 32 bytes). No key, no install:
         // a checksum alone only proves the file is the one the request named.
         'signing_public_key' => env('ADDON_SIGNING_PUBLIC_KEY'),
+        // Test mode while Central has no signing key yet: off, an install
+        // needs no key and no signature, but a signature that is sent is still
+        // checked against a key that is set, and the checksum always is.
+        // Must be true before launch.
+        'require_signature' => (bool) env('ADDON_REQUIRE_SIGNATURE', false),
         'download_max_bytes' => (int) env('ADDON_DOWNLOAD_MAX_BYTES', 209715200),
         'install_timeout' => 1800,
         // An install or remove still queued or running after this long is
