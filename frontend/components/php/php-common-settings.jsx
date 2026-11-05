@@ -13,6 +13,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Form, FormControl, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { LabelHint } from "@/components/ui/label";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { SettingsCardSkeleton } from "@/components/settings/settings-skeleton";
@@ -144,7 +145,17 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
   }
 
   const notSet = t("notSet");
-  const directive = (name) => <code className="ms-1.5 font-mono text-xs font-normal text-muted-foreground">{name}</code>;
+  // Same shape as the application PHP page: plain label, php.ini name, and the explanation behind the ⓘ.
+  // One wrapping child, so a narrow column moves the php.ini name to its own line instead of squeezing the label.
+  const label = (field, name, explain) => (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span>{tApp(field)}</span>
+      <span className="inline-flex items-center gap-1">
+        <code className="font-mono text-xs font-normal text-muted-foreground">{name}</code>
+        <LabelHint>{explain}</LabelHint>
+      </span>
+    </span>
+  );
   const raisesPost =
     upload && /^(-1|\d+[KMG]?)$/i.test(upload) && phpSizeToBytes(settings.post_max_size ?? "8M") < phpSizeToBytes(upload);
 
@@ -175,7 +186,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
             control={form.control}
             name="memory_limit"
             render={({ field }) => (
-              <Row label={<>{tApp("fields.memory")}{directive("memory_limit")}</>} hint={tApp("hints.memory")}>
+              <Row label={label("fields.memory", "memory_limit", tApp("hints.memory"))}>
                 <FormControl>
                   <Input placeholder={notSet} disabled={!canManage} className="font-mono" {...field} />
                 </FormControl>
@@ -187,8 +198,9 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
             name="upload_max_filesize"
             render={({ field }) => (
               <Row
-                label={<>{tApp("fields.upload")}{directive("upload_max_filesize")}</>}
-                hint={raisesPost ? t("uploadRaisesPost", { size: upload }) : t("uploadHint", { post: settings.post_max_size ?? "8M" })}
+                label={label("fields.upload", "upload_max_filesize", t("uploadHint", { post: settings.post_max_size ?? "8M" }))}
+                // Only the value-driven warning stays on the page.
+                hint={raisesPost ? t("uploadRaisesPost", { size: upload }) : null}
               >
                 <FormControl>
                   <Input placeholder={notSet} disabled={!canManage} className="font-mono" {...field} />
@@ -200,7 +212,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
             control={form.control}
             name="max_execution_time"
             render={({ field }) => (
-              <Row label={<>{tApp("fields.executionTime")}{directive("max_execution_time")}</>} hint={tApp("hints.executionTime")}>
+              <Row label={label("fields.executionTime", "max_execution_time", tApp("hints.executionTime"))}>
                 <FormControl>
                   <Input inputMode="numeric" placeholder={notSet} disabled={!canManage} className="font-mono" {...field} />
                 </FormControl>
@@ -211,7 +223,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
             control={form.control}
             name="max_input_time"
             render={({ field }) => (
-              <Row label={<>{tApp("fields.inputTime")}{directive("max_input_time")}</>} hint={tApp("hints.inputTime")}>
+              <Row label={label("fields.inputTime", "max_input_time", tApp("hints.inputTime"))}>
                 <FormControl>
                   <Input inputMode="numeric" placeholder={notSet} disabled={!canManage} className="font-mono" {...field} />
                 </FormControl>
@@ -222,7 +234,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
             control={form.control}
             name="max_input_vars"
             render={({ field }) => (
-              <Row label={<>{tApp("fields.inputVars")}{directive("max_input_vars")}</>} hint={tApp("hints.inputVars")}>
+              <Row label={label("fields.inputVars", "max_input_vars", tApp("hints.inputVars"))}>
                 <FormControl>
                   <Input inputMode="numeric" placeholder={notSet} disabled={!canManage} className="font-mono" {...field} />
                 </FormControl>

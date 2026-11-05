@@ -11,6 +11,8 @@ export const lifecycleSchema = z.object({
 
 export const phpVersionSchema = z.object({
   version: z.string(),
+  // `8.4.14` for display only; `version` stays the identifier. Null while not ready or unreadable.
+  full_version: z.string().nullable().optional(),
   path: z.string().nullable().optional(),
   is_default: z.boolean().optional().default(false),
   // Anything but ready means no PHP on disk, so its extensions and php.ini 404.
@@ -47,6 +49,7 @@ export const phpVersionSchema = z.object({
 export const phpGroupSchema = z.object({
   manager: z.string().nullable().optional(),
   default: z.string().nullable().optional(),
+  default_full_version: z.string().nullable().optional(),
   panel_version: z.string().nullable().optional(),
   // False offline or before the daily refresh; then no badges rather than all "unknown".
   lifecycle_available: z.boolean().nullable().optional().default(false),

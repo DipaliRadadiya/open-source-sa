@@ -563,7 +563,7 @@
         "backup": "Server-Backups und ihr Speicherort.",
         "php": "PHP-Versionen und -Erweiterungen auf dem Server.",
         "node": "Node.js-Versionen auf dem Server.",
-        "sync": "Bereits vorhandene Anwendungen und Einstellungen übernehmen.",
+        "sync": "Anwendungen und Einstellungen, die schon auf dem Server sind, zum Panel hinzufügen.",
         "git": "Verbundene Git-Konten zum Deployen von Anwendungen.",
         "storage": "Externer Speicher für Backups.",
         "app_domain": "Auf diese Anwendung zeigende Domains und deren SSL.",
@@ -892,9 +892,9 @@
     "noSlashes": "Dieses Feld ist ein Name, kein Pfad — keine /-Zeichen",
     "required_target": "Pfad eingeben",
     "invalidPath": "Gültigen Pfad eingeben",
-    "invalidMode": "Genau 3 Oktalziffern eingeben, z. B. 644",
+    "invalidMode": "Geben Sie 3 Ziffern von 0 bis 7 ein, z. B. 644.",
     "required_bucket": "Bucket ist erforderlich",
-    "required_endpoint": "Endpoint ist erforderlich",
+    "required_endpoint": "Geben Sie die Speicheradresse (Endpoint) ein.",
     "required_region": "Region ist erforderlich",
     "required_accessKey": "Access Key ist erforderlich",
     "required_secretKey": "Secret Key ist erforderlich",
@@ -944,7 +944,7 @@
     "hostIsUrl": "Geben Sie nur den Hostnamen ein, etwa ftp.example.com — ohne ftp://, Pfad oder Benutzernamen.",
     "rootFormat": "Verwenden Sie nur Buchstaben, Zahlen, Punkte, Bindestriche, Unterstriche und Schrägstriche.",
     "rootTraversal": "Der Ordner darf kein .. enthalten",
-    "noEnvironmentLine": "environment= setzt das Panel für diesen Worker bereits. Eine zweite Zeile verhindert den Start.",
+    "noEnvironmentLine": "Entfernen Sie die Zeile environment= — das Panel setzt sie für diesen Worker bereits.",
     "sftpAuthRequired": "Geben Sie ein Passwort oder einen privaten Schlüssel ein.",
     "maxLines100": "Höchstens 100 Zeilen",
     "rangeSeconds3600": "Geben Sie 0 bis 3600 Sekunden ein.",
@@ -979,7 +979,7 @@
     "confirmContainerOnly": "Setzen Sie das Häkchen zur Bestätigung.",
     "rangeIdleTimeout": "Geben Sie 1 bis 86400 Sekunden ein oder lassen Sie das Feld leer.",
     "rangeSpawnRate": "Geben Sie 1 bis 1024 ein oder lassen Sie das Feld leer.",
-    "pmSpareOrder": "Füllen Sie alle drei Worker-Zahlen aus oder keine, sodass mindestens frei ≤ beim Start ≤ höchstens frei ≤ PHP-Worker-Prozesse.",
+    "pmSpareOrder": "Füllen Sie alle drei Zahlen aus oder keine. Die Startzahl muss zwischen der kleinsten und größten Leerlaufzahl liegen, und keine darf größer sein als die PHP-Worker.",
     "min12": "Mindestens 12 Zeichen",
     "max128": "Darf höchstens 128 Zeichen lang sein",
     "noControlChars": "Keine Zeilenumbrüche oder Steuerzeichen",
@@ -1033,7 +1033,7 @@
       "noHistory": "Verläufe erscheinen, sobald einige Messwerte erfasst wurden. Der Server wird alle fünf Minuten gemessen.",
       "load": {
         "title": "Serverlast",
-        "description": "Wartende Auslastung im Verhältnis zur Anzahl der Kerne dieses Servers, über die letzten 24 Stunden.",
+        "description": "Wie ausgelastet der Server im Verhältnis zu seinen Kernen war, über die letzten 24 Stunden.",
         "cores": "{count} Kerne"
       },
       "usage": {
@@ -1059,7 +1059,7 @@
     "processes": {
       "title": "Prozesse",
       "description": "Prozesse mit der höchsten CPU-Auslastung.",
-      "pid": "PID",
+      "pid": "ID",
       "user": "Benutzer",
       "cpu": "CPU %",
       "memory": "Speicher %",
@@ -1095,7 +1095,7 @@
       "action": "Diesen Prozess stoppen",
       "noPermission": "Ihre Rolle enthält nicht „Dashboard“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "title": "{command} stoppen?",
-      "description": "PID {pid}, läuft als {user}. Alles, was davon abhängt, wird ebenfalls gestoppt, und das lässt sich nicht rückgängig machen.",
+      "description": "Prozess {pid}, ausgeführt von {user}. Alles, was davon abhängt, stoppt ebenfalls, und das lässt sich nicht rückgängig machen.",
       "forceDescription": "Der Prozess wurde nicht gestoppt. Erzwungenes Stoppen beendet ihn sofort, ohne Möglichkeit, Dateien zu speichern oder zu schließen.",
       "confirm": "Stoppen",
       "force": "Stopp erzwingen",
@@ -1209,7 +1209,7 @@
     "addJob": "Cronjob hinzufügen",
     "cancel": "Abbrechen",
     "saving": "Wird gespeichert…",
-    "unmanaged": "Nicht verwaltet",
+    "unmanaged": "Von Hand angelegt",
     "columns": {
       "name": "Name",
       "schedule": "Zeitplan",
@@ -1286,7 +1286,7 @@
         "days": "Tage & Wochen",
         "custom": "Benutzerdefiniert"
       },
-      "commandHint": "Cron läuft mit einem minimalen <code>PATH</code>, verwenden Sie daher absolute Pfade wie <code>/usr/bin/php</code>. Um die Ausgabe in einer Logdatei zu speichern, hängen Sie <code>>> /path/to/log 2>&1</code> an.",
+      "commandHint": "Verwenden Sie vollständige Pfade wie <code>/usr/bin/php</code>. Die Ausgabe wird automatisch gespeichert — siehe Ausführungsverlauf.",
       "serverTimeNote": "Läuft in Serverzeit ({timezone})",
       "runAsUnavailable": "Die Kontoliste konnte nicht geladen werden. Wählen Sie „Anderer OS-Benutzer…“ und geben Sie den Benutzernamen ein.",
       "runAsHint": "Das Linux-Konto, unter dem der Befehl ausgeführt wird. Es legt fest, welche Dateien der Cron-Job lesen und schreiben kann.",
@@ -1441,7 +1441,7 @@
     "unavailable": {
       "title": "Das Panel wird aktualisiert",
       "body": "Der Server weist Anfragen ab, während er aktualisiert wird. Das ist normalerweise innerhalb einer Minute vorbei.",
-      "stuck": "Die Aktualisierung ist steckengeblieben. Führen Sie dies auf dem Server aus, um die API zurückzuholen:",
+      "stuck": "Das Update ist mittendrin stehen geblieben. Führen Sie diesen Befehl auf dem Server aus, um es abzuschließen:",
       "stuckLabel": "Falls es nicht aufhört",
       "copyCommand": "Befehl kopieren"
     },
@@ -1452,38 +1452,38 @@
       "noResponse": "keine Antwort",
       "details": "Technische Details",
       "serverSaid": "Ihr Server meldet",
-      "debugWarning": "Dieses Detail war nur sichtbar, weil Ihr Server im Debug-Modus läuft. Schalten Sie das auf einem öffentlichen Panel ab – es gibt Interna an jeden preis, der die Anmeldeseite erreicht."
+      "debugWarning": "Das wird angezeigt, weil der Debug-Modus an ist. Schalten Sie ihn auf einem öffentlichen Panel aus — er zeigt jedem, der die Anmeldeseite öffnet, interne Details."
     },
     "why": {
       "network": {
         "title": "Ihr Server antwortet nicht",
         "body": "Das Panel hat versucht, {host} zu erreichen, und gar keine Antwort erhalten.",
-        "next": "Meist ist die API gestoppt, startet noch, oder ihr Port ist durch eine Firewall blockiert. Prüfen Sie den Webserver auf dieser Maschine."
+        "next": "Warten Sie eine Minute und versuchen Sie es erneut. Schlägt es weiter fehl, ist der Dienst des Panels auf dem Server vielleicht gestoppt, oder eine Firewall blockiert ihn."
       },
       "server": {
         "title": "Ihr Server hat einen Fehler zurückgegeben",
-        "body": "Die API hat mit Fehler {status} geantwortet statt mit Ihren Kontodaten.",
-        "next": "Etwas ist innerhalb der API fehlgeschlagen, nicht auf dieser Seite. Der Grund steht im Log der API auf Ihrem Server."
+        "body": "Auf dem Server ist ein Problem aufgetreten, und Ihr Konto konnte nicht geladen werden.",
+        "next": "Das ist ein Fehler im Panel, nicht in Ihren Anwendungen. Versuchen Sie es in einer Minute erneut. Passiert es weiter, steht im Fehlerprotokoll unter Admin, was los ist."
       },
       "forbidden": {
         "title": "Ihr Server hat diese Anfrage abgelehnt",
-        "body": "Die API hat {status} geantwortet – dieses Konto darf das nicht.",
+        "body": "Ihr Konto darf das nicht öffnen.",
         "next": "Bitten Sie eine Administratorin oder einen Administrator um die Berechtigung und melden Sie sich erneut an."
       },
       "notFound": {
         "title": "Das Panel hat etwas angefragt, das es nicht gibt",
-        "body": "Die API hat {status} für {path} geantwortet.",
-        "next": "Das bedeutet meist, dass Panel und API unterschiedliche Versionen sind. Aktualisieren Sie beide auf dieselbe Version."
+        "body": "Das Panel hat den Server nach etwas gefragt, das es dort nicht gibt.",
+        "next": "Meist ist ein Update nicht fertig geworden. Führen Sie das Panel-Update erneut aus, oder fragen Sie, wer diesen Server betreut."
       },
       "gateway": {
-        "title": "Die API hat nicht geantwortet",
-        "body": "Der Webserver auf {host} hat {status} geantwortet – er hat also von der dahinterliegenden API keine Antwort bekommen.",
-        "next": "Meist ist PHP-FPM gestoppt oder die Anfrage hat zu lange gedauert. Prüfen Sie PHP-FPM auf dieser Maschine – das Log der API bleibt leer, weil sie nie gelaufen ist."
+        "title": "Das Panel hat nicht geantwortet",
+        "body": "Der Server unter {host} läuft, aber das Panel darauf hat nicht geantwortet.",
+        "next": "Das Panel ist vielleicht ausgelastet, oder sein PHP-Dienst ist gestoppt. Warten Sie eine Minute und versuchen Sie es erneut. Passiert es weiter, starten Sie PHP auf dem Server neu."
       },
       "rejected": {
         "title": "Ihr Server hat die Anfrage zurückgewiesen",
-        "body": "Die API hat {status} für {path} geantwortet. Sie ist nicht fehlgeschlagen – sie hat abgelehnt, was das Panel gesendet hat.",
-        "next": "Meist sind Panel und API unterschiedliche Versionen, oder etwas dazwischen schreibt Anfragen um. Aktualisieren Sie beide auf dieselbe Version."
+        "body": "Der Server hat abgelehnt, was das Panel gesendet hat.",
+        "next": "Meist ist ein Update nicht fertig geworden. Führen Sie das Panel-Update erneut aus, oder fragen Sie, wer diesen Server betreut."
       }
     },
     "whatToDo": "Was zu tun ist",
@@ -1875,7 +1875,7 @@
       "ignoreHint": "Adressen auf dieser Liste sind von Fail2ban-Sperren ausgenommen.",
       "saveRules": "Sperrregeln speichern",
       "ignoreDraftHint": "Hinzufügen und Entfernen gelten sofort. Fail2ban wird dabei jedes Mal neu geladen, das dauert einige Sekunden.",
-      "inputLabel": "IP-Adresse oder Bereich (CIDR)",
+      "inputLabel": "IP-Adresse oder Bereich, z. B. 203.0.113.0/24",
       "ignoreEmpty": "Hier ist noch nichts.",
       "ipPlaceholder": "203.0.113.5 oder 203.0.113.0/24",
       "addIp": "Hinzufügen",
@@ -2306,7 +2306,7 @@
         }
       },
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
-      "passwordNotManageable": "Diese Installation kann ihre eigene Konfigurationsdatei nicht neu schreiben, daher kann das Redis-Passwort hier nicht geändert werden. Ändern Sie es auf dem Server und aktualisieren Sie REDIS_PASSWORD."
+      "passwordNotManageable": "Bei dieser Installation lässt sich das Redis-Passwort nicht im Panel ändern. Es muss auf dem Server geändert werden."
     },
     "maintenance": {
       "rebootRequired": {
@@ -2352,14 +2352,14 @@
         "runConfirmSubmit": "Jetzt installieren",
         "runReasons": {
           "locked": "Ein anderer Paketmanager hielt apt belegt und gab es nicht frei. Es wurde nichts geändert — versuche es in ein paar Minuten erneut.",
-          "stale_lock": "apt ist gesperrt, ohne dass jemand die Sperre hält: ein abgebrochenes Werkzeug hat eine Lock-Datei hinterlassen. Führe den Panel-Doctor aus, er nennt die zu löschende Datei.",
-          "denied": "Das Panel darf unattended-upgrades nicht ausführen. Führe `artisan panel:sudoers` als root aus, um die Berechtigung neu zu schreiben.",
+          "stale_lock": "Ein früheres Update wurde unterbrochen und hat die Update-Funktion gesperrt hinterlassen. Bitten Sie eine Administratorin oder einen Administrator, den Systemzustand zu öffnen — dort steht, wie man die Sperre löst.",
+          "denied": "Das Panel darf keine Updates installieren. Bitten Sie eine Administratorin oder einen Administrator, den Systemzustand zu öffnen — dort steht die Lösung.",
           "timeout": "Das Upgrade lief noch, als die Zeit ablief. Es kann von selbst fertig geworden sein — prüfen Sie das Protokoll, bevor Sie ein weiteres starten.",
           "dpkg": "Ein Paket konnte sich nicht konfigurieren. Der Grund steht im dpkg-Protokoll: /var/log/unattended-upgrades/unattended-upgrades-dpkg.log",
           "fetch": "Die Updates konnten nicht heruntergeladen werden. Prüfe, ob der Server seine Paket-Mirror erreicht.",
           "disk_full": "Während des Upgrades lief die Festplatte voll. Schaffe Platz und versuche es erneut.",
           "dependencies": "Die wartenden Pakete lassen sich nicht gemeinsam installieren. Dafür muss apt meist von Hand ausgeführt werden, um zu sehen, was zurückgehalten wird.",
-          "worker": "Der Prozess, der das Upgrade ausführte, ist verschwunden — höchstwahrscheinlich vom Upgrade selbst neu gestartet. apt hat die Arbeit möglicherweise trotzdem beendet: prüfen Sie das Protokoll, bevor Sie ein weiteres starten.",
+          "worker": "Das Update hat unerwartet aufgehört, vielleicht weil es das Panel neu gestartet hat. Es ist womöglich trotzdem fertig — sehen Sie ins Protokoll, bevor Sie es erneut starten.",
           "unknown": "Das Upgrade ist fehlgeschlagen. Die Ausgabe unten ist, was es gesagt hat."
         },
         "saveFailed": "Die Update-Einstellungen konnten nicht gespeichert werden."
@@ -2709,7 +2709,7 @@
     },
     "common": {
       "title": "Allgemeine Einstellungen",
-      "description": "Die Limits, die Anwendungen am häufigsten erhöht brauchen. Sie gelten für jede Anwendung auf PHP {version}, die keine eigenen setzt.",
+      "description": "Gilt für jede Anwendung auf PHP {version}, die keine eigenen Werte setzt.",
       "appliesNote": "Wird in php.ini gespeichert und vorher von PHP geprüft.",
       "saveAction": "PHP-Einstellungen speichern",
       "saved": "Einstellungen für PHP {version} gespeichert.",
@@ -3195,18 +3195,18 @@
       "backupsKept": "Ihre Backups bleiben erhalten. Sie finden sie unter Backups → Archiviert, wo Sie sie herunterladen oder in eine andere Datenbank zurückspielen können."
     },
     "adopt": {
-      "title": "{count, plural, one {# Datenbank auf diesem Server wird hier nicht verwaltet} other {# Datenbanken auf diesem Server werden hier nicht verwaltet}}",
-      "description": "Sie wurden außerhalb des Panels erstellt. Übernehmen Sie sie, um sie hier zu sehen und zu verwalten.",
+      "title": "{count, plural, one {# Datenbank auf diesem Server ist noch nicht im Panel} other {# Datenbanken auf diesem Server sind noch nicht im Panel}}",
+      "description": "Sie wurden außerhalb des Panels angelegt. Fügen Sie sie hinzu, um sie hier zu sehen und zu verwalten.",
       "action": "Ansehen",
-      "confirmTitle": "Bestehende Datenbanken übernehmen",
+      "confirmTitle": "Vorhandene Datenbanken zum Panel hinzufügen",
       "confirmDescription": "Es wird nichts geändert oder gelöscht — das Panel beginnt nur, sie zu verwalten.",
       "selectedCount": "{selected} von {total} ausgewählt",
       "selectAll": "Alle auswählen",
       "clearAll": "Zurücksetzen",
-      "submit": "Übernehmen",
-      "adopting": "Wird übernommen…",
-      "done": "{count, plural, one {# Datenbank übernommen. Sie ist noch nicht mit einer Anwendung verknüpft, also in keinem Backup enthalten.} other {# Datenbanken übernommen. Sie sind noch nicht mit einer Anwendung verknüpft, also in keinem Backup enthalten.}}",
-      "failed": "Sie konnten nicht übernommen werden."
+      "submit": "Zum Panel hinzufügen",
+      "adopting": "Wird hinzugefügt…",
+      "done": "{count, plural, one {# Datenbank hinzugefügt. Sie ist noch mit keiner Anwendung verknüpft, also ist sie in keinem Backup enthalten.} other {# Datenbanken hinzugefügt. Sie sind noch mit keiner Anwendung verknüpft, also sind sie in keinem Backup enthalten.}}",
+      "failed": "Sie konnten nicht hinzugefügt werden."
     },
     "engineList": {
       "title": "Datenbank-Engines",
@@ -3239,7 +3239,7 @@
         "hint": "Host und Port. Die übliche Wahl."
       },
       "socket": {
-        "label": "Unix-Socket",
+        "label": "Lokaler Socket (nur dieser Server)",
         "hint": "Eine lokale Datei. Funktioniert oft, wenn eine Anmeldung mit Passwort nicht geht."
       },
       "socketPath": "Socket-Pfad",
@@ -3645,7 +3645,7 @@
     "createFailed": "Die Datenbank konnte nicht erstellt werden.",
     "unavailable": {
       "title": "Datenbanken werden auf diesem Server nicht verwaltet",
-      "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt sie als eigenen Container mit, daher verwaltet das Panel hier keine Engine — und seine eigenen Daten liegen ohnehin in SQLite."
+      "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt ihre eigene als Container mit, daher gibt es hier nichts zu verwalten."
     },
     "detailsTitle": "Details",
     "rootPassword": {
@@ -3825,7 +3825,7 @@
     "logs": {
       "pageTitle": "Protokolle",
       "pageSubtitle": "Lesen Sie die Zugriffs-, Fehler- und Ausgabeprotokolle dieser Anwendung.",
-      "provisioning": "Protokolle stehen bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
+      "provisioning": "Protokolle erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "loadFailed": "Die Protokolle konnten nicht geladen werden.",
       "sourcesLabel": "Protokollquelle",
       "proxyHint": "Das sind die Protokolle des Reverse Proxy — die eigene Ausgabe Ihrer Anwendung steht unter „Anwendungsausgabe“.",
@@ -3870,7 +3870,7 @@
     "environment": {
       "pageTitle": "Umgebung",
       "pageSubtitle": "Bearbeiten Sie die .env-Datei dieser Anwendung.",
-      "provisioning": "Die Umgebung steht bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
+      "provisioning": "Die Umgebungseinstellungen erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "loadFailed": "Die Umgebung konnte nicht geladen werden.",
       "sectionTitle": "Umgebung",
       "sectionSubtitle": "Die .env der Anwendung, als eine Datei bearbeitet.",
@@ -4045,7 +4045,7 @@
     },
     "empty": {
       "title": "Ihr Server ist bereit für die erste Anwendung",
-      "description": "Legen Sie eine Anwendung oder einen Dienst in einem geführten Ablauf an. {brand} richtet alles ein und zeigt hier den aktuellen Status.",
+      "description": "Wählen Sie einen Typ und füllen Sie ein kurzes Formular aus. {brand} richtet sie ein und zeigt hier ihren aktuellen Status.",
       "filteredTitle": "Keine passenden Anwendungen",
       "guideTitle": "Von der Idee zur laufenden Anwendung",
       "steps": {
@@ -4138,7 +4138,7 @@
       "typeHint": "Wählen Sie den Ausgangspunkt für Ihr Projekt. Die erweiterte Konfiguration können Sie später anpassen.",
       "moreOnDocker": "Weitere Apps gibt es als 1-Click Rezepte auf Servern, die mit Docker installiert wurden.",
       "configureHint": "Es werden nur die Felder gezeigt, die diese Anwendung braucht.",
-      "reviewTitle": "Bereit zur Einrichtung",
+      "reviewTitle": "Bereit zum Erstellen",
       "reviewHint": "{brand} erstellt die Anwendungskonfiguration und zeigt den Fortschritt auf dem nächsten Bildschirm.",
       "selected": "Ausgewählt",
       "change": "Ändern"
@@ -4262,7 +4262,7 @@
       "label": "Aktionen",
       "open": "Dashboard öffnen",
       "visit": "Anwendung aufrufen",
-      "visitHint": "Die Anwendung wird ausgeliefert, sobald die Einrichtung fertig ist.",
+      "visitHint": "Die Anwendung lässt sich öffnen, sobald die Einrichtung fertig ist.",
       "delete": "Anwendung löschen",
       "visitNamed": "{domain} in neuem Tab öffnen"
     },
@@ -4318,7 +4318,7 @@
       "since": "Läuft seit",
       "cpu": "CPU",
       "memory": "RAM",
-      "pid": "PID",
+      "pid": "ID",
       "restarts": "Neustarts",
       "start": "Starten",
       "stop": "Stoppen",
@@ -4334,21 +4334,21 @@
       "stopBody": "Die Anwendung ist offline, bis sie wieder gestartet wird, und Besucher sehen so lange eine Fehlerseite.",
       "stopping": "Wird gestoppt…",
       "cancel": "Abbrechen",
-      "supervisorPm2": "PM2 (übernommen)",
+      "supervisorPm2": "PM2 (vom alten Panel)",
       "workers": "Prozesse",
       "workersCount": "{total}",
       "workersDegraded": "{online} von {total} online",
       "convert": {
-        "action": "Auf systemd-Unit umstellen",
-        "title": "„{name}“ auf eine systemd-Unit umstellen?",
-        "description": "Diese Website wird noch vom PM2 des alten Panels betrieben. Die Umstellung auf eine systemd-Unit startet die Anwendung neu.",
+        "action": "Zum neuen Prozessmanager wechseln",
+        "title": "„{name}“ zum neuen Prozessmanager wechseln?",
+        "description": "Diese Anwendung läuft noch über PM2 aus dem alten Panel. Beim Wechsel wird sie neu gestartet.",
         "restarts": "Die Anwendung startet neu. Normalerweise ist sie in wenigen Sekunden wieder da.",
-        "rollback": "Antwortet sie danach nicht, stellen wir sie sofort auf PM2 zurück — ein Fehlschlag lässt Ihre Website also online.",
-        "gains": "Eine Unit gibt dieser Website ein eigenes Speicherlimit, genaue Messwerte und ihre Logs neben den Dateien.",
+        "rollback": "Antwortet sie danach nicht, stellen wir sie sofort wieder auf PM2 um — ein Fehlschlag lässt Ihre Anwendung also online.",
+        "gains": "Die Anwendung erhält ein eigenes Speicherlimit, genaue Verbrauchswerte und ihre Protokolle neben ihren Dateien.",
         "confirm": "Umstellen und neu starten",
         "converting": "Wird umgestellt…",
         "cancel": "Abbrechen",
-        "done": "„{name}“ läuft jetzt unter einer systemd-Unit.",
+        "done": "„{name}“ läuft jetzt über den neuen Prozessmanager.",
         "failed": "Diese Anwendung konnte nicht umgestellt werden."
       }
     },
@@ -4368,7 +4368,7 @@
         "notSecured": "Nicht gesichert",
         "sslUnknown": "Zertifikatsstatus unbekannt"
       },
-      "provisioning": "Domains und SSL stehen bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
+      "provisioning": "Domains und SSL erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "sectionTitle": "Domains",
       "sectionSubtitle": "Jeder Name, unter dem diese Anwendung antwortet.",
       "emptyTitle": "Noch keine Domains",
@@ -4511,9 +4511,9 @@
         "dryRunPassed": "Testlauf erfolgreich – diese Anwendung ist bereit für ein Zertifikat.",
         "dryRunFailed": "Testlauf fehlgeschlagen – eine Ausstellung würde jetzt nicht funktionieren.",
         "dryRunStartFailed": "Der Testlauf konnte nicht gestartet werden.",
-        "certificate": "Zertifikat (PEM)",
-        "privateKey": "Privater Schlüssel (PEM)",
-        "chain": "Kette / Zwischenzertifikate",
+        "certificate": "Zertifikat",
+        "privateKey": "Privater Schlüssel",
+        "chain": "Zwischenzertifikate",
         "optional": "optional",
         "refusedTitle": "Die Anwendung ist für die Validierung noch nicht erreichbar",
         "forceHint": "Wenn dieser Server seine eigene öffentliche Adresse nicht erreichen kann (z. B. hinter NAT), können Sie die Erreichbarkeitsprüfung überspringen.",
@@ -4667,14 +4667,14 @@
         "title": "Wie diese Anwendung läuft",
         "subtitle": "Der Befehl, der den Prozess startet, und der Port, auf dem er lauscht.",
         "startCommand": "Startbefehl",
-        "startCommandHint": "Die Startdatei, zum Beispiel „node index.js“. Nicht „npm start“ — ein Paketmanager startet den eigentlichen Prozess als Kindprozess, sodass Stopp-Signale ihn nie erreichen.",
+        "startCommandHint": "Die Datei, die Ihre App startet, zum Beispiel \"node index.js\". Nicht \"npm start\" — sonst lässt sich die App nicht sauber beenden.",
         "appPort": "Anwendungs-Port",
         "appPortPlaceholder": "Wird für Sie gewählt",
         "appPortHint": "Leer wählt einen freien.",
-        "appliesOnDeploy": "Jetzt gespeichert, beim nächsten Deployment angewendet — dann wird die Service-Datei neu geschrieben.",
-        "save": "Laufzeiteinstellungen speichern",
-        "saved": "Laufzeiteinstellungen gespeichert. Sie gelten ab dem nächsten Deploy.",
-        "saveFailed": "Die Laufzeiteinstellungen konnten nicht gespeichert werden.",
+        "appliesOnDeploy": "Wird jetzt gespeichert und ab dem nächsten Deployment verwendet.",
+        "save": "Starteinstellungen speichern",
+        "saved": "Starteinstellungen gespeichert. Sie gelten ab dem nächsten Deployment.",
+        "saveFailed": "Die Starteinstellungen konnten nicht gespeichert werden.",
         "noPermission": "Sie haben keine Berechtigung, das zu ändern.",
         "nothingToSave": "Nichts hat sich geändert"
       },
@@ -5220,7 +5220,7 @@
         "nameHint": "Eine kurze Bezeichnung, an der Sie diesen Worker erkennen.",
         "useTemplate": "Vorlage verwenden",
         "command": "Befehl",
-        "commandHint": "Läuft als der eigene Benutzer dieser Anwendung. supervisord führt den Befehl direkt aus, nicht über eine Shell.",
+        "commandHint": "Läuft direkt als eigener Benutzer dieser Anwendung — nicht über eine Shell, Pipes und && funktionieren also nicht.",
         "processes": "Prozesse",
         "processesHint": "Wie viele Kopien gleichzeitig laufen, um mehr Jobs parallel abzuarbeiten.",
         "restartOnDeploy": "Nach dem Deployment neu starten",
@@ -5243,10 +5243,10 @@
         "userHint": "Das Konto, unter dem dieser Worker läuft — der eigene Benutzer der Anwendung.",
         "logFile": "Protokolldatei",
         "logFilePlaceholder": "/var/log/my-worker.log",
-        "logFileHint": "Absoluter Pfad, und er darf kein .. enthalten — leer lassen, dann wählt supervisord einen.",
+        "logFileHint": "Ein vollständiger Pfad ohne .. — leer lassen für den Standard.",
         "logLevel": "Protokollstufe",
         "logLevelDefault": "Serverstandard",
-        "logLevelHint": "Wie viel supervisord selbst über diesen Worker schreibt.",
+        "logLevelHint": "Wie ausführlich das eigene Protokoll des Workers ist.",
         "logLevels": {
           "critical": "Kritisch",
           "error": "Fehler",
@@ -5258,7 +5258,7 @@
         },
         "autoStart": "Mit dem Server starten",
         "autoStartHint": "Aus heißt, er läuft nur, wenn Sie ihn von Hand starten.",
-        "extraConfig": "Zusätzliche supervisord-Einstellungen",
+        "extraConfig": "Zusätzliche Worker-Einstellungen",
         "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Eine Einstellung pro Zeile, nur für diesen Worker. Abschnittsköpfe in [Klammern] werden abgelehnt.",
         "kind": "Typ",
@@ -5289,11 +5289,11 @@
       "enableHint": "Besucher müssen sich mit den Daten unten anmelden, bevor sie die Anwendung sehen können.",
       "whenToUseTitle": "Wann Sie das nutzen",
       "whenToUseBody": "Gut für eine Staging-Anwendung, ein laufendes Redesign oder eine Kundenvorschau, die vor dem Start nicht gefunden werden soll. Schalten Sie es ab, sobald die Anwendung für die Öffentlichkeit bereit ist.",
-      "warning": "Das schützt die ganze Anwendung, nicht nur einen Adminbereich — Suchmaschinen, Uptime-Monitore und jede Integration auf dieser Domain werden ebenfalls blockiert, bis sie die Zugangsdaten haben. Wenn das Probleme macht, können Sie es hier jederzeit ausschalten.",
+      "warning": "Das sperrt die ganze Anwendung — auch Suchmaschinen und Uptime-Prüfungen sind blockiert, bis sie die Zugangsdaten erhalten.",
       "unencrypted": "Diese Anwendung hat kein SSL-Zertifikat, daher wird das Passwort unverschlüsselt übertragen. <link>Fügen Sie ein Zertifikat hinzu</link>, um es zu schützen.",
       "credentialsNote": "Das erstellt einen neuen Login nur für diese Anwendung — getrennt von Ihrem {brand}-Konto. Besucher sehen die schlichte Anmeldeaufforderung ihres Browsers, keine gestaltete Seite.",
       "disabledHint": "Die Anwendung ist öffentlich erreichbar — jeder kann sie ansehen.",
-      "unsupportedForType": "Diese Anwendung meldet sich über den Authorization-Header an, den HTTP nur einmal pro Anfrage erlaubt. Der Passwortschutz würde ihn belegen und die Anwendung unerreichbar machen. Sie verlangt bereits eigene Zugangsdaten.",
+      "unsupportedForType": "Diese Anwendung hat eine eigene Anmeldung, daher lässt sich kein Passwortschutz darüberlegen — sie wäre sonst nicht erreichbar.",
       "username": "Benutzername",
       "usernamePlaceholder": "z. B. admin",
       "password": "Passwort",
@@ -5313,7 +5313,7 @@
       "openSite": "Anwendung öffnen",
       "showPassword": "Passwort anzeigen",
       "hidePassword": "Passwort verbergen",
-      "unsupportedProtected": "Diese Anwendung meldet sich über den Authorization-Header an, daher kann der Passwortschutz sie unerreichbar machen. Schalten Sie ihn aus, sofern Sie nicht geprüft haben, dass die Anwendung weiter funktioniert.",
+      "unsupportedProtected": "Diese Anwendung hat eine eigene Anmeldung, daher kann der Passwortschutz sie unerreichbar machen. Schalten Sie ihn aus, außer Sie haben geprüft, dass die Anwendung noch funktioniert.",
       "passwordAgainHint": "Geben Sie das Passwort erneut ein oder ein neues. Es wird zum Speichern jeder Änderung gebraucht."
     },
     "botBlocker": {
@@ -5398,7 +5398,7 @@
       "noPermission": "Ihre Rolle enthält nicht „KI-Bot-Blocker“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "nothingToSave": "Nichts zu speichern",
       "robotsTxtOnly": "nur robots.txt",
-      "robotsTxtOnlyNote": "{names} besuchen Ihre Website nie — Google und Apple trainieren KI mit ihren normalen Crawlern und lesen diese Namen nur in robots.txt. Sie hier zu blockieren verhindert das nicht; tragen Sie sie stattdessen mit Disallow: / in robots.txt ein.",
+      "robotsTxtOnlyNote": "{names} lassen sich hier nicht sperren — Google und Apple beachten diese Namen nur in der robots.txt. Tragen Sie sie stattdessen dort mit Disallow: / ein.",
       "robotsTxt": {
         "title": "Fügen Sie dies auch in robots.txt ein",
         "copy": "robots.txt-Zeilen kopieren"
@@ -5436,7 +5436,7 @@
       "lastCategory": "Mindestens eine Prüfung muss an bleiben. Um gar nicht mehr zu prüfen, schalten Sie die Firewall aus.",
       "advanced": "Feinabstimmung",
       "exceptionsTitle": "Diese durchlassen",
-      "exceptionsHint": "Eine Anfrage, deren Webadressen-Pfad einen dieser Einträge enthält, überspringt jede Prüfung. Verglichen wird nur der Pfad — nicht der Teil nach dem ? und nicht der Browsername. Verwenden Sie mindestens 4 Zeichen und halten Sie sie spezifisch: ein häufiges Wort schaltet die Firewall auf großen Teilen Ihrer Anwendung ab.",
+      "exceptionsHint": "Adressen, die die Firewall überspringen. Verglichen wird nur der Pfad der Webadresse. Nutzen Sie mindestens 4 Zeichen und einen genauen Pfad wie /api/webhook — ein häufiges Wort schaltet den Schutz an vielen Stellen ab.",
       "exceptionsPlaceholder": "z. B. mein-plugin-name",
       "exceptionsEmpty": "Es wird nichts durchgelassen.",
       "blocksTitle": "Diese immer blockieren",
@@ -5482,7 +5482,7 @@
         "carriesItems": {
           "files": "Dateien",
           "database": "Datenbank",
-          "phpVersion": "Laufzeitversionen",
+          "phpVersion": "PHP- und Node.js-Versionen",
           "webRoot": "Web-Root",
           "buildCommand": "Build & Deployment",
           "repository": "Repository, Branch & Git-Konto"
@@ -5675,7 +5675,7 @@
         "timezone": "Betrifft nur Datumsangaben, die PHP erzeugt, nicht die Serveruhr.",
         "autoPrepend": "Ein Pfad innerhalb dieser Anwendung. Leer lassen, sofern Ihnen nichts anderes gesagt wurde.",
         "directives": "Eine PHP-Einstellung pro Zeile, etwa display_errors = Off. Einstellungen mit eigenem Feld auf dieser Seite und Erweiterungen lassen sich hier nicht setzen.",
-        "directivesPool": "Eine Einstellung pro Zeile, etwa display_errors = Off. Pool-Zeilen wie env[APP_ENV] = production und request_terminate_timeout = 300 sind ebenfalls erlaubt. Einstellungen mit eigenem Feld auf dieser Seite und Erweiterungen lassen sich hier nicht setzen.",
+        "directivesPool": "Zusätzliche PHP-Einstellungen, eine pro Zeile, z. B. display_errors = Off. Pool-Zeilen wie env[APP_ENV] = production gehen auch.",
         "openBasedir": "Verhindert, dass PHP Dateien außerhalb des Ordners dieser Anwendung liest oder schreibt.",
         "allowUrlFopen": "Erlaubt PHP, entfernte URLs abzurufen. Ausschalten blockiert einen verbreiteten Weg, auf dem Malware nach Hause telefoniert.",
         "upload": "Hebt auch das eigene Limit des Webservers an, der große Uploads ablehnt, bevor PHP sie sieht. Eine früher eingerichtete Anwendung übernimmt das beim ersten Speichern.",
@@ -5762,7 +5762,7 @@
         "errorsHere": "Einstellungen in diesem Tab korrigieren"
       },
       "sections": {
-        "runtime": "Laufzeit",
+        "runtime": "Version und Speicher",
         "limits": "Anfragelimits"
       },
       "advancedNote": "Diese ändern, wie PHP-FPM diese Anwendung betreibt. Die Standardwerte passen für fast jede Anwendung — ändern Sie sie nur, wenn Sie wissen, warum.",
@@ -5831,7 +5831,7 @@
         "jailHint": "Wann gesperrt wird — wie viele Versuche, über welchen Zeitraum, wie lange.",
         "filterHint": "Was als Fehlversuch zählt — verglichen mit jeder Protokollzeile."
       },
-      "placeholderNote": "Jail-Name, Logpfad und Filter werden aus dieser Anwendung übernommen. Lassen Sie die Filterzeile unverändert — sie muss zur Filter-Datei passen, die immer nach dieser Anwendung benannt ist.",
+      "placeholderNote": "Jail-Name, Protokollpfad und Filter werden für Sie ausgefüllt. Lassen Sie die Filterzeile, wie sie ist.",
       "placeholderLost": "{count, plural, one {{tokens} steht nicht mehr in der Datei — der Wert, für den es stand, wird nicht eingesetzt. Das ist nur richtig, wenn Sie es absichtlich ersetzt haben.} other {{tokens} stehen nicht mehr in der Datei — die Werte, für die sie standen, werden nicht eingesetzt. Das ist nur richtig, wenn Sie sie absichtlich ersetzt haben.}}",
       "unsavedHere": "Nicht gespeicherte Änderungen in dieser Datei",
       "saveAction": "Speichern und fail2ban neu laden",
@@ -6116,7 +6116,7 @@
       "description": "Ob diese Anwendung wiederherstellbar wäre.",
       "runningNote": "Gerade läuft ein Backup dieser Anwendung. Diese Karte aktualisiert sich selbst.",
       "queuedNote": "Backup eingeplant. Es beginnt, sobald der Server es aufnimmt.",
-      "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
+      "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, bitten Sie eine Administratorin oder einen Administrator, den Systemzustand zu prüfen.",
       "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung.",
       "noneKept": "Keins aufbewahrt",
       "notSetUp": "Nicht eingerichtet"
@@ -6268,8 +6268,8 @@
       },
       "purpose": {
         "database": "Hier speichert {app} seine Daten",
-        "node": "Die Laufzeitumgebung von {app}",
-        "php": "Die Laufzeitumgebung von {app}"
+        "node": "Was {app} zum Laufen braucht",
+        "php": "Was {app} zum Laufen braucht"
       },
       "footerIdleOne": "Die Installation läuft im Hintergrund — Sie können das Formular weiter ausfüllen.",
       "subImpossible": "Dieser Server kann diese Anwendung so nicht ausführen.",
@@ -6434,7 +6434,7 @@
       "hint": "Image, Ports, Volumes und Umgebungsvariablen dieser Anwendung stehen alle in dieser Datei.",
       "loadFailed": "Die Compose-Datei konnte nicht gelesen werden.",
       "safety": "Beim Speichern wird der Container neu gestartet, die Anwendung ist also kurz offline. Startet die neue Datei nicht, legt das Panel die vorherige zurück.",
-      "takeover": "Diese Anwendung läuft derzeit mit einer Datei, die das Panel aus ihrem Image und den Einstellungen im Bereich „Container“ erzeugt. Speichern übernimmt die Datei: ab dann läuft dieser Text, und jene Einstellungen steuern sie nicht mehr. Zurück zur erzeugten Datei geht es nur, indem Sie diese löschen.",
+      "takeover": "Wenn Sie hier speichern, läuft diese Datei, und die Einstellungen der Container-Seite steuern sie nicht mehr. Zurück geht es nur, indem Sie diese Datei leeren.",
       "acknowledge": "Mir ist klar, dass das Speichern die erzeugte Datei dauerhaft ersetzt.",
       "save": "Speichern und anwenden",
       "saved": "Die Compose-Datei wurde angewendet und der Container neu erstellt.",
@@ -6445,7 +6445,7 @@
       "lines": "{count, plural, one {# Zeile} other {# Zeilen}}",
       "rules": {
         "parser": "Vor dem Start von Docker geprüft",
-        "ports": "Ports nur auf 127.0.0.1 veröffentlicht",
+        "ports": "Ports nur auf diesem Server offen — Besucher erreichen die App über ihre Domain",
         "mounts": "Mounts bleiben im Ordner dieser Anwendung"
       },
       "tickFirst": "Bestätigen Sie zuerst das Kästchen oben."
@@ -6502,10 +6502,10 @@
       "portGuessed": "unsere beste Schätzung für dieses Image",
       "portChange": "Ändern",
       "portAsk": "Dieses Image gibt nicht an, auf welchem Port es lauscht. Sehen Sie in seiner Dokumentation nach, auf welchem Port die Webseite bereitgestellt wird, etwa 8080 oder 3000.",
-      "portChangeWarning": "Ändern Sie dies nur, wenn die App wirklich auf einem anderen Port lauscht. Das Image nennt {port}; ein falscher Port führt zu einem 502-Fehler auf Ihrer Domain.",
+      "portChangeWarning": "Ändern Sie das nur, wenn die App wirklich einen anderen Port nutzt. Das Image nennt {port}; ein falscher Port bedeutet, dass Ihre Domain eine Fehlerseite zeigt.",
       "portUseDetected": "{port} verwenden",
       "portOthers": "Das Image öffnet außerdem: {ports}",
-      "portDiffers": "Das Image lauscht auf {port}. Ein anderer Port kann einen 502-Fehler verursachen.",
+      "portDiffers": "Das Image nutzt Port {port}. Ein anderer Port kann dazu führen, dass Ihre Domain eine Fehlerseite zeigt.",
       "storageLabel": "Speicher",
       "storageKeep": "Daten in <mono>{path}</mono> behalten, wenn die App neu startet oder aktualisiert wird",
       "storageVolume": "Gespeichert im Volume {name}",
@@ -6532,7 +6532,7 @@
       "publicImage": "Öffentliches Image (ohne Anmeldung)",
       "checking": "Wird geprüft…",
       "composeLabel": "Compose-Datei",
-      "composeHelp": "Ports nur auf 127.0.0.1 veröffentlichen; Mounts bleiben im Ordner dieser Anwendung."
+      "composeHelp": "Ports sind nur auf diesem Server offen, und Ordner bleiben im Ordner dieser Anwendung."
     },
     "containerState": {
       "starting": "Wird gestartet",
@@ -6686,7 +6686,7 @@
     "tiles": {
       "status": "Status",
       "deploy": "Letztes Deployment",
-      "runtime": "Laufzeit",
+      "runtime": "Läuft mit",
       "lastBackup": "Letztes Backup {when}",
       "deployed": "Deployt",
       "deployFailed": "Deployment fehlgeschlagen",
@@ -6887,10 +6887,10 @@
   "errorLogs": {
     "rawTitle": "Rohantwort",
     "rawCopy": "Rohantwort kopieren",
-    "title": "API-Fehlerprotokoll",
-    "subtitle": "Unerwartete Fehler in der eigenen API des Panels, neueste zuerst.",
+    "title": "Panel-Fehlerprotokoll",
+    "subtitle": "Unerwartete Fehler im Panel, die neuesten zuerst.",
     "summary": {
-      "healthy": "Keine unerwarteten API-Fehler.",
+      "healthy": "Keine unerwarteten Panel-Fehler.",
       "healthyHint": "Das Panel hatte im erfassten Zeitraum keinen internen Fehler.",
       "excluded": "Abgelehnte Eingaben, Anmeldeprobleme und nicht gefundene Seiten sind normal und werden hier nicht aufgezeichnet.",
       "counts": "{kinds, plural, one {# Fehlerart} other {# Fehlerarten}} · {total, plural, one {# Vorkommen} other {# Vorkommen}}",
@@ -6927,7 +6927,7 @@
     "kind": {
       "label": "Angezeigte Fehler",
       "all": "Alle ({count})",
-      "api": "API-Fehler ({count})",
+      "api": "Panel-Fehler ({count})",
       "operation": "Serverbefehle ({count})"
     },
     "referenceFind": "Nach Referenz suchen",
@@ -7120,7 +7120,7 @@
         "passphrase": "Nur nötig, wenn der private Schlüssel selbst verschlüsselt ist.",
         "service_account_json": "Die vollständige JSON-Schlüsseldatei des Dienstkontos einfügen.",
         "folder_id": "Der Teil der Ordner-URL nach /folders/ — nicht der ganze Link.",
-        "drive_shared_only": "Nur eine geteilte Ablage in Google Workspace funktioniert. Ein Dienstkonto hat keinen eigenen Speicher, daher werden Uploads in ein persönliches Drive auch bei leerem Konto abgelehnt. Geben Sie den Ordner für die Adresse des Dienstkontos frei und fügen Sie dann dessen Schlüssel unten ein. Sie nutzen ein privates Gmail-Konto? Wählen Sie stattdessen Backblaze B2 oder Cloudflare R2 — beide haben ein kostenloses Kontingent und eignen sich besser für große Archive.",
+        "drive_shared_only": "Nur eine geteilte Ablage von Google Workspace funktioniert: Geben Sie ihren Ordner für das Dienstkonto frei und fügen Sie dann unten den Schlüssel ein. Privates Gmail? Wählen Sie stattdessen Backblaze B2 oder Cloudflare R2.",
         "bucket": "Der Name des Buckets, in dem Sicherungen gespeichert werden. Er muss bereits existieren — wir erstellen ihn nicht für Sie.",
         "region": "Die Region, in der sich der Bucket befindet. Sie muss übereinstimmen, sonst wird die Verbindung abgewiesen.",
         "access_key": "Die öffentliche Hälfte der Anmeldedaten für dieses Speicherkonto.",
@@ -7239,7 +7239,7 @@
         "step3": {
           "title": "Zustimmungsbildschirm einrichten",
           "body": "Wählen Sie „External“ und tragen Sie einen App-Namen sowie Ihre eigene E-Mail-Adresse ein.",
-          "publish": "Veröffentlichen Sie die App. Bleibt sie auf „Testing“, entzieht Google den Zugriff nach etwa sieben Tagen und Ihre Sicherungen stoppen — eine Woche läuft alles, die nächste nicht mehr, ohne dass sich im Panel etwas geändert hätte. Eine Google-Überprüfung ist nicht nötig; ein Warnhinweis für Ihre eigene App ist normal.",
+          "publish": "Veröffentlichen Sie die App. Bleibt sie im Testmodus, sperrt Google den Zugriff nach etwa sieben Tagen, und Backups schlagen fehl. Eine Prüfung durch Google ist nicht nötig.",
           "link": "Zustimmungsbildschirm öffnen"
         },
         "step4": {
@@ -7515,7 +7515,7 @@
       },
       "queuedNote": "Backup für {name} eingeplant. Es erscheint in dieser Liste, sobald der Server es zu schreiben beginnt.",
       "queuedHidden": "Backup für {name} eingeplant. Der gesetzte Statusfilter verbirgt es — setzen Sie den Filter zurück, um es laufen zu sehen.",
-      "queuedStalled": "Das für {name} eingeplante Backup hat noch nicht begonnen. Bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
+      "queuedStalled": "Das Backup für {name} hat noch nicht begonnen. Bleibt es so, bitten Sie eine Administratorin oder einen Administrator, den Systemzustand zu prüfen.",
       "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung. Sobald es fertig ist, können Sie ein weiteres starten.",
       "delete": {
         "action": "Löschen",
@@ -7711,7 +7711,7 @@
         "failed": "Dieses Backup konnte nicht aufgeräumt werden."
       },
       "queuedNote": "Backup eingeplant. Es erscheint hier, sobald der Server es zu schreiben beginnt.",
-      "queuedStalled": "Dieses Backup hat noch nicht begonnen. Es ist weiterhin eingeplant — bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
+      "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, bitten Sie eine Administratorin oder einen Administrator, den Systemzustand zu prüfen.",
       "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung. Sobald es fertig ist, können Sie ein weiteres starten.",
       "noDatabase": {
         "title": "Diese Anwendung hat keine Datenbank",
@@ -8042,7 +8042,7 @@
     "stalled": "Dieser Durchlauf meldet keinen Fortschritt mehr. Möglicherweise ist er auf dem Server fehlgeschlagen.",
     "handover": {
       "title": "Umzug vom alten Agenten abschließen",
-      "body": "Ihre Anwendungen sind übernommen, aber der alte Agent hat noch Aufgaben, die dieses Panel übernehmen sollte.",
+      "body": "Ihre Anwendungen sind hinzugefügt, aber der alte Agent hat noch Aufgaben, die dieses Panel übernehmen sollte.",
       "agentRunning": "Der alte Agent ({unit}) läuft noch.",
       "bootMissing": "{username}: Seine Anwendungen starten nach einem Neustart nicht wieder.",
       "rotationMissing": "{username}: Seine Logs werden nie rotiert und wachsen weiter.",

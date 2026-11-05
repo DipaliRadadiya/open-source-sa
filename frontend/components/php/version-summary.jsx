@@ -174,7 +174,8 @@ export function VersionSummary({
   const nothingToRemove = failedWithNothingInstalled(version);
   const showRemove = !version.in_use_by_panel && !nothingToRemove;
 
-  const name = t("versions.name", { version: version.version });
+  // The exact release when the server could read it; otherwise the minor line.
+  const name = t("versions.name", { version: version.full_version ?? version.version });
 
   return (
     <li

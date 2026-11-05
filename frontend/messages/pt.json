@@ -563,7 +563,7 @@
         "backup": "Backups do servidor e onde são armazenados.",
         "php": "Versões e extensões do PHP no servidor.",
         "node": "Versões do Node.js no servidor.",
-        "sync": "Adotar aplicações e configurações já presentes na máquina.",
+        "sync": "Adicionar ao painel as aplicações e configurações que já estão no servidor.",
         "git": "Contas Git conectadas usadas para implantar aplicações.",
         "storage": "Armazenamento remoto usado para guardar backups.",
         "app_domain": "Domínios apontados para esta aplicação e seus SSL.",
@@ -892,9 +892,9 @@
     "noSlashes": "Este campo é um nome, não um caminho — sem caracteres /",
     "required_target": "Informe um caminho",
     "invalidPath": "Informe um caminho válido",
-    "invalidMode": "Informe exatamente 3 dígitos octais, ex.: 644",
+    "invalidMode": "Digite 3 dígitos de 0 a 7, como 644.",
     "required_bucket": "O bucket é obrigatório",
-    "required_endpoint": "O endpoint é obrigatório",
+    "required_endpoint": "Digite o endereço do armazenamento (endpoint).",
     "required_region": "A região é obrigatória",
     "required_accessKey": "A access key é obrigatória",
     "required_secretKey": "A secret key é obrigatória",
@@ -944,7 +944,7 @@
     "hostIsUrl": "Informe apenas o nome do host, como ftp.example.com — sem ftp://, caminho ou usuário.",
     "rootFormat": "Use apenas letras, números, pontos, hífens, sublinhados e barras.",
     "rootTraversal": "A pasta não pode conter ..",
-    "noEnvironmentLine": "O painel já define environment= para este worker. Uma segunda linha impede que ele inicie.",
+    "noEnvironmentLine": "Remova a linha environment= — o painel já a define para este worker.",
     "sftpAuthRequired": "Informe uma senha ou uma chave privada.",
     "maxLines100": "No máximo 100 linhas",
     "rangeSeconds3600": "Informe de 0 a 3600 segundos.",
@@ -979,7 +979,7 @@
     "confirmContainerOnly": "Marque a caixa para confirmar.",
     "rangeIdleTimeout": "Informe de 1 a 86400 segundos, ou deixe vazio.",
     "rangeSpawnRate": "Informe de 1 a 1024, ou deixe vazio.",
-    "pmSpareOrder": "Preencha os três números de workers ou nenhum, de modo que mínimo ocioso ≤ ao iniciar ≤ máximo ocioso ≤ processos worker do PHP.",
+    "pmSpareOrder": "Preencha os três números ou nenhum. O número inicial deve ficar entre o mínimo e o máximo em espera, e nenhum pode ser maior que os workers PHP.",
     "min12": "Pelo menos 12 caracteres",
     "max128": "Deve ter 128 caracteres ou menos",
     "noControlChars": "Sem quebras de linha nem caracteres de controle",
@@ -1033,7 +1033,7 @@
       "noHistory": "As tendências aparecem depois de algumas amostras serem recolhidas. O servidor é medido a cada cinco minutos.",
       "load": {
         "title": "Carga do servidor",
-        "description": "Trabalho na fila versus a quantidade de núcleos deste servidor, nas últimas 24 horas.",
+        "description": "Quão ocupado o servidor esteve em relação ao seu número de núcleos, nas últimas 24 horas.",
         "cores": "{count} núcleos"
       },
       "usage": {
@@ -1059,7 +1059,7 @@
     "processes": {
       "title": "Processos",
       "description": "Principais processos por uso de CPU.",
-      "pid": "PID",
+      "pid": "ID",
       "user": "Usuário",
       "cpu": "CPU %",
       "memory": "Memória %",
@@ -1095,7 +1095,7 @@
       "action": "Parar este processo",
       "noPermission": "Seu papel não inclui Painel com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "title": "Parar {command}?",
-      "description": "PID {pid}, executando como {user}. Tudo que depende dele também para, e não há como desfazer.",
+      "description": "Processo {pid}, executado por {user}. Tudo o que depende dele também para, e não é possível desfazer.",
       "forceDescription": "Não parou. A parada forçada o encerra imediatamente, sem chance de salvar ou fechar arquivos.",
       "confirm": "Parar",
       "force": "Forçar parada",
@@ -1209,7 +1209,7 @@
     "addJob": "Adicionar tarefa cron",
     "cancel": "Cancelar",
     "saving": "Salvando…",
-    "unmanaged": "Não gerenciado",
+    "unmanaged": "Adicionado à mão",
     "columns": {
       "name": "Nome",
       "schedule": "Agendamento",
@@ -1286,7 +1286,7 @@
         "days": "Dias e semanas",
         "custom": "Personalizado"
       },
-      "commandHint": "O cron executa com um <code>PATH</code> mínimo, então use caminhos absolutos como <code>/usr/bin/php</code>. Para salvar a saída em um arquivo de log, anexe <code>>> /caminho/do/log 2>&1</code>.",
+      "commandHint": "Use caminhos completos, como <code>/usr/bin/php</code>. A saída é salva automaticamente — veja o Histórico de execuções.",
       "serverTimeNote": "Executa no horário do servidor ({timezone})",
       "runAsUnavailable": "A lista de contas não pôde ser carregada. Escolha \"Outro usuário do SO…\" e digite o nome de usuário.",
       "runAsHint": "A conta do Linux sob a qual o comando será executado. Ela define quais arquivos o job pode ler e gravar.",
@@ -1441,7 +1441,7 @@
     "unavailable": {
       "title": "O painel está sendo atualizado",
       "body": "O servidor recusa requisições enquanto é atualizado. Isso costuma se resolver em menos de um minuto.",
-      "stuck": "A atualização parou pela metade. Execute isto no servidor para trazer a API de volta:",
+      "stuck": "A atualização parou no meio. Execute este comando no servidor para concluí-la:",
       "stuckLabel": "Se não resolver",
       "copyCommand": "Copiar comando"
     },
@@ -1452,38 +1452,38 @@
       "noResponse": "sem resposta",
       "details": "Detalhes técnicos",
       "serverSaid": "Seu servidor disse",
-      "debugWarning": "Este detalhe só apareceu porque seu servidor está em modo de depuração. Desative isso em um painel público: expõe informações internas a qualquer um que chegue à página de login."
+      "debugWarning": "Isso aparece porque o modo de depuração está ativo. Desative-o em um painel em produção — mostra detalhes internos a quem abrir a página de login."
     },
     "why": {
       "network": {
         "title": "Seu servidor não está respondendo",
         "body": "O painel tentou alcançar {host} e não obteve resposta alguma.",
-        "next": "Normalmente a API está parada, ainda reiniciando, ou a porta está bloqueada por um firewall. Verifique o servidor web dessa máquina."
+        "next": "Aguarde um minuto e tente novamente. Se continuar falhando, o serviço do painel pode ter parado no servidor, ou um firewall está bloqueando."
       },
       "server": {
         "title": "Seu servidor retornou um erro",
-        "body": "A API respondeu com o erro {status} em vez dos dados da sua conta.",
-        "next": "Algo falhou dentro da API, não nesta página. O motivo fica registrado no log da API, no seu servidor."
+        "body": "O servidor teve um problema e não conseguiu carregar a sua conta.",
+        "next": "É uma falha do painel, não das suas aplicações. Tente novamente em um minuto. Se continuar, o Log de erros da Administração tem os detalhes."
       },
       "forbidden": {
         "title": "Seu servidor recusou esta requisição",
-        "body": "A API respondeu {status} — esta conta não tem permissão para isso.",
+        "body": "A sua conta não tem permissão para abrir isto.",
         "next": "Peça a um administrador que dê permissão à sua conta e entre novamente."
       },
       "notFound": {
         "title": "O painel pediu algo que não existe",
-        "body": "A API respondeu {status} para {path}.",
-        "next": "Isso costuma significar que o painel e a API estão em versões diferentes. Atualize os dois para a mesma versão."
+        "body": "O painel pediu ao servidor algo que ele não tem.",
+        "next": "Normalmente significa que uma atualização não terminou. Execute novamente a atualização do painel, ou pergunte a quem gerencia este servidor."
       },
       "gateway": {
-        "title": "A API não respondeu",
-        "body": "O servidor web em {host} respondeu {status}, ou seja, não conseguiu resposta da API que está atrás dele.",
-        "next": "Normalmente o PHP-FPM está parado, ou a requisição demorou demais. Verifique o PHP-FPM nessa máquina — o log da própria API ficará vazio, porque ela nunca chegou a rodar."
+        "title": "O painel não respondeu",
+        "body": "O servidor em {host} está ligado, mas o painel nele não respondeu.",
+        "next": "O painel pode estar ocupado, ou o seu serviço PHP parou. Aguarde um minuto e tente novamente. Se continuar, reinicie o PHP no servidor."
       },
       "rejected": {
         "title": "Seu servidor rejeitou a requisição",
-        "body": "A API respondeu {status} para {path}. Ela não falhou: recusou o que o painel enviou.",
-        "next": "Normalmente o painel e a API estão em versões diferentes, ou algo entre eles reescreve as requisições. Atualize ambos para a mesma versão."
+        "body": "O servidor recusou o que o painel enviou.",
+        "next": "Normalmente significa que uma atualização não terminou. Execute novamente a atualização do painel, ou pergunte a quem gerencia este servidor."
       }
     },
     "whatToDo": "O que fazer",
@@ -1875,7 +1875,7 @@
       "ignoreHint": "Os endereços desta lista ficam excluídos dos bloqueios do Fail2ban.",
       "saveRules": "Salvar regras de bloqueio",
       "ignoreDraftHint": "Adicionar e remover valem na hora. O Fail2ban é recarregado a cada vez, o que leva alguns segundos.",
-      "inputLabel": "Endereço IP ou faixa (CIDR)",
+      "inputLabel": "Endereço IP ou intervalo, como 203.0.113.0/24",
       "ignoreEmpty": "Nada aqui ainda.",
       "ipPlaceholder": "203.0.113.5 ou 203.0.113.0/24",
       "addIp": "Adicionar",
@@ -2306,7 +2306,7 @@
         }
       },
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
-      "passwordNotManageable": "Esta instalação não pode reescrever o próprio arquivo de configuração, então a senha do Redis não pode ser alterada aqui. Altere no servidor e atualize REDIS_PASSWORD."
+      "passwordNotManageable": "Nesta instalação, a senha do Redis não pode ser alterada no painel. Precisa ser alterada no servidor."
     },
     "maintenance": {
       "rebootRequired": {
@@ -2352,14 +2352,14 @@
         "runConfirmSubmit": "Instalar agora",
         "runReasons": {
           "locked": "Outro gerenciador de pacotes estava segurando o apt e não soltou. Nada foi alterado — tente novamente em alguns minutos.",
-          "stale_lock": "O apt está travado sem nada segurando: uma ferramenta interrompida deixou um arquivo de lock. Rode o doctor do painel, que informa o arquivo a remover.",
-          "denied": "O painel não tem permissão para rodar unattended-upgrades. Rode `artisan panel:sudoers` como root para regravar sua permissão.",
+          "stale_lock": "Uma atualização anterior foi interrompida e deixou o atualizador bloqueado. Peça a um administrador que abra Saúde do sistema, onde é mostrado como desbloqueá-lo.",
+          "denied": "O painel não tem permissão para instalar atualizações. Peça a um administrador que abra Saúde do sistema, onde é mostrada a correção.",
           "timeout": "A atualização ainda estava em execução quando o tempo acabou. Pode ter terminado sozinha — confira o log antes de iniciar outra.",
           "dpkg": "Um pacote falhou ao se configurar. O motivo está no log do dpkg: /var/log/unattended-upgrades/unattended-upgrades-dpkg.log",
           "fetch": "As atualizações não puderam ser baixadas. Verifique se o servidor alcança seus mirrors de pacotes.",
           "disk_full": "O disco encheu durante a atualização. Libere espaço e tente novamente.",
           "dependencies": "Os pacotes pendentes não podem ser instalados juntos. Geralmente é preciso rodar o apt manualmente para ver o que está retido.",
-          "worker": "O processo que rodava a atualização sumiu — provavelmente reiniciado pela própria atualização. O apt pode ter concluído o trabalho mesmo assim: confira o log antes de iniciar outra.",
+          "worker": "A atualização parou inesperadamente, talvez por ter reiniciado o painel. Pode ter terminado mesmo assim — veja o log antes de executá-la novamente.",
           "unknown": "A atualização falhou. A saída abaixo é o que ela disse."
         },
         "saveFailed": "Não foi possível salvar as configurações de atualização."
@@ -2709,7 +2709,7 @@
     },
     "common": {
       "title": "Configurações comuns",
-      "description": "Os limites que as aplicações mais precisam de aumentar. Aplicam-se a todas as aplicações no PHP {version} que não definem os seus.",
+      "description": "Vale para todas as aplicações no PHP {version} que não definem os próprios valores.",
       "appliesNote": "Guardado no php.ini e verificado pelo PHP antes de ser aplicado.",
       "saveAction": "Guardar configurações do PHP",
       "saved": "Configurações do PHP {version} guardadas.",
@@ -3195,18 +3195,18 @@
       "backupsKept": "Os backups dele são mantidos. Você os encontra em Backups → Arquivado, onde pode baixá-los ou restaurá-los em outro banco de dados."
     },
     "adopt": {
-      "title": "{count, plural, one {# banco de dados neste servidor não é gerenciado aqui} other {# bancos de dados neste servidor não são gerenciados aqui}}",
-      "description": "Foram criados fora do painel. Adote-os para vê-los e gerenciá-los aqui.",
+      "title": "{count, plural, one {# banco de dados deste servidor ainda não está no painel} other {# bancos de dados deste servidor ainda não estão no painel}}",
+      "description": "Foram criados fora do painel. Adicione-os para vê-los e gerenciá-los aqui.",
       "action": "Revisar",
-      "confirmTitle": "Adotar bancos de dados existentes",
+      "confirmTitle": "Adicionar bancos de dados existentes ao painel",
       "confirmDescription": "Nada é alterado ou excluído — o painel apenas passa a gerenciá-los.",
       "selectedCount": "{selected} de {total} selecionados",
       "selectAll": "Selecionar todos",
       "clearAll": "Limpar",
-      "submit": "Adotar",
-      "adopting": "Adotando…",
-      "done": "{count, plural, one {# banco de dados adotado. Ele ainda não está vinculado a uma aplicação, então nenhum backup o inclui.} other {# bancos de dados adotados. Eles ainda não estão vinculados a uma aplicação, então nenhum backup os inclui.}}",
-      "failed": "Eles não puderam ser adotados."
+      "submit": "Adicionar ao painel",
+      "adopting": "Adicionando…",
+      "done": "{count, plural, one {# banco de dados adicionado. Ainda não está vinculado a nenhuma aplicação, por isso nenhum backup o inclui.} other {# bancos de dados adicionados. Ainda não estão vinculados a nenhuma aplicação, por isso nenhum backup os inclui.}}",
+      "failed": "Não foi possível adicioná-los."
     },
     "engineList": {
       "title": "Engines de banco de dados",
@@ -3239,7 +3239,7 @@
         "hint": "Host e porta. A escolha usual."
       },
       "socket": {
-        "label": "Unix socket",
+        "label": "Socket local (só este servidor)",
         "hint": "Um arquivo local. Frequentemente funciona quando o login por senha não funciona."
       },
       "socketPath": "Caminho do socket",
@@ -3645,7 +3645,7 @@
     "createFailed": "O banco de dados não pôde ser criado.",
     "unavailable": {
       "title": "As bases de dados não são geridas neste servidor",
-      "body": "Este servidor aloja contentores. Uma aplicação que precisa de uma base de dados traz a sua como contentor, por isso o painel não gere nenhum motor aqui — e os seus próprios dados estão em SQLite de qualquer forma."
+      "body": "Este servidor hospeda contentores. Uma aplicação que precisa de banco de dados traz a sua como contentor, por isso não há nada para gerenciar aqui."
     },
     "detailsTitle": "Detalhes",
     "rootPassword": {
@@ -3825,7 +3825,7 @@
     "logs": {
       "pageTitle": "Logs",
       "pageSubtitle": "Leia os logs de acesso, erro e saída desta aplicação.",
-      "provisioning": "Os logs ficam disponíveis quando a aplicação termina o provisionamento.",
+      "provisioning": "Os logs aparecem quando a aplicação terminar de ser configurada.",
       "loadFailed": "Não foi possível carregar os logs.",
       "sourcesLabel": "Origem do log",
       "proxyHint": "Estes são os logs do reverse proxy — a saída da sua aplicação está em \"Saída da aplicação\".",
@@ -3870,7 +3870,7 @@
     "environment": {
       "pageTitle": "Ambiente",
       "pageSubtitle": "Edite o arquivo .env desta aplicação.",
-      "provisioning": "O ambiente fica disponível quando a aplicação termina o provisionamento.",
+      "provisioning": "As configurações de ambiente aparecem quando a aplicação terminar de ser configurada.",
       "loadFailed": "Não foi possível carregar o ambiente.",
       "sectionTitle": "Ambiente",
       "sectionSubtitle": "O .env da aplicação, editado como um único arquivo.",
@@ -4029,7 +4029,7 @@
     "connectGit": "Conectar Git",
     "createAction": "Criar aplicação",
     "creating": "Criando aplicação…",
-    "created": "Aplicação criada. O provisionamento foi iniciado.",
+    "created": "Aplicação criada. A configuração foi iniciada.",
     "cancel": "Cancelar",
     "columns": {
       "name": "Aplicação",
@@ -4045,7 +4045,7 @@
     },
     "empty": {
       "title": "Seu servidor está pronto para a primeira aplicação",
-      "description": "Crie uma aplicação ou serviço em um fluxo guiado. {brand} fará o provisionamento e mostrará o status aqui.",
+      "description": "Escolha um tipo e preencha um formulário curto. {brand} a configura e mostra aqui o estado em tempo real.",
       "filteredTitle": "Nenhuma aplicação corresponde",
       "guideTitle": "Da ideia à aplicação rodando",
       "steps": {
@@ -4058,7 +4058,7 @@
           "description": "Informe domínio, dono e apenas as configurações necessárias."
         },
         "provision": {
-          "title": "Acompanhe o provisionamento",
+          "title": "Acompanhe a configuração",
           "description": "Siga cada etapa no servidor até a aplicação ficar pronta."
         }
       }
@@ -4138,7 +4138,7 @@
       "typeHint": "Escolha o ponto de partida do seu projeto. Você poderá ajustar a configuração avançada depois.",
       "moreOnDocker": "Há mais aplicações disponíveis como 1-Click Receitas em servidores instalados com Docker.",
       "configureHint": "Apenas os campos exigidos por esta aplicação são exibidos.",
-      "reviewTitle": "Pronto para provisionar",
+      "reviewTitle": "Pronto para criar",
       "reviewHint": "{brand} criará a configuração da aplicação e mostrará o progresso na próxima tela.",
       "selected": "Selecionado",
       "change": "Alterar"
@@ -4262,7 +4262,7 @@
       "label": "Ações",
       "open": "Abrir painel",
       "visit": "Visitar aplicação",
-      "visitHint": "A aplicação fica disponível assim que o provisionamento terminar.",
+      "visitHint": "A aplicação pode ser aberta quando a configuração terminar.",
       "delete": "Excluir aplicação",
       "visitNamed": "Abrir {domain} em uma nova aba"
     },
@@ -4318,7 +4318,7 @@
       "since": "Em execução desde",
       "cpu": "CPU",
       "memory": "Memória",
-      "pid": "PID",
+      "pid": "ID",
       "restarts": "Reinicializações",
       "start": "Iniciar",
       "stop": "Parar",
@@ -4334,21 +4334,21 @@
       "stopBody": "A aplicação fica offline até ser iniciada de novo, e enquanto isso os visitantes veem uma página de erro.",
       "stopping": "Parando…",
       "cancel": "Cancelar",
-      "supervisorPm2": "PM2 (adotado)",
+      "supervisorPm2": "PM2 (do painel antigo)",
       "workers": "Processos",
       "workersCount": "{total}",
       "workersDegraded": "{online} de {total} online",
       "convert": {
-        "action": "Mudar para uma unidade systemd",
-        "title": "Mudar «{name}» para uma unidade systemd?",
-        "description": "Este site ainda é executado pelo PM2 do painel anterior. Mudá-lo para uma unidade systemd reinicia a aplicação.",
+        "action": "Mudar para o novo gerenciador de processos",
+        "title": "Mudar “{name}” para o novo gerenciador de processos?",
+        "description": "Esta aplicação ainda é executada pelo PM2 do painel antigo. A mudança a reinicia.",
         "restarts": "A aplicação reinicia. Normalmente volta em poucos segundos.",
-        "rollback": "Se depois não responder, repomo-la logo no PM2 — por isso uma falha deixa o seu site no ar.",
-        "gains": "Uma unidade dá a este site o seu próprio limite de memória, métricas exactas e os registos junto dos ficheiros.",
+        "rollback": "Se depois não responder, a colocamos de volta no PM2 na hora — por isso uma falha mantém sua aplicação funcionando.",
+        "gains": "Dá a esta aplicação o seu próprio limite de memória, números de uso exatos e os logs junto aos arquivos.",
         "confirm": "Mudar e reiniciar",
         "converting": "A mudar…",
         "cancel": "Cancelar",
-        "done": "«{name}» passa a correr sob uma unidade systemd.",
+        "done": "“{name}” já funciona com o novo gerenciador de processos.",
         "failed": "Não foi possível mudar esta aplicação."
       }
     },
@@ -4368,7 +4368,7 @@
         "notSecured": "Não protegido",
         "sslUnknown": "Estado do certificado desconhecido"
       },
-      "provisioning": "Domínios e SSL ficam disponíveis quando a aplicação termina o provisionamento.",
+      "provisioning": "Os domínios e o SSL aparecem quando a aplicação terminar de ser configurada.",
       "sectionTitle": "Domínios",
       "sectionSubtitle": "Todos os nomes para os quais esta aplicação responde.",
       "emptyTitle": "Ainda sem domínios",
@@ -4511,9 +4511,9 @@
         "dryRunPassed": "Dry run passou — esta aplicação está pronta para um certificado.",
         "dryRunFailed": "Dry run falhou — emitir agora não funcionaria.",
         "dryRunStartFailed": "Não foi possível iniciar o dry run.",
-        "certificate": "Certificado (PEM)",
-        "privateKey": "Chave privada (PEM)",
-        "chain": "Cadeia / intermediários",
+        "certificate": "Certificado",
+        "privateKey": "Chave privada",
+        "chain": "Certificados intermediários",
         "optional": "opcional",
         "refusedTitle": "A aplicação ainda não está acessível para validação",
         "forceHint": "Se este servidor não conseguir alcançar seu próprio endereço público (ex.: atrás de NAT), você pode pular a verificação de acessibilidade.",
@@ -4667,14 +4667,14 @@
         "title": "Como esta aplicação é executada",
         "subtitle": "O comando que inicia o processo e a porta em que ele escuta.",
         "startCommand": "Comando de inicialização",
-        "startCommandHint": "O arquivo de entrada, por exemplo \"node index.js\". Não \"npm start\" — um gerenciador de pacotes bifurca o processo real, então os sinais de desligamento nunca chegam até ele.",
+        "startCommandHint": "O arquivo que inicia a sua app, por exemplo \"node index.js\". Não use \"npm start\" — a app não pararia corretamente.",
         "appPort": "Porta da aplicação",
         "appPortPlaceholder": "Escolhida para você",
         "appPortHint": "Em branco escolhe uma porta livre.",
-        "appliesOnDeploy": "Salvo agora, aplicado no próximo deploy — é quando o arquivo de serviço é reescrito.",
-        "save": "Salvar configurações de execução",
-        "saved": "Configurações de execução salvas. Elas valem a partir do próximo deploy.",
-        "saveFailed": "Não foi possível salvar as configurações de execução.",
+        "appliesOnDeploy": "Salvo agora, usado a partir do próximo deploy.",
+        "save": "Salvar configurações de inicialização",
+        "saved": "Configurações de inicialização salvas. Elas valem a partir do próximo deploy.",
+        "saveFailed": "Não foi possível salvar as configurações de inicialização.",
         "noPermission": "Você não tem permissão para alterar isso.",
         "nothingToSave": "Nada foi alterado"
       },
@@ -5220,7 +5220,7 @@
         "nameHint": "Um rótulo curto para identificar este worker.",
         "useTemplate": "Usar modelo",
         "command": "Comando",
-        "commandHint": "Executa como o próprio usuário desta aplicação. O supervisord executa o comando diretamente, sem passar por um shell.",
+        "commandHint": "É executado diretamente como o usuário desta aplicação — não através de uma shell, por isso pipes e && não funcionam.",
         "processes": "Processos",
         "processesHint": "Quantas cópias executar ao mesmo tempo, para processar mais jobs em paralelo.",
         "restartOnDeploy": "Reiniciar após o deploy",
@@ -5243,10 +5243,10 @@
         "userHint": "A conta com que este worker é executado — o próprio usuário da aplicação.",
         "logFile": "Arquivo de log",
         "logFilePlaceholder": "/var/log/my-worker.log",
-        "logFileHint": "Caminho absoluto e não pode conter .. — deixe vazio e o supervisord escolhe um.",
+        "logFileHint": "Um caminho completo, sem .. — deixe vazio para usar o padrão.",
         "logLevel": "Nível de log",
         "logLevelDefault": "Padrão do servidor",
-        "logLevelHint": "Quanto o próprio supervisord registra sobre este worker.",
+        "logLevelHint": "Quanto detalhe o log do próprio worker registra.",
         "logLevels": {
           "critical": "Critical",
           "error": "Error",
@@ -5258,7 +5258,7 @@
         },
         "autoStart": "Iniciar com o servidor",
         "autoStartHint": "Desativado significa que só executa quando você inicia manualmente.",
-        "extraConfig": "Configurações extras do supervisord",
+        "extraConfig": "Configurações adicionais do worker",
         "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Uma configuração por linha, adicionada apenas a este worker. Cabeçalhos de seção entre [colchetes] são recusados.",
         "kind": "Tipo",
@@ -5289,11 +5289,11 @@
       "enableHint": "Os visitantes devem fazer login com as credenciais abaixo antes de visualizar a aplicação.",
       "whenToUseTitle": "Quando usar isso",
       "whenToUseBody": "Bom para uma aplicação de staging, um redesign em andamento ou uma prévia de cliente que você não quer que seja encontrada antes do lançamento. Desative quando a aplicação estiver pronta para o público.",
-      "warning": "Isso protege a aplicação inteira, não apenas uma área administrativa — mecanismos de busca, monitores de uptime e qualquer integração que acesse este domínio também serão bloqueados até receberem as credenciais. Você pode desativar aqui a qualquer momento, se isso causar algum problema.",
+      "warning": "Isso bloqueia toda a aplicação, por isso os motores de busca e as verificações de disponibilidade também ficam bloqueados até receberem o acesso.",
       "unencrypted": "Esta aplicação não tem certificado SSL, então a senha é enviada sem criptografia. <link>Adicione um certificado</link> para protegê-la.",
       "credentialsNote": "Isso cria um novo login apenas para esta aplicação — separado da sua conta {brand}. Os visitantes verão o prompt de login nativo do próprio navegador, e não uma página estilizada.",
       "disabledHint": "A aplicação está publicamente acessível — qualquer pessoa pode visualizá-la.",
-      "unsupportedForType": "Esta aplicação faz login pelo cabeçalho Authorization, que o HTTP permite apenas uma vez por requisição. A proteção por senha o consumiria e tornaria a aplicação inacessível. Ela já exige suas próprias credenciais.",
+      "unsupportedForType": "Esta aplicação tem o seu próprio login, por isso não é possível adicionar proteção por senha por cima — ficaria inacessível.",
       "username": "Nome de usuário",
       "usernamePlaceholder": "ex. admin",
       "password": "Senha",
@@ -5313,7 +5313,7 @@
       "openSite": "Abrir aplicação",
       "showPassword": "Mostrar senha",
       "hidePassword": "Ocultar senha",
-      "unsupportedProtected": "Esta aplicação faz login com o cabeçalho Authorization, então a proteção por senha pode deixá-la inacessível. Desative-a, a menos que você tenha verificado que a aplicação ainda funciona.",
+      "unsupportedProtected": "Esta aplicação tem o seu próprio login, por isso a proteção por senha pode deixá-la inacessível. Desative-a, a não ser que tenha confirmado que a aplicação ainda funciona.",
       "passwordAgainHint": "Digite a senha novamente, ou uma nova. Ela é necessária para salvar qualquer alteração."
     },
     "botBlocker": {
@@ -5398,7 +5398,7 @@
       "noPermission": "Seu papel não inclui AI Bot Blocker para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "nothingToSave": "Nada para salvar",
       "robotsTxtOnly": "só robots.txt",
-      "robotsTxtOnlyNote": "{names} nunca visitam seu site — Google e Apple treinam IA com seus rastreadores normais e só leem esses nomes no robots.txt. Bloqueá-los aqui não impede isso; adicione-os ao robots.txt com Disallow: /.",
+      "robotsTxtOnlyNote": "{names} não podem ser bloqueados aqui — o Google e a Apple só respeitam estes nomes no robots.txt. Adicione-os lá com Disallow: /.",
       "robotsTxt": {
         "title": "Adicione também isto ao robots.txt",
         "copy": "Copiar as linhas do robots.txt"
@@ -5436,7 +5436,7 @@
       "lastCategory": "Pelo menos uma verificação precisa permanecer ativa. Para parar de verificar tudo, desligue o firewall.",
       "advanced": "Ajustes finos",
       "exceptionsTitle": "Permitir passagem",
-      "exceptionsHint": "Uma requisição cujo caminho do endereço web contenha qualquer um destes itens pula todas as verificações. Só o caminho é comparado — não a parte após o ? nem o nome do navegador. Use pelo menos 4 caracteres e mantenha-os específicos: uma palavra comum desliga o firewall em grande parte da aplicação.",
+      "exceptionsHint": "Endereços que ignoram o firewall. Só o caminho do endereço web é comparado. Use pelo menos 4 caracteres e um caminho específico como /api/webhook — uma palavra comum desliga a proteção em muitos lugares.",
       "exceptionsPlaceholder": "ex.: meu-plugin",
       "exceptionsEmpty": "Nada está sendo permitido passar.",
       "blocksTitle": "Sempre bloquear",
@@ -5482,7 +5482,7 @@
         "carriesItems": {
           "files": "Arquivos",
           "database": "Banco de dados",
-          "phpVersion": "Versões do runtime",
+          "phpVersion": "Versões de PHP e Node.js",
           "webRoot": "Diretório raiz web",
           "buildCommand": "Build e deploy",
           "repository": "Repositório, ramo e conta Git"
@@ -5675,7 +5675,7 @@
         "timezone": "Afeta apenas datas que o PHP produz, não o relógio do servidor.",
         "autoPrepend": "Um caminho dentro desta aplicação. Deixe vazio a menos que tenha sido instruído contrário.",
         "directives": "Uma configuração do PHP por linha, como display_errors = Off. Configurações que têm um campo nesta tela, e extensões, não podem ser definidas aqui.",
-        "directivesPool": "Uma configuração por linha, como display_errors = Off. Linhas do pool como env[APP_ENV] = production e request_terminate_timeout = 300 também são aceitas. Configurações que têm um campo nesta tela, e extensões, não podem ser definidas aqui.",
+        "directivesPool": "Configurações extra de PHP, uma por linha, como display_errors = Off. Linhas de pool como env[APP_ENV] = production também funcionam.",
         "openBasedir": "Impede o PHP de ler ou escrever arquivos fora da pasta desta aplicação.",
         "allowUrlFopen": "Permite que o PHP busque URLs remotas. Desativar bloqueia uma forma comum de malware se comunicar.",
         "upload": "Também aumenta o próprio limite do servidor web, que recusa uploads grandes antes do PHP vê-los. Uma aplicação configurada antes pega isso na primeira vez que você salva.",
@@ -5762,7 +5762,7 @@
         "errorsHere": "Configurações a corrigir nesta aba"
       },
       "sections": {
-        "runtime": "Runtime",
+        "runtime": "Versão e memória",
         "limits": "Limites de requisição"
       },
       "advancedNote": "Estas opções mudam como o PHP-FPM roda esta aplicação. Os padrões servem para quase todas as aplicações — altere apenas se souber o motivo.",
@@ -5831,7 +5831,7 @@
         "jailHint": "Quando banir — quantas tentativas, em quanto tempo, por quanto tempo.",
         "filterHint": "O que conta como tentativa ruim — comparado com cada linha do log."
       },
-      "placeholderNote": "O nome do jail, o caminho do log e o filtro são preenchidos a partir desta aplicação. Deixe a linha do filtro como está — ela precisa corresponder ao arquivo Filtro, que recebe sempre o nome desta aplicação.",
+      "placeholderNote": "O nome da jail, o caminho do log e o filtro são preenchidos automaticamente. Deixe a linha do filtro como está.",
       "placeholderLost": "{count, plural, one {{tokens} não está mais no arquivo — o valor que ele representava não será preenchido. Isso só é correto se você o substituiu de propósito.} other {{tokens} não estão mais no arquivo — os valores que eles representavam não serão preenchidos. Isso só é correto se você os substituiu de propósito.}}",
       "unsavedHere": "Alterações não salvas neste arquivo",
       "saveAction": "Salvar e recarregar o fail2ban",
@@ -6072,7 +6072,7 @@
     },
     "status": {
       "pending": "Pendente",
-      "provisioning": "Provisionando",
+      "provisioning": "Configurando",
       "active": "Em execução",
       "paused": "Em pausa",
       "failed": "Falhou"
@@ -6116,7 +6116,7 @@
       "description": "Se esta aplicação poderia ser restaurada.",
       "runningNote": "Um backup desta aplicação está rodando agora. Este card se atualiza sozinho.",
       "queuedNote": "Backup na fila. Ele inicia assim que o servidor pegá-lo.",
-      "queuedStalled": "Este backup ainda não começou. Se continuar assim, o worker em segundo plano pode não estar rodando.",
+      "queuedStalled": "Este backup ainda não começou. Se continuar assim, peça a um administrador que verifique Saúde do sistema.",
       "alreadyRunning": "Um backup desta aplicação já está rodando.",
       "noneKept": "Nenhum mantido",
       "notSetUp": "Não configurado"
@@ -6268,8 +6268,8 @@
       },
       "purpose": {
         "database": "Onde {app} guarda os seus dados",
-        "node": "O runtime em que {app} corre",
-        "php": "O runtime em que {app} corre"
+        "node": "O que {app} precisa para funcionar",
+        "php": "O que {app} precisa para funcionar"
       },
       "footerIdleOne": "Instala em segundo plano — pode continuar a preencher o formulário.",
       "subImpossible": "Este servidor não consegue executar esta aplicação tal como está.",
@@ -6434,7 +6434,7 @@
       "hint": "A imagem, as portas, os volumes e as variáveis de ambiente desta aplicação estão todos neste ficheiro.",
       "loadFailed": "Não foi possível ler o ficheiro compose.",
       "safety": "Guardar reinicia o contentor, pelo que a aplicação fica brevemente em baixo. Se o novo ficheiro não arrancar, o painel repõe o anterior.",
-      "takeover": "Esta aplicação funciona atualmente com um ficheiro que o painel gera a partir da sua imagem e das definições da página Contentor. Guardar aqui assume o ficheiro: a partir daí é este texto que corre e essas definições deixam de o comandar. Não há regresso ao ficheiro gerado a não ser apagando este.",
+      "takeover": "Salvar aqui faz este arquivo ser executado, e as configurações da página Contentor deixam de controlá-lo. Não há volta, a não ser limpando este arquivo.",
       "acknowledge": "Compreendo que guardar substitui o ficheiro gerado de forma permanente.",
       "save": "Guardar e aplicar",
       "saved": "O ficheiro compose foi aplicado e o contentor recriado.",
@@ -6445,7 +6445,7 @@
       "lines": "{count, plural, one {# linha} other {# linhas}}",
       "rules": {
         "parser": "Verificado pelo Docker antes de correr",
-        "ports": "Portas publicadas apenas em 127.0.0.1",
+        "ports": "Portas abertas só neste servidor — os visitantes chegam à app pelo domínio",
         "mounts": "Montagens ficam na pasta desta aplicação"
       },
       "tickFirst": "Marque primeiro a caixa acima para confirmar."
@@ -6502,10 +6502,10 @@
       "portGuessed": "nossa melhor estimativa para esta imagem",
       "portChange": "Alterar",
       "portAsk": "Esta imagem não informa em qual porta escuta. Consulte a documentação dela para ver a porta da página web, como 8080 ou 3000.",
-      "portChangeWarning": "Altere apenas se o aplicativo realmente escutar em outra porta. A imagem informa {port}; uma porta errada faz seu domínio mostrar um erro 502.",
+      "portChangeWarning": "Altere só se a app usar de fato outra porta. A imagem indica {port}; uma porta errada faz o seu domínio mostrar uma página de erro.",
       "portUseDetected": "Usar {port}",
       "portOthers": "A imagem também abre: {ports}",
-      "portDiffers": "A imagem escuta na porta {port}. Outra porta pode mostrar um erro 502.",
+      "portDiffers": "A imagem usa a porta {port}. Uma porta diferente pode fazer o seu domínio mostrar uma página de erro.",
       "storageLabel": "Armazenamento",
       "storageKeep": "Manter os dados de <mono>{path}</mono> quando o aplicativo reiniciar ou for atualizado",
       "storageVolume": "Salvo no volume {name}",
@@ -6532,7 +6532,7 @@
       "publicImage": "Imagem pública (sem login)",
       "checking": "Verificando…",
       "composeLabel": "Ficheiro compose",
-      "composeHelp": "As portas são publicadas só em 127.0.0.1 e as montagens ficam dentro da pasta desta aplicação."
+      "composeHelp": "As portas só abrem neste servidor e as pastas ficam dentro da pasta desta aplicação."
     },
     "containerState": {
       "starting": "Iniciando",
@@ -6686,7 +6686,7 @@
     "tiles": {
       "status": "Status",
       "deploy": "Última implantação",
-      "runtime": "Runtime",
+      "runtime": "Roda em",
       "lastBackup": "Último backup {when}",
       "deployed": "Implantado",
       "deployFailed": "A implantação falhou",
@@ -6887,10 +6887,10 @@
   "errorLogs": {
     "rawTitle": "Resposta bruta",
     "rawCopy": "Copiar resposta bruta",
-    "title": "Log de erros da API",
-    "subtitle": "Falhas inesperadas dentro da própria API do painel, mais recentes primeiro.",
+    "title": "Log de erros do painel",
+    "subtitle": "Falhas inesperadas dentro do painel, as mais recentes primeiro.",
     "summary": {
-      "healthy": "Nenhum erro inesperado na API.",
+      "healthy": "Sem erros inesperados do painel.",
       "healthyHint": "O painel não teve falha interna no período registrado.",
       "excluded": "Entradas rejeitadas, problemas de login e páginas não encontradas são normais e não são registrados aqui.",
       "counts": "{kinds, plural, one {# tipo de erro} other {# tipos de erro}} · {total, plural, one {# ocorrência} other {# ocorrências}}",
@@ -6927,7 +6927,7 @@
     "kind": {
       "label": "Erros exibidos",
       "all": "Todos ({count})",
-      "api": "Erros de API ({count})",
+      "api": "Erros do painel ({count})",
       "operation": "Comandos do servidor ({count})"
     },
     "referenceFind": "Buscar por referência",
@@ -7120,7 +7120,7 @@
         "passphrase": "Só é necessária se a própria chave privada estiver criptografada.",
         "service_account_json": "Cole o arquivo JSON completo da conta de serviço.",
         "folder_id": "A parte da URL da pasta depois de /folders/ — não o link inteiro.",
-        "drive_shared_only": "Só funciona um Drive compartilhado do Google Workspace. Uma conta de serviço não tem armazenamento próprio, então envios para um Drive pessoal são recusados mesmo com a conta vazia. Compartilhe a pasta com o endereço da conta de serviço e cole a chave abaixo. Está usando uma conta pessoal do Gmail? Escolha o Backblaze B2 ou o Cloudflare R2 — ambos têm um plano gratuito e lidam melhor com arquivos grandes.",
+        "drive_shared_only": "Só funciona uma unidade compartilhada do Google Workspace: compartilhe a pasta com a conta de serviço e cole a chave abaixo. Usa Gmail pessoal? Escolha Backblaze B2 ou Cloudflare R2.",
         "bucket": "O nome do bucket onde armazenar as cópias de segurança. Ele já deve existir — nós não o criamos para você.",
         "region": "A região em que o bucket está. Ela precisa corresponder, caso contrário a conexão será recusada.",
         "access_key": "A parte pública das credenciais desta conta de armazenamento.",
@@ -7239,7 +7239,7 @@
         "step3": {
           "title": "Configure a tela de consentimento",
           "body": "Escolha \"External\" e preencha um nome de aplicativo e o seu próprio e-mail.",
-          "publish": "Publique o aplicativo. Se deixar em \"Testing\", o Google expira o acesso após cerca de sete dias e seus backups param — funcionam a semana toda e falham na seguinte, sem nada ter mudado no painel. Não é preciso verificação do Google; uma tela de aviso para o seu próprio aplicativo é normal.",
+          "publish": "Publique a app. Se ficar em Teste, o Google corta o acesso após cerca de sete dias e os backups começam a falhar. Não precisa da verificação do Google.",
           "link": "Abrir a tela de consentimento"
         },
         "step4": {
@@ -7515,7 +7515,7 @@
       },
       "queuedNote": "Backup na fila para {name}. Ele aparece nesta lista assim que o servidor começar a gravá-lo.",
       "queuedHidden": "Backup na fila para {name}. O filtro de status ativo o ocultará — limpe o filtro para acompanhar a execução.",
-      "queuedStalled": "O backup na fila para {name} ainda não foi iniciado. Se permanecer assim, o worker em segundo plano pode não estar em execução.",
+      "queuedStalled": "O backup de {name} ainda não começou. Se continuar assim, peça a um administrador que verifique Saúde do sistema.",
       "alreadyRunning": "Já existe um backup desta aplicação em execução. Você pode iniciar outro quando este terminar.",
       "delete": {
         "action": "Excluir",
@@ -7711,7 +7711,7 @@
         "failed": "Não foi possível limpar esse backup."
       },
       "queuedNote": "Backup na fila. Ele aparece aqui assim que o servidor começar a gravá-lo.",
-      "queuedStalled": "Este backup ainda não foi iniciado. Ainda está na fila — se permanecer assim, o worker em segundo plano pode não estar em execução.",
+      "queuedStalled": "Este backup ainda não começou. Se continuar assim, peça a um administrador que verifique Saúde do sistema.",
       "alreadyRunning": "Já existe um backup desta aplicação em execução. Você pode iniciar outro quando este terminar.",
       "noDatabase": {
         "title": "Esta aplicação não possui banco de dados",
@@ -8042,7 +8042,7 @@
     "stalled": "Esta varredura parou de reportar progresso. Pode ter falhado no servidor.",
     "handover": {
       "title": "Concluir a migração do agente antigo",
-      "body": "Suas aplicações foram adotadas, mas o agente antigo ainda tem tarefas que este painel deve assumir.",
+      "body": "As suas aplicações foram adicionadas, mas o agente antigo ainda tem tarefas que este painel deve assumir.",
       "agentRunning": "O agente antigo ({unit}) ainda está em execução.",
       "bootMissing": "{username}: suas aplicações não voltarão a iniciar após uma reinicialização.",
       "rotationMissing": "{username}: seus logs nunca são rotacionados, então continuam crescendo.",

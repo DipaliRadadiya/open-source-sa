@@ -62,7 +62,7 @@ test("without manage permission the matching port has no Change link", async () 
 test("a saved port the image does not declare stays editable, with a fix to the declared one", async () => {
   renderCard({ port: 8082, detected: 5230 });
   const fix = await portField().findByRole("button", { name: "Use 5230" });
-  assert.ok(portField().getByText(/The image listens on 5230/));
+  assert.ok(portField().getByText(/The image uses port 5230/));
   assert.equal(portField().getByRole("spinbutton").value, "8082");
 
   fireEvent.click(fix);
@@ -75,6 +75,6 @@ test("an image that declares no port leaves a plain input and no warning", async
   renderCard({ port: 8080, detected: null });
   const input = await portField().findByRole("spinbutton");
   assert.equal(input.value, "8080");
-  assert.equal(Boolean(portField().queryByText(/The image listens on/)), false);
+  assert.equal(Boolean(portField().queryByText(/The image uses port/)), false);
   assert.ok(portField().getByText(messages.applications.container.containerPortHint));
 });

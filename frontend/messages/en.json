@@ -563,7 +563,7 @@
         "backup": "Server backups and where they are stored.",
         "php": "PHP versions and extensions on the server.",
         "node": "Node.js versions on the server.",
-        "sync": "Adopt applications and settings already on the machine.",
+        "sync": "Add applications and settings already on the server to the panel.",
         "git": "Connected Git accounts used to deploy applications.",
         "storage": "Remote storage used to hold backups.",
         "app_domain": "Domains pointed at this application, and their SSL.",
@@ -892,9 +892,9 @@
     "noSlashes": "This field is a name, not a path — no / characters",
     "required_target": "Enter a path",
     "invalidPath": "Enter a valid path",
-    "invalidMode": "Enter exactly 3 octal digits, e.g. 644",
+    "invalidMode": "Enter 3 digits from 0 to 7, like 644.",
     "required_bucket": "Bucket is required",
-    "required_endpoint": "Endpoint is required",
+    "required_endpoint": "Enter the storage address (endpoint).",
     "required_region": "Region is required",
     "required_accessKey": "Access key is required",
     "required_secretKey": "Secret key is required",
@@ -944,7 +944,7 @@
     "hostIsUrl": "Enter just the host name, like ftp.example.com — no ftp://, path or user name.",
     "rootFormat": "Use letters, numbers, dots, dashes, underscores and slashes only.",
     "rootTraversal": "The folder cannot contain ..",
-    "noEnvironmentLine": "environment= is already set by the panel for this worker. A second line stops it starting.",
+    "noEnvironmentLine": "Remove the environment= line — the panel already sets it for this worker.",
     "sftpAuthRequired": "Enter a password or a private key.",
     "maxLines100": "Up to 100 lines",
     "rangeSeconds3600": "Enter 0 to 3600 seconds.",
@@ -979,7 +979,7 @@
     "confirmContainerOnly": "Tick the box to confirm.",
     "rangeIdleTimeout": "Enter 1 to 86400 seconds, or leave it empty.",
     "rangeSpawnRate": "Enter 1 to 1024, or leave it empty.",
-    "pmSpareOrder": "Fill in all three worker numbers or none, so that fewest idle ≤ started ≤ most idle ≤ PHP workers.",
+    "pmSpareOrder": "Fill in all three numbers or none. The starting number must be between the fewest and most idle, and none can be more than the PHP workers.",
     "min12": "At least 12 characters",
     "max128": "Must be 128 characters or fewer",
     "noControlChars": "No line breaks or control characters",
@@ -1033,7 +1033,7 @@
       "noHistory": "Trends appear once a few samples have been collected. The server is measured every five minutes.",
       "load": {
         "title": "Server load",
-        "description": "Queued work against how many cores this server has, over the last 24 hours.",
+        "description": "How busy the server has been compared with its number of cores, over the last 24 hours.",
         "cores": "{count} cores"
       },
       "usage": {
@@ -1059,7 +1059,7 @@
     "processes": {
       "title": "Processes",
       "description": "Top processes by CPU usage.",
-      "pid": "PID",
+      "pid": "ID",
       "user": "User",
       "cpu": "CPU %",
       "memory": "Memory %",
@@ -1095,7 +1095,7 @@
       "action": "Stop this process",
       "noPermission": "Your role does not include Dashboard with Manage access. Ask an administrator to grant it.",
       "title": "Stop {command}?",
-      "description": "PID {pid}, running as {user}. Anything depending on it stops too, and there is no undo.",
+      "description": "Process {pid}, run by {user}. Anything that depends on it stops too, and this can't be undone.",
       "forceDescription": "It did not stop. Force stop kills it immediately, with no chance to save or close files.",
       "confirm": "Stop",
       "force": "Force stop",
@@ -1209,7 +1209,7 @@
     "addJob": "Add cron job",
     "cancel": "Cancel",
     "saving": "Saving…",
-    "unmanaged": "Unmanaged",
+    "unmanaged": "Added by hand",
     "columns": {
       "name": "Name",
       "schedule": "Schedule",
@@ -1286,7 +1286,7 @@
         "days": "Days & weeks",
         "custom": "Custom"
       },
-      "commandHint": "Cron runs with a minimal <code>PATH</code>, so use absolute paths such as <code>/usr/bin/php</code>. To save output to a log file, append <code>>> /path/to/log 2>&1</code>.",
+      "commandHint": "Use full paths, such as <code>/usr/bin/php</code>. Output is saved for you — see Run history.",
       "serverTimeNote": "Runs in server time ({timezone})",
       "runAsUnavailable": "The account list could not be loaded. Choose \"Other system user…\" and type the username.",
       "runAsHint": "The system user the command runs under. It decides which files the job can read and write.",
@@ -1441,7 +1441,7 @@
     "unavailable": {
       "title": "The panel is updating",
       "body": "The server is refusing requests while it updates. This usually clears within a minute.",
-      "stuck": "The update stopped part-way. Run this on the server to bring the API back:",
+      "stuck": "The update stopped part-way. Run this command on the server to finish it:",
       "stuckLabel": "If it does not clear",
       "copyCommand": "Copy command"
     },
@@ -1452,38 +1452,38 @@
       "noResponse": "no reply",
       "details": "Technical details",
       "serverSaid": "Your server said",
-      "debugWarning": "This detail was only available because your server is running in debug mode. Turn that off on a public panel — it exposes internals to anyone who reaches the login page."
+      "debugWarning": "This is shown because debug mode is on. Turn it off on a live panel — it shows internal details to anyone who opens the login page."
     },
     "why": {
       "network": {
         "title": "Your server is not answering",
         "body": "The panel tried to reach {host} and got no reply at all.",
-        "next": "The API is usually stopped, still restarting, or its port is closed by a firewall. Check the web server on that machine."
+        "next": "Wait a minute and try again. If it keeps failing, the panel's service on the server may have stopped, or a firewall is blocking it."
       },
       "server": {
         "title": "Your server returned an error",
-        "body": "The API answered with error {status} instead of your account details.",
-        "next": "Something failed inside the API, not in this page. The reason is written to the API's log on your server."
+        "body": "The server hit a problem and couldn't load your account.",
+        "next": "This is a fault in the panel, not in your applications. Try again in a minute. If it keeps happening, the Error Log in Admin has the details."
       },
       "forbidden": {
         "title": "Your server refused this request",
-        "body": "The API answered {status} — this account is not allowed to do that.",
+        "body": "Your account is not allowed to open this.",
         "next": "Ask an administrator to give your account permission, then sign in again."
       },
       "notFound": {
         "title": "The panel asked for something that is not there",
-        "body": "The API answered {status} for {path}.",
-        "next": "That usually means the panel and the API are different versions. Update them both to the same release."
+        "body": "The panel asked the server for something it doesn't have.",
+        "next": "This usually means an update did not finish. Run the panel update again, or ask whoever manages this server."
       },
       "gateway": {
-        "title": "The API did not respond",
-        "body": "The web server on {host} answered {status}, which means it could not get a reply from the API behind it.",
-        "next": "Usually PHP-FPM has stopped, or the request took too long. Check PHP-FPM on that machine — the API's own log will be empty, because it never ran."
+        "title": "The panel did not respond",
+        "body": "The server at {host} is up, but the panel on it did not answer.",
+        "next": "The panel may be busy, or its PHP service has stopped. Wait a minute and try again. If it keeps happening, restart PHP on the server."
       },
       "rejected": {
         "title": "Your server rejected the request",
-        "body": "The API answered {status} for {path}. It did not fail — it refused what the panel sent.",
-        "next": "Usually the panel and the API are different versions, or something between them is rewriting requests. Update both to the same release."
+        "body": "The server refused what the panel sent.",
+        "next": "This usually means an update did not finish. Run the panel update again, or ask whoever manages this server."
       }
     },
     "whatToDo": "What to do",
@@ -1875,7 +1875,7 @@
       "ignoreHint": "Addresses on this list are excluded from Fail2ban bans.",
       "saveRules": "Save ban rules",
       "ignoreDraftHint": "Add and remove take effect straight away. Fail2ban reloads each time, which takes a few seconds.",
-      "inputLabel": "IP address or range (CIDR)",
+      "inputLabel": "IP address or range, like 203.0.113.0/24",
       "ignoreEmpty": "Nothing here yet.",
       "ipPlaceholder": "203.0.113.5 or 203.0.113.0/24",
       "addIp": "Add",
@@ -2306,7 +2306,7 @@
         }
       },
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
-      "passwordNotManageable": "This install cannot rewrite its own configuration file, so the Redis password cannot be changed from here. Change it on the server and update REDIS_PASSWORD."
+      "passwordNotManageable": "The Redis password can't be changed from the panel on this install. It has to be changed on the server."
     },
     "maintenance": {
       "rebootRequired": {
@@ -2352,14 +2352,14 @@
         "runConfirmSubmit": "Install now",
         "runReasons": {
           "locked": "Another package manager was holding apt and would not let go. Nothing was changed — try again in a few minutes.",
-          "stale_lock": "apt is locked with nothing holding it: an interrupted tool left a lock file behind. Run the panel doctor, which names the file to remove.",
-          "denied": "The panel is not permitted to run unattended-upgrades. Run `artisan panel:sudoers` as root to rewrite its grant.",
+          "stale_lock": "An earlier update was interrupted and left the updater locked. Ask an administrator to open System Health, which shows how to clear it.",
+          "denied": "The panel isn't allowed to install updates. Ask an administrator to open System Health, which shows the fix.",
           "timeout": "The upgrade was still running when it ran out of time. It may have finished on its own — check the log before starting another.",
           "dpkg": "A package failed to configure itself. The reason is in the dpkg log: /var/log/unattended-upgrades/unattended-upgrades-dpkg.log",
           "fetch": "The updates could not be downloaded. Check the server can reach its package mirrors.",
           "disk_full": "The disk filled up during the upgrade. Free some space, then try again.",
           "dependencies": "The packages waiting cannot be installed together. This usually needs apt run by hand to see what is held back.",
-          "worker": "The process running the upgrade disappeared — most likely restarted by the upgrade itself. apt may have finished the work anyway: check the log before starting another.",
+          "worker": "The update stopped unexpectedly, possibly because it restarted the panel. It may have finished anyway — check the log before running it again.",
           "unknown": "The upgrade failed. The output below is what it said."
         },
         "saveFailed": "Update settings could not be saved."
@@ -2709,7 +2709,7 @@
     },
     "common": {
       "title": "Common settings",
-      "description": "The limits applications most often need raised. They apply to every application on PHP {version} that doesn't set its own.",
+      "description": "Applies to every application on PHP {version} that doesn't set its own.",
       "appliesNote": "Saved to php.ini and checked by PHP before it applies.",
       "saveAction": "Save PHP settings",
       "saved": "PHP {version} settings saved.",
@@ -3195,18 +3195,18 @@
       "backupsKept": "Any backups of it are kept. You'll find them under Backups → Archived, where you can download them or restore them into another database."
     },
     "adopt": {
-      "title": "{count, plural, one {# database on this server isn't managed here} other {# databases on this server aren't managed here}}",
-      "description": "They were created outside the panel. Adopt them to see and manage them here.",
+      "title": "{count, plural, one {# database on this server isn't in the panel yet} other {# databases on this server aren't in the panel yet}}",
+      "description": "They were created outside the panel. Add them to see and manage them here.",
       "action": "Review",
-      "confirmTitle": "Adopt existing databases",
+      "confirmTitle": "Add existing databases to the panel",
       "confirmDescription": "Nothing is changed or deleted — the panel just starts managing them.",
       "selectedCount": "{selected} of {total} selected",
       "selectAll": "Select all",
       "clearAll": "Clear",
-      "submit": "Adopt",
-      "adopting": "Adopting…",
-      "done": "{count, plural, one {# database adopted. It is not linked to an application yet, so no backup includes it.} other {# databases adopted. They are not linked to an application yet, so no backup includes them.}}",
-      "failed": "They couldn't be adopted."
+      "submit": "Add to panel",
+      "adopting": "Adding…",
+      "done": "{count, plural, one {# database added. It isn't linked to an application yet, so no backup includes it.} other {# databases added. They aren't linked to an application yet, so no backup includes them.}}",
+      "failed": "They couldn't be added."
     },
     "engineList": {
       "title": "Database engines",
@@ -3239,7 +3239,7 @@
         "hint": "Host and port. The usual choice."
       },
       "socket": {
-        "label": "Unix socket",
+        "label": "Local socket (this server only)",
         "hint": "A local file. Often works when a password login does not."
       },
       "socketPath": "Socket path",
@@ -3645,7 +3645,7 @@
     "createFailed": "The database could not be created.",
     "unavailable": {
       "title": "Databases are not managed on this server",
-      "body": "This server hosts containers. An application that needs a database brings one as a container of its own, so the panel manages no engine here — and its own data is SQLite regardless."
+      "body": "This server hosts containers. An application that needs a database brings its own, as a container, so there is nothing to manage here."
     },
     "detailsTitle": "Details",
     "rootPassword": {
@@ -3825,7 +3825,7 @@
     "logs": {
       "pageTitle": "Logs",
       "pageSubtitle": "Read this application's access, error and output logs.",
-      "provisioning": "Logs become available once the application finishes provisioning.",
+      "provisioning": "Logs appear once the application has finished setting up.",
       "loadFailed": "We couldn't load the logs.",
       "sourcesLabel": "Log source",
       "proxyHint": "These are the reverse proxy's logs — your application's own output is under \"Application output\".",
@@ -3870,7 +3870,7 @@
     "environment": {
       "pageTitle": "Environment",
       "pageSubtitle": "Edit this application's .env file.",
-      "provisioning": "Environment becomes available once the application finishes provisioning.",
+      "provisioning": "Environment settings appear once the application has finished setting up.",
       "loadFailed": "We couldn't load the environment.",
       "sectionTitle": "Environment",
       "sectionSubtitle": "The application's .env, edited as one file.",
@@ -4029,7 +4029,7 @@
     "connectGit": "Connect Git",
     "createAction": "Create application",
     "creating": "Creating application…",
-    "created": "Application created. Provisioning has started.",
+    "created": "Application created. Setup has started.",
     "cancel": "Cancel",
     "columns": {
       "name": "Application",
@@ -4045,7 +4045,7 @@
     },
     "empty": {
       "title": "Your server is ready for its first application",
-      "description": "Create an application or service in a guided flow. {brand} will provision it, then show its live status here.",
+      "description": "Pick a type and fill in a short form. {brand} sets it up and shows its live status here.",
       "filteredTitle": "No matching applications",
       "guideTitle": "From idea to a running application",
       "steps": {
@@ -4058,7 +4058,7 @@
           "description": "Provide its domain, owner, and only the settings it needs."
         },
         "provision": {
-          "title": "Track provisioning",
+          "title": "Watch it set up",
           "description": "Follow each server step until the application is ready."
         }
       }
@@ -4138,7 +4138,7 @@
       "typeHint": "Pick the starting point for your project. You can adjust advanced configuration later.",
       "moreOnDocker": "More apps are available as 1-Click Recipes on servers installed with Docker.",
       "configureHint": "Only the fields required by this application are shown.",
-      "reviewTitle": "Ready to provision",
+      "reviewTitle": "Ready to create",
       "reviewHint": "{brand} will create the application configuration and show progress on the next screen.",
       "selected": "Selected",
       "change": "Change"
@@ -4262,7 +4262,7 @@
       "label": "Actions",
       "open": "Open dashboard",
       "visit": "Visit application",
-      "visitHint": "The application is served once provisioning finishes.",
+      "visitHint": "The application can be opened once setup finishes.",
       "delete": "Delete application",
       "visitNamed": "Open {domain} in a new tab"
     },
@@ -4318,7 +4318,7 @@
       "since": "Running since",
       "cpu": "CPU",
       "memory": "Memory",
-      "pid": "PID",
+      "pid": "ID",
       "restarts": "Restarts",
       "start": "Start",
       "stop": "Stop",
@@ -4334,21 +4334,21 @@
       "stopBody": "The application goes offline until it is started again, and visitors get an error page in the meantime.",
       "stopping": "Stopping…",
       "cancel": "Cancel",
-      "supervisorPm2": "PM2 (adopted)",
+      "supervisorPm2": "PM2 (from the old panel)",
       "workers": "Processes",
       "workersCount": "{total}",
       "workersDegraded": "{online} of {total} online",
       "convert": {
-        "action": "Switch to a systemd unit",
-        "title": "Switch “{name}” to a systemd unit?",
-        "description": "This site is still run by the previous panel’s PM2. Moving it to a systemd unit restarts the application.",
+        "action": "Switch to the new process manager",
+        "title": "Switch “{name}” to the new process manager?",
+        "description": "This application is still run by the old panel's PM2. Switching restarts it.",
         "restarts": "The application restarts. It is usually back within a few seconds.",
-        "rollback": "If it does not answer afterwards, we put it straight back under PM2 — so a failure leaves your site up.",
-        "gains": "A unit gives this site its own memory limit, accurate per-site metrics and its logs beside the files.",
+        "rollback": "If it does not answer afterwards, we put it straight back under PM2 — so a failure leaves your application up.",
+        "gains": "It gives this application its own memory limit, accurate usage numbers, and its logs next to its files.",
         "confirm": "Switch and restart",
         "converting": "Switching…",
         "cancel": "Cancel",
-        "done": "“{name}” now runs under a systemd unit.",
+        "done": "“{name}” now runs under the new process manager.",
         "failed": "We could not switch this application."
       }
     },
@@ -4368,7 +4368,7 @@
         "notSecured": "Not secured",
         "sslUnknown": "Certificate status unknown"
       },
-      "provisioning": "Domains and SSL become available once the application finishes provisioning.",
+      "provisioning": "Domains and SSL appear once the application has finished setting up.",
       "sectionTitle": "Domains",
       "sectionSubtitle": "Every name this application answers to.",
       "emptyTitle": "No domains yet",
@@ -4511,9 +4511,9 @@
         "dryRunPassed": "Dry run passed — this application is ready for a certificate.",
         "dryRunFailed": "Dry run failed — issuing now would not work.",
         "dryRunStartFailed": "Couldn't start the dry run.",
-        "certificate": "Certificate (PEM)",
-        "privateKey": "Private key (PEM)",
-        "chain": "Chain / intermediates",
+        "certificate": "Certificate",
+        "privateKey": "Private key",
+        "chain": "Intermediate certificates",
         "optional": "optional",
         "refusedTitle": "The application isn't reachable for validation yet",
         "forceHint": "If this server can't reach its own public address (e.g. behind NAT), you can skip the reachability check.",
@@ -4667,14 +4667,14 @@
         "title": "How this application runs",
         "subtitle": "The command that starts the process, and the port it listens on.",
         "startCommand": "Start command",
-        "startCommandHint": "The entry file, for example \"node index.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.",
+        "startCommandHint": "The file that starts your app, for example \"node index.js\". Don't use \"npm start\" — the app would not stop cleanly.",
         "appPort": "Application port",
         "appPortPlaceholder": "Chosen for you",
         "appPortHint": "Blank picks a free one.",
-        "appliesOnDeploy": "Saved now, applied on the next deploy — that is when the service file is rewritten.",
-        "save": "Save runtime settings",
-        "saved": "Runtime settings saved. They apply on the next deploy.",
-        "saveFailed": "Couldn't save the runtime settings.",
+        "appliesOnDeploy": "Saved now, used from the next deploy.",
+        "save": "Save start settings",
+        "saved": "Start settings saved. They apply on the next deploy.",
+        "saveFailed": "Couldn't save the start settings.",
         "noPermission": "You do not have permission to change this.",
         "nothingToSave": "Nothing has changed"
       },
@@ -5220,7 +5220,7 @@
         "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
-        "commandHint": "Runs as this application's own user. supervisord runs the command directly, not through a shell.",
+        "commandHint": "Runs as this application's own user, directly — not through a shell, so pipes and && don't work.",
         "processes": "Processes",
         "processesHint": "How many copies to run at once, for handling more jobs in parallel.",
         "restartOnDeploy": "Restart after deploy",
@@ -5243,10 +5243,10 @@
         "userHint": "The account this worker runs as — the application's own user.",
         "logFile": "Log file",
         "logFilePlaceholder": "/var/log/my-worker.log",
-        "logFileHint": "Absolute path, and it can't contain .. — leave empty and supervisord chooses one.",
+        "logFileHint": "A full path, without .. — leave empty to use the default.",
         "logLevel": "Log level",
         "logLevelDefault": "Server default",
-        "logLevelHint": "How much supervisord itself writes about this worker.",
+        "logLevelHint": "How much detail the worker's own log records.",
         "logLevels": {
           "critical": "Critical",
           "error": "Error",
@@ -5258,7 +5258,7 @@
         },
         "autoStart": "Start with the server",
         "autoStartHint": "Off means it only runs when you start it by hand.",
-        "extraConfig": "Extra supervisord settings",
+        "extraConfig": "Extra worker settings",
         "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "One setting per line, added to this worker only. Section headers in [brackets] are refused.",
         "kind": "Type",
@@ -5289,11 +5289,11 @@
       "enableHint": "Visitors must sign in with the credentials below before they can view the application.",
       "whenToUseTitle": "When to use this",
       "whenToUseBody": "Good for a staging application, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the application is ready for the public.",
-      "warning": "This protects the whole application, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
+      "warning": "This locks the whole application, so search engines and uptime checks are blocked too until they're given the login.",
       "unencrypted": "This application has no SSL certificate, so the password is sent unencrypted. <link>Add a certificate</link> to protect it.",
       "credentialsNote": "This creates a new login just for this application — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
       "disabledHint": "The application is publicly reachable — anyone can view it.",
-      "unsupportedForType": "This application signs in with the Authorization header, which HTTP allows only once per request. Password protection would consume it and make the application unreachable. It already requires its own credentials.",
+      "unsupportedForType": "This application has its own login, so password protection can't be added on top — it would make the application unreachable.",
       "username": "Username",
       "usernamePlaceholder": "e.g. admin",
       "password": "Password",
@@ -5313,7 +5313,7 @@
       "openSite": "Open application",
       "showPassword": "Show password",
       "hidePassword": "Hide password",
-      "unsupportedProtected": "This application signs in with the Authorization header, so password protection can make it unreachable. Turn it off unless you've checked the application still works.",
+      "unsupportedProtected": "This application has its own login, so password protection can make it unreachable. Turn it off unless you've checked the application still works.",
       "passwordAgainHint": "Enter the password again, or a new one. It's needed to save any change."
     },
     "botBlocker": {
@@ -5398,7 +5398,7 @@
       "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "robotsTxtOnly": "robots.txt only",
-      "robotsTxtOnlyNote": "{names} never visit your site — Google and Apple train AI with their normal crawlers and only read these names in robots.txt. Blocking them here doesn't stop that; add them to robots.txt with Disallow: / instead.",
+      "robotsTxtOnlyNote": "{names} can't be blocked here — Google and Apple only honour these names in robots.txt. Add them there with Disallow: / instead.",
       "robotsTxt": {
         "title": "Also add this to robots.txt",
         "copy": "Copy the robots.txt lines"
@@ -5436,7 +5436,7 @@
       "lastCategory": "At least one check has to stay on. To stop checking altogether, turn the firewall off.",
       "advanced": "Fine-tuning",
       "exceptionsTitle": "Let these through",
-      "exceptionsHint": "A request whose web address path contains any of these skips every check. Only the path is matched — not the part after the ? or the browser name. Use at least 4 characters and keep them specific: a common word switches the firewall off across much of your application.",
+      "exceptionsHint": "Addresses that skip the firewall. Only the web address path is matched. Use at least 4 characters and a specific path like /api/webhook — a common word switches protection off widely.",
       "exceptionsPlaceholder": "e.g. my-plugin-name",
       "exceptionsEmpty": "Nothing is being let through.",
       "blocksTitle": "Always block these",
@@ -5482,7 +5482,7 @@
         "carriesItems": {
           "files": "Files",
           "database": "Database",
-          "phpVersion": "Runtime versions",
+          "phpVersion": "PHP and Node.js versions",
           "webRoot": "Web root",
           "buildCommand": "Build & deploy",
           "repository": "Repository, branch & git account"
@@ -5675,7 +5675,7 @@
         "timezone": "Only affects dates PHP produces, not the server clock.",
         "autoPrepend": "A path inside this application. Leave empty unless you were told otherwise.",
         "directives": "One PHP setting per line, like display_errors = Off. Settings with a field on this screen, and extensions, can't be set here.",
-        "directivesPool": "One setting per line, like display_errors = Off. Pool lines such as env[APP_ENV] = production and request_terminate_timeout = 300 are allowed too. Settings with a field on this screen, and extensions, can't be set here.",
+        "directivesPool": "Extra PHP settings, one per line, like display_errors = Off. Pool lines such as env[APP_ENV] = production work too.",
         "openBasedir": "Stops PHP reading or writing files outside this application's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
         "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. An application set up earlier picks this up the first time you save.",
@@ -5762,7 +5762,7 @@
         "errorsHere": "Settings to fix on this tab"
       },
       "sections": {
-        "runtime": "Runtime",
+        "runtime": "Version and memory",
         "limits": "Request limits"
       },
       "advancedNote": "These change how PHP-FPM runs this application. The defaults suit almost every application — change them only if you know why.",
@@ -5831,7 +5831,7 @@
         "jailHint": "When to ban — how many tries, over how long, for how long.",
         "filterHint": "What counts as a bad try — matched against each log line."
       },
-      "placeholderNote": "The jail name, log path and filter are filled in from this application. Leave the filter line as it is — it must match the Filter file, which is always named after this application.",
+      "placeholderNote": "The jail name, log path and filter are filled in for you. Leave the filter line as it is.",
       "placeholderLost": "{count, plural, one {{tokens} is no longer in the file — the value it stood for will not be filled in. That is only correct if you replaced it on purpose.} other {{tokens} are no longer in the file — the values they stood for will not be filled in. That is only correct if you replaced them on purpose.}}",
       "unsavedHere": "Unsaved changes in this file",
       "saveAction": "Save and reload fail2ban",
@@ -6072,7 +6072,7 @@
     },
     "status": {
       "pending": "Pending",
-      "provisioning": "Provisioning",
+      "provisioning": "Setting up",
       "active": "Running",
       "paused": "Paused",
       "failed": "Failed"
@@ -6116,7 +6116,7 @@
       "description": "Whether this application could be restored.",
       "runningNote": "A backup of this application is running now. This card updates on its own.",
       "queuedNote": "Backup queued. It starts as soon as the server picks it up.",
-      "queuedStalled": "This backup has not started yet. If it stays this way, the background worker may not be running.",
+      "queuedStalled": "This backup has not started yet. If it stays this way, ask an administrator to check System Health.",
       "alreadyRunning": "A backup of this application is already running.",
       "noneKept": "None kept",
       "notSetUp": "Not set up"
@@ -6268,8 +6268,8 @@
       },
       "purpose": {
         "database": "Where {app} stores its data",
-        "node": "The runtime {app} runs on",
-        "php": "The runtime {app} runs on"
+        "node": "What {app} needs to run",
+        "php": "What {app} needs to run"
       },
       "footerIdleOne": "It installs in the background — you can keep filling in the form.",
       "subImpossible": "This server cannot run this application as it stands.",
@@ -6434,7 +6434,7 @@
       "hint": "Image, ports, volumes and environment variables for this application all live in this file.",
       "loadFailed": "The compose file could not be read.",
       "safety": "Saving restarts the container, so the application is briefly down. If the new file won't start, the panel puts the previous one back.",
-      "takeover": "This application currently runs a file the panel generates from its image and the settings on the Container page. Saving here takes the file over: from then on this text is what runs, and those settings stop driving it. There is no way back to the generated file except clearing this one.",
+      "takeover": "Saving here means this file runs, and the settings on the Container page stop driving it. There is no way back except clearing this file.",
       "acknowledge": "I understand that saving replaces the generated file permanently.",
       "save": "Save and apply",
       "saved": "The compose file was applied and the container recreated.",
@@ -6445,7 +6445,7 @@
       "lines": "{count, plural, one {# line} other {# lines}}",
       "rules": {
         "parser": "Checked by Docker before it runs",
-        "ports": "Ports publish on 127.0.0.1 only",
+        "ports": "Ports open on this server only — visitors reach the app through its domain",
         "mounts": "Mounts stay inside this application's folder"
       },
       "tickFirst": "Tick the box above to confirm first."
@@ -6502,10 +6502,10 @@
       "portGuessed": "our best guess for this image",
       "portChange": "Change",
       "portAsk": "This image doesn't say which port it listens on. Check its documentation for the port its web page is served on, such as 8080 or 3000.",
-      "portChangeWarning": "Only change this if the app really listens on another port. The image says {port}; a wrong port makes your domain show a 502 error.",
+      "portChangeWarning": "Only change this if the app really uses another port. The image says {port}; a wrong port means your domain shows an error page.",
       "portUseDetected": "Use {port}",
       "portOthers": "The image also opens: {ports}",
-      "portDiffers": "The image listens on {port}. A different port may show a 502 error.",
+      "portDiffers": "The image uses port {port}. A different port may make your domain show an error page.",
       "storageLabel": "Storage",
       "storageKeep": "Keep data in <mono>{path}</mono> when the app restarts or updates",
       "storageVolume": "Saved in volume {name}",
@@ -6532,7 +6532,7 @@
       "publicImage": "Public image (no login)",
       "checking": "Checking…",
       "composeLabel": "Compose file",
-      "composeHelp": "Ports publish on 127.0.0.1 only, and mounts stay inside this application's folder."
+      "composeHelp": "Ports open on this server only, and folders stay inside this application's folder."
     },
     "containerState": {
       "starting": "Starting",
@@ -6686,7 +6686,7 @@
     "tiles": {
       "status": "Status",
       "deploy": "Last deploy",
-      "runtime": "Runtime",
+      "runtime": "Runs on",
       "lastBackup": "Last backup {when}",
       "deployed": "Deployed",
       "deployFailed": "Deploy failed",
@@ -6887,10 +6887,10 @@
   "errorLogs": {
     "rawTitle": "Raw response",
     "rawCopy": "Copy raw response",
-    "title": "API Error Log",
-    "subtitle": "Unexpected failures inside the panel's own API, newest first.",
+    "title": "Panel Error Log",
+    "subtitle": "Unexpected failures inside the panel, newest first.",
     "summary": {
-      "healthy": "No unexpected API errors.",
+      "healthy": "No unexpected panel errors.",
       "healthyHint": "The panel has not hit an internal failure in the recorded period.",
       "excluded": "Rejected input, sign-in problems and pages that were not found are normal, and are not recorded here.",
       "counts": "{kinds, plural, one {# kind of error} other {# kinds of error}} · {total, plural, one {# occurrence} other {# occurrences}}",
@@ -6927,7 +6927,7 @@
     "kind": {
       "label": "Errors to show",
       "all": "All ({count})",
-      "api": "API errors ({count})",
+      "api": "Panel errors ({count})",
       "operation": "Server commands ({count})"
     },
     "referenceFind": "Find by reference",
@@ -7120,7 +7120,7 @@
         "passphrase": "Only needed if the private key itself is encrypted.",
         "service_account_json": "Paste the whole JSON key file for the service account.",
         "folder_id": "The part of the folder URL after /folders/ — not the whole link.",
-        "drive_shared_only": "Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty. Share the Shared Drive folder with the service account address, then paste its key below. Using a personal Gmail account? Choose Backblaze B2 or Cloudflare R2 instead — both have a free tier and handle large archives better.",
+        "drive_shared_only": "Only a Google Workspace Shared Drive works: share its folder with the service account, then paste the key below. Using personal Gmail? Choose Backblaze B2 or Cloudflare R2 instead.",
         "bucket": "The name of the bucket to store backups in. It must already exist — we do not create it for you.",
         "region": "The region the bucket lives in. It has to match, or the connection is refused.",
         "access_key": "The public half of the credentials for this storage account.",
@@ -7239,7 +7239,7 @@
         "step3": {
           "title": "Set up the consent screen",
           "body": "Choose External, then fill in an app name and your own email address.",
-          "publish": "Publish the app. If you leave it in Testing, Google expires access after about seven days and your backups stop — they will work all week and fail the next, with nothing in the panel having changed. You do not need Google to verify it; one warning screen for your own app is expected.",
+          "publish": "Publish the app. If it stays in Testing, Google stops access after about seven days and backups start failing. You don't need Google to verify it.",
           "link": "Open the consent screen"
         },
         "step4": {
@@ -7515,7 +7515,7 @@
       },
       "queuedNote": "Backup queued for {name}. It appears in this list as soon as the server starts writing it.",
       "queuedHidden": "Backup queued for {name}. The status filter you have set will hide it — clear the filter to watch it run.",
-      "queuedStalled": "The backup queued for {name} has not started yet. If it stays this way, the background worker may not be running.",
+      "queuedStalled": "The backup for {name} has not started yet. If it stays this way, ask an administrator to check System Health.",
       "alreadyRunning": "A backup of this application is already running. You can start another once it finishes.",
       "delete": {
         "action": "Delete",
@@ -7711,7 +7711,7 @@
         "failed": "That backup could not be cleared."
       },
       "queuedNote": "Backup queued. It appears here as soon as the server starts writing it.",
-      "queuedStalled": "This backup has not started yet. It is still queued — if it stays this way, the background worker may not be running.",
+      "queuedStalled": "This backup has not started yet. If it stays this way, ask an administrator to check System Health.",
       "alreadyRunning": "A backup of this application is already running. You can start another once it finishes.",
       "noDatabase": {
         "title": "This application has no database",
@@ -8042,7 +8042,7 @@
     "stalled": "This scan has stopped reporting progress. It may have failed on the server.",
     "handover": {
       "title": "Finish moving from the old agent",
-      "body": "Your applications are adopted, but the old agent still has jobs this panel should take over.",
+      "body": "Your applications are added, but the old agent still has jobs this panel should take over.",
       "agentRunning": "The old agent ({unit}) is still running.",
       "bootMissing": "{username}: its applications won't start again after a reboot.",
       "rotationMissing": "{username}: its logs are never rotated, so they keep growing.",
