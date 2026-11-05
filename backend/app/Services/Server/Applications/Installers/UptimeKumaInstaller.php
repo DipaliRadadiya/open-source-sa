@@ -325,6 +325,7 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
         $this->runAsSiteUser('extract', $application, ['git', 'checkout', '--force', $to], null, $documentRoot);
         $this->runWithNode('install_app', $application, ['npm', 'run', 'setup'], $documentRoot);
 
+        $this->progress->begin('restart');
         $restarted = $this->supervisor->restart($application);
 
         if ($restarted->failed()) {

@@ -28,7 +28,14 @@ class ApplicationUpdateResource extends JsonResource
                 Lang::has('app_update.reasons.'.$this->resource->reason) => __('app_update.reasons.'.$this->resource->reason),
                 default => __('app_update.reasons.step_failed'),
             },
+            // While the update runs this is the phase it is in now; once it has
+            // failed, the phase it failed at. Null when pending or completed.
             'step' => $this->resource->step,
+            'step_title' => match (true) {
+                $this->resource->step === null => null,
+                Lang::has('app_update.steps.'.$this->resource->step) => __('app_update.steps.'.$this->resource->step),
+                default => __('app_update.steps.working'),
+            },
             'reference' => $this->resource->reference,
             'user' => $this->resource->user?->username,
             'started_at' => $this->resource->started_at?->format('d-m-Y H:i:s'),

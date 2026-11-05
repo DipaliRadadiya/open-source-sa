@@ -87,6 +87,7 @@ trait UpdatesNpmApp
      */
     public function update(Application $application, string $from, string $to): void
     {
+        $this->progress->begin('check');
         $this->assertNodeSupports($application, $to);
 
         $root = $application->documentRoot();
@@ -114,6 +115,8 @@ trait UpdatesNpmApp
 
     private function restartAndConfirm(Application $application): void
     {
+        $this->progress->begin('restart');
+
         $restarted = $this->supervisor->restart($application);
 
         if ($restarted->failed()) {

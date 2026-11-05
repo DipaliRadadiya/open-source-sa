@@ -11,6 +11,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationUpdates;
+use App\Services\Server\Applications\ProvisionProgress;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -61,8 +62,12 @@ final class UpdateHost
     /** @var array<int, array{command: array<int, string>, path: ?string}> */
     public static array $runs = [];
 
+    /** Called with the joined command before it is answered — to look at the database mid-update. */
+    public static ?Closure $onRun = null;
+
     public static function reset(): void
     {
+        self::$onRun = null;
         self::$files = [];
         self::$updated = false;
         self::$finalStep = null;
@@ -74,6 +79,10 @@ final class UpdateHost
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
             self::$runs[] = ['command' => $args, 'path' => $process->path];
             $joined = implode(' ', $args);
+
+            if (self::$onRun !== null) {
+                (self::$onRun)($joined);
+            }
 
             if (self::$failOn !== null && str_contains($joined, self::$failOn)) {
                 return Process::result(errorOutput: 'simulated failure', exitCode: 1);
@@ -130,7 +139,7 @@ function updateHeaders(?User $user = null): array
 
 function runUpdateJob(ApplicationUpdate $update): ApplicationUpdate
 {
-    (new UpdateApplication($update->id, $update->application_id))->handle(app(ApplicationUpdates::class), app(ActivityLogger::class));
+    (new UpdateApplication($update->id, $update->application_id))->handle(app(ApplicationUpdates::class), app(ActivityLogger::class), app(ProvisionProgress::class));
 
     return $update->fresh();
 }
@@ -626,4 +635,152 @@ it('puts n8n back when the new version never comes up', function () {
     expect($update->status)->toBe(ApplicationUpdateStatus::Failed)
         ->and($update->reason)->toBe('app_not_ready')
         ->and(UpdateHost::ran("mv -- {$root}/.node_modules.pre-update {$root}/node_modules"))->toBeTrue();
+});
+
+// ---------------------------------------------------------------- the step while it runs (RC-12)
+
+/**
+ * `step` used to be set only when an update failed, so a running update read
+ * `status: running` and nothing else — for the several minutes Moodle's
+ * package and upgrade take. It now follows the update: each phase is written
+ * to the row as it starts, and the same field says where a failure stopped.
+ */
+it('shows the phase an update is in while it runs, and moves it as each phase starts', function () {
+    $application = updateApp('moodle');
+    moodleFixture($application);
+    UpdateHost::$finalStep = 'admin/cli/upgrade.php';
+    $update = pendingUpdate($application, '5.0.9', '5.0.11');
+    $seen = [];
+    $answers = [];
+    $busy = false;
+
+    UpdateHost::$onRun = function (string $command) use ($update, &$seen, &$answers, &$busy) {
+        if ($busy) {
+            return;
+        }
+        $busy = true;
+        $row = ApplicationUpdate::find($update->id);
+        $seen[] = [$row->status->value, $row->step];
+
+        // The poll the screen makes, answered in the middle of the upgrade.
+        if (str_contains($command, 'admin/cli/upgrade.php')) {
+            $answers = test()->withHeaders(updateHeaders())
+                ->getJson("/api/applications/{$update->application_id}/update")->json('history.0');
+        }
+        $busy = false;
+    };
+
+    $done = runUpdateJob($update);
+
+    // Consecutive repeats collapse: one entry per phase, in the order they ran.
+    $phases = collect($seen)->map(fn ($s) => $s[1])->filter()->values()
+        ->reduce(fn ($carry, $step) => end($carry) === $step ? $carry : [...$carry, $step], []);
+
+    expect($phases)->toBe(['maintenance_on', 'download', 'extract', 'upgrade', 'verify'])
+        ->and(collect($seen)->every(fn ($s) => $s[0] === 'running'))->toBeTrue()
+        ->and($answers['status'])->toBe('running')
+        ->and($answers['step'])->toBe('upgrade')
+        ->and($answers['step_title'])->toBe(__('app_update.steps.upgrade'))
+        ->and($done->status)->toBe(ApplicationUpdateStatus::Completed);
+});
+
+it('clears the step once an update has completed', function () {
+    $application = updateApp('moodle');
+    moodleFixture($application);
+    UpdateHost::$finalStep = 'admin/cli/upgrade.php';
+
+    $update = runUpdateJob(pendingUpdate($application, '5.0.9', '5.0.11'));
+
+    expect($update->status)->toBe(ApplicationUpdateStatus::Completed)->and($update->step)->toBeNull();
+
+    $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
+        ->assertJsonPath('history.0.step', null)
+        ->assertJsonPath('history.0.step_title', null);
+});
+
+it('follows an npm app through its check, prepare, install and restart phases', function () {
+    $application = npmApp('n8n', '2.40.1');
+    fakePackument('n8n', ['latest' => '2.43.6'], ['2.40.1' => '>=24.0.0', '2.43.6' => '>=24.0.0']);
+    UpdateHost::$files[$application->documentRoot().'/node_modules/n8n/package.json'][1] = '{"version":"2.43.6"}';
+    UpdateHost::$finalStep = 'npm install --omit=dev --no-audit --no-fund n8n@2.43.6';
+    n8nReady();
+    $update = pendingUpdate($application, '2.40.1', '2.43.6');
+    $steps = [];
+
+    UpdateHost::$onRun = function () use ($update, &$steps) {
+        $step = ApplicationUpdate::find($update->id)->step;
+        if ($step !== null && end($steps) !== $step) {
+            $steps[] = $step;
+        }
+    };
+
+    runUpdateJob($update);
+
+    expect($steps)->toBe(['prepare', 'install_app', 'restart', 'cleanup', 'verify']);
+});
+
+it('keeps failing as before: the step that failed, with its reason and reference', function () {
+    $application = updateApp('moodle');
+    moodleFixture($application);
+    UpdateHost::$failOn = 'admin/cli/upgrade.php';
+    $update = pendingUpdate($application, '5.0.9', '5.0.11');
+    $during = null;
+    UpdateHost::$onRun = function (string $command) use ($update, &$during) {
+        if (str_contains($command, 'admin/cli/maintenance.php --disable')) {
+            $during = ApplicationUpdate::find($update->id)->step;
+        }
+    };
+
+    $failed = runUpdateJob($update);
+
+    // The maintenance-off in `finally` is not a step of its own, so the
+    // row still named the phase that failed when it ran.
+    expect($during)->toBe('upgrade')
+        ->and($failed->status)->toBe(ApplicationUpdateStatus::Failed)
+        ->and($failed->step)->toBe('upgrade')
+        ->and($failed->reason)->toBe('step_failed')
+        ->and($failed->reference)->not->toBeNull();
+
+    $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
+        ->assertJsonPath('history.0.step', 'upgrade')
+        ->assertJsonPath('history.0.step_title', __('app_update.steps.upgrade'))
+        ->assertJsonPath('history.0.reason_title', __('app_update.reasons.step_failed'));
+});
+
+it('leaves a worker-killed update on the phase it died in', function () {
+    $application = updateApp('moodle');
+    $update = pendingUpdate($application, '5.0.9', '5.0.11');
+    $update->forceFill(['status' => ApplicationUpdateStatus::Running, 'step' => 'upgrade'])->save();
+
+    (new UpdateApplication($update->id, $application->id))->failed(new RuntimeException('timeout'));
+
+    expect($update->fresh()->reason)->toBe('worker')->and($update->fresh()->step)->toBe('upgrade');
+});
+
+it('never shows a raw key for a step it has no sentence for, and nothing before one starts', function () {
+    $application = updateApp('moodle');
+    moodleFixture($application);
+    $pending = pendingUpdate($application, '5.0.9', '5.0.11');
+
+    $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
+        ->assertJsonPath('history.0.status', 'pending')
+        ->assertJsonPath('history.0.step', null)
+        ->assertJsonPath('history.0.step_title', null);
+
+    $pending->forceFill(['status' => ApplicationUpdateStatus::Running, 'step' => 'some_future_step'])->save();
+
+    $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
+        ->assertJsonPath('history.0.step', 'some_future_step')
+        ->assertJsonPath('history.0.step_title', __('app_update.steps.working'));
+});
+
+it('does not touch the application\'s own steps[] while an update runs', function () {
+    $application = updateApp('moodle');
+    moodleFixture($application);
+    UpdateHost::$finalStep = 'admin/cli/upgrade.php';
+    $application->forceFill(['steps' => ['create_database', 'download']])->save();
+
+    runUpdateJob(pendingUpdate($application, '5.0.9', '5.0.11'));
+
+    expect($application->fresh()->steps)->toBe(['create_database', 'download']);
 });

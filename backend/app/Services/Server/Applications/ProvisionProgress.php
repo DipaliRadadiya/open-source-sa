@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Models\Application;
+use App\Models\ApplicationUpdate;
 
 /**
  * Records provisioning and deploy steps on the application **as they happen**.
@@ -31,6 +32,8 @@ class ProvisionProgress
 
     /** @var array<int, string> */
     private array $steps = [];
+
+    private ?ApplicationUpdate $update = null;
 
     /**
      * Begin recording for an application, discarding anything from a previous
@@ -66,6 +69,38 @@ class ProvisionProgress
         $this->steps[] = $step;
 
         $this->persist();
+    }
+
+    /**
+     * Follow one-click update `$update`: from here on `begin()` keeps its
+     * `step` column on the phase the update is in. Separate from `open()` on
+     * purpose — an update must not reset the application's own `steps[]`.
+     */
+    public function trackUpdate(ApplicationUpdate $update): void
+    {
+        $this->update = $update;
+    }
+
+    /**
+     * Note a step that is **starting**, for the update being followed.
+     *
+     * `record()` runs after a step succeeds, which says what is done; an
+     * update that sits in `download` for four minutes needs to say what it is
+     * doing *now*. A no-op unless `trackUpdate()` was called, so installs and
+     * deploys, which share the installers, write nothing here.
+     */
+    public function begin(string $step): void
+    {
+        if ($this->update === null || $this->update->step === $step) {
+            return;
+        }
+
+        // Straight to the row, as persist() does: the job saves `status` from
+        // its own instance and must not write a stale `step` over this.
+        ApplicationUpdate::whereKey($this->update->getKey())->update(['step' => $step]);
+
+        $this->update->setAttribute('step', $step);
+        $this->update->syncOriginalAttribute('step');
     }
 
     /**

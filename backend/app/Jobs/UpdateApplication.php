@@ -8,6 +8,7 @@ use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\ApplicationUpdate;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationUpdates;
+use App\Services\Server\Applications\ProvisionProgress;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -42,7 +43,7 @@ class UpdateApplication implements ShouldBeUnique, ShouldQueue
         return 'app-update-'.$this->applicationId;
     }
 
-    public function handle(ApplicationUpdates $updates, ActivityLogger $activity): void
+    public function handle(ApplicationUpdates $updates, ActivityLogger $activity, ProvisionProgress $progress): void
     {
         $update = ApplicationUpdate::with(['application.systemUser', 'user'])->find($this->updateId);
 
@@ -51,7 +52,11 @@ class UpdateApplication implements ShouldBeUnique, ShouldQueue
         }
 
         $application = $update->application;
-        $update->update(['status' => ApplicationUpdateStatus::Running, 'started_at' => now()]);
+        $update->update(['status' => ApplicationUpdateStatus::Running, 'started_at' => now(), 'step' => null]);
+
+        // From here every command the updater runs reports the phase it is
+        // starting, and the row says so while the update is still running.
+        $progress->trackUpdate($update);
 
         try {
             $updater = $updates->updaterFor($application);
@@ -64,15 +69,19 @@ class UpdateApplication implements ShouldBeUnique, ShouldQueue
 
             // The tools report success on their own terms; the version the
             // site's files now carry is the one thing that says it worked.
+            $progress->begin('verify');
             $now = $updater->installedVersion($application);
 
             if ($now === null || version_compare($now, (string) $update->to_version, '<')) {
                 throw new ProvisioningFailedException('verify', (string) Str::uuid(), 'version_unchanged');
             }
 
+            // `step` is the phase an update is in, or the one it failed at; a
+            // finished update is in none.
             $update->update([
                 'status' => ApplicationUpdateStatus::Completed,
                 'to_version' => $now,
+                'step' => null,
                 'finished_at' => now(),
             ]);
 

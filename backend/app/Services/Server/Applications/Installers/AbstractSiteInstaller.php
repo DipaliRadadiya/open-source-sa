@@ -554,6 +554,8 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      */
     protected function run(string $step, array $command, Application $application, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
+        $this->progress->begin($step);
+
         $result = $this->serverOps->run(
             $command,
             [

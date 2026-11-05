@@ -3729,11 +3729,24 @@ Permission `application` (view). Also the poll while an update runs (`throttle:p
     "blocked_reason": null,
     "last_backup_at": "2026-10-13 09:10:02"
   },
-  "history": [ { "id": 3, "from_version": "5.0.8", "to_version": "5.0.9", "status": "completed", "status_title": "Updated",
-                 "reason": null, "reason_title": null, "step": null, "reference": null, "user": "admin",
+  "history": [ { "id": 4, "from_version": "5.0.9", "to_version": "5.0.11", "status": "running", "status_title": "Updating",
+                 "reason": null, "reason_title": null, "step": "upgrade", "step_title": "Running the application's own upgrade",
+                 "reference": null, "user": "admin", "started_at": "…", "finished_at": null, "created_at": "…" },
+               { "id": 3, "from_version": "5.0.8", "to_version": "5.0.9", "status": "completed", "status_title": "Updated",
+                 "reason": null, "reason_title": null, "step": null, "step_title": null, "reference": null, "user": "admin",
                  "started_at": "…", "finished_at": "…", "created_at": "…" } ]
 }
 ```
+**`step` / `step_title` (RC-12, 2026-11-05).** While `status` is `running`, `step` is the phase the update is in **now**, written as each
+phase starts, so the screen can say what is happening during the minutes Moodle's package and upgrade take (poll this GET). It was
+previously set only on failure. Branch on `step` (machine key), show `step_title` (localised; an unknown key falls back to "Updating the
+application", never a raw key). Values, in the order they occur: `check` · `prepare` · `maintenance_on` · `download` · `extract` ·
+`update_app` · `install_app` · `upgrade` · `migrate` · `clear_cache` · `restart` · `cleanup` · `verify` (the last phase, for every
+type: the installed version is read back), plus `rollback` while an npm app puts its previous `node_modules` back. Which of them an update goes through depends on the type
+(Moodle: `maintenance_on` → `download` → `extract` → `upgrade` → `verify`; n8n: `check` → `prepare` → `install_app` → `restart` →
+`cleanup` → `verify`). `step` is `null` while `pending`, and **is cleared (`null`) when the update completes**. When it fails, `step` stays
+on the phase it failed at, exactly as before; an update killed with `reason: "worker"` keeps the phase it died in. No new column
+or table: it is the existing `step` field.
 `blocked_reason`: `null` (can update) · `unsupported` · `not_active` (not active, or disabled) · `version_unknown` (installed version unreadable) ·
 `lookup_failed` (release lookup failed — not cached, retried next time) · `up_to_date` · `running`.
 Release lookups are cached for 30 minutes per type and installed version.
