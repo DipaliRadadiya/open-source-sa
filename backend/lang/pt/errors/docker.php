@@ -20,4 +20,7 @@ return [
     'database_start_failed' => 'Não foi possível iniciar a base de dados (:step). Não ficou nada atrás — nenhum registo, nenhum contentor e nenhuma porta reservada.',
     'database_version_unknown' => 'Esse motor não tem a versão :version. Escolha uma das que o painel oferece para :engine.',
     'database_deleted' => 'A base de dados foi removida.',
+    'network_docker_own' => ':name é uma das redes do próprio Docker e não pode ser usada por uma aplicação. host colocá-la-ia diretamente na rede do servidor, e com as outras ela deixaria de alcançar os seus outros contentores. Escolha uma rede criada no ecrã Docker, ou mantenha a aplicação na sua própria rede.',
+    'network_other_application' => ':name é a rede privada de outra aplicação. Juntar-se a ela daria acesso aos contentores dessa aplicação, incluindo a sua base de dados. Para ligar as duas, crie uma rede partilhada no ecrã Docker e coloque ambas nela.',
+    'network_name_reserved' => 'O nome :name está reservado: o painel guarda os nomes das redes do próprio Docker e os que começam por sv-app- para as redes que cria para cada aplicação. Escolha outro nome.',
 ];

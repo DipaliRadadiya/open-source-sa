@@ -20,4 +20,7 @@ return [
     'database_start_failed' => 'The database could not be started (:step). Nothing was left behind — no row, no container and no port held.',
     'database_version_unknown' => 'That engine has no version :version. Pick one the panel offers for :engine.',
     'database_deleted' => 'The database was removed.',
+    'network_docker_own' => ':name is one of Docker\'s own networks and cannot be used for an application. host would put it straight on the server\'s own network, and the others leave it unable to reach its other containers. Pick a network made on the Docker screen, or keep the application on its own network.',
+    'network_other_application' => ':name is another application\'s private network. Joining it would give access to that application\'s containers, its database included. To connect the two, create a shared network on the Docker screen and put both on it.',
+    'network_name_reserved' => 'The name :name is reserved: the panel keeps Docker\'s own network names and names starting with sv-app- for the networks it creates for each application. Choose a different name.',
 ];

@@ -11,6 +11,7 @@ use App\Rules\SingleLine;
 use App\Rules\WithinHostCpus;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\Docker\NetworkIsolation;
 use App\Services\Server\HostCpus;
 
 /**
@@ -358,6 +359,9 @@ class DockerSiteType extends AbstractSiteType
             // deploy with a reason that names credentials nobody configured.
             'registry_id' => ['nullable', 'integer', 'exists:registries,id'],
 
+            // No application yet, so the rule has nothing it may call its own:
+            // Docker's built-ins and every site's private network are refused
+            // (RC-28), and the site is created on a shared network or its own.
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
             // A name to CREATE, so the opposite rule: it must not exist yet.
@@ -415,10 +419,10 @@ class DockerSiteType extends AbstractSiteType
      * would run `docker network ls` on a LEMP box, on a request that has
      * nothing to do with Docker, to build options for a card that is not shown.
      *
-     * Docker's own three are offered alongside the panel's. `bridge` is a
-     * legitimate answer and is also what null means, so it is not listed
-     * twice — the empty choice is the default, and the built-ins that cannot
-     * do name resolution are left out rather than offered as a trap.
+     * Only networks the site may join: Docker's own and every site's private
+     * `sv-app-<id>_*` network are left out, because the rule on the field
+     * refuses them (RC-28) and an option that answers 422 is a trap. The empty
+     * choice is the default and means the site's own network.
      *
      * @return list<array{value: string, label: string}>
      */
@@ -429,7 +433,7 @@ class DockerSiteType extends AbstractSiteType
         }
 
         return collect(app(DockerResources::class)->networks())
-            ->reject(fn (array $network): bool => $network['built_in'])
+            ->reject(fn (array $network): bool => NetworkIsolation::refusal($network['name']) !== null)
             ->map(fn (array $network): array => [
                 'value' => $network['name'],
                 'label' => $network['name'],

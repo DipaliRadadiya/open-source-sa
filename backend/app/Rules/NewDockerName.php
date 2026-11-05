@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\Docker\NetworkIsolation;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -39,6 +40,16 @@ class NewDockerName implements ValidationRule
 
         if (! DockerResources::validName($name)) {
             $fail(__("validation.docker_{$this->kind}_invalid"));
+
+            return;
+        }
+
+        // A name the panel keeps for itself (RC-28): `sv-app-<id>_*` is how a
+        // site's private network is recognised, and the names a container may
+        // never join are no better as a new network. Before the lookup, so the
+        // refusal does not reach `docker`.
+        if ($this->kind === 'network' && ($reserved = NetworkIsolation::reservedName($name)) !== null) {
+            $fail($reserved);
 
             return;
         }

@@ -532,6 +532,14 @@ class StoreApplicationRequest extends FormRequest
                 if ($taken !== null) {
                     $validator->errors()->add('compose', $taken);
                 }
+
+                // Docker's own networks and every site's private one (RC-28):
+                // the site does not exist yet, so none of them is its own.
+                $network = $verdict['resolved'] === null ? null : $composeValidator->unjoinableNetwork($verdict['resolved']);
+
+                if ($network !== null) {
+                    $validator->errors()->add('compose', $network);
+                }
             },
 
             // A Docker image site: what the image says about itself (DS-03).

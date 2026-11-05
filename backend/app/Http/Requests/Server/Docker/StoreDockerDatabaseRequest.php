@@ -42,7 +42,10 @@ class StoreDockerDatabaseRequest extends FormRequest
             'version' => ['required', 'string', 'max:32'],
 
             // Null is a real answer: a database only ever reached over its
-            // loopback port needs no network at all.
+            // loopback port needs no network at all. Not Docker's own and not a
+            // site's private network (RC-28): a database belongs to no site, so
+            // every `sv-app-<id>_*` network is somebody else's. A database a
+            // site should reach goes on a network made for both.
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
             // The instance's size, and the reason these are here rather than read

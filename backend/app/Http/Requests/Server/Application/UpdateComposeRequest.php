@@ -78,6 +78,17 @@ class UpdateComposeRequest extends FormRequest
                 if ($taken !== null) {
                     $validator->errors()->add('compose', $taken);
                 }
+
+                // Docker's own networks and other sites' private ones (RC-28),
+                // which the Container card's network field refuses too.
+                $network = $verdict['resolved'] === null ? null : $composeValidator->unjoinableNetwork(
+                    $verdict['resolved'],
+                    (int) $application->getKey(),
+                );
+
+                if ($network !== null) {
+                    $validator->errors()->add('compose', $network);
+                }
             },
         ];
     }

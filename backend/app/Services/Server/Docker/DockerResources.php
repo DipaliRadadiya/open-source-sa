@@ -594,9 +594,10 @@ class DockerResources
      *
      * `sv-app-6_default` belongs to application 6.
      * {@see ContainerSupervisor::project()}
-     * is where that prefix is decided.
+     * is where that prefix is decided. Public because it is also what decides
+     * which networks a site may join ({@see NetworkIsolation}).
      */
-    private function applicationIdFrom(string $name): ?int
+    public static function applicationIdFrom(string $name): ?int
     {
         return preg_match('/^sv-app-(\d+)[_-]/', $name, $matches) === 1
             ? (int) $matches[1]

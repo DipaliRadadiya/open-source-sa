@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\Docker\NetworkIsolation;
 use App\Services\Server\HostCpus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,6 +72,13 @@ class DockerResourceController extends Controller
         $name = (string) $request->input('name');
 
         abort_unless(DockerResources::validName($name), 422, __('errors/docker.invalid_name'));
+
+        // The `sv-app-<id>_*` namespace is how a site's private network is
+        // recognised (RC-28); one made here under that name is one Compose
+        // finds already there, without its labels, when that site is created.
+        $reserved = NetworkIsolation::reservedName($name);
+
+        abort_if($reserved !== null, 422, (string) $reserved);
 
         // Asked before creating rather than reading Docker's error after:
         // "network with name X already exists" is fine for a terminal and

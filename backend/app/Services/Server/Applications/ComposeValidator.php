@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Models\Application;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\Docker\NetworkIsolation;
 use App\Services\Server\ServerOps;
 
 /**
@@ -205,6 +206,48 @@ class ComposeValidator
         foreach ($published as $entry) {
             if ($containerPort !== null && $entry['target'] === $containerPort) {
                 return $entry['host'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Why this file may not use one of the networks it names, or null (RC-28).
+     *
+     * `network_mode` is refused above, but it is not the only way onto a
+     * network: a top-level `networks:` entry with `external: true` and `name:
+     * host` (or `name: sv-app-6_default`) joins one too, and the Container card's
+     * own network field already refuses both. Same rule, from the same class.
+     *
+     * Every resolved name is checked, external or not: an explicit `name:`
+     * without `external` makes Compose reuse a network that is already there.
+     * The ones Compose makes up are `<project>_<key>`, and the project at
+     * validation time is never another site's unless the file says so.
+     *
+     * Asked by the requests, not by `validate()`: a site already deploying a file
+     * that names such a network is not stopped on its next redeploy by a rule it
+     * predates — only a save of the file is.
+     *
+     * @param  array<string, mixed>  $resolved
+     * @param  int|null  $applicationId  the site the file is for; its own networks
+     *                                   are allowed. Null when creating one.
+     */
+    public function unjoinableNetwork(array $resolved, ?int $applicationId = null): ?string
+    {
+        $networks = $resolved['networks'] ?? [];
+
+        if (! is_array($networks)) {
+            return null;
+        }
+
+        foreach ($networks as $network) {
+            // `config` writes the real name on every entry, external ones
+            // included. Not the key: the key `default` is the project's own.
+            $name = is_array($network) ? ($network['name'] ?? null) : null;
+
+            if (is_string($name) && ($refusal = NetworkIsolation::refusal($name, $applicationId)) !== null) {
+                return $refusal;
             }
         }
 

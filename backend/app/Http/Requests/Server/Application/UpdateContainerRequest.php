@@ -92,8 +92,11 @@ class UpdateContainerRequest extends FormRequest
             // container does not have.
             'cpu_limit' => ['sometimes', 'nullable', 'string', 'max:16', new WithinHostCpus, new SingleLine],
 
-            // Null is a real answer: it means Docker's default bridge.
-            'docker_network' => ['sometimes', 'nullable', 'string', 'max:255', new ExistingDockerNetwork],
+            // Null is a real answer: it means the site's own network again.
+            // The application goes to the rule because "may this site join
+            // it" depends on which site: its own `sv-app-<id>_*` networks yes,
+            // another site's no (RC-28), and the one it is on now is kept.
+            'docker_network' => ['sometimes', 'nullable', 'string', 'max:255', new ExistingDockerNetwork($this->route('application'))],
 
             // When the network changes, whether the network the site was created on
             // (`<project>_default`) is removed once the move has come up. Default
