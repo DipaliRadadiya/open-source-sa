@@ -2196,6 +2196,7 @@ Every operation runs as the site's own Linux user (not root). All paths are rela
 | `destination_missing` | 422 | The folder something is going into does not exist (copy, move, extract, upload, new folder). Before 2026-10-08 this was a `404` "item could not be found" (FI-B). |
 | `destination_not_directory` | 422 | That "folder" is a file. |
 | `path_exists` | 422 | Something is already at the target (also creating a folder that exists — this was a silent `200` until 2026-10-08, FI-9). |
+| `into_itself` | 422 | Move/copy: the target is inside the folder being moved or copied (`a` → `a/b`). Was a `500` until 2026-11-05. A sibling that only starts the same (`a` → `ab/x`) is allowed; the same path is `path_exists`. |
 | `not_archive` | 422 | Extract: the file is not `.zip`/`.tar.gz`/`.tgz`. Compress: the target's name does not end in one. |
 | `too_large` | 422 | Too large to open in the editor (download it instead). |
 | `not_text` | 422 | Not a text file. |
@@ -2551,6 +2552,7 @@ The two are not the same operation:
 ```
 
 `reason` is `not_found`, `exists` (something is already at the destination),
+`into_itself` (move/copy: the destination is inside that selected folder; nothing runs for it, 2026-11-05),
 `setgid_file` (permissions only) or `failed`. A `target_directory` that does not
 exist refuses the whole request (`422`, `reason: destination_missing`). A batch can partly succeed — show the failures rather than treating
 the call as failed.

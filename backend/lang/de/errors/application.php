@@ -123,6 +123,7 @@ return [
     'upload_exists' => '„:name“ ist hier bereits vorhanden. Löschen Sie die Datei zuerst, wenn Sie sie ersetzen möchten – ein Upload überschreibt keine Datei.',
 
     'path_exists' => 'An diesem Pfad existiert bereits etwas.',
+    'into_itself' => 'Ein Ordner kann nicht in sich selbst verschoben oder kopiert werden.',
     'cannot_delete_root' => 'Der Stammordner der Website kann nicht gelöscht werden.',
     'target_not_archive' => 'Der Name des neuen Archivs muss auf .zip, .tar.gz oder .tgz enden.',
     'unknown_backup' => 'Das ist keine bekannte Sicherung dieser Datei.',

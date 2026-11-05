@@ -123,6 +123,7 @@ return [
     'upload_exists' => '« :name » existe déjà ici. Supprimez-le d’abord pour le remplacer : un envoi n’écrase jamais un fichier.',
 
     'path_exists' => 'Quelque chose existe déjà à ce chemin.',
+    'into_itself' => 'Un dossier ne peut pas être déplacé ou copié dans lui-même.',
     'cannot_delete_root' => 'Le dossier racine de l’application ne peut pas être supprimé.',
     'target_not_archive' => 'Le nom de la nouvelle archive doit se terminer par .zip, .tar.gz ou .tgz.',
     'unknown_backup' => 'Ce n\'est pas une sauvegarde connue de ce fichier.',

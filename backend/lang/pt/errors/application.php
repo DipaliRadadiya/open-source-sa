@@ -124,6 +124,7 @@ return [
     'upload_exists' => '«:name» já existe aqui. Elimine-o primeiro se pretende substituí-lo — um carregamento não substitui um ficheiro.',
 
     'path_exists' => 'Já existe algo nesse caminho.',
+    'into_itself' => 'Uma pasta não pode ser movida nem copiada para dentro de si mesma.',
     'cannot_delete_root' => 'A pasta raiz da aplicação não pode ser eliminada.',
     'target_not_archive' => 'O nome do novo arquivo deve terminar em .zip, .tar.gz ou .tgz.',
     'unknown_backup' => 'Essa não é uma cópia de segurança conhecida deste ficheiro.',

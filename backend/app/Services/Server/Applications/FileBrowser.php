@@ -1113,6 +1113,7 @@ class FileBrowser
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
         $target = $this->resolve($application, $targetPath);
+        $this->refuseIntoItself($source, $target, 'target');
         $this->assertDestination($application, dirname($target), 'target', dirname($targetPath));
         $this->refuseExisting($application, $target, 'target');
 
@@ -1136,6 +1137,7 @@ class FileBrowser
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
         $target = $this->resolve($application, $targetPath);
+        $this->refuseIntoItself($source, $target, 'target');
         $this->assertDestination($application, dirname($target), 'target', dirname($targetPath));
         $this->refuseExisting($application, $target, 'target');
 
@@ -2077,6 +2079,28 @@ class FileBrowser
         return strlen($mode) === 4 && in_array($mode[0], ['2', '3'], true);
     }
 
+    /**
+     * Moving or copying a folder into itself (`a` to `a/b`): `mv` and `cp`
+     * refuse it, and the refusal surfaced as a 500. A sibling whose name only
+     * starts the same (`a` to `ab/x`) is a different folder and is allowed.
+     */
+    private function refuseIntoItself(string $source, string $target, string $field): void
+    {
+        // The same path is left to refuseExisting(): "already exists" is the
+        // truer answer for renaming something to its own name.
+        if ($target !== rtrim($source, '/') && self::isInside($target, $source)) {
+            throw FileRefusedException::because($field, 'into_itself', 'errors/application.into_itself');
+        }
+    }
+
+    /** Whether $path is $folder itself or somewhere below it. */
+    private static function isInside(string $path, string $folder): bool
+    {
+        $folder = rtrim($folder, '/');
+
+        return $path === $folder || str_starts_with($path, $folder.'/');
+    }
+
     private function refuseExisting(Application $application, string $target, string $field): void
     {
         if ($this->stat($application, $target) !== null) {
@@ -2341,6 +2365,12 @@ class FileBrowser
         $sources = [];
 
         foreach ($landing as $relative => $target) {
+            if (self::isInside($destination, $this->resolve($application, $relative))) {
+                $failed[] = ['path' => $relative, 'reason' => 'into_itself'];
+
+                continue;
+            }
+
             if (array_key_exists($target, $occupied)) {
                 $failed[] = ['path' => $relative, 'reason' => 'exists'];
 

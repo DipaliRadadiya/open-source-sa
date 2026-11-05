@@ -124,6 +124,7 @@ return [
     'upload_exists' => '‘:name’ already exists here. Delete it first if you mean to replace it — an upload will not overwrite a file.',
 
     'path_exists' => 'Something already exists at that path.',
+    'into_itself' => "A folder can't be moved or copied into itself.",
     'cannot_delete_root' => 'The application\'s own root folder cannot be deleted.',
     'target_not_archive' => 'The new archive\'s name must end in .zip, .tar.gz or .tgz.',
     'unknown_backup' => 'That is not a known backup of this file.',

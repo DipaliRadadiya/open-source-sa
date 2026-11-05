@@ -2221,6 +2221,109 @@ describe('copying', function () {
     });
 });
 
+describe('moving or copying a folder into itself', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['a'] = ['type' => 'd'];
+        FileBrowserFake::$fs['a/b'] = ['type' => 'd'];
+        FileBrowserFake::$fs['a/b/c'] = ['type' => 'd'];
+        FileBrowserFake::$fs['a/inside.txt'] = ['type' => 'f', 'content' => 'x'];
+        FileBrowserFake::$fs['ab'] = ['type' => 'd'];
+    });
+
+    $ranTransfer = fn (): bool => collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_contains($c, ' mv ') || str_contains($c, ' cp -r '));
+
+    it('refuses a move into the folder itself with a 422, not a 500', function () use ($ranTransfer) {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'a', 'target' => 'a/b/a'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'into_itself')
+            ->assertJsonValidationErrors(['target']);
+
+        expect($ranTransfer())->toBeFalse()
+            ->and(FileBrowserFake::$fs)->toHaveKey('a/inside.txt');
+    });
+
+    it('refuses a copy into the folder itself', function () use ($ranTransfer) {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'a', 'target' => 'a/copy'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'into_itself');
+
+        expect($ranTransfer())->toBeFalse();
+    });
+
+    it('refuses it however deep the target is, even below a folder that does not exist yet', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'a', 'target' => 'a/b/c/missing/a'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'into_itself');
+    });
+
+    it('says so in plain words', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'a', 'target' => 'a/b/a'])
+            ->assertJsonPath('errors.target.0', "A folder can't be moved or copied into itself.");
+    });
+
+    it('still lets a folder move into a sibling whose name starts the same', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'a', 'target' => 'ab/a'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('ab/a/inside.txt');
+    });
+
+    it('leaves renaming to the same name to the "already exists" answer', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'a', 'target' => 'a'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'path_exists');
+    });
+
+    it('skips a selected folder that would land inside itself, and moves the rest', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), [
+                'paths' => ['a', 'ab'],
+                'target_directory' => 'a/b',
+            ])
+            ->assertOk();
+
+        expect($response->json('failed'))->toBe([['path' => 'a', 'reason' => 'into_itself']])
+            ->and($response->json('succeeded'))->toBe(['ab'])
+            ->and(FileBrowserFake::$fs)->toHaveKey('a/inside.txt')
+            ->and(FileBrowserFake::$fs)->toHaveKey('a/b/ab');
+    });
+
+    it('skips it in a bulk copy too, without running anything for it', function () use ($ranTransfer) {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), [
+                'paths' => ['a'],
+                'target_directory' => 'a',
+            ])
+            ->assertOk();
+
+        expect($response->json('failed'))->toBe([['path' => 'a', 'reason' => 'into_itself']])
+            ->and($ranTransfer())->toBeFalse();
+    });
+});
+
 describe('compressing', function () {
     beforeEach(function () {
         FileBrowserFake::reset();

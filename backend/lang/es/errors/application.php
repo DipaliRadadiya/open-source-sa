@@ -124,6 +124,7 @@ return [
     'upload_exists' => '«:name» ya existe aquí. Elimínalo primero si quieres reemplazarlo: una subida no sobrescribe un archivo.',
 
     'path_exists' => 'Ya existe algo en esa ruta.',
+    'into_itself' => 'Una carpeta no se puede mover ni copiar dentro de sí misma.',
     'cannot_delete_root' => 'No se puede eliminar la carpeta raíz de la aplicación.',
     'target_not_archive' => 'El nombre del nuevo archivo comprimido debe terminar en .zip, .tar.gz o .tgz.',
     'unknown_backup' => 'Esa no es una copia de seguridad conocida de este archivo.',
