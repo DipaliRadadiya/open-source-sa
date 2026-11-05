@@ -27,9 +27,11 @@ use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Staging: a staging site is just another `Application` row
@@ -2060,4 +2062,35 @@ it('refuses a staging copy that would not fit, before anything is made (2026-10-
         ->assertJsonValidationErrors('disk_space');
 
     expect($this->production->fresh()->staging)->toBeNull();
+});
+
+it('lists no safety copies without an error in the log when the folder does not exist yet', function () {
+    // `find` exits 1 on a missing directory, which is the normal state of a
+    // site that never pushed its database. It is an answer, not a failure.
+    Process::fake(['*' => Process::result(exitCode: 1, errorOutput: "find: '/home/siteowner/shop/.panel/staging-backups': No such file or directory")]);
+
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    expect(app(StagingManager::class)->safetyDumps($this->production))->toBe([]);
+
+    $logger->shouldHaveReceived('info')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['op'] === 'staging_dump_list'
+            && $context['exit_code'] === 1
+            && $context['expected_exit'] === true,
+    ));
+    $logger->shouldNotHaveReceived('error');
+});
+
+it('still logs an error when listing safety copies fails for another reason', function () {
+    Process::fake(['*' => Process::result(exitCode: 2, errorOutput: 'find: Permission denied')]);
+
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    expect(app(StagingManager::class)->safetyDumps($this->production))->toBe([]);
+
+    $logger->shouldHaveReceived('error')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['op'] === 'staging_dump_list' && $context['expected_exit'] === false,
+    ));
 });

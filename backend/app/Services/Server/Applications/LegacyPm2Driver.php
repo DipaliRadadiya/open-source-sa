@@ -112,6 +112,9 @@ class LegacyPm2Driver
             ['feature' => 'application', 'op' => 'pm2_jlist_user', 'user' => $username],
             timeout: (int) config('server.applications.pm2_timeout', 120),
             cwd: self::SAFE_CWD,
+            // PM2 not installed for this user: `env` exits 127. That is "no
+            // processes to read", not a failed server command.
+            expectedExitCodes: [127],
         );
 
         if ($result->failed()) {

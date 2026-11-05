@@ -290,10 +290,11 @@ class StagingManager
             ['find', $production->panelPath().'/staging-backups', '-mindepth', '1', '-maxdepth', '1', '-type', 'f', '-name', 'pre-push-*.sql', '-printf', '%f\t%s\t%T@\n'],
             ['feature' => 'application', 'op' => 'staging_dump_list', 'application' => $production->id],
             timeout: 30,
+            expectedExitCodes: [1],
         );
 
         // No directory yet is no copies, not an error: a site that never
-        // pushed its database has none.
+        // pushed its database has none (`find` exits 1 for a missing path).
         if ($listed->failed()) {
             return [];
         }

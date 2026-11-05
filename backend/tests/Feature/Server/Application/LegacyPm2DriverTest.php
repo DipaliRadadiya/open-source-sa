@@ -4,7 +4,9 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\LegacyPm2Driver;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Psr\Log\LoggerInterface;
 
 /**
  * Applications adopted from the old panel, still run by its PM2 daemon.
@@ -222,4 +224,35 @@ it('falls back to the application name when adoption recorded none', function ()
     app(LegacyPm2Driver::class)->stop(adoptedApp(['pm2_process_name' => null]));
 
     expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'pm2 stop API')))->toBeTrue();
+});
+
+it('reads no processes without an error in the log when PM2 is not installed for the user', function () {
+    // `env` exits 127 when it cannot find pm2: nothing to read, not a failed
+    // server command.
+    Process::fake(['*' => Process::result(exitCode: 127, errorOutput: "env: 'pm2': No such file or directory")]);
+
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    expect(app(LegacyPm2Driver::class)->processesFor('appuser', '/home/appuser'))->toBeNull();
+
+    $logger->shouldHaveReceived('info')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['op'] === 'pm2_jlist_user'
+            && $context['exit_code'] === 127
+            && $context['expected_exit'] === true,
+    ));
+    $logger->shouldNotHaveReceived('error');
+});
+
+it('still logs an error when pm2 jlist fails for another reason', function () {
+    Process::fake(['*' => Process::result(exitCode: 1, errorOutput: 'pm2 crashed')]);
+
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    expect(app(LegacyPm2Driver::class)->processesFor('appuser', '/home/appuser'))->toBeNull();
+
+    $logger->shouldHaveReceived('error')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['op'] === 'pm2_jlist_user' && $context['expected_exit'] === false,
+    ));
 });
