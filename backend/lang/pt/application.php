@@ -238,6 +238,11 @@ return [
         'git_branch_missing' => 'O branch que este site publica não existe no repositório. Escolha um branch existente nas definições de deploy e faça o deploy de novo.',
 
         'download_unreachable' => 'A transferência não aconteceu: o servidor não conseguiu chegar ao anfitrião de onde transfere. Verifique o acesso à Internet e o DNS do servidor e tente novamente.',
+        'download_timeout' => 'A transferência demorou mais do que o tempo permitido e foi interrompida. A ligação do servidor ao anfitrião é demasiado lenta ou está a ser cortada. Verifique o acesso à Internet do servidor e tente novamente.',
+        'download_http_error' => 'O anfitrião respondeu à transferência com um erro em vez do ficheiro: pode estar em manutenção ou o ficheiro pode ter sido movido. Tente novamente dentro de alguns minutos; se continuar a falhar, verifique, a partir do servidor, se o endereço de transferência abre.',
+        'download_tls' => 'Não foi possível estabelecer uma ligação segura ao anfitrião, pelo que nada foi transferido. Verifique a data e a hora do servidor e se os certificados de CA estão instalados (ca-certificates) e tente novamente.',
+        'download_interrupted' => 'A ligação foi cortada a meio da transferência e o ficheiro ficou incompleto. Tente novamente; se voltar a acontecer, verifique a ligação de rede do servidor.',
+        'archive_invalid' => 'Não foi possível descompactar o ficheiro transferido: está incompleto ou não é o arquivo esperado (um proxy ou uma firewall pode substituí-lo por uma página de erro). Tente novamente; se continuar a falhar, verifique as definições de proxy e de firewall do servidor.',
 
         'release_not_found' => 'A lista de versões foi alcançada, mas não tem nenhuma versão que este servidor possa instalar. Verifique a versão do PHP ou tente mais tarde.',
 

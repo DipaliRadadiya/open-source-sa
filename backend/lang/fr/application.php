@@ -238,6 +238,11 @@ return [
         'git_branch_missing' => 'La branche que ce site déploie n\'existe pas dans le dépôt. Choisissez une branche existante dans les paramètres de déploiement, puis déployez à nouveau.',
 
         'download_unreachable' => 'Le téléchargement n’a pas eu lieu : le serveur n’a pas pu joindre l’hôte de téléchargement. Vérifiez l’accès à Internet et le DNS du serveur, puis réessayez.',
+        'download_timeout' => 'Le téléchargement a dépassé le délai autorisé et a été interrompu. La connexion du serveur vers l’hôte est trop lente ou est coupée. Vérifiez l’accès à Internet du serveur, puis réessayez.',
+        'download_http_error' => 'L’hôte a répondu au téléchargement par une erreur au lieu du fichier : il est peut-être en maintenance, ou le fichier a été déplacé. Réessayez dans quelques minutes ; si l’échec persiste, vérifiez depuis le serveur que l’adresse de téléchargement s’ouvre.',
+        'download_tls' => 'Une connexion sécurisée avec l’hôte n’a pas pu être établie, donc rien n’a été téléchargé. Vérifiez la date et l’heure du serveur ainsi que l’installation de ses certificats d’autorité (ca-certificates), puis réessayez.',
+        'download_interrupted' => 'La connexion a été coupée en cours de téléchargement, le fichier est donc incomplet. Réessayez ; si cela se reproduit, vérifiez la connexion réseau du serveur.',
+        'archive_invalid' => 'Le fichier téléchargé n’a pas pu être décompressé : il est incomplet ou n’est pas l’archive attendue (un proxy ou un pare-feu peut le remplacer par une page d’erreur). Réessayez ; si l’échec persiste, vérifiez la configuration du proxy et du pare-feu du serveur.',
 
         'release_not_found' => 'La liste des versions a été atteinte mais ne contient aucune version installable sur ce serveur. Vérifiez la version de PHP ou réessayez plus tard.',
 

@@ -238,6 +238,11 @@ return [
         'git_branch_missing' => 'La rama que despliega este sitio no existe en el repositorio. Elige una rama que exista en la configuración de despliegue y vuelve a desplegar.',
 
         'download_unreachable' => 'La descarga no se realizó: el servidor no pudo llegar al host desde el que descarga. Compruebe el acceso a internet y el DNS del servidor y vuelva a intentarlo.',
+        'download_timeout' => 'La descarga tardó más del tiempo permitido y se detuvo. La conexión del servidor con el host es demasiado lenta o se está cortando. Compruebe el acceso a internet del servidor y vuelva a intentarlo.',
+        'download_http_error' => 'El host respondió a la descarga con un error en lugar del archivo: puede estar en mantenimiento o el archivo puede haberse movido. Vuelva a intentarlo en unos minutos; si sigue fallando, compruebe desde el servidor que la dirección de descarga se abre.',
+        'download_tls' => 'No se pudo establecer una conexión segura con el host, por lo que no se descargó nada. Compruebe la fecha y la hora del servidor y que sus certificados de CA estén instalados (ca-certificates), y vuelva a intentarlo.',
+        'download_interrupted' => 'La conexión se cortó a mitad de la descarga y el archivo quedó incompleto. Vuelva a intentarlo; si se repite, compruebe la conexión de red del servidor.',
+        'archive_invalid' => 'No se pudo descomprimir el archivo descargado: está incompleto o no es el archivo esperado (un proxy o un cortafuegos puede sustituirlo por una página de error). Vuelva a intentarlo; si sigue fallando, compruebe la configuración del proxy y del cortafuegos del servidor.',
 
         'release_not_found' => 'Se accedió a la lista de versiones, pero no hay ninguna que este servidor pueda instalar. Compruebe la versión de PHP o vuelva a intentarlo más tarde.',
 

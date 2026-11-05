@@ -41,18 +41,25 @@ class ProvisioningFailedException extends Exception
      * undiagnosable and leaves everything else unclassified rather than
      * guessing. A wrong reason is worse than none — it sends the user to fix
      * something that was never broken.
+     *
+     * @param  array<int, string>  $command  what was run, for the callers that know it. A bare
+     *                                       exit status means nothing without the tool that
+     *                                       returned it — 22 is an HTTP error from curl and
+     *                                       nothing in particular from anything else.
      */
-    public static function fromResult(string $step, ServerOpsResult $result): self
+    public static function fromResult(string $step, ServerOpsResult $result, array $command = []): self
     {
-        return new self($step, $result->reference, self::classify($step, $result));
+        return new self($step, $result->reference, self::classify($step, $result, $command));
     }
 
     /**
      * `null` when the failure speaks for itself — the command's own output is
      * already in the log under this reference, and the user is better served
      * by it than by a category invented here.
+     *
+     * @param  array<int, string>  $command
      */
-    private static function classify(string $step, ServerOpsResult $result): ?string
+    private static function classify(string $step, ServerOpsResult $result, array $command = []): ?string
     {
         // The user's deploy script ran a git command against the remote —
         // nearly always the `git pull` the default script carried until
@@ -127,6 +134,27 @@ class ProvisioningFailedException extends Exception
             return 'container_port_in_use';
         }
 
+        // FS-B3: a download or unpack the installer ran itself. Named from
+        // curl's documented exit status (`man curl`, EXIT CODES) and not from
+        // its wording, because the wording varies by version and by locale and
+        // — the reason this exists — a download killed at its timeout has no
+        // wording at all: no process result, no stderr, only `timedOut`.
+        // Left unnamed, every one of these read as "failed at download" plus a
+        // reference to a log that says nothing the user can act on.
+        $tool = self::toolOf($command);
+
+        if ($tool === 'curl') {
+            $reason = self::curlFailure($result);
+
+            if ($reason !== null) {
+                return $reason;
+            }
+        }
+
+        if ($step === 'extract' && in_array($tool, ['tar', 'unzip'], true) && self::mentionsBrokenArchive($result)) {
+            return 'archive_invalid';
+        }
+
         // A registry refused to serve the image.
         //
         // Named here for the same reason as the two above: the failure is
@@ -176,6 +204,88 @@ class ProvisioningFailedException extends Exception
         }
 
         return 'out_of_memory';
+    }
+
+    /**
+     * The program a command runs, looking past the `runuser -u <name> --`
+     * the installers wrap the application's own tooling in.
+     *
+     * @param  array<int, string>  $command
+     */
+    private static function toolOf(array $command): ?string
+    {
+        if (($command[0] ?? null) === 'runuser') {
+            $separator = array_search('--', $command, true);
+
+            return $separator === false ? null : ($command[$separator + 1] ?? null);
+        }
+
+        return $command[0] ?? null;
+    }
+
+    /**
+     * What a failed curl download was, by its exit status.
+     *
+     * Exit codes are from curl's manual and stable across versions: 5/6/7 the
+     * proxy or host did not resolve or accept the connection, 28 the
+     * operation timed out, 22 the host answered with an HTTP error (the
+     * installers pass `--fail`, so a 404 or 503 is an exit rather than an
+     * error page written over the archive), 18/52/55/56 the connection died
+     * part-way, and the TLS family (35, 51, 58, 59, 60, 77, 83, 90, 91) a
+     * secure connection that could not be trusted or set up.
+     *
+     * Anything else — a write failure, a refused protocol, a status this list
+     * does not know — stays unnamed, which is this class's own rule: a wrong
+     * reason is worse than none.
+     */
+    private static function curlFailure(ServerOpsResult $result): ?string
+    {
+        // Killed at the ceiling: there is no process result to read. The
+        // ceiling and curl's own `--max-time` are the same number, and the
+        // ceiling starts first, so this is how a stalled download usually ends.
+        if ($result->timedOut) {
+            return 'download_timeout';
+        }
+
+        return match ($result->exitCode()) {
+            5, 6, 7 => 'download_unreachable',
+            28 => 'download_timeout',
+            22 => 'download_http_error',
+            18, 52, 55, 56 => 'download_interrupted',
+            35, 51, 58, 59, 60, 77, 83, 90, 91 => 'download_tls',
+            default => null,
+        };
+    }
+
+    /**
+     * Did tar or unzip refuse the file as not being the archive it should be?
+     *
+     * Wording measured 2026-11-05 with GNU tar 1.35 and UnZip 6.00 against an
+     * HTML page saved as `.tar.gz`, an empty file, a truncated and a corrupted
+     * gzip, a truncated plain tar and a truncated or empty zip. Matched on
+     * these and not on the exit status, because tar exits 2 for a corrupt
+     * archive and also for a full disk or a permission refusal — different
+     * problems with different fixes.
+     */
+    private static function mentionsBrokenArchive(ServerOpsResult $result): bool
+    {
+        $output = $result->errorOutput()."\n".$result->output();
+
+        foreach ([
+            'not in gzip format',
+            'unexpected end of file',
+            'invalid compressed data',
+            'does not look like a tar archive',
+            'Unexpected EOF in archive',
+            'End-of-central-directory signature not found',
+            'cannot find zipfile directory',
+        ] as $needle) {
+            if (stripos($output, $needle) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

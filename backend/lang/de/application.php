@@ -238,6 +238,11 @@ return [
         'git_branch_missing' => 'Der Branch, den diese Website deployt, existiert im Repository nicht. Wählen Sie in den Deployment-Einstellungen einen vorhandenen Branch und deployen Sie erneut.',
 
         'download_unreachable' => 'Der Download hat nicht stattgefunden: Der Server konnte den Host, von dem er lädt, nicht erreichen. Prüfen Sie Internetzugang und DNS des Servers und versuchen Sie es erneut.',
+        'download_timeout' => 'Der Download hat zu lange gedauert und wurde abgebrochen. Die Verbindung des Servers zum Host ist zu langsam oder wird unterbrochen. Prüfen Sie den Internetzugang des Servers und versuchen Sie es erneut.',
+        'download_http_error' => 'Der Host hat den Download mit einem Fehler statt mit der Datei beantwortet – möglicherweise ist er wegen Wartungsarbeiten nicht verfügbar oder die Datei wurde verschoben. Versuchen Sie es in einigen Minuten erneut; schlägt es weiter fehl, prüfen Sie vom Server aus, ob sich die Download-Adresse öffnen lässt.',
+        'download_tls' => 'Eine sichere Verbindung zum Host konnte nicht aufgebaut werden, daher wurde nichts heruntergeladen. Prüfen Sie Datum und Uhrzeit des Servers und ob seine CA-Zertifikate installiert sind (ca-certificates), und versuchen Sie es erneut.',
+        'download_interrupted' => 'Die Verbindung wurde während des Downloads unterbrochen, daher ist die Datei unvollständig. Versuchen Sie es erneut; tritt es wiederholt auf, prüfen Sie die Netzwerkverbindung des Servers.',
+        'archive_invalid' => 'Die heruntergeladene Datei konnte nicht entpackt werden: Sie ist unvollständig oder nicht das erwartete Archiv (ein Proxy oder eine Firewall kann sie durch eine Fehlerseite ersetzen). Versuchen Sie es erneut; schlägt es weiter fehl, prüfen Sie die Proxy- und Firewall-Einstellungen des Servers.',
 
         'release_not_found' => 'Die Release-Liste war erreichbar, enthält aber keine Version, die dieser Server installieren kann. Prüfen Sie die PHP-Version oder versuchen Sie es später erneut.',
 

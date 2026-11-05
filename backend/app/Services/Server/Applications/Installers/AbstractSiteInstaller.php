@@ -580,7 +580,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
             // the problem was found — would have fixed the build and left
             // `npm install`, `composer create-project` and the rest reporting
             // a reference to an empty log.
-            throw ProvisioningFailedException::fromResult($step, $result);
+            throw ProvisioningFailedException::fromResult($step, $result, $command);
         }
 
         // Every command an installer runs arrives here, so this one line is

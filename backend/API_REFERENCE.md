@@ -1080,7 +1080,9 @@ something that was never broken.
 `reference` always names an entry that exists — including at `create_database`,
 where it previously carried a freshly minted id that appeared in no log at all.
 
-It is set only where the cause is genuinely identified. Render
+It is set only where the cause is genuinely identified. For the download
+reasons the title is a fixed, translated sentence — curl's own output is never
+put in it; it stays in the server-ops log under `reference`. Render
 `failed_reason_title` when present — it is localized in the viewer's locale —
 and fall back to `failed_step` + `reference` when it is `null`.
 
@@ -1094,6 +1096,12 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `git_repository_unreachable` | The panel's own fetch could not read the repository: it does not exist, or it is private and the site's git account cannot read it (or the site is on a public URL). Only on the `fetch` step (FS-C22, 2026-10-23; was `null`). |
 | `git_branch_missing` | The panel's own fetch found no such branch in the repository. Only on the `fetch` step (FS-C22, 2026-10-23; was `null`). An unreachable git host on `fetch` is `download_unreachable`. |
+| `download_unreachable` | A download the panel's installer ran could not reach its host: no DNS, no route, or the connection was refused (curl exit 5/6/7). On `download` and `install_cli` (wp-cli) for every application that unpacks a release archive (WordPress, Joomla, Nextcloud, phpMyAdmin, Adminer, Mautic, Akaunting, PrestaShop, Moodle, the Node apps), and on `fetch` for an unreachable git host. Since FS-B3 (2026-11-05) it is also set from curl's exit status, not only from its wording. |
+| `download_timeout` | The download ran out of time and was stopped. Also the usual way a stalled download ends, when the process is killed at its ceiling before curl says anything (no exit status, no output). Same steps as above (FS-B3, 2026-11-05; was `null`). |
+| `download_http_error` | The host answered the download with an HTTP error instead of the file (404, 503, …), so nothing was saved. Same steps as above (FS-B3, 2026-11-05; was `null`). |
+| `download_tls` | A secure connection to the host could not be set up or trusted — an expired or unknown certificate, a wrong server clock, missing CA certificates. Same steps as above (FS-B3, 2026-11-05; was `null`). |
+| `download_interrupted` | The connection dropped part-way through the download, so the file is incomplete. Same steps as above (FS-B3, 2026-11-05; was `null`). |
+| `archive_invalid` | The downloaded file could not be unpacked: it is truncated, corrupt, or not the archive that was expected (a proxy or firewall serving an error page). Only on the `extract` step (FS-B3, 2026-11-05; was `null`). A full disk or a permission refusal while unpacking stays `null`. |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
 | `process_exited` | The application's process was started and stopped straight away (`start_app`). Its log shows why — most often a missing package or a start command that does not exist. (2026-10-20) |
 | `container_restarting` | A Docker site's container keeps restarting. See `last_failure` for its last log lines. |
@@ -3736,7 +3744,7 @@ Permission `application` **manage**, `throttle:10,1`. No body: the target is `la
 **409** an update of this site is already running. **422** `errors.update[0]` = the readable `blocked_reason`.
 A pending update whose job never started is released (`abandoned`) after 60 minutes.
 Failure `reason`: `step_failed` (with `step` + `reference` into the server-ops log), `version_unchanged`, `release_not_found`,
-`download_unreachable`, `out_of_memory`, `composer_platform`, `no_build_tools`, `node_unsupported`, `app_not_ready`, `worker` (job died/timed out), `abandoned`, `failed`.
+`download_unreachable`, `download_timeout`, `download_http_error`, `download_tls`, `download_interrupted`, `archive_invalid`, `out_of_memory`, `composer_platform`, `no_build_tools`, `node_unsupported`, `app_not_ready`, `worker` (job died/timed out), `abandoned`, `failed`.
 Activity: `application.update_started`, `application.update_completed`, `application.update_failed`. (`application.update_completed` was logged as `application.updated` until FS-C22 #21. That key is the settings save, and the two shared one sentence. Rows written before then still read "Updated application :name".)
 
 ## Backups
