@@ -8,6 +8,7 @@ export const getStorageDestinations = cache(async function getStorageDestination
   return {
     destinations: result.data?.storage_destinations ?? [],
     oauthRedirectUri: result.data?.google_oauth_redirect_uri ?? null,
+    localSettings: result.data?.local ?? null,
     failed: result.failed,
     status: result.status,
     failure: result.failure, message: result.message, debug: result.debug,

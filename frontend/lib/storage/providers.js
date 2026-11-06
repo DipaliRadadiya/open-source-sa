@@ -1,6 +1,8 @@
 // `provider` is a real API column; nothing is inferred from the endpoint. PRESETS is what the user
 // picks (several are `s3` to the backend); FIELDS, keyed by backend provider, says which inputs to render.
 
+import { localStorageSettings } from "./local-settings.js";
+
 /** Input kinds the renderer knows how to draw. */
 export const TEXT = "text";
 export const SECRET = "secret";
@@ -93,7 +95,7 @@ export const FIELDS = {
   // The backend creates the folder (one level) or takes over an empty one, and refuses any path
   // outside its allowed roots with a message naming them. Its suggested folder is the default.
   // Moving it strands what is in the old folder: restore and retention read only the new one.
-  local: [{ name: "path", kind: TEXT, required: true, mono: true, default: "/var/backups/panel", changeWarning: "localPathChangeWarning" }],
+  local: [{ name: "path", kind: TEXT, required: true, mono: true, changeWarning: "localPathChangeWarning" }],
   sftp: [
     { name: "host", kind: TEXT, required: true, mono: true },
     { name: "port", kind: NUMBER, placeholder: "22" },
@@ -182,8 +184,8 @@ export function describeDestination(destination) {
 
 // So a create form starts as the backend would save it. Other fields start as "", since a missing key
 // would mount the input uncontrolled; `cleanConfig` strips the blanks.
-export function defaultConfig(provider) {
+export function defaultConfig(provider, localSettings = null) {
   return Object.fromEntries(
-    fieldsFor(provider).map((f) => [f.name, f.default !== undefined ? f.default : ""]),
+    fieldsFor(provider).map((f) => [f.name, provider === "local" && f.name === "path" ? localStorageSettings(localSettings).default_path : f.default !== undefined ? f.default : ""]),
   );
 }

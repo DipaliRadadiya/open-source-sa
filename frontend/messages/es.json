@@ -988,14 +988,15 @@
     "logFromInvalid": "Introduce un número de línea, 1 o más.",
     "logIpInvalid": "Introduce una sola dirección IP, p. ej. 203.0.113.5.",
     "logStatusInvalid": "Introduce un código como 404 o un grupo como 5xx.",
-    "localPathAbsolute": "Introduce la ruta completa de una carpeta que empiece por /, como /var/backups/panel.",
+    "localPathAbsolute": "Introduce la ruta completa de una carpeta que empiece por /.",
     "unresolvedPhp": "Sustituye el marcador de PHP por un binario de PHP, como php o /usr/bin/php8.3.",
     "nameTaken": "Este nombre ya está en uso. Elige otro nombre.",
-    "localPathRoot": "Elige una carpeta dentro, como /var/backups/panel, no /var/backups, /mnt o /media en sí.",
+    "localPathRoot": "Elige una carpeta dentro de una ubicación permitida, no la ubicación en sí.",
     "dockerName": "Empiece por una letra o un número y use solo letras, números, puntos, guiones y guiones bajos.",
     "dockerNameLength": "Use 128 caracteres o menos.",
     "dockerMemory": "Use un tamaño con unidad, como 512m o 2g.",
-    "dockerCpu": "Use un número de núcleos, como 1 o 0.5."
+    "dockerCpu": "Use un número de núcleos, como 1 o 0.5.",
+    "localPathAllowed": "Elige una carpeta dentro de una de las ubicaciones permitidas."
   },
   "serverDashboard": {
     "title": "Panel",
@@ -7135,7 +7136,8 @@
         "secret_key": "La parte secreta de las credenciales. Trátela como una contraseña: cualquiera que la tenga puede leer sus copias de seguridad.",
         "client_id": "Desde Google Cloud Console → Credenciales. Termina en .apps.googleusercontent.com.",
         "client_secret": "Se muestra junto al ID de cliente al crearlo. Trátelo como una contraseña.",
-        "path": "Elige una carpeta dentro de /var/backups, /mnt o /media, por ejemplo /var/backups/panel. Si no existe, se creará."
+        "path": "Elige una carpeta dentro de {roots}. La carpeta superior ya debe existir.",
+        "noLocalRoots": "No hay carpetas de copia de seguridad disponibles en este servidor."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
       "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varias aplicaciones.",
@@ -7154,7 +7156,7 @@
         "folder_id": "Por ejemplo 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
         "passphrase": "Solo si la clave tiene una",
-        "path": "/var/backups/panel"
+        "path": "{path}"
       },
       "localWarning": "Las copias locales pueden perderse si falla el servidor o el disco. Usa almacenamiento en la nube o un servidor remoto para copias más seguras.",
       "localPathChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior se quedan allí y dejan de encontrarse."

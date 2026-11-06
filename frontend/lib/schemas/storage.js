@@ -1,6 +1,7 @@
 import { z } from "zod";
 // Relative, not `@/`: the alias is a bundler feature and breaks `node --test`.
 import { fieldsFor, isRequired, providerForPreset } from "../storage/providers.js";
+import { localStorageSettings } from "../storage/local-settings.js";
 
 export const storageDestinationSchema = z
   .object({
@@ -39,6 +40,11 @@ export const storageDestinationsResponseSchema = z.object({
   // The callback URL to register with Google. Panel-wide and needed before
   // the first destination exists; optional for older APIs.
   google_oauth_redirect_uri: z.string().optional().nullable(),
+  // RC-39: the same roots the server validates against; absent on older APIs.
+  local: z.object({
+    allowed_roots: z.array(z.string()),
+    default_path: z.string(),
+  }).nullish(),
 });
 
 // Answers **200 even when the probe fails**; the verdict is in `test.success`.
@@ -116,16 +122,17 @@ const rootField = z
   ])
   .optional();
 
-// A folder on this server. Only the shape is checked here; which folders are allowed is the
-// backend's (its config), and its message names them.
-const localPathField = z
-  .string()
-  .trim()
-  .max(255, "max255")
-  .regex(/^\//, "localPathAbsolute")
-  // A root itself is refused by the backend with a message that names the very folder typed.
-  .refine((v) => !/^\/(var\/backups|mnt|media)\/*$/.test(v), "localPathRoot")
-  .refine((v) => !/(^|\/)\.{1,2}(\/|$)/.test(v), "rootTraversal");
+// The server still checks links, ownership and disk access. Here we only prevent
+// obvious path mistakes using its advertised roots, never a second fixed list.
+function localPathField(settings) {
+  const roots = localStorageSettings(settings).allowed_roots.map((root) => root.replace(/\/+$/, ""));
+  return z.string().trim().max(255, "max255")
+    .regex(/^\//, "localPathAbsolute")
+    .refine((v) => !roots.includes(v.replace(/\/+$/, "")), "localPathRoot")
+    .refine((v) => !/(^|\/)\.{1,2}(\/|$)/.test(v), "rootTraversal")
+    // An older API does not advertise its config: let it decide which roots apply.
+    .refine((v) => settings == null || roots.some((root) => v.startsWith(`${root}/`) && v.replace(/\/+$/, "") !== root), "localPathAllowed");
+}
 
 /** Per-field validators, keyed by the config key they validate. */
 const CONFIG_FIELDS = {
@@ -143,16 +150,16 @@ const CONFIG_FIELDS = {
   root: rootField,
   ssl: z.boolean(),
   passive: z.boolean(),
-  path: localPathField,
+  path: localPathField(),
 };
 
 // Built from the declaration the form renders from, so shown and validated fields cannot drift.
-function configSchemaFor(preset, { requireSecrets = true } = {}) {
+function configSchemaFor(preset, { requireSecrets = true, localSettings = null } = {}) {
   const provider = providerForPreset(preset);
   const shape = {};
 
   for (const field of fieldsFor(provider)) {
-    let schema = CONFIG_FIELDS[field.name] ?? z.any();
+    let schema = field.name === "path" ? localPathField(localSettings) : CONFIG_FIELDS[field.name] ?? z.any();
     const required = isRequired(field, preset) && (requireSecrets || field.kind !== "secret");
 
     if (required) {
@@ -179,14 +186,14 @@ function configSchemaFor(preset, { requireSecrets = true } = {}) {
 }
 
 // No `preset` key: it lives in component state, and declaring it here fails every submit silently.
-export function createStorageDestinationSchema(preset) {
+export function createStorageDestinationSchema(preset, localSettings = null) {
   const provider = providerForPreset(preset);
 
   return z
     .object({
       name: nameField,
       prefix: prefixField,
-      config: configSchemaFor(preset),
+      config: configSchemaFor(preset, { localSettings }),
     })
     .superRefine((values, ctx) => {
       // SFTP authenticates with a password OR a private key; require at least one.
@@ -202,12 +209,12 @@ export function createStorageDestinationSchema(preset) {
 }
 
 // No credentials: PATCH treats a present credential as "rotate". Provider is immutable on the API.
-export function editStorageDestinationSchema(destination) {
+export function editStorageDestinationSchema(destination, localSettings = null) {
   if (destination?.provider !== "s3") {
     return z.object({
       name: nameField,
       prefix: prefixField,
-      config: configSchemaFor(destination?.provider, { requireSecrets: false }),
+      config: configSchemaFor(destination?.provider, { requireSecrets: false, localSettings }),
     });
   }
 

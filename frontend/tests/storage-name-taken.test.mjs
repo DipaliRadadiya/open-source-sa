@@ -38,6 +38,6 @@ test("the new strings exist in all 8 languages", () => {
   for (const locale of LOCALES) {
     const m = JSON.parse(read(`messages/${locale}.json`));
     assert.ok(m.validation.nameTaken && m.validation.localPathRoot, locale);
-    assert.ok(m.storage.form.help.path.includes("/var/backups/panel"), locale);
+    assert.ok(m.storage.form.help.path.includes("{roots}"), locale);
   }
 });

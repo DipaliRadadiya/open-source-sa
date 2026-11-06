@@ -34,6 +34,7 @@ export default async function StorageIntegrationsPage() {
           destinations={list.destinations}
           canManage={canManage}
           oauthRedirectUri={list.oauthRedirectUri}
+          localSettings={list.localSettings}
         />
       </div>
     </div>

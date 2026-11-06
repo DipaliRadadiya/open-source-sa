@@ -988,14 +988,15 @@
     "logFromInvalid": "Digite um número de linha, 1 ou mais.",
     "logIpInvalid": "Digite um único endereço IP, ex.: 203.0.113.5.",
     "logStatusInvalid": "Digite um código como 404 ou um grupo como 5xx.",
-    "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /, como /var/backups/panel.",
+    "localPathAbsolute": "Informe o caminho completo de uma pasta que comece com /.",
     "unresolvedPhp": "Substitua o marcador de PHP por um binário PHP, como php ou /usr/bin/php8.3.",
     "nameTaken": "Este nome já está em uso. Escolha outro nome.",
-    "localPathRoot": "Escolha uma pasta dentro dela, como /var/backups/panel, e não /var/backups, /mnt ou /media em si.",
+    "localPathRoot": "Escolha uma pasta dentro de um local permitido, e não o próprio local.",
     "dockerName": "Comece com uma letra ou número e use apenas letras, números, pontos, hífenes e sublinhados.",
     "dockerNameLength": "Use 128 caracteres ou menos.",
     "dockerMemory": "Informe um tamanho com unidade, como 512m ou 2g.",
-    "dockerCpu": "Informe um número de núcleos, como 1 ou 0.5."
+    "dockerCpu": "Informe um número de núcleos, como 1 ou 0.5.",
+    "localPathAllowed": "Escolha uma pasta dentro de um dos locais permitidos."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -7135,7 +7136,8 @@
         "secret_key": "A parte secreta das credenciais. Trate-a como uma senha — quem a tiver poderá ler suas cópias de segurança.",
         "client_id": "No Google Cloud Console → Credenciais. Termina em .apps.googleusercontent.com.",
         "client_secret": "Aparece ao lado do ID do cliente quando você o cria. Trate como uma senha.",
-        "path": "Escolha uma pasta em /var/backups, /mnt ou /media, por exemplo /var/backups/panel. Se a pasta não existir, ela será criada."
+        "path": "Escolha uma pasta dentro de {roots}. A pasta superior já deve existir.",
+        "noLocalRoots": "Não há pastas de backup disponíveis neste servidor."
       },
       "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
       "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar várias aplicações.",
@@ -7154,7 +7156,7 @@
         "folder_id": "Por exemplo 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
         "passphrase": "Só se a chave tiver uma",
-        "path": "/var/backups/panel"
+        "path": "{path}"
       },
       "localWarning": "Os backups locais podem se perder se o servidor ou o disco falhar. Use armazenamento em nuvem ou um servidor remoto para backups mais seguros.",
       "localPathChangeWarning": "Alterar isto não move nada. Backups já na pasta antiga ficam lá e deixam de ser localizados."

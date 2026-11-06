@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil } from "lucide-react";
 import { editStorageDestinationSchema } from "@/lib/schemas/storage";
-import { fieldsFor, hasCredentials, presetForProvider } from "@/lib/storage/providers";
+import { defaultConfig, fieldsFor, hasCredentials, presetForProvider } from "@/lib/storage/providers";
 import { updateDestination } from "@/lib/api/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { markTakenName } from "@/lib/storage/name-taken";
@@ -20,22 +20,23 @@ import { GoogleDriveConnect } from "@/components/integrations/storage/google-dri
 import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
 // No credentials (the API reads their presence as "rotate") and no provider (immutable).
-export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri, existingNames = [] }) {
+export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri, localSettings = null, existingNames = [] }) {
   const t = useTranslations("storage.edit");
   const { refreshAndWait } = useRefresh();
 
   const provider = destination?.provider ?? "s3";
   const preset = presetForProvider(provider);
 
-  const schema = useMemo(() => editStorageDestinationSchema(destination), [destination]);
+  const schema = useMemo(() => editStorageDestinationSchema(destination, localSettings), [destination, localSettings]);
 
   // The non-secret config from the API; secrets are never in the response.
   const values = useMemo(() => {
     const config = {};
+    const defaults = defaultConfig(provider, localSettings);
 
     for (const field of fieldsFor(provider)) {
       const current = destination?.config?.[field.name];
-      config[field.name] = current ?? (field.default !== undefined ? field.default : "");
+      config[field.name] = current ?? defaults[field.name];
     }
 
     return {
@@ -43,7 +44,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
       prefix: destination?.prefix ?? "",
       config,
     };
-  }, [destination, provider]);
+  }, [destination, provider, localSettings]);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -104,6 +105,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
         <DestinationFormFields
           form={form}
           preset={preset}
+          localSettings={localSettings}
           disabled={submitting}
           hideSecrets
           existing

@@ -23,7 +23,7 @@ const DEFAULT_PRESET = "aws";
 // The test endpoint needs a saved id, so this saves first, then tests.
 // `initialPreset`: opened from a destination in the empty state, it starts there (and comes back to
 // it after a close); the picker inside still changes it. Callers key the dialog on it.
-export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri, existingNames = [], initialPreset = null }) {
+export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri, localSettings = null, existingNames = [], initialPreset = null }) {
   const t = useTranslations("storage.connect");
   const { refreshAndWait } = useRefresh();
 
@@ -33,7 +33,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
   const [preset, setPreset] = useState(startPreset);
   const provider = providerForPreset(preset);
 
-  const resolver = useMemo(() => zodResolver(createStorageDestinationSchema(preset)), [preset]);
+  const resolver = useMemo(() => zodResolver(createStorageDestinationSchema(preset, localSettings)), [preset, localSettings]);
 
   const form = useForm({
     resolver,
@@ -42,7 +42,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
     defaultValues: {
       name: "",
       prefix: "",
-      config: defaultConfig(providerForPreset(startPreset)),
+      config: defaultConfig(providerForPreset(startPreset), localSettings),
     },
   });
 
@@ -103,7 +103,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
     form.reset({
       name: "",
       prefix: "",
-      config: defaultConfig(providerForPreset(nextPreset)),
+      config: defaultConfig(providerForPreset(nextPreset), localSettings),
     });
   }
 
@@ -117,7 +117,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
       form.reset({
         name: form.getValues("name"),
         prefix: form.getValues("prefix"),
-        config: defaultConfig(nextProvider),
+        config: defaultConfig(nextProvider, localSettings),
       });
       return;
     }
@@ -162,6 +162,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
         <DestinationFormFields
           form={form}
           preset={preset}
+          localSettings={localSettings}
           onPresetChange={handlePresetChange}
           disabled={submitting}
         />

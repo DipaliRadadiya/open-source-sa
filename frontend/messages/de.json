@@ -988,14 +988,15 @@
     "logFromInvalid": "Gib eine Zeilennummer ab 1 ein.",
     "logIpInvalid": "Gib eine einzelne IP-Adresse ein, z. B. 203.0.113.5.",
     "logStatusInvalid": "Gib einen Code wie 404 oder eine Gruppe wie 5xx ein.",
-    "localPathAbsolute": "Geben Sie einen vollständigen Ordnerpfad ein, der mit / beginnt, z. B. /var/backups/panel.",
+    "localPathAbsolute": "Gib einen vollständigen Ordnerpfad ein, der mit / beginnt.",
     "unresolvedPhp": "Ersetzen Sie den PHP-Platzhalter durch eine PHP-Binärdatei, z. B. php oder /usr/bin/php8.3.",
     "nameTaken": "Dieser Name ist bereits vergeben. Bitte wählen Sie einen anderen Namen.",
-    "localPathRoot": "Wählen Sie einen Ordner darin, z. B. /var/backups/panel, nicht /var/backups, /mnt oder /media selbst.",
+    "localPathRoot": "Wähle einen Ordner innerhalb eines erlaubten Speicherorts, nicht den Speicherort selbst.",
     "dockerName": "Beginnen Sie mit einem Buchstaben oder einer Ziffer und verwenden Sie nur Buchstaben, Ziffern, Punkte, Binde- und Unterstriche.",
     "dockerNameLength": "Höchstens 128 Zeichen.",
     "dockerMemory": "Geben Sie eine Größe mit Einheit an, z. B. 512m oder 2g.",
-    "dockerCpu": "Geben Sie eine Anzahl Kerne an, z. B. 1 oder 0.5."
+    "dockerCpu": "Geben Sie eine Anzahl Kerne an, z. B. 1 oder 0.5.",
+    "localPathAllowed": "Wähle einen Ordner innerhalb eines der erlaubten Speicherorte."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -7135,7 +7136,8 @@
         "secret_key": "Die geheime Hälfte der Anmeldedaten. Behandeln Sie sie wie ein Passwort — jeder, der sie besitzt, kann Ihre Sicherungen lesen.",
         "client_id": "Aus der Google Cloud Console → Anmeldedaten. Endet auf .apps.googleusercontent.com.",
         "client_secret": "Wird beim Erstellen neben der Client-ID angezeigt. Wie ein Passwort behandeln.",
-        "path": "Wählen Sie einen Ordner unter /var/backups, /mnt oder /media, z. B. /var/backups/panel. Fehlt der Ordner, wird er angelegt."
+        "path": "Wähle einen Ordner innerhalb von {roots}. Der übergeordnete Ordner muss bereits existieren.",
+        "noLocalRoots": "Auf diesem Server sind keine Backup-Ordner verfügbar."
       },
       "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
       "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Anwendungen aufnehmen kann.",
@@ -7154,7 +7156,7 @@
         "folder_id": "Zum Beispiel 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
         "passphrase": "Nur falls der Schlüssel eine hat",
-        "path": "/var/backups/panel"
+        "path": "{path}"
       },
       "localWarning": "Lokale Backups können verloren gehen, wenn der Server oder die Festplatte ausfällt. Nutzen Sie Cloud-Speicher oder einen entfernten Server für sicherere Backups.",
       "localPathChangeWarning": "Das zu ändern verschiebt nichts. Backups im alten Ordner bleiben dort und werden nicht mehr gefunden."

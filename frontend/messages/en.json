@@ -988,14 +988,15 @@
     "logFromInvalid": "Enter a line number, 1 or more.",
     "logIpInvalid": "Enter one IP address, e.g. 203.0.113.5.",
     "logStatusInvalid": "Enter a code like 404, or a group like 5xx.",
-    "localPathAbsolute": "Enter a full folder path that starts with /, such as /var/backups/panel.",
+    "localPathAbsolute": "Enter a full folder path that starts with /.",
     "unresolvedPhp": "Replace the PHP placeholder with a PHP binary, such as php or /usr/bin/php8.3.",
     "nameTaken": "This name is already taken. Please choose a different name.",
-    "localPathRoot": "Choose a folder inside it, such as /var/backups/panel, not /var/backups, /mnt or /media itself.",
+    "localPathRoot": "Choose a folder inside an allowed location, not the location itself.",
     "dockerName": "Start with a letter or number, then use only letters, numbers, dots, dashes and underscores.",
     "dockerNameLength": "Use 128 characters or fewer.",
     "dockerMemory": "Use a size with a unit, like 512m or 2g.",
-    "dockerCpu": "Use a number of cores, like 1 or 0.5."
+    "dockerCpu": "Use a number of cores, like 1 or 0.5.",
+    "localPathAllowed": "Choose a folder inside one of the allowed locations."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -7135,7 +7136,8 @@
         "secret_key": "The secret half of the credentials. Treat it like a password — anyone holding it can read your backups.",
         "client_id": "From Google Cloud Console → Credentials. Ends in .apps.googleusercontent.com.",
         "client_secret": "Shown beside the client ID when you create it. Treat it like a password.",
-        "path": "Select a folder under /var/backups, /mnt or /media, for example /var/backups/panel. The folder will be created if it doesn't exist."
+        "path": "Choose a folder inside {roots}. Its parent folder must already exist.",
+        "noLocalRoots": "No backup folders are available on this server."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several applications.",
@@ -7154,7 +7156,7 @@
         "folder_id": "For example 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
         "passphrase": "Only if the key has one",
-        "path": "/var/backups/panel"
+        "path": "{path}"
       },
       "localWarning": "Local backups may be lost if the server or disk fails. Use cloud storage or a remote server for safer backups.",
       "localPathChangeWarning": "Changing this does not move anything. Backups already in the old folder stay there and stop being found."

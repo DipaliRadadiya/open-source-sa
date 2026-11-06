@@ -988,14 +988,15 @@
     "logFromInvalid": "Saisissez un numéro de ligne, 1 ou plus.",
     "logIpInvalid": "Saisissez une seule adresse IP, ex. 203.0.113.5.",
     "logStatusInvalid": "Saisissez un code comme 404 ou un groupe comme 5xx.",
-    "localPathAbsolute": "Saisissez le chemin complet d'un dossier commençant par /, par exemple /var/backups/panel.",
+    "localPathAbsolute": "Saisissez le chemin complet d’un dossier commençant par /.",
     "unresolvedPhp": "Remplacez l'espace réservé PHP par un binaire PHP, comme php ou /usr/bin/php8.3.",
     "nameTaken": "Ce nom est déjà pris. Veuillez choisir un autre nom.",
-    "localPathRoot": "Choisissez un dossier à l'intérieur, comme /var/backups/panel, pas /var/backups, /mnt ou /media eux-mêmes.",
+    "localPathRoot": "Choisissez un dossier à l’intérieur d’un emplacement autorisé, pas l’emplacement lui-même.",
     "dockerName": "Commencez par une lettre ou un chiffre, puis utilisez uniquement des lettres, chiffres, points, tirets et traits de soulignement.",
     "dockerNameLength": "128 caractères maximum.",
     "dockerMemory": "Indiquez une taille avec une unité, par exemple 512m ou 2g.",
-    "dockerCpu": "Indiquez un nombre de cœurs, par exemple 1 ou 0.5."
+    "dockerCpu": "Indiquez un nombre de cœurs, par exemple 1 ou 0.5.",
+    "localPathAllowed": "Choisissez un dossier dans l’un des emplacements autorisés."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -7135,7 +7136,8 @@
         "secret_key": "La partie secrète des identifiants. Traitez-la comme un mot de passe — toute personne qui la détient peut lire vos sauvegardes.",
         "client_id": "Depuis Google Cloud Console → Identifiants. Se termine par .apps.googleusercontent.com.",
         "client_secret": "Affiché à côté de l’ID client lors de sa création. À traiter comme un mot de passe.",
-        "path": "Choisissez un dossier sous /var/backups, /mnt ou /media, par exemple /var/backups/panel. Le dossier sera créé s'il n'existe pas."
+        "path": "Choisissez un dossier dans {roots}. Son dossier parent doit déjà exister.",
+        "noLocalRoots": "Aucun dossier de sauvegarde n’est disponible sur ce serveur."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs applications.",
@@ -7154,7 +7156,7 @@
         "folder_id": "Par exemple 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
         "passphrase": "Seulement si la clé en a une",
-        "path": "/var/backups/panel"
+        "path": "{path}"
       },
       "localWarning": "Les sauvegardes locales peuvent être perdues si le serveur ou le disque tombe en panne. Utilisez un stockage cloud ou un serveur distant pour des sauvegardes plus sûres.",
       "localPathChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà dans l'ancien dossier y restent et ne seront plus trouvées."

@@ -14,6 +14,7 @@ import {
 } from "@/lib/storage/providers";
 import { Input } from "@/components/ui/input";
 import { Caution } from "@/components/ui/caution";
+import { localStorageSettings } from "@/lib/storage/local-settings";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +38,7 @@ export function DestinationFormFields({
   // Never render credentials when editing: the API reads their presence as "rotate"
   // and would overwrite the stored secret.
   hideSecrets = false,
+  localSettings = null,
 }) {
   const t = useTranslations("storage.form");
   const provider = providerForPreset(preset);
@@ -100,6 +102,7 @@ export function DestinationFormFields({
           preset={preset}
           disabled={disabled}
           endpointHint={endpointHint}
+          localSettings={localSettings}
           existing={existing}
           t={t}
         />
@@ -142,16 +145,19 @@ export function DestinationFormFields({
 }
 
 // Labels and help text are looked up by field name; no per-provider branch.
-function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, t }) {
+function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, localSettings = null, t }) {
   const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint, changeWarning } = definition;
   // The S3 service of an existing destination is unknown, so endpoint and region follow
   // `editStorageDestinationSchema`, not a preset.
   const sharedS3Rule = existing && providerForPreset(preset) === "s3" && (name === "endpoint" || name === "region");
   const required = !sharedS3Rule && isRequired(definition, preset);
-  const help = t.has(`help.${name}`) ? t(`help.${name}`) : null;
+  const local = name === "path" ? localStorageSettings(localSettings) : null;
+  const help = local
+    ? local.allowed_roots.length ? t("help.path", { roots: local.allowed_roots.join(", ") }) : t("help.noLocalRoots")
+    : t.has(`help.${name}`) ? t(`help.${name}`) : null;
   // A translated placeholder when one exists, else the definition's literal
   // (numeric port defaults).
-  const hint = t.has(`placeholders.${name}`) ? t(`placeholders.${name}`) : placeholder;
+  const hint = local ? t("placeholders.path", { path: local.default_path }) : t.has(`placeholders.${name}`) ? t(`placeholders.${name}`) : placeholder;
 
   return (
     <FormField

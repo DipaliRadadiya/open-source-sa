@@ -988,14 +988,15 @@
     "logFromInvalid": "1 以上の行番号を入力してください。",
     "logIpInvalid": "IP アドレスを 1 つ入力してください（例: 203.0.113.5）。",
     "logStatusInvalid": "404 のようなコード、または 5xx のようなグループを入力してください。",
-    "localPathAbsolute": "/var/backups/panel のように、/ で始まるフォルダーのフルパスを入力してください。",
+    "localPathAbsolute": "/ で始まるフォルダーのフルパスを入力してください。",
     "unresolvedPhp": "PHP のプレースホルダーを php や /usr/bin/php8.3 などの PHP バイナリに置き換えてください。",
     "nameTaken": "この名前はすでに使われています。別の名前を選んでください。",
-    "localPathRoot": "/var/backups/panel のように、その中のフォルダーを指定してください。/var/backups、/mnt、/media そのものは使えません。",
+    "localPathRoot": "許可された場所そのものではなく、その中のフォルダーを指定してください。",
     "dockerName": "先頭は英字か数字にし、英字、数字、ドット、ハイフン、アンダースコアのみを使ってください。",
     "dockerNameLength": "128 文字以内で入力してください。",
     "dockerMemory": "512m や 2g のように、単位付きのサイズを入力してください。",
-    "dockerCpu": "1 や 0.5 のように、コア数を入力してください。"
+    "dockerCpu": "1 や 0.5 のように、コア数を入力してください。",
+    "localPathAllowed": "許可された場所の中にあるフォルダーを指定してください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -7135,7 +7136,8 @@
         "secret_key": "認証情報の秘密側の半分です。パスワードと同様に扱い、漏れた人は誰でもバックアップを読み取れます。",
         "client_id": "Google Cloud Console →「認証情報」から。末尾は .apps.googleusercontent.com です。",
         "client_secret": "クライアント ID の作成時に併せて表示されます。パスワードと同様に扱ってください。",
-        "path": "/var/backups、/mnt、/media の下のフォルダーを指定してください（例: /var/backups/panel）。フォルダーがなければ作成されます。"
+        "path": "{roots} 内のフォルダーを指定してください。親フォルダーは事前に作成しておく必要があります。",
+        "noLocalRoots": "このサーバーではバックアップ用フォルダーを利用できません。"
       },
       "plainFtpWarning": "TLS が無効です。パスワードとすべてのバックアップが暗号化されずに送信されます。",
       "prefixHintRemote": "リモートディレクトリ内の任意のフォルダー。1 台のサーバーで複数アプリケーションを保存できます。",
@@ -7154,7 +7156,7 @@
         "folder_id": "例: 1AbCdEfGhIjKlMnOp",
         "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
         "passphrase": "鍵に設定されている場合のみ",
-        "path": "/var/backups/panel"
+        "path": "{path}"
       },
       "localWarning": "サーバーやディスクが故障すると、ローカルのバックアップは失われる可能性があります。より安全なバックアップには、クラウドストレージかリモートサーバーを使ってください。",
       "localPathChangeWarning": "変更しても既存のバックアップは移動されません。古いフォルダーのバックアップはそのまま残り、検出されなくなります。"
