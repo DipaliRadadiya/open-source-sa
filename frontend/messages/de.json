@@ -3669,7 +3669,10 @@
       "submitSet": "Root-Passwort festlegen",
       "submitChange": "Root-Passwort ändern",
       "saved": "{engine}-Root-Passwort gespeichert.",
-      "failed": "Das Root-Passwort konnte nicht geändert werden."
+      "failed": "Das Root-Passwort konnte nicht geändert werden.",
+      "current": "Aktuelles Root-Passwort",
+      "currentPlaceholder": "Aktuelles Passwort von root",
+      "currentHint": "Das Panel kann sich mit dem bekannten Passwort nicht als root bei {engine} anmelden. Geben Sie das aktuelle Root-Passwort einmal ein; es wird nicht gespeichert."
     }
   },
   "git": {

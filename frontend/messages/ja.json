@@ -3669,7 +3669,10 @@
       "submitSet": "root パスワードを設定",
       "submitChange": "root パスワードを変更",
       "saved": "{engine} の root パスワードを保存しました。",
-      "failed": "root パスワードを変更できませんでした。"
+      "failed": "root パスワードを変更できませんでした。",
+      "current": "現在の root パスワード",
+      "currentPlaceholder": "root の現在のパスワード",
+      "currentHint": "パネルは保持しているパスワードで {engine} に root としてサインインできません。root の現在のパスワードを一度入力してください。保存はされません。"
     }
   },
   "git": {

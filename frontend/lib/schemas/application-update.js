@@ -16,6 +16,8 @@ export const applicationUpdateRunSchema = z.object({
   // Translated by the backend; falls back to its generic step_failed sentence.
   reason_title: z.string().nullish(),
   step: z.string().nullish(),
+  // Translated; while running, the phase it is in now (RC-12), null once it completes.
+  step_title: z.string().nullish(),
   // Points into the server-ops log.
   reference: z.string().nullish(),
   user: z.string().nullish(),

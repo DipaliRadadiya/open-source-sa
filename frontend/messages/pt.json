@@ -3669,7 +3669,10 @@
       "submitSet": "Definir senha do root",
       "submitChange": "Alterar senha do root",
       "saved": "Senha do root do {engine} salva.",
-      "failed": "Não foi possível alterar a senha do root."
+      "failed": "Não foi possível alterar a senha do root.",
+      "current": "Senha atual do root",
+      "currentPlaceholder": "Senha atual do root",
+      "currentHint": "O painel não consegue entrar no {engine} como root com a senha que conhece. Digite uma vez a senha atual do root; ela não é salva."
     }
   },
   "git": {

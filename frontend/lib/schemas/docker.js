@@ -305,6 +305,8 @@ export const imageInspectResponseSchema = z.object({
   architectures: z.array(z.string()).default([]),
   uses_app_dir: z.boolean().default(false),
   warnings: z.array(z.string()).default([]),
+  // One language-free code per `warnings` entry, same order (RC-32); absent on older backends.
+  warning_codes: z.array(z.string()).default([]),
 });
 
 /** Matches DS-03's create rule for env keys. */

@@ -3669,7 +3669,10 @@
       "submitSet": "Establecer contraseña de root",
       "submitChange": "Cambiar contraseña de root",
       "saved": "Contraseña de root de {engine} guardada.",
-      "failed": "No se pudo cambiar la contraseña de root."
+      "failed": "No se pudo cambiar la contraseña de root.",
+      "current": "Contraseña actual de root",
+      "currentPlaceholder": "Contraseña actual de root",
+      "currentHint": "El panel no puede iniciar sesión en {engine} como root con la contraseña que conoce. Escribe una vez la contraseña actual de root; no se guarda."
     }
   },
   "git": {

@@ -241,6 +241,8 @@ export const rootPasswordSchema = z
       // eslint-disable-next-line no-control-regex
       .refine((value) => !/[\x00-\x1f\x7f]/.test(value), "noControlChars"),
     password_confirmation: z.string(),
+    // Asked for only after `root_unreachable`; checked by MySQL itself, so any value goes.
+    current_password: z.string().max(512, "max512").optional(),
   })
   .refine((values) => values.password === values.password_confirmation, {
     path: ["password_confirmation"],

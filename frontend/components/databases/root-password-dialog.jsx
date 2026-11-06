@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -13,11 +14,14 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Note } from "@/components/ui/note";
 import { CopyablePasswordInput } from "@/components/system-users/copyable-password-input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Set, change or reset the MySQL/MariaDB root password (5fdb2007). The old one is not
-// asked for: the panel reaches root as the server's own root account, or with the
-// password it stored last time.
+// Set, change or reset the MySQL/MariaDB root password (5fdb2007). The old one is asked
+// for only when the panel cannot reach root either as the server's own root account or
+// with the password it stored (`root_unreachable`, e.g. a server moved from v7).
+const ASK_CURRENT = new Set(["root_unreachable", "current_password_wrong"]);
+
 export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
   const t = useTranslations("databases.rootPassword");
   const tEngines = useTranslations("databases.engines");
@@ -25,25 +29,46 @@ export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
   const name = engine ? tEngines(engine) : "";
   const known = Boolean(connection?.has_root_password);
 
+  const [askCurrent, setAskCurrent] = useState(false);
   const form = useForm({
     resolver: zodResolver(rootPasswordSchema),
-    defaultValues: { password: "", password_confirmation: "" },
+    defaultValues: { password: "", password_confirmation: "", current_password: "" },
   });
+
+  useEffect(() => {
+    if (askCurrent) form.setFocus("current_password");
+  }, [askCurrent, form]);
 
   function handleOpenChange(next) {
     // The form stays mounted: clear values and errors so a reopen starts clean.
-    if (!next) form.reset();
+    if (!next) {
+      form.reset();
+      setAskCurrent(false);
+    }
     onOpenChange?.(next);
   }
 
-  async function onSubmit(values) {
+  async function onSubmit({ current_password: current, ...values }) {
+    if (askCurrent && !current) {
+      form.setError("current_password", { message: "requiredField" });
+      return;
+    }
     try {
-      await setRootPassword(engine, values);
+      await setRootPassword(engine, askCurrent && current ? { ...values, current_password: current } : values);
       await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("saved", { engine: name }));
       handleOpenChange(false);
     } catch (error) {
-      // `errors.engine` (root unreachable, a change already running) has no field here.
+      const data = error.response?.data;
+      if (error.response?.status === 422 && ASK_CURRENT.has(data?.reason)) {
+        // The first time it is a question, not a mistake: the field appears with its hint.
+        if (askCurrent || data.reason === "current_password_wrong") {
+          form.setError("current_password", { message: data.errors?.current_password?.[0] ?? data.message });
+        }
+        setAskCurrent(true);
+        return;
+      }
+      // `errors.engine` (a change already running) has no field here.
       handleValidationError(error, form, { fallback: t("failed"), formError: true });
     }
   }
@@ -84,6 +109,22 @@ export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
         ) : null}
 
         <div className="space-y-4">
+          {askCurrent ? (
+            <FormField
+              control={form.control}
+              name="current_password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>{t("current")}</FormLabel>
+                  <FormControl>
+                    <PasswordInput placeholder={t("currentPlaceholder")} autoComplete="current-password" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">{t("currentHint", { engine: name })}</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
           <FormField
             control={form.control}
             name="password"

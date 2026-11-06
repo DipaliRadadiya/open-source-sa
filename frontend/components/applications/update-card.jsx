@@ -238,6 +238,10 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
           <p role="status" className="mx-(--card-spacing) mb-(--card-spacing) flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
             <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
             <span>
+              {/* The phase it is in now; the backend writes it as each one starts. */}
+              {last?.status === "running" && last.step_title ? (
+                <span className="block font-medium text-foreground">{last.step_title}</span>
+              ) : null}
               {t("runningNote", {
                 version: last?.to_version ?? update.latest_version ?? "",
                 when: relative(last?.started_at ?? last?.created_at) ?? "—",

@@ -3669,7 +3669,10 @@
       "submitSet": "Définir le mot de passe root",
       "submitChange": "Changer le mot de passe root",
       "saved": "Mot de passe root de {engine} enregistré.",
-      "failed": "Le mot de passe root n'a pas pu être changé."
+      "failed": "Le mot de passe root n'a pas pu être changé.",
+      "current": "Mot de passe root actuel",
+      "currentPlaceholder": "Mot de passe actuel de root",
+      "currentHint": "Le panneau ne peut pas se connecter à {engine} en tant que root avec le mot de passe qu'il connaît. Saisissez une fois le mot de passe root actuel ; il n'est pas enregistré."
     }
   },
   "git": {

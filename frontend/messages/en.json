@@ -3669,7 +3669,10 @@
       "submitSet": "Set root password",
       "submitChange": "Change root password",
       "saved": "{engine} root password saved.",
-      "failed": "The root password could not be changed."
+      "failed": "The root password could not be changed.",
+      "current": "Current root password",
+      "currentPlaceholder": "Root's current password",
+      "currentHint": "The panel can't sign in to {engine} as root with the password it knows. Enter root's current password once; it isn't saved."
     }
   },
   "git": {

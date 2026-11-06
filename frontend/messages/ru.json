@@ -3669,7 +3669,10 @@
       "submitSet": "Задать пароль root",
       "submitChange": "Сменить пароль root",
       "saved": "Пароль root для {engine} сохранён.",
-      "failed": "Не удалось сменить пароль root."
+      "failed": "Не удалось сменить пароль root.",
+      "current": "Текущий пароль root",
+      "currentPlaceholder": "Текущий пароль root",
+      "currentHint": "Панель не может войти в {engine} как root с известным ей паролем. Введите текущий пароль root один раз — он не сохраняется."
     }
   },
   "git": {
