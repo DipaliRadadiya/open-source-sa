@@ -261,6 +261,7 @@ return [
 
     'port_registered' => 'ポート :port は通常 :service が使用します。このサーバーで何も使っていなければ、そのまま使用できます。',
     'application_name_immutable' => 'アプリケーション名は作成後は変更できません。サーバー上の設定ファイル名になるためです。別の名前が必要な場合は新しいアプリケーションを作成してください。',
+    'application_domain_use_endpoint' => 'ドメインは Domains ページ (/applications/{id}/domains) で変更してください。Web サーバーの設定と証明書もあわせて更新されます。',
     'site_name_taken_pool' => 'このサーバーには、パネルが作成したものではない「:name.conf」という PHP プールファイルがすでにあります。別の名前を選んでください。',
     'site_name_taken_vhost' => 'このサーバーには、パネルが作成したものではない「:name」というウェブサーバー設定がすでにあります（パネル自身の設定もその一つです）。別の名前を選んでください。',
 

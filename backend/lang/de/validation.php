@@ -261,6 +261,7 @@ return [
 
     'port_registered' => 'Port :port wird normalerweise von :service verwendet. Du kannst ihn trotzdem nutzen, wenn nichts auf diesem Server ihn belegt.',
     'application_name_immutable' => 'Der Name einer Website steht nach dem Anlegen fest — er benennt ihre Konfigurationsdateien auf dem Server. Legen Sie eine neue Website an, wenn Sie einen anderen Namen brauchen.',
+    'application_domain_use_endpoint' => 'Die Domain wird auf der Domains-Seite geändert (/applications/{id}/domains), die auch die Webserver-Konfiguration und das Zertifikat aktualisiert.',
     'site_name_taken_pool' => 'Auf diesem Server gibt es bereits eine PHP-Pool-Datei namens „:name.conf“, die nicht vom Panel stammt. Wählen Sie einen anderen Namen.',
     'site_name_taken_vhost' => 'Auf diesem Server gibt es bereits eine Webserver-Konfiguration namens „:name“, die nicht vom Panel stammt — die des Panels selbst gehört dazu. Wählen Sie einen anderen Namen.',
 

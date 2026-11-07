@@ -263,6 +263,7 @@ return [
 
     'port_registered' => 'A porta :port é normalmente usada por :service. Pode usá-la mesmo assim se nada neste servidor a usar.',
     'application_name_immutable' => 'O nome de uma aplicação é fixo depois de criado — dá nome aos seus ficheiros de configuração no servidor. Crie uma aplicação nova se precisar de outro nome.',
+    'application_domain_use_endpoint' => 'Altere o domínio na página Domínios (/applications/{id}/domains), que também atualiza a configuração do servidor web e o certificado.',
     'site_name_taken_pool' => 'Este servidor já tem um ficheiro de pool PHP chamado «:name.conf» que não foi criado pelo painel. Escolha outro nome.',
     'site_name_taken_vhost' => 'Este servidor já tem uma configuração do servidor web chamada «:name» que não foi criada pelo painel — a do próprio painel é uma delas. Escolha outro nome.',
 

@@ -5,7 +5,6 @@ namespace App\Http\Requests\Server\Application;
 use App\Models\Application;
 use App\Models\Worker;
 use App\Rules\AvailablePort;
-use App\Rules\Hostname;
 use App\Rules\StartCommand;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
@@ -59,6 +58,7 @@ class UpdateApplicationRequest extends FormRequest
     {
         return [
             'name.prohibited' => __('validation.application_name_immutable'),
+            'domain.prohibited' => __('validation.application_domain_use_endpoint'),
             'node_version.prohibited' => __('errors/node.change_use_endpoint'),
         ];
     }
@@ -132,7 +132,12 @@ class UpdateApplicationRequest extends FormRequest
             // believed the switch had happened. It is a restart and a check
             // now: PUT /applications/{application}/node-version.
             'node_version' => ['prohibited'],
-            'domain' => ['sometimes', 'string', 'max:255', new Hostname],
+            // Refused too (2026-11-07). It wrote the column and nothing else:
+            // the domain rows, the vhost and the certificate stayed on the old
+            // name, nothing checked another site already had it, and it needed
+            // `application` manage instead of `app_domain` manage. The Domains
+            // endpoints do all of that; our own UI never sent it here.
+            'domain' => ['prohibited'],
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
             'build_command' => ['sometimes', 'nullable', 'string', 'max:500'],

@@ -296,6 +296,7 @@ return [
 
     'port_registered' => 'Port :port is normally used by :service. You can still use it if nothing on this server does.',
     'application_name_immutable' => 'An application\'s name is fixed once it exists — it names its configuration files on the server. Create a new application if you need a different name.',
+    'application_domain_use_endpoint' => 'Change the domain on the Domains page (/applications/{id}/domains), which also updates the web server configuration and the certificate.',
     'site_name_taken_pool' => 'This server already has a PHP pool file called “:name.conf” that the panel did not create. Choose a different name.',
     'site_name_taken_vhost' => 'This server already has a web server configuration called “:name” that the panel did not create — the panel\'s own is one of them. Choose a different name.',
 

@@ -440,6 +440,28 @@ it('lists, shows, updates and deletes an application', function () {
     expect(Application::count())->toBe(0);
 });
 
+it('refuses a domain on the general update, which changed the column and nothing else', function () {
+    // The Domains endpoints move the rows, the vhost and the certificate, check
+    // the name is free and ask for `app_domain` manage. This one did none of it.
+    $app = Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => 'Site',
+        'slug' => 'site', 'domain' => 'site.example.com',
+        'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'pending',
+    ]);
+
+    $this->withHeaders(appHeaders())->putJson("/api/applications/{$app->id}", [
+        'domain' => 'other.example.com',
+    ])->assertStatus(422)
+        ->assertJsonPath('errors.domain.0', __('validation.application_domain_use_endpoint'));
+
+    expect($app->fresh()->domain)->toBe('site.example.com');
+
+    // What the UI really sends here still works.
+    $this->withHeaders(appHeaders())->putJson("/api/applications/{$app->id}", [
+        'settings' => ['b' => 2],
+    ])->assertOk();
+});
+
 it('records the creation in the activity log', function () {
     capableServer();
 

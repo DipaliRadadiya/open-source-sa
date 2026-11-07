@@ -1509,6 +1509,8 @@ Check if a port is available before creating an app.
 
 ## Application — Domains & SSL
 
+**Change a domain here, not on `PUT /applications/{application}` (2026-11-07).** `domain` on that general update is a `422` (`validation.application_domain_use_endpoint`). It used to write the column only: the domain rows, the vhost and the certificate kept the old name, nobody checked the name was free, and it needed `application` manage rather than `app_domain` manage. Use `POST …/domains/{domain}/primary` to change the primary name.
+
 ### GET `/applications/{application}/domains`
 **Permission:** `app_domain` (view)
 
