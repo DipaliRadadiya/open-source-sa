@@ -36,6 +36,11 @@ class ComposeSecrets
             fn (string $value) => strlen($value) >= self::MIN_LENGTH,
         );
 
+        // Each value also as the template's one filter writes it:
+        // `{{ secret.APP_KEY|base64 }}` (RecipeTemplate). Found live on a
+        // BookStack install, whose APP_KEY reached a view-only user that way.
+        $values = array_merge($values, array_map('base64_encode', $values));
+
         // Longest first, so a secret that contains another is masked whole.
         usort($values, fn (string $a, string $b) => strlen($b) <=> strlen($a));
 

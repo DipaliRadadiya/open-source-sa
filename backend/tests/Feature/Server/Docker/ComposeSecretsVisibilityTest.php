@@ -149,6 +149,22 @@ it('masks a secret that contains another one whole', function () {
         ->and($masked)->toBe('A: '.ComposeSecrets::PLACEHOLDER."\nB: ".ComposeSecrets::PLACEHOLDER."\n");
 });
 
+it('masks a secret written base64-encoded, the one filter recipe templates have', function () {
+    // BookStack writes `APP_KEY: "base64:{{ secret.APP_KEY|base64 }}"`. Found
+    // live: the plain value was masked and the encoded one still reached the
+    // view-only user.
+    $key = 'Zq3Lm8Rt1Vx6Np2Ws9Ka4Hd7Jf0Bc5Ge';
+
+    [$masked, $redacted] = ComposeSecrets::redact(
+        'APP_KEY: "base64:'.base64_encode($key)."\"\n",
+        ['APP_KEY' => $key],
+    );
+
+    expect($redacted)->toBeTrue()
+        ->and($masked)->toBe('APP_KEY: "base64:'.ComposeSecrets::PLACEHOLDER."\"\n")
+        ->and($masked)->not->toContain(base64_encode($key));
+});
+
 it('has the refusal translated in every locale', function () {
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
         expect(__('errors/application.compose_redacted', [], $locale))->not->toBe('errors/application.compose_redacted');
