@@ -60,7 +60,14 @@ class CreateDockerDatabase
             // The row goes with it. A database row whose container never started
             // is a set of connection details that connect to nothing, and it
             // holds a port the allocator would keep reserving.
-            $this->containers->remove($database);
+            //
+            // remove() refuses when `down` fails over a container that is still
+            // there. Here the failure being reported is the create's, so that is
+            // the one that is thrown; the cleanup stays best-effort, as it was.
+            try {
+                $this->containers->remove($database);
+            } catch (DatabaseContainerFailedException) {
+            }
 
             // 🔴 **And the volume**, which this did not do. Two failed creates on
             // the test box — Postgres 18 before its mount point was fixed, and

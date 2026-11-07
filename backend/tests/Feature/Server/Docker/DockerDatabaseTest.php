@@ -9,6 +9,7 @@ use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Docker\DatabaseContainerManager;
 use App\Services\Server\HostCpus;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Symfony\Component\Yaml\Yaml;
@@ -374,6 +375,116 @@ it('removes the data when the delete opted in', function () {
 
     expect(ActivityLog::where('type', 'docker_database')->where('action', 'deleted')->sole()->properties['data_removed'])
         ->toBeTrue();
+});
+
+/*
+ * A delete that did not happen on the server is not reported as one
+ * (live-reproduced 2026-11-06: `down` failed, the container kept running, and
+ * the row and the compose file were deleted anyway).
+ */
+
+/**
+ * @param  callable(array<int, string>): ?ProcessResult  $answer
+ * @param  list<array<int, string>>  $ran
+ */
+function fakeDockerDelete(callable $answer, array &$ran): void
+{
+    Process::fake(function ($process) use ($answer, &$ran) {
+        $args = $process->command;
+        while (in_array($args[0] ?? '', ['sudo', '-n'], true)) {
+            array_shift($args);
+        }
+        $ran[] = $args;
+
+        return $answer($args) ?? Process::result(exitCode: 0);
+    });
+}
+
+function ranDirRemove(array $ran): bool
+{
+    return collect($ran)->contains(fn (array $a) => ($a[0] ?? '') === 'rm' && in_array('-rf', $a, true));
+}
+
+it('keeps the database listed when compose down fails and the container is still there', function () {
+    [, $id] = createDb();
+    $ran = [];
+
+    fakeDockerDelete(fn (array $a) => match (true) {
+        in_array('down', $a, true) => Process::result(exitCode: 1, errorOutput: 'Cannot connect to the Docker daemon'),
+        ($a[1] ?? '') === 'ps' => Process::result(output: "3f2a9c1d\n"),
+        default => null,
+    }, $ran);
+
+    $this->withHeaders(dbHeaders())->deleteJson("/api/docker/databases/{$id}")
+        ->assertStatus(422)
+        ->assertJsonPath('step', 'db_down')
+        ->assertJsonPath('message', __('errors/docker.database_delete_failed', ['step' => 'db_down']));
+
+    expect(DockerDatabase::find($id))->not->toBeNull()
+        ->and(ranDirRemove($ran))->toBeFalse('the compose file is what a retry stops it with')
+        ->and(ActivityLog::where('type', 'docker_database')->where('action', 'deleted')->exists())->toBeFalse();
+});
+
+it('treats Docker not answering the check as the container still being there', function () {
+    [, $id] = createDb();
+    $ran = [];
+
+    fakeDockerDelete(fn (array $a) => match (true) {
+        in_array('down', $a, true), ($a[1] ?? '') === 'ps' => Process::result(exitCode: 1),
+        default => null,
+    }, $ran);
+
+    $this->withHeaders(dbHeaders())->deleteJson("/api/docker/databases/{$id}")->assertStatus(422);
+
+    expect(DockerDatabase::find($id))->not->toBeNull();
+});
+
+it('finishes the delete when down fails over a container that is already gone', function () {
+    [, $id] = createDb();
+    $ran = [];
+
+    fakeDockerDelete(fn (array $a) => match (true) {
+        in_array('down', $a, true) => Process::result(exitCode: 1, errorOutput: 'open compose.yml: no such file or directory'),
+        ($a[1] ?? '') === 'ps' => Process::result(output: ''),
+        default => null,
+    }, $ran);
+
+    $this->withHeaders(dbHeaders())->deleteJson("/api/docker/databases/{$id}")->assertOk();
+
+    expect(DockerDatabase::find($id))->toBeNull()
+        ->and(ranDirRemove($ran))->toBeTrue();
+});
+
+it('keeps the database listed when the data was asked to go and the volume would not', function () {
+    [, $id] = createDb();
+    $ran = [];
+
+    fakeDockerDelete(fn (array $a) => in_array('volume', $a, true) && in_array('rm', $a, true)
+        ? Process::result(exitCode: 1, errorOutput: 'Error response from daemon: remove sv-db: volume is in use')
+        : null, $ran);
+
+    $this->withHeaders(dbHeaders())
+        ->deleteJson("/api/docker/databases/{$id}", ['remove_data' => true])
+        ->assertStatus(422)
+        ->assertJsonPath('step', 'volume_remove');
+
+    expect(DockerDatabase::find($id))->not->toBeNull()
+        ->and(ActivityLog::where('type', 'docker_database')->where('action', 'deleted')->exists())->toBeFalse();
+});
+
+it('counts a volume that is already gone as removed, so a retry can finish', function () {
+    [, $id] = createDb();
+    $ran = [];
+
+    fakeDockerDelete(fn (array $a) => in_array('volume', $a, true) && in_array('rm', $a, true)
+        ? Process::result(exitCode: 1, errorOutput: 'Error response from daemon: get sv-db_data: no such volume')
+        : null, $ran);
+
+    $this->withHeaders(dbHeaders())
+        ->deleteJson("/api/docker/databases/{$id}", ['remove_data' => true])
+        ->assertOk();
+
+    expect(DockerDatabase::find($id))->toBeNull();
 });
 
 /*

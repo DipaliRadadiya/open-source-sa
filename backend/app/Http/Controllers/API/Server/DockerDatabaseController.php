@@ -107,7 +107,17 @@ class DockerDatabaseController extends Controller
 
     public function destroy(Request $request, DockerDatabase $dockerDatabase, DeleteDockerDatabase $action): JsonResponse
     {
-        $action->execute($dockerDatabase, $request->boolean('remove_data'));
+        try {
+            $action->execute($dockerDatabase, $request->boolean('remove_data'));
+        } catch (DatabaseContainerFailedException $e) {
+            // Still listed, on purpose: the container or its data is still on
+            // the server, and the row is what lets the user try again.
+            return response()->json([
+                'message' => __('errors/docker.database_delete_failed', ['step' => $e->step]),
+                'step' => $e->step,
+                'reference' => $e->reference,
+            ], 422);
+        }
 
         return response()->json(['message' => __('errors/docker.database_deleted')]);
     }

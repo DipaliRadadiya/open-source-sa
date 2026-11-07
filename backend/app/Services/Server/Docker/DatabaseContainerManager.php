@@ -155,16 +155,46 @@ class DatabaseContainerManager
      * the site path and because a future non-external volume would need it. The
      * data is removed by the caller, through the same guarded path a site's
      * volume goes through.
+     *
+     * A failed `down` stops here while the container is still there. It used to
+     * be ignored: the directory went next, then the row, and the panel said
+     * "removed" over a container that was still running, now with no compose
+     * file to stop it with (live-reproduced 2026-11-06). Throwing keeps both,
+     * so a retry has what it needs.
+     *
+     * @throws DatabaseContainerFailedException
      */
     public function remove(DockerDatabase $database): void
     {
-        $this->compose($database, ['down', '--remove-orphans'], 'db_down');
+        $down = $this->compose($database, ['down', '--remove-orphans'], 'db_down');
+
+        if ($down->failed() && $this->containerRemains($database)) {
+            throw new DatabaseContainerFailedException('db_down', $down->reference);
+        }
 
         // The directory and the file in it, which hold the password.
         $this->serverOps->run(
             ['rm', '-rf', $this->directory($database)],
             ['feature' => 'docker', 'docker_database' => $database->id, 'op' => 'db_dir_remove'],
         );
+    }
+
+    /**
+     * Does any container of this database's project still exist, running or not?
+     *
+     * Asked after a failed `down`, which also fails when the container is
+     * already gone (the compose file was removed by hand, say). Only an answer
+     * of "none" counts as gone: Docker not answering is "still there".
+     */
+    private function containerRemains(DockerDatabase $database): bool
+    {
+        $result = $this->serverOps->run(
+            ['docker', 'ps', '-a', '-q', '--filter', 'label=com.docker.compose.project='.$database->project()],
+            ['feature' => 'docker', 'docker_database' => $database->id, 'op' => 'db_container_check'],
+            timeout: 30,
+        );
+
+        return $result->failed() || trim($result->output()) !== '';
     }
 
     /** Is the container up right now? */

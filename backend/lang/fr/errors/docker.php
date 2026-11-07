@@ -20,6 +20,7 @@ return [
     'database_start_failed' => 'La base de données n’a pas pu démarrer (:step). Rien n’a été laissé derrière : aucune entrée, aucun conteneur, aucun port réservé.',
     'database_version_unknown' => 'Ce moteur n’a pas de version :version. Choisissez-en une proposée par le panneau pour :engine.',
     'database_deleted' => 'La base de données a été supprimée.',
+    'database_delete_failed' => 'La base de données n’a pas pu être entièrement supprimée (:step) ; elle reste donc dans la liste. Vérifiez que Docker fonctionne et réessayez.',
     'network_docker_own' => ':name est l\'un des réseaux propres à Docker et ne peut pas servir pour une application. host la placerait directement sur le réseau du serveur, et avec les autres elle ne pourrait plus joindre ses autres conteneurs. Choisissez un réseau créé depuis l\'écran Docker, ou laissez l\'application sur son propre réseau.',
     'network_other_application' => ':name est le réseau privé d\'une autre application. Le rejoindre donnerait accès aux conteneurs de cette application, base de données comprise. Pour relier les deux, créez un réseau partagé depuis l\'écran Docker et placez-les toutes les deux dessus.',
     'network_name_reserved' => 'Le nom :name est réservé : le panneau garde les noms des réseaux propres à Docker et ceux qui commencent par sv-app- pour les réseaux qu\'il crée pour chaque application. Choisissez un autre nom.',

@@ -4,6 +4,7 @@ namespace App\Actions\Server\Docker;
 
 use App\Models\DockerDatabase;
 use App\Services\ActivityLogger;
+use App\Services\Server\Docker\DatabaseContainerFailedException;
 use App\Services\Server\Docker\DatabaseContainerManager;
 use App\Services\Server\Docker\DockerResources;
 
@@ -28,9 +29,27 @@ class DeleteDockerDatabase
         private DockerResources $docker,
     ) {}
 
+    /**
+     * The row goes last, and only when the server side really went: a row
+     * deleted over a failure is a running container the panel no longer lists.
+     * A retry after a failure is safe — `down` on a container already gone,
+     * and `volume rm` on a volume already gone, both count as done.
+     *
+     * @throws DatabaseContainerFailedException
+     */
     public function execute(DockerDatabase $database, bool $removeData = false): void
     {
         $volume = $database->volume();
+
+        $this->containers->remove($database);
+
+        if ($removeData) {
+            $removed = $this->docker->removeVolume($volume);
+
+            if ($removed->failed() && ! str_contains(strtolower($removed->errorOutput()), 'no such volume')) {
+                throw new DatabaseContainerFailedException('volume_remove', $removed->reference);
+            }
+        }
 
         $this->activityLogger->log('docker_database.deleted', $database, [
             'name' => $database->name,
@@ -39,12 +58,6 @@ class DeleteDockerDatabase
             // that is what the row records.
             'data_removed' => $removeData,
         ]);
-
-        $this->containers->remove($database);
-
-        if ($removeData) {
-            $this->docker->removeVolume($volume);
-        }
 
         $database->delete();
     }

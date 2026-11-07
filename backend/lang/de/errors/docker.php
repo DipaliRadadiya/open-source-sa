@@ -20,6 +20,7 @@ return [
     'database_start_failed' => 'Die Datenbank konnte nicht gestartet werden (:step). Es blieb nichts zurück — kein Eintrag, kein Container und kein belegter Port.',
     'database_version_unknown' => 'Diese Engine hat keine Version :version. Wählen Sie eine, die das Panel für :engine anbietet.',
     'database_deleted' => 'Die Datenbank wurde entfernt.',
+    'database_delete_failed' => 'Die Datenbank konnte nicht vollständig entfernt werden (:step) und bleibt daher in der Liste. Prüfen Sie, ob Docker läuft, und versuchen Sie es erneut.',
     'network_docker_own' => ':name ist eines von Dockers eigenen Netzwerken und kann nicht für eine Anwendung verwendet werden. host würde sie direkt in das Netzwerk des Servers stellen, und mit den anderen erreicht sie ihre übrigen Container nicht. Wählen Sie ein Netzwerk, das auf der Docker-Seite angelegt wurde, oder lassen Sie die Anwendung in ihrem eigenen Netzwerk.',
     'network_other_application' => ':name ist das private Netzwerk einer anderen Anwendung. Wer ihm beitritt, erreicht deren Container, einschließlich ihrer Datenbank. Um beide zu verbinden, legen Sie auf der Docker-Seite ein gemeinsames Netzwerk an und nehmen beide darin auf.',
     'network_name_reserved' => 'Der Name :name ist reserviert: Das Panel hält Dockers eigene Netzwerknamen und Namen, die mit sv-app- beginnen, für die Netzwerke frei, die es für jede Anwendung anlegt. Wählen Sie einen anderen Namen.',
