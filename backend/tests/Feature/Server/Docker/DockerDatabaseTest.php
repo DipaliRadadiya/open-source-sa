@@ -425,6 +425,26 @@ it('keeps the database listed when compose down fails and the container is still
         ->and(ActivityLog::where('type', 'docker_database')->where('action', 'deleted')->exists())->toBeFalse();
 });
 
+it('writes the compose file again and retries once, so a missing file does not block the delete', function () {
+    [, $id] = createDb();
+    $ran = [];
+    $downs = 0;
+
+    fakeDockerDelete(function (array $a) use (&$downs) {
+        if (in_array('down', $a, true)) {
+            return ++$downs === 1 ? Process::result(exitCode: 1, errorOutput: 'open compose.yml: no such file or directory') : Process::result();
+        }
+
+        return ($a[1] ?? '') === 'ps' ? Process::result(output: "3f2a9c1d\n") : null;
+    }, $ran);
+
+    $this->withHeaders(dbHeaders())->deleteJson("/api/docker/databases/{$id}")->assertOk();
+
+    expect($downs)->toBe(2)
+        ->and(collect($ran)->contains(fn (array $a) => ($a[0] ?? '') === 'tee' && str_ends_with((string) ($a[1] ?? ''), '/compose.yml')))->toBeTrue()
+        ->and(DockerDatabase::find($id))->toBeNull();
+});
+
 it('treats Docker not answering the check as the container still being there', function () {
     [, $id] = createDb();
     $ran = [];

@@ -162,6 +162,11 @@ class DatabaseContainerManager
      * file to stop it with (live-reproduced 2026-11-06). Throwing keeps both,
      * so a retry has what it needs.
      *
+     * One repair is tried first: the compose file is written again from the row
+     * and `down` asked once more. A file that went missing or was edited by
+     * hand is the one cause of a failed `down` the panel can fix by itself, and
+     * without it that database could never be deleted from the panel at all.
+     *
      * @throws DatabaseContainerFailedException
      */
     public function remove(DockerDatabase $database): void
@@ -169,7 +174,11 @@ class DatabaseContainerManager
         $down = $this->compose($database, ['down', '--remove-orphans'], 'db_down');
 
         if ($down->failed() && $this->containerRemains($database)) {
-            throw new DatabaseContainerFailedException('db_down', $down->reference);
+            $down = $this->downFromFreshFile($database) ?? $down;
+
+            if ($down->failed() && $this->containerRemains($database)) {
+                throw new DatabaseContainerFailedException('db_down', $down->reference);
+            }
         }
 
         // The directory and the file in it, which hold the password.
@@ -177,6 +186,31 @@ class DatabaseContainerManager
             ['rm', '-rf', $this->directory($database)],
             ['feature' => 'docker', 'docker_database' => $database->id, 'op' => 'db_dir_remove'],
         );
+    }
+
+    /**
+     * Write the compose file again from the row, then `down` with it.
+     *
+     * Null when the file could not be rendered or written: the caller then
+     * reports the first failure, which is the one that explains the problem.
+     */
+    private function downFromFreshFile(DockerDatabase $database): ?ServerOpsResult
+    {
+        $context = ['feature' => 'docker', 'docker_database' => $database->id];
+
+        try {
+            $contents = $this->contents($database);
+        } catch (DatabaseContainerFailedException) {
+            return null;
+        }
+
+        $this->serverOps->run(['mkdir', '-m', '0750', '-p', $this->directory($database)], $context + ['op' => 'db_dir']);
+
+        if ($this->files->put($this->composePath($database), $contents, $context + ['op' => 'db_compose_write'])->failed()) {
+            return null;
+        }
+
+        return $this->compose($database, ['down', '--remove-orphans'], 'db_down');
     }
 
     /**
