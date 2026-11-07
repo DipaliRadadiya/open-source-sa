@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\BasicAuthOperationException;
+use App\Exceptions\Server\WebServer\WebServerReloadFailedException;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -96,10 +97,16 @@ class BasicAuthManager
             throw new BasicAuthOperationException($restored->reference);
         }
 
-        $this->webServers->driver()->reload();
+        $reload = $this->webServers->driver()->reload();
 
+        // Saved either way: the tested config is on disk, and the row has to
+        // say what the disk says. A failed reload is reported, not success.
         $application->basic_auth_password = $hash;
         $application->save();
+
+        if ($reload->failed()) {
+            throw new WebServerReloadFailedException($reload->reference);
+        }
     }
 
     public function unprotect(Application $application): void
@@ -120,9 +127,15 @@ class BasicAuthManager
             throw new BasicAuthOperationException($restored->reference);
         }
 
-        $this->webServers->driver()->reload();
+        $reload = $this->webServers->driver()->reload();
 
         $application->save();
+
+        // A failed reload leaves the web server on the config that still
+        // points at the file, so it stays until a reload has really happened.
+        if ($reload->failed()) {
+            throw new WebServerReloadFailedException($reload->reference);
+        }
 
         // Removed only once the vhost no longer references it — nothing
         // should be able to read a stale credential once protection is off,

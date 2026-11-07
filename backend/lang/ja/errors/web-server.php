@@ -7,4 +7,6 @@ return [
     // hijack of a port something else already owns.
     'ols_listener_missing' => 'OpenLiteSpeed にこのアプリケーションを紐づける ":listener" リスナーがありません。先に Web サーバー設定で追加してください。',
 
+    'reload_failed' => '変更は保存され、設定テストにも合格しましたが、Web サーバーが再読み込みされなかったため、以前の設定のまま動作しています。「サービス」から Web サーバーを再起動するか、ログを確認してください。',
+
 ];

@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Enums\WafMode;
 use App\Exceptions\Server\Application\WafOperationException;
+use App\Exceptions\Server\WebServer\WebServerReloadFailedException;
 use App\Models\Application;
 use App\Models\ApplicationWafRule;
 use App\Services\ActivityLogger;
@@ -116,7 +117,9 @@ class Waf8GManager
             $moved = [];
         }
 
-        $this->webServers->driver()->reload();
+        // Saved either way: the tested config is on disk, and the row has to
+        // say what the disk says. A failed reload is reported at the end.
+        $reload = $this->webServers->driver()->reload();
 
         $application->save();
 
@@ -142,14 +145,16 @@ class Waf8GManager
         // the same values on every save would churn the table and, worse,
         // reset their timestamps so "when did this rule appear" stops being
         // answerable.
-        if (! $rulesChange) {
-            return;
+        if ($rulesChange) {
+            $application->wafRules()->delete();
+
+            foreach ($this->pendingRules($exceptions, $customRules) as $rule) {
+                $application->wafRules()->create(['type' => $rule->type, 'value' => $rule->value]);
+            }
         }
 
-        $application->wafRules()->delete();
-
-        foreach ($this->pendingRules($exceptions, $customRules) as $rule) {
-            $application->wafRules()->create(['type' => $rule->type, 'value' => $rule->value]);
+        if ($reload->failed()) {
+            throw new WebServerReloadFailedException($reload->reference);
         }
     }
 

@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Enums\ApplicationStatus;
 use App\Exceptions\Server\Application\WebRootOperationException;
+use App\Exceptions\Server\WebServer\WebServerReloadFailedException;
 use App\Models\Application;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
@@ -112,14 +113,21 @@ class WebRootManager
             throw new WebRootOperationException($test->reference);
         }
 
-        $this->webServers->driver()->reload();
+        $reload = $this->webServers->driver()->reload();
 
+        // Saved either way: the tested config is on disk, and the row has to
+        // say what the disk says. A failed reload is reported, not passed off
+        // as success — see WebServerReloadFailedException.
         $application->save();
 
         // After the reload: the unit's working directory only matters to the
         // next start, and the old credential file must outlive the config that
         // referenced it.
         $this->republishUnit($application, $documentRoot);
+
+        if ($reload->failed()) {
+            throw new WebServerReloadFailedException($reload->reference);
+        }
     }
 
     /**

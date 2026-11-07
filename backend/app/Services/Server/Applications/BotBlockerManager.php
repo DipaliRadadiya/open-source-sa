@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Enums\AiBotPolicy;
 use App\Exceptions\Server\Application\BotBlockerOperationException;
+use App\Exceptions\Server\WebServer\WebServerReloadFailedException;
 use App\Models\Application;
 use App\Models\ApplicationBotRule;
 use App\Services\ActivityLogger;
@@ -76,7 +77,9 @@ class BotBlockerManager
             $moved = [];
         }
 
-        $this->webServers->driver()->reload();
+        // Saved either way: the tested config is on disk, and the rows have to
+        // say what the disk says. A failed reload is reported at the end.
+        $reload = $this->webServers->driver()->reload();
 
         $application->save();
 
@@ -87,15 +90,17 @@ class BotBlockerManager
             ]);
         }
 
-        if (! $rulesChange) {
-            return;
+        if ($rulesChange) {
+            // Replaced wholesale, and only now — see the class docblock.
+            $application->botRules()->delete();
+
+            foreach ($pending as $rule) {
+                $application->botRules()->create(['type' => $rule->type, 'value' => $rule->value]);
+            }
         }
 
-        // Replaced wholesale, and only now — see the class docblock.
-        $application->botRules()->delete();
-
-        foreach ($pending as $rule) {
-            $application->botRules()->create(['type' => $rule->type, 'value' => $rule->value]);
+        if ($reload->failed()) {
+            throw new WebServerReloadFailedException($reload->reference);
         }
     }
 

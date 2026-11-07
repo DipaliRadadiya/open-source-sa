@@ -1229,6 +1229,12 @@ class GitDeployer
             throw new ProvisioningFailedException('test_config', $tested->reference);
         }
 
-        $driver->reload();
+        // Checked like ApplyVhost checks it: a deploy whose new config never
+        // went live is not a deploy that finished.
+        $reload = $driver->reload();
+
+        if ($reload->failed()) {
+            throw new ProvisioningFailedException('reload', $reload->reference);
+        }
     }
 }
