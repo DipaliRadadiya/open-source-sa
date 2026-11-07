@@ -54,6 +54,7 @@ return [
     'container_apply_failed' => 'As definições foram guardadas, mas não foi possível iniciar o contentor com elas. Referência :reference.',
     'container_fields_owned_by_compose' => 'O ficheiro de configuração próprio desta aplicação define as suas portas, rede e volumes, por isso não podem ser alterados aqui.',
     'compose_apply_failed' => 'Não foi possível aplicar o ficheiro compose, por isso a aplicação voltou ao que estava a usar antes. Referência :reference.',
+    'compose_redacted' => 'Este ficheiro compose tem as palavras-passe ocultas, por isso não pode ser guardado assim. Para o editar, precisa de permissão para gerir as credenciais do contentor.',
     'docker_removal_not_permitted' => 'Não tem permissão para eliminar redes ou volumes Docker. Remova a aplicação sem eles, ou peça a alguém com acesso ao Docker.',
     'no_database_engine' => 'Nenhum mecanismo de banco de dados disponível. Instale e configure o MySQL ou MariaDB antes de criar esta aplicação.',
     'no_process' => '"‎:name" não executa um processo próprio.',

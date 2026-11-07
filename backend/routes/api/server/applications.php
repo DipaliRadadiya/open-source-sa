@@ -106,9 +106,10 @@ Route::put('/applications/{application}/container', [ApplicationContainerControl
 // The compose file this site runs.
 //
 // `view` to read it and `manage` to replace it, unlike the settings endpoint which
-// is manage-only: reading the file is how somebody diagnoses their own site, and it
-// carries nothing the application payload does not already imply. Writing it is a
-// different matter — it can stop the site.
+// is manage-only: reading the file is how somebody diagnoses their own site. A
+// recipe's file has its generated passwords in it, though, so they are masked for
+// a reader without `app_container` manage, the grant that guards them on their own
+// endpoint below. Writing it is a different matter — it can stop the site.
 Route::get('/applications/{application}/container/compose', [ApplicationContainerController::class, 'compose'])
     ->middleware(['permission:app_compose', 'throttle:60,1']);
 

@@ -54,6 +54,7 @@ return [
     'container_apply_failed' => '設定は保存しましたが、その設定でコンテナを起動できませんでした。参照 :reference。',
     'container_fields_owned_by_compose' => 'このアプリ専用のセットアップファイルでポート、ネットワーク、ボリュームが決まるため、ここでは変更できません。',
     'compose_apply_failed' => 'compose ファイルを適用できなかったため、アプリケーションは以前のファイルに戻されました。参照 :reference。',
+    'compose_redacted' => 'この compose ファイルはパスワードが非表示のため、このままでは保存できません。編集するには、コンテナーの認証情報を管理する権限が必要です。',
     'docker_removal_not_permitted' => 'Docker のネットワークやボリュームを削除する権限がありません。それらを残してアプリケーションを削除するか、Docker の権限を持つ人に依頼してください。',
     'no_database_engine' => '利用可能なデータベースエンジンがありません。このアプリケーションを作成する前に MySQL または MariaDB を設定してください。',
     'no_process' => '「:name」は独自のプロセスを実行していません。',

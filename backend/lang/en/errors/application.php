@@ -54,6 +54,7 @@ return [
     'container_apply_failed' => 'The settings were saved, but the container could not be brought up on them. Reference :reference.',
     'container_fields_owned_by_compose' => 'This app\'s own setup file sets its ports, network and volumes, so they can\'t be changed here.',
     'compose_apply_failed' => 'The compose file could not be applied, so the application was put back on the one it was running before. Reference :reference.',
+    'compose_redacted' => 'This compose file has its passwords hidden, so it cannot be saved like this. Editing it needs permission to manage the container’s credentials.',
     'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the application without them, or ask someone with Docker access.',
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
     'no_process' => '":name" does not run a process of its own.',

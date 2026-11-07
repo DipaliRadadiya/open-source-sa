@@ -54,6 +54,7 @@ return [
     'container_apply_failed' => 'Les réglages ont été enregistrés, mais le conteneur n’a pas pu être démarré avec eux. Référence :reference.',
     'container_fields_owned_by_compose' => 'Le fichier de configuration propre à cette application définit ses ports, son réseau et ses volumes ; ils ne peuvent donc pas être modifiés ici.',
     'compose_apply_failed' => 'Le fichier compose n’a pas pu être appliqué ; l’application a été remise sur celui qu’elle utilisait auparavant. Référence :reference.',
+    'compose_redacted' => 'Les mots de passe de ce fichier compose sont masqués, il ne peut donc pas être enregistré ainsi. Pour le modifier, il faut la permission de gérer les identifiants du conteneur.',
     'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez l’application sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
     'no_process' => '« :name » n\'exécute pas de processus propre.',
