@@ -1379,6 +1379,8 @@ Move a Node site to another **installed** Node version (2026-10-05, junior re-te
 ### PUT `/applications/{application}/web-root`
 **Permission:** `application` (manage) | **Throttle:** 10/min
 
+**A failed reload is reported (2026-11-07).** When the config passed its test but `reload` failed, this answers `500` with `code: web_server_reload_failed` and a `reference`: the change is saved and on disk, and the web server is still serving the previous settings until it reloads. The same applies to `PUT …/waf`, `PUT …/bot-blocker` and `PUT …/security`; a Git deploy fails at step `reload`.
+
 Change the served directory (rewrites vhost, tests + reloads).
 
 **Request:** `{"web_root": "/public"}`
@@ -4542,6 +4544,8 @@ Paged. `?search=` case-insensitively matches the database name; `?filter[engine]
 
 ### POST `/databases`
 **Permission:** `database` (manage)
+
+**A MongoDB name already on the server is a `422` on `name` (2026-11-07)** (`errors/database.exists_on_server`), even when the panel does not manage that database. Mongo's create does not fail on an existing database, so the panel used to adopt it, and drop it with its data if the initial user then failed. Bring such a database in with Sync instead. MySQL, MariaDB and PostgreSQL already refused an existing name.
 
 **Request:**
 ```json
