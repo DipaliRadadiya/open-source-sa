@@ -23,6 +23,7 @@ return [
     'phpmyadmin_not_isolated' => 'このphpMyAdminアプリケーションはサーバー全体のPHPプールを共有しているため、サインインリンクが他のすべてのアプリケーションから読み取れてしまいます。専用のPHPプールを割り当てるか、phpMyAdminを開いてデータベースの認証情報でサインインしてください。',
     'phpmyadmin_requires_https' => 'この phpMyAdmin アプリケーションには HTTPS がないため、サインインリンクとデータベースセッションが暗号化されずに送信されます。先に SSL 証明書を発行してください。',
     'user_exists' => 'データベースユーザー「:username」は既に存在します。別の名前を選んでください。',
+    'exists_on_server' => 'データベース「:name」は、パネル外で既にサーバー上に存在します。別の名前を選ぶか、Sync でパネルに取り込んでください。',
     'phpmyadmin_sso_unavailable' => 'phpMyAdminアプリケーションでサインインリンクを準備できませんでした。',
     'adminer_engine_not_supported' => 'Adminer は :engine データベースを開けません。MySQL、MariaDB、PostgreSQL を開けます。',
     'adminer_not_deployed' => 'このサーバーには Adminer アプリケーションがインストールされていません。まずアプリケーションページから Adminer をインストールしてください。',

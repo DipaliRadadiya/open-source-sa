@@ -23,6 +23,7 @@ return [
     'phpmyadmin_not_isolated' => 'Diese phpMyAdmin-Site nutzt den serverweiten PHP-Pool, sodass ein Anmeldelink für jede andere Site lesbar wäre. Geben Sie ihr einen eigenen PHP-Pool, oder öffnen Sie phpMyAdmin und melden Sie sich mit den Datenbank-Zugangsdaten an.',
     'phpmyadmin_requires_https' => 'Diese phpMyAdmin-Anwendung hat kein HTTPS, daher würden der Anmeldelink und die Datenbanksitzung unverschlüsselt übertragen. Stellen Sie zuerst ein SSL-Zertifikat dafür aus.',
     'user_exists' => 'Ein Datenbankbenutzer namens „:username“ existiert bereits. Wählen Sie einen anderen Namen.',
+    'exists_on_server' => 'Auf dem Server gibt es bereits eine Datenbank namens „:name“, die das Panel nicht verwaltet. Wählen Sie einen anderen Namen oder übernehmen Sie sie per Sync.',
     'phpmyadmin_sso_unavailable' => 'Der Anmeldelink konnte auf der phpMyAdmin-Site nicht vorbereitet werden.',
     'adminer_engine_not_supported' => 'Adminer kann keine :engine-Datenbanken öffnen. Es öffnet MySQL, MariaDB und PostgreSQL.',
     'adminer_not_deployed' => 'Auf diesem Server ist keine Adminer-Anwendung installiert. Installieren Sie Adminer zuerst über die Anwendungsseite.',

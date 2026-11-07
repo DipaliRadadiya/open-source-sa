@@ -23,6 +23,7 @@ return [
     'phpmyadmin_not_isolated' => 'Esta aplicación phpMyAdmin comparte el grupo de PHP de todo el servidor, por lo que un enlace de inicio de sesión sería legible por todas las demás aplicaciones. Asígnele su propio grupo de PHP, o abra phpMyAdmin e inicie sesión con las credenciales de la base de datos.',
     'phpmyadmin_requires_https' => 'Esta aplicación de phpMyAdmin no tiene HTTPS, así que el enlace de inicio de sesión y la sesión de la base de datos viajarían sin cifrar. Emite primero un certificado SSL para ella.',
     'user_exists' => 'Ya existe un usuario de base de datos llamado ":username". Elige otro nombre.',
+    'exists_on_server' => 'Ya existe en el servidor una base de datos llamada ":name" que el panel no gestiona. Elige otro nombre o incorpórala al panel con Sync.',
     'phpmyadmin_sso_unavailable' => 'No se pudo preparar el enlace de inicio de sesión en la aplicación phpMyAdmin.',
     'adminer_engine_not_supported' => 'Adminer no puede abrir bases de datos :engine. Abre MySQL, MariaDB y PostgreSQL.',
     'adminer_not_deployed' => 'No hay ninguna aplicación Adminer instalada en este servidor. Instala Adminer primero desde la página de aplicaciones.',

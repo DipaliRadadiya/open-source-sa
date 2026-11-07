@@ -7,6 +7,7 @@ use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Models\DatabaseConnection;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Validation\ValidationException;
 
 /**
  * MongoDB via `mongosh`. The connection URI (with credentials) and the
@@ -16,6 +17,9 @@ use App\Services\Server\ServerOpsResult;
  */
 class MongoEngine implements DatabaseEngine
 {
+    /** Printed by createDatabase() when the name is already on the server. */
+    private const EXISTS_MARKER = 'panel:database_exists';
+
     public function __construct(
         private DatabaseConnection $connection,
         private ServerOps $serverOps,
@@ -139,8 +143,30 @@ class MongoEngine implements DatabaseEngine
 
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
+        // Refused when the name is already on the server. SQL's CREATE DATABASE
+        // does that by itself; Mongo's createCollection does not, it quietly
+        // adds to the existing database. CreateDatabase then treated that
+        // database as its own and dropped it, data and all, when a later step
+        // failed. Asked in the same script as the create, so a failed check is
+        // a failed create rather than a "no".
+        //
         // Mongo creates a DB lazily; make a placeholder collection so it lists.
-        $this->must('db.getSiblingDB('.$this->js($name).').createCollection("_panel_init");');
+        $result = $this->run(
+            'const candidate = '.$this->js($name).'; '
+            .'if (db.adminCommand({ listDatabases: 1, nameOnly: true }).databases.some(d => d.name === candidate)) { '
+            .'print("'.self::EXISTS_MARKER.'"); quit(3); } '
+            .'db.getSiblingDB(candidate).createCollection("_panel_init");'
+        );
+
+        if ($result->failed() && str_contains($result->output(), self::EXISTS_MARKER)) {
+            throw ValidationException::withMessages([
+                'name' => [__('errors/database.exists_on_server', ['name' => $name])],
+            ]);
+        }
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
     }
 
     public function dropDatabase(string $name): void

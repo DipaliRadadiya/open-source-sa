@@ -23,6 +23,7 @@ return [
     'phpmyadmin_not_isolated' => 'Esta aplicação phpMyAdmin compartilha o pool de PHP de todo o servidor, portanto um link de acesso seria legível por todas as outras aplicações. Dê-lhe o seu próprio pool de PHP, ou abra o phpMyAdmin e entre com as credenciais do banco de dados.',
     'phpmyadmin_requires_https' => 'Esta aplicação do phpMyAdmin não tem HTTPS, por isso o link de acesso e a sessão da base de dados seriam transmitidos sem encriptação. Emita primeiro um certificado SSL para ela.',
     'user_exists' => 'Já existe um utilizador de base de dados chamado ":username". Escolha outro nome.',
+    'exists_on_server' => 'Já existe no servidor uma base de dados chamada ":name", fora do painel. Escolha outro nome ou traga-a para o painel com o Sync.',
     'phpmyadmin_sso_unavailable' => 'Não foi possível preparar o link de acesso na aplicação phpMyAdmin.',
     'adminer_engine_not_supported' => 'O Adminer não consegue abrir bases de dados :engine. Ele abre MySQL, MariaDB e PostgreSQL.',
     'adminer_not_deployed' => 'Nenhuma aplicação Adminer está instalada neste servidor. Instale o Adminer primeiro pela página de aplicações.',

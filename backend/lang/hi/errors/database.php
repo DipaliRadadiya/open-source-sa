@@ -23,6 +23,7 @@ return [
     'phpmyadmin_not_isolated' => 'यह phpMyAdmin एप्लिकेशन सर्वर-व्यापी PHP पूल साझा करती है, इसलिए साइन-इन लिंक हर दूसरी एप्लिकेशन पढ़ सकेगी। इसे अपना PHP पूल दें, या phpMyAdmin खोलकर डेटाबेस क्रेडेंशियल से साइन इन करें।',
     'phpmyadmin_requires_https' => 'इस phpMyAdmin एप्लिकेशन पर HTTPS नहीं है, इसलिए साइन-इन लिंक और डेटाबेस सत्र बिना एन्क्रिप्शन के भेजे जाएँगे। पहले इसके लिए SSL प्रमाणपत्र जारी करें।',
     'user_exists' => '":username" नाम का डेटाबेस उपयोगकर्ता पहले से मौजूद है। कोई दूसरा नाम चुनें।',
+    'exists_on_server' => '":name" नाम का डेटाबेस सर्वर पर पहले से मौजूद है, जो पैनल में नहीं है। कोई दूसरा नाम चुनें, या Sync से उसे पैनल में लाएँ।',
     'phpmyadmin_sso_unavailable' => 'phpMyAdmin एप्लिकेशन पर साइन-इन लिंक तैयार नहीं किया जा सका।',
     'adminer_engine_not_supported' => 'Adminer :engine डेटाबेस नहीं खोल सकता। यह MySQL, MariaDB और PostgreSQL खोलता है।',
     'adminer_not_deployed' => 'इस सर्वर पर कोई Adminer एप्लिकेशन इंस्टॉल नहीं है। पहले एप्लिकेशन पेज से Adminer इंस्टॉल करें।',

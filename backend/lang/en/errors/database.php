@@ -23,6 +23,7 @@ return [
     'phpmyadmin_not_isolated' => 'This phpMyAdmin application shares the server-wide PHP pool, so a sign-in link would be readable by every other application. Give it its own PHP pool, or open phpMyAdmin and sign in with the database credentials.',
     'phpmyadmin_requires_https' => 'This phpMyAdmin application has no HTTPS, so the sign-in link and the database session would travel unencrypted. Issue an SSL certificate for it first.',
     'user_exists' => 'A database user named ":username" already exists. Choose another name.',
+    'exists_on_server' => 'A database named ":name" already exists on the server, outside the panel. Choose another name, or bring it into the panel with Sync.',
     'phpmyadmin_sso_unavailable' => 'The sign-in link could not be prepared on the phpMyAdmin application.',
     'adminer_engine_not_supported' => 'Adminer cannot open :engine databases. It opens MySQL, MariaDB and PostgreSQL.',
     'adminer_not_deployed' => 'No Adminer application is installed on this server. Install Adminer from the applications page first.',
