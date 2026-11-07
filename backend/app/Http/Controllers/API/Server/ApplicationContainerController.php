@@ -20,7 +20,6 @@ use App\Services\ActivityLogger;
 use App\Services\Recipes\RecipeCredentials;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ApplicationRuns;
-use App\Services\Server\Applications\ComposeSecrets;
 use App\Services\Server\Applications\ContainerAccess;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\DnsVerifier;
@@ -118,7 +117,6 @@ class ApplicationContainerController extends Controller
      * past would be indefensible.
      */
     public function compose(
-        Request $request,
         Application $application,
         ContainerSupervisor $containers,
         ApplicationProvisioner $provisioner,
@@ -145,25 +143,11 @@ class ApplicationContainerController extends Controller
             ], 422);
         }
 
-        // A recipe's file has its generated passwords written into it, and this
-        // route is only `app_compose` view. The passwords themselves are behind
-        // `app_container` manage on their own endpoint, which also logs who
-        // looked; handing them out here undid both (live-reproduced 2026-11-06).
-        // So the values are masked for anyone who could not read them there.
-        $redacted = false;
-
-        if (! $request->user()?->canManage('app_container')) {
-            [$compose, $redacted] = ComposeSecrets::redact($compose, (array) ($application->docker_secrets ?? []));
-        }
-
         return response()->json([
             'compose' => $compose,
             // Which of the two the user is looking at, so the editor can warn that
             // saving takes the file over instead of quietly converting the site.
             'generated' => $generated,
-            // Masked values cannot be saved back (UpdateComposeRequest refuses
-            // them), so the editor should be read-only while this is true.
-            'redacted' => $redacted,
         ]);
     }
 

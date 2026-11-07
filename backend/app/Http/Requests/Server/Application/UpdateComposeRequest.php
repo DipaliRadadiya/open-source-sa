@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Services\Server\Applications\ApplicationProvisioner;
-use App\Services\Server\Applications\ComposeSecrets;
 use App\Services\Server\Applications\ComposeValidator;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -46,15 +45,6 @@ class UpdateComposeRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 if ($validator->errors()->isNotEmpty()) {
-                    return;
-                }
-
-                // A file whose passwords were masked for a viewer who could not
-                // read them. Saved back, it would replace the real passwords with
-                // the placeholder and the site would lose its own database.
-                if (ComposeSecrets::containsPlaceholder((string) $this->input('compose'))) {
-                    $validator->errors()->add('compose', __('errors/application.compose_redacted'));
-
                     return;
                 }
 

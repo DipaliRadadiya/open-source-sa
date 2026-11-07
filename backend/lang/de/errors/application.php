@@ -54,7 +54,6 @@ return [
     'container_apply_failed' => 'Die Einstellungen wurden gespeichert, der Container konnte damit aber nicht gestartet werden. Referenz :reference.',
     'container_fields_owned_by_compose' => 'Die eigene Einrichtungsdatei dieser App legt ihre Ports, ihr Netzwerk und ihre Volumes fest, daher lassen sie sich hier nicht ändern.',
     'compose_apply_failed' => 'Die Compose-Datei konnte nicht angewendet werden, daher läuft die Site wieder mit der vorherigen. Referenz :reference.',
-    'compose_redacted' => 'Diese Compose-Datei enthält ausgeblendete Passwörter und kann so nicht gespeichert werden. Sie benötigen die Berechtigung, die Container-Zugangsdaten zu verwalten, um sie zu bearbeiten.',
     'docker_removal_not_permitted' => 'Sie haben keine Berechtigung, Docker-Netzwerke oder -Volumes zu löschen. Entfernen Sie die Website ohne sie, oder fragen Sie jemanden mit Docker-Zugriff.',
     'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installieren und konfigurieren Sie MySQL oder MariaDB, bevor Sie diese Anwendung anlegen.',
     'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
