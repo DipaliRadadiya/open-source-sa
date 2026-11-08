@@ -101,7 +101,9 @@ it('renders them as deny contexts on OpenLiteSpeed', function (string $siteType)
 it('adds nothing for an application that needs nothing', function (string $driver) {
     $config = deniedPathsVhost('wordpress', $driver);
 
-    expect(substr_count($config, 'location ~* '))->toBe(0)
+    // v7's three browser-caching locations are always there on nginx (vhosts
+    // the same as v7, 2026-11-08); nothing beyond them.
+    expect(substr_count($config, 'location ~* ') - substr_count($config, 'location ~* \\.(?:'))->toBe(0)
         // OLS: only the dotfile context it always had.
         ->and(substr_count($config, 'context exp:'))->toBe($driver === 'openlitespeed' ? 1 : 0);
 })->with(['nginx', 'openlitespeed']);

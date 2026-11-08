@@ -194,7 +194,9 @@ it('still writes a placeholder for a blank PHP site, as the site user after taki
     $order = [];
 
     foreach ($ran as $args) {
-        if (($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R') {
+        // Root taking its own `conf/` folder back (SiteConfFolder) is not the
+        // hand-over to the site user this is about.
+        if (($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R' && ! in_array('root:root', $args, true)) {
             $order[] = 'chown';
         } elseif (($args[0] ?? '') === 'runuser' && ($args[4] ?? '') === 'tee' && str_ends_with((string) end($args), '/index.php')) {
             $order[] = 'tee as user';

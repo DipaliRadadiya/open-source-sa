@@ -88,7 +88,9 @@ it('lists the sources this application has, with localized labels', function () 
     $response = $this->actingAs($this->admin)->getJson(logUrl())->assertOk();
     $logs = collect($response->json('logs'));
 
-    expect($logs->pluck('key')->all())->toBe(['access', 'error'])
+    // Plus the HTTPS block's own files, v7's `-ssl` names.
+    expect($logs->pluck('key')->all())->toBe(['access', 'error', 'access_ssl', 'error_ssl'])
+        ->and($logs->firstWhere('key', 'access_ssl')['label'])->toBe('Access log (HTTPS)')
         ->and($logs->firstWhere('key', 'error')['label'])->toBe('Error log')
         ->and($logs->firstWhere('key', 'access')['exists'])->toBeTrue();
 });
