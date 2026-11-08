@@ -140,6 +140,8 @@ errorpage 503 {
 rewrite {
   enable                  1
   include {{ $siteRules }}/panel-fail2ban*.conf
+  {{-- v7's rewrite rules for this site (its bot blocker and 8G live here). --}}
+  include {{ $siteConf }}/rewrites/*.conf
 @if (! $certificate)
   RewriteCond %{HTTPS} =on
   RewriteRule ^ - [F,L]
@@ -215,3 +217,6 @@ rewrite {
   RewriteRule ^ - [R=503,L]
 @endif
 }
+
+{{-- v7's per-site folder, loaded as v7 loaded it (vhosts the same as v7, 2026-11-08). --}}
+include {{ $siteConf }}/*.conf

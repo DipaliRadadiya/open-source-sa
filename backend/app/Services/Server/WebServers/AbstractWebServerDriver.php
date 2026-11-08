@@ -241,6 +241,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         $this->ensurePanelDirectory($application);
         $this->ensureChallengeRoot();
         $this->ensureSiteRules($application);
+        app(SiteConfFolder::class)->ensure($application, $this->name());
 
         // The vhost names `logs/access.log`, and a web server refuses to start
         // when a log file's directory does not exist. A missing directory here
@@ -579,6 +580,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'documentRoot' => $documentRoot,
             // Included by the vhost, never rendered into it — see ensureSiteRules().
             'siteRules' => $application->siteRulesPath(),
+            // v7's per-site folder, loaded where v7 loaded it ({@see SiteConfFolder}).
+            'siteConf' => $application->siteConfPath(),
             // The largest request body this site accepts, in bytes.
             //
             // Every web server has its own default for this and nothing here

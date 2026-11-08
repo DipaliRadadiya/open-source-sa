@@ -333,6 +333,11 @@ server {
         try_files $uri $uri/ /$frontdir{{ $i }}/{{ $front['script'] }}$is_args$args;
     }
 @endforeach
+
+    {{-- v7's per-site folder: every `*.conf` the user or v7 put there, loaded
+         where v7 loaded it, last in the server block (vhosts the same as v7,
+         2026-11-08; {@see \App\Services\Server\WebServers\SiteConfFolder}). --}}
+    include {{ $siteConf }}/*.conf;
 }
 @endif
 

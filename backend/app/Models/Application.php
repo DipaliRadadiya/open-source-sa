@@ -838,7 +838,19 @@ class Application extends Model
      */
     public function basicAuthPath(): string
     {
-        return $this->rootPath().'/conf/'.app(WebServerManager::class)->driver()->name().'/.htpasswd';
+        return $this->siteConfPath().'/.htpasswd';
+    }
+
+    /**
+     * v7's per-site web server folder, `{site}/conf/{web server}`: the vhost
+     * loads every `*.conf` in it (v7 put its bot blocker, 8G and Apache
+     * force-HTTPS there, and so did users with their own rules). Loaded the
+     * v7 way so a site moved from v7 keeps every rule it had (Dipali,
+     * 2026-11-08: vhosts the same as v7). Root's, see SiteConfFolder.
+     */
+    public function siteConfPath(): string
+    {
+        return $this->rootPath().'/conf/'.app(WebServerManager::class)->driver()->name();
     }
 
     /**

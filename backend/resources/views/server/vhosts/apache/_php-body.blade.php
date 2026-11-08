@@ -180,3 +180,8 @@
          Last, so a `<Files>`/`<LocationMatch>` deny here is merged after the
          `<Directory>` grant above and wins. --}}
     IncludeOptional {{ $siteRules }}/*.conf
+
+    {{-- v7's per-site folder, last like in v7 (vhosts the same as v7,
+         2026-11-08; {@see \App\Services\Server\WebServers\SiteConfFolder}).
+         `*` as v7 had it: a glob skips the dot-file `.htpasswd`. --}}
+    IncludeOptional {{ $siteConf }}/*
