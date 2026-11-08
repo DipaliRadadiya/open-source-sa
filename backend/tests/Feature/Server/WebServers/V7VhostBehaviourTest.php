@@ -12,6 +12,7 @@ use App\Services\Server\WebServers\NginxDriver;
 use App\Services\Server\WebServers\OlsDriver;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 
 /*
  * What v7's vhosts did that v8's had dropped (compared line by line against
@@ -114,4 +115,28 @@ it('gives each OpenLiteSpeed site v7\'s 35 PHP workers', function () {
     $config = implode("\n", behaviourFiles(behaviourSite('openlitespeed'), OlsDriver::class));
 
     expect($config)->toMatch('/maxConns\s+35/')->toContain('PHP_LSAPI_CHILDREN=35');
+});
+
+it('renders a Node site\'s own v7 location block instead of the default proxy', function () {
+    $custom = "index index.html;\n\nlocation / {\n    proxy_pass http://127.0.0.1:50424;\n    proxy_set_header X-Custom yes;\n    {basic_authentication}\n}";
+    $site = behaviourSite('nginx', ['site_type' => 'node', 'serving_profile' => 'node', 'app_port' => 50424, 'nginx_location' => $custom]);
+
+    $config = implode("\n", behaviourFiles($site, NginxDriver::class));
+
+    expect($config)->toContain('proxy_set_header X-Custom yes;')
+        ->not->toContain('{basic_authentication}')
+        ->not->toContain('error_page 502 503 504 =503 @restarting;');
+
+    $default = implode("\n", behaviourFiles(behaviourSite('nginx', ['site_type' => 'node', 'serving_profile' => 'node', 'app_port' => 3000]), NginxDriver::class));
+    expect($default)->toContain('proxy_pass http://127.0.0.1:3000;')->toContain('@restarting');
+});
+
+it('adds and removes the nginx_location column', function () {
+    $migration = require database_path('migrations/2026_11_08_000001_add_nginx_location_to_applications.php');
+
+    $migration->down();
+    expect(Schema::hasColumn('applications', 'nginx_location'))->toBeFalse();
+
+    $migration->up();
+    expect(Schema::hasColumn('applications', 'nginx_location'))->toBeTrue();
 });

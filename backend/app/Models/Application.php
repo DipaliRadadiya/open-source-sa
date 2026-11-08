@@ -35,7 +35,7 @@ use Illuminate\Support\Str;
     // another application already holds.
     'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'site_mount_path', 'docker_secrets', 'credentials_seen_at', 'container_status', 'last_failure',
     'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances', 'supervisor_mode', 'pm2_process_name',
-    'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
+    'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets', 'nginx_location',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'volume_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret', 'webhook_remote_id',

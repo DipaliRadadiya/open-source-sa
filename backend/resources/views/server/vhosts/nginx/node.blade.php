@@ -230,6 +230,12 @@ server {
          never reached PHP for its settings to matter. --}}
     client_max_body_size {{ $maxBodySize }};
 
+@if (filled($application->nginx_location))
+    {{-- The site's own block, as v7 kept it per Node app (`nginx_conf`) and
+         its owner may have edited it. v7's `{basic_authentication}` slot is
+         left empty: password protection is on the whole server block here. --}}
+{!! str_replace('{basic_authentication}', '', $application->nginx_location) !!}
+@else
     location / {
         proxy_pass http://127.0.0.1:{{ $appPort }};
 
@@ -280,6 +286,7 @@ server {
              the page went out as a 502, and Retry-After belongs to a 503. --}}
         error_page 502 503 504 =503 @restarting;
     }
+@endif
 
     {{-- Inline rather than a file: nothing on disk to create, own or lose.
          The page holds no `'` or `$` (the string's quote, nginx's variables)
