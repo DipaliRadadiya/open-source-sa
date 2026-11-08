@@ -1090,6 +1090,12 @@ return [
             'vhost_root' => env('SERVER_OLS_VHOST_ROOT', '/usr/local/lsws/conf/vhosts'),
 
             /*
+            | The listeners a v7-layout site's wrapper attaches to: v7's own
+            | `Default` (:80) and `DefaultHttps` (:443). {@see OlsDriver::renderLegacyWrapper()}
+            */
+            'legacy_listeners' => env('SERVER_OLS_LEGACY_LISTENERS', 'Default,DefaultHttps'),
+
+            /*
             | LSAPI pool size, per site.
             |
             | Rendered into BOTH `maxConns` and `PHP_LSAPI_CHILDREN` -- one

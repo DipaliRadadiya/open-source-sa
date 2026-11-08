@@ -9,6 +9,7 @@ use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\WebServers\OlsVhostLayout;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
@@ -57,6 +58,14 @@ class SiteConfigResyncer
     public function run(): array
     {
         $driver = $this->webServers->driver();
+
+        // Which layout this OpenLiteSpeed server has, asked before any vhost is
+        // written: a v7 server that only ever had its data imported has never
+        // been detected, and its sites would be rewritten where OpenLiteSpeed
+        // does not look.
+        if ($driver->name() === 'openlitespeed') {
+            app(OlsVhostLayout::class)->detect();
+        }
 
         $applications = Application::query()
             ->where('status', ApplicationStatus::Active)

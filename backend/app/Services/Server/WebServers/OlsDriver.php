@@ -243,6 +243,71 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
+     * On a server laid out by v7, the site is also its wrapper: v7's
+     * `httpd_config.conf` loads `/etc/<brand>-ols/*.conf`, and each of those
+     * is a `virtualhost` block that includes `<name>/main.conf`. Written here,
+     * so `sites:resync` keeps both files in step like every other pair.
+     *
+     * @return array<string, string|null>
+     */
+    public function configFiles(Application $application, string $documentRoot): array
+    {
+        $files = parent::configFiles($application, $documentRoot);
+        $wrapper = $this->legacyWrapperPath($application);
+
+        if ($wrapper !== null) {
+            $files[$wrapper] = $this->renderLegacyWrapper($application);
+        }
+
+        return $files;
+    }
+
+    /**
+     * `/etc/<brand>-ols/<name>.conf`, or null on a server with this panel's
+     * own layout.
+     */
+    public function legacyWrapperPath(Application $application): ?string
+    {
+        $layout = app(OlsVhostLayout::class);
+
+        return $layout->isLegacy() ? $layout->root()."/{$this->fileName($application)}.conf" : null;
+    }
+
+    /**
+     * v7's wrapper, now this panel's: one definition of the site, on v7's own
+     * listeners, loading the vhost from `main.conf`.
+     *
+     * The domains and the certificate are in `main.conf` rather than here as
+     * in v7. Either works; keeping them there means one template for both
+     * layouts, and the wrapper never has to change when a domain does. What
+     * must not happen is the site being defined twice, which is what writing
+     * this panel's own `virtualHost` region beside v7's wrapper did (seen on a
+     * real v7 server, 2026-11-08). So on this layout the shared regions are
+     * never written for a site, and the server's existing listeners
+     * (`Default`, `DefaultHttps` on v7) are the ones it is attached to.
+     */
+    public function renderLegacyWrapper(Application $application): string
+    {
+        $layout = app(OlsVhostLayout::class);
+        $name = $this->fileName($application);
+        $listeners = (string) config('server.web_server_drivers.openlitespeed.legacy_listeners', 'Default,DefaultHttps');
+
+        return implode("\n", [
+            '# Managed by the panel. Manual edits are overwritten on the next deploy.',
+            "virtualhost {$name} {",
+            "    listeners               {$listeners}",
+            '    vhRoot                  '.rtrim($this->vhRoot($application), '/').'/',
+            '    allowSymbolLink         1',
+            '    enableScript            1',
+            '    restrained              1',
+            '',
+            "    include {$layout->root()}/{$name}/{$layout->filename()}",
+            '}',
+            '',
+        ]);
+    }
+
+    /**
      * Directory, then vhost file, then the shared entries — in that order.
      *
      * The shared file goes last on purpose. It is the one that can take every
@@ -256,6 +321,9 @@ class OlsDriver extends AbstractWebServerDriver
         $this->assertHasSystemUser($application);
 
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
+
+        // The layout decides where every file below goes; see SiteConfigResyncer.
+        app(OlsVhostLayout::class)->detect();
 
         // Before anything is written. A site whose name is already one of the
         // server's own vhosts would overwrite that vhost's `vhconf.conf` two
@@ -322,6 +390,25 @@ class OlsDriver extends AbstractWebServerDriver
             return $written;
         }
 
+        $wrapper = $this->legacyWrapperPath($application);
+
+        if ($wrapper !== null) {
+            // After main.conf, which it includes: a wrapper naming a file that
+            // is not there fails the config test for every site on the box.
+            $wrapped = $this->files->put($wrapper, $this->renderLegacyWrapper($application), $context);
+
+            if ($wrapped->failed()) {
+                return $wrapped;
+            }
+
+            // Drop an entry this panel wrote for the site before, so it is
+            // defined once. Only when there is one: the shared file is every
+            // site's, and rewriting it for nothing is a risk with no purpose.
+            return $this->shared->references($this->fileName($application))
+                ? $this->shared->unregister($this->fileName($application))
+                : $wrapped;
+        }
+
         // The vhost NAME in the shared config, which must agree with the
         // directory `configPath()` writes into — both are the application, not
         // one of its domains. The domains it answers to are the second
@@ -372,6 +459,17 @@ class OlsDriver extends AbstractWebServerDriver
         // names it breaks the config test for every site on the box.
         if ($this->shared->references($this->fileName($application))) {
             return $this->shared->test();
+        }
+
+        // The wrapper before the directory it includes, for the same reason.
+        $wrapper = $this->legacyWrapperPath($application);
+
+        if ($wrapper !== null) {
+            $gone = $this->files->delete($wrapper, $context);
+
+            if ($gone->failed()) {
+                return $gone;
+            }
         }
 
         $directory = dirname($this->configPath($application));

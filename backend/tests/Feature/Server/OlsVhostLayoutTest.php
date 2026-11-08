@@ -40,10 +40,18 @@ beforeEach(function () {
  * @param  array<int, string>  $etcDirs  what `/etc/*-ols` returns
  * @param  array<int, string>  $withVhosts  directories that actually hold one
  */
-function fakeOlsBox(array $etcDirs, array $withVhosts): void
+function fakeOlsBox(array $etcDirs, array $withVhosts, array $managedSites = []): void
 {
-    Process::fake(function ($process) use ($etcDirs, $withVhosts) {
+    Process::fake(function ($process) use ($etcDirs, $withVhosts, $managedSites) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // httpd_config.conf: the panel's managed map region, holding the sites
+        // this panel has registered (none on a box it only took its own vhosts to).
+        if (($args[0] ?? '') === 'cat') {
+            $maps = implode("\n", array_map(fn ($site) => "  map                     {$site} {$site}.example.com", $managedSites));
+
+            return Process::result(output: "listener Default {\n  ### BEGIN panel-managed maps — do not edit between these markers\n{$maps}\n  ### END panel-managed maps\n}\n");
+        }
 
         if (($args[0] ?? '') !== 'find') {
             return Process::result(exitCode: 0);
@@ -80,10 +88,25 @@ it('keeps its own directory when this panel already manages the box', function (
     fakeOlsBox(
         etcDirs: ['/etc/serveravatar-ols'],
         withVhosts: ['/usr/local/lsws/conf/vhosts', '/etc/serveravatar-ols'],
+        managedSites: ['shop'],
     );
 
     expect(app(OlsVhostLayout::class)->detect())->toBe('/usr/local/lsws/conf/vhosts')
         ->and(ServerCapability::query()->value('ols_vhost_root'))->toBeNull();
+});
+
+it('takes a v7 server for one, even with this panel\'s own vhosts beside it', function () {
+    // This panel installed on a v7 server: its own vhosts (panel, panel-api)
+    // and OpenLiteSpeed's Example are in the configured root, but no site is.
+    // Those are not sites, and the v7 sites must stay where v7 put them
+    // (2026-11-08).
+    fakeOlsBox(
+        etcDirs: ['/etc/serveravatar-ols'],
+        withVhosts: ['/usr/local/lsws/conf/vhosts', '/etc/serveravatar-ols'],
+    );
+
+    expect(app(OlsVhostLayout::class)->detect())->toBe('/etc/serveravatar-ols')
+        ->and(ServerCapability::query()->value('ols_vhost_root'))->toBe('/etc/serveravatar-ols');
 });
 
 it('ignores a branded directory that holds no vhost', function () {

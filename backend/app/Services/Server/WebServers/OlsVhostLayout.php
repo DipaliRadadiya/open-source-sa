@@ -95,7 +95,13 @@ class OlsVhostLayout
         // Ours first: a server that has both — one this panel created, one it
         // inherited — is a server this panel is already managing, and moving it
         // to the inherited directory would strand every site it made.
-        if ($configured !== '' && $this->holdsVhost($configured)) {
+        //
+        // "Created" means sites, not just files. The configured root always
+        // holds the panel's own vhosts (panel, panel-api) and OpenLiteSpeed's
+        // Example, so a v7 server with this panel installed on it was taken for
+        // one of ours and its sites were written where OpenLiteSpeed does not
+        // look (found 2026-11-08 checking the v7 layout).
+        if ($configured !== '' && $this->holdsVhost($configured) && $this->managesSites()) {
             $this->record(null);
 
             return $configured;
@@ -114,6 +120,22 @@ class OlsVhostLayout
         $this->record(null);
 
         return $configured;
+    }
+
+    /**
+     * Has this panel registered any site in the shared config yet?
+     *
+     * Asked of the managed region, which only ever names sites. A config that
+     * cannot be read answers yes, which keeps the layout this panel already had.
+     */
+    private function managesSites(): bool
+    {
+        $read = $this->serverOps->run(
+            ['cat', (string) config('server.web_server_drivers.openlitespeed.shared_config', '/usr/local/lsws/conf/httpd_config.conf')],
+            ['feature' => 'web_server', 'op' => 'ols_layout_sites'],
+        );
+
+        return ! $read->ok || app(OlsSharedConfig::class)->sites($read->output()) !== [];
     }
 
     /**
