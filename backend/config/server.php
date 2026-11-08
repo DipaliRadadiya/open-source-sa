@@ -1097,13 +1097,12 @@ return [
             | of workers LSPHP forks to answer them describe the same pool, and
             | setting one without the other leaves the two halves disagreeing.
             |
-            | Ten rather than the 35 ServerAvatar v7 uses: this is per SITE, so
-            | thirty-five on a box with twenty sites is seven hundred potential
-            | PHP processes. php-fpm pools on the other two stacks run
-            | `pm = ondemand` with a similar ceiling. Raise it deliberately on
-            | a box that needs it.
+            | 35, the value ServerAvatar v7 uses (vhosts the same as v7,
+            | 2026-11-08): a site moved from v7 keeps the capacity it had. It is
+            | a ceiling per site — LSPHP forks workers as requests arrive — so
+            | lower it deliberately on a small box with many busy sites.
             */
-            'lsapi_children' => (int) env('SERVER_OLS_LSAPI_CHILDREN', 10),
+            'lsapi_children' => (int) env('SERVER_OLS_LSAPI_CHILDREN', 35),
 
             /*
             | Recycle an LSPHP worker after this many requests -- the analogue

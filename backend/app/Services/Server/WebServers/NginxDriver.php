@@ -147,6 +147,9 @@ class NginxDriver extends AbstractWebServerDriver
         return [
             'access' => "{$dir}/access.log",
             'error' => "{$dir}/error.log",
+            // The HTTPS block's, named as v7 names them.
+            'access_ssl' => "{$dir}/access-ssl.log",
+            'error_ssl' => "{$dir}/error-ssl.log",
         ];
     }
 }

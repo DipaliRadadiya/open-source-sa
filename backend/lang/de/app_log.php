@@ -5,6 +5,8 @@ return [
         'container' => 'Container',
         'access' => 'Zugriffsprotokoll',
         'error' => 'Fehlerprotokoll',
+        'access_ssl' => 'Zugriffsprotokoll (HTTPS)',
+        'error_ssl' => 'Fehlerprotokoll (HTTPS)',
         'application' => 'Anwendungsausgabe',
         'application_error' => 'Anwendungsfehler',
         'waf_detect' => 'Firewall-Erkennungen',

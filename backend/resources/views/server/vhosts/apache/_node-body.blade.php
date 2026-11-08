@@ -26,8 +26,10 @@
          at the firewall (frontend QA FB-K). --}}
     IncludeOptional {{ $siteRules }}/panel-fail2ban.conf
 
-    ErrorLog  {{ $logDir }}/error.log
-    CustomLog {{ $logDir }}/access.log combined
+    {{-- The HTTPS VirtualHost logs to `-ssl` files, as v7 does; fail2ban
+         and the Logs screen read both. --}}
+    ErrorLog  {{ $logDir }}/error{{ ($tlsBlock ?? false) ? '-ssl' : '' }}.log
+    CustomLog {{ $logDir }}/access{{ ($tlsBlock ?? false) ? '-ssl' : '' }}.log combined
 
     {{-- The site's own `post_max_size`, in bytes. Apache's default is
          unlimited, so this was never the source of a 413 here — it is set so

@@ -136,6 +136,13 @@ class ApplicationFail2banManager
     {
         $paths = $this->webServers->driver()->logPaths($application);
 
+        // Both access logs, HTTP and HTTPS, the way v7's jail reads them: with
+        // HTTPS forced every real request is in `access-ssl.log`, and a jail
+        // watching only `access.log` would never see a login attempt.
+        if (isset($paths['access'], $paths['access_ssl'])) {
+            return dirname($paths['access']).'/access*log';
+        }
+
         return $paths['access'] ?? $application->logsPath().'/access.log';
     }
 

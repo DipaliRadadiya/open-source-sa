@@ -219,8 +219,10 @@ server {
     }
 
 
-    access_log {{ $logDir }}/access.log;
-    error_log  {{ $logDir }}/error.log;
+    {{-- The HTTPS block logs to `-ssl` files, as v7 does; fail2ban and the
+         Logs screen read both. --}}
+    access_log {{ $logDir }}/access{{ $section === 'ssl' ? '-ssl' : '' }}.log;
+    error_log  {{ $logDir }}/error{{ $section === 'ssl' ? '-ssl' : '' }}.log;
 
     {{-- The site's own `post_max_size`, so the web server and PHP agree.
          nginx defaults this to 1 MB and nothing here used to set it, so a site

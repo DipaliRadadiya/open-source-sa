@@ -55,7 +55,7 @@ it('gives every site a policy for its logs, run as root', function () {
     $logs = $this->site->logsPath();
     $policy = policyFor($this->site);
 
-    expect($policy)->toContain("{$logs}/access.log {$logs}/error.log {$logs}/app.log {$logs}/app-error.log")
+    expect($policy)->toContain("{$logs}/access.log {$logs}/error.log {$logs}/access-ssl.log {$logs}/error-ssl.log {$logs}/app.log {$logs}/app-error.log")
         ->toContain('copytruncate')
         ->toContain('rotate 14')
         // The broken policy ran as the site user, who cannot open files root writes.

@@ -241,8 +241,10 @@ server {
          never reached PHP for its settings to matter. --}}
     client_max_body_size {{ $maxBodySize }};
 
-    access_log {{ $logDir }}/access.log;
-    error_log  {{ $logDir }}/error.log;
+    {{-- The HTTPS block logs to `-ssl` files, as v7 does (vhosts the same as
+         v7, 2026-11-08); fail2ban and the Logs screen read both. --}}
+    access_log {{ $logDir }}/access{{ $section === 'ssl' ? '-ssl' : '' }}.log;
+    error_log  {{ $logDir }}/error{{ $section === 'ssl' ? '-ssl' : '' }}.log;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -315,6 +317,10 @@ server {
     location ~ [^/]\.php(/|$) {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:{{ $phpSocket }};
+        {{-- v7's 300 s, or longer when the site lets PHP run longer: nginx's
+             own 60 s cut long imports and saves off with a 504 while PHP was
+             still working. --}}
+        fastcgi_read_timeout {{ $fastcgiReadTimeout }};
     }
 
     {{-- Version control and dotfiles must never be served. A .git directory
@@ -322,6 +328,34 @@ server {
     location ~ /\.(?!well-known) {
         deny all;
     }
+@if ($application->site_type !== 'nextcloud')
+
+    {{-- v7's browser caching for static files, same types and times. Not for
+         Nextcloud, which v7 left out too: it sets its own headers. --}}
+    location ~* \.(?:jpg|jpeg|gif|png|webp|avif|svg|ico|bmp|cur|tif|tiff|woff|woff2|ttf|otf|eot|mp3|aac|flac|wav|ogg|m4a|oga|webm|mp4|m4v|wasm|zip|pdf)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+        log_not_found off;
+        try_files $uri $uri/ /index.php$is_args$args;
+    }
+
+    location ~* \.(?:json|xml|txt|map)$ {
+        expires 1h;
+        add_header Cache-Control "public, must-revalidate";
+        access_log off;
+        log_not_found off;
+        try_files $uri $uri/ /index.php$is_args$args;
+    }
+
+    location ~* \.(?:css|js|mjs|jsx|ts|tsx)$ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+        log_not_found off;
+        try_files $uri $uri/ /index.php$is_args$args;
+    }
+@endif
 @foreach ($subdirectoryFrontControllers as $i => $front)
 
     {{-- A directory that is an application of its own (PrestaShop's back

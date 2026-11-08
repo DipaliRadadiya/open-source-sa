@@ -131,8 +131,10 @@
         Require all denied
     </FilesMatch>
 
-    ErrorLog  {{ $logDir }}/error.log
-    CustomLog {{ $logDir }}/access.log combined
+    {{-- The HTTPS VirtualHost logs to `-ssl` files, as v7 does; fail2ban
+         and the Logs screen read both. --}}
+    ErrorLog  {{ $logDir }}/error{{ ($tlsBlock ?? false) ? '-ssl' : '' }}.log
+    CustomLog {{ $logDir }}/access{{ ($tlsBlock ?? false) ? '-ssl' : '' }}.log combined
 @if ($waf)
     {{-- Both modes (bug #84): blocking used to leave no record of what it
          blocked. One line per active category/custom rule — a request

@@ -54,23 +54,35 @@ class BotTrafficReporter
     {
         $days = max(1, min($days, self::MAX_DAYS));
 
-        $path = $this->webServers->driver()->logPaths($application)['access'] ?? null;
+        $logs = $this->webServers->driver()->logPaths($application);
+        // HTTP and HTTPS: with HTTPS forced, nearly all traffic is in the
+        // `-ssl` file (v7's names), and reading one file would report no bots.
+        $paths = array_values(array_filter([$logs['access'] ?? null, $logs['access_ssl'] ?? null]));
 
-        if ($path === null) {
+        if ($paths === []) {
             return $this->unavailable($days);
         }
 
-        $result = $this->serverOps->run(
-            ['tail', '-n', (string) self::SCAN_LINES, $path],
-            ['feature' => 'application', 'op' => 'bot_traffic_read', 'application' => $application->id],
-            timeout: 60,
-        );
+        $lines = [];
+        $read = false;
 
-        if ($result->failed()) {
-            return $this->unavailable($days);
+        foreach ($paths as $path) {
+            $result = $this->serverOps->run(
+                ['tail', '-n', (string) self::SCAN_LINES, $path],
+                ['feature' => 'application', 'op' => 'bot_traffic_read', 'application' => $application->id],
+                timeout: 60,
+            );
+
+            // A missing `-ssl` file is a site that never had HTTPS, not a failure.
+            if ($result->ok) {
+                $read = true;
+                $lines = array_merge($lines, $this->split($result->output()));
+            }
         }
 
-        $lines = $this->split($result->output());
+        if (! $read) {
+            return $this->unavailable($days);
+        }
         $since = now()->subDays($days);
 
         $counts = [];

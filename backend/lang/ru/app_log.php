@@ -5,6 +5,8 @@ return [
         'container' => 'Контейнер',
         'access' => 'Журнал доступа',
         'error' => 'Журнал ошибок',
+        'access_ssl' => 'Журнал доступа (HTTPS)',
+        'error_ssl' => 'Журнал ошибок (HTTPS)',
         'application' => 'Вывод приложения',
         'application_error' => 'Ошибки приложения',
         'waf_detect' => 'Обнаружения брандмауэра',

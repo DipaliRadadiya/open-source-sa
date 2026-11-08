@@ -56,7 +56,13 @@
          redirect to plaintext and cookies marked Secure are dropped. --}}
     RequestHeader set X-Forwarded-Proto "https"
 
-@include('server.vhosts.apache._node-body')
+    {{-- HTTP/2 on HTTPS, as v7 had it. Only when the module is loaded:
+         `Protocols h2` without it would be a no-op at best. --}}
+    <IfModule http2_module>
+        Protocols h2 http/1.1
+    </IfModule>
+
+@include('server.vhosts.apache._node-body', ['tlsBlock' => true])
 </VirtualHost>
 @endif
 @elseif ($section !== 'ssl')

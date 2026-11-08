@@ -55,7 +55,13 @@
          older suite than both sides support. --}}
     SSLHonorCipherOrder off
 
-@include('server.vhosts.apache._static-body')
+    {{-- HTTP/2 on HTTPS, as v7 had it. Only when the module is loaded:
+         `Protocols h2` without it would be a no-op at best. --}}
+    <IfModule http2_module>
+        Protocols h2 http/1.1
+    </IfModule>
+
+@include('server.vhosts.apache._static-body', ['tlsBlock' => true])
 </VirtualHost>
 @endif
 @elseif ($section !== 'ssl')

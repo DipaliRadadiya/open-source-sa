@@ -60,8 +60,15 @@ it('agrees across all three web servers', function () {
         'error' => '/home/siteowner/shop/logs/error.log',
     ];
 
-    expect(app(NginxDriver::class)->logPaths($this->site))->toBe($expected)
-        ->and(app(ApacheDriver::class)->logPaths($this->site))->toBe($expected)
+    // nginx and Apache also write the HTTPS block to v7's `-ssl` files;
+    // OpenLiteSpeed has one vhost for both and, like v7, one pair of logs.
+    $ssl = [
+        'access_ssl' => '/home/siteowner/shop/logs/access-ssl.log',
+        'error_ssl' => '/home/siteowner/shop/logs/error-ssl.log',
+    ];
+
+    expect(app(NginxDriver::class)->logPaths($this->site))->toBe($expected + $ssl)
+        ->and(app(ApacheDriver::class)->logPaths($this->site))->toBe($expected + $ssl)
         ->and(app(OlsDriver::class)->logPaths($this->site))->toBe($expected);
 });
 

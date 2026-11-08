@@ -39,7 +39,7 @@ class ApplicationLogRotation
     private const SITE_LOGS = ['app.log', 'app-error.log', 'waf-detect.log', 'php-error.log'];
 
     /** Written by the web server, unless it rotates them itself. */
-    private const WEB_SERVER_LOGS = ['access.log', 'error.log'];
+    private const WEB_SERVER_LOGS = ['access.log', 'error.log', 'access-ssl.log', 'error-ssl.log'];
 
     public function __construct(
         private ManagedFile $files,

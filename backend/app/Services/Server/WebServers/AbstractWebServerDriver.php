@@ -605,6 +605,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // exists on one server and not the others is the same site
             // behaving differently on different boxes.
             'maxBodySize' => $this->maxBodySizeBytes($application),
+            // v7 gave PHP 300 s at the web server; longer when the site's own
+            // max_execution_time is longer, so nginx never cuts PHP off first.
+            'fastcgiReadTimeout' => max(300, (int) (($application->phpSettings ?? new ApplicationPhpSettings)->effective()['max_execution_time'] ?? 0) + 30),
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
             // Where PHP actually is for this site. An isolated site has its own
             // pool running as its own user; everything else still shares the

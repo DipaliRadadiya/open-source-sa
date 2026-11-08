@@ -5,6 +5,8 @@ return [
         'container' => 'コンテナ',
         'access' => 'アクセスログ',
         'error' => 'エラーログ',
+        'access_ssl' => 'アクセスログ (HTTPS)',
+        'error_ssl' => 'エラーログ (HTTPS)',
         'application' => 'アプリケーションの出力',
         'application_error' => 'アプリケーションのエラー',
         'waf_detect' => 'ファイアウォール検出',

@@ -128,6 +128,28 @@
         SetHandler "proxy:unix:{{ $phpSocket }}|fcgi://localhost"
     </FilesMatch>
 
+    {{-- v7 passed the Authorization header on to PHP; mod_proxy_fcgi drops
+         it, and an app that does not set it in its own .htaccess (API tokens,
+         JWT) then never sees it. --}}
+    SetEnvIfNoCase ^Authorization$ "(.+)" HTTP_AUTHORIZATION=$1
+
+    {{-- v7's browser caching, same types and times. --}}
+    <IfModule mod_expires.c>
+        ExpiresActive on
+        ExpiresDefault "access plus 2 days"
+        ExpiresByType image/jpg "access plus 1 month"
+        ExpiresByType image/gif "access plus 1 month"
+        ExpiresByType image/jpeg "access plus 1 month"
+        ExpiresByType image/png "access plus 1 month"
+        ExpiresByType text/css "access plus 1 month"
+        ExpiresByType text/javascript "access plus 1 month"
+        ExpiresByType application/javascript "access plus 1 month"
+        ExpiresByType application/x-shockwave-flash "access plus 1 month"
+        ExpiresByType image/ico "access plus 1 month"
+        ExpiresByType image/x-icon "access plus 1 month"
+        ExpiresByType text/html "access plus 600 seconds"
+    </IfModule>
+
     {{-- A .git directory inside a web root is a full source disclosure. --}}
     <DirectoryMatch "/\.(?!well-known)">
         Require all denied
@@ -141,8 +163,10 @@
         Require all denied
     </FilesMatch>
 
-    ErrorLog  {{ $logDir }}/error.log
-    CustomLog {{ $logDir }}/access.log combined
+    {{-- The HTTPS VirtualHost logs to `-ssl` files, as v7 does; fail2ban
+         and the Logs screen read both. --}}
+    ErrorLog  {{ $logDir }}/error{{ ($tlsBlock ?? false) ? '-ssl' : '' }}.log
+    CustomLog {{ $logDir }}/access{{ ($tlsBlock ?? false) ? '-ssl' : '' }}.log combined
 @if ($waf)
     {{-- Both modes (bug #84): blocking used to leave no record of what it
          blocked. One line per active category/custom rule — a request

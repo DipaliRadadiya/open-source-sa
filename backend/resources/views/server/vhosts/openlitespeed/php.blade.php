@@ -117,6 +117,12 @@ accesslog $VH_ROOT/logs/access.log {
   keepDays                30
 }
 
+{{-- v7's browser caching for static files, same types and times. --}}
+expires {
+  enableExpires           1
+  expiresByType           image/*=A31536000,text/css=A31536000,application/x-javascript=A31536000,application/javascript=A31536000,font/*=A31536000,application/x-font-ttf=A31536000
+}
+
 index {
   useServer               0
   indexFiles              index.php, index.html

@@ -222,8 +222,10 @@ server {
 
     index index.html;
 
-    access_log {{ $logDir }}/access.log;
-    error_log  {{ $logDir }}/error.log;
+    {{-- The HTTPS block logs to `-ssl` files, as v7 does; fail2ban and the
+         Logs screen read both. --}}
+    access_log {{ $logDir }}/access{{ $section === 'ssl' ? '-ssl' : '' }}.log;
+    error_log  {{ $logDir }}/error{{ $section === 'ssl' ? '-ssl' : '' }}.log;
 
 @if ($disabled)
     {{-- Disabled: every path answers 503 with the unavailable page, which is

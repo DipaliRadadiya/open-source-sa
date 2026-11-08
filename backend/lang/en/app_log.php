@@ -13,6 +13,8 @@ return [
         'container' => 'Container',
         'access' => 'Access log',
         'error' => 'Error log',
+        'access_ssl' => 'Access log (HTTPS)',
+        'error_ssl' => 'Error log (HTTPS)',
         'application' => 'Application output',
         'application_error' => 'Application errors',
         'waf_detect' => 'Firewall detections',

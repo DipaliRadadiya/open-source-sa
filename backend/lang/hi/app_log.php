@@ -5,6 +5,8 @@ return [
         'container' => 'कंटेनर',
         'access' => 'एक्सेस लॉग',
         'error' => 'त्रुटि लॉग',
+        'access_ssl' => 'एक्सेस लॉग (HTTPS)',
+        'error_ssl' => 'त्रुटि लॉग (HTTPS)',
         'application' => 'ऐप्लिकेशन आउटपुट',
         'application_error' => 'ऐप्लिकेशन त्रुटियाँ',
         'waf_detect' => 'फ़ायरवॉल पहचान',

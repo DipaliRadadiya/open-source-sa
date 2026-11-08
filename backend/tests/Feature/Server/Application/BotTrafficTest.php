@@ -4,6 +4,7 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\BotTrafficReporter;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -61,10 +62,20 @@ function accessLine(string $agent, int $daysAgo = 0): string
     return '10.0.0.1 - - ['.$stamp.'] "GET / HTTP/1.1" 200 512 "-" "'.$agent.'"';
 }
 
-function fakeAccessLog(array $lines, bool $readable = true): void
+/**
+ * `$sslLines` is the HTTPS block's `access-ssl.log` (v7's name); null means the
+ * site has no such file, which is what a site without HTTPS looks like.
+ */
+function fakeAccessLog(array $lines, bool $readable = true, ?array $sslLines = null): void
 {
-    Process::fake(function ($process) use ($lines, $readable) {
+    Process::fake(function ($process) use ($lines, $readable, $sslLines) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'tail' && str_ends_with((string) end($args), '/access-ssl.log')) {
+            return $sslLines === null
+                ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
+                : Process::result(output: implode("\n", $sslLines));
+        }
 
         if (($args[0] ?? '') === 'tail') {
             return $readable
@@ -239,4 +250,14 @@ it('never labels a bot legacy on a v8 policy', function () {
     $bots = collect($this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->assertOk()->json('bot_traffic.bots'))->keyBy('bot');
 
     expect($bots['AIMatrix']['category'])->toBe('custom');
+});
+
+it('counts the HTTPS log too, where a site with HTTPS forced logs nearly everything', function () {
+    $this->application->forceFill(['ai_bot_policy' => 'block_training'])->save();
+
+    fakeAccessLog([accessLine('GPTBot/1.0')], sslLines: [accessLine('GPTBot/1.0'), accessLine('GPTBot/1.0')]);
+
+    $bots = collect(app(BotTrafficReporter::class)->report($this->application)['bots']);
+
+    expect($bots->firstWhere('bot', 'GPTBot')['hits'] ?? null)->toBe(3);
 });

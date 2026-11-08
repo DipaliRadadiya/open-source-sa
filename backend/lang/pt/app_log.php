@@ -5,6 +5,8 @@ return [
         'container' => 'Contentor',
         'access' => 'Registo de acessos',
         'error' => 'Registo de erros',
+        'access_ssl' => 'Registo de acessos (HTTPS)',
+        'error_ssl' => 'Registo de erros (HTTPS)',
         'application' => 'Saída da aplicação',
         'application_error' => 'Erros da aplicação',
         'waf_detect' => 'Deteções da firewall',

@@ -390,6 +390,13 @@ class ApplicationLogManager
             ['key' => 'error', 'kind' => 'file', 'path' => $paths['error']],
         ];
 
+        // The HTTPS block's own files, where the web server writes them.
+        foreach (['access_ssl', 'error_ssl'] as $key) {
+            if (isset($paths[$key])) {
+                $catalog[] = ['key' => $key, 'kind' => 'file', 'path' => $paths[$key]];
+            }
+        }
+
         // For a Node application the web-server logs describe the *proxy* —
         // they will happily show a healthy 502 while the actual error is in
         // the journal. Without this source the screen would be confidently

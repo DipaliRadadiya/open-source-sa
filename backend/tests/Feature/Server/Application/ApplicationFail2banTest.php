@@ -292,7 +292,9 @@ it('hands the form a filled-in template, not one full of placeholders', function
         ->and($jail)->toContain('filter   = panel-site-shop')
         // The site's own log directory — fail2ban follows `logPaths()`, so
         // moving the logs moved the jail with them for free.
-        ->and($jail)->toContain('/logs/access.log')
+        // Both access logs, HTTP and HTTPS (v7's `-ssl` file), as v7's jail
+        // reads them: with HTTPS forced the logins are all in the second.
+        ->and($jail)->toContain('logpath  = /home/siteowner/shop/logs/access*log')
         ->and($filter)->not->toContain('{name}');
 });
 

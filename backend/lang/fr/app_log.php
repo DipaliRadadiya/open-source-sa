@@ -5,6 +5,8 @@ return [
         'container' => 'Conteneur',
         'access' => 'Journal d\'accès',
         'error' => 'Journal d\'erreurs',
+        'access_ssl' => 'Journal d’accès (HTTPS)',
+        'error_ssl' => 'Journal d’erreurs (HTTPS)',
         'application' => 'Sortie de l\'application',
         'application_error' => 'Erreurs de l\'application',
         'waf_detect' => 'Détections du pare-feu',
