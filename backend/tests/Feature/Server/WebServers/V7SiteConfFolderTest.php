@@ -35,7 +35,7 @@ function confSite(string $profile = 'php', string $type = 'wordpress'): Applicat
     ])->load('systemUser');
 }
 
-function useWebServer(string $name): void
+function confFolderWebServer(string $name): void
 {
     ServerCapability::query()->delete();
     ServerCapability::create([
@@ -49,7 +49,7 @@ function useWebServer(string $name): void
 }
 
 it('loads the v7 folder in every nginx vhost, last in the site block', function (string $profile, string $type) {
-    useWebServer('nginx');
+    confFolderWebServer('nginx');
     $config = app(NginxDriver::class)->renderConfig(confSite($profile, $type), '/home/siteowner/blog/public_html');
 
     expect($config)->toContain('include /home/siteowner/blog/conf/nginx/*.conf;');
@@ -62,14 +62,14 @@ it('loads the v7 folder in every nginx vhost, last in the site block', function 
 })->with([['php', 'wordpress'], ['static', 'static'], ['node', 'node']]);
 
 it('loads the v7 folder in every Apache vhost', function (string $profile, string $type) {
-    useWebServer('apache');
+    confFolderWebServer('apache');
     $config = app(ApacheDriver::class)->renderConfig(confSite($profile, $type), '/home/siteowner/blog/public_html');
 
     expect($config)->toContain('IncludeOptional /home/siteowner/blog/conf/apache/*');
 })->with([['php', 'wordpress'], ['static', 'static'], ['node', 'node']]);
 
 it('loads the v7 folder and its rewrite rules in every OpenLiteSpeed vhost', function (string $profile, string $type) {
-    useWebServer('openlitespeed');
+    confFolderWebServer('openlitespeed');
     $config = app(OlsDriver::class)->renderConfig(confSite($profile, $type), '/home/siteowner/blog/public_html');
 
     expect($config)->toContain('include /home/siteowner/blog/conf/openlitespeed/*.conf')
@@ -81,7 +81,7 @@ it('loads the v7 folder and its rewrite rules in every OpenLiteSpeed vhost', fun
 })->with([['php', 'wordpress'], ['static', 'static'], ['node', 'node']]);
 
 it('makes the folder and what v7 left in it root\'s, without following links', function () {
-    useWebServer('nginx');
+    confFolderWebServer('nginx');
     $ran = [];
     Process::fake(function ($process) use (&$ran) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -110,7 +110,7 @@ it('makes the folder and what v7 left in it root\'s, without following links', f
 });
 
 it('creates the rewrites folder OpenLiteSpeed reads', function () {
-    useWebServer('openlitespeed');
+    confFolderWebServer('openlitespeed');
     $ran = [];
     Process::fake(function ($process) use (&$ran) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
