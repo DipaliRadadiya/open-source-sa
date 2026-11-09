@@ -319,6 +319,14 @@ class UpdateScript
         DEPS_CHANGED=1
         {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}
 
+        # The previous release's cached config, gone before any artisan step
+        # below reads it. `sites:resync` rewrote every vhost from it, so a
+        # setting this release changed reached the vhosts only one update later
+        # (seen live 2026-11-09: OpenLiteSpeed kept 10 LSAPI workers after the
+        # default became 35). `optimize` near the end caches the new one.
+        note clear_config_cache
+        {$asUser}{$php} {$backend}/artisan config:clear
+
         note migrate
         DB_TOUCHED=1
         {$asUser}{$php} {$backend}/artisan migrate --force

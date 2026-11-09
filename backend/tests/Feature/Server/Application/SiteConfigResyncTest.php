@@ -2,8 +2,10 @@
 
 use App\Enums\CertificateStatus;
 use App\Enums\CertificateType;
+use App\Enums\PanelUpdateStatus;
 use App\Models\Application;
 use App\Models\Certificate;
+use App\Models\PanelUpdate;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Panel\UpdateScript;
@@ -409,4 +411,16 @@ it('splits a site written as one file into v7\'s two, and links the new one', fu
     expect($result['updated'])->toBe(1)
         ->and($lines)->toContain("tee {$letsEncrypt}")
         ->and($lines->contains(fn ($l) => str_starts_with($l, 'ln ') && str_contains($l, $driver->enabledPathFor($letsEncrypt))))->toBeTrue();
+});
+
+it('clears the cached config before the update rewrites any vhost', function () {
+    // A setting changed in this release (OLS LSAPI workers 10 → 35) reached the
+    // vhosts only one update later, because resync read the previous release's
+    // cached config (seen live, 2026-11-09).
+    $update = PanelUpdate::create(['status' => PanelUpdateStatus::Pending, 'to_version' => '99.0.0']);
+    $script = app(UpdateScript::class)->render($update, '99.0.0');
+
+    expect(strpos($script, 'artisan config:clear'))->not->toBeFalse()
+        ->and(strpos($script, 'artisan config:clear'))->toBeLessThan(strpos($script, 'artisan sites:resync'))
+        ->and(strpos($script, 'composer install'))->toBeLessThan(strpos($script, 'artisan config:clear'));
 });
