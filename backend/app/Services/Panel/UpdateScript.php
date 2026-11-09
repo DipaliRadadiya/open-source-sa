@@ -384,6 +384,16 @@ class UpdateScript
         # the new list while sites still enforce the old one, and neither
         # side can tell. Never fails the update: a site that could not be
         # re-rendered was rolled back and is still serving.
+        # Apache's caching and HTTP/2 modules, which the vhosts now use the way v7
+        # did (2026-11-08). install.sh enables them on new servers; this is the
+        # only place an existing one gets them. Before the resync, so the reload
+        # it does serves them; the vhost wraps both in <IfModule>, so a server
+        # where this fails keeps working. Nothing to do on nginx or OLS.
+        note enable_apache_modules
+        if [ -d /etc/apache2/mods-available ]; then
+            {$run}sudo a2enmod -q expires http2 && {$run}sudo apache2ctl -t && {$run}sudo systemctl reload apache2 || echo "WARNING: Apache expires/http2 not enabled; run 'a2enmod expires http2' as root"
+        fi
+
         note resync_site_configs
         {$asUser}{$php} {$backend}/artisan sites:resync
 

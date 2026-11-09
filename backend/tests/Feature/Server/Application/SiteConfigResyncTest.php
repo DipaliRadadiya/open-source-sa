@@ -424,3 +424,14 @@ it('clears the cached config before the update rewrites any vhost', function () 
         ->and(strpos($script, 'artisan config:clear'))->toBeLessThan(strpos($script, 'artisan sites:resync'))
         ->and(strpos($script, 'composer install'))->toBeLessThan(strpos($script, 'artisan config:clear'));
 });
+
+it('enables Apache\'s caching and HTTP/2 modules on update, before the vhosts are rewritten', function () {
+    // install.sh enables them on new servers; a server installed before the
+    // vhosts used them would otherwise never get them (2026-11-09).
+    $update = PanelUpdate::create(['status' => PanelUpdateStatus::Pending, 'to_version' => '99.0.0']);
+    $script = app(UpdateScript::class)->render($update, '99.0.0');
+
+    expect($script)->toContain('a2enmod -q expires http2')
+        ->and(strpos($script, 'a2enmod -q expires http2'))->toBeLessThan(strpos($script, 'artisan sites:resync'))
+        ->and($script)->toContain('if [ -d /etc/apache2/mods-available ]; then');
+});
