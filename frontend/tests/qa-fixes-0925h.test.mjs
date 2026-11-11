@@ -9,7 +9,7 @@ const SECTION = read("components/applications/security/security-section.jsx");
 const SCHEMA = read("lib/schemas/application.js");
 
 test("PP-A: the status badge shows the saved state, not the switch", () => {
-  assert.match(SECTION, /<Badge variant=\{alreadyProtected \? "success" : "muted"\}>/);
+  assert.match(SECTION, /<Badge variant=\{pending \? "warning" : alreadyProtected \? "success" : "muted"\}>/);
   assert.doesNotMatch(SECTION, /<Badge variant=\{field\.value/);
 });
 

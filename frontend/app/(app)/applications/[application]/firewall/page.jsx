@@ -10,6 +10,7 @@ import {
   getWafOptions,
 } from "@/lib/applications/get-applications";
 import { FirewallSection } from "@/components/applications/firewall/firewall-section";
+import { HideWhileReloadPending } from "@/components/applications/reload-pending-provider";
 import { DetectLogCard } from "@/components/applications/firewall/detect-log-card";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { getApplicationLog } from "@/lib/applications/get-application-logs";
@@ -108,11 +109,11 @@ export default async function ApplicationFirewallPage({ params }) {
             detectFailed={detectFailed}
           />
           {watching ? (
-            <>
-              {/* Keeps the match list current; unsaved form edits survive the refresh. */}
+            <HideWhileReloadPending appId={id}>
+              {/* A saved watch mode may not be running while a reload is owed. */}
               <AutoRefresh intervalMs={30000} stopAfterMs={600000} />
               <DetectLogCard rows={detectRows} failed={detectFailed} />
-            </>
+            </HideWhileReloadPending>
           ) : null}
         </>
       )}

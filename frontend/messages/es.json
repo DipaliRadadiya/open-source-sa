@@ -6059,10 +6059,23 @@
       "hint": "Relativa a la carpeta de la aplicación, p. ej. /public. Déjala vacía para servir la carpeta de la aplicación.",
       "submit": "Cambiar la raíz web",
       "cancel": "Cancelar",
+      "close": "Cerrar",
       "saved": "Raíz web cambiada.",
       "failed": "No se pudo cambiar la raíz web.",
       "resolved": "El sitio se servirá desde <code>{path}</code>.",
       "missingFolder": "No existe la carpeta {path}. Créala primero en Archivos o revisa cómo está escrita."
+    },
+    "reloadPending": {
+      "title": "Guardado, pero aún no está activo.",
+      "body": "El servidor web no se recargó, así que este sitio sigue usando la configuración anterior.",
+      "openServices": "Reinicia el servidor web en Servicios",
+      "askAdmin": "Pide a un administrador que reinicie el servidor web.",
+      "reference": "Referencia:",
+      "copyReference": "Copiar la referencia",
+      "badge": "Pendiente de recarga",
+      "hint": "El servidor web no se ha recargado desde el último cambio, así que puede que aún no esté activo.",
+      "toast": "Guardado, pero el servidor web no se recargó.",
+      "stillPendingToast": "Guardado, pero aún hay que recargar el servidor web."
     },
     "missing": {
       "title": "Esta aplicación ya no existe",

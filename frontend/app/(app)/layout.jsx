@@ -33,6 +33,8 @@ import { ServerRestartProvider } from "@/components/sections/server-restart-over
 import { AppChromeHeight } from "@/components/sections/app-chrome-height";
 import { PanelFocus } from "@/components/sections/panel-focus";
 import { ErrorCopy } from "@/components/sections/error-copy";
+import { ReloadPendingProvider } from "@/components/applications/reload-pending-provider";
+import { RELOAD_PENDING_COOKIE, parseReloadPending, recordsForUser } from "@/lib/applications/reload-pending";
 
 export const dynamic = "force-dynamic";
 
@@ -59,8 +61,11 @@ export default async function AppLayout({ children }) {
     throw error;
   }
 
+  const reloadPending = recordsForUser(parseReloadPending((await cookies()).get(RELOAD_PENDING_COOKIE)?.value), user.id);
+
   return (
     <AuthProvider user={user}>
+      <ReloadPendingProvider userId={user.id} canManageServices={can(permissions, "service", "manage")} initial={reloadPending}>
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
       <RememberPath />
@@ -115,6 +120,7 @@ export default async function AppLayout({ children }) {
         </ServerRestartProvider>
         </UnsavedProvider>
       </TooltipProvider>
+      </ReloadPendingProvider>
     </AuthProvider>
   );
 }

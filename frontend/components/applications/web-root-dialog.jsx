@@ -10,6 +10,9 @@ import { updateWebRoot } from "@/lib/api/applications";
 import { listFiles } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { isReloadFailed } from "@/lib/applications/reload-pending";
+import { useReloadPending, useReloadPendingActions } from "@/components/applications/reload-pending-provider";
+import { ReloadPendingNotice } from "@/components/applications/reload-pending-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormModal } from "@/components/ui/form-modal";
@@ -34,8 +37,11 @@ const schema = z.object({
 
 export function WebRootDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.webRoot");
+  const tPending = useTranslations("applications.reloadPending");
   const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
+  const pending = useReloadPending(application.id);
+  const { mark, stillPending } = useReloadPendingActions();
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -67,10 +73,17 @@ export function WebRootDialog({ application, open, onOpenChange }) {
       }
       await updateWebRoot(application.id, values.web_root);
       await refreshAndWait();
-      toast.success(t("saved"));
+      if (stillPending(application.id)) toast.warning(tPending("stillPendingToast"));
+      else toast.success(t("saved"));
       onOpenChange?.(false);
     } catch (error) {
-      if (error.response?.data?.errors) handleValidationError(error, form);
+      // Saved and on disk, but not live: the field keeps the new value, the dialog stays
+      // open with the warning, and nothing says it worked.
+      if (isReloadFailed(error)) {
+        mark(application.id, error);
+        form.reset({ web_root: values.web_root });
+        await refreshAndWait();
+      } else if (error.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("failed")));
     } finally {
       setSaving(false);
@@ -90,7 +103,7 @@ export function WebRootDialog({ application, open, onOpenChange }) {
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>
-              {t("cancel")}
+              {pending && !form.formState.isDirty ? t("close") : t("cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -99,6 +112,7 @@ export function WebRootDialog({ application, open, onOpenChange }) {
           </>
         }
       >
+        <ReloadPendingNotice appId={application.id} />
         <FormField
           control={form.control}
           name="web_root"

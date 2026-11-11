@@ -6059,10 +6059,23 @@
       "hint": "Relative to the application folder, e.g. /public. Leave empty to serve the application folder itself.",
       "submit": "Change web root",
       "cancel": "Cancel",
+      "close": "Close",
       "saved": "Web root changed.",
       "failed": "The web root could not be changed.",
       "resolved": "The site will be served from <code>{path}</code>.",
       "missingFolder": "There is no folder {path}. Create it in Files first, or check the spelling."
+    },
+    "reloadPending": {
+      "title": "Saved, but not live yet.",
+      "body": "The web server did not reload, so this site still uses its previous settings.",
+      "openServices": "Restart the web server in Services",
+      "askAdmin": "Ask an administrator to restart the web server.",
+      "reference": "Reference:",
+      "copyReference": "Copy reference",
+      "badge": "Waiting for reload",
+      "hint": "The web server has not reloaded since the last change, so this may not be live yet.",
+      "toast": "Saved, but the web server did not reload.",
+      "stillPendingToast": "Saved, but a web server reload is still needed."
     },
     "missing": {
       "title": "This application is no longer here",

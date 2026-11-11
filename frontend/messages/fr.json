@@ -6059,10 +6059,23 @@
       "hint": "Relatif au dossier de l'application, par ex. /public. Laissez vide pour servir le dossier de l'application lui-même.",
       "submit": "Modifier la racine web",
       "cancel": "Annuler",
+      "close": "Fermer",
       "saved": "Racine web modifiée.",
       "failed": "La racine web n'a pas pu être modifiée.",
       "resolved": "Le site sera servi depuis <code>{path}</code>.",
       "missingFolder": "Le dossier {path} n'existe pas. Créez-le d'abord dans Fichiers, ou vérifiez l'orthographe."
+    },
+    "reloadPending": {
+      "title": "Enregistré, mais pas encore actif.",
+      "body": "Le serveur web ne s'est pas rechargé : ce site utilise encore les réglages précédents.",
+      "openServices": "Redémarrer le serveur web dans Services",
+      "askAdmin": "Demandez à un administrateur de redémarrer le serveur web.",
+      "reference": "Référence :",
+      "copyReference": "Copier la référence",
+      "badge": "En attente de rechargement",
+      "hint": "Le serveur web ne s'est pas rechargé depuis la dernière modification : elle n'est peut-être pas encore active.",
+      "toast": "Enregistré, mais le serveur web ne s'est pas rechargé.",
+      "stillPendingToast": "Enregistré, mais le serveur web doit encore être rechargé."
     },
     "missing": {
       "title": "Cette application n'est plus là",

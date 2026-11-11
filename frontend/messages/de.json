@@ -6059,10 +6059,23 @@
       "hint": "Relativ zum Anwendungsordner, z. B. /public. Leer lassen, um den Anwendungsordner selbst auszuliefern.",
       "submit": "Web-Root ändern",
       "cancel": "Abbrechen",
+      "close": "Schließen",
       "saved": "Web-Root geändert.",
       "failed": "Der Web-Root konnte nicht geändert werden.",
       "resolved": "Die Website wird aus <code>{path}</code> ausgeliefert.",
       "missingFolder": "Den Ordner {path} gibt es nicht. Legen Sie ihn zuerst unter Dateien an oder prüfen Sie die Schreibweise."
+    },
+    "reloadPending": {
+      "title": "Gespeichert, aber noch nicht aktiv.",
+      "body": "Der Webserver wurde nicht neu geladen, daher verwendet diese Website noch die vorherigen Einstellungen.",
+      "openServices": "Webserver unter „Dienste“ neu starten",
+      "askAdmin": "Bitten Sie einen Administrator, den Webserver neu zu starten.",
+      "reference": "Referenz:",
+      "copyReference": "Referenz kopieren",
+      "badge": "Wartet auf Neuladen",
+      "hint": "Der Webserver wurde seit der letzten Änderung nicht neu geladen, daher ist sie möglicherweise noch nicht aktiv.",
+      "toast": "Gespeichert, aber der Webserver wurde nicht neu geladen.",
+      "stillPendingToast": "Gespeichert, aber der Webserver muss noch neu geladen werden."
     },
     "missing": {
       "title": "Diese Anwendung ist nicht mehr hier",

@@ -31,8 +31,9 @@ test("PP-F: the show/hide password button is reachable by keyboard", () => {
 
 test("WAF-A/B/C: saved state in the badge, a real no-access page, no false all-clear", () => {
   const section = read("components/applications/firewall/firewall-section.jsx");
-  assert.match(section, /const live = justSaved \?\? saved;/);
-  assert.match(section, /const blocking = live\.enabled && live\.mode === "enforce";/);
+  assert.match(section, /const saved = justSaved \?\? server;/);
+  // Never Blocking while a reload is owed (saved-but-not-live, 2026-11-11).
+  assert.match(section, /const blocking = !pending && saved\.enabled && saved\.mode === "enforce";/);
   assert.match(section, /detectFailed\s*\n?\s*\? t\("detectUnknown"\)/);
   const page = read("app/(app)/applications/[application]/firewall/page.jsx");
   assert.match(page, /if \(result\.status === 403\) return <PermissionDenied title=\{t\("pageTitle"\)\} \/>;/);

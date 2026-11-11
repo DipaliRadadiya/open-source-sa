@@ -6059,10 +6059,23 @@
       "hint": "Relativo à pasta da aplicação, ex. /public. Deixe vazio para servir a própria pasta da aplicação.",
       "submit": "Alterar diretório raiz web",
       "cancel": "Cancelar",
+      "close": "Fechar",
       "saved": "Web root alterado.",
       "failed": "Não foi possível alterar o web root.",
       "resolved": "O site será servido a partir de <code>{path}</code>.",
       "missingFolder": "A pasta {path} não existe. Crie-a primeiro em Ficheiros ou verifique a grafia."
+    },
+    "reloadPending": {
+      "title": "Salvo, mas ainda não está ativo.",
+      "body": "O servidor web não recarregou, então este site ainda usa as configurações anteriores.",
+      "openServices": "Reinicie o servidor web em Serviços",
+      "askAdmin": "Peça a um administrador para reiniciar o servidor web.",
+      "reference": "Referência:",
+      "copyReference": "Copiar referência",
+      "badge": "Aguardando recarga",
+      "hint": "O servidor web não recarregou desde a última alteração, então ela pode ainda não estar ativa.",
+      "toast": "Salvo, mas o servidor web não recarregou.",
+      "stillPendingToast": "Salvo, mas o servidor web ainda precisa ser recarregado."
     },
     "missing": {
       "title": "Esta aplicação não está mais aqui",

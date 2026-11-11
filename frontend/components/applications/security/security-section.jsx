@@ -17,6 +17,8 @@ import { securityFormSchema } from "@/lib/schemas/application";
 import { updateApplicationSecurity } from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { isReloadFailed } from "@/lib/applications/reload-pending";
+import { useReloadPending, useReloadPendingActions } from "@/components/applications/reload-pending-provider";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,8 +34,11 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 // When `enabled` is true the API requires username and password together.
 export function SecuritySection({ appId, application, domain, canManage }) {
   const t = useTranslations("applications.security");
+  const tPending = useTranslations("applications.reloadPending");
   const { name: brand } = useBranding();
   const { refreshAndWait } = useRefresh();
+  const pending = useReloadPending(appId);
+  const { mark, stillPending } = useReloadPendingActions();
   // Shown once for copying: the API never returns the password on reads.
   const [justSaved, setJustSaved] = useState(null);
 
@@ -63,18 +68,32 @@ export function SecuritySection({ appId, application, domain, canManage }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The new credentials stay in memory for copying and never reach the cookie.
+  function keepSaved(values) {
+    setSavedProtected(values.enabled);
+    setJustSaved(values.enabled ? { username: values.username.trim(), password: values.password } : null);
+    form.reset({ enabled: values.enabled, username: values.enabled ? values.username.trim() : "", password: "" });
+  }
+
   async function onSubmit(values) {
     try {
       const payload = values.enabled
         ? { enabled: true, username: values.username.trim(), password: values.password }
         : { enabled: false };
       await updateApplicationSecurity(appId, payload);
-      setSavedProtected(values.enabled);
-      setJustSaved(values.enabled ? { username: values.username.trim(), password: values.password } : null);
-      form.reset({ enabled: values.enabled, username: values.enabled ? values.username.trim() : "", password: "" });
+      keepSaved(values);
       await refreshAndWait();
-      toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
+      if (stillPending(appId)) toast.warning(tPending("stillPendingToast"));
+      else toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
     } catch (error) {
+      // Saved but not live: the old setting is still served, so no success toast.
+      if (isReloadFailed(error)) {
+        mark(appId, error);
+        keepSaved(values);
+        await refreshAndWait();
+        toast.warning(tPending("toast"));
+        return;
+      }
       handleValidationError(error, form, { fallback: t("saveFailed") });
     }
   }
@@ -120,7 +139,11 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                     <label
                       className={cn(
                         "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-                        alreadyProtected ? "border-success/30 bg-success/5" : "bg-muted/40",
+                        pending
+                          ? "border-warning/30 bg-warning/5"
+                          : alreadyProtected
+                            ? "border-success/30 bg-success/5"
+                            : "bg-muted/40",
                         !canManage || submitting ? "cursor-not-allowed" : "cursor-pointer",
                       )}
                     >
@@ -128,7 +151,11 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <span
                           className={cn(
                             "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
-                            alreadyProtected ? "bg-success/15 text-success" : "bg-muted-foreground/10 text-muted-foreground",
+                            pending
+                              ? "bg-warning/15 text-warning"
+                              : alreadyProtected
+                                ? "bg-success/15 text-success"
+                                : "bg-muted-foreground/10 text-muted-foreground",
                           )}
                         >
                           <Lock className="size-4" />
@@ -136,17 +163,23 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{t("enable")}</span>
-                            {/* The saved state, not the switch position. */}
-                            <Badge variant={alreadyProtected ? "success" : "muted"}>
-                              {alreadyProtected ? t("statusProtected") : t("statusNotProtected")}
+                            {/* The saved state, not the switch position; unknown while a reload is owed. */}
+                            <Badge variant={pending ? "warning" : alreadyProtected ? "success" : "muted"}>
+                              {pending
+                                ? tPending("badge")
+                                : alreadyProtected
+                                  ? t("statusProtected")
+                                  : t("statusNotProtected")}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {cannotEnable
                               ? t("unsupportedForType")
-                              : alreadyProtected
-                                ? t("enableHint")
-                                : t("disabledHint")}
+                              : pending
+                                ? tPending("hint")
+                                : alreadyProtected
+                                  ? t("enableHint")
+                                  : t("disabledHint")}
                           </p>
                         </div>
                       </div>

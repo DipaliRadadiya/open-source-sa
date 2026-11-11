@@ -1,8 +1,10 @@
 import { api } from "@/lib/api/client";
+import { settleReloadPending } from "@/lib/applications/reload-pending";
 
 // Responds with the refreshed service; callers re-render so the table stays consistent.
+// A web server restart or reload that succeeds also clears saved-but-not-live warnings.
 export function runServiceAction(key, action) {
-  return api.put(`/services/${encodeURIComponent(key)}`, { action });
+  return settleReloadPending(key, action, () => api.put(`/services/${encodeURIComponent(key)}`, { action }));
 }
 
 /** `cpu_percent` is null until a second sample exists, so CPU only appears after polling. */

@@ -5,6 +5,7 @@ import { ApplicationNav } from "@/components/sections/application-nav";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { SystemUserMissing } from "@/components/applications/system-user-missing";
 import { ApplicationStatusWatcher } from "@/components/applications/application-status-watcher";
+import { ReloadPendingNotice } from "@/components/applications/reload-pending-notice";
 import { can } from "@/lib/permissions/can";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
@@ -42,6 +43,9 @@ export default async function ApplicationLayout({ children, params }) {
           redeploy={result.application.container_redeploy ?? null}
         />
       ) : null}
+      {/* Above every application page: the overview and editors show saved settings,
+          which are not live while this is up. */}
+      <ReloadPendingNotice appId={application} className="mb-6" />
       {orphaned ? (
         <SystemUserMissing
           application={result.application}

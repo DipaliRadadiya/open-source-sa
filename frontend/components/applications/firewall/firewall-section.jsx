@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { Note } from "@/components/ui/note";
 import { updateApplicationWaf } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
+import { isReloadFailed } from "@/lib/applications/reload-pending";
+import { useReloadPending, useReloadPendingActions } from "@/components/applications/reload-pending-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -43,15 +45,32 @@ function sameList(a, b) {
 // Saves everything in one call: the API is a single atomic PUT.
 export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0, detectFailed = false }) {
   const t = useTranslations("applications.firewall");
+  const tPending = useTranslations("applications.reloadPending");
   const { refreshAndWait } = useRefresh();
+  const pending = useReloadPending(appId);
+  const { mark, stillPending } = useReloadPendingActions();
 
-  const saved = {
+  const server = {
     enabled: application.waf_enabled ?? false,
     mode: application.waf_mode ?? "detect",
     categories: application.waf_categories ?? [],
     exceptions: application.waf_exceptions ?? [],
     blocks: application.waf_custom_rules ?? [],
   };
+  // What the last save sent, held until the refreshed page agrees, so the card is
+  // not "unsaved" in between and badge, tint and hint do not lag the toast.
+  const [justSaved, setJustSaved] = useState(null);
+  if (
+    justSaved &&
+    justSaved.enabled === server.enabled &&
+    justSaved.mode === server.mode &&
+    sameList(justSaved.categories, server.categories) &&
+    sameList(justSaved.exceptions, server.exceptions) &&
+    sameList(justSaved.blocks, server.blocks)
+  ) {
+    setJustSaved(null);
+  }
+  const saved = justSaved ?? server;
 
   const [enabled, setEnabled] = useState(saved.enabled);
   const [mode, setMode] = useState(saved.mode);
@@ -76,17 +95,20 @@ export function FirewallSection({ appId, application, categories: catalog, modes
 
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
 
-  // Badge, tint and hint describe the saved state; a local save is held until
-  // the refreshed page agrees, so they do not lag the toast.
-  const [justSaved, setJustSaved] = useState(null);
-  if (justSaved && justSaved.enabled === saved.enabled && justSaved.mode === saved.mode) setJustSaved(null);
-  const live = justSaved ?? saved;
-  const blocking = live.enabled && live.mode === "enforce";
+  // Not reloaded since a save, so nothing about the running firewall is known.
+  const blocking = !pending && saved.enabled && saved.mode === "enforce";
   // Watch mode is not protection, so it must not use the success colour.
-  const statusVariant = blocking ? "success" : live.enabled ? "warning" : "muted";
-  const statusLabel = blocking ? t("statusBlocking") : live.enabled ? t("statusWatching") : t("statusOff");
+  const caution = pending || (saved.enabled && !blocking);
+  const statusVariant = blocking ? "success" : caution ? "warning" : "muted";
+  const statusLabel = pending
+    ? tPending("badge")
+    : blocking
+      ? t("statusBlocking")
+      : saved.enabled
+        ? t("statusWatching")
+        : t("statusOff");
   // The log exists only once watch mode is saved and running.
-  const showDetectLog = saved.enabled && saved.mode === "detect";
+  const showDetectLog = !pending && saved.enabled && saved.mode === "detect";
 
   function toggleCategory(value, checked) {
     setActive((prev) => {
@@ -97,20 +119,25 @@ export function FirewallSection({ appId, application, categories: catalog, modes
 
   async function save() {
     setSaving(true);
+    // Never an empty array: the backend reads `categories: []` as "all six".
+    const categories = active.length > 0 ? active : catalog.map((item) => item.value);
+    const sent = { enabled, mode, categories, exceptions, blocks };
     try {
-      await updateApplicationWaf(appId, {
-        enabled,
-        mode,
-        // Never an empty array: the backend reads `categories: []` as "all six".
-        categories: active.length > 0 ? active : catalog.map((item) => item.value),
-        exceptions,
-        custom_rules: blocks,
-      });
-      setJustSaved({ enabled, mode });
+      await updateApplicationWaf(appId, { enabled, mode, categories, exceptions, custom_rules: blocks });
+      setJustSaved(sent);
+      setActive(categories);
       await refreshAndWait();
-      toast.success(t("saved"));
+      if (stillPending(appId)) toast.warning(tPending("stillPendingToast"));
+      else toast.success(t("saved"));
     } catch (error) {
-      toast.error(apiMessage(error, t("saveFailed")));
+      // Saved but not live: keep it as the saved state, with no success toast.
+      if (isReloadFailed(error)) {
+        mark(appId, error);
+        setJustSaved(sent);
+        setActive(categories);
+        await refreshAndWait();
+        toast.warning(tPending("toast"));
+      } else toast.error(apiMessage(error, t("saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -136,8 +163,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
               className={cn(
                 "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
                 blocking && "border-success/30 bg-success/5",
-                live.enabled && !blocking && "border-warning/30 bg-warning/5",
-                !live.enabled && "bg-muted/40",
+                caution && "border-warning/30 bg-warning/5",
+                !blocking && !caution && "bg-muted/40",
                 locked ? "cursor-not-allowed" : "cursor-pointer",
               )}
             >
@@ -146,8 +173,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                   className={cn(
                     "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
                     blocking && "bg-success/15 text-success",
-                    live.enabled && !blocking && "bg-warning/15 text-warning",
-                    !live.enabled && "bg-muted-foreground/10 text-muted-foreground",
+                    caution && "bg-warning/15 text-warning",
+                    !blocking && !caution && "bg-muted-foreground/10 text-muted-foreground",
                   )}
                 >
                   <ShieldCheck className="size-4" />
@@ -158,7 +185,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {blocking ? t("blockingHint") : live.enabled ? t("watchingHint") : t("offHint")}
+                    {pending ? tPending("hint") : blocking ? t("blockingHint") : saved.enabled ? t("watchingHint") : t("offHint")}
                   </p>
                 </div>
               </div>

@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { Note } from "@/components/ui/note";
 import { updateApplicationBotBlocker } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
+import { isReloadFailed } from "@/lib/applications/reload-pending";
+import { useReloadPending, useReloadPendingActions } from "@/components/applications/reload-pending-provider";
 import {
   BOT_RULE_LIMIT,
   botRuleError,
@@ -315,7 +317,10 @@ export function BotBlockerSection({
   canManage,
 }) {
   const t = useTranslations("applications.botBlocker");
+  const tPending = useTranslations("applications.reloadPending");
   const { refreshAndWait } = useRefresh();
+  const pending = useReloadPending(appId);
+  const { mark, stillPending } = useReloadPendingActions();
   const policies = dedupedPolicies(sentPolicies);
   // What the last save wrote, held until the refreshed props agree, so the
   // card is not "unsaved" in between.
@@ -417,8 +422,17 @@ export function BotBlockerSection({
       await updateApplicationBotBlocker(appId, { policy, blocked, allowed });
       setJustSaved({ policy, blocked, allowed });
       await refreshAndWait();
-      toast.success(t("saved"));
+      if (stillPending(appId)) toast.warning(tPending("stillPendingToast"));
+      else toast.success(t("saved"));
     } catch (error) {
+      // Saved but not live: it becomes the saved state, with no success toast.
+      if (isReloadFailed(error)) {
+        mark(appId, error);
+        setJustSaved({ policy, blocked, allowed });
+        await refreshAndWait();
+        toast.warning(tPending("toast"));
+        return;
+      }
       const errors = error.response?.status === 422 ? error.response.data?.errors ?? {} : {};
       const next = { blocked: {}, allowed: {} };
       for (const [field, messages] of Object.entries(errors)) {
@@ -492,10 +506,10 @@ export function BotBlockerSection({
                           <Badge variant={option.blocked_count ? (warn ? "warning" : "muted") : "outline"}>
                             {t("blockedCount", { count: option.blocked_count })}
                           </Badge>
-                          {/* Marks the option currently in force. */}
+                          {/* Marks the option currently in force; not known while a reload is owed. */}
                           {key === base.policy ? (
-                            <Badge variant={isProtected ? "success" : "muted"}>
-                              {t("activeNow")}
+                            <Badge variant={pending ? "warning" : isProtected ? "success" : "muted"}>
+                              {pending ? tPending("badge") : t("activeNow")}
                             </Badge>
                           ) : null}
                           {checked && isDirty ? (
