@@ -107,11 +107,13 @@ it('sets the policy, re-renders the vhost, and logs the change', function () {
 });
 
 it('writes the training bot names into the rendered vhost, not the search ones', function () {
-    Process::fake(function ($process) {
+    $written = false;
+    Process::fake(function ($process) use (&$written) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
-        // The vhost — not the logrotate policy written beside it (LOG-01).
-        if (($args[0] ?? '') === 'tee' && ! str_starts_with((string) end($args), '/etc/logrotate.d/')) {
+        // The bot blocker's own file in the site's conf folder (v7's name).
+        if (($args[0] ?? '') === 'tee' && str_ends_with((string) end($args), '/conf/nginx/ai-bot-blocker.conf')) {
+            $written = true;
             expect($process->input ?? '')->toContain('GPTBot')->not->toContain('OAI-SearchBot');
         }
 
@@ -125,6 +127,8 @@ it('writes the training bot names into the rendered vhost, not the search ones',
     $this->withHeaders(botBlockerHeaders())
         ->putJson(botBlockerUrl(), ['policy' => 'block_training'])
         ->assertOk();
+
+    expect($written)->toBeTrue();
 });
 
 it('blocks live AI assistants but keeps the search crawlers under block_agents', function () {

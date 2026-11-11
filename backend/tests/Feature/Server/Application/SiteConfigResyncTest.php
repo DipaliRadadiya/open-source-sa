@@ -75,7 +75,9 @@ function fakeResyncServer(string $onDisk = 'stale config', bool $testPasses = tr
         if (($args[0] ?? '') === 'cat') {
             // The site's own file. Its HTTPS file (v7 layout, B1) exists only
             // for a site with a certificate, which none of these have.
-            return str_ends_with((string) end($args), '-ssl.conf')
+            // Nor the bot blocker/8G files in its conf folder (v7's names, written
+            // by the panel since 2026-11-11): a site that never had them.
+            return str_ends_with((string) end($args), '-ssl.conf') || str_contains((string) end($args), '/conf/nginx/')
                 ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
                 : Process::result(output: $onDisk);
         }
@@ -109,7 +111,7 @@ it('re-renders a stale site config and reloads once', function () {
         ->and($result['reloaded'])->toBeTrue()
         // The point of the whole exercise: the current bot list is now in the
         // file the web server actually reads.
-        ->and((string) $written[0])->toContain('GPTBot');
+        ->and(collect($written->getArrayCopy())->contains(fn (string $file) => str_contains($file, 'GPTBot')))->toBeTrue();
 
     // One reload for the batch, not one per site — each was already proved
     // safe on its own.
@@ -140,7 +142,9 @@ it('reconciles the canonical URL of an existing installed site', function () {
 });
 
 it('skips a site whose config is already current', function () {
-    $site = makeSite('one.test');
+    // No bot blocker: its file lives in the conf folder, and this fake hands
+    // one text back for every path.
+    $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
 
     // Feed back exactly what the renderer produces, so nothing has drifted.
     // Rendered against the provisioner's own document root, not a
@@ -177,7 +181,7 @@ it('creates the directories the config names, even for a site it skips', functio
     // when the config loads rather than per request: the vhost fails its own
     // test and the site is rolled back. "Deploy, then resync" was the standing
     // advice for repairing precisely this, and it did not.
-    $site = makeSite('one.test');
+    $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
 
     $current = app(WebServerManager::class)
         ->driver()
@@ -310,7 +314,9 @@ function fakeOlsResync(string $onDisk, bool $alreadyMember): ArrayObject
         if (($args[0] ?? '') === 'cat') {
             // The site's own file. Its HTTPS file (v7 layout, B1) exists only
             // for a site with a certificate, which none of these have.
-            return str_ends_with((string) end($args), '-ssl.conf')
+            // Nor the bot blocker/8G files in its conf folder (v7's names, written
+            // by the panel since 2026-11-11): a site that never had them.
+            return str_ends_with((string) end($args), '-ssl.conf') || str_contains((string) end($args), '/conf/nginx/')
                 ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
                 : Process::result(output: $onDisk);
         }
@@ -395,7 +401,9 @@ it('splits a site written as one file into v7\'s two, and links the new one', fu
         $ran->append($args);
 
         if (($args[0] ?? '') === 'cat') {
-            return str_ends_with((string) end($args), '-ssl.conf')
+            // Nor the bot blocker/8G files in its conf folder (v7's names, written
+            // by the panel since 2026-11-11): a site that never had them.
+            return str_ends_with((string) end($args), '-ssl.conf') || str_contains((string) end($args), '/conf/nginx/')
                 ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
                 : Process::result(output: "server {\n    listen 443 ssl;\n    listen 80;\n}\n");
         }

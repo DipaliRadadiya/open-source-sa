@@ -64,7 +64,11 @@ final class LeftoverHost
                 return Process::result();
             }
             if (in_array($args[0], ['nginx', 'apache2ctl', 'apachectl'], true) && in_array('-t', $args, true)) {
-                return self::$testFailsAfterMove && self::$moves > 0 ? Process::result(exitCode: 1, errorOutput: 'emerg') : Process::result();
+                // Fails while one of v7's files is away in the backup folder,
+                // the way a vhost still reading one of its conf.d maps would.
+                $away = collect(self::$paths)->keys()->contains(fn (string $path) => str_contains($path, '/v7-leftovers/'));
+
+                return self::$testFailsAfterMove && $away ? Process::result(exitCode: 1, errorOutput: 'emerg') : Process::result();
             }
 
             return Process::result();
@@ -143,7 +147,7 @@ it('knows v7\'s paths on Apache and OpenLiteSpeed', function (string $server, st
 
     expect(array_column(app(V7Leftovers::class)->remove($this->application, 'ai_bot_blocker'), 'from'))->toBe([str_replace('{root}', $this->root, $path)]);
 })->with([
-    ['apache', '{root}/conf/apache2/ai-bot-blocker.conf'],
+    ['apache', '{root}/conf/apache/ai-bot-blocker.conf'],
     ['openlitespeed', '{root}/conf/openlitespeed/rewrites/ai-bot-blocker.conf'],
 ]);
 

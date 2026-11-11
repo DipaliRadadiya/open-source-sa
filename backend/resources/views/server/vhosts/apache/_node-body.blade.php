@@ -42,6 +42,12 @@
     ProxyPreserveHost On
     ProxyRequests Off
 
+    {{-- v7's per-site folder ({@see \App\Services\Server\WebServers\SiteConfFolder}):
+         the bot blocker, the 8G firewall and force HTTPS are rewrite rules
+         there, so it loads before the proxy rewrite below, or a WebSocket
+         upgrade would skip them. `*` as v7 had it: a glob skips `.htpasswd`. --}}
+    IncludeOptional {{ $siteConf }}/*
+
     {{-- WebSocket upgrades first: ProxyPass on / would otherwise swallow them
          as ordinary HTTP, and the handshake would never complete. Order is
          the whole trick here. --}}
@@ -54,63 +60,14 @@
 
     RequestHeader set X-Forwarded-Proto "%{REQUEST_SCHEME}s"
 
-@if ($waf)
-    Include {{ config('server.waf.apache_setenvif_path') }}
-@foreach ($waf['exceptions'] as $exception)
-    {{-- The path only (bug #82): matched against the query string or the
-         user agent, an exception was a password anyone could type. --}}
-    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $exception !!}#i" waf_exception
-@endforeach
-@foreach ($waf['customRules'] as $rule)
-    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $rule !!}#i || %{QUERY_STRING} =~ m#{!! $rule !!}#i" waf_custom
-@endforeach
-@endif
-@if ($botBlock)
-    SetEnvIfNoCase User-Agent "({{ $botBlock }})" ai_bot_blocked
-@endif
-@if ($botBlock || $basicAuth || ($waf && $waf['mode'] === 'enforce'))
-    {{-- A node app has no `<Directory>` of its own to attach any of these
-         checks to — it serves nothing from disk — so all three are scoped
-         by URL instead, with the ACME path excluded by the same regex the
-         dotfile-deny rule below uses. One `RequireAll` so a blocked bot or
-         WAF match fails here regardless of Basic Auth, the same as the
-         php/static `<Directory>` blocks. --}}
+@if ($basicAuth)
+    {{-- A node app has no `<Directory>` of its own to attach the password
+         to — it serves nothing from disk — so it is scoped by URL instead,
+         with the ACME path excluded by the same regex the dotfile-deny rule
+         below uses. The bot blocker and the firewall are rewrite rules in the
+         site's conf folder (v7's files), loaded before the proxy rules. --}}
     <LocationMatch "^/(?!\.well-known/acme-challenge/)">
         <RequireAll>
-@if ($botBlock)
-            Require not env ai_bot_blocked
-@endif
-@if ($waf && $waf['mode'] === 'enforce')
-            <RequireAny>
-                Require env waf_exception
-                <RequireAll>
-                    Require all granted
-                    <RequireNone>
-@if (in_array('query_string', $waf['categories'], true))
-                        Require env waf_query
-@endif
-@if (in_array('request_uri', $waf['categories'], true))
-                        Require env waf_uri
-@endif
-@if (in_array('user_agent', $waf['categories'], true))
-                        Require env waf_agent
-@endif
-@if (in_array('referrer', $waf['categories'], true))
-                        Require env waf_referer
-@endif
-@if (in_array('cookie', $waf['categories'], true))
-                        Require env waf_cookie
-@endif
-@if (in_array('method', $waf['categories'], true))
-                        Require env waf_method
-@endif
-@if ($waf['customRules'] !== [])
-                        Require env waf_custom
-@endif
-                    </RequireNone>
-                </RequireAll>
-            </RequireAny>
-@endif
 @if ($basicAuth)
             AuthType Basic
             AuthName "Restricted"
@@ -135,37 +92,4 @@
     <FilesMatch "^\.">
         Require all denied
     </FilesMatch>
-@if ($waf)
-    {{-- Both modes (bug #84): blocking used to leave no record of what it
-         blocked. One line per active category/custom rule — a request
-         matching two logs twice, harmless for a log nobody is asked to
-         dedupe. `expr=`, not `env=`: an excepted request was never blocked
-         and must not be logged as if it were. The format is combined plus
-         which rule matched and what was done. --}}
-@if (in_array('query_string', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=query_string action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_query') && -z reqenv('waf_exception')"
-@endif
-@if (in_array('request_uri', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=request_uri action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_uri') && -z reqenv('waf_exception')"
-@endif
-@if (in_array('user_agent', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=user_agent action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_agent') && -z reqenv('waf_exception')"
-@endif
-@if (in_array('referrer', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=referrer action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_referer') && -z reqenv('waf_exception')"
-@endif
-@if (in_array('cookie', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=cookie action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_cookie') && -z reqenv('waf_exception')"
-@endif
-@if (in_array('method', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=method action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_method') && -z reqenv('waf_exception')"
-@endif
-@if ($waf['customRules'] !== [])
-    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=custom_rule action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_custom') && -z reqenv('waf_exception')"
-@endif
-@endif
 
-    {{-- v7's per-site folder, last like in v7 (vhosts the same as v7,
-         2026-11-08; {@see \App\Services\Server\WebServers\SiteConfFolder}).
-         `*` as v7 had it: a glob skips the dot-file `.htpasswd`. --}}
-    IncludeOptional {{ $siteConf }}/*

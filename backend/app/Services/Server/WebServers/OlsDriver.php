@@ -382,12 +382,21 @@ class OlsDriver extends AbstractWebServerDriver
 
         $written = $this->files->put(
             $this->configPath($application),
-            $this->renderConfig($application, $documentRoot),
+            // The vhost alone: its rule files go to the conf folder below.
+            $this->renderSection($application, $documentRoot, null),
             $context,
         );
 
         if ($written->failed()) {
             return $written;
+        }
+
+        foreach ($this->siteConfFiles($application, $documentRoot) as $path => $contents) {
+            $rules = $this->writeSiteConf($path, $contents, $context + ['op' => 'write_site_conf']);
+
+            if ($rules->failed()) {
+                return $rules;
+            }
         }
 
         $wrapper = $this->legacyWrapperPath($application);
@@ -598,5 +607,11 @@ class OlsDriver extends AbstractWebServerDriver
     {
         return $this->shared->serverUser()
             ?? (string) config('server.web_server_drivers.openlitespeed.user', 'nobody');
+    }
+
+    /** v7 keeps OpenLiteSpeed's in conf/openlitespeed/rewrites/, inside `rewrite {}`. */
+    protected function siteConfRulesDir(Application $application): string
+    {
+        return $application->siteConfPath().'/rewrites';
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\WebServers\AbstractWebServerDriver;
 use App\Services\Server\WebServers\OlsVhostLayout;
 use App\Services\Server\WebServers\WebServerManager;
 
@@ -156,6 +157,16 @@ class SiteConfigResyncer
 
             // Nothing shipped changed for this site. Skipping keeps a routine
             // update from rewriting forty files to identical content.
+            // The site's conf-folder files are v7's names: one that is v7's
+            // or its owner's (not the panel's marker) is left exactly as it is.
+            foreach (array_keys($files) as $path) {
+                if ($driver->isSiteConfPath($application, $path)
+                    && $previous[$path] !== null
+                    && ! AbstractWebServerDriver::siteConfIsOurs($previous[$path])) {
+                    unset($files[$path], $previous[$path]);
+                }
+            }
+
             $changed = array_filter(
                 $files,
                 fn (?string $contents, string $path) => $contents === null
@@ -227,7 +238,9 @@ class SiteConfigResyncer
 
         foreach ($changed as $path => $contents) {
             if ($contents === null) {
-                $this->files->delete($driver->enabledPathFor($path), $this->context($application, 'resync_remove'));
+                if (! $driver->isSiteConfPath($application, $path)) {
+                    $this->files->delete($driver->enabledPathFor($path), $this->context($application, 'resync_remove'));
+                }
                 $result = $this->files->delete($path, $this->context($application, 'resync_remove'));
             } else {
                 $result = $this->files->put($path, $contents, $this->context($application, 'resync_write'));
@@ -265,7 +278,9 @@ class SiteConfigResyncer
 
         foreach (array_keys($changed) as $path) {
             if ($previous[$path] === null) {
-                $this->files->delete($driver->enabledPathFor($path), $this->context($application, 'resync_rollback'));
+                if (! $driver->isSiteConfPath($application, $path)) {
+                    $this->files->delete($driver->enabledPathFor($path), $this->context($application, 'resync_rollback'));
+                }
                 $this->files->delete($path, $this->context($application, 'resync_rollback'));
 
                 continue;

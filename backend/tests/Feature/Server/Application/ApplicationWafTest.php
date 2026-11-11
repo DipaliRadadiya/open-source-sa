@@ -127,7 +127,8 @@ it('enables the firewall, writes the shared nginx maps file, and persists the ru
     // and was never unique, so two sites could claim one and overwrite each
     // other's config. Matching on 'shop.test' found nothing, and the null went
     // straight into an array offset.
-    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'));
+    // The rules are in v7's 8g-firewall.conf in the site's conf folder, which the vhost includes.
+    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'));
     expect($vhostWrite['input'])
         ->toContain('bad_querystring_ng')
         ->toContain('bad_request_ng')
@@ -152,7 +153,8 @@ it('excludes disabled categories from the rendered vhost', function () {
     // and was never unique, so two sites could claim one and overwrite each
     // other's config. Matching on 'shop.test' found nothing, and the null went
     // straight into an array offset.
-    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'));
+    // The rules are in v7's 8g-firewall.conf in the site's conf folder, which the vhost includes.
+    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'));
 
     expect($vhostWrite['input'])
         ->toContain('not_allowed_method_ng')
@@ -175,7 +177,8 @@ it('logs would-be blocks instead of enforcing in detect mode', function () {
     // and was never unique, so two sites could claim one and overwrite each
     // other's config. Matching on 'shop.test' found nothing, and the null went
     // straight into an array offset.
-    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'));
+    // The rules are in v7's 8g-firewall.conf in the site's conf folder, which the vhost includes.
+    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'));
 
     expect($vhostWrite['input'])
         ->not->toContain('return 403')
@@ -586,16 +589,16 @@ describe('the firewall log (bug #84)', function () {
             ->assertOk();
 
         $vhost = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'))['input'];
+        $rules = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'))['input'];
         $format = 'panel_waf_'.$this->application->id;
 
         // Blocking left no record at all.
-        expect($vhost)
+        expect($rules)
             ->toContain('return 403')
-            ->toContain("log_format {$format} ")
-            ->toContain('waf=$waf_reason action=blocked')
             ->toContain('set $waf_reason "query_string"')
             ->toContain("access_log {$this->application->wafDetectLogPath()} {$format} if=\$waf_matched;")
-            // log_format is http-level only: above the server block.
+            // log_format is http-level only: in the vhost, above the server block.
+            ->and($vhost)->toContain("log_format {$format} ", 'waf=$waf_reason action=blocked')
             ->and(strpos($vhost, 'log_format'))->toBeLessThan(strpos($vhost, 'server {'));
     });
 

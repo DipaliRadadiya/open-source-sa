@@ -4,7 +4,9 @@ namespace App\Actions\Server\Application;
 
 use App\Models\Certificate;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\V7Leftovers;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Turns the plain HTTP block into a redirect.
@@ -19,6 +21,7 @@ class SetForceHttps
     public function __construct(
         private ApplyVhost $vhost,
         private ActivityLogger $activityLogger,
+        private V7Leftovers $leftovers,
     ) {}
 
     /**
@@ -32,9 +35,22 @@ class SetForceHttps
             ]);
         }
 
+        $previous = (bool) $certificate->force_https;
         $certificate->update(['force_https' => $force]);
+        $application = $certificate->application->fresh(['domains', 'certificate']);
 
-        $this->vhost->execute($certificate->application->fresh(['domains', 'certificate']));
+        // v7's own forceHttps.conf (Apache) goes first: it sits at the name v8
+        // writes to, and v8 never writes over a file it did not write.
+        $moved = $this->leftovers->remove($application, 'force_https');
+
+        try {
+            $this->vhost->execute($application);
+        } catch (Throwable $e) {
+            $this->leftovers->restore($application, $moved);
+            $certificate->update(['force_https' => $previous]);
+
+            throw $e;
+        }
 
         $this->activityLogger->log(
             $force ? 'application.force_https_enabled' : 'application.force_https_disabled',

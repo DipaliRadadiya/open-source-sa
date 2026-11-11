@@ -91,13 +91,30 @@ class Waf8GManager
         // the database — see class docblock.
         $application->setRelation('wafRules', $this->pendingRules($exceptions, $customRules));
 
+        // v7's own files for this setting go first: they sit at the names v8
+        // writes to, and v8 never writes over a file it did not write. Put
+        // back with everything else if the change does not hold.
+        $moved = $this->leftovers->remove($application, 'firewall');
+
         $applied = $this->applyVhost($application);
 
-        if ($applied->failed()) {
-            throw new WafOperationException($applied->reference);
+        // Refused with v7's files gone: something may still lean on them (an
+        // nginx conf.d map another vhost reads), so they go back first and
+        // the change is kept if that is enough.
+        $refused = $applied->failed() || $this->webServers->driver()->test()->failed();
+
+        // Only the ones elsewhere: one at a name the panel now writes would go
+        // back over the panel's own file and hide the refusal.
+        $elsewhere = $refused && $applied->ok ? $this->leftovers->outsideSiteConf($application, $moved) : [];
+
+        if ($elsewhere !== []) {
+            $this->leftovers->restore($application, $elsewhere);
+            $moved = array_values(array_udiff($moved, $elsewhere, fn ($a, $b) => strcmp($a['from'], $b['from'])));
+            $refused = $this->webServers->driver()->test()->failed();
         }
 
-        if ($this->webServers->driver()->test()->failed()) {
+        if ($refused) {
+            $this->leftovers->restore($application, $moved);
             $application->waf_enabled = $previousEnabled;
             $application->waf_mode = $previousMode;
             $application->waf_categories = $previousCategories;
@@ -105,16 +122,7 @@ class Waf8GManager
 
             $restored = $this->applyVhost($application);
 
-            throw new WafOperationException($restored->reference);
-        }
-
-        // v7's own files for this setting, now that v8's are live: moved
-        // aside and tested again — put back if the web server objects.
-        $moved = $this->leftovers->remove($application, 'firewall');
-
-        if ($moved !== [] && $this->webServers->driver()->test()->failed()) {
-            $this->leftovers->restore($application, $moved);
-            $moved = [];
+            throw new WafOperationException($applied->failed() ? $applied->reference : $restored->reference);
         }
 
         // Saved either way: the tested config is on disk, and the row has to
