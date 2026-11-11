@@ -1030,6 +1030,11 @@ return [
             // The answer for names no site claims (bug #55). conf.d is read
             // before sites-enabled and needs no symlink.
             'catch_all' => env('SERVER_NGINX_CATCH_ALL', '/etc/nginx/conf.d/panel-default-server.conf'),
+            // The visitor's own address behind Cloudflare, and compression of
+            // more than HTML — both in v7's nginx, both http-level (CloudflareRealIp,
+            // NginxCompression).
+            'real_ip' => env('SERVER_NGINX_REAL_IP', '/etc/nginx/conf.d/panel-real-ip.conf'),
+            'compression' => env('SERVER_NGINX_COMPRESSION', '/etc/nginx/conf.d/panel-gzip.conf'),
             // Which PHP stack this web server implies — see `php_stacks`.
             'php_stack' => 'fpm',
         ],
@@ -1045,6 +1050,9 @@ return [
             // read before sites-enabled, so this is always the first vhost.
             'catch_all' => env('SERVER_APACHE_CATCH_ALL', '/etc/apache2/conf-available/panel-default-site.conf'),
             'catch_all_enabled_dir' => env('SERVER_APACHE_CATCH_ALL_ENABLED_DIR', '/etc/apache2/conf-enabled'),
+            // The visitor's own address behind Cloudflare (CloudflareRealIp),
+            // linked into catch_all_enabled_dir like the catch-all.
+            'real_ip' => env('SERVER_APACHE_REAL_IP', '/etc/apache2/conf-available/panel-real-ip.conf'),
             'php_stack' => 'fpm',
         ],
 
@@ -1569,6 +1577,13 @@ return [
         '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
         '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
         '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    ],
+
+    // https://www.cloudflare.com/ips-v6 — kept apart from the IPv4 list above,
+    // which DnsVerifier matches with ip2long(). The real-IP config trusts both.
+    'cloudflare_ranges_v6' => [
+        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+        '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
     ],
 
     'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),

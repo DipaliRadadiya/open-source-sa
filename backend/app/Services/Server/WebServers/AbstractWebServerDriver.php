@@ -564,8 +564,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // Sending one to https://<that name> lands the visitor on a
             // certificate error, so they go to the primary instead — which a
             // forced-HTTPS certificate always covers, since forcing needs the
-            // site's own scheme to be https. Apache already sends every name
-            // to the primary; nginx and OLS keep each covered name's own host.
+            // site's own scheme to be https. Every covered name keeps its own
+            // host, as on v7 (Apache too since 2026-11-11: www stays www).
             'uncoveredNames' => $forceHttps
                 ? array_values(array_filter(
                     $application->serverNames(),

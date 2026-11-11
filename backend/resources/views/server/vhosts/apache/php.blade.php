@@ -27,7 +27,21 @@
         Require all granted
     </Directory>
 
-    RedirectMatch 301 ^/(?!\.well-known/acme-challenge/)(.*)$ https://{{ $serverNames[0] }}/$1
+    {{-- To the name the visitor asked for, as v7 and the other two web
+         servers do: www stays www. Only this site's own names reach this
+         vhost (an unknown name goes to the catch-all), so the Host header
+         cannot send anyone elsewhere. --}}
+    RewriteEngine On
+@foreach ($uncoveredNames as $name)
+    {{-- Not on the certificate: https://{{ $name }} is a TLS error, so send
+         it to the primary. ACME stays excluded so the certificate can still
+         be reissued to include this name. --}}
+    RewriteCond %{HTTP_HOST} ^{{ preg_quote($name, '/') }}(:80)?$ [NC]
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://{{ $serverNames[0] }}%{REQUEST_URI} [R=301,L]
+@endforeach
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]
 </VirtualHost>
 @else
 <VirtualHost *:80>

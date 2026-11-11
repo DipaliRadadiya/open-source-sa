@@ -16,6 +16,8 @@ use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use App\Services\Server\WebServers\CatchAllSite;
+use App\Services\Server\WebServers\CloudflareRealIp;
+use App\Services\Server\WebServers\NginxCompression;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -69,6 +71,8 @@ class ResyncSiteConfigs extends Command
         }
 
         $this->ensureCatchAll(app(CatchAllSite::class));
+        $this->ensureRealIp(app(CloudflareRealIp::class));
+        $this->ensureCompression(app(NginxCompression::class));
         $this->lockSiteRoots($rootLock);
         $this->closeHomes($homeAccess);
         // The panel's own checkout, closed for the same reason as the homes
@@ -118,6 +122,40 @@ class ResyncSiteConfigs extends Command
             'current' => $this->info('Unknown domains: already refused.'),
             'skipped' => $this->info('Unknown domains: left to the server\'s own default.'),
             'failed' => $this->warn('Unknown domains: not changed — the web server refused the default site'
+                .($result['reference'] ? ' (reference '.$result['reference'].')' : '').'.'),
+        };
+    }
+
+    /**
+     * The visitor's own address behind Cloudflare, as v7 has it — see
+     * CloudflareRealIp. Never fails the command.
+     */
+    private function ensureRealIp(CloudflareRealIp $realIp): void
+    {
+        $result = $realIp->ensure();
+
+        match ($result['status']) {
+            'updated' => $this->info('Cloudflare visitor addresses: now used (web server reloaded).'),
+            'current' => $this->info('Cloudflare visitor addresses: already used.'),
+            'skipped' => $this->info('Cloudflare visitor addresses: left to the server\'s own setting.'),
+            'failed' => $this->warn('Cloudflare visitor addresses: not changed — the web server refused it'
+                .($result['reference'] ? ' (reference '.$result['reference'].')' : '').'.'),
+        };
+    }
+
+    /**
+     * Compression of CSS, JavaScript and JSON on nginx, as v7 has it — see
+     * NginxCompression. Never fails the command.
+     */
+    private function ensureCompression(NginxCompression $compression): void
+    {
+        $result = $compression->ensure();
+
+        match ($result['status']) {
+            'updated' => $this->info('Compression: text, scripts and data now compressed (web server reloaded).'),
+            'current' => $this->info('Compression: already on for text, scripts and data.'),
+            'skipped' => null,
+            'failed' => $this->warn('Compression: not changed — the web server refused it'
                 .($result['reference'] ? ' (reference '.$result['reference'].')' : '').'.'),
         };
     }

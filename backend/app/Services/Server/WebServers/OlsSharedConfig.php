@@ -881,6 +881,109 @@ class OlsSharedConfig
     }
 
     /**
+     * Use the visitor's address from X-Forwarded-For, but only on a request
+     * that comes from one of `$ranges` — see CloudflareRealIp. OpenLiteSpeed's
+     * "Trusted IP Only" (2): its docs advise against "Yes" (1), v7's setting,
+     * because then any visitor can choose the address the server logs and
+     * bans. The trusted addresses are the server's Allowed List entries that
+     * end in `T`.
+     *
+     * Left alone: a server whose owner chose another mode (every server moved
+     * from v7 has 1), and one whose Allowed List is not open to ALL — adding
+     * Cloudflare there would let it in.
+     *
+     * @param  array<int, string>  $ranges
+     * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
+     */
+    public function trustProxies(array $ranges): array
+    {
+        return Cache::lock('ols-shared-config', 30)->block(20, fn () => $this->trustProxiesLocked($ranges));
+    }
+
+    /**
+     * @param  array<int, string>  $ranges
+     * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
+     */
+    private function trustProxiesLocked(array $ranges): array
+    {
+        $path = $this->path();
+        $context = ['feature' => 'web_server', 'op' => 'real_ip'];
+        $read = $this->files->get($path, $context);
+
+        if ($read->failed()) {
+            return ['status' => 'failed', 'reference' => $read->reference];
+        }
+
+        $contents = $read->output();
+        $hasMode = preg_match('/^useIpInProxyHeader\s+(\d+)/m', $contents, $mode) === 1;
+
+        if ($hasMode && $mode[1] !== '2') {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        if (preg_match('/^accessControl\s*\{/m', $contents, $match, PREG_OFFSET_CAPTURE) !== 1) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $start = $match[0][1];
+        $open = $start + strlen($match[0][0]) - 1;
+        $close = $this->matchingBrace($contents, $open);
+
+        if ($close === null) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $block = substr($contents, $open, $close - $open);
+
+        if (preg_match('/^(\s*allow\s+)(.*)$/m', $block, $allow) !== 1) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $entries = array_values(array_filter(array_map('trim', explode(',', $allow[2])), fn (string $entry) => $entry !== ''));
+
+        if (! in_array('ALL', array_map('strtoupper', $entries), true)) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $missing = array_values(array_filter(
+            array_map(fn (string $range) => $range.'T', $ranges),
+            fn (string $entry) => ! in_array($entry, $entries, true),
+        ));
+
+        if ($missing === [] && $hasMode) {
+            return ['status' => 'current', 'reference' => null];
+        }
+
+        $line = $allow[1].implode(', ', array_merge($entries, $missing));
+        $block = preg_replace('/^\s*allow\s+.*$/m', str_replace(['\\', '$'], ['\\\\', '\\$'], $line), $block, 1);
+        $updated = substr($contents, 0, $open).$block.substr($contents, $close);
+
+        if (! $hasMode) {
+            $updated = substr($updated, 0, $start)."useIpInProxyHeader       2\n".substr($updated, $start);
+        }
+
+        $backup = $path.'.panel-bak';
+        $backedUp = $this->serverOps->run(['cp', '-f', $path, $backup], $context);
+
+        if ($backedUp->failed()) {
+            return ['status' => 'failed', 'reference' => $backedUp->reference];
+        }
+
+        $written = $this->files->put($path, $updated, $context);
+        $test = $written->ok ? $this->test() : $written;
+
+        if ($test->failed()) {
+            $this->serverOps->run(['cp', '-f', $backup, $path], $context);
+
+            return ['status' => 'failed', 'reference' => $test->reference];
+        }
+
+        $this->discardBackup($backup, $context);
+
+        return ['status' => 'updated', 'reference' => null];
+    }
+
+    /**
      * The copy has done its job once the new file passed its test (2026-10-29,
      * Dipali: no copy stays on the user's server unasked). Kept only while
      * the change is in flight; a failure to remove it fails nothing.

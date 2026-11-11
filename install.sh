@@ -5267,7 +5267,7 @@ configure_apache() {
     # expires + http2: v7's browser caching and HTTP/2 on HTTPS (vhosts the same
     # as v7, 2026-11-08). The vhost wraps both in <IfModule>, so a server that
     # never ran this line still starts.
-    run a2enmod proxy proxy_fcgi proxy_http rewrite headers setenvif ssl expires http2
+    run a2enmod proxy proxy_fcgi proxy_http rewrite headers setenvif ssl expires http2 remoteip
 
     # Apache's default site is a catch-all on port 80 and answers for our
     # hostnames depending on load order.
