@@ -48,11 +48,16 @@ function siteCertificate(Application $site, CertificateType $type = CertificateT
 }
 
 /** @return array<string, ?string> */
+/** The site's vhost files — not the rule files in its conf folder, which have tests of their own. */
 function siteFiles(Application $site, string $driver): array
 {
-    return app((string) config("server.web_server_drivers.{$driver}.driver"))->configFiles(
-        $site->fresh(['domains', 'certificate', 'systemUser']),
-        app(ApplicationProvisioner::class)->documentRoot($site),
+    $site = $site->fresh(['domains', 'certificate', 'systemUser']);
+    $webServer = app((string) config("server.web_server_drivers.{$driver}.driver"));
+
+    return array_filter(
+        $webServer->configFiles($site, app(ApplicationProvisioner::class)->documentRoot($site)),
+        fn (string $path) => ! $webServer->isSiteConfPath($site, $path),
+        ARRAY_FILTER_USE_KEY,
     );
 }
 

@@ -235,45 +235,6 @@ rewrite {
   RewriteCond %{HTTPS} =on
   RewriteRule ^ - [F,L]
 @endif
-@if ($waf)
-  {{-- 8G Firewall, before the bot block and everything else. Each category
-       and custom rule marks the request (`waf_block`); an exception marks it
-       too (`waf_exception`); one rule at the end blocks — or, in detect mode,
-       only marks it for the access log — when it is blocked and not excepted.
-       Conditions are printed raw: they are already escaped for this syntax
-       (OlsDriver::wafPattern, and the 8G file's own patterns). --}}
-@foreach ($waf['exceptions'] as $exception)
-  {{-- The path only (bug #82): matched against the query string or the
-       user agent, an exception was a password anyone could type. --}}
-  RewriteCond %{REQUEST_URI} {!! $exception !!} [NC]
-  RewriteRule ^ - [E=waf_exception:1]
-@endforeach
-@foreach ($wafRules as $category => $conditions)
-@foreach ($conditions as [$variable, $pattern])
-  RewriteCond {!! '%{'.$variable.'}' !!} {!! $pattern !!} [NC{{ $loop->last ? '' : ',OR' }}]
-@endforeach
-  RewriteRule ^ - [E=waf_block:{{ $category }}]
-@endforeach
-@foreach ($waf['customRules'] as $rule)
-  RewriteCond %{REQUEST_URI} {!! $rule !!} [NC,OR]
-  RewriteCond %{QUERY_STRING} {!! $rule !!} [NC]
-  RewriteRule ^ - [E=waf_block:custom_rule]
-@endforeach
-  RewriteCond %{ENV:waf_exception} !=1
-  RewriteCond %{ENV:waf_block} !^$
-@if ($waf['mode'] === 'enforce')
-  RewriteRule ^ - [E=waf_would:1,F,L]
-@else
-  RewriteRule ^ - [E=waf_would:1]
-@endif
-@endif
-@if ($botBlock)
-  {{-- Checked first, ahead of HTTPS-force/redirects/the front controller —
-       a blocked bot gets [F] (403) immediately. Apache mod_rewrite syntax,
-       which OLS implements here, not nginx's. --}}
-  RewriteCond %{HTTP_USER_AGENT} ({{ $botBlock }}) [NC]
-  RewriteRule ^ - [F,L]
-@endif
 @if ($readsHtaccess)
   {{-- On for WordPress, because LiteSpeed Cache has no other way in: the
        plugin writes its cache rules to .htaccess and OpenLiteSpeed's cache

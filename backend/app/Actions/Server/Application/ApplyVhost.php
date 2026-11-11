@@ -48,10 +48,17 @@ class ApplyVhost
         // Keep whatever is currently serving, so a rejected config can be
         // undone rather than merely deleted. Read, not rendered — see the note
         // on the class.
-        $previous = $this->files->get(
-            $driver->configPath($application),
-            ['feature' => 'application', 'op' => 'read_config', 'application' => $application->id],
-        );
+        $context = ['feature' => 'application', 'op' => 'read_config', 'application' => $application->id];
+
+        // Every file a change can touch — the vhost, its HTTPS half and the
+        // site's conf-folder rules — so a refused change puts all of them
+        // back, not just the first: a rule file left behind would keep the
+        // web server's config test failing for every site after this one.
+        $previous = [];
+
+        foreach (array_keys($driver->configFiles($application->load('domains'), $documentRoot)) as $path) {
+            $previous[$path] = $this->files->get($path, $context);
+        }
 
         $written = $driver->apply($application->load('domains'), $documentRoot);
 
@@ -85,22 +92,33 @@ class ApplyVhost
      * rejected config stays on disk instead — untested and unreloaded, so it
      * is not serving — and the caller's exception reports the failure.
      */
-    private function restore(Application $application, ServerOpsResult $previous): void
+    /** @param  array<string, ServerOpsResult>  $previous */
+    private function restore(Application $application, array $previous): void
     {
-        if ($previous->failed()) {
-            return;
+        $driver = $this->webServers->driver();
+        $context = ['feature' => 'application', 'op' => 'restore_config', 'application' => $application->id];
+
+        foreach ($previous as $path => $read) {
+            if ($read->ok) {
+                $this->files->put($path, $read->output(), $context);
+                $driver->link($path, $context);
+
+                continue;
+            }
+
+            // Not there before: whatever the change wrote goes again. Only on
+            // "no such file" — a read that failed for any other reason says
+            // nothing about whether the file was there.
+            if (! str_contains($read->errorOutput(), 'No such file')) {
+                continue;
+            }
+
+            if (! $driver->isSiteConfPath($application, $path)) {
+                $this->files->delete($driver->enabledPathFor($path), $context);
+            }
+            $this->files->delete($path, $context);
         }
 
-        $driver = $this->webServers->driver();
-
-        $this->files->put(
-            $driver->configPath($application),
-            $previous->output(),
-            ['feature' => 'application', 'op' => 'restore_config', 'application' => $application->id],
-        );
-
-        // Only reload if the restored config passes — reloading a broken one
-        // takes every other site on the box down with it.
         if ($driver->test()->ok) {
             $driver->reload();
         }

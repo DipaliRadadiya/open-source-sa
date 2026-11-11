@@ -54,27 +54,29 @@ class BotBlockerManager
         $application->ai_bot_policy = $policy;
         $application->setRelation('botRules', $pending);
 
+        // v7's own files for this setting go first: one sits at the name v8
+        // writes to, and v8 never writes over a file it did not write. Put
+        // back with everything else if the change does not hold.
+        $moved = $this->leftovers->remove($application, 'ai_bot_blocker');
+
         $applied = $this->applyVhost($application);
 
         if ($applied->failed()) {
+            $this->leftovers->restore($application, $moved);
             $this->restore($application, $previous, $rulesChange);
 
             throw new BotBlockerOperationException($applied->reference);
         }
 
-        if ($this->webServers->driver()->test()->failed()) {
+        // Refused with v7's files gone: something may still lean on them (an
+        // nginx conf.d map another vhost reads), so they go back first and
+        // the change is kept if that is enough.
+        if ($this->webServers->driver()->test()->failed()
+            && ($moved === [] || ! $this->leftoversWereTheProblem($application, $moved))) {
+            $this->leftovers->restore($application, $moved);
             $restored = $this->restore($application, $previous, $rulesChange);
 
             throw new BotBlockerOperationException($restored->reference);
-        }
-
-        // v7's own files for this setting, now that v8's are live: moved
-        // aside and tested again — put back if the web server objects.
-        $moved = $this->leftovers->remove($application, 'ai_bot_blocker');
-
-        if ($moved !== [] && $this->webServers->driver()->test()->failed()) {
-            $this->leftovers->restore($application, $moved);
-            $moved = [];
         }
 
         // Saved either way: the tested config is on disk, and the rows have to
@@ -102,6 +104,29 @@ class BotBlockerManager
         if ($reload->failed()) {
             throw new WebServerReloadFailedException($reload->reference);
         }
+    }
+
+    /**
+     * Put v7's files back and ask again: true when that alone makes the
+     * config pass, which keeps the change and leaves them in place.
+     *
+     * @param  array<int, array{from: string, to: string}>  $moved
+     */
+    private function leftoversWereTheProblem(Application $application, array &$moved): bool
+    {
+        // Only the ones elsewhere: one at a name the panel now writes would
+        // go back over the panel's own file, the test would pass, and the
+        // setting would say one thing while v7's old rules did another.
+        $elsewhere = $this->leftovers->outsideSiteConf($application, $moved);
+
+        if ($elsewhere === []) {
+            return false;
+        }
+
+        $this->leftovers->restore($application, $elsewhere);
+        $moved = array_values(array_udiff($moved, $elsewhere, fn ($a, $b) => strcmp($a['from'], $b['from'])));
+
+        return $this->webServers->driver()->test()->ok;
     }
 
     /**

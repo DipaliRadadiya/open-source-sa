@@ -151,4 +151,15 @@ interface WebServerDriver
      * @return array{files: array<string, string>, links: array<string, string>, legacy: list<string>, package: ?string}|null
      */
     public function catchAllConfig(): ?array;
+
+    /**
+     * The site's bot blocker / 8G / force-HTTPS files in its conf folder, v7's
+     * names, path => contents (null: the panel's own copy must go).
+     *
+     * @return array<string, ?string>
+     */
+    public function siteConfFiles(Application $application, string $documentRoot): array;
+
+    /** Whether a configFiles() path is one of those. */
+    public function isSiteConfPath(Application $application, string $path): bool;
 }

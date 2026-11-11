@@ -344,10 +344,11 @@ it('keeps the name the visitor typed in Apache\'s redirect to HTTPS', function (
         'force_https' => true,
     ]);
 
-    $config = app(ApacheDriver::class)->renderConfig($application->fresh(['domains', 'certificate', 'systemUser']), '/home/siteowner/blog/public_html');
-    $http = substr($config, 0, strpos($config, '</VirtualHost>'));
+    // In v7's forceHttps.conf in the site's conf folder, loaded by both vhosts.
+    $http = app(ApacheDriver::class)->siteConfFiles($application->fresh(['domains', 'certificate', 'systemUser']), '/home/siteowner/blog/public_html')['/home/siteowner/blog/conf/apache/forceHttps.conf'];
 
-    expect($http)->toContain('RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]')
+    expect($http)->toStartWith('# Managed by the panel')
+        ->toContain('RewriteCond %{HTTPS} !=on', 'RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]')
         ->and($http)->toContain('RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/')
         ->and($http)->not->toContain('RedirectMatch 301')
         // A name the certificate does not cover still goes to the primary, first.

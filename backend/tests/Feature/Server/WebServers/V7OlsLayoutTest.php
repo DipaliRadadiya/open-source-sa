@@ -70,8 +70,10 @@ it('writes the site the v7 way: wrapper plus main.conf, on v7\'s listeners', fun
     fakeV7OlsBox($ran);
 
     $files = app(OlsDriver::class)->configFiles($this->site, '/home/v7demo/wpblog/public_html');
+    // The bot blocker and 8G files in the site's conf folder are not vhosts.
+    $vhosts = array_filter($files, fn (string $path) => ! str_contains($path, '/conf/openlitespeed/'), ARRAY_FILTER_USE_KEY);
 
-    expect(array_keys($files))->toBe(['/etc/serveravatar-ols/wpblog/main.conf', '/etc/serveravatar-ols/wpblog.conf']);
+    expect(array_keys($vhosts))->toBe(['/etc/serveravatar-ols/wpblog/main.conf', '/etc/serveravatar-ols/wpblog.conf']);
 
     $wrapper = $files['/etc/serveravatar-ols/wpblog.conf'];
     expect($wrapper)->toContain('virtualhost wpblog {')
@@ -122,5 +124,6 @@ it('leaves a server with this panel\'s own layout as it was', function () {
 
     $files = app(OlsDriver::class)->configFiles($this->site->fresh(['domains', 'certificate', 'systemUser']), '/home/v7demo/wpblog/public_html');
 
-    expect(array_keys($files))->toBe(['/usr/local/lsws/conf/vhosts/wpblog/vhconf.conf']);
+    expect(array_keys(array_filter($files, fn (string $path) => ! str_contains($path, '/conf/openlitespeed/'), ARRAY_FILTER_USE_KEY)))
+        ->toBe(['/usr/local/lsws/conf/vhosts/wpblog/vhconf.conf']);
 });

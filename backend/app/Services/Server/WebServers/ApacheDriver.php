@@ -130,4 +130,13 @@ class ApacheDriver extends AbstractWebServerDriver
     {
         return str_replace(['\\', '"'], ['\\\\', '\\"'], preg_quote($value, '#'));
     }
+
+    /**
+     * v7's Apache has a third: forceHttps.conf, which both of the site's
+     * vhosts load ({@see parent::siteConfFiles()}).
+     */
+    protected function siteConfRules(): array
+    {
+        return parent::siteConfRules() + ['forceHttps.conf' => ['_force-https', 'forceHttps']];
+    }
 }

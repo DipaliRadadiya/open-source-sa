@@ -57,6 +57,16 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         $result = new ServerOpsResult(true, 'config-applied');
 
         foreach ($this->configFiles($application, $documentRoot) as $path => $contents) {
+            if ($this->isSiteConfPath($application, $path)) {
+                $written = $this->writeSiteConf($path, $contents, $context + ['op' => 'write_site_conf']);
+
+                if ($written->failed()) {
+                    return $written;
+                }
+
+                continue;
+            }
+
             if ($contents === null) {
                 $this->files->delete($this->enabledPathFor($path), $context + ['op' => 'remove_config']);
                 $this->files->delete($path, $context + ['op' => 'remove_config']);
@@ -100,7 +110,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     public function configFiles(Application $application, string $documentRoot): array
     {
         if (! $this->splitsSsl()) {
-            return [$this->configPath($application) => $this->renderConfig($application, $documentRoot)];
+            return [$this->configPath($application) => $this->renderSection($application, $documentRoot, null)]
+                + $this->siteConfFiles($application, $documentRoot);
         }
 
         $files = [$this->configPath($application) => $this->renderSection($application, $documentRoot, 'main')];
@@ -110,7 +121,102 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             $files[$path] = $path === $active ? $this->renderSection($application, $documentRoot, 'ssl') : null;
         }
 
+        return $files + $this->siteConfFiles($application, $documentRoot);
+    }
+
+    /**
+     * The site's bot blocker, 8G firewall and (Apache) force HTTPS, each in
+     * v7's own file in the site's conf folder (Dipali, 2026-11-11: v7's
+     * places), which the vhost includes as v7's does. Null for one that is
+     * off: the panel's own copy is then removed — v7's or the owner's never
+     * ({@see self::writeSiteConf()}; {@see V7Leftovers} moves v7's aside
+     * when the owner changes that setting).
+     *
+     * @return array<string, ?string>
+     */
+    public function siteConfFiles(Application $application, string $documentRoot): array
+    {
+        $rules = array_filter(
+            $this->siteConfRules(),
+            fn (array $rule) => View::exists("server.vhosts.{$this->name()}.{$rule[0]}"),
+        );
+
+        if ($rules === []) {
+            return [];
+        }
+
+        $data = $this->viewData($application, $documentRoot);
+        $directory = $this->siteConfRulesDir($application);
+        $files = [];
+
+        foreach ($rules as $file => [$view, $key]) {
+            $files["{$directory}/{$file}"] = ! empty($data[$key])
+                ? View::make("server.vhosts.{$this->name()}.{$view}", $data)->render()
+                : null;
+        }
+
         return $files;
+    }
+
+    /**
+     * File name => [view, the view-data key that turns it on], v7's names.
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    protected function siteConfRules(): array
+    {
+        return [
+            '8g-firewall.conf' => ['_8g-firewall', 'waf'],
+            'ai-bot-blocker.conf' => ['_ai-bot-blocker', 'botBlock'],
+        ];
+    }
+
+    /** Where those files go: the conf folder itself on nginx and Apache. */
+    protected function siteConfRulesDir(Application $application): string
+    {
+        return $application->siteConfPath();
+    }
+
+    /** Whether a path from configFiles() is one of the site's conf-folder files. */
+    public function isSiteConfPath(Application $application, string $path): bool
+    {
+        return str_starts_with($path, rtrim($application->siteConfPath(), '/').'/');
+    }
+
+    /**
+     * Whether a conf-folder file's text is the panel's to replace: its own
+     * marker, or nothing at all (an empty file holds nothing to keep).
+     */
+    public static function siteConfIsOurs(string $contents): bool
+    {
+        return trim($contents) === '' || str_starts_with($contents, SharedConfigFile::MARKER);
+    }
+
+    /**
+     * Write or remove one of the site's conf-folder files — never one the
+     * panel did not write. Those names are v7's, so on a site from v7 the file
+     * is v7's own (or its owner's) and it stays as it is.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function writeSiteConf(string $path, ?string $contents, array $context): ServerOpsResult
+    {
+        $current = $this->files->get($path, $context);
+        $exists = $current->ok;
+
+        if ($exists && ! self::siteConfIsOurs($current->output())) {
+            return new ServerOpsResult(true, 'site-conf-not-ours');
+        }
+
+        if ($contents === null) {
+            return $exists ? $this->files->delete($path, $context) : new ServerOpsResult(true, 'site-conf-absent');
+        }
+
+        if ($exists && $current->output() === $contents) {
+            return new ServerOpsResult(true, 'site-conf-current');
+        }
+
+        return $this->files->put($path, $contents, $context);
     }
 
     /**
@@ -145,7 +251,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     public function link(string $availablePath, array $context = []): ServerOpsResult
     {
-        if (! $this->splitsSsl()) {
+        // Only a vhost in sites-available is linked; a site's conf-folder file
+        // is included by the vhost.
+        $available = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_available_dir"), '/');
+
+        if (! $this->splitsSsl() || dirname($availablePath) !== $available) {
             return new ServerOpsResult(true, 'no-link-required');
         }
 
@@ -460,10 +570,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     public function renderConfig(Application $application, string $documentRoot): string
     {
-        if (! $this->splitsSsl()) {
-            return $this->renderSection($application, $documentRoot, null);
-        }
-
+        // Every file the site's config is made of — its vhost (two, on the
+        // split layouts) and the rule files in its conf folder — in one text.
         return implode("\n", array_filter($this->configFiles($application, $documentRoot), fn (?string $contents) => $contents !== null));
     }
 
