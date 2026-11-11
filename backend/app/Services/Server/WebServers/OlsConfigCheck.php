@@ -4,6 +4,7 @@ namespace App\Services\Server\WebServers;
 
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Sleep;
 
 /**
  * `openlitespeed -t`, made capable of failing.
@@ -68,6 +69,18 @@ class OlsConfigCheck
         // that decision is below, where it can be explained.
         $result = $this->serverOps->run($this->command(), $context, expectedExitCodes: [1]);
 
+        // Killed, not answered. About six seconds after a graceful restart
+        // OpenLiteSpeed kills every `openlitespeed` process it finds, a test
+        // still running included (measured on 1.9.4, 2026-11-11: started 0 s
+        // and 4 s after `lswsctrl restart` it died with signal 9, 8 s after it
+        // ran). Every panel write that reloads and then tests again hit it —
+        // `sites:resync` refused the Cloudflare list on a fresh install that
+        // way. That says nothing about the config, so ask again.
+        for ($retry = 0; $retry < 2 && $this->killed($result); $retry++) {
+            Sleep::for(2)->seconds();
+            $result = $this->serverOps->run($this->command(), $context, expectedExitCodes: [1]);
+        }
+
         // Exit 1 is "the log had something in it, none of it an error" — the
         // log level in test mode is WARN, so this is a deprecation notice and
         // friends. Refusing here would turn a warning into a site that cannot
@@ -87,6 +100,17 @@ class OlsConfigCheck
         }
 
         return $result;
+    }
+
+    /**
+     * Ended by a signal. Symfony throws for a signalled process and ServerOps
+     * returns it with no process result at all — the same shape as a spawn
+     * that failed, which for this command (no working directory, an absolute
+     * path) asking again also does no harm. Not our own timeout or sudo.
+     */
+    private function killed(ServerOpsResult $result): bool
+    {
+        return ! $result->ok && $result->result === null && ! $result->timedOut && ! $result->denied && ! $result->busy;
     }
 
     /**
