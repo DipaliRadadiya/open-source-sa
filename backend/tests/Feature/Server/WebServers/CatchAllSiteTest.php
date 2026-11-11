@@ -28,11 +28,11 @@ function catchAllServer(string $webServer): void
  *
  * @param  array<string, string>  $files
  */
-function catchAllDisk(array $files = [], string $nginx = '1.28.3', bool $testPasses = true): ArrayObject
+function catchAllDisk(array $files = [], string $nginx = '1.28.3', bool $testPasses = true, array $stock = []): ArrayObject
 {
     $state = new ArrayObject(['files' => $files, 'links' => [], 'reloads' => 0, 'tests' => 0]);
 
-    Process::fake(function ($process) use ($state, $nginx, $testPasses) {
+    Process::fake(function ($process) use ($state, $nginx, $testPasses, $stock) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
         $files = $state['files'];
         $links = $state['links'];
@@ -63,8 +63,16 @@ function catchAllDisk(array $files = [], string $nginx = '1.28.3', bool $testPas
             })(),
             'test' => Process::result(exitCode: match ($args[1] ?? '') {
                 '-L' => isset($links[$args[2]]) ? 0 : 1,
+                '-e' => isset($links[$args[2]]) || isset($files[$args[2]]) ? 0 : 1,
                 default => 0,
             }),
+            'find' => in_array('%l', $args, true)
+                ? Process::result(output: $links[$args[1]] ?? '')
+                : Process::result(),
+            // The md5 dpkg keeps for each package conffile: `$stock` is the
+            // package's original text of a file.
+            'dpkg-query' => Process::result(output: collect($stock)
+                ->map(fn (string $text, string $path) => " {$path} ".md5($text))->implode("\n")),
             'nginx' => ($args[1] ?? '') === '-v'
                 ? Process::result(errorOutput: "nginx version: nginx/{$nginx} (Ubuntu)")
                 : (function () use ($state, $testPasses) {
@@ -94,22 +102,34 @@ function catchAllDisk(array $files = [], string $nginx = '1.28.3', bool $testPas
     return $state;
 }
 
-const NGINX_CATCH_ALL = '/etc/nginx/conf.d/panel-default-server.conf';
-const APACHE_CATCH_ALL = '/etc/apache2/conf-available/panel-default-site.conf';
-const APACHE_CATCH_ALL_LINK = '/etc/apache2/conf-enabled/panel-default-site.conf';
+// v7's names (Dipali, 2026-11-11): what v7 has, where v7 has it.
+const NGINX_CATCH_ALL = '/etc/nginx/sites-available/default';
+const NGINX_CATCH_ALL_SSL = '/etc/nginx/sites-available/000-default-ssl.conf';
+const NGINX_CATCH_ALL_LINK = '/etc/nginx/sites-enabled/default';
+const NGINX_CATCH_ALL_LEGACY = '/etc/nginx/conf.d/panel-default-server.conf';
+const APACHE_CATCH_ALL = '/etc/apache2/sites-available/000-default.conf';
+const APACHE_CATCH_ALL_SSL = '/etc/apache2/sites-available/000-default-ssl.conf';
+const APACHE_CATCH_ALL_LINK = '/etc/apache2/sites-enabled/000-default.conf';
+const APACHE_CATCH_ALL_SSL_LINK = '/etc/apache2/sites-enabled/000-default-ssl.conf';
+const APACHE_CATCH_ALL_LEGACY = '/etc/apache2/conf-available/panel-default-site.conf';
+
+/** v7's own default site, as it is on a real v7 nginx server. */
+const V7_NGINX_DEFAULT = "server {\n\tlisten 80 default_server;\n\troot /var/www/html;\n\tserver_name _;\n}\n";
 
 describe('nginx', function () {
     beforeEach(fn () => catchAllServer('nginx'));
 
-    it('answers unknown names itself, refusing the TLS handshake', function () {
+    it('answers unknown names itself, under v7\'s file names, refusing the TLS handshake', function () {
         $disk = catchAllDisk();
 
         expect(app(CatchAllSite::class)->ensure()['status'])->toBe('updated');
 
-        $config = $disk['files'][NGINX_CATCH_ALL];
-
-        expect($config)->toContain('listen 80 default_server;', 'listen [::]:443 ssl default_server;', 'ssl_reject_handshake on;', 'return 404;')
-            ->and($config)->not->toContain('ssl_certificate ')
+        expect($disk['files'][NGINX_CATCH_ALL])->toStartWith('# Managed by the panel')
+            ->toContain('listen 80 default_server;', 'return 404;')
+            ->not->toContain('443')
+            ->and($disk['files'][NGINX_CATCH_ALL_SSL])->toContain('listen [::]:443 ssl default_server;', 'ssl_reject_handshake on;')
+            ->not->toContain('ssl_certificate ')
+            ->and($disk['links'])->toMatchArray([NGINX_CATCH_ALL_LINK => NGINX_CATCH_ALL, '/etc/nginx/sites-enabled/000-default-ssl.conf' => NGINX_CATCH_ALL_SSL])
             ->and($disk['reloads'])->toBe(1);
     });
 
@@ -118,7 +138,7 @@ describe('nginx', function () {
 
         app(CatchAllSite::class)->ensure();
 
-        expect($disk['files'][NGINX_CATCH_ALL])->not->toContain('ssl_reject_handshake')
+        expect($disk['files'][NGINX_CATCH_ALL_SSL])->not->toContain('ssl_reject_handshake')
             ->toContain('.panel-tls-reject.crt', 'return 444;');
     });
 
@@ -131,20 +151,62 @@ describe('nginx', function () {
     });
 
     it('takes itself back out when the web server refuses it, and never reloads', function () {
-        // A server moved from v7 already has a default_server of its own.
         $disk = catchAllDisk(testPasses: false);
 
         expect(app(CatchAllSite::class)->ensure()['status'])->toBe('failed')
             ->and($disk['files'])->not->toHaveKey(NGINX_CATCH_ALL)
+            ->and($disk['files'])->not->toHaveKey(NGINX_CATCH_ALL_SSL)
+            ->and($disk['links'])->toBe([])
             ->and($disk['reloads'])->toBe(0);
     });
 
-    it('puts back the previous version when an update is refused', function () {
-        $disk = catchAllDisk([NGINX_CATCH_ALL => 'what was there'], testPasses: false);
+    it('writes over Ubuntu\'s untouched default site, and over its own', function () {
+        $stock = "server {\n\tlisten 80 default_server;\n\troot /var/www/html;\n}\n";
+        $disk = catchAllDisk([NGINX_CATCH_ALL => $stock], stock: [NGINX_CATCH_ALL => $stock]);
+
+        expect(app(CatchAllSite::class)->ensure()['status'])->toBe('updated')
+            ->and($disk['files'][NGINX_CATCH_ALL])->toStartWith('# Managed by the panel');
+    });
+
+    it('leaves v7\'s or the owner\'s own default exactly as it is, as on v7', function () {
+        // Ubuntu's file with one line changed is no longer the package's.
+        $disk = catchAllDisk(
+            [NGINX_CATCH_ALL => V7_NGINX_DEFAULT, NGINX_CATCH_ALL_LEGACY => 'the panel\'s earlier answer'],
+            stock: [NGINX_CATCH_ALL => V7_NGINX_DEFAULT."# changed\n"],
+        );
+
+        expect(app(CatchAllSite::class)->ensure()['status'])->toBe('skipped')
+            ->and($disk['files'][NGINX_CATCH_ALL])->toBe(V7_NGINX_DEFAULT)
+            ->and($disk['files'])->not->toHaveKey(NGINX_CATCH_ALL_SSL)
+            // Unknown names stay answered by what answered them.
+            ->and($disk['files'][NGINX_CATCH_ALL_LEGACY])->toBe('the panel\'s earlier answer')
+            ->and($disk['reloads'])->toBe(0);
+    });
+
+    it('leaves a file somebody put where the link goes', function () {
+        $disk = catchAllDisk([NGINX_CATCH_ALL_LINK => '# keeps the stock site out']);
+
+        expect(app(CatchAllSite::class)->ensure()['status'])->toBe('skipped')
+            ->and($disk['files'][NGINX_CATCH_ALL_LINK])->toBe('# keeps the stock site out');
+    });
+
+    it('moves its earlier answer to v7\'s names in one change', function () {
+        // Both at once would be two default_server blocks, which nginx refuses.
+        $disk = catchAllDisk([NGINX_CATCH_ALL_LEGACY => 'the panel\'s earlier answer']);
+
+        expect(app(CatchAllSite::class)->ensure()['status'])->toBe('updated')
+            ->and($disk['files'])->not->toHaveKey(NGINX_CATCH_ALL_LEGACY)
+            ->and($disk['files'])->toHaveKey(NGINX_CATCH_ALL)
+            ->and($disk['tests'])->toBe(1);
+    });
+
+    it('puts everything back when the move is refused', function () {
+        $disk = catchAllDisk([NGINX_CATCH_ALL_LEGACY => 'the panel\'s earlier answer'], testPasses: false);
 
         app(CatchAllSite::class)->ensure();
 
-        expect(trim($disk['files'][NGINX_CATCH_ALL]))->toBe('what was there');
+        expect(array_map('trim', $disk['files']))->toBe([NGINX_CATCH_ALL_LEGACY => 'the panel\'s earlier answer'])
+            ->and($disk['links'])->toBe([]);
     });
 });
 
@@ -156,11 +218,10 @@ describe('Apache', function () {
 
         expect(app(CatchAllSite::class)->ensure()['status'])->toBe('updated');
 
-        expect($disk['links'][APACHE_CATCH_ALL_LINK] ?? null)->toBe(APACHE_CATCH_ALL)
-            ->and($disk['files'][APACHE_CATCH_ALL])->toContain(
-                '<VirtualHost *:80>', '<VirtualHost *:443>', 'ServerName panel-default.invalid',
-                'Require all denied', '.panel-tls-reject.crt', '<IfModule ssl_module>',
-            );
+        expect($disk['links'])->toMatchArray([APACHE_CATCH_ALL_LINK => APACHE_CATCH_ALL, APACHE_CATCH_ALL_SSL_LINK => APACHE_CATCH_ALL_SSL])
+            ->and($disk['files'][APACHE_CATCH_ALL])->toContain('<VirtualHost *:80>', 'ServerName panel-default.invalid', 'Require all denied')
+            ->not->toContain('<VirtualHost *:443>')
+            ->and($disk['files'][APACHE_CATCH_ALL_SSL])->toContain('<VirtualHost *:443>', '.panel-tls-reject.crt', '<IfModule ssl_module>');
     });
 
     it('re-links a file someone disabled', function () {
@@ -174,13 +235,22 @@ describe('Apache', function () {
             ->and($disk['links'])->toHaveKey(APACHE_CATCH_ALL_LINK);
     });
 
-    it('removes both the file and the link when refused', function () {
+    it('removes the files and the links when refused', function () {
         $disk = catchAllDisk(testPasses: false);
 
         app(CatchAllSite::class)->ensure();
 
-        expect($disk['files'])->not->toHaveKey(APACHE_CATCH_ALL)
-            ->and($disk['links'])->not->toHaveKey(APACHE_CATCH_ALL_LINK);
+        expect($disk['files'])->toBe([])
+            ->and($disk['links'])->toBe([]);
+    });
+
+    it('takes over Ubuntu\'s untouched 000-default.conf and drops its earlier conf-enabled copy', function () {
+        $stock = "<VirtualHost *:80>\n\tDocumentRoot /var/www/html\n</VirtualHost>\n";
+        $disk = catchAllDisk([APACHE_CATCH_ALL => $stock, APACHE_CATCH_ALL_LEGACY => 'earlier'], stock: [APACHE_CATCH_ALL => $stock]);
+
+        expect(app(CatchAllSite::class)->ensure()['status'])->toBe('updated')
+            ->and($disk['files'][APACHE_CATCH_ALL])->toContain('panel-default.invalid')
+            ->and($disk['files'])->not->toHaveKey(APACHE_CATCH_ALL_LEGACY);
     });
 });
 

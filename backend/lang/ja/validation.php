@@ -264,6 +264,7 @@ return [
     'application_domain_use_endpoint' => 'ドメインは Domains ページ (/applications/{id}/domains) で変更してください。Web サーバーの設定と証明書もあわせて更新されます。',
     'site_name_taken_pool' => 'このサーバーには、パネルが作成したものではない「:name.conf」という PHP プールファイルがすでにあります。別の名前を選んでください。',
     'site_name_taken_vhost' => 'このサーバーには、パネルが作成したものではない「:name」というウェブサーバー設定がすでにあります（パネル自身の設定もその一つです）。別の名前を選んでください。',
+    'site_name_taken_vhost_order' => 'このサーバーでは「:name」という名前のサイトは Apache の既定サイトより前に並び、未知のすべてのドメインに応答してしまいます。英字、または 0 以外の数字で始まる名前を選んでください。',
 
     'webhook_secret_min' => 'Webhook のシークレットは 16 文字以上で入力してください。',
 

@@ -299,6 +299,7 @@ return [
     'application_domain_use_endpoint' => 'Change the domain on the Domains page (/applications/{id}/domains), which also updates the web server configuration and the certificate.',
     'site_name_taken_pool' => 'This server already has a PHP pool file called “:name.conf” that the panel did not create. Choose a different name.',
     'site_name_taken_vhost' => 'This server already has a web server configuration called “:name” that the panel did not create — the panel\'s own is one of them. Choose a different name.',
+    'site_name_taken_vhost_order' => 'On this server a site named “:name” would sort before Apache\'s default site and answer for every unknown domain. Choose a name that starts with a letter, or a digit other than 0.',
 
     'webhook_secret_min' => 'The webhook secret must be at least 16 characters.',
 

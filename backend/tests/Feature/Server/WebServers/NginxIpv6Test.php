@@ -96,7 +96,8 @@ it('leaves IPv6 out of the catch-all too', function () {
 
     expect(app(CatchAllSite::class)->ensure()['status'])->toBe('updated');
 
-    $catchAll = collect($written)->first(fn (string $contents) => str_contains($contents, 'default_server'));
+    // Two files now, under v7's names: port 80 in `default`, 443 beside it.
+    $catchAll = collect($written)->filter(fn (string $contents) => str_contains($contents, 'default_server'))->implode("\n");
 
     expect($catchAll)->toContain('listen 80 default_server;', 'listen 443 ssl default_server;')
         ->not->toContain('[::]');
@@ -193,9 +194,14 @@ it('renders the IPv6 config minus its [::] lines when the host has no IPv6', fun
 it('keeps both catch-all listens where the host has IPv6, and drops only [::] where it has not', function () {
     nginxAt('1.24.0');
 
-    $withIpv6 = View::make('server.vhosts.nginx._catch-all', (fn () => $this->catchAllViewData())->call(app(NginxDriver::class)))->render();
+    $render = fn () => collect(['main', 'ssl'])->map(fn (string $section) => View::make(
+        'server.vhosts.nginx._catch-all',
+        (fn () => $this->catchAllViewData())->call(app(NginxDriver::class)) + ['section' => $section],
+    )->render())->implode("\n");
+
+    $withIpv6 = $render();
     withoutIpv6();
-    $withoutIpv6 = View::make('server.vhosts.nginx._catch-all', (fn () => $this->catchAllViewData())->call(app(NginxDriver::class)))->render();
+    $withoutIpv6 = $render();
 
     expect($withIpv6)->toContain('listen [::]:80 default_server;', 'listen [::]:443 ssl default_server;')
         ->and($withoutIpv6)->toBe(implode("\n", array_filter(

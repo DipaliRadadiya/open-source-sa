@@ -116,20 +116,24 @@ function realIpDisk(array $files = [], bool $testPasses = true, bool $stopFails 
     return $state;
 }
 
-const STOCK_NGINX_CONF = "http {\n\tgzip on;\n\n\t# gzip_vary on;\n\t# gzip_types text/plain text/css;\n\tinclude /etc/nginx/conf.d/*.conf;\n}\n";
-const V7_NGINX_CONF = "http {\n\tgzip on;\n\tgzip_vary on;\n\tgzip_proxied any;\n\tgzip_comp_level 6;\n\tgzip_buffers 16 8k;\n\tgzip_http_version 1.1;\n\tgzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;\n}\n";
+/** Ubuntu's nginx.conf gzip section, as the package ships it. */
+const STOCK_NGINX_CONF = "http {\n\tgzip on;\n\n\t# gzip_vary on;\n\t# gzip_proxied any;\n\t# gzip_comp_level 6;\n\t# gzip_buffers 16 8k;\n\t# gzip_http_version 1.1;\n\t# gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;\n\n\tinclude /etc/nginx/conf.d/*.conf;\n}\n";
+/** The same section on a real v7 server: five lines switched on, gzip_vary still off. */
+const V7_NGINX_CONF = "http {\n\tgzip on;\n\n\t# gzip_vary on;\n\tgzip_proxied any;\n\tgzip_comp_level 6;\n\tgzip_buffers 16 8k;\n\tgzip_http_version 1.1;\n\tgzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;\n\n\tinclude /etc/nginx/conf.d/*.conf;\n}\n";
 const OLS_CONF = "serverName\n\naccessControl{\n\tallow                                   ALL\n\tdeny\n}\n \nextProcessor lsphp{\n}\n";
+const V7_NGINX_REMOTEIP = "real_ip_header CF-Connecting-IP;\n\nset_real_ip_from  173.245.48.0/20;\n";
 
 describe('Cloudflare visitor address', function () {
-    it('trusts Cloudflare\'s IPv4 and IPv6 ranges on nginx, once', function () {
+    it('trusts Cloudflare\'s IPv4 and IPv6 ranges on nginx in v7\'s file, once', function () {
         realIpServer('nginx');
         $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF]);
 
         expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('updated');
 
-        $config = $disk['files']['/etc/nginx/conf.d/panel-real-ip.conf'];
+        $config = $disk['files']['/etc/nginx/conf.d/remoteip.conf'];
 
-        expect($config)->toContain('real_ip_header CF-Connecting-IP;', 'set_real_ip_from 173.245.48.0/20;', 'set_real_ip_from 2606:4700::/32;')
+        expect($config)->toStartWith('# Managed by the panel')
+            ->toContain('real_ip_header CF-Connecting-IP;', 'set_real_ip_from 173.245.48.0/20;', 'set_real_ip_from 2606:4700::/32;')
             ->and($disk['reloads'])->toBe(1);
 
         // Nothing to do the second time, so nothing reloaded.
@@ -137,16 +141,32 @@ describe('Cloudflare visitor address', function () {
             ->and($disk['reloads'])->toBe(1);
     });
 
-    it('leaves a v7 nginx server, which already sets it, as it is', function () {
+    it('leaves v7\'s own remoteip.conf as it is', function () {
         realIpServer('nginx');
-        $disk = realIpDisk([
-            '/etc/nginx/nginx.conf' => STOCK_NGINX_CONF,
-            '/etc/nginx/conf.d/remoteip.conf' => "real_ip_header CF-Connecting-IP;\n\nset_real_ip_from  173.245.48.0/20;\n",
-        ]);
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF, '/etc/nginx/conf.d/remoteip.conf' => V7_NGINX_REMOTEIP]);
 
         expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('skipped')
-            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-real-ip.conf')
+            ->and($disk['files']['/etc/nginx/conf.d/remoteip.conf'])->toBe(V7_NGINX_REMOTEIP)
             ->and($disk['reloads'])->toBe(0);
+    });
+
+    it('leaves a server whose owner set the header in another file', function () {
+        realIpServer('nginx');
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF, '/etc/nginx/conf.d/my-proxy.conf' => "real_ip_header X-Real-IP;\n"]);
+
+        expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('skipped')
+            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/remoteip.conf');
+    });
+
+    it('moves the panel\'s earlier panel-real-ip.conf to v7\'s name in one change', function () {
+        // Both at once would be two real_ip_header lines, which nginx refuses.
+        realIpServer('nginx');
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF, '/etc/nginx/conf.d/panel-real-ip.conf' => "# Managed by the panel\nreal_ip_header CF-Connecting-IP;\n"]);
+
+        expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('updated')
+            ->and($disk['files'])->toHaveKey('/etc/nginx/conf.d/remoteip.conf')
+            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-real-ip.conf')
+            ->and($disk['tests'])->toBe(1);
     });
 
     it('takes the file away again when nginx refuses it', function () {
@@ -154,28 +174,34 @@ describe('Cloudflare visitor address', function () {
         $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF], testPasses: false);
 
         expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('failed')
-            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-real-ip.conf')
+            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/remoteip.conf')
             ->and($disk['reloads'])->toBe(0);
     });
 
-    it('trusts Cloudflare on Apache through mod_remoteip, inert without the module', function () {
+    it('trusts Cloudflare on Apache in v7\'s conf-enabled/remoteip.conf, inert without the module', function () {
         realIpServer('apache');
-        $disk = realIpDisk();
+        $disk = realIpDisk([
+            '/etc/apache2/conf-available/panel-real-ip.conf' => "# Managed by the panel\n",
+        ]);
+        $disk['links'] = ['/etc/apache2/conf-enabled/panel-real-ip.conf' => '/etc/apache2/conf-available/panel-real-ip.conf'];
 
         expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('updated');
 
-        $config = $disk['files']['/etc/apache2/conf-available/panel-real-ip.conf'];
+        $config = $disk['files']['/etc/apache2/conf-enabled/remoteip.conf'];
 
         expect($config)->toContain('<IfModule remoteip_module>', 'RemoteIPHeader CF-Connecting-IP', 'RemoteIPTrustedProxy 104.16.0.0/13', 'RemoteIPTrustedProxy 2400:cb00::/32')
-            ->and($disk['links'])->toHaveKey('/etc/apache2/conf-enabled/panel-real-ip.conf');
+            // The panel's earlier copy is gone, file and link.
+            ->and($disk['files'])->not->toHaveKey('/etc/apache2/conf-available/panel-real-ip.conf')
+            ->and($disk['links'])->not->toHaveKey('/etc/apache2/conf-enabled/panel-real-ip.conf');
     });
 
-    it('leaves a v7 Apache server, which already sets it, as it is', function () {
+    it('leaves v7\'s Apache remoteip.conf as it is', function () {
         realIpServer('apache');
-        $disk = realIpDisk(['/etc/apache2/conf-enabled/remoteip.conf' => "RemoteIPHeader CF-Connecting-IP\n\nRemoteIPTrustedProxy 173.245.48.0/20\n"]);
+        $v7 = "RemoteIPHeader CF-Connecting-IP\n\nRemoteIPTrustedProxy 173.245.48.0/20\n";
+        $disk = realIpDisk(['/etc/apache2/conf-enabled/remoteip.conf' => $v7]);
 
         expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('skipped')
-            ->and($disk['files'])->not->toHaveKey('/etc/apache2/conf-available/panel-real-ip.conf');
+            ->and($disk['files']['/etc/apache2/conf-enabled/remoteip.conf'])->toBe($v7);
     });
 
     it('uses the header on OpenLiteSpeed from Cloudflare only, never from anyone', function () {
@@ -233,46 +259,62 @@ describe('Cloudflare visitor address', function () {
 });
 
 describe('nginx compression', function () {
-    it('compresses text, scripts and data as v7 does', function () {
+    it('switches on Ubuntu\'s own gzip lines in nginx.conf, exactly as v7 has them', function () {
         realIpServer('nginx');
         $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF]);
 
-        expect(app(NginxCompression::class)->ensure()['status'])->toBe('updated');
-
-        $config = $disk['files']['/etc/nginx/conf.d/panel-gzip.conf'];
-
-        expect($config)->toContain('gzip_comp_level 6;', 'gzip_proxied any;', 'gzip_vary on;', 'gzip_types text/plain text/css application/json application/javascript')
-            // nginx.conf already says `gzip on`; a second one is a duplicate.
-            ->and($config)->not->toMatch('/^gzip on;/m');
+        expect(app(NginxCompression::class)->ensure()['status'])->toBe('updated')
+            ->and($disk['files']['/etc/nginx/nginx.conf'])->toBe(V7_NGINX_CONF)
+            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-gzip.conf');
 
         expect(app(NginxCompression::class)->ensure()['status'])->toBe('current');
     });
 
-    it('writes nothing on a v7 server, whose nginx.conf has them all', function () {
+    it('changes nothing on a v7 server', function () {
         realIpServer('nginx');
         $disk = realIpDisk(['/etc/nginx/nginx.conf' => V7_NGINX_CONF]);
 
-        expect(app(NginxCompression::class)->ensure()['status'])->toBe('skipped')
-            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-gzip.conf')
+        expect(app(NginxCompression::class)->ensure()['status'])->toBe('current')
+            ->and($disk['files']['/etc/nginx/nginx.conf'])->toBe(V7_NGINX_CONF)
             ->and($disk['reloads'])->toBe(0);
     });
 
-    it('writes only the lines nginx.conf does not already set', function () {
+    it('moves the panel\'s earlier panel-gzip.conf into nginx.conf in one change', function () {
         realIpServer('nginx');
-        $disk = realIpDisk(['/etc/nginx/nginx.conf' => str_replace("\t# gzip_types text/plain text/css;", "\tgzip_types text/plain;", STOCK_NGINX_CONF)]);
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF, '/etc/nginx/conf.d/panel-gzip.conf' => "# Managed by the panel\ngzip_vary on;\ngzip_comp_level 6;\n"]);
+
+        expect(app(NginxCompression::class)->ensure()['status'])->toBe('updated')
+            ->and($disk['files']['/etc/nginx/nginx.conf'])->toBe(V7_NGINX_CONF)
+            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-gzip.conf')
+            ->and($disk['tests'])->toBe(1);
+    });
+
+    it('adds a missing line under gzip on, and leaves one the owner set', function () {
+        realIpServer('nginx');
+        $conf = str_replace(["\t# gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;\n", "\t# gzip_comp_level 6;\n"], ['', "\tgzip_comp_level 2;\n"], STOCK_NGINX_CONF);
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => $conf]);
 
         app(NginxCompression::class)->ensure();
 
-        expect($disk['files']['/etc/nginx/conf.d/panel-gzip.conf'])->toContain('gzip_vary on;')
-            ->not->toContain('gzip_types');
+        expect($disk['files']['/etc/nginx/nginx.conf'])->toContain("\tgzip on;\n\tgzip_types text/plain text/css", "\tgzip_comp_level 2;\n")
+            ->not->toContain('gzip_comp_level 6');
     });
 
     it('leaves gzip off alone', function () {
         realIpServer('nginx');
-        $disk = realIpDisk(['/etc/nginx/nginx.conf' => str_replace('gzip on;', 'gzip off;', STOCK_NGINX_CONF)]);
+        $conf = str_replace('gzip on;', 'gzip off;', STOCK_NGINX_CONF);
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => $conf]);
 
         expect(app(NginxCompression::class)->ensure()['status'])->toBe('skipped')
-            ->and($disk['files'])->not->toHaveKey('/etc/nginx/conf.d/panel-gzip.conf');
+            ->and($disk['files']['/etc/nginx/nginx.conf'])->toBe($conf);
+    });
+
+    it('puts nginx.conf back when nginx refuses the change', function () {
+        realIpServer('nginx');
+        $disk = realIpDisk(['/etc/nginx/nginx.conf' => STOCK_NGINX_CONF], testPasses: false);
+
+        expect(app(NginxCompression::class)->ensure()['status'])->toBe('failed')
+            ->and($disk['files']['/etc/nginx/nginx.conf'])->toBe(STOCK_NGINX_CONF);
     });
 
     it('does nothing on Apache or OpenLiteSpeed, which already compress', function (string $webServer) {

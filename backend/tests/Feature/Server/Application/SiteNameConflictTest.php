@@ -329,3 +329,27 @@ it('gives up on the disk rather than looping forever', function () {
 
     expect($slug)->toBe('www-'.(Application::SLUG_DISK_ATTEMPTS + 1));
 });
+
+it('refuses on Apache a name that would sort before its default site, and nowhere else', function () {
+    // Apache answers an unknown name with the first vhost it loads, in file
+    // order, and the panel's answer is v7's 000-default.conf. `00-shop.conf`
+    // would load first and serve every domain this server does not.
+    expect(conflictFor('00-shop'))->toBeNull();
+
+    ServerCapability::query()->delete();
+    ServerCapability::create(['stack' => 'lamp', 'web_server' => 'apache', 'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now()]);
+    app()->forgetInstance(ServerCapabilities::class);
+    app()->forgetInstance(WebServerManager::class);
+
+    expect(conflictFor('00-shop'))->toBe('vhost_order')
+        ->and(conflictFor('000-a'))->toBe('vhost_order')
+        ->and(conflictFor('00'))->toBe('vhost_order')
+        // After it: a digit other than 0 first, a letter, or 0 then a letter.
+        ->and(conflictFor('1shop'))->toBeNull()
+        ->and(conflictFor('0shop'))->toBeNull()
+        ->and(conflictFor('shop'))->toBeNull();
+
+    $this->actingAs($this->admin)->postJson('/api/applications', [
+        'name' => '00-shop', 'site_type' => 'php', 'domain' => 'shop.test', 'system_user_id' => $this->systemUser->id,
+    ])->assertUnprocessable()->assertJsonValidationErrors(['name']);
+});

@@ -16,11 +16,19 @@ namespace App\Services\Server\WebServers;
  * every web server.
  *
  * Run by `sites:resync` (install, every update, the manual deploy runbook).
- * A server that already sets this itself — every server moved from v7 — is
- * left as it is.
+ * Written where v7 writes it, under v7's name; on a server that comes from v7
+ * that file is v7's and is left as it is, as is a server whose owner set the
+ * header anywhere else.
  */
 class CloudflareRealIp
 {
+    /** Where the panel wrote these before it used v7's names (2026-11-11). */
+    private const LEGACY_NGINX = '/etc/nginx/conf.d/panel-real-ip.conf';
+
+    private const LEGACY_APACHE = '/etc/apache2/conf-available/panel-real-ip.conf';
+
+    private const LEGACY_APACHE_LINK = '/etc/apache2/conf-enabled/panel-real-ip.conf';
+
     public function __construct(
         private WebServerManager $webServers,
         private SharedConfigFile $shared,
@@ -60,29 +68,48 @@ class CloudflareRealIp
         if ($driver->name() === 'nginx') {
             $path = (string) config('server.web_server_drivers.nginx.real_ip');
 
-            // A second `real_ip_header` is a duplicate nginx refuses.
-            $others = $this->shared->otherConfigs([(string) config('server.web_server_drivers.nginx.config_path')], [dirname($path)], [$path], $context);
-
-            if (preg_match('/^\s*real_ip_header\s/m', $others) === 1) {
-                return ['status' => 'skipped', 'reference' => null];
-            }
-
-            return $this->shared->publish($path, $this->nginx($ranges), null, $context);
+            return $this->writeUnlessSetElsewhere($path, $this->nginx($ranges), '/^\s*real_ip_header\s/m',
+                [(string) config('server.web_server_drivers.nginx.config_path')], [dirname($path)],
+                [self::LEGACY_NGINX => null], [], $context);
         }
 
         if ($driver->name() === 'apache') {
             $path = (string) config('server.web_server_drivers.apache.real_ip');
-            $enabledDir = (string) config('server.web_server_drivers.apache.catch_all_enabled_dir');
-            $enabled = $enabledDir.'/'.basename($path);
 
-            if (preg_match('/^\s*RemoteIPHeader\s/mi', $this->shared->otherConfigs([], [$enabledDir], [$enabled], $context)) === 1) {
-                return ['status' => 'skipped', 'reference' => null];
-            }
-
-            return $this->shared->publish($path, $this->apache($ranges), $enabled, $context);
+            return $this->writeUnlessSetElsewhere($path, $this->apache($ranges), '/^\s*RemoteIPHeader\s/mi',
+                [], [dirname($path)],
+                [self::LEGACY_APACHE => null], [self::LEGACY_APACHE_LINK => null], $context);
         }
 
         return ['status' => 'skipped', 'reference' => null];
+    }
+
+    /**
+     * Write `$path` — v7's own file name — unless that file is v7's or the
+     * owner's ({@see SharedConfigFile::ownership()}), or another file already
+     * sets the header (a second one is a duplicate the web server refuses).
+     * The panel's earlier name for it goes in the same change.
+     *
+     * @param  array<int, string>  $files
+     * @param  array<int, string>  $dirs
+     * @param  array<string, null>  $legacyFiles
+     * @param  array<string, null>  $legacyLinks
+     * @param  array<string, mixed>  $context
+     * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
+     */
+    private function writeUnlessSetElsewhere(string $path, string $contents, string $pattern, array $files, array $dirs, array $legacyFiles, array $legacyLinks, array $context): array
+    {
+        if ($this->shared->ownership($path, null, $context) === 'foreign') {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $except = array_merge([$path], array_keys($legacyFiles), array_keys($legacyLinks));
+
+        if (preg_match($pattern, $this->shared->otherConfigs($files, $dirs, $except, $context)) === 1) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        return $this->shared->apply([$path => $contents] + $legacyFiles, $legacyLinks, $context);
     }
 
     /** @return array<int, string> */
@@ -97,7 +124,7 @@ class CloudflareRealIp
     /** @param  array<int, string>  $ranges */
     private function nginx(array $ranges): string
     {
-        $lines = ['# Managed by the panel: the visitor\'s own address behind Cloudflare.', 'real_ip_header CF-Connecting-IP;'];
+        $lines = [SharedConfigFile::MARKER.': the visitor\'s own address behind Cloudflare.', 'real_ip_header CF-Connecting-IP;'];
 
         foreach ($ranges as $range) {
             $lines[] = "set_real_ip_from {$range};";
@@ -111,7 +138,7 @@ class CloudflareRealIp
     {
         // Inert until mod_remoteip is enabled (install.sh and the updater do),
         // so the file can never stop Apache from starting.
-        $lines = ['# Managed by the panel: the visitor\'s own address behind Cloudflare.', '<IfModule remoteip_module>', '    RemoteIPHeader CF-Connecting-IP'];
+        $lines = [SharedConfigFile::MARKER.': the visitor\'s own address behind Cloudflare.', '<IfModule remoteip_module>', '    RemoteIPHeader CF-Connecting-IP'];
 
         foreach ($ranges as $range) {
             $lines[] = "    RemoteIPTrustedProxy {$range}";

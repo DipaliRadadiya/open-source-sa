@@ -264,6 +264,7 @@ return [
     'application_domain_use_endpoint' => 'Die Domain wird auf der Domains-Seite geändert (/applications/{id}/domains), die auch die Webserver-Konfiguration und das Zertifikat aktualisiert.',
     'site_name_taken_pool' => 'Auf diesem Server gibt es bereits eine PHP-Pool-Datei namens „:name.conf“, die nicht vom Panel stammt. Wählen Sie einen anderen Namen.',
     'site_name_taken_vhost' => 'Auf diesem Server gibt es bereits eine Webserver-Konfiguration namens „:name“, die nicht vom Panel stammt — die des Panels selbst gehört dazu. Wählen Sie einen anderen Namen.',
+    'site_name_taken_vhost_order' => 'Auf diesem Server würde eine Website namens „:name“ vor der Standard-Website von Apache einsortiert und für jede unbekannte Domain antworten. Wählen Sie einen Namen, der mit einem Buchstaben oder einer Ziffer außer 0 beginnt.',
 
     'webhook_secret_min' => 'Das Webhook-Secret muss mindestens 16 Zeichen lang sein.',
 

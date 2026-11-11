@@ -15,9 +15,10 @@ use App\Services\Server\Certificates\CertificateFiles;
  * Run by `sites:resync`, so new installs, updates and the manual deploy
  * runbook all get it. Idempotent: nothing is written or reloaded when it is
  * already in place. Never takes the web server down: the config is tested
- * before the reload and put back as it was when the test fails — which is
- * what happens on a server that already has a default of its own (a server
- * moved from v7 has one), and that default is then left to serve.
+ * before the reload and put back as it was when the test fails.
+ *
+ * Under v7's file names (Dipali, 2026-11-11). A server moved from v7 has its
+ * own default in those files, and it is left to serve, as on v7.
  */
 class CatchAllSite
 {
@@ -58,7 +59,27 @@ class CatchAllSite
             return ['status' => 'skipped', 'reference' => null];
         }
 
-        return $this->shared->publish($config['path'], $config['contents'], $config['enabled'], $context);
+        // v7's names are files a server from v7 — or its owner — already has.
+        // Written only over nothing, the package's untouched original or the
+        // panel's own; anything else is the server's own default, and it stays
+        // (with the panel's earlier copy, so unknown names are still answered).
+        foreach (array_keys($config['files']) as $path) {
+            if ($this->shared->ownership($path, $config['package'], $context) === 'foreign') {
+                return ['status' => 'skipped', 'reference' => null];
+            }
+        }
+
+        foreach (array_keys($config['links']) as $link) {
+            if ($this->shared->occupied($link, $context)) {
+                return ['status' => 'skipped', 'reference' => null];
+            }
+        }
+
+        return $this->shared->apply(
+            $config['files'] + array_fill_keys($config['legacy'], null),
+            $config['links'],
+            $context,
+        );
     }
 
     /**
