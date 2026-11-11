@@ -43,6 +43,9 @@ test("empty filters are not sent, and only the access log offers the field filte
   assert.match(read("lib/api/application-logs.js"), /filter\(\(\[, value\]\) => value !== ""\)/);
   const panel = read("components/applications/logs/application-logs-panel.jsx");
   assert.match(panel, /const fieldFilters = current === "access";/);
+  // HTTPS logs: proxy hint on both, field filters still off until the API filters `access_ssl`.
+  assert.match(panel, /const PROXY_LOG_KEYS = new Set\(\["access", "error", "access_ssl", "error_ssl"\]\);/);
+  assert.match(panel, /const showProxyHint = hasAppOutput && PROXY_LOG_KEYS\.has\(current\);/);
   assert.match(panel, /fromAllowed=\{source\?\.kind === "file"\}/);
   // A different file has different line numbers and fields: switching tabs resets.
   assert.equal(panel.match(/setFilters\(EMPTY_LOG_FILTERS\);/g)?.length, 2);

@@ -40,7 +40,9 @@ const RANGE_LINK =
   "rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 // Sources whose lines carry an HTTP status; `waf_detect` uses `combined` format.
-const WEB_FORMAT_KEYS = new Set(["access", "waf_detect"]);
+const WEB_FORMAT_KEYS = new Set(["access", "access_ssl", "waf_detect"]);
+// The web server's own logs, HTTP and HTTPS: on a process site they describe the proxy.
+const PROXY_LOG_KEYS = new Set(["access", "error", "access_ssl", "error_ssl"]);
 const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
 
 export function ApplicationLogsPanel({
@@ -343,11 +345,11 @@ export function ApplicationLogsPanel({
     [current],
   );
 
-  // Reverse proxy hint: only on the proxy logs (access/error) of a process site.
-  const showProxyHint =
-    hasAppOutput && (current === "access" || current === "error");
+  // Reverse proxy hint: only on the proxy logs of a process site.
+  const showProxyHint = hasAppOutput && PROXY_LOG_KEYS.has(current);
 
   // IP, status, method and URL are parsed from the access log's format only.
+  // Not `access_ssl` yet: the API refuses field filters there (422 fields_unsupported).
   const fieldFilters = current === "access";
   const serverFiltered = Boolean(debouncedTerm) || hasFieldFilters(filters);
   // Pages only an unfiltered read: a filtered one searches 5,000 lines, not `lines`.

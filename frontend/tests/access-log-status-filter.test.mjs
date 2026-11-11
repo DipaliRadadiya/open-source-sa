@@ -9,8 +9,8 @@ const LOCALES = ["en", "es", "de", "fr", "hi", "pt", "ja", "ru"];
 
 // Reported 28 Oct: the Access log offered "Errors" and "Warnings", levels a request log does not have.
 test("only request logs count as access logs; the web servers' error logs do not", () => {
-  for (const key of ["access", "nginx_access", "apache_access", "openlitespeed_access", "waf_detect"]) assert.ok(isAccessLog(key), key);
-  for (const key of ["error", "nginx_error", "apache_error", "php_fpm", "access_log_old", undefined, null]) assert.ok(!isAccessLog(key), String(key));
+  for (const key of ["access", "access_ssl", "nginx_access", "apache_access", "openlitespeed_access", "waf_detect"]) assert.ok(isAccessLog(key), key);
+  for (const key of ["error", "error_ssl", "nginx_error", "apache_error", "php_fpm", "access_log_old", "access_ssl_old", undefined, null]) assert.ok(!isAccessLog(key), String(key));
 });
 
 test("on an access log the buckets are the HTTP status: 5xx, and 4xx + 5xx", () => {

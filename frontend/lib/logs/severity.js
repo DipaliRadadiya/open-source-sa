@@ -33,7 +33,7 @@ export function lineLevel(line, group) {
 // Request logs, whose only level is the HTTP status. By source, not group: System Logs files the web
 // servers' error logs under "web" too, and those do carry level words.
 export function isAccessLog(key) {
-  return typeof key === "string" && (/(^|_)access$/.test(key) || key === "waf_detect");
+  return typeof key === "string" && (/(^|_)access(_ssl)?$/.test(key) || key === "waf_detect");
 }
 
 // Severity filter buckets. "warnings" includes errors.

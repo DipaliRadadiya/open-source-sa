@@ -103,7 +103,7 @@ test("the detect log is graded as web format, because that is what it is", () =>
    * as null, so Errors and Warnings emptied the tab.
    */
   const panel = read("components/applications/logs/application-logs-panel.jsx");
-  assert.match(panel, /const WEB_FORMAT_KEYS = new Set\(\["access", "waf_detect"\]\)/);
+  assert.match(panel, /const WEB_FORMAT_KEYS = new Set\(\["access", "access_ssl", "waf_detect"\]\)/);
 
   // The behaviour, not just the constant — a real combined line, both ways.
   const line =

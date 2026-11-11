@@ -12,6 +12,8 @@ test("Live is remembered per source, defaults where the reader never chose", () 
   assert.equal(followFor("access", prefs), true);
   assert.equal(followFor("application", {}), true, "default for a quiet source");
   assert.equal(followFor("access", {}), false, "the busy access log opens paused");
+  assert.equal(followFor("error_ssl", {}), true, "the HTTPS error log follows like the HTTP one");
+  assert.equal(followFor("access_ssl", {}), false, "the HTTPS access log opens paused like the HTTP one");
   assert.equal(serializeFollowPrefs({ error: true, access: false }), "error:on,access:off");
   assert.deepEqual(parseFollowPrefs("junk,<x>:on,error:maybe"), {}, "anything malformed is ignored");
 });

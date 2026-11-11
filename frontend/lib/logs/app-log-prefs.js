@@ -5,7 +5,7 @@ export const APP_LOG_FOLLOW_COOKIE = "sv_app_logs_follow";
 export const APP_LOG_LINES_COOKIE = "sv_app_logs_lines";
 
 // Sources that follow by default: low-volume, and read for "what just broke".
-export const AUTO_FOLLOW_KEYS = new Set(["error", "application", "application_error"]);
+export const AUTO_FOLLOW_KEYS = new Set(["error", "error_ssl", "application", "application_error"]);
 
 // "error:on,access:off" → { error: true, access: false }
 export function parseFollowPrefs(value) {
