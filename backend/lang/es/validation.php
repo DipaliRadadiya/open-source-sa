@@ -289,6 +289,7 @@ return [
     'application_domain_use_endpoint' => 'Cambia el dominio en la página Dominios (/applications/{id}/domains), que también actualiza la configuración del servidor web y el certificado.',
     'site_name_taken_pool' => 'Este servidor ya tiene un archivo de pool de PHP llamado «:name.conf» que no creó el panel. Elige otro nombre.',
     'site_name_taken_vhost' => 'Este servidor ya tiene una configuración del servidor web llamada «:name» que no creó el panel — la del propio panel es una de ellas. Elige otro nombre.',
+    'site_name_taken_vhost_order' => 'En este servidor, un sitio llamado «:name» quedaría antes que el sitio predeterminado de Apache y respondería a todos los dominios desconocidos. Elige un nombre que empiece por una letra o por un dígito distinto de 0.',
 
     'webhook_secret_min' => 'El secreto del webhook debe tener al menos 16 caracteres.',
 

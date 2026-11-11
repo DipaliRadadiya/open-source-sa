@@ -283,18 +283,33 @@ abstract class AbstractWebServerDriver implements WebServerDriver
 
     public function catchAllConfig(): ?array
     {
-        $path = (string) config("server.web_server_drivers.{$this->name()}.catch_all");
+        $key = "server.web_server_drivers.{$this->name()}";
+        $paths = array_filter([
+            'main' => (string) config("{$key}.catch_all"),
+            'ssl' => (string) config("{$key}.catch_all_ssl"),
+        ]);
 
-        if ($path === '' || ! View::exists("server.vhosts.{$this->name()}._catch-all")) {
+        if ($paths === [] || ! View::exists("server.vhosts.{$this->name()}._catch-all")) {
             return null;
         }
 
-        $enabledDir = (string) config("server.web_server_drivers.{$this->name()}.catch_all_enabled_dir");
+        $enabledDir = rtrim((string) config("{$key}.catch_all_enabled_dir"), '/');
+        $files = [];
+        $links = [];
+
+        foreach ($paths as $section => $path) {
+            $files[$path] = View::make("server.vhosts.{$this->name()}._catch-all", $this->catchAllViewData() + ['section' => $section])->render();
+
+            if ($enabledDir !== '') {
+                $links[$enabledDir.'/'.basename($path)] = $path;
+            }
+        }
 
         return [
-            'path' => $path,
-            'enabled' => $enabledDir === '' ? null : rtrim($enabledDir, '/').'/'.basename($path),
-            'contents' => View::make("server.vhosts.{$this->name()}._catch-all", $this->catchAllViewData())->render(),
+            'files' => $files,
+            'links' => $links,
+            'legacy' => array_values(array_map('strval', (array) config("{$key}.catch_all_legacy", []))),
+            'package' => config("{$key}.catch_all_package"),
         ];
     }
 

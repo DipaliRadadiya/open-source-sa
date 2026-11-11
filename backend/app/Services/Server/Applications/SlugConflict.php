@@ -82,6 +82,10 @@ class SlugConflict
             return null;
         }
 
+        if ($this->sortsBeforeDefault($slug)) {
+            return 'vhost_order';
+        }
+
         $listings = [];
 
         foreach ($this->targetsFor($slug) as $kind => $targets) {
@@ -93,6 +97,28 @@ class SlugConflict
         }
 
         return null;
+    }
+
+    /**
+     * Apache answers an unknown name with the first virtual host it loads for
+     * the port, in file-name order, and the panel's answer is v7's
+     * `000-default.conf` / `000-default-ssl.conf` in sites-enabled. A site
+     * whose file sorts before them — `00-shop.conf`, `000-a.conf` — would be
+     * loaded first and answer for every name this server does not serve.
+     * nginx chooses by `default_server` and OpenLiteSpeed by its listener
+     * map, so only Apache is asked.
+     */
+    private function sortsBeforeDefault(string $slug): bool
+    {
+        if ($this->webServers->driver()->name() !== 'apache') {
+            return false;
+        }
+
+        $main = basename((string) config('server.web_server_drivers.apache.catch_all'));
+        $ssl = basename((string) config('server.web_server_drivers.apache.catch_all_ssl'));
+
+        return ($main !== '' && strcmp($slug.'.conf', $main) < 0)
+            || ($ssl !== '' && (strcmp($slug.'-le-ssl.conf', $ssl) < 0 || strcmp($slug.'-ssl.conf', $ssl) < 0));
     }
 
     /**

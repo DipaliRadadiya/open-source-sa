@@ -1027,13 +1027,19 @@ return [
             'sites_available_dir' => env('SERVER_NGINX_SITES_AVAILABLE_DIR', '/etc/nginx/sites-available'),
             // Where the vhost templates point `access_log` / `error_log`.
             'log_dir' => env('SERVER_NGINX_LOG_DIR', '/var/log/nginx'),
-            // The answer for names no site claims (bug #55). conf.d is read
-            // before sites-enabled and needs no symlink.
-            'catch_all' => env('SERVER_NGINX_CATCH_ALL', '/etc/nginx/conf.d/panel-default-server.conf'),
+            // The answer for names no site claims (bug #55), under v7's names:
+            // port 80 in Ubuntu's own `default` (written only while it is the
+            // package's untouched file or the panel's), 443 beside it.
+            'catch_all' => env('SERVER_NGINX_CATCH_ALL', '/etc/nginx/sites-available/default'),
+            'catch_all_ssl' => env('SERVER_NGINX_CATCH_ALL_SSL', '/etc/nginx/sites-available/000-default-ssl.conf'),
+            'catch_all_enabled_dir' => env('SERVER_NGINX_CATCH_ALL_ENABLED_DIR', '/etc/nginx/sites-enabled'),
+            'catch_all_package' => 'nginx-common',
+            // Where it lived before v7's names; removed in the same change.
+            'catch_all_legacy' => ['/etc/nginx/conf.d/panel-default-server.conf'],
             // The visitor's own address behind Cloudflare, and compression of
             // more than HTML — both in v7's nginx, both http-level (CloudflareRealIp,
             // NginxCompression).
-            'real_ip' => env('SERVER_NGINX_REAL_IP', '/etc/nginx/conf.d/panel-real-ip.conf'),
+            'real_ip' => env('SERVER_NGINX_REAL_IP', '/etc/nginx/conf.d/remoteip.conf'),
             'compression' => env('SERVER_NGINX_COMPRESSION', '/etc/nginx/conf.d/panel-gzip.conf'),
             // Which PHP stack this web server implies — see `php_stacks`.
             'php_stack' => 'fpm',
@@ -1046,13 +1052,18 @@ return [
             // `${APACHE_LOG_DIR}` in the templates, resolved — Apache expands
             // it from envvars at start, which we cannot read.
             'log_dir' => env('SERVER_APACHE_LOG_DIR', '/var/log/apache2'),
-            // The answer for names no site claims (bug #55). conf-enabled is
-            // read before sites-enabled, so this is always the first vhost.
-            'catch_all' => env('SERVER_APACHE_CATCH_ALL', '/etc/apache2/conf-available/panel-default-site.conf'),
-            'catch_all_enabled_dir' => env('SERVER_APACHE_CATCH_ALL_ENABLED_DIR', '/etc/apache2/conf-enabled'),
-            // The visitor's own address behind Cloudflare (CloudflareRealIp),
-            // linked into catch_all_enabled_dir like the catch-all.
-            'real_ip' => env('SERVER_APACHE_REAL_IP', '/etc/apache2/conf-available/panel-real-ip.conf'),
+            // The answer for names no site claims (bug #55), under v7's names:
+            // 000-default.conf (Ubuntu's own, written only while it is the
+            // package's untouched file or the panel's) and 000-default-ssl.conf,
+            // first in sites-enabled. Apache takes the first vhost it loads.
+            'catch_all' => env('SERVER_APACHE_CATCH_ALL', '/etc/apache2/sites-available/000-default.conf'),
+            'catch_all_ssl' => env('SERVER_APACHE_CATCH_ALL_SSL', '/etc/apache2/sites-available/000-default-ssl.conf'),
+            'catch_all_enabled_dir' => env('SERVER_APACHE_CATCH_ALL_ENABLED_DIR', '/etc/apache2/sites-enabled'),
+            'catch_all_package' => 'apache2',
+            'catch_all_legacy' => ['/etc/apache2/conf-available/panel-default-site.conf', '/etc/apache2/conf-enabled/panel-default-site.conf'],
+            // The visitor's own address behind Cloudflare (CloudflareRealIp), in
+            // conf-enabled as v7 has it.
+            'real_ip' => env('SERVER_APACHE_REAL_IP', '/etc/apache2/conf-enabled/remoteip.conf'),
             'php_stack' => 'fpm',
         ],
 

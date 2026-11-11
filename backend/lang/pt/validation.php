@@ -266,6 +266,7 @@ return [
     'application_domain_use_endpoint' => 'Altere o domínio na página Domínios (/applications/{id}/domains), que também atualiza a configuração do servidor web e o certificado.',
     'site_name_taken_pool' => 'Este servidor já tem um ficheiro de pool PHP chamado «:name.conf» que não foi criado pelo painel. Escolha outro nome.',
     'site_name_taken_vhost' => 'Este servidor já tem uma configuração do servidor web chamada «:name» que não foi criada pelo painel — a do próprio painel é uma delas. Escolha outro nome.',
+    'site_name_taken_vhost_order' => 'Neste servidor, um site chamado «:name» ficaria antes do site padrão do Apache e responderia a todos os domínios desconhecidos. Escolha um nome que comece por uma letra ou por um dígito diferente de 0.',
 
     'webhook_secret_min' => 'O segredo do webhook deve ter pelo menos 16 caracteres.',
 

@@ -143,10 +143,12 @@ interface WebServerDriver
      * when this web server chooses its default some other way.
      *
      * Left to the web server, an unknown name went to the first site it
-     * loaded — a customer's site, with its certificate. `enabled` is the
-     * symlink the web server reads, when the file is not read where it lies.
+     * loaded — a customer's site, with its certificate. Under v7's file
+     * names: `files` path => contents, `links` the symlinks the web server
+     * reads them through, `legacy` the panel's earlier copies to remove, and
+     * `package` the one whose untouched conffile may be written over.
      *
-     * @return array{path: string, enabled: ?string, contents: string}|null
+     * @return array{files: array<string, string>, links: array<string, string>, legacy: list<string>, package: ?string}|null
      */
     public function catchAllConfig(): ?array;
 }
