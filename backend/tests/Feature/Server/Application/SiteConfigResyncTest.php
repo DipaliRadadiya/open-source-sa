@@ -431,7 +431,7 @@ it('enables Apache\'s caching and HTTP/2 modules on update, before the vhosts ar
     $update = PanelUpdate::create(['status' => PanelUpdateStatus::Pending, 'to_version' => '99.0.0']);
     $script = app(UpdateScript::class)->render($update, '99.0.0');
 
-    expect($script)->toContain('a2enmod -q expires http2')
-        ->and(strpos($script, 'a2enmod -q expires http2'))->toBeLessThan(strpos($script, 'artisan sites:resync'))
+    expect($script)->toContain('a2enmod -q expires http2 remoteip')
+        ->and(strpos($script, 'a2enmod -q expires http2 remoteip'))->toBeLessThan(strpos($script, 'artisan sites:resync'))
         ->and($script)->toContain('if [ -d /etc/apache2/mods-available ]; then');
 });

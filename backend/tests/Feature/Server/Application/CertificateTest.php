@@ -1249,7 +1249,7 @@ it('sends http to https before asking for the site password, whatever Force HTTP
     expect(renderedCertVhost($this->application->fresh(), $driver))->toContain($redirect);
 })->with([
     'nginx' => ['nginx', 'return 301 https://$host$request_uri;'],
-    'apache' => ['apache', 'RedirectMatch 301 ^/(?!\.well-known/acme-challenge/)(.*)$ https://shop.example.com/$1'],
+    'apache' => ['apache', 'RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]'],
     'openlitespeed' => ['openlitespeed', 'RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]'],
 ]);
 
