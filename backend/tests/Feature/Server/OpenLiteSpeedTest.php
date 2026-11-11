@@ -22,6 +22,7 @@ use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
@@ -873,6 +874,38 @@ describe('the driver', function () {
         app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         expect(collect($runs)->pluck('command'))->toContain(['mkdir', '-p', '/tmp/lshttpd']);
+    });
+
+    it('asks again when the config test is killed by a restart, not by the config', function () {
+        // About six seconds after a graceful restart OpenLiteSpeed kills every
+        // `openlitespeed` process, a running `-t` included (measured on 1.9.4).
+        $tests = 0;
+        Process::fake(function ($process) use (&$tests) {
+            if (in_array('/usr/local/lsws/bin/openlitespeed', $process->command, true)) {
+                if (++$tests === 1) {
+                    throw new Symfony\Component\Process\Exception\RuntimeException('The process has been signaled with signal "9".');
+                }
+            }
+
+            return Process::result();
+        });
+        Sleep::fake();
+
+        expect(app(OlsDriver::class)->test()->ok)->toBeTrue()
+            ->and($tests)->toBe(2);
+    });
+
+    it('still fails a config test that keeps being killed', function () {
+        Process::fake(function ($process) {
+            if (in_array('/usr/local/lsws/bin/openlitespeed', $process->command, true)) {
+                throw new Symfony\Component\Process\Exception\RuntimeException('The process has been signaled with signal "9".');
+            }
+
+            return Process::result();
+        });
+        Sleep::fake();
+
+        expect(app(OlsDriver::class)->test()->failed())->toBeTrue();
     });
 
     it('fails the config test on an error', function () {
