@@ -39,18 +39,20 @@ function realIpServer(string $webServer): void
  *
  * @param  array<string, string>  $files
  */
-function realIpDisk(array $files = [], bool $testPasses = true): ArrayObject
+function realIpDisk(array $files = [], bool $testPasses = true, bool $stopFails = false): ArrayObject
 {
-    $state = new ArrayObject(['files' => $files, 'links' => [], 'reloads' => 0, 'tests' => 0]);
+    $state = new ArrayObject(['files' => $files, 'links' => [], 'reloads' => 0, 'tests' => 0, 'ran' => []]);
 
-    Process::fake(function ($process) use ($state, $testPasses) {
+    Process::fake(function ($process) use ($state, $testPasses, $stopFails) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
         $files = $state['files'];
         $links = $state['links'];
+        $state['ran'] = [...$state['ran'], implode(' ', $args)];
         $isTest = in_array($args[0] ?? '', ['nginx', 'apache2ctl', 'apachectl', '/usr/local/lsws/bin/openlitespeed'], true)
             && ($args[1] ?? '') !== '-v';
 
         $result = match (true) {
+            $stopFails && $args === ['systemctl', 'stop', 'lshttpd'] => Process::result(exitCode: 1, errorOutput: 'refused'),
             $isTest => (function () use ($state, $testPasses) {
                 $state['tests']++;
 
@@ -188,8 +190,13 @@ describe('Cloudflare visitor address', function () {
         expect($config)->toMatch('/^useIpInProxyHeader\s+2$/m')
             ->and($config)->toMatch('/^\s*allow\s+ALL, 173\.245\.48\.0\/20T, .*2c0f:f248::\/32T$/m')
             ->and(substr_count($config, 'accessControl{'))->toBe(1)
-            ->and($disk['files'])->not->toHaveKey('/usr/local/lsws/conf/httpd_config.conf.panel-bak')
-            ->and($disk['reloads'])->toBe(1);
+            // Last, where v7 has it: OpenLiteSpeed ignored it above accessControl.
+            ->and(trim(collect(explode("\n", trim($config)))->last()))->toBe('useIpInProxyHeader       2')
+            ->and($disk['files'])->not->toHaveKey('/usr/local/lsws/conf/httpd_config.conf.panel-bak');
+
+        // Cold: a graceful restart kept the old trusted list.
+        expect($disk['ran'])->toContain('systemctl stop lshttpd', 'systemctl start lshttpd')
+            ->and(collect($disk['ran'])->contains(fn (string $c) => str_contains($c, 'lswsctrl')))->toBeFalse();
 
         expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('current')
             ->and($disk['files']['/usr/local/lsws/conf/httpd_config.conf'])->toBe($config);
@@ -205,6 +212,15 @@ describe('Cloudflare visitor address', function () {
         'v7 sets 1' => [OLS_CONF."useIpInProxyHeader          1\n"],
         'allowed list is not ALL' => [str_replace('ALL', '192.0.2.0/24', OLS_CONF)],
     ]);
+
+    it('says so when OpenLiteSpeed cannot be restarted cold, and keeps it serving', function () {
+        realIpServer('openlitespeed');
+        $disk = realIpDisk(['/usr/local/lsws/conf/httpd_config.conf' => OLS_CONF], stopFails: true);
+
+        expect(app(CloudflareRealIp::class)->ensure()['status'])->toBe('restart_needed')
+            ->and($disk['ran'])->toContain('/usr/local/lsws/bin/lswsctrl restart')
+            ->and($disk['ran'])->not->toContain('systemctl start lshttpd');
+    });
 
     it('puts OpenLiteSpeed\'s config back when the test fails', function () {
         realIpServer('openlitespeed');
