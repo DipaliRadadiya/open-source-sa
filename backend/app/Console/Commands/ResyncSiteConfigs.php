@@ -138,6 +138,7 @@ class ResyncSiteConfigs extends Command
             'updated' => $this->info('Cloudflare visitor addresses: now used (web server reloaded).'),
             'current' => $this->info('Cloudflare visitor addresses: already used.'),
             'skipped' => $this->info('Cloudflare visitor addresses: left to the server\'s own setting.'),
+            'restart_needed' => $this->warn('Cloudflare visitor addresses: written, but OpenLiteSpeed could not be fully restarted; they apply at its next full restart.'),
             'failed' => $this->warn('Cloudflare visitor addresses: not changed — the web server refused it'
                 .($result['reference'] ? ' (reference '.$result['reference'].')' : '').'.'),
         };

@@ -892,6 +892,9 @@ class OlsSharedConfig
      * from v7 has 1), and one whose Allowed List is not open to ALL — adding
      * Cloudflare there would let it in.
      *
+     * Applied only by a cold restart (OlsColdRestart): after a graceful one
+     * OpenLiteSpeed kept the old trusted list.
+     *
      * @param  array<int, string>  $ranges
      * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
      */
@@ -958,8 +961,11 @@ class OlsSharedConfig
         $block = preg_replace('/^\s*allow\s+.*$/m', str_replace(['\\', '$'], ['\\\\', '\\$'], $line), $block, 1);
         $updated = substr($contents, 0, $open).$block.substr($contents, $close);
 
+        // At the end of the file, where v7 has it. Measured on OpenLiteSpeed
+        // 1.9.4 (2026-11-11): the same line just above `accessControl` was
+        // ignored, at either value.
         if (! $hasMode) {
-            $updated = substr($updated, 0, $start)."useIpInProxyHeader       2\n".substr($updated, $start);
+            $updated = rtrim($updated, "\n")."\nuseIpInProxyHeader       2\n";
         }
 
         $backup = $path.'.panel-bak';

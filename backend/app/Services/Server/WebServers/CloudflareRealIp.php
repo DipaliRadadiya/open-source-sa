@@ -25,10 +25,14 @@ class CloudflareRealIp
         private WebServerManager $webServers,
         private SharedConfigFile $shared,
         private OlsSharedConfig $olsConfig,
+        private OlsColdRestart $coldRestart,
     ) {}
 
     /**
-     * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
+     * `restart_needed`: written, but OpenLiteSpeed could not be restarted cold,
+     * so it takes effect at its next full restart.
+     *
+     * @return array{status: 'updated'|'current'|'skipped'|'failed'|'restart_needed', reference: ?string}
      */
     public function ensure(): array
     {
@@ -43,8 +47,11 @@ class CloudflareRealIp
         if ($driver->name() === 'openlitespeed') {
             $result = $this->olsConfig->trustProxies($ranges);
 
-            if ($result['status'] === 'updated') {
+            // A graceful restart keeps the old trusted list (OlsColdRestart).
+            if ($result['status'] === 'updated' && ! $this->coldRestart->run()) {
                 $driver->reload();
+
+                return ['status' => 'restart_needed', 'reference' => null];
             }
 
             return $result;
