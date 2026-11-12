@@ -147,12 +147,13 @@ export const phpCommonSettingsSchema = z.object({
 });
 
 // Mirrors the request's rules; empty means "leave as it is".
-const optionalInt = (min, max) =>
-  z.union([z.literal(""), z.coerce.number().int().min(min).max(max)]);
+// Message keys, as in php-settings.js: Zod's own text is English and technical.
+const optionalInt = (min, max, range) =>
+  z.union([z.literal("", { error: "integer" }), z.coerce.number({ error: "integer" }).int("integer").min(min, range).max(max, range)], { error: "integer" });
 export const phpCommonSettingsFormSchema = z.object({
   memory_limit: z.union([z.literal(""), z.string().regex(/^(-1|\d+[KMG]?)$/i, "phpSize")]),
   upload_max_filesize: z.union([z.literal(""), z.string().regex(/^(-1|\d+[KMG]?)$/i, "phpSize")]),
-  max_execution_time: optionalInt(0, 3600),
-  max_input_time: optionalInt(-1, 3600),
-  max_input_vars: optionalInt(100, 100000),
+  max_execution_time: optionalInt(0, 3600, "rangeSeconds3600"),
+  max_input_time: optionalInt(-1, 3600, "rangeInputTime"),
+  max_input_vars: optionalInt(100, 100000, "rangeInputVars"),
 });

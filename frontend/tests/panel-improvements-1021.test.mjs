@@ -5,6 +5,7 @@ import path from "node:path";
 import { operationHref } from "../lib/operations/href.js";
 import { operationsResponseSchema, isActive } from "../lib/schemas/operation.js";
 import { phpCommonSettingsFormSchema } from "../lib/schemas/php.js";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const root = path.join(import.meta.dirname, "..");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
@@ -69,6 +70,21 @@ test("PHP settings: empty means unchanged, and values follow the API's rules", (
   assert.equal(phpCommonSettingsFormSchema.safeParse({ memory_limit: "512MB", upload_max_filesize: "", max_execution_time: "", max_input_time: "", max_input_vars: "" }).success, false);
   assert.equal(phpCommonSettingsFormSchema.safeParse({ memory_limit: "", upload_max_filesize: "", max_execution_time: "9999", max_input_time: "", max_input_vars: "" }).success, false);
   assert.equal(phpCommonSettingsFormSchema.safeParse({ memory_limit: "", upload_max_filesize: "", max_execution_time: "", max_input_time: "", max_input_vars: "50" }).success, false);
+});
+
+// QA 12 Nov: a number out of range read "Too big: expected number to be <=3600", Zod's own English.
+test("PHP settings: a wrong number names the allowed range in the reader's language", async () => {
+  const blank = { memory_limit: "", upload_max_filesize: "", max_execution_time: "", max_input_time: "", max_input_vars: "" };
+  const messages = (values) => phpCommonSettingsFormSchema.safeParse({ ...blank, ...values }).error.issues.map((i) => i.message);
+  const validation = JSON.parse(read("messages/en.json")).validation;
+  assert.deepEqual(messages({ max_execution_time: "9999" }), ["rangeSeconds3600"]);
+  assert.deepEqual(messages({ max_input_time: "-5" }), ["rangeInputTime"]);
+  assert.deepEqual(messages({ max_input_vars: "50" }), ["rangeInputVars"]);
+  assert.deepEqual(messages({ max_execution_time: "abc", max_input_vars: "1.5" }), ["integer", "integer"]);
+  // What the form shows comes through the resolver, which reports a union's first branch.
+  const shown = await zodResolver(phpCommonSettingsFormSchema)({ ...blank, max_input_time: "abc" }, undefined, { fields: {} });
+  assert.equal(shown.errors.max_input_time.message, "integer");
+  for (const key of ["rangeSeconds3600", "rangeInputTime", "rangeInputVars", "integer"]) assert.ok(validation[key], key);
 });
 
 test("PHP settings: the upload field raises post_max_size so uploads that size get through", () => {
