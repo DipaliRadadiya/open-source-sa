@@ -54,9 +54,9 @@ export function IgnoreListCard({ settings, canManage }) {
       setDraftError(t("settings.invalidIp"));
       return;
     }
+    // Said, not swallowed: a cleared field read as "added" (QA 12 Nov).
     if (ips.includes(ip)) {
-      setDraftError(null);
-      if (value === draft) setDraft("");
+      setDraftError(t("settings.alreadyListed", { ip }));
       return;
     }
     // Mirrors the API cap so the 101st entry fails here, not on the server.

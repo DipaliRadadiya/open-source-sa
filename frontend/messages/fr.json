@@ -1889,6 +1889,7 @@
       "saved": "Règles de bannissement enregistrées.",
       "failed": "Impossible d'enregistrer cela.",
       "ignoreAdded": "{ip} ajoutée. Fail2ban ne la bannira pas.",
+      "alreadyListed": "{ip} figure déjà dans cette liste.",
       "ignoreRemoved": "{ip} retirée de la liste.",
       "addMine": "Ajouter mon adresse",
       "yourIpMissing": "Votre adresse actuelle {ip} n’est pas exclue des bannissements.",

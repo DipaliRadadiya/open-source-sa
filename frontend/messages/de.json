@@ -1889,6 +1889,7 @@
       "saved": "Sperrregeln gespeichert.",
       "failed": "Das konnte nicht gespeichert werden.",
       "ignoreAdded": "{ip} hinzugefügt. Fail2ban sperrt sie nicht.",
+      "alreadyListed": "{ip} steht bereits auf dieser Liste.",
       "ignoreRemoved": "{ip} von der Liste entfernt.",
       "addMine": "Meine Adresse hinzufügen",
       "yourIpMissing": "Ihre aktuelle Adresse {ip} ist nicht von Sperren ausgenommen.",

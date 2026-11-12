@@ -195,8 +195,12 @@ test("Add checks the address here, then sends that one entry and re-reads the li
   const full = ignoreFixture(Array.from({ length: 100 }, (_, i) => `203.0.113.${i}`));
   await full.add("198.51.100.1");
   assert.equal(full.error, "settings.ignoreLimit");
+  // QA 12 Nov: an address already listed is said, not silently cleared; still no request,
+  // and it wins over "list is full" because nothing would be added.
+  full.draft = "203.0.113.2";
   await full.add("203.0.113.2");
-  assert.equal(full.error, null, "an existing address remains a no-op even at capacity");
+  assert.equal(full.error, "settings.alreadyListed");
+  assert.equal(full.draft, "203.0.113.2", "the typed address stays, so the reader sees what was refused");
   assert.deepEqual(full.calls, []);
 });
 

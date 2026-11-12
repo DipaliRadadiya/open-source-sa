@@ -1889,6 +1889,7 @@
       "saved": "Regras de banimento salvas.",
       "failed": "Não foi possível salvar.",
       "ignoreAdded": "{ip} adicionado. O Fail2ban não vai bani-lo.",
+      "alreadyListed": "{ip} já está nesta lista.",
       "ignoreRemoved": "{ip} removido da lista.",
       "addMine": "Adicionar meu endereço",
       "yourIpMissing": "Seu endereço atual {ip} não está excluído dos bloqueios.",

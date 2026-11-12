@@ -1889,6 +1889,7 @@
       "saved": "Ban rules saved.",
       "failed": "We could not save that.",
       "ignoreAdded": "{ip} added. Fail2ban will not ban it.",
+      "alreadyListed": "{ip} is already on this list.",
       "ignoreRemoved": "{ip} removed from the list.",
       "addMine": "Add my address",
       "yourIpMissing": "Your current address {ip} is not excluded from bans.",

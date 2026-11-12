@@ -1889,6 +1889,7 @@
       "saved": "ブロックルールを保存しました。",
       "failed": "保存できませんでした。",
       "ignoreAdded": "{ip} を追加しました。Fail2ban はこのアドレスをブロックしません。",
+      "alreadyListed": "{ip} はすでにこのリストにあります。",
       "ignoreRemoved": "{ip} をリストから削除しました。",
       "addMine": "現在のアドレスを追加",
       "yourIpMissing": "現在のアドレス {ip} はブロックの対象外ではありません。",

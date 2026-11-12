@@ -1889,6 +1889,7 @@
       "saved": "Reglas guardadas.",
       "failed": "No hemos podido guardarlo.",
       "ignoreAdded": "{ip} añadida. Fail2ban no la bloqueará.",
+      "alreadyListed": "{ip} ya está en esta lista.",
       "ignoreRemoved": "{ip} quitada de la lista.",
       "addMine": "Añadir mi dirección",
       "yourIpMissing": "Tu dirección actual {ip} no está excluida de los bloqueos.",
