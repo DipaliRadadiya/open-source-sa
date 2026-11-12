@@ -342,7 +342,8 @@ function currentConfigFor(Application $site): string
 
 it('restarts the web server for a grant, even when no config changed', function () {
     resyncOnOls();
-    $site = makeSite('one.test');
+    // No bot blocker, whose file in the conf folder this fake has not got.
+    $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
 
     $commands = fakeOlsResync(currentConfigFor($site), alreadyMember: false);
 
@@ -366,7 +367,8 @@ it('does not restart the web server when the account is already in the group', f
     // a grant that was made months ago — would be a worse bug than the one the
     // test above fixes.
     resyncOnOls();
-    $site = makeSite('one.test');
+    // No bot blocker, whose file in the conf folder this fake has not got.
+    $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
 
     $commands = fakeOlsResync(currentConfigFor($site), alreadyMember: true);
 

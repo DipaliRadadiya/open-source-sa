@@ -24,7 +24,9 @@ function apacheTemplateSources(): array
 }
 
 it('finds the Apache templates that carry authorization blocks', function () {
-    $withAuthz = array_filter(apacheTemplateSources(), fn (string $source) => str_contains($source, '<RequireNone>'));
+    // `RequireAll`: the firewall's RequireNone left the vhost for v7's
+    // 8g-firewall.conf (a rewrite, 2026-11-11); Basic Auth is still here.
+    $withAuthz = array_filter(apacheTemplateSources(), fn (string $source) => str_contains($source, '<RequireAll>'));
 
     // Without this, an empty glob makes the check below vacuous.
     expect(array_keys($withAuthz))->toContain('_php-body.blade.php', '_static-body.blade.php', '_node-body.blade.php');
