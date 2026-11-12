@@ -30,9 +30,12 @@ function olsCapabilityDocs(): array
 it('does not tell anyone the bot blocker is unavailable on OpenLiteSpeed', function () {
     // Guarded by what the templates actually do, so this test stops applying
     // by itself if the bot rules are ever removed from them.
-    foreach (['php', 'node'] as $template) {
+    // In v7's per-site file since 2026-11-11, which every OLS vhost includes.
+    expect(file_get_contents(resource_path('views/server/vhosts/openlitespeed/_ai-bot-blocker.blade.php')))->toContain('botBlock');
+
+    foreach (['php', 'static', 'node'] as $template) {
         expect(file_get_contents(resource_path("views/server/vhosts/openlitespeed/{$template}.blade.php")))
-            ->toContain('botBlock');
+            ->toContain('/rewrites/*.conf');
     }
 
     foreach (olsCapabilityDocs() as $file => $contents) {

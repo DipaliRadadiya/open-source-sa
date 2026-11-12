@@ -95,9 +95,11 @@ beforeEach(function () {
                 $this->travel(31)->seconds();
             }
 
-            return $this->readFailure
-                ? Process::result(errorOutput: 'permission denied', exitCode: 1)
-                : Process::result(output: file_get_contents($process->command[1]));
+            return match (true) {
+                $this->readFailure => Process::result(errorOutput: 'permission denied', exitCode: 1),
+                ! file_exists($process->command[1]) => Process::result(errorOutput: 'No such file or directory', exitCode: 1),
+                default => Process::result(output: file_get_contents($process->command[1])),
+            };
         }
         if ($process->command[0] === 'tee' && str_starts_with($process->command[1], $this->nginxRoot.'/')) {
             File::ensureDirectoryExists(dirname($process->command[1]));
