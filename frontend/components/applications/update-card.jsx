@@ -221,8 +221,10 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
       <CardContent className="p-0">
         {/* Three facts side by side on a wide card, stacked on a phone. */}
         <dl className="-mt-(--card-spacing) grid divide-y text-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {/* Mid-run the files already hold the new release, so the API reads it as installed
+              before the restart has finished; until the run ends, the version it started from. */}
           <Fact label={t("installed")} mono>
-            {update.installed_version ?? t("unknown")}
+            {((running && last?.from_version) || update.installed_version) ?? t("unknown")}
           </Fact>
           <Fact label={t("available")} mono={Boolean(update.latest_version)}>
             {update.latest_version

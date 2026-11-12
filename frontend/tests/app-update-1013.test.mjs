@@ -55,3 +55,11 @@ test("the dashboard asks only for the six updatable types, and streams it", () =
   for (const state of ["running", "failed", "available", "up_to_date", "lookup_failed", "version_unknown", "not_active"]) assert.ok(en.state[state]);
   for (const key of ["noPermission", "not_active", "version_unknown", "lookup_failed", "up_to_date", "running", "unsupported"]) assert.ok(en.blocked[key]);
 });
+
+// QA 12 Nov: mid-update the API reads the new release from the replaced files, so Installed
+// said 2.5.11 while the card still said "Installing the new version".
+test("while a run is in flight, Installed shows the version it started from", () => {
+  const card = read("components/applications/update-card.jsx");
+  assert.match(card, /\{\(\(running && last\?\.from_version\) \|\| update\.installed_version\) \?\? t\("unknown"\)\}/);
+  assert.equal(updateCardState({ supported: true, blocked_reason: "running" }, [{ status: "running", from_version: "2.5.9", to_version: "2.5.11" }]), "running");
+});
