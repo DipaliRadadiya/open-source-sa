@@ -126,3 +126,11 @@ test("extensions flow into columns, each switch beside its own name", () => {
   // ionCube's card is a container, so its button moves to the right on a wide card.
   assert.match(read("components/php/ioncube-card.jsx"), /<Card className="@container gap-0 py-0">/);
 });
+
+// QA 12 Nov: "Langzeitunterstützung (Lithium)" is one word wider than the Support column; the
+// badge centres and clips, so the German Node.js page showed "ANGZEITUNTERSTÜTZUN".
+test("the support badge breaks a word wider than its column instead of clipping it", () => {
+  const src = read("components/runtime/versions-table.jsx");
+  assert.match(src, /className="h-auto max-w-full justify-start text-left whitespace-normal hyphens-auto \[overflow-wrap:anywhere\]"/);
+  assert.match(read("app/layout.jsx"), /<html lang=\{locale\}/, "hyphenation needs the page language");
+});

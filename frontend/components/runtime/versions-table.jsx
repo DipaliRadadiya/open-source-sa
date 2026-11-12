@@ -93,11 +93,13 @@ export function SupportCell({ version, namespace, lifecycleAvailable, label, qui
       <span className="flex min-w-0 flex-col items-start gap-1">
         {lifecycleAvailable && lifecycle?.status ? (
           // Wraps inside its column: "Долгосрочная поддержка (Krypton)" ran under the npm cell.
+          // One word wider than the column ("Langzeitunterstützung") is hyphenated, else broken:
+          // the badge centres and clips, so it was cut off on both sides.
           <LifecycleBadge
             lifecycle={lifecycle}
             namespace={namespace}
             available={lifecycleAvailable}
-            className="h-auto max-w-full text-left whitespace-normal"
+            className="h-auto max-w-full justify-start text-left whitespace-normal hyphens-auto [overflow-wrap:anywhere]"
           />
         ) : (
           <span className="text-muted-foreground">—</span>
