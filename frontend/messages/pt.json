@@ -3402,6 +3402,8 @@
       },
       "noPermission": "Seu papel não inclui Banco de dados com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "engineDown": "{engine} não está em execução, então nada pode ser importado.",
+      "noAccount": "Uma importação entra como um dos usuários deste banco de dados, e nenhum pode ser usado ainda. Adicione um usuário que se conecte a partir deste servidor ou defina uma nova senha para um existente.",
+      "openUsers": "Abrir Usuários",
       "busy": "Já há uma importação em andamento.",
       "confirmTitle": "Substituir tudo em {name}?",
       "confirmDescription": "Todo o conteúdo deste banco de dados é substituído por este arquivo:",

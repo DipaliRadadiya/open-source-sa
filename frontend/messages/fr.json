@@ -3402,6 +3402,8 @@
       },
       "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "engineDown": "{engine} n'est pas en cours d'exécution, donc rien ne peut être importé.",
+      "noAccount": "Un import se connecte avec l'un des utilisateurs de cette base de données, et aucun n'est encore utilisable. Ajoutez un utilisateur qui se connecte depuis ce serveur, ou définissez un nouveau mot de passe pour un utilisateur existant.",
+      "openUsers": "Ouvrir Utilisateurs",
       "busy": "Une importation est déjà en cours.",
       "confirmTitle": "Remplacer tout le contenu de {name} ?",
       "confirmDescription": "Tout le contenu de cette base de données est remplacé par ce fichier :",

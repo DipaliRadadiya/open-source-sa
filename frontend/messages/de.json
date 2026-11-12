@@ -3402,6 +3402,8 @@
       },
       "noPermission": "Ihre Rolle enthält nicht „Datenbank“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "engineDown": "{engine} läuft nicht, daher kann nichts importiert werden.",
+      "noAccount": "Ein Import meldet sich als einer der Benutzer dieser Datenbank an, und noch keiner kann verwendet werden. Fügen Sie einen Benutzer hinzu, der sich von diesem Server aus verbindet, oder legen Sie für einen vorhandenen ein neues Passwort fest.",
+      "openUsers": "Benutzer öffnen",
       "busy": "Es läuft bereits ein Import.",
       "confirmTitle": "Alles in {name} ersetzen?",
       "confirmDescription": "Der gesamte Inhalt dieser Datenbank wird durch diese Datei ersetzt:",

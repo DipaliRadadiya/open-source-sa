@@ -29,7 +29,8 @@ test("the confirm step has the safety-copy checkbox, ticked for every new file",
 });
 
 test("unticked shows a red warning instead of the backup promise", () => {
-  const warn = dialog.slice(dialog.indexOf("{!safetyCopy ? ("), dialog.indexOf("</Caution>"));
+  const from = dialog.indexOf("{!safetyCopy ? (");
+  const warn = dialog.slice(from, dialog.indexOf("</Caution>", from));
   assert.match(warn, /<Caution tone="destructive"/);
   assert.match(warn, /t\("noSafetyCopyWarning"\)/);
   assert.match(dialog, /\{safetyCopy \? \(\s*<span[^>]*>\s*<ShieldCheck[\s\S]*?t\("confirmSafety"\)/);

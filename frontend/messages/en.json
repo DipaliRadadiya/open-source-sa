@@ -3402,6 +3402,8 @@
       },
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "engineDown": "{engine} is not running, so nothing can be imported.",
+      "noAccount": "An import signs in as one of this database's users, and none can be used yet. Add a user that connects from this server, or set a new password for an existing one.",
+      "openUsers": "Open Users",
       "busy": "An import is already in progress.",
       "confirmTitle": "Replace everything in {name}?",
       "confirmDescription": "Everything in this database is replaced with this file:",

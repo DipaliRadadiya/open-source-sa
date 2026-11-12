@@ -18,6 +18,14 @@ export function DatabaseTabs({ overview, users, tables, exports: exportsNode, ba
     const wanted = LEGACY[initial] ?? initial;
     return VALUES.includes(wanted) ? wanted : "overview";
   });
+  // A link to this page with another `?tab=` (e.g. the import card's "Open Users") renders
+  // the same component again, so the open tab follows the URL, not only the first render.
+  const [seenInitial, setSeenInitial] = useState(initial);
+  if (initial !== seenInitial) {
+    setSeenInitial(initial);
+    const wanted = LEGACY[initial] ?? initial;
+    if (VALUES.includes(wanted)) setTab(wanted);
+  }
 
   const sections = [
     // Connection details and the facts first: connecting an application is the main task.

@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Circle, Download, FileText, FileUp, Loader2, Play, ShieldCheck, Trash2, TriangleAlert, UploadCloud } from "lucide-react";
 import { deleteImport, getImports, startImport, uploadAndStartImport } from "@/lib/api/databases";
 import { importSchema, importsResponseSchema } from "@/lib/schemas/database";
-import { IMPORT_IN_FLIGHT, IMPORT_STEPS, engineMismatch, importFormat, importStage } from "@/lib/databases/import-formats";
+import { IMPORT_IN_FLIGHT, IMPORT_STEPS, engineMismatch, hasImportAccount, importFormat, importStage } from "@/lib/databases/import-formats";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiMessage } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
@@ -104,7 +105,17 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
     };
   }, [runningId, database.id, database.name, router, t]);
 
-  const blocked = !canManage ? t("noPermission") : unavailable ? t("engineDown", { engine: unavailable }) : running || upload ? t("busy") : null;
+  // Said before a file is chosen: the server refuses the start (422) after the user confirmed.
+  const noAccount = !hasImportAccount(database);
+  const blocked = !canManage
+    ? t("noPermission")
+    : unavailable
+      ? t("engineDown", { engine: unavailable })
+      : noAccount
+        ? t("noAccount")
+        : running || upload
+          ? t("busy")
+          : null;
 
   function choose(files) {
     const file = files?.[0];
@@ -291,6 +302,21 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
               />
             </div>
           )}
+
+          {noAccount && canManage && !unavailable ? (
+            <Caution
+              size="md"
+              action={
+                <Button asChild variant="outline" size="sm" className="h-8">
+                  <Link href={`/databases/${database.id}?tab=users`} prefetch={false}>
+                    {t("openUsers")}
+                  </Link>
+                </Button>
+              }
+            >
+              <p>{t("noAccount")}</p>
+            </Caution>
+          ) : null}
 
           {history.length ? (
             <div className="space-y-2">

@@ -3402,6 +3402,8 @@
       },
       "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "engineDown": "{engine} no está en ejecución, así que no se puede importar nada.",
+      "noAccount": "Una importación inicia sesión como uno de los usuarios de esta base de datos, y todavía no se puede usar ninguno. Añada un usuario que se conecte desde este servidor o establezca una contraseña nueva para uno existente.",
+      "openUsers": "Abrir Usuarios",
       "busy": "Ya hay una importación en curso.",
       "confirmTitle": "¿Sustituir todo el contenido de {name}?",
       "confirmDescription": "Todo el contenido de esta base de datos se sustituye por este archivo:",

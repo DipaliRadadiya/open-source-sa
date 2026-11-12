@@ -44,3 +44,11 @@ export function engineMismatch(fileName, database) {
   const own = importFormat(database).key;
   return fromName && fromName !== own ? fromName : null;
 }
+
+// Mirrors ImportDatabase::account(): a user whose password the panel knows and who does not
+// connect only remotely. Unknown (no list, older API) never blocks; the server still checks.
+export function hasImportAccount(database) {
+  const users = database?.users;
+  if (!Array.isArray(users)) return true;
+  return users.some((user) => user.password_known !== false && user.connection_preference !== "remote");
+}
