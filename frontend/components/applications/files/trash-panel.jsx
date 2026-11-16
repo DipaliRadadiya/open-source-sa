@@ -19,6 +19,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { useRefresh } from "@/hooks/use-refresh";
 import { formatFileSize } from "@/lib/format/bytes";
+import { parseApiWallClock } from "@/lib/format/api-date";
 import { FileSize } from "@/components/applications/files/file-size";
 
 // No "restore all": the API restores one `{batch, path}` per call against a 30/min throttle.
@@ -36,6 +37,12 @@ export function TrashPanel({
 }) {
   const t = useTranslations("applications.files.trash");
   const format = useFormatter();
+  // The server's wall clock in the reader's format, as in the restore dialog: the raw
+  // "16-11-2026 09:16:41" reads as another date where months come first.
+  const deletedLabel = (stamp, fallback) => {
+    const when = parseApiWallClock(stamp);
+    return when ? format.dateTime(when, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) : (stamp ?? fallback);
+  };
   const { pending: refreshing, refresh, refreshThen } = useRefresh();
   // Emptying runs in a dialog that stays open until done; per-row restores can
   // overlap, so they are tracked separately.
@@ -154,7 +161,7 @@ export function TrashPanel({
                 <div className="flex min-w-48 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="text-xs text-muted-foreground">{t("deletedAt")}</span>
                   <span className="text-sm font-medium tabular-nums">
-                    {entries[0].deleted_at ?? batch}
+                    {deletedLabel(entries[0].deleted_at, batch)}
                   </span>
                   <Badge variant="secondary" className="font-normal">
                     {t("itemCount", { count: entries.length })}

@@ -42,3 +42,13 @@ test("a domain wraps before a dot, and a long part still breaks rather than over
     assert.match(read(`components/applications/domains/${f}.jsx`), /<WrappedDomain domain=/, f);
   }
 });
+
+// QA 16 Nov: the Trash header printed the API's raw "16-11-2026 09:16:41".
+test("Trash shows when a batch was deleted in the reader's format, like the restore dialog", async () => {
+  const { parseApiWallClock } = await import("../lib/format/api-date.js");
+  const panel = read("components/applications/files/trash-panel.jsx");
+  assert.match(panel, /\{deletedLabel\(entries\[0\]\.deleted_at, batch\)\}/);
+  assert.match(panel, /format\.dateTime\(when, \{ dateStyle: "medium", timeStyle: "short", timeZone: "UTC" \}\)/);
+  const when = parseApiWallClock("16-11-2026 09:16:41");
+  assert.equal(new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(when), "Nov 16, 2026, 9:16 AM");
+});
