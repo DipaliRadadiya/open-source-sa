@@ -41,6 +41,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { WrappedDomain } from "@/components/ui/domain-text";
 import {
   Tooltip,
   TooltipContent,
@@ -272,8 +273,8 @@ export function DomainsSection({
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         {/* Inline, so the copy button follows the last character of the name
                             however the name wraps. */}
-                        <span className="min-w-0 font-mono text-sm break-all">
-                          {domain.domain}
+                        <span className="min-w-0 font-mono text-sm">
+                          <WrappedDomain domain={domain.domain} />
                           <CopyButton
                             value={domain.domain}
                             label={t("copyDomain")}

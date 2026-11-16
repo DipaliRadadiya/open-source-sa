@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 import { Input } from "@/components/ui/input";
 import { FormModal } from "@/components/ui/form-modal";
+import { WrappedDomain } from "@/components/ui/domain-text";
 import {
   Form,
   FormField,
@@ -100,7 +101,7 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
           <FormLabel className="text-muted-foreground">{t("edit.domain")}</FormLabel>
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
             <Lock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="min-w-0 font-mono text-sm break-all">{domain?.domain}</span>
+            <WrappedDomain domain={domain?.domain} className="min-w-0 font-mono text-sm" />
           </div>
           <p className="text-xs text-muted-foreground">{t("edit.domainLocked")}</p>
         </div>

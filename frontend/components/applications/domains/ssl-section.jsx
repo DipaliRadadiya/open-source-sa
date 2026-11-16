@@ -34,6 +34,7 @@ import { Caution } from "@/components/ui/caution";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WrappedDomain } from "@/components/ui/domain-text";
 import { IssueCertDialog } from "@/components/applications/domains/issue-cert-dialog";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 
@@ -364,7 +365,7 @@ export function SslSection({
                     )}
                     {/* Wraps rather than truncates; the max-width leaves room
                         for the visit link on the last line. */}
-                    <span className="max-w-[calc(100%-4.5rem)] font-mono text-sm break-all">{domain}</span>
+                    <WrappedDomain domain={domain} className="max-w-[calc(100%-4.5rem)] font-mono text-sm" />
                     {state === "covered" ? (
                       <VisitSiteLink
                         domain={domain}

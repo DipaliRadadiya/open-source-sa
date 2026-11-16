@@ -31,3 +31,14 @@ test("the database tabs follow a ?tab= link to the same page", () => {
   const tabs = read("components/databases/database-tabs.jsx");
   assert.match(tabs, /if \(initial !== seenInitial\) \{\s*setSeenInitial\(initial\);[\s\S]*?if \(VALUES\.includes\(wanted\)\) setTab\(wanted\);/);
 });
+
+// QA 12 Nov: on a phone the SSL tab broke "…nip.io" as "…nip.i" / "o" (break-all).
+test("a domain wraps before a dot, and a long part still breaks rather than overflowing", () => {
+  const src = read("components/ui/domain-text.jsx");
+  assert.match(src, /export function WrappedDomain/);
+  assert.match(src, /\{index \? <wbr \/> : null\}\s*\{index \? "\." : null\}\s*\{part\}/);
+  assert.match(src, /\[overflow-wrap:anywhere\]/);
+  for (const f of ["ssl-section", "domains-section", "edit-domain-dialog"]) {
+    assert.match(read(`components/applications/domains/${f}.jsx`), /<WrappedDomain domain=/, f);
+  }
+});

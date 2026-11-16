@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { cn } from "@/lib/utils";
 import { splitDomain } from "@/lib/format/domain";
 import { HoverHint } from "@/components/ui/hover-hint";
@@ -22,5 +23,22 @@ export function DomainText({ domain, className }) {
       {/* shrink-0: the tail never gives up space. */}
       <span className="shrink-0">{tail}</span>
     </span></HoverHint>
+  );
+}
+
+// The whole name, wrapping only before a dot ("…-111.nip" / ".io", not "…nip.i" / "o"); a
+// single part too long for the line still breaks anywhere rather than overflowing.
+export function WrappedDomain({ domain, className }) {
+  const parts = String(domain ?? "").split(".");
+  return (
+    <span className={cn("[overflow-wrap:anywhere]", className)}>
+      {parts.map((part, index) => (
+        <Fragment key={index}>
+          {index ? <wbr /> : null}
+          {index ? "." : null}
+          {part}
+        </Fragment>
+      ))}
+    </span>
   );
 }
