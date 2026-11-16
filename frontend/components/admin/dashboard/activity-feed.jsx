@@ -1,5 +1,5 @@
 import Link from "@/components/ui/app-link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, CircleAlert, History } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import { lowerFirst } from "@/lib/activity-log/lower-first";
 const SHOWN = 6;
 
 export async function ActivityFeed({ entries = [], todayCount = 0, failed = false, todayKnown = true }) {
-  const t = await getTranslations("admin.feed");
+  const [t, locale] = await Promise.all([getTranslations("admin.feed"), getLocale()]);
   // Collapse first, then choose; quiet actions (logins) are capped.
   const rows = pickFeedRows(collapseRepeats(entries, { mergeAcross: QUIET_ACTIONS }), {
     max: SHOWN,
@@ -37,7 +37,7 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
         <ul className="divide-y">
           {rows.map(({ key, newest, oldest, count }) => {
             // One sentence ("test logged in 50 times") rather than columns.
-            const what = lowerFirst(newest.description || humanizeActivity(newest.action));
+            const what = lowerFirst(newest.description || humanizeActivity(newest.action), locale);
             const who = newest.is_system ? t("system") : (newest.user?.username ?? t("someone"));
             return (
               <li key={key} className="flex items-start gap-3 px-5 py-3">
@@ -54,9 +54,10 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
                       ? t("sentenceRepeated", { who, what, count })
                       : t("sentenceOnce", { who, what })}
                   </p>
-                  {/* A collapsed run shows its time span, from entries already loaded. */}
+                  {/* A collapsed run shows its time span, from entries already loaded; one that rounds
+                      to a single moment says it once, not "From 47 minutes ago to 47 minutes ago". */}
                   <p className="text-xs text-muted-foreground">
-                    {count > 1 && oldest?.created_at_human && oldest.id !== newest.id
+                    {count > 1 && oldest?.created_at_human && oldest.id !== newest.id && oldest.created_at_human !== newest.created_at_human
                       ? t("between", {
                           first: oldest.created_at_human,
                           last: newest.created_at_human || "",

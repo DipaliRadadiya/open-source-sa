@@ -52,3 +52,9 @@ test("Trash shows when a batch was deleted in the reader's format, like the rest
   const when = parseApiWallClock("16-11-2026 09:16:41");
   assert.equal(new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(when), "Nov 16, 2026, 9:16 AM");
 });
+
+// QA 16 Nov: Admin → Recent activity read "From 47 minutes ago to 47 minutes ago".
+test("a collapsed activity run whose ends read the same says the time once", () => {
+  const feed = read("components/admin/dashboard/activity-feed.jsx");
+  assert.match(feed, /oldest\.id !== newest\.id && oldest\.created_at_human !== newest\.created_at_human\s*\?\s*t\("between"/);
+});
