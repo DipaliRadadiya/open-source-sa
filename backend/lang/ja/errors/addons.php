@@ -22,6 +22,7 @@ return [
     'checksum_mismatch' => 'ダウンロードした :addon のファイルが SHA-256 チェックサムと一致しません。何もインストールされていません。',
     'signature_invalid' => 'ダウンロードした :addon のファイルは Central によって署名されていません。何もインストールされていません。',
     'not_executable' => 'ダウンロードした :addon のファイルは Linux のプログラムではありません。何もインストールされていません。',
+    'no_build_for_architecture' => ':addon はまだこのサーバーの CPU に対応していません（x86-64 版のみです）。何もインストールされていません。',
     'disk_low' => ':addon のデータには 5 GB を超える空き容量が必要です。このサーバーの空き容量は :message GB です。',
     'install_failed' => ':addon をインストールできませんでした (ステップ :message)。このインストールによる変更は元に戻されました。',
     'remove_failed' => ':addon を完全には削除できませんでした (ステップ :message)。',

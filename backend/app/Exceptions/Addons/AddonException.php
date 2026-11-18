@@ -48,6 +48,8 @@ class AddonException extends RuntimeException
         'addon_checksum_mismatch' => 422,
         'addon_signature_invalid' => 422,
         'addon_not_executable' => 422,
+        // Central's own code for it (UNSUPPORTED in its AddonInstallations).
+        'no_build_for_architecture' => 422,
         'addon_disk_low' => 422,
         'addon_install_failed' => 500,
         'addon_remove_failed' => 500,
@@ -63,7 +65,7 @@ class AddonException extends RuntimeException
 
     public static function of(string $code, string $addon, ?string $addonMessage = null, array $details = []): self
     {
-        $key = 'errors/addons.'.substr($code, strlen('addon_'));
+        $key = 'errors/addons.'.(str_starts_with($code, 'addon_') ? substr($code, strlen('addon_')) : $code);
 
         return new self($code, __($key, ['addon' => $addon, 'message' => (string) $addonMessage]), $details);
     }

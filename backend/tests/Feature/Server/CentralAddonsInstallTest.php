@@ -62,7 +62,7 @@ beforeEach(function () {
         'web_root' => '/', 'php_version' => '8.4',
     ]);
 
-    $this->binary = "\x7fELF".random_bytes(256);
+    $this->binary = "\x7fELF\x02\x01\x01".str_repeat("\0", 9)."\x02\x00\x3E\x00".random_bytes(236);
     $GLOBALS['addonDownloadFaked'] = false;
     fakeAddonDownload($this->binary);
     fakeLifecycle();
@@ -334,7 +334,7 @@ describe('test mode (require_signature off)', function () {
     });
 
     it('still refuses a download that does not match its checksum', function () {
-        fakeAddonDownload("\x7fELF".random_bytes(256));
+        fakeAddonDownload("\x7fELF\x02\x01\x01".str_repeat("\0", 9)."\x02\x00\x3E\x00".random_bytes(236));
 
         installAddon('wp-toolkit', installBody($this->binary, ['signature' => null]))
             ->assertStatus(202)
@@ -569,7 +569,7 @@ it('puts the previous binary and files back when an update fails', function () {
     installAddon('log-monitoring-suite', installBody($this->binary, ['retention_days' => 30]))->assertJsonPath('data.status', 'succeeded');
     $before = file_get_contents("{$dir}/units/log-monitoring-suite-prune.service");
 
-    $new = "\x7fELF".random_bytes(300);
+    $new = "\x7fELF\x02\x01\x01".str_repeat("\0", 9)."\x02\x00\x3E\x00".random_bytes(280);
     fakeAddonDownload($new);
     fakeLifecycle(['daemon-reload' => fn () => ranLifecycle('tee') ? ['', 'boom', 1] : null]);
 
@@ -726,4 +726,33 @@ it('reports no health for Log Monitoring Suite when it is not installed', functi
         ->assertJsonPath('addons.1.retention_days', null);
 
     expect(ranLifecycle('systemctl'))->toBeFalse();
+});
+
+/*
+ * QA, 2026-11-17: on an ARM server the x86-64 build downloaded, passed every
+ * check and then could not run. Refused cleanly instead, under the code
+ * Central shows as "unsupported CPU".
+ */
+it('refuses to install on a server whose CPU the addons are not built for', function () {
+    config(['server.addons.host_machine' => 'aarch64']);
+
+    installAddon('wp-toolkit', installBody($this->binary))
+        ->assertStatus(202)
+        ->assertJsonPath('data.status', 'failed')
+        ->assertJsonPath('data.result.code', 'no_build_for_architecture');
+
+    expect(file_exists("{$this->dir}/bin/wp-toolkit"))->toBeFalse()
+        ->and(ranLifecycle('install'))->toBeFalse();
+});
+
+it('refuses a program built for another CPU', function () {
+    // An aarch64 ELF (e_machine 0xB7) on this x86-64 server.
+    $arm = "\x7fELF\x02\x01\x01".str_repeat("\0", 9)."\x02\x00\xB7\x00".random_bytes(236);
+    fakeAddonDownload($arm);
+
+    installAddon('wp-toolkit', installBody($arm))
+        ->assertStatus(202)
+        ->assertJsonPath('data.result.code', 'no_build_for_architecture');
+
+    expect(file_exists("{$this->dir}/bin/wp-toolkit"))->toBeFalse();
 });

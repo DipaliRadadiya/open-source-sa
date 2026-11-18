@@ -25,6 +25,7 @@ return [
     'checksum_mismatch' => 'The downloaded :addon file does not match its SHA-256 checksum. Nothing was installed.',
     'signature_invalid' => 'The downloaded :addon file is not signed by Central. Nothing was installed.',
     'not_executable' => 'The downloaded :addon file is not a Linux program. Nothing was installed.',
+    'no_build_for_architecture' => 'The :addon is not available for this server\'s CPU yet (it is built for x86-64 only). Nothing was installed.',
     'disk_low' => ':addon needs more than 5 GB free for its data; this server has :message GB free.',
     'install_failed' => ':addon could not be installed (step :message). The changes this install made were undone.',
     'remove_failed' => ':addon could not be fully removed (step :message).',

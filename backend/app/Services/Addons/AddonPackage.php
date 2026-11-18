@@ -29,6 +29,12 @@ class AddonPackage
 {
     private const ELF_MAGIC = "\x7fELF";
 
+    /** ELF e_machine for x86-64, the only CPU the addons are built for. */
+    private const ELF_X86_64 = 0x3E;
+
+    /** The CPU names `uname -m` gives an x86-64 server. */
+    private const X86_64 = ['x86_64', 'amd64'];
+
     /**
      * The configured public key, raw, or null when there is none usable.
      * A key that is not 32 bytes of base64 is no key.
@@ -38,6 +44,14 @@ class AddonPackage
         $key = base64_decode((string) config('server.addons.signing_public_key'), true);
 
         return is_string($key) && strlen($key) === SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ? $key : null;
+    }
+
+    /** Whether this server's CPU is one the addons are built for. */
+    public static function hostSupported(): bool
+    {
+        $machine = (string) (config('server.addons.host_machine') ?: php_uname('m'));
+
+        return in_array(strtolower($machine), self::X86_64, true);
     }
 
     /** False only in test mode (config `server.addons.require_signature`). */
@@ -53,6 +67,14 @@ class AddonPackage
      */
     public function fetch(AddonCli $addon, string $url, string $sha256, ?string $signature, string $to): void
     {
+        // The addons are built for x86-64 only. On an ARM server the file
+        // downloads, passes every check below and then cannot run, which
+        // Central could only show as a broken install (QA, 2026-11-17). Refused
+        // first, under the code Central reads as "unsupported CPU".
+        if (! self::hostSupported()) {
+            throw AddonException::of('no_build_for_architecture', $addon->label());
+        }
+
         // Checked first, and before the download: no key means no install, so
         // there is nothing to fetch. Test mode excepted.
         $key = self::signingKey();
@@ -81,8 +103,15 @@ class AddonPackage
             }
         }
 
-        if ((string) @file_get_contents($to, length: 4) !== self::ELF_MAGIC) {
+        $header = (string) @file_get_contents($to, length: 20);
+
+        if (substr($header, 0, 4) !== self::ELF_MAGIC) {
             throw AddonException::of('addon_not_executable', $addon->label());
+        }
+
+        // And built for this CPU: e_machine, two little-endian bytes at 18.
+        if (strlen($header) < 20 || unpack('v', substr($header, 18, 2))[1] !== self::ELF_X86_64) {
+            throw AddonException::of('no_build_for_architecture', $addon->label());
         }
     }
 

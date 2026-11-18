@@ -22,6 +22,7 @@ return [
     'checksum_mismatch' => 'El archivo descargado de :addon no coincide con su suma SHA-256. No se instaló nada.',
     'signature_invalid' => 'El archivo descargado de :addon no está firmado por Central. No se instaló nada.',
     'not_executable' => 'El archivo descargado de :addon no es un programa de Linux. No se instaló nada.',
+    'no_build_for_architecture' => 'El :addon todavía no está disponible para el procesador de este servidor (solo existe para x86-64). No se instaló nada.',
     'disk_low' => ':addon necesita más de 5 GB libres para sus datos; este servidor tiene :message GB libres.',
     'install_failed' => 'No se pudo instalar :addon (paso :message). Se deshicieron los cambios de esta instalación.',
     'remove_failed' => 'No se pudo eliminar :addon por completo (paso :message).',

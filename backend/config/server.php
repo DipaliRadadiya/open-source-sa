@@ -877,6 +877,8 @@ return [
         // checked against a key that is set, and the checksum always is.
         // Must be true before launch.
         'require_signature' => (bool) env('ADDON_REQUIRE_SIGNATURE', false),
+        // `uname -m` of this server, read when unset. For tests.
+        'host_machine' => env('ADDON_HOST_MACHINE'),
         'download_max_bytes' => (int) env('ADDON_DOWNLOAD_MAX_BYTES', 209715200),
         'install_timeout' => 1800,
         // An install or remove still queued or running after this long is
