@@ -385,7 +385,6 @@
   },
   "users": {
     "title": "Benutzer",
-    "subtitle": "Verwalten Sie, wer auf dieses Panel zugreifen kann.",
     "addUser": "Benutzer hinzufügen",
     "searchPlaceholder": "Name oder Benutzername suchen…",
     "clearSearch": "Suche zurücksetzen",
@@ -499,7 +498,6 @@
       "failed": "Berechtigungen konnten nicht synchronisiert werden."
     },
     "title": "Rollen",
-    "subtitle": "Berechtigungsrollen definieren und Benutzern zuweisen.",
     "addRole": "Neue Rolle",
     "system": "System",
     "searchPlaceholder": "Rollen suchen…",
@@ -625,10 +623,8 @@
   },
   "account": {
     "title": "Konto",
-    "subtitle": "Profil, Passwort und Aktivität verwalten.",
     "profile": {
       "title": "Ihre Angaben",
-      "description": "Wie Sie im Panel erscheinen und mit welchem Namen Sie sich anmelden.",
       "name": "Name",
       "username": "Benutzername",
       "accountType": "Kontotyp",
@@ -638,13 +634,11 @@
       "success": "Profil aktualisiert.",
       "namePlaceholder": "Ihr vollständiger Name",
       "usernamePlaceholder": "ihr-benutzername",
-      "usernameHint": "Damit melden Sie sich an. Buchstaben, Zahlen, Bindestriche und Unterstriche.",
       "unsavedTitle": "Nicht gespeicherte Änderungen verwerfen?",
       "unsavedDesc": "Sie haben nicht gespeicherte Profiländerungen. Wenn Sie jetzt den Tab wechseln, gehen sie verloren.",
       "unsavedDiscard": "Änderungen verwerfen",
       "unsavedKeep": "Weiter bearbeiten",
-      "failed": "Ihr Profil konnte nicht gespeichert werden.",
-      "nameHint": "Steht im Menü und neben allem, was Sie tun."
+      "failed": "Ihr Profil konnte nicht gespeichert werden."
     },
     "password": {
       "title": "Passwort",
@@ -697,7 +691,6 @@
   },
   "activity": {
     "title": "Aktivitätsprotokoll",
-    "subtitle": "Jede Aktion im gesamten Panel.",
     "searchPlaceholder": "Aktion oder Benutzer suchen…",
     "empty": {
       "title": "Noch keine Aktivität",
@@ -3633,12 +3626,10 @@
   },
   "git": {
     "title": "Git",
-    "subtitle": "Verbinden Sie ein Git-Konto einmal und wählen Sie es dann beim Anlegen einer Anwendung.",
     "loadFailed": "Ihre verbundenen Konten konnten nicht geladen werden.",
     "noPermission": "Ihre Rolle enthält nicht „Git“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "accounts": {
       "title": "Verbundene Konten",
-      "description": "Konten, aus denen Anwendungen deployen können.",
       "recheck": "Alle Konten erneut prüfen"
     },
     "onboarding": {
@@ -6733,7 +6724,7 @@
   },
   "panelUpdate": {
     "title": "Panel-Update",
-    "subtitle": "Aktualisieren Sie {brand} selbst. Gehostete Anwendungen bleiben online; nur dieses Panel startet neu.",
+    "subtitle": "Gehostete Anwendungen bleiben online; nur dieses Panel startet neu.",
     "loadFailed": "Der Update-Status konnte nicht geladen werden. Versuchen Sie es gleich erneut.",
     "versionValue": "v{version}",
     "versionUnknown": "Unbekannte Version",
@@ -6802,7 +6793,6 @@
   },
   "doctor": {
     "title": "Systemzustand",
-    "subtitle": "Automatische Prüfungen, die bestätigen, dass dieses Panel auf dem Server wirklich laufen kann.",
     "recheck": "Erneut prüfen",
     "loadFailed": "Die Zustandsprüfungen konnten nicht ausgeführt werden. Versuchen Sie es gleich erneut.",
     "statusPass": "Bestanden",
@@ -6823,7 +6813,6 @@
     "rawTitle": "Rohantwort",
     "rawCopy": "Rohantwort kopieren",
     "title": "Panel-Fehlerprotokoll",
-    "subtitle": "Unerwartete Fehler im Panel, die neuesten zuerst.",
     "summary": {
       "healthy": "Keine unerwarteten Panel-Fehler.",
       "healthyHint": "Das Panel hatte im erfassten Zeitraum keinen internen Fehler.",
@@ -6934,7 +6923,6 @@
   },
   "storage": {
     "title": "Speicher",
-    "subtitle": "Wohin Backups gesendet werden. Verbinden Sie hier ein Ziel und wählen Sie es dann bei einer Anwendung aus.",
     "loadFailed": "Das konnte nicht geladen werden.",
     "noPermission": "Ihre Rolle enthält nicht „Speicher“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "card": {
@@ -7999,7 +7987,6 @@
   "central": {
     "title": "Zentrale Verwaltung",
     "pageSubtitle": "Lassen Sie ein zentrales Panel diesen Server für Sie verwalten.",
-    "subtitle": "Erzeugen Sie hier einen Schlüssel und fügen Sie ihn in Ihr zentrales Panel ein, um diesen Server damit zu verbinden.",
     "disconnected": "Dieser Server ist nicht mehr mit Central verbunden.",
     "cancel": "Abbrechen",
     "power": {
@@ -8066,7 +8053,6 @@
   },
   "docker": {
     "title": "Docker",
-    "subtitle": "Netzwerke und Volumes, die sich die Container dieses Servers teilen.",
     "remove": "Entfernen",
     "none": "Keine",
     "failed": "Das hat nicht funktioniert.",
@@ -8219,7 +8205,6 @@
           "hint": "Jede Registry, die docker login akzeptiert"
         }
       },
-      "subtitle": "Anmeldedaten, mit denen dieser Server private Container-Images lädt.",
       "unavailableTitle": "Dieser Server hostet keine Container",
       "unavailableBody": "Registry-Anmeldedaten dienen dem Laden von Container-Images. Dieser Server führt keine aus, es gibt also nichts zu laden.",
       "listTitle": "Gespeicherte Anmeldedaten",

@@ -51,7 +51,7 @@ export default async function AdminDoctorPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {!doctor ? (
         <LoadFailed

@@ -29,7 +29,7 @@ export default async function AccountPage({ searchParams }) {
     <div className="space-y-6">
       {/* Reached from the user menu, not the sidebar, so it names its own trail. */}
       <PageCrumb root>{t("title")}</PageCrumb>
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
       <AccountIdentity user={user} />
 
       <AccountTabs

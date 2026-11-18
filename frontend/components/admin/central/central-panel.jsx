@@ -106,7 +106,6 @@ export function CentralPanel({ status }) {
       <Section
         icon={PlugZap}
         title={t("cardTitle")}
-        description={t("subtitle")}
         badge={
           linked ? (
             <Badge variant="success" className="font-normal">{t("state.connected")}</Badge>

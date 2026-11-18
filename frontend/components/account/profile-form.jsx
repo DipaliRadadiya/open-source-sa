@@ -51,7 +51,6 @@ export function ProfileForm({ user, onDirtyChange }) {
         <Section
           icon={UserRound}
           title={t("profile.title")}
-          description={t("profile.description")}
           actions={
             <SectionActions
               label={t("profile.submit")}
@@ -66,7 +65,7 @@ export function ProfileForm({ user, onDirtyChange }) {
             control={form.control}
             name="name"
             render={({ field }) => (
-              <Row label={t("profile.name")} hint={t("profile.nameHint")} required>
+              <Row label={t("profile.name")} required>
                 <FormControl>
                   <Input autoComplete="name" placeholder={t("profile.namePlaceholder")} {...field} />
                 </FormControl>
@@ -77,7 +76,7 @@ export function ProfileForm({ user, onDirtyChange }) {
             control={form.control}
             name="username"
             render={({ field }) => (
-              <Row label={t("profile.username")} hint={t("profile.usernameHint")} required>
+              <Row label={t("profile.username")} required>
                 <FormControl>
                   <Input autoComplete="username" placeholder={t("profile.usernamePlaceholder")} className="font-mono" {...field} />
                 </FormControl>

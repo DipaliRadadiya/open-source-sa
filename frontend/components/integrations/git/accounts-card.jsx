@@ -113,14 +113,9 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
           <div className="flex items-center gap-2.5">
-            <div>
-              <h2 className="text-[15px] font-semibold tracking-tight">
-                {t("accounts.title")}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {t("accounts.description")}
-              </p>
-            </div>
+            <h2 className="text-[15px] font-semibold tracking-tight">
+              {t("accounts.title")}
+            </h2>
           </div>
 
           <div className="flex items-center gap-2">

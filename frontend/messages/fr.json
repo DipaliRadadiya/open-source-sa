@@ -385,7 +385,6 @@
   },
   "users": {
     "title": "Utilisateurs",
-    "subtitle": "Gérez les personnes qui peuvent accéder à ce panneau.",
     "addUser": "Ajouter un utilisateur",
     "searchPlaceholder": "Rechercher un nom ou un utilisateur…",
     "clearSearch": "Effacer la recherche",
@@ -499,7 +498,6 @@
       "failed": "Impossible de synchroniser les autorisations."
     },
     "title": "Rôles",
-    "subtitle": "Définissez des rôles d'autorisation et attribuez-les aux utilisateurs.",
     "addRole": "Nouveau rôle",
     "system": "Système",
     "searchPlaceholder": "Rechercher des rôles…",
@@ -625,10 +623,8 @@
   },
   "account": {
     "title": "Compte",
-    "subtitle": "Gérez votre profil, votre mot de passe et votre activité.",
     "profile": {
       "title": "Vos informations",
-      "description": "Comment vous apparaissez dans le panneau, et le nom avec lequel vous vous connectez.",
       "name": "Nom",
       "username": "Nom d'utilisateur",
       "accountType": "Type de compte",
@@ -638,13 +634,11 @@
       "success": "Profil mis à jour.",
       "namePlaceholder": "Votre nom complet",
       "usernamePlaceholder": "votre-nom-utilisateur",
-      "usernameHint": "Vous vous connectez avec. Lettres, chiffres, tirets et underscores.",
       "unsavedTitle": "Abandonner les modifications non enregistrées ?",
       "unsavedDesc": "Vous avez des modifications de profil non enregistrées. Si vous changez d'onglet maintenant, elles seront perdues.",
       "unsavedDiscard": "Abandonner les modifications",
       "unsavedKeep": "Continuer à modifier",
-      "failed": "Votre profil n'a pas pu être enregistré.",
-      "nameHint": "Affiché dans le menu et à côté de tout ce que vous faites."
+      "failed": "Votre profil n'a pas pu être enregistré."
     },
     "password": {
       "title": "Mot de passe",
@@ -697,7 +691,6 @@
   },
   "activity": {
     "title": "Journal d'activité",
-    "subtitle": "Chaque action effectuée dans le panneau.",
     "searchPlaceholder": "Rechercher une action ou un utilisateur…",
     "empty": {
       "title": "Aucune activité",
@@ -3633,12 +3626,10 @@
   },
   "git": {
     "title": "Git",
-    "subtitle": "Connectez un compte Git une fois, puis choisissez-le quand vous créez une application.",
     "loadFailed": "Impossible de charger vos comptes connectés.",
     "noPermission": "Votre rôle n'inclut pas l'accès Gestion à Git. Demandez à un administrateur de l'accorder.",
     "accounts": {
       "title": "Comptes connectés",
-      "description": "Comptes depuis lesquels les applications peuvent être déployées.",
       "recheck": "Vérifier à nouveau tous les comptes"
     },
     "onboarding": {
@@ -6733,7 +6724,7 @@
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",
-    "subtitle": "Mettre à jour {brand} lui-même. Les applications hébergées restent en ligne ; seul ce panneau redémarre.",
+    "subtitle": "Les applications hébergées restent en ligne ; seul ce panneau redémarre.",
     "loadFailed": "Impossible de charger l'état de la mise à jour. Réessayez dans un instant.",
     "versionValue": "v{version}",
     "versionUnknown": "Version inconnue",
@@ -6802,7 +6793,6 @@
   },
   "doctor": {
     "title": "État du système",
-    "subtitle": "Vérifications automatisées confirmant que ce panneau peut réellement fonctionner sur le serveur.",
     "recheck": "Vérifier à nouveau",
     "loadFailed": "Impossible d'exécuter les vérifications. Réessayez dans un instant.",
     "statusPass": "Réussi",
@@ -6823,7 +6813,6 @@
     "rawTitle": "Réponse brute",
     "rawCopy": "Copier la réponse brute",
     "title": "Journal d'erreurs du panneau",
-    "subtitle": "Pannes inattendues dans le panneau, les plus récentes d'abord.",
     "summary": {
       "healthy": "Aucune erreur inattendue du panneau.",
       "healthyHint": "Le panneau n'a pas rencontré de défaillance interne sur la période enregistrée.",
@@ -6934,7 +6923,6 @@
   },
   "storage": {
     "title": "Stockage",
-    "subtitle": "L'endroit où les sauvegardes sont envoyées. Connectez une destination ici, puis choisissez-la sur une application.",
     "loadFailed": "Impossible de charger ces données.",
     "noPermission": "Votre rôle n'inclut pas le Stockage avec l'accès Gestion. Demandez à un administrateur de l'accorder.",
     "card": {
@@ -7999,7 +7987,6 @@
   "central": {
     "title": "Gestion centralisée",
     "pageSubtitle": "Laissez un panel central gérer ce serveur pour vous.",
-    "subtitle": "Générez une clé ici, puis collez-la dans votre panel central pour y connecter ce serveur.",
     "disconnected": "Ce serveur n'est plus connecté à Central.",
     "cancel": "Annuler",
     "power": {
@@ -8066,7 +8053,6 @@
   },
   "docker": {
     "title": "Docker",
-    "subtitle": "Réseaux et volumes partagés par les conteneurs de ce serveur.",
     "remove": "Retirer",
     "none": "Aucune",
     "failed": "Cela n'a pas fonctionné.",
@@ -8219,7 +8205,6 @@
           "hint": "Tout registre qui accepte docker login"
         }
       },
-      "subtitle": "Identifiants utilisés par ce serveur pour récupérer des images de conteneurs privées.",
       "unavailableTitle": "Ce serveur n’héberge aucun conteneur",
       "unavailableBody": "Les identifiants de registre servent à récupérer des images de conteneurs. Ce serveur n’en exécute aucun, il n’y a donc rien à récupérer.",
       "listTitle": "Identifiants enregistrés",

@@ -64,7 +64,6 @@ test("the page is gated on the docker permission", () => {
 test("every string the screen uses exists in every locale", () => {
   const needed = [
     ["title"],
-    ["subtitle"],
     ["networks", "createAction"],
     ["volumes", "createAction"],
     ["remove"],

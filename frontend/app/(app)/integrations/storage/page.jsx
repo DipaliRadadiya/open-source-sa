@@ -28,7 +28,7 @@ export default async function StorageIntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
       <div >
         <DestinationsCard
           destinations={list.destinations}

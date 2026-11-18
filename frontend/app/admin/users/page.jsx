@@ -50,7 +50,7 @@ export default async function AdminUsersPage({ searchParams }) {
   redirectOutOfRange("/admin/users", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
         {/* Below lg the rows are cards of their own, so the list drops its frame there. The

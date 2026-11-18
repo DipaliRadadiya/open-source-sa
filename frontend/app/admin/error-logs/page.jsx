@@ -43,7 +43,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {failed ? (
         <LoadFailed status={status} failure={failure} message={message} />

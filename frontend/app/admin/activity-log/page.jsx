@@ -37,7 +37,7 @@ export default async function AdminActivityLogPage({ searchParams }) {
   redirectOutOfRange("/admin/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* Unanswered is said so: an empty card would read as "kept forever". */}
       {retention.retention ? (

@@ -385,7 +385,6 @@
   },
   "users": {
     "title": "Usuários",
-    "subtitle": "Gerencie as pessoas que podem acessar este painel.",
     "addUser": "Adicionar usuário",
     "searchPlaceholder": "Buscar nome ou nome de usuário…",
     "clearSearch": "Limpar busca",
@@ -499,7 +498,6 @@
       "failed": "Não foi possível sincronizar as permissões."
     },
     "title": "Papéis",
-    "subtitle": "Defina papéis de permissão e atribua-os aos usuários.",
     "addRole": "Novo papel",
     "system": "Sistema",
     "searchPlaceholder": "Buscar papéis…",
@@ -625,10 +623,8 @@
   },
   "account": {
     "title": "Conta",
-    "subtitle": "Gerencie seu perfil, senha e atividades.",
     "profile": {
       "title": "Seus dados",
-      "description": "Como você aparece no painel e o nome com que você faz login.",
       "name": "Nome",
       "username": "Nome de usuário",
       "accountType": "Tipo de conta",
@@ -638,13 +634,11 @@
       "success": "Perfil atualizado.",
       "namePlaceholder": "Seu nome completo",
       "usernamePlaceholder": "seu-usuario",
-      "usernameHint": "É com ele que você entra. Letras, números, traços e underscores.",
       "unsavedTitle": "Descartar alterações não salvas?",
       "unsavedDesc": "Você tem alterações de perfil não salvas. Se mudar de aba agora, elas serão perdidas.",
       "unsavedDiscard": "Descartar alterações",
       "unsavedKeep": "Continuar editando",
-      "failed": "Não foi possível salvar seu perfil.",
-      "nameHint": "Aparece no menu e ao lado de tudo o que você faz."
+      "failed": "Não foi possível salvar seu perfil."
     },
     "password": {
       "title": "Senha",
@@ -697,7 +691,6 @@
   },
   "activity": {
     "title": "Registro de atividades",
-    "subtitle": "Cada ação realizada no painel.",
     "searchPlaceholder": "Buscar ação ou usuário…",
     "empty": {
       "title": "Nenhuma atividade ainda",
@@ -3633,12 +3626,10 @@
   },
   "git": {
     "title": "Git",
-    "subtitle": "Conecte uma conta Git uma vez e escolha-a ao criar uma aplicação.",
     "loadFailed": "Não foi possível carregar suas contas conectadas.",
     "noPermission": "Seu papel não inclui Git com acesso Gerenciar. Peça a um administrador para concedê-lo.",
     "accounts": {
       "title": "Contas conectadas",
-      "description": "Contas a partir das quais as aplicações podem fazer deploy.",
       "recheck": "Verificar todas as contas novamente"
     },
     "onboarding": {
@@ -6733,7 +6724,7 @@
   },
   "panelUpdate": {
     "title": "Atualização do painel",
-    "subtitle": "Atualizar o próprio {brand}. As aplicações hospedadas continuam no ar; apenas este painel reinicia.",
+    "subtitle": "As aplicações hospedadas continuam no ar; apenas este painel reinicia.",
     "loadFailed": "Não foi possível carregar o status da atualização. Tente novamente em alguns instantes.",
     "versionValue": "v{version}",
     "versionUnknown": "Versão desconhecida",
@@ -6802,7 +6793,6 @@
   },
   "doctor": {
     "title": "Saúde do sistema",
-    "subtitle": "Verificações automatizadas que confirmam se este painel realmente funciona no servidor.",
     "recheck": "Verificar novamente",
     "loadFailed": "Não foi possível executar as verificações de saúde. Tente novamente em instantes.",
     "statusPass": "Aprovado",
@@ -6823,7 +6813,6 @@
     "rawTitle": "Resposta bruta",
     "rawCopy": "Copiar resposta bruta",
     "title": "Log de erros do painel",
-    "subtitle": "Falhas inesperadas dentro do painel, as mais recentes primeiro.",
     "summary": {
       "healthy": "Sem erros inesperados do painel.",
       "healthyHint": "O painel não teve falha interna no período registrado.",
@@ -6934,7 +6923,6 @@
   },
   "storage": {
     "title": "Armazenamento",
-    "subtitle": "Para onde os backups são enviados. Conecte um destino aqui e depois escolha-o em uma aplicação.",
     "loadFailed": "Não foi possível carregar isso.",
     "noPermission": "Seu papel não inclui Armazenamento com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
     "card": {
@@ -7999,7 +7987,6 @@
   "central": {
     "title": "Gerenciamento central",
     "pageSubtitle": "Permita que um painel central gerencie este servidor por você.",
-    "subtitle": "Gere uma chave aqui e cole-a no seu painel central para conectar este servidor a ele.",
     "disconnected": "Este servidor não está mais conectado ao Central.",
     "cancel": "Cancelar",
     "power": {
@@ -8066,7 +8053,6 @@
   },
   "docker": {
     "title": "Docker",
-    "subtitle": "Redes e volumes partilhados pelos contentores deste servidor.",
     "remove": "Remover",
     "none": "Nenhum",
     "failed": "Não foi possível concluir.",
@@ -8219,7 +8205,6 @@
           "hint": "Qualquer registo que aceite docker login"
         }
       },
-      "subtitle": "Credenciais que este servidor usa para obter imagens de contentor privadas.",
       "unavailableTitle": "Este servidor não aloja contentores",
       "unavailableBody": "As credenciais de registo servem para obter imagens de contentor. Este servidor não executa nenhum, por isso não há nada para obter.",
       "listTitle": "Credenciais guardadas",

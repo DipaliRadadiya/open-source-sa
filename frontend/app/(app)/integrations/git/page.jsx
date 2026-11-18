@@ -31,7 +31,7 @@ export default async function GitIntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       <div >
         <AccountsCard

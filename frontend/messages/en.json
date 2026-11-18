@@ -385,7 +385,6 @@
   },
   "users": {
     "title": "Users",
-    "subtitle": "Manage the people who can access this panel.",
     "addUser": "Add user",
     "searchPlaceholder": "Search name or username…",
     "clearSearch": "Clear search",
@@ -499,7 +498,6 @@
       "failed": "Couldn't sync permissions."
     },
     "title": "Roles",
-    "subtitle": "Define permission roles and assign them to users.",
     "addRole": "New role",
     "system": "System",
     "searchPlaceholder": "Search roles…",
@@ -625,10 +623,8 @@
   },
   "account": {
     "title": "Account",
-    "subtitle": "Manage your profile, password, and activity.",
     "profile": {
       "title": "Your details",
-      "description": "How you appear in the panel, and the name you sign in with.",
       "name": "Name",
       "username": "Username",
       "accountType": "Account type",
@@ -638,13 +634,11 @@
       "success": "Profile updated.",
       "namePlaceholder": "Your full name",
       "usernamePlaceholder": "your-username",
-      "usernameHint": "You sign in with this. Letters, numbers, dashes and underscores.",
       "unsavedTitle": "Discard unsaved changes?",
       "unsavedDesc": "You have unsaved profile changes. If you switch tabs now, they will be lost.",
       "unsavedDiscard": "Discard changes",
       "unsavedKeep": "Keep editing",
-      "failed": "Your profile could not be saved.",
-      "nameHint": "Shown in the menu and next to everything you do."
+      "failed": "Your profile could not be saved."
     },
     "password": {
       "title": "Password",
@@ -697,7 +691,6 @@
   },
   "activity": {
     "title": "Activity Log",
-    "subtitle": "Every action taken across the panel.",
     "searchPlaceholder": "Search action or user…",
     "empty": {
       "title": "No activity yet",
@@ -3633,12 +3626,10 @@
   },
   "git": {
     "title": "Git",
-    "subtitle": "Connect a Git account once, then choose it when you create an application.",
     "loadFailed": "We could not load your connected accounts.",
     "noPermission": "Your role does not include Git with Manage access. Ask an administrator to grant it.",
     "accounts": {
       "title": "Connected accounts",
-      "description": "Accounts applications can deploy from.",
       "recheck": "Check all accounts again"
     },
     "onboarding": {
@@ -6733,7 +6724,7 @@
   },
   "panelUpdate": {
     "title": "Panel update",
-    "subtitle": "Update {brand} itself. Hosted applications stay online; only this panel restarts.",
+    "subtitle": "Hosted applications stay online; only this panel restarts.",
     "loadFailed": "We couldn't load the update status. Try again in a moment.",
     "versionValue": "v{version}",
     "versionUnknown": "Unknown version",
@@ -6802,7 +6793,6 @@
   },
   "doctor": {
     "title": "System health",
-    "subtitle": "Automated checks that confirm this panel can actually run on the server.",
     "recheck": "Re-check",
     "loadFailed": "We couldn't run the health checks. Try again in a moment.",
     "statusPass": "Passed",
@@ -6823,7 +6813,6 @@
     "rawTitle": "Raw response",
     "rawCopy": "Copy raw response",
     "title": "Panel Error Log",
-    "subtitle": "Unexpected failures inside the panel, newest first.",
     "summary": {
       "healthy": "No unexpected panel errors.",
       "healthyHint": "The panel has not hit an internal failure in the recorded period.",
@@ -6934,7 +6923,6 @@
   },
   "storage": {
     "title": "Storage",
-    "subtitle": "Where backups are sent. Connect a destination here, then choose it on an application.",
     "loadFailed": "This couldn't be loaded.",
     "noPermission": "Your role does not include Storage with Manage access. Ask an administrator to grant it.",
     "card": {
@@ -7999,7 +7987,6 @@
   "central": {
     "title": "Central management",
     "pageSubtitle": "Let a central panel manage this server on your behalf.",
-    "subtitle": "Generate a key here, then paste it into your central panel to connect this server to it.",
     "disconnected": "This server is no longer connected to Central.",
     "cancel": "Cancel",
     "power": {
@@ -8066,7 +8053,6 @@
   },
   "docker": {
     "title": "Docker",
-    "subtitle": "Networks and volumes shared by this server's containers.",
     "remove": "Remove",
     "none": "None",
     "failed": "That didn't work.",
@@ -8219,7 +8205,6 @@
           "hint": "Any registry that accepts docker login"
         }
       },
-      "subtitle": "Credentials this server uses to pull private container images.",
       "unavailableTitle": "This server hosts no containers",
       "unavailableBody": "Registry credentials are for pulling container images. This server runs none, so there is nothing for a credential to pull for.",
       "listTitle": "Saved credentials",
