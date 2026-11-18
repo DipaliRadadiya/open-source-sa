@@ -66,7 +66,6 @@ export function ResourceUsageChart({ history = [], timeZone }) {
     <LiveChartCard
       icon={Gauge}
       title={t("charts.usage.title")}
-      description={t("charts.usage.description")}
       ready={history.length >= 2}
       badges={series.map((s) => (
         <ChartPill key={s.key} dotClassName={SWATCH[s.token]} label={s.label} />

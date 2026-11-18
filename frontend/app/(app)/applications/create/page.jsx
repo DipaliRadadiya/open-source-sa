@@ -107,7 +107,7 @@ export default async function CreateApplicationPage({ searchParams }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
+      <PageHeader title={t("createTitle")} />
       <CreateApplicationForm
         // A server precondition, not a form field, so it sits above the form rather than in
         // the readiness checklist. The form hides it once a type that needs no database is chosen.

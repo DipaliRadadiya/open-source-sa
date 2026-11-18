@@ -54,7 +54,6 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
       plotHeight="h-52"
       icon={ArrowDownUp}
       title={t("charts.network.title")}
-      description={t("charts.network.description")}
       ready={series.length >= 2}
       stale={stale}
       badges={

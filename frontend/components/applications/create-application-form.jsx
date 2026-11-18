@@ -151,7 +151,7 @@ function fieldLabel(config) {
 // step turns into a tick.
 function SectionHeading({ step, title, description, headingId, done = false }) {
   return (
-    <div className="flex items-start gap-3">
+    <div className={cn("flex gap-3", description ? "items-start" : "items-center")}>
       <span
         className={cn(
           // Steel UI: square markers like the rest of the panel.
@@ -166,7 +166,7 @@ function SectionHeading({ step, title, description, headingId, done = false }) {
       </span>
       <div className="min-w-0 space-y-0.5">
         <h2 id={headingId} className="text-[15px] font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm leading-5 text-muted-foreground">{description}</p>
+        {description ? <p className="text-sm leading-5 text-muted-foreground">{description}</p> : null}
       </div>
     </div>
   );
@@ -1654,7 +1654,6 @@ export function CreateApplicationForm({
                   step={1}
                   done={sectionDone[1]}
                   title={t("guided.stageType")}
-                  description={t("guided.typeHint")}
                   headingId="application-type-heading"
                 />
               </div>
@@ -1728,7 +1727,6 @@ export function CreateApplicationForm({
                   step={2}
                   done={sectionDone[2]}
                   title={t("form.detailsTitle")}
-                  description={t("form.detailsHint")}
                   headingId="application-details-heading"
                 />
               </div>
@@ -1752,7 +1750,6 @@ export function CreateApplicationForm({
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>{t("form.nameHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -2059,7 +2056,6 @@ export function CreateApplicationForm({
                   title={t("guided.stageConfigure")}
                   /* Before a type is chosen, the box below does the asking; the heading only
                      describes the section. */
-                  description={t("guided.configureHint")}
                   headingId="application-configure-heading"
                 />
               </div>

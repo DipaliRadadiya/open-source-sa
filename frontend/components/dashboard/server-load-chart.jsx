@@ -74,7 +74,6 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
     <LiveChartCard
       icon={Activity}
       title={t("charts.load.title")}
-      description={t("charts.load.description")}
       ready={history.length >= 2}
       badges={
         <>

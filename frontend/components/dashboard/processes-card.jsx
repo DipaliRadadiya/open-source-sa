@@ -11,7 +11,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -64,7 +63,6 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
         </div>
       </CardHeader>
 
-      <CardDescription className="px-(--card-spacing) pt-4 pb-3">{t("processes.topDescription")}</CardDescription>
       <CardContent>
         {/* ProcessTable handles the failed state itself. */}
         <ProcessTable

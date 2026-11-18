@@ -4,7 +4,7 @@ import { CircleAlert, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortVersion } from "@/lib/databases/short-version";
 import { HoverHint } from "@/components/ui/hover-hint";
 
@@ -101,12 +101,8 @@ export async function ServerInfoCard({ facts, health, engines = [], enginesFaile
 
   return (
     <Card className={cn("gap-0 pb-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
-      {/* The description sits on the right in mono caps, as in the prototype. */}
-      <CardHeader className="border-b max-sm:grid-cols-1">
+      <CardHeader className="border-b">
         <CardTitle as="h2">{t("info.title")}</CardTitle>
-        <CardAction className="self-center max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-2 max-sm:justify-self-start">
-          <CardDescription className="font-mono text-xs tracking-[0.1em] uppercase">{t("info.description")}</CardDescription>
-        </CardAction>
       </CardHeader>
       <CardContent className="p-0">
         {/* Eight facts so the four-across rows are always full. */}

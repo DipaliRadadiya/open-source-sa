@@ -2,7 +2,7 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Container query, not a breakpoint: the card is narrow at wide viewports and wide at narrow ones.
 // `className` lets the side column cap its height: then only the list scrolls and the
@@ -24,9 +24,6 @@ export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, 
             {complete ? t("readiness.ready") : t("readiness.needsAttention")}
           </Badge>
         </div>
-        <CardDescription>
-          {complete ? t("readiness.readyHint") : t("readiness.incompleteHint")}
-        </CardDescription>
         {/* A progress bar shows how much is left, which the sentence alone does not. */}
         {items.length ? (
           <div className="space-y-1.5 pt-1">

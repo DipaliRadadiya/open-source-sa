@@ -7,7 +7,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 
 // Literal classes for Tailwind; a series token maps to its swatch.
@@ -41,7 +40,6 @@ export function LiveChartCard({
   // The live pair is shorter than the 24h charts (the redesign); the wait matches it.
   plotHeight = "h-72",
   title,
-  description,
   badges,
   summary,
   ready,
@@ -65,7 +63,7 @@ export function LiveChartCard({
       )}
     >
       {/* The plot is bottom-anchored so paired charts start on the same line. */}
-      {/* Title and readings over a hairline; the description opens the body (prototype). */}
+      {/* Title and readings over a hairline. */}
       <CardHeader className="flex flex-col items-stretch gap-1 space-y-0 border-b">
         <div className="min-w-0">
           {/* h3, not h2: these cards sit inside a section whose heading is the h2. */}
@@ -82,10 +80,8 @@ export function LiveChartCard({
           </CardTitle>
         </div>
       </CardHeader>
-      {/* Two lines reserved so paired cards align when descriptions wrap differently. */}
-      <CardDescription className="min-h-10 px-(--card-spacing) pt-4">{description}</CardDescription>
       {/* mt-auto aligns paired charts. */}
-      <CardContent className="mt-auto pt-2">
+      <CardContent className="mt-auto pt-4">
         {/* A line needs two points; until then say so. */}
         {ready ? (
           children

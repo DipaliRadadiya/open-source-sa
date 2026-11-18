@@ -515,8 +515,10 @@ test("the four chart plots start at the same height", () => {
    * nothing about where the contents start. Measured at 1440: 116px for all
    * four once the second line is reserved.
    */
-  // Steel UI (14 Oct): the description opens the body, still two lines reserved.
-  assert.match(chartCard, /<CardDescription className="min-h-10 px-\(--card-spacing\) pt-4">/);
+  // 18 Nov: the descriptions are gone (too much text, Krishna), so nothing above the plot
+  // can wrap; the bottom-anchored content keeps paired plots level.
+  assert.doesNotMatch(chartCard, /CardDescription/);
+  assert.match(chartCard, /<CardContent className="mt-auto pt-4">/);
 });
 
 test("the loading card is exactly as tall as the loaded one", () => {

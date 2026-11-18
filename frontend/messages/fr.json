@@ -1020,7 +1020,6 @@
       "noServices": "Aucun service détecté",
       "servicesDownCount": "{count, plural, one {# service sur {total} ne fonctionne pas} other {# services sur {total} ne fonctionnent pas}}",
       "title": "Informations sur le serveur",
-      "description": "Ce qu'est ce serveur et ce qu'il fait tourner",
       "hostname": "Nom du serveur",
       "os": "Système d'exploitation",
       "memory": "Mémoire",
@@ -1036,22 +1035,18 @@
       "noHistory": "Les tendances apparaîtront une fois quelques relevés collectés. Le serveur est mesuré toutes les cinq minutes.",
       "load": {
         "title": "Charge du serveur",
-        "description": "La charge du serveur par rapport à son nombre de cœurs, sur les dernières 24 heures.",
         "cores": "{count} cœurs"
       },
       "usage": {
-        "title": "Utilisation des ressources",
-        "description": "Utilisation de chaque ressource sur les dernières 24 heures."
+        "title": "Utilisation des ressources"
       },
       "network": {
         "title": "I/O réseau",
-        "description": "Trafic entrant et sortant, mis à jour en direct.",
         "in": "Entrant",
         "out": "Sortant"
       },
       "disk": {
         "title": "I/O disque",
-        "description": "Débit en lecture et écriture, mis à jour en direct.",
         "read": "Lecture",
         "write": "Écriture",
         "iops": "{ops} IOPS"
@@ -1075,7 +1070,6 @@
       "summary": "Top {count} par CPU · {cpu}% CPU et {memory}% mémoire au total",
       "summaryOfTotal": "Top {count} sur {total} par CPU · {cpu}% CPU et {memory}% mémoire au total",
       "actions": "Actions",
-      "topDescription": "Les plus actifs en ce moment — pas tous les processus du serveur.",
       "viewAll": "Voir tous les processus",
       "loadFailed": "Impossible de lire la liste des processus.",
       "showLess": "Afficher moins",
@@ -3965,12 +3959,10 @@
       }
     },
     "title": "Applications",
-    "subtitle": "Applications et services exécutés sur ce serveur.",
     "loadFailed": "Impossible de charger les applications.",
     "noPermission": "Votre rôle n'inclut pas l'accès en gestion aux applications. Demandez à un administrateur de l'accorder.",
     "create": "Créer une application",
     "createTitle": "Créer une application",
-    "createSubtitle": "Choisissez une app, puis remplissez quelques informations.",
     "chooseType": "Choisir un type d'application",
     "unavailable": "Indisponible",
     "requires": "Nécessite {runtime}",
@@ -4134,9 +4126,7 @@
       "stageType": "Choisir l'application",
       "stageConfigure": "Ajouter les informations",
       "stageReview": "Vérifier et créer",
-      "typeHint": "Choisissez un point de départ. Vous pourrez modifier les réglages avancés plus tard.",
       "moreOnDocker": "D'autres applications sont disponibles en 1-Click Recettes sur les serveurs installés avec Docker.",
-      "configureHint": "Seuls les champs nécessaires à cette application sont affichés.",
       "reviewTitle": "Prêt à créer",
       "reviewHint": "{brand} créera la configuration de l'application et affichera la progression sur l'écran suivant.",
       "selected": "Sélectionné",
@@ -4145,8 +4135,6 @@
     "readiness": {
       "needsAttention": "À vérifier",
       "ready": "Prêt",
-      "incompleteHint": "Complétez ces éléments pour continuer.",
-      "readyHint": "Vérifiez cette configuration, puis créez l'application.",
       "complete": "Manquant : {field}",
       "configured": "Configuré",
       "progress": "{done} sur {total} prêts",
@@ -4154,7 +4142,6 @@
     },
     "form": {
       "detailsTitle": "Détails de l'application",
-      "detailsHint": "Toute application a besoin d'un propriétaire, d'un nom et d'un domaine.",
       "chooseTypeHint": "Choisissez un type d'application pour voir ses champs.",
       "toggleOn": "Activé",
       "toggleOff": "Désactivé",
@@ -4168,7 +4155,7 @@
       "systemUsersUnavailable": "Impossible de charger les utilisateurs système. Choisissez « Générer un nouvel utilisateur système » pour continuer.",
       "noSystemUserCreatePermission": "Vous avez besoin de l'autorisation de gérer les utilisateurs système. Demandez à un administrateur d'en créer un.",
       "generateSystemUser": "Générer un nouvel utilisateur système",
-      "generateSystemUserHint": "Un utilisateur dédié à cette application. Son nom et son mot de passe sont ci-dessous.",
+      "generateSystemUserHint": "Uniquement pour cette application.",
       "pickSystemUser": "Utiliser un utilisateur système existant",
       "pickSystemUserHint": "Partager un compte avec vos autres applications.",
       "repositoriesLoading": "Chargement des dépôts…",
@@ -4211,7 +4198,6 @@
         "label": "Où cette application sera hébergée"
       },
       "temporaryDomainHint": "Fonctionne tout de suite. Utilisez un vrai domaine avant la mise en ligne.",
-      "nameHint": "Votre libellé dans le panneau. Il remplit aussi le domaine et l'utilisateur système ci-dessous — vous pouvez les modifier.",
       "buildCommandSuperseded": "Ceci ne s'exécutera pas — le script de déploiement le remplace.",
       "moreLines": "{count, plural, one {+# ligne supplémentaire} other {+# lignes supplémentaires}}",
       "needsSystemUser": "Aucun utilisateur système n'existe encore.",
@@ -4255,7 +4241,7 @@
       "systemUserNew": "{username} (nouveau)",
       "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_).",
       "runtimeLoadFailed": "Impossible de lire les versions de {runtime} installées.",
-      "httpsAutomatic": "HTTPS s'active tout seul après la création, dès que le domaine pointe vers ce serveur."
+      "httpsAutomatic": "Le HTTPS s’active tout seul dès que le domaine pointe ici."
     },
     "actions": {
       "label": "Actions",

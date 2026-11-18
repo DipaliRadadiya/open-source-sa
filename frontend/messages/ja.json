@@ -1020,7 +1020,6 @@
       "noServices": "サービスが検出されませんでした",
       "servicesDownCount": "{count, plural, other {{total} 件中 # 件のサービスが停止しています}}",
       "title": "サーバー情報",
-      "description": "このサーバーの概要と稼働中のソフトウェア",
       "hostname": "サーバー名",
       "os": "オペレーティングシステム",
       "memory": "メモリ",
@@ -1036,22 +1035,18 @@
       "noHistory": "サンプルがいくつか収集されると推移が表示されます。サーバーは 5 分ごとに計測されます。",
       "load": {
         "title": "サーバ負荷",
-        "description": "過去 24 時間に、コア数に対してサーバーがどれだけ忙しかったか。",
         "cores": "{count} コア"
       },
       "usage": {
-        "title": "リソース使用状況",
-        "description": "過去24時間における各リソースの使用量です。"
+        "title": "リソース使用状況"
       },
       "network": {
         "title": "ネットワーク I/O",
-        "description": "受信・送信トラフィックをリアルタイムで表示します。",
         "in": "受信",
         "out": "送信"
       },
       "disk": {
         "title": "ディスク I/O",
-        "description": "読み書きのスループットをリアルタイムで表示します。",
         "read": "読み取り",
         "write": "書き込み",
         "iops": "{ops} IOPS"
@@ -1075,7 +1070,6 @@
       "summary": "CPU使用率上位 {count} 件 · 合計 CPU {cpu}% ・メモリ {memory}%",
       "summaryOfTotal": "{total} 件中 CPU 使用率上位 {count} 件 · 合計 CPU {cpu}% ・メモリ {memory}%",
       "actions": "操作",
-      "topDescription": "現在最も負荷の高いプロセスです。サーバー上のすべてのプロセスではありません。",
       "viewAll": "すべてのプロセスを表示",
       "loadFailed": "プロセス一覧を読み込めませんでした。",
       "showLess": "折りたたむ",
@@ -3965,12 +3959,10 @@
       }
     },
     "title": "アプリケーション",
-    "subtitle": "このサーバーで稼働しているアプリケーションとサービス。",
     "loadFailed": "アプリケーションを読み込めませんでした。",
     "noPermission": "あなたのロールには Application の Manage 権限がありません。管理者に依頼して付与してもらってください。",
     "create": "アプリケーションを作成",
     "createTitle": "アプリケーションを作成",
-    "createSubtitle": "アプリを選んで、いくつかの項目を入力するだけです。",
     "chooseType": "アプリケーションの種類を選択",
     "unavailable": "利用不可",
     "requires": "{runtime} が必要",
@@ -4134,9 +4126,7 @@
       "stageType": "アプリケーションを選択",
       "stageConfigure": "詳細を入力",
       "stageReview": "確認して作成",
-      "typeHint": "開始点を選んでください。詳細な設定は後から変更できます。",
       "moreOnDocker": "Docker でインストールしたサーバーでは、1-Click レシピとしてさらに多くのアプリを利用できます。",
-      "configureHint": "このアプリケーションに必要な項目だけが表示されます。",
       "reviewTitle": "作成の準備ができました",
       "reviewHint": "{brand} がアプリケーションの設定を作成し、次の画面で進捗を表示します。",
       "selected": "選択済み",
@@ -4145,8 +4135,6 @@
     "readiness": {
       "needsAttention": "対応が必要",
       "ready": "準備完了",
-      "incompleteHint": "続行するにはこれらを完了してください。",
-      "readyHint": "設定を確認し、アプリケーションを作成してください。",
       "complete": "{field} を追加",
       "configured": "設定済み",
       "progress": "{total} 件中 {done} 件完了",
@@ -4154,7 +4142,6 @@
     },
     "form": {
       "detailsTitle": "アプリケーションの詳細",
-      "detailsHint": "すべてのアプリケーションにはオーナー、名前、ドメインが必要です。",
       "chooseTypeHint": "アプリケーションの種類を選ぶと項目が表示されます。",
       "toggleOn": "有効",
       "toggleOff": "無効",
@@ -4168,7 +4155,7 @@
       "systemUsersUnavailable": "システムユーザーを読み込めませんでした。続行するには「新しいシステムユーザーを生成」を選択してください。",
       "noSystemUserCreatePermission": "システムユーザーを管理する権限がありません。管理者に作成を依頼してください。",
       "generateSystemUser": "新しいシステムユーザーを生成",
-      "generateSystemUserHint": "このアプリケーション専用のユーザー。名前とパスワードは下にあります。",
+      "generateSystemUserHint": "このアプリケーション専用です。",
       "pickSystemUser": "既存のシステムユーザーを使用",
       "pickSystemUserHint": "他のアプリケーションとアカウントを共有します。",
       "repositoriesLoading": "リポジトリを読み込み中…",
@@ -4211,7 +4198,6 @@
         "label": "このアプリケーションを公開する場所"
       },
       "temporaryDomainHint": "すぐに動作します。本番公開前に実際のドメインを使用してください。",
-      "nameHint": "パネル内での表示名です。下のドメインとシステムユーザーにも反映されます（変更できます）。",
       "buildCommandSuperseded": "これは実行されません。デプロイスクリプトが代わりに処理します。",
       "moreLines": "{count, plural, one {他 # 行} other {他 # 行}}",
       "needsSystemUser": "システムユーザーがまだありません。",
@@ -4255,7 +4241,7 @@
       "systemUserNew": "{username}（新規）",
       "tablePrefixInvalid": "英字で始め、英字と数字のみを使い、アンダースコアで終えてください（例: jml_）。",
       "runtimeLoadFailed": "インストール済みの {runtime} バージョンを読み込めませんでした。",
-      "httpsAutomatic": "作成後、ドメインがこのサーバーを指すと HTTPS は自動で有効になります。"
+      "httpsAutomatic": "ドメインがこのサーバーを向くと、HTTPS は自動でオンになります。"
     },
     "actions": {
       "label": "操作",

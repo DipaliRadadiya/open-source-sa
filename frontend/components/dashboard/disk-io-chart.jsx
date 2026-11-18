@@ -68,7 +68,6 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
       plotHeight="h-52"
       icon={HardDrive}
       title={t("charts.disk.title")}
-      description={t("charts.disk.description")}
       ready={chartSeries.length >= 2}
       stale={stale}
       badges={

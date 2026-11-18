@@ -76,7 +76,7 @@ export default async function ApplicationsPage({ searchParams }) {
   redirectOutOfRange("/applications", sp, result.meta, result.failed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
       <RefreshOnReturn />
       {/* `?gone` is set when a deleted site redirects here; explain the redirect. */}
       {sp?.gone ? (

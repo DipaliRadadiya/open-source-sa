@@ -1020,7 +1020,6 @@
       "noServices": "Keine Dienste gefunden",
       "servicesDownCount": "{count, plural, one {# von {total} Diensten läuft nicht} other {# von {total} Diensten laufen nicht}}",
       "title": "Serverinformationen",
-      "description": "Was dieser Server ist und was darauf läuft",
       "hostname": "Servername",
       "os": "Betriebssystem",
       "memory": "RAM",
@@ -1036,22 +1035,18 @@
       "noHistory": "Verläufe erscheinen, sobald einige Messwerte erfasst wurden. Der Server wird alle fünf Minuten gemessen.",
       "load": {
         "title": "Serverlast",
-        "description": "Wie ausgelastet der Server im Verhältnis zu seinen Kernen war, über die letzten 24 Stunden.",
         "cores": "{count} Kerne"
       },
       "usage": {
-        "title": "Ressourcennutzung",
-        "description": "Wie stark jede Ressource in den letzten 24 Stunden ausgelastet war."
+        "title": "Ressourcennutzung"
       },
       "network": {
         "title": "Netzwerk-E/A",
-        "description": "Eingehender und ausgehender Traffic, live aktualisiert.",
         "in": "Eingehend",
         "out": "Ausgehend"
       },
       "disk": {
         "title": "Festplatten-E/A",
-        "description": "Lese- und Schreibdurchsatz, live aktualisiert.",
         "read": "Lesen",
         "write": "Schreiben",
         "iops": "{ops} IOPS"
@@ -1075,7 +1070,6 @@
       "summary": "Top {count} nach CPU · zusammen {cpu}% CPU und {memory}% Speicher",
       "summaryOfTotal": "Top {count} von {total} nach CPU · zusammen {cpu}% CPU und {memory}% Speicher",
       "actions": "Aktionen",
-      "topDescription": "Die derzeit aktivsten — nicht alle Prozesse auf dem Server.",
       "viewAll": "Alle Prozesse anzeigen",
       "loadFailed": "Die Prozessliste konnte nicht gelesen werden.",
       "showLess": "Weniger anzeigen",
@@ -3965,12 +3959,10 @@
       }
     },
     "title": "Anwendungen",
-    "subtitle": "Anwendungen und Dienste, die auf diesem Server laufen.",
     "loadFailed": "Die Anwendungen konnten nicht geladen werden.",
     "noPermission": "Ihre Rolle enthält nicht „Anwendung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "create": "Anwendung erstellen",
     "createTitle": "Anwendung erstellen",
-    "createSubtitle": "Wählen Sie eine App und füllen Sie ein paar Angaben aus.",
     "chooseType": "Anwendungstyp wählen",
     "unavailable": "Nicht verfügbar",
     "requires": "Erfordert {runtime}",
@@ -4134,9 +4126,7 @@
       "stageType": "Anwendung wählen",
       "stageConfigure": "Angaben ergänzen",
       "stageReview": "Prüfen und erstellen",
-      "typeHint": "Wählen Sie einen Ausgangspunkt. Erweiterte Einstellungen können Sie später ändern.",
       "moreOnDocker": "Weitere Apps gibt es als 1-Click Rezepte auf Servern, die mit Docker installiert wurden.",
-      "configureHint": "Es werden nur die Felder gezeigt, die diese Anwendung braucht.",
       "reviewTitle": "Bereit zum Erstellen",
       "reviewHint": "{brand} erstellt die Anwendungskonfiguration und zeigt den Fortschritt auf dem nächsten Bildschirm.",
       "selected": "Ausgewählt",
@@ -4145,8 +4135,6 @@
     "readiness": {
       "needsAttention": "Handlungsbedarf",
       "ready": "Bereit",
-      "incompleteHint": "Vervollständigen Sie diese Punkte, um fortzufahren.",
-      "readyHint": "Prüfen Sie diese Konfiguration und erstellen Sie dann die Anwendung.",
       "complete": "{field} angeben",
       "configured": "Konfiguriert",
       "progress": "{done} von {total} bereit",
@@ -4154,7 +4142,6 @@
     },
     "form": {
       "detailsTitle": "Angaben zur Anwendung",
-      "detailsHint": "Jede Anwendung braucht einen Besitzer, einen Namen und eine Domain.",
       "chooseTypeHint": "Wählen Sie einen Anwendungstyp, um seine Felder zu sehen.",
       "toggleOn": "Aktiviert",
       "toggleOff": "Deaktiviert",
@@ -4168,7 +4155,7 @@
       "systemUsersUnavailable": "Die Systembenutzer konnten nicht geladen werden. Wählen Sie „Neuen Systembenutzer erzeugen“, um fortzufahren.",
       "noSystemUserCreatePermission": "Sie brauchen die Berechtigung, Systembenutzer zu verwalten. Bitten Sie eine Administratorin oder einen Administrator, einen anzulegen.",
       "generateSystemUser": "Neuen Systembenutzer erzeugen",
-      "generateSystemUserHint": "Ein eigener Benutzer für diese Anwendung. Name und Passwort stehen unten.",
+      "generateSystemUserHint": "Nur für diese Anwendung.",
       "pickSystemUser": "Vorhandenen Systembenutzer verwenden",
       "pickSystemUserHint": "Ein Konto gemeinsam mit Ihren anderen Anwendungen nutzen.",
       "repositoriesLoading": "Repositories werden geladen…",
@@ -4211,7 +4198,6 @@
         "label": "Wo diese Anwendung liegen wird"
       },
       "temporaryDomainHint": "Funktioniert sofort. Nutzen Sie vor dem Start eine echte Domain.",
-      "nameHint": "Ihre Bezeichnung im Panel. Sie füllt auch die Domain und den Systembenutzer unten aus — Sie können beide ändern.",
       "buildCommandSuperseded": "Das wird nicht ausgeführt — das Deploy-Skript ersetzt es.",
       "moreLines": "{count, plural, one {+# weitere Zeile} other {+# weitere Zeilen}}",
       "needsSystemUser": "Es gibt noch keine Systembenutzer.",
@@ -4255,7 +4241,7 @@
       "systemUserNew": "{username} (neu)",
       "tablePrefixInvalid": "Mit einem Buchstaben beginnen, nur Buchstaben und Ziffern verwenden und mit einem Unterstrich enden (zum Beispiel jml_).",
       "runtimeLoadFailed": "Die installierten {runtime}-Versionen konnten nicht gelesen werden.",
-      "httpsAutomatic": "HTTPS wird nach dem Erstellen automatisch aktiviert, sobald die Domain auf diesen Server zeigt."
+      "httpsAutomatic": "HTTPS wird automatisch aktiviert, sobald die Domain hierher zeigt."
     },
     "actions": {
       "label": "Aktionen",
