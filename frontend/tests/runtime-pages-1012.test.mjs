@@ -13,7 +13,8 @@ test("both pages list every version in one table with Install in its header", ()
     const src = read(page);
     assert.match(src, /<VersionsCard/, page);
     assert.match(src, /action=\{install\}/, page);
-    assert.match(src, /footnote=\{t\("versions\.defaultHint"\)\}/, page);
+    // 18 Nov: PHP dropped its footnote (too much text, Krishna); Node keeps its own until its pass.
+    if (page.includes("node")) assert.match(src, /footnote=\{t\("versions\.defaultHint"\)\}/, page);
     assert.doesNotMatch(src, /VersionBar|PhpVersionList/, `${page} brought back the chips or the two-pane list`);
   }
 });
@@ -92,18 +93,17 @@ test("an up-to-date npm is said, not offered as a dead button", () => {
 test("every locale has the new labels, and the help text speaks to users", () => {
   for (const locale of LOCALES) {
     const m = JSON.parse(read(`messages/${locale}.json`));
-    for (const key of ["title", "description", "colVersion", "colSupport", "colUsedBy", "colActions", "usedByCount", "usedByNone", "usedByTitle"]) {
+    for (const key of ["title", "colVersion", "colSupport", "colUsedBy", "colActions", "usedByCount", "usedByNone", "usedByTitle"]) {
       assert.ok(m.php.table?.[key], `${locale} php.table.${key}`);
       assert.ok(m.node.table?.[key], `${locale} node.table.${key}`);
     }
+    assert.ok(m.node.table.description, `${locale} node.table.description`);
     assert.ok(m.node.table.colNpm && m.node.table.npmCurrent, `${locale} node npm labels`);
     assert.ok(m.php.settings?.title?.includes("{version}"), `${locale} php.settings.title`);
     assert.ok(m.php.tabs?.ini, `${locale} php.tabs.ini`);
-    for (const key of ["description", "perApp", "perAppLink", "retry", "discard"]) {
+    for (const key of ["description", "retry", "discard"]) {
       assert.ok(m.php.ini?.[key], `${locale} php.ini.${key}`);
     }
-    assert.match(m.php.ioncube.hint, /\{version\}/, `${locale} ioncube hint names the version`);
-    assert.doesNotMatch(m.php.ioncube.hint, /apt/, `${locale} ioncube hint still explains packaging`);
     assert.equal(m.php.versions.switchLabel, undefined, `${locale} keeps the dead "Settings for:" label`);
   }
 });

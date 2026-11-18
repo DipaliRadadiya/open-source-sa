@@ -132,9 +132,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
                 ) : null}
               </span>
             </p>
-          ) : (
-            <p className="text-xs leading-relaxed text-muted-foreground">{t("hint", { version })}</p>
-          )}
+          ) : null}
 
           {/* Install has no confirmation, so its choice sits on the card. */}
           {canAct && canManage && !installed && !installing ? (

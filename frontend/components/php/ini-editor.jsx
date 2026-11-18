@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Info, Loader2, RotateCcw, TriangleAlert } from "lucide-react";
-import Link from "@/components/ui/app-link";
+import { Loader2, RotateCcw, TriangleAlert } from "lucide-react";
 import { readPhpIni, savePhpIni } from "@/lib/api/php";
 import { phpIniResponseSchema } from "@/lib/schemas/php";
 import { Button } from "@/components/ui/button";
@@ -141,23 +140,10 @@ export function IniEditor({ version, canManage }) {
     <Card>
       <CardHeader>
         <CardTitle as="h3">{t("phpIni.title", { version })}</CardTitle>
-        <CardDescription>
-          {readOnly ? t("phpIni.readOnlyDescription") : tPhp(safetyCopy ? "ini.description" : "ini.descriptionNoCopy")}
-        </CardDescription>
+        {readOnly ? null : <CardDescription>{tPhp("ini.description")}</CardDescription>}
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Most people arrive here to raise one application's limit, which belongs on its own page. */}
-        <p className="flex items-start gap-2 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">
-          <Info className="mt-0.5 size-4 shrink-0" />
-          <span>
-            {tPhp("ini.perApp")}{" "}
-            <Link href="/applications" prefetch={false} className="font-medium text-foreground underline underline-offset-4">
-              {tPhp("ini.perAppLink")}
-            </Link>
-          </span>
-        </p>
-
         {loadError ? (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
             <span className="flex items-start gap-2">

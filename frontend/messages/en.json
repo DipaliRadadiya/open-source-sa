@@ -1685,7 +1685,7 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "acknowledge": "I understand a bad php.ini can stop PHP {version} FPM from starting, which would take every application on that version offline.",
+      "acknowledge": "I understand a mistake here can take every application on PHP {version} offline.",
       "save": "Save and reload",
       "copy": "Copy file",
       "saved": "php.ini saved and PHP {version} reloaded",
@@ -1693,8 +1693,7 @@
       "saveFailed": "The php.ini could not be saved.",
       "blockedNoChanges": "Nothing to save — the file has not been changed.",
       "blockedAcknowledge": "Confirm you understand the risk first.",
-      "pathUnknown": "Loading…",
-      "readOnlyDescription": "The whole file, as PHP reads it."
+      "pathUnknown": "Loading…"
     },
     "notMeasured": "Not measured",
     "phpSettings": "PHP settings",
@@ -2429,10 +2428,8 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "PHP on this server, and the extensions your applications can use.",
     "table": {
       "title": "Installed versions",
-      "description": "Click a version to see and change its extensions, ionCube and php.ini.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colUsedBy": "Used by",
@@ -2443,13 +2440,10 @@
     },
     "settings": {
       "title": "Settings for PHP {version}",
-      "description": "Changes here apply to every application that uses PHP {version}."
+      "description": "Applies to every application on PHP {version}. An application's own PHP settings override these."
     },
     "ini": {
-      "description": "The whole file, as PHP reads it. When you save, the old file is backed up and PHP checks the new one. If PHP rejects it, the old file is put back and nothing changes.",
-      "descriptionNoCopy": "The whole file, as PHP reads it. When you save, PHP checks the new one. If PHP rejects it, the old file is put back and nothing changes.",
-      "perApp": "To change upload size, memory or time limits for one application only, use that application’s PHP settings instead.",
-      "perAppLink": "Go to Applications",
+      "description": "PHP checks the file when you save. If it finds an error, nothing changes.",
       "retry": "Try again",
       "discard": "Discard changes",
       "stale": "This file was changed on the Common settings tab. Reload it before saving, or your save will undo that change.",
@@ -2472,7 +2466,6 @@
       "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "New applications start on the default version. The php command uses it too.",
       "defaultSet": "PHP {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "PHP {version} removed.",
@@ -2531,7 +2524,7 @@
       "installing": "Installing {name} — this takes a few minutes.",
       "installingShort": "Starting",
       "failed": "That extension could not be changed.",
-      "summary": "{on} of {total} turned on. Turn on what your applications need.",
+      "summary": "{on} of {total} turned on.",
       "filterAll": "All",
       "filterOn": "On",
       "filterOff": "Off",
@@ -2677,7 +2670,7 @@
     },
     "ioncube": {
       "title": "ionCube Loader",
-      "subtitle": "Runs commercial PHP software whose source is encrypted — WHMCS and most licensed scripts need it.",
+      "subtitle": "Needed by encrypted PHP software, such as WHMCS.",
       "installed": "Installed",
       "notInstalled": "Not installed",
       "loaderVersion": "Loader {version}",
@@ -2693,7 +2686,6 @@
       "loadFailed": "The ionCube Loader status could not be read.",
       "removeConfirmTitle": "Remove the ionCube Loader?",
       "removeConfirmBody": "Any application on PHP {version} running encrypted software will stop working until it is installed again.",
-      "hint": "Install it only if an application asks for the ionCube Loader. It is added to PHP {version} only.",
       "onShort": "On",
       "offShort": "Off",
       "unavailableShort": "Unavailable",
@@ -2713,8 +2705,6 @@
     },
     "common": {
       "title": "Common settings",
-      "description": "Applications with their own PHP settings keep them.",
-      "appliesNote": "Saved to php.ini and checked by PHP before it applies.",
       "saveAction": "Save PHP settings",
       "saved": "PHP {version} settings saved.",
       "failed": "Couldn't save the PHP settings.",
@@ -6134,7 +6124,6 @@
       "manage": "Manage backups",
       "setUp": "Set up backups",
       "loadFailed": "The backup settings could not be loaded.",
-      "unprotectedRisk": "Nothing is being backed up. If this application is lost, there is nothing to restore.",
       "pausedRisk": "Backups are set up but not running, so the newest copy keeps getting older.",
       "description": "Whether this application could be restored.",
       "runningNote": "A backup of this application is running now. This card updates on its own.",
@@ -6409,10 +6398,10 @@
       },
       "firstRun": {
         "title": "Save these credentials now",
-        "body": "The panel generated these when it installed this app. They cannot be changed from here — the app stores them inside its own database — so copy them somewhere safe before you dismiss this.",
+        "body": "The app's own login. The panel can't change it, so keep a copy somewhere safe.",
         "acknowledge": "I've saved these",
         "acknowledgeFailed": "Couldn't record that. The credentials are unchanged.",
-        "laterHint": "They stay available under Container → Reveal.",
+        "laterHint": "You can see them again under Container → Reveal.",
         "loading": "Loading credentials",
         "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page.",
         "valuesNotShown": "Available once the values are on screen.",
@@ -6649,9 +6638,9 @@
       "title": "Command-line access",
       "stateOn": "Container login on",
       "stateOff": "Container login off",
-      "hostSshOn": "{username} can still log in to this server over SSH, outside the container. To stop that, turn off its SSH login in <link>System Users</link>.",
-      "hostSshNotEnforced": "{username} can still log in to this server over SSH, outside the container, because SSH login rules are off on this server. Turn them on in <link>Access & security</link>.",
-      "offBody": "Turn it on and logging in as {username} opens this app's container directly.",
+      "hostSshOn": "{username} can still log in to the server over SSH. Turn off its SSH login in <link>System Users</link>.",
+      "hostSshNotEnforced": "{username} can still log in to the server over SSH. Turn on SSH login rules in <link>Access & security</link>.",
+      "offBody": "When on, {username} logs in to the container instead of the server.",
       "turnOffDialog": {
         "title": "Turn off container login for {username}?",
         "body": "Logging in as {username} will no longer open this app's container.",
@@ -6699,7 +6688,6 @@
     },
     "health": {
       "online": "Online",
-      "onlineDetail": "Visitors can reach this application.",
       "paused": "Paused",
       "pausedDetail": "Visitors see a holding page until you resume it.",
       "https": "HTTPS is on",
@@ -8335,15 +8323,13 @@
   },
   "operations": {
     "title": "Background jobs",
-    "description": "Running now, and finished in the last 24 hours.",
     "trigger": "{count, plural, one {# job running} other {# jobs running}}",
     "running": "running",
     "loading": "Loading jobs…",
     "empty": "No jobs in the last 24 hours.",
-    "footer": "Each job also shows its progress on its own page.",
     "groups": {
       "running": "Running",
-      "finished": "Finished"
+      "finished": "Last 24 hours"
     },
     "state": {
       "waiting": "Waiting to start",

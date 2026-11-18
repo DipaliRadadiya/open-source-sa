@@ -123,7 +123,7 @@ export default async function PhpPage({ searchParams }) {
         />
       ) : null}
 
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* No PHP installed is a normal state, not an error. */}
       {versions.length === 0 ? (
@@ -146,7 +146,6 @@ export default async function PhpPage({ searchParams }) {
               t("table.colActions"),
             ]}
             action={install}
-            footnote={t("versions.defaultHint")}
           >
             {/* Newest first: the API lists in-flight installs ahead of installed versions. */}
             {ordered.map((version) => (

@@ -1685,7 +1685,7 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "acknowledge": "Je comprends qu'un php.ini erroné peut empêcher PHP {version} FPM de démarrer, ce qui mettrait hors ligne toutes les applications utilisant cette version.",
+      "acknowledge": "Je comprends qu'une erreur ici peut mettre hors ligne toutes les applications sous PHP {version}.",
       "save": "Enregistrer et recharger",
       "copy": "Copier le fichier",
       "saved": "php.ini enregistré et PHP {version} rechargé",
@@ -1693,8 +1693,7 @@
       "saveFailed": "Le php.ini n'a pas pu être enregistré.",
       "blockedNoChanges": "Rien à enregistrer — le fichier n'a pas été modifié.",
       "blockedAcknowledge": "Confirmez d'abord que vous comprenez le risque.",
-      "pathUnknown": "Chargement…",
-      "readOnlyDescription": "Le fichier complet, tel que PHP le lit."
+      "pathUnknown": "Chargement…"
     },
     "notMeasured": "Non mesuré",
     "phpSettings": "Paramètres PHP",
@@ -2429,10 +2428,8 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "PHP sur ce serveur et extensions utilisables par vos applications.",
     "table": {
       "title": "Versions installées",
-      "description": "Cliquez sur une version pour voir et modifier ses extensions, ionCube et php.ini.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colUsedBy": "Utilisé par",
@@ -2443,13 +2440,10 @@
     },
     "settings": {
       "title": "Paramètres de PHP {version}",
-      "description": "Les modifications ici s’appliquent à toutes les applications qui utilisent PHP {version}."
+      "description": "S’applique à toutes les applications sous PHP {version}. Les réglages PHP propres à une application restent prioritaires."
     },
     "ini": {
-      "description": "Le fichier complet, tel que PHP le lit. À l’enregistrement, l’ancien fichier est sauvegardé et PHP vérifie le nouveau. Si PHP le refuse, l’ancien fichier est remis en place et rien ne change.",
-      "descriptionNoCopy": "Le fichier complet, tel que PHP le lit. À l’enregistrement, PHP vérifie le nouveau. Si PHP le refuse, l’ancien fichier est remis en place et rien ne change.",
-      "perApp": "Pour modifier la taille d’envoi, la mémoire ou les limites de temps d’une seule application, utilisez plutôt les paramètres PHP de cette application.",
-      "perAppLink": "Aller aux applications",
+      "description": "PHP vérifie le fichier à l’enregistrement. S’il trouve une erreur, rien ne change.",
       "retry": "Réessayer",
       "discard": "Abandonner les modifications",
       "stale": "Ce fichier a été modifié dans l'onglet Paramètres courants. Rechargez-le avant d'enregistrer, sinon votre enregistrement annulera ce changement.",
@@ -2472,7 +2466,6 @@
       "usedByNone": "Aucune application n'utilise encore cette version.",
       "makeDefault": "Définir par défaut",
       "remove": "Retirer",
-      "defaultHint": "Les nouvelles applications démarrent sur la version par défaut. La commande php l’utilise aussi.",
       "defaultSet": "PHP {version} est maintenant la version par défaut.",
       "defaultFailed": "Cette version n'a pas pu être définie par défaut.",
       "removed": "PHP {version} supprimé.",
@@ -2531,7 +2524,7 @@
       "installing": "Installation de {name} — cela prend quelques minutes.",
       "installingShort": "Démarrage",
       "failed": "Cette extension n'a pas pu être modifiée.",
-      "summary": "{on} sur {total} activées. Activez celles dont vos applications ont besoin.",
+      "summary": "{on} sur {total} activées.",
       "filterAll": "Tout",
       "filterOn": "Activé",
       "filterOff": "Désactivé",
@@ -2677,7 +2670,7 @@
     },
     "ioncube": {
       "title": "ionCube Loader",
-      "subtitle": "Exécute les logiciels PHP commerciaux dont le code source est chiffré — WHMCS et la plupart des scripts sous licence en ont besoin.",
+      "subtitle": "Requis par les logiciels PHP chiffrés, comme WHMCS.",
       "installed": "Installé",
       "notInstalled": "Non installé",
       "loaderVersion": "Loader {version}",
@@ -2693,7 +2686,6 @@
       "loadFailed": "L'état du ionCube Loader n'a pas pu être lu.",
       "removeConfirmTitle": "Supprimer le ionCube Loader ?",
       "removeConfirmBody": "Toute application sous PHP {version} qui exécute un logiciel chiffré cessera de fonctionner tant qu'elle ne sera pas réinstallée.",
-      "hint": "Installez-le uniquement si une application demande ionCube Loader. Il est ajouté à PHP {version} seulement.",
       "onShort": "Activé",
       "offShort": "Désactivé",
       "unavailableShort": "Indisponible",
@@ -2713,8 +2705,6 @@
     },
     "common": {
       "title": "Paramètres courants",
-      "description": "Les applications qui ont leurs propres réglages PHP les gardent.",
-      "appliesNote": "Enregistré dans php.ini et vérifié par PHP avant d'être appliqué.",
       "saveAction": "Enregistrer les paramètres PHP",
       "saved": "Paramètres de PHP {version} enregistrés.",
       "failed": "Impossible d'enregistrer les paramètres PHP.",
@@ -6134,7 +6124,6 @@
       "manage": "Gérer les sauvegardes",
       "setUp": "Configurer les sauvegardes",
       "loadFailed": "Les paramètres de sauvegarde n'ont pas pu être chargés.",
-      "unprotectedRisk": "Aucune sauvegarde n'est effectuée. Si cette application est perdue, il n'y a rien à restaurer.",
       "pausedRisk": "Les sauvegardes sont configurées mais ne tournent pas, la copie la plus récente vieillit donc sans cesse.",
       "description": "Si cette application pourrait être restaurée.",
       "runningNote": "Une sauvegarde de cette application est en cours. Cette carte se met à jour toute seule.",
@@ -6409,10 +6398,10 @@
       },
       "firstRun": {
         "title": "Enregistrez ces identifiants maintenant",
-        "body": "Le panneau les a générés à l'installation de cette application. Ils ne peuvent pas être modifiés ici — l'application les stocke dans sa propre base de données — copiez-les donc en lieu sûr avant de fermer ce message.",
+        "body": "Les identifiants propres à l'application. Le panneau ne peut pas les modifier, gardez-en donc une copie en lieu sûr.",
         "acknowledge": "Je les ai enregistrés",
         "acknowledgeFailed": "Impossible d'enregistrer cette confirmation. Les identifiants sont inchangés.",
-        "laterHint": "Ils restent disponibles via Conteneur → Afficher.",
+        "laterHint": "Vous pouvez les revoir via Conteneur → Afficher.",
         "loading": "Chargement des identifiants",
         "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page.",
         "valuesNotShown": "Disponible une fois les valeurs affichées.",
@@ -6649,9 +6638,9 @@
       "title": "Accès en ligne de commande",
       "stateOn": "Connexion au conteneur activée",
       "stateOff": "Connexion au conteneur désactivée",
-      "hostSshOn": "{username} peut toujours se connecter à ce serveur en SSH, hors du conteneur. Pour l'empêcher, désactivez sa connexion SSH dans <link>Utilisateurs système</link>.",
-      "hostSshNotEnforced": "{username} peut toujours se connecter à ce serveur en SSH, hors du conteneur, car les règles de connexion SSH sont désactivées sur ce serveur. Activez-les dans <link>Accès et sécurité</link>.",
-      "offBody": "Activez-la et la connexion en tant que {username} ouvrira directement le conteneur de cette application.",
+      "hostSshOn": "{username} peut toujours se connecter au serveur en SSH. Désactivez sa connexion SSH dans <link>Utilisateurs système</link>.",
+      "hostSshNotEnforced": "{username} peut toujours se connecter au serveur en SSH. Activez les règles de connexion SSH dans <link>Accès et sécurité</link>.",
+      "offBody": "Activée, la connexion de {username} ouvre le conteneur au lieu du serveur.",
       "turnOffDialog": {
         "title": "Désactiver la connexion au conteneur pour {username} ?",
         "body": "Se connecter en tant que {username} n'ouvrira plus le conteneur de cette application.",
@@ -6699,7 +6688,6 @@
     },
     "health": {
       "online": "En ligne",
-      "onlineDetail": "Les visiteurs peuvent accéder à cette application.",
       "paused": "En pause",
       "pausedDetail": "Les visiteurs voient une page d'attente jusqu'à la reprise.",
       "https": "HTTPS est activé",
@@ -8335,15 +8323,13 @@
   },
   "operations": {
     "title": "Tâches en arrière-plan",
-    "description": "En cours, et terminées au cours des dernières 24 heures.",
     "trigger": "{count, plural, one {# tâche en cours} other {# tâches en cours}}",
     "running": "en cours",
     "loading": "Chargement des tâches…",
     "empty": "Aucune tâche au cours des dernières 24 heures.",
-    "footer": "Chaque tâche affiche aussi sa progression sur sa propre page.",
     "groups": {
       "running": "En exécution",
-      "finished": "Terminées"
+      "finished": "Dernières 24 heures"
     },
     "state": {
       "waiting": "En attente de démarrage",

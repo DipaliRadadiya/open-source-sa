@@ -88,7 +88,8 @@ export function Section({
       {/* The same head as the cards on an application's page. Colour sits in the icon
           chip, never the title: a red title read as an error (Krishna, 12 Oct). */}
       {title ? (
-        <div className="flex min-w-0 items-start gap-3 border-b bg-[var(--card-head)] px-5 py-4">
+        // A title alone centres on the icon; with a description both lines start at its top.
+        <div className={cn("flex min-w-0 gap-3 border-b bg-[var(--card-head)] px-5 py-4", description ? "items-start" : "items-center")}>
           {Icon ? (
             <span
               className={cn(

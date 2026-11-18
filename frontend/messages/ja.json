@@ -1685,7 +1685,7 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "acknowledge": "不適切な php.ini は PHP {version} FPM の起動を妨げ、そのバージョンのすべてのアプリケーションを停止させることを理解しました。",
+      "acknowledge": "ここでの誤りで PHP {version} のすべてのアプリケーションが停止する可能性があることを理解しました。",
       "save": "保存してリロード",
       "copy": "ファイルをコピー",
       "saved": "php.ini を保存し、PHP {version} をリロードしました",
@@ -1693,8 +1693,7 @@
       "saveFailed": "php.ini を保存できませんでした。",
       "blockedNoChanges": "保存する内容がありません — ファイルは変更されていません。",
       "blockedAcknowledge": "まずリスクを理解した旨を確認してください。",
-      "pathUnknown": "読み込み中…",
-      "readOnlyDescription": "PHP が読み込むファイル全体です。"
+      "pathUnknown": "読み込み中…"
     },
     "notMeasured": "未計測",
     "phpSettings": "PHP 設定",
@@ -2429,10 +2428,8 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "このサーバーのPHPと、各アプリケーションで使用できる拡張機能です。",
     "table": {
       "title": "インストール済みのバージョン",
-      "description": "バージョンをクリックすると、その拡張機能、ionCube、php.ini を確認・変更できます。",
       "colVersion": "バージョン",
       "colSupport": "サポート",
       "colUsedBy": "使用箇所",
@@ -2443,13 +2440,10 @@
     },
     "settings": {
       "title": "PHP {version} の設定",
-      "description": "ここでの変更は、PHP {version} を使うすべてのアプリケーションに適用されます。"
+      "description": "PHP {version} を使うすべてのアプリケーションに適用されます。アプリケーション個別の PHP 設定が優先されます。"
     },
     "ini": {
-      "description": "PHP が読み込むファイル全体です。保存すると古いファイルがバックアップされ、PHP が新しいファイルを確認します。PHP が拒否した場合は古いファイルが戻され、何も変わりません。",
-      "descriptionNoCopy": "PHP が読み込むファイル全体です。保存すると PHP が新しいファイルを確認します。PHP が拒否した場合は古いファイルが戻され、何も変わりません。",
-      "perApp": "1 つのアプリケーションだけのアップロードサイズ、メモリ、時間制限を変えるには、そのアプリケーションの PHP 設定を使ってください。",
-      "perAppLink": "アプリケーションへ",
+      "description": "保存時に PHP がファイルを確認します。エラーがあれば何も変更されません。",
       "retry": "再試行",
       "discard": "変更を破棄",
       "stale": "このファイルは「共通設定」タブで変更されました。保存する前に再読み込みしてください。そのまま保存するとその変更が元に戻ります。",
@@ -2472,7 +2466,6 @@
       "usedByNone": "このバージョンを使用しているアプリケーションはまだありません。",
       "makeDefault": "デフォルトにする",
       "remove": "解除",
-      "defaultHint": "新しいアプリケーションはデフォルトのバージョンで始まります。php コマンドもこのバージョンを使います。",
       "defaultSet": "PHP {version} をデフォルトに設定しました。",
       "defaultFailed": "そのバージョンをデフォルトに設定できませんでした。",
       "removed": "PHP {version} を削除しました。",
@@ -2531,7 +2524,7 @@
       "installing": "{name} をインストール中です。数分かかります。",
       "installingShort": "開始中",
       "failed": "拡張機能を変更できませんでした。",
-      "summary": "{total} 中 {on} がオンです。アプリケーションに必要なものをオンにしてください。",
+      "summary": "{total} 中 {on} がオンです。",
       "filterAll": "すべて",
       "filterOn": "オン",
       "filterOff": "オフ",
@@ -2677,7 +2670,7 @@
     },
     "ioncube": {
       "title": "ionCube Loader",
-      "subtitle": "ソースが暗号化されている商用PHPソフトウェアを実行します。WHMCSやほとんどのライセンス付きスクリプトはこれが必要です。",
+      "subtitle": "WHMCS など、暗号化された PHP ソフトウェアに必要です。",
       "installed": "インストール済み",
       "notInstalled": "未インストール",
       "loaderVersion": "Loader {version}",
@@ -2693,7 +2686,6 @@
       "loadFailed": "ionCube Loader の状態を読み取れませんでした。",
       "removeConfirmTitle": "ionCube Loader を削除しますか？",
       "removeConfirmBody": "PHP {version} で動作している暗号化ソフトウェアをご利用のアプリケーションは、再インストールするまで動作しなくなります。",
-      "hint": "アプリケーションが ionCube Loader を必要とする場合だけインストールしてください。追加されるのは PHP {version} のみです。",
       "onShort": "オン",
       "offShort": "オフ",
       "unavailableShort": "利用不可",
@@ -2713,8 +2705,6 @@
     },
     "common": {
       "title": "共通設定",
-      "description": "独自の PHP 設定があるアプリケーションは、その設定のままです。",
-      "appliesNote": "php.ini に保存され、適用前に PHP が検証します。",
       "saveAction": "PHP 設定を保存",
       "saved": "PHP {version} の設定を保存しました。",
       "failed": "PHP 設定を保存できませんでした。",
@@ -6134,7 +6124,6 @@
       "manage": "バックアップを管理",
       "setUp": "バックアップを設定",
       "loadFailed": "バックアップ設定を読み込めませんでした。",
-      "unprotectedRisk": "バックアップが取得されていません。このアプリケーションが失われると復元できるものがありません。",
       "pausedRisk": "バックアップは設定されていますが実行されていないため、最新のコピー内容がどんどん古くなっています。",
       "description": "このアプリケーションが復元可能かどうか。",
       "runningNote": "このアプリケーションのバックアップを実行中です。このカードは自動で更新されます。",
@@ -6409,7 +6398,7 @@
       },
       "firstRun": {
         "title": "この認証情報を今すぐ保存してください",
-        "body": "このアプリのインストール時にパネルが生成したものです。ここから変更することはできません（アプリが自身のデータベースに保存しています）。閉じる前に安全な場所へコピーしてください。",
+        "body": "アプリ自身のログイン情報です。パネルからは変更できないため、安全な場所に控えておいてください。",
         "acknowledge": "保存しました",
         "acknowledgeFailed": "記録できませんでした。認証情報は変わっていません。",
         "laterHint": "コンテナ → 表示 からいつでも確認できます。",
@@ -6649,9 +6638,9 @@
       "title": "コマンドラインアクセス",
       "stateOn": "コンテナログイン: オン",
       "stateOff": "コンテナログイン: オフ",
-      "hostSshOn": "{username} は引き続き、コンテナの外でこのサーバーに SSH でログインできます。止めるには、<link>システムユーザー</link>でこのユーザーの SSH ログインをオフにしてください。",
-      "hostSshNotEnforced": "このサーバーでは SSH ログインのルールがオフのため、{username} は引き続きコンテナの外でこのサーバーに SSH でログインできます。<link>アクセスとセキュリティ</link>でオンにしてください。",
-      "offBody": "オンにすると、{username} としてログインしたときにこのアプリのコンテナが直接開きます。",
+      "hostSshOn": "{username} は引き続き SSH でサーバーにログインできます。<link>システムユーザー</link>でこのユーザーの SSH ログインをオフにしてください。",
+      "hostSshNotEnforced": "{username} は引き続き SSH でサーバーにログインできます。<link>アクセスとセキュリティ</link>で SSH ログインのルールをオンにしてください。",
+      "offBody": "オンにすると、{username} はサーバーではなくコンテナにログインします。",
       "turnOffDialog": {
         "title": "{username} のコンテナログインをオフにしますか？",
         "body": "{username} としてログインしても、このアプリのコンテナは開かなくなります。",
@@ -6699,7 +6688,6 @@
     },
     "health": {
       "online": "オンライン",
-      "onlineDetail": "訪問者はこのアプリケーションにアクセスできます。",
       "paused": "一時停止中",
       "pausedDetail": "再開するまで、訪問者には待機ページが表示されます。",
       "https": "HTTPS が有効です",
@@ -8335,15 +8323,13 @@
   },
   "operations": {
     "title": "バックグラウンドジョブ",
-    "description": "実行中のものと、過去 24 時間に完了したもの。",
     "trigger": "{count, plural, other {# 件のジョブを実行中}}",
     "running": "件実行中",
     "loading": "ジョブを読み込み中…",
     "empty": "過去 24 時間のジョブはありません。",
-    "footer": "各ジョブの進行状況はそれぞれのページにも表示されます。",
     "groups": {
       "running": "実行中",
-      "finished": "完了"
+      "finished": "直近 24 時間"
     },
     "state": {
       "waiting": "開始待ち",

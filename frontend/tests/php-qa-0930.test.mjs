@@ -12,9 +12,8 @@ test("view-only opens php.ini read-only: GET …/ini only needs view", () => {
   assert.match(src, /readOnly=\{readOnly\}/);
   // 12 Oct: an inline tab now, so read-only means no Save row at all, not a hidden button.
   assert.match(src, /\{readOnly \|\| loadError \? null : \(\s*\n\s*<CardFooter/);
-  assert.match(src, /readOnly \? t\("phpIni\.readOnlyDescription"\)/);
-  const en = JSON.parse(read("messages/en.json")).services.phpIni;
-  assert.ok(en.readOnlyDescription);
+  // 18 Nov: read-only has no description; the save behaviour it explains does not apply.
+  assert.match(src, /\{readOnly \? null : <CardDescription>\{tPhp\("ini\.description"\)\}<\/CardDescription>\}/);
 });
 
 test("extension descriptions wrap instead of being cut on a phone", () => {

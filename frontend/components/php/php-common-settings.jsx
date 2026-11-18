@@ -166,9 +166,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
         <Section
           icon={SlidersHorizontal}
           title={t("title", { version })}
-          description={t("description", { version })}
           readOnly={!canManage}
-          changedBy={canManage ? t("appliesNote") : null}
           actions={
             <SectionActions
               label={t("saveAction")}

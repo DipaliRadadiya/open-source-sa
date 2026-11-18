@@ -13,15 +13,19 @@ import { SUBGRID } from "@/lib/runtime/version-rows";
 // support and usage compare at a glance; rows stack into small cards below 48rem of card width.
 export function VersionsCard({ namespace, columns, gridClass, action, footnote, children }) {
   const t = useTranslations(namespace);
+  const described = t.has("table.description");
 
   return (
     <Card className="@container/versions gap-0 overflow-hidden pb-0">
-      <CardHeader className="pb-4">
+      {/* Without a description the title and the button share one centred row. */}
+      <CardHeader className={cn("pb-4", !described && "items-center")}>
         <CardTitle as="h2">{t("table.title")}</CardTitle>
-        <CardDescription className="@max-sm/card-header:col-span-full">{t("table.description")}</CardDescription>
+        {described ? (
+          <CardDescription className="@max-sm/card-header:col-span-full">{t("table.description")}</CardDescription>
+        ) : null}
         {/* Below a phone's width the button drops under the description instead of squeezing it. */}
         {action ? (
-          <CardAction className="@max-sm/card-header:col-start-1 @max-sm/card-header:row-span-1 @max-sm/card-header:row-start-3 @max-sm/card-header:mt-3 @max-sm/card-header:justify-self-start">
+          <CardAction className={cn(!described && "row-span-1", "@max-sm/card-header:col-start-1 @max-sm/card-header:row-span-1 @max-sm/card-header:row-start-3 @max-sm/card-header:mt-3 @max-sm/card-header:justify-self-start")}>
             {action}
           </CardAction>
         ) : null}

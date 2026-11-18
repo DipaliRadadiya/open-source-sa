@@ -1685,7 +1685,7 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "acknowledge": "Mir ist klar, dass eine fehlerhafte php.ini den FPM von PHP {version} am Start hindern kann, wodurch alle Anwendungen auf dieser Version offline gehen.",
+      "acknowledge": "Mir ist klar, dass ein Fehler hier alle Anwendungen mit PHP {version} offline nehmen kann.",
       "save": "Speichern und neu laden",
       "copy": "Datei kopieren",
       "saved": "php.ini gespeichert und PHP {version} neu geladen",
@@ -1693,8 +1693,7 @@
       "saveFailed": "Die php.ini konnte nicht gespeichert werden.",
       "blockedNoChanges": "Nichts zu speichern — die Datei wurde nicht geändert.",
       "blockedAcknowledge": "Bestätigen Sie zuerst, dass Sie das Risiko kennen.",
-      "pathUnknown": "Wird geladen…",
-      "readOnlyDescription": "Die gesamte Datei, so wie PHP sie liest."
+      "pathUnknown": "Wird geladen…"
     },
     "notMeasured": "Nicht gemessen",
     "phpSettings": "PHP-Einstellungen",
@@ -2429,10 +2428,8 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "PHP auf diesem Server und die Erweiterungen, die Ihre Anwendungen nutzen können.",
     "table": {
       "title": "Installierte Versionen",
-      "description": "Klicken Sie auf eine Version, um ihre Erweiterungen, ionCube und php.ini zu sehen und zu ändern.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colUsedBy": "Genutzt von",
@@ -2443,13 +2440,10 @@
     },
     "settings": {
       "title": "Einstellungen für PHP {version}",
-      "description": "Änderungen hier gelten für jede Anwendung, die PHP {version} nutzt."
+      "description": "Gilt für jede Anwendung mit PHP {version}. Eigene PHP-Einstellungen einer Anwendung haben Vorrang."
     },
     "ini": {
-      "description": "Die gesamte Datei, so wie PHP sie liest. Beim Speichern wird die alte Datei gesichert und PHP prüft die neue. Lehnt PHP sie ab, wird die alte Datei zurückgelegt und nichts ändert sich.",
-      "descriptionNoCopy": "Die gesamte Datei, so wie PHP sie liest. Beim Speichern prüft PHP die neue. Lehnt PHP sie ab, wird die alte Datei zurückgelegt und nichts ändert sich.",
-      "perApp": "Um Upload-Größe, Speicher oder Zeitlimits nur für eine Anwendung zu ändern, nutzen Sie stattdessen die PHP-Einstellungen dieser Anwendung.",
-      "perAppLink": "Zu den Anwendungen",
+      "description": "PHP prüft die Datei beim Speichern. Findet es einen Fehler, ändert sich nichts.",
       "retry": "Erneut versuchen",
       "discard": "Änderungen verwerfen",
       "stale": "Diese Datei wurde im Tab „Allgemeine Einstellungen“ geändert. Laden Sie sie vor dem Speichern neu, sonst macht Ihr Speichern diese Änderung rückgängig.",
@@ -2472,7 +2466,6 @@
       "usedByNone": "Noch keine Anwendung nutzt diese Version.",
       "makeDefault": "Als Standard festlegen",
       "remove": "Entfernen",
-      "defaultHint": "Neue Anwendungen starten mit der Standardversion. Auch der php-Befehl nutzt sie.",
       "defaultSet": "PHP {version} ist jetzt der Standard.",
       "defaultFailed": "Diese Version konnte nicht als Standard festgelegt werden.",
       "removed": "PHP {version} entfernt.",
@@ -2531,7 +2524,7 @@
       "installing": "{name} wird installiert – dies dauert einige Minuten.",
       "installingShort": "Wird gestartet",
       "failed": "Diese Erweiterung konnte nicht geändert werden.",
-      "summary": "{on} von {total} aktiviert. Aktivieren Sie, was Ihre Anwendungen benötigen.",
+      "summary": "{on} von {total} aktiviert.",
       "filterAll": "Alle",
       "filterOn": "Aktiv",
       "filterOff": "Inaktiv",
@@ -2677,7 +2670,7 @@
     },
     "ioncube": {
       "title": "ionCube Loader",
-      "subtitle": "Führt kommerzielle PHP-Software aus, deren Quelltext verschlüsselt ist — WHMCS und die meisten lizenzierten Skripte benötigen ihn.",
+      "subtitle": "Wird von verschlüsselter PHP-Software wie WHMCS benötigt.",
       "installed": "Installiert",
       "notInstalled": "Nicht installiert",
       "loaderVersion": "Loader {version}",
@@ -2693,7 +2686,6 @@
       "loadFailed": "Der Status des ionCube Loaders konnte nicht gelesen werden.",
       "removeConfirmTitle": "ionCube Loader entfernen?",
       "removeConfirmBody": "Jede Anwendung unter PHP {version}, die verschlüsselte Software ausführt, funktioniert erst wieder, sobald er erneut installiert ist.",
-      "hint": "Installieren Sie ihn nur, wenn eine Anwendung den ionCube Loader verlangt. Er wird nur zu PHP {version} hinzugefügt.",
       "onShort": "An",
       "offShort": "Aus",
       "unavailableShort": "Nicht verfügbar",
@@ -2713,8 +2705,6 @@
     },
     "common": {
       "title": "Allgemeine Einstellungen",
-      "description": "Anwendungen mit eigenen PHP-Einstellungen behalten diese.",
-      "appliesNote": "Wird in php.ini gespeichert und vorher von PHP geprüft.",
       "saveAction": "PHP-Einstellungen speichern",
       "saved": "Einstellungen für PHP {version} gespeichert.",
       "failed": "Die PHP-Einstellungen konnten nicht gespeichert werden.",
@@ -6134,7 +6124,6 @@
       "manage": "Backups verwalten",
       "setUp": "Backups einrichten",
       "loadFailed": "Die Backup-Einstellungen konnten nicht geladen werden.",
-      "unprotectedRisk": "Es wird nichts gesichert. Geht diese Anwendung verloren, gibt es nichts wiederherzustellen.",
       "pausedRisk": "Backups sind eingerichtet, laufen aber nicht — die neueste Kopie wird also immer älter.",
       "description": "Ob diese Anwendung wiederherstellbar wäre.",
       "runningNote": "Gerade läuft ein Backup dieser Anwendung. Diese Karte aktualisiert sich selbst.",
@@ -6409,10 +6398,10 @@
       },
       "firstRun": {
         "title": "Speichern Sie diese Zugangsdaten jetzt",
-        "body": "Das Panel hat sie bei der Installation dieser Anwendung erzeugt. Sie lassen sich hier nicht ändern — die Anwendung speichert sie in ihrer eigenen Datenbank — kopieren Sie sie also an einen sicheren Ort, bevor Sie dies schließen.",
+        "body": "Die eigene Anmeldung der Anwendung. Das Panel kann sie nicht ändern, bewahren Sie also eine Kopie sicher auf.",
         "acknowledge": "Ich habe sie gespeichert",
         "acknowledgeFailed": "Das konnte nicht vermerkt werden. Die Zugangsdaten sind unverändert.",
-        "laterHint": "Sie bleiben unter Container → Anzeigen verfügbar.",
+        "laterHint": "Sie finden sie wieder unter Container → Anzeigen.",
         "loading": "Zugangsdaten werden geladen",
         "failed": "Die Zugangsdaten konnten nicht geladen werden. Schließen Sie dies nicht — laden Sie die Seite neu.",
         "valuesNotShown": "Verfügbar, sobald die Werte angezeigt werden.",
@@ -6649,9 +6638,9 @@
       "title": "Kommandozeilenzugriff",
       "stateOn": "Container-Anmeldung an",
       "stateOff": "Container-Anmeldung aus",
-      "hostSshOn": "{username} kann sich weiterhin per SSH auf diesem Server anmelden, außerhalb des Containers. Um das zu verhindern, schalten Sie die SSH-Anmeldung unter <link>Systembenutzer</link> aus.",
-      "hostSshNotEnforced": "{username} kann sich weiterhin per SSH auf diesem Server anmelden, außerhalb des Containers, weil die SSH-Anmelderegeln auf diesem Server ausgeschaltet sind. Schalten Sie sie unter <link>Zugang & Sicherheit</link> ein.",
-      "offBody": "Schalten Sie sie ein, dann landet die Anmeldung als {username} direkt im Container dieser Anwendung.",
+      "hostSshOn": "{username} kann sich weiterhin per SSH am Server anmelden. Schalten Sie die SSH-Anmeldung unter <link>Systembenutzer</link> aus.",
+      "hostSshNotEnforced": "{username} kann sich weiterhin per SSH am Server anmelden. Schalten Sie die SSH-Anmelderegeln unter <link>Zugang & Sicherheit</link> ein.",
+      "offBody": "Wenn eingeschaltet, landet {username} beim Anmelden im Container statt auf dem Server.",
       "turnOffDialog": {
         "title": "Container-Anmeldung für {username} ausschalten?",
         "body": "Die Anmeldung als {username} öffnet dann nicht mehr den Container dieser Anwendung.",
@@ -6699,7 +6688,6 @@
     },
     "health": {
       "online": "Online",
-      "onlineDetail": "Besucher können diese Anwendung erreichen.",
       "paused": "Pausiert",
       "pausedDetail": "Besucher sehen eine Platzhalterseite, bis Sie sie fortsetzen.",
       "https": "HTTPS ist aktiv",
@@ -8335,15 +8323,13 @@
   },
   "operations": {
     "title": "Hintergrundaufgaben",
-    "description": "Laufen gerade oder in den letzten 24 Stunden beendet.",
     "trigger": "{count, plural, one {# Aufgabe läuft} other {# Aufgaben laufen}}",
     "running": "laufen",
     "loading": "Aufgaben werden geladen…",
     "empty": "Keine Aufgaben in den letzten 24 Stunden.",
-    "footer": "Jede Aufgabe zeigt ihren Fortschritt auch auf ihrer eigenen Seite.",
     "groups": {
       "running": "Läuft",
-      "finished": "Beendet"
+      "finished": "Letzte 24 Stunden"
     },
     "state": {
       "waiting": "Wartet auf den Start",

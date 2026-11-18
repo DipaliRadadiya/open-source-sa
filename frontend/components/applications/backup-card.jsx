@@ -166,12 +166,10 @@ export function BackupCard({
             ) : null}
           </dl>
         )}
-        {/* States the consequence; paused is called out because it looks set up. Outside
-            the <dl>: a note is not a term/value pair. */}
-        {!failed && state !== "protected" ? (
-          <p className="border-t px-(--card-spacing) py-2.5 text-xs text-muted-foreground">
-            {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
-          </p>
+        {/* Paused is called out because it looks set up. Outside the <dl>: a note is not a
+            term/value pair. */}
+        {!failed && state === "paused" ? (
+          <p className="border-t px-(--card-spacing) py-2.5 text-xs text-muted-foreground">{t("pausedRisk")}</p>
         ) : null}
 
         {/* Covers the gap between the click and the first row appearing. */}

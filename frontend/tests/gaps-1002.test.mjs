@@ -49,7 +49,7 @@ test("axe fixes from the orange pass", () => {
   assert.match(table, /allLabel=\{t\("filters\.allTypes"\)\}\s*label=\{t\("filters\.typeLabel"\)\}/);
   assert.match(read("components/ui/badge.jsx"), /default: "rounded-md bg-primary\/10 px-1\.5 text-\[color-mix\(in_oklch,var\(--primary\)_80%,var\(--foreground\)\)\] dark:text-primary/);
   const card = read("components/applications/backup-card.jsx");
-  assert.ok(card.indexOf("unprotectedRisk") > card.indexOf("</dl>"), "the note sits outside the <dl>");
+  assert.ok(card.indexOf("pausedRisk") > card.indexOf("</dl>"), "the note sits outside the <dl>");
 });
 
 test("support references are not faded below 4.5:1", () => {

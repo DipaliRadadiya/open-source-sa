@@ -1685,7 +1685,7 @@
     },
     "phpIni": {
       "title": "php.ini — PHP {version}",
-      "acknowledge": "Entendo que um php.ini inválido pode impedir o PHP {version} FPM de iniciar, tirando do ar todas as aplicações dessa versão.",
+      "acknowledge": "Entendo que um erro aqui pode tirar do ar todas as aplicações com PHP {version}.",
       "save": "Salvar e recarregar",
       "copy": "Copiar arquivo",
       "saved": "php.ini salvo e PHP {version} recarregado",
@@ -1693,8 +1693,7 @@
       "saveFailed": "Não foi possível salvar o php.ini.",
       "blockedNoChanges": "Nada para salvar — o arquivo não foi alterado.",
       "blockedAcknowledge": "Confirme que entende o risco primeiro.",
-      "pathUnknown": "Carregando…",
-      "readOnlyDescription": "O arquivo completo, como o PHP lê."
+      "pathUnknown": "Carregando…"
     },
     "notMeasured": "Não medido",
     "phpSettings": "Configurações do PHP",
@@ -2429,10 +2428,8 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "PHP neste servidor e as extensões que suas aplicações podem usar.",
     "table": {
       "title": "Versões instaladas",
-      "description": "Clique numa versão para ver e alterar as extensões, o ionCube e o php.ini dela.",
       "colVersion": "Versão",
       "colSupport": "Suporte",
       "colUsedBy": "Usado por",
@@ -2443,13 +2440,10 @@
     },
     "settings": {
       "title": "Configurações do PHP {version}",
-      "description": "As alterações aqui valem para todas as aplicações que usam o PHP {version}."
+      "description": "Vale para todas as aplicações com PHP {version}. As configurações de PHP próprias de cada aplicação têm prioridade."
     },
     "ini": {
-      "description": "O arquivo completo, como o PHP lê. Ao salvar, o arquivo antigo é copiado e o PHP verifica o novo. Se o PHP rejeitar, o antigo é restaurado e nada muda.",
-      "descriptionNoCopy": "O arquivo completo, como o PHP lê. Ao salvar, o PHP verifica o novo. Se o PHP rejeitar, o antigo é restaurado e nada muda.",
-      "perApp": "Para alterar o tamanho de envio, a memória ou os limites de tempo de uma só aplicação, use as configurações do PHP dessa aplicação.",
-      "perAppLink": "Ir para Aplicações",
+      "description": "O PHP verifica o arquivo ao salvar. Se encontrar um erro, nada muda.",
       "retry": "Tentar novamente",
       "discard": "Descartar alterações",
       "stale": "Este ficheiro foi alterado no separador Configurações comuns. Recarregue-o antes de guardar, ou guardar desfará essa alteração.",
@@ -2472,7 +2466,6 @@
       "usedByNone": "Nenhuma aplicação usa esta versão ainda.",
       "makeDefault": "Tornar padrão",
       "remove": "Remover",
-      "defaultHint": "Novas aplicações começam na versão padrão. O comando php também a usa.",
       "defaultSet": "PHP {version} agora é o padrão.",
       "defaultFailed": "Não foi possível tornar essa versão a padrão.",
       "removed": "PHP {version} removido.",
@@ -2531,7 +2524,7 @@
       "installing": "Instalando {name} — isto leva alguns minutos.",
       "installingShort": "Iniciando",
       "failed": "Não foi possível alterar essa extensão.",
-      "summary": "{on} de {total} ativadas. Ative o que suas aplicações precisam.",
+      "summary": "{on} de {total} ativadas.",
       "filterAll": "Tudo",
       "filterOn": "Ligado",
       "filterOff": "Desligado",
@@ -2677,7 +2670,7 @@
     },
     "ioncube": {
       "title": "ionCube Loader",
-      "subtitle": "Executa softwares PHP comerciais cujo código-fonte é criptografado — o WHMCS e a maioria dos scripts licenciados precisam dele.",
+      "subtitle": "Necessário para softwares PHP criptografados, como o WHMCS.",
       "installed": "Instalado",
       "notInstalled": "Não instalado",
       "loaderVersion": "Loader {version}",
@@ -2693,7 +2686,6 @@
       "loadFailed": "Não foi possível ler o status do ionCube Loader.",
       "removeConfirmTitle": "Remover o ionCube Loader?",
       "removeConfirmBody": "Qualquer aplicação no PHP {version} que execute software criptografado deixará de funcionar até que seja instalado novamente.",
-      "hint": "Instale-o só se uma aplicação pedir o ionCube Loader. Ele é adicionado apenas ao PHP {version}.",
       "onShort": "Ligado",
       "offShort": "Desligado",
       "unavailableShort": "Indisponível",
@@ -2713,8 +2705,6 @@
     },
     "common": {
       "title": "Configurações comuns",
-      "description": "Aplicações com configurações de PHP próprias as mantêm.",
-      "appliesNote": "Guardado no php.ini e verificado pelo PHP antes de ser aplicado.",
       "saveAction": "Guardar configurações do PHP",
       "saved": "Configurações do PHP {version} guardadas.",
       "failed": "Não foi possível guardar as configurações do PHP.",
@@ -6134,7 +6124,6 @@
       "manage": "Gerenciar backups",
       "setUp": "Configurar backups",
       "loadFailed": "Não foi possível carregar as configurações de backup.",
-      "unprotectedRisk": "Nada está sendo salvo em backup. Se esta aplicação for perdida, não haverá o que restaurar.",
       "pausedRisk": "Backups estão configurados, mas não rodando, então a cópia mais nova continua ficando antiga.",
       "description": "Se esta aplicação poderia ser restaurada.",
       "runningNote": "Um backup desta aplicação está rodando agora. Este card se atualiza sozinho.",
@@ -6409,10 +6398,10 @@
       },
       "firstRun": {
         "title": "Salve estas credenciais agora",
-        "body": "O painel as gerou ao instalar esta aplicação. Elas não podem ser alteradas aqui — a aplicação as guarda no próprio banco de dados — então copie-as para um lugar seguro antes de fechar este aviso.",
+        "body": "O login próprio da aplicação. O painel não consegue alterá-lo, então guarde uma cópia em um lugar seguro.",
         "acknowledge": "Eu as salvei",
         "acknowledgeFailed": "Não foi possível registrar. As credenciais não mudaram.",
-        "laterHint": "Elas continuam disponíveis em Contêiner → Mostrar.",
+        "laterHint": "Você pode vê-las de novo em Contentor → Mostrar.",
         "loading": "Carregando credenciais",
         "failed": "Não foi possível carregar as credenciais. Não feche este aviso — recarregue a página.",
         "valuesNotShown": "Disponível quando os valores estiverem na tela.",
@@ -6649,9 +6638,9 @@
       "title": "Acesso por linha de comando",
       "stateOn": "Login no contentor ligado",
       "stateOff": "Login no contentor desligado",
-      "hostSshOn": "{username} ainda pode entrar neste servidor por SSH, fora do contentor. Para impedir isso, desligue o login SSH dele em <link>Usuários do sistema</link>.",
-      "hostSshNotEnforced": "{username} ainda pode entrar neste servidor por SSH, fora do contentor, porque as regras de login SSH estão desligadas neste servidor. Ligue-as em <link>Acesso e segurança</link>.",
-      "offBody": "Ligue-o e entrar como {username} vai abrir diretamente o contentor desta aplicação.",
+      "hostSshOn": "{username} ainda pode entrar no servidor por SSH. Desligue o login SSH dele em <link>Usuários do sistema</link>.",
+      "hostSshNotEnforced": "{username} ainda pode entrar no servidor por SSH. Ligue as regras de login SSH em <link>Acesso e segurança</link>.",
+      "offBody": "Ligado, {username} entra no contentor em vez do servidor.",
       "turnOffDialog": {
         "title": "Desligar o login no contentor para {username}?",
         "body": "Entrar como {username} não vai mais abrir o contentor desta aplicação.",
@@ -6699,7 +6688,6 @@
     },
     "health": {
       "online": "Online",
-      "onlineDetail": "Os visitantes conseguem acessar esta aplicação.",
       "paused": "Em pausa",
       "pausedDetail": "Os visitantes veem uma página de espera até você retomá-la.",
       "https": "HTTPS está ativado",
@@ -8335,15 +8323,13 @@
   },
   "operations": {
     "title": "Tarefas em segundo plano",
-    "description": "Em curso agora, e concluídas nas últimas 24 horas.",
     "trigger": "{count, plural, one {# tarefa em curso} other {# tarefas em curso}}",
     "running": "em curso",
     "loading": "A carregar tarefas…",
     "empty": "Sem tarefas nas últimas 24 horas.",
-    "footer": "Cada tarefa também mostra o progresso na sua própria página.",
     "groups": {
       "running": "Em execução",
-      "finished": "Concluídas"
+      "finished": "Últimas 24 horas"
     },
     "state": {
       "waiting": "À espera de começar",

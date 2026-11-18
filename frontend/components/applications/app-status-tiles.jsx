@@ -118,7 +118,7 @@ export function AppStatusTiles({
   } else if (container === "degraded") {
     tiles.push({ key: "status", icon: Power, tone: "warning", value: t("health.degraded"), detail: t("health.degradedDetail", { services: describeWarnings(warnings, t) }) });
   } else {
-    tiles.push({ key: "status", icon: Power, tone: "success", value: t("health.online"), detail: t("health.onlineDetail") });
+    tiles.push({ key: "status", icon: Power, tone: "success", value: t("health.online") });
   }
   tiles[0].label = t("tiles.status");
 

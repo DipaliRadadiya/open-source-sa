@@ -194,10 +194,7 @@ export function OperationsIndicator({ canOpenApplications = false }) {
       </Tooltip>
 
       <PopoverContent align="end" className="w-[22rem] p-0 sm:w-96">
-        <div className="border-b px-4 py-3">
-          <p className="text-sm font-semibold">{t("title")}</p>
-          <p className="text-xs text-muted-foreground">{t("description")}</p>
-        </div>
+        <p className="border-b px-4 py-3 text-sm font-semibold">{t("title")}</p>
 
         <div className="max-h-[60vh] overflow-y-auto">
           {all === null && running === 0 ? (
@@ -227,7 +224,6 @@ export function OperationsIndicator({ canOpenApplications = false }) {
           )}
         </div>
 
-        <p className="border-t px-4 py-2.5 text-xs text-muted-foreground">{t("footer")}</p>
       </PopoverContent>
     </Popover>
   );

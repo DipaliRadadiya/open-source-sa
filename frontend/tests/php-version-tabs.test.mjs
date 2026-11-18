@@ -91,6 +91,7 @@ test("an uninstall does not announce itself as an install", () => {
 test("the ionCube hint no longer describes the stacked layout it used to have", () => {
   // It read "that is why it is here and not in the extensions list ABOVE",
   // which stopped being true the moment they became sibling tabs.
+  // 18 Nov: the hint is gone entirely (too much text, Krishna).
   const en = JSON.parse(fs.readFileSync("messages/en.json", "utf8")).php.ioncube.hint;
-  assert.doesNotMatch(en, /above/i, "the hint still points at a layout that is gone");
+  assert.equal(en, undefined, "the hint came back");
 });

@@ -166,13 +166,13 @@ test("each settings place has the switch, on by default, with the red warning wh
   const f2b = read("components/applications/fail2ban/fail2ban-panel.jsx");
   assert.match(f2b, /\{canManage && !isSetup && changed \? \(/);
   assert.match(f2b, /safetyCopy: isSetup \|\| safetyCopy/);
-  // php.ini's card stops promising a backup when there will be none.
-  assert.match(read("components/php/ini-editor.jsx"), /tPhp\(safetyCopy \? "ini\.description" : "ini\.descriptionNoCopy"\)/);
+  // php.ini's card never promises a backup: the switch below says whether there is one (18 Nov).
   for (const locale of LOCALES) {
     const m = JSON.parse(read(`messages/${locale}.json`));
-    assert.ok(m.common.keepSettingsCopy && m.common.keepSettingsCopyOff && m.php.ini.descriptionNoCopy, locale);
-    assert.doesNotMatch(m.php.ini.descriptionNoCopy, /backed up|backup/i, locale);
+    assert.ok(m.common.keepSettingsCopy && m.common.keepSettingsCopyOff && m.php.ini.description, locale);
+    assert.equal(m.php.ini.descriptionNoCopy, undefined, locale);
   }
+  assert.doesNotMatch(JSON.parse(read("messages/en.json")).php.ini.description, /backed up|backup/i);
   const en = JSON.parse(read("messages/en.json"));
   assert.equal(en.common.keepSettingsCopy, "Keep a copy of the current settings");
   assert.equal(en.common.keepSettingsCopyOff, "Without a copy, the old settings are only kept in memory while the new ones are checked. If the panel stops during the save, they can't be put back.");
