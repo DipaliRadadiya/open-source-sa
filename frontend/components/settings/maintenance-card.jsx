@@ -474,7 +474,6 @@ function UpdatesSection({ updates, canManage }) {
         <Section
           icon={ShieldCheck}
           title={t("updates.title")}
-          description={t("updates.description")}
           actions={
             <SectionActions
               label={t("updates.save")}
@@ -630,7 +629,6 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
         <Section
           icon={CalendarClock}
           title={t("schedule.title")}
-          description={t("schedule.description")}
           actions={
             <SectionActions
               label={t("schedule.save")}
@@ -867,7 +865,6 @@ function ManualSection({
     <Section
       icon={TriangleAlert}
       title={t("reboot.title")}
-      description={t("reboot.summary")}
       tone="destructive"
       badge={
         rebootRequired ? (

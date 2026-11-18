@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardAction,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -51,10 +50,9 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
   return (
     // Rows reach the card edges, like the cleanup list above.
     <Card className="gap-0 overflow-hidden pb-0">
-      <CardHeader className="pb-4">
+      <CardHeader className="items-center pb-4">
         <CardTitle className="text-base font-semibold">{t("runs.title")}</CardTitle>
-        <CardDescription>{t("runs.subtitle")}</CardDescription>
-        <CardAction>
+        <CardAction className="row-span-1 self-center">
           <RefreshButton />
         </CardAction>
       </CardHeader>

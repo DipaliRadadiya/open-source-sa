@@ -56,7 +56,7 @@ export default async function DiskCleanerPage({ searchParams }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* Three compact tiles across the top (one per row until the page is wide enough);
           the schedule tile gets the most room, "Can be freed" the least (a short number).

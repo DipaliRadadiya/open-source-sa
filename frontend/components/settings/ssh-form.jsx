@@ -110,7 +110,6 @@ export function SshForm({
           <Section
             icon={KeyRound}
             title={t("title")}
-            description={t("description")}
             // One question per row, answers as cards (three narrow columns wrapped every
             // answer). The port gets its own ruled row: beside the cards it read as a
             // third sign-in choice (Krishna, 12 Oct).

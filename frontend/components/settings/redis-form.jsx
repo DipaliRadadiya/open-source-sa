@@ -139,7 +139,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
           <Section
             icon={Database}
             title={t("redis.title")}
-            description={t("redis.description")}
             readOnly={!canManage}
             changedBy={changedBy}
             actions={

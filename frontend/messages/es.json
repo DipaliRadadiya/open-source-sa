@@ -732,7 +732,7 @@
     "loadFailed": "No se pudo cargar el registro de actividad. Vuelve a intentarlo en un momento.",
     "server": {
       "title": "Registro de actividad",
-      "subtitle": "Lo que han cambiado en este servidor todas las personas con acceso. Tus inicios de sesión y cambios de cuenta están en tu página Cuenta.",
+      "subtitle": "Tus inicios de sesión y cambios de cuenta están en tu página Cuenta.",
       "loadFailed": "No pudimos cargar el registro de actividad.",
       "empty": "Todavía no ha pasado nada en este servidor.",
       "searchPlaceholder": "Buscar actividad…"
@@ -1487,8 +1487,7 @@
   },
   "logs": {
     "title": "Registros del sistema",
-    "subtitle": "Consulta los archivos de registro de este servidor.",
-    "subtitleWithLocked": "Consulta los archivos de registro de este servidor. {count} de {total} necesitan acceso elevado y aún no se pueden abrir.",
+    "subtitleWithLocked": "{count} de {total} necesitan acceso elevado y aún no se pueden abrir.",
     "sourcesLabel": "Orígenes de registro",
     "viewerLabel": "Contenido del registro",
     "noSource": "Ningún registro seleccionado",
@@ -2107,7 +2106,6 @@
   },
   "settings": {
     "title": "Ajustes",
-    "subtitle": "Configuración de todo el servidor: nombre, acceso, memoria y actualizaciones.",
     "loadFailed": "No pudimos leer los ajustes de este servidor.",
     "tabs": {
       "label": "Secciones de ajustes",
@@ -2153,7 +2151,6 @@
       "saved": "Ajustes del servidor guardados.",
       "localTime": "Ahora: {time}",
       "save": "Guardar datos del servidor",
-      "description": "El nombre y el reloj de este servidor.",
       "clockDrift": "Sin sincronizar",
       "clockDriftHint": "NTP está activo pero el reloj no se ha sincronizado: las tareas programadas pueden ejecutarse tarde y las horas de los registros serán incorrectas.",
       "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda.",
@@ -2213,7 +2210,6 @@
         },
         "save": "Guardar ajustes SSH"
       },
-      "description": "Quién puede acceder a la línea de comandos, y cómo.",
       "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda.",
       "saveFailed": "No se pudieron guardar los ajustes de SSH."
     },
@@ -2266,7 +2262,6 @@
         "saved": "Ajustes de Redis guardados.",
         "save": "Guardar Redis",
         "passwordLocked": "Esta instalación no puede cambiar la contraseña de Redis: el panel no puede actualizar su propio archivo de configuración.",
-        "description": "Cuánta memoria puede usar Redis y qué descarta al llegar al límite.",
         "removePassword": "Quitar contraseña",
         "removeTitle": "¿Quitar la contraseña de Redis?",
         "removeDescription": "Redis aceptará conexiones sin contraseña. Hazlo solo si no es accesible desde fuera de este servidor.",
@@ -2310,7 +2305,6 @@
         "afterUpdateHint": "Reiniciar solo cuando un parche instalado lo requiera para aplicarse.",
         "rebootTimeHint": "Hora del servidor. Elige un periodo de poco tráfico.",
         "withUsersHint": "Desactivado, el reinicio espera a que terminen todas las sesiones. Activado, las sesiones activas se cierran.",
-        "description": "Parches de seguridad y los reinicios que necesitan.",
         "pending": "{count, plural, one {# actualización de seguridad pendiente} other {# actualizaciones de seguridad pendientes}}",
         "upToDate": "No hay actualizaciones de seguridad pendientes.",
         "checked": "Comprobado {when}",
@@ -2374,12 +2368,10 @@
         "cancelled": "Reinicio programado cancelado.",
         "cancelFailed": "No se pudo cancelar el reinicio.",
         "scheduledAt": "Reinicio programado para {at}.",
-        "failed": "No se pudo iniciar el reinicio.",
-        "summary": "Reinicia este servidor ahora o tras una breve espera."
+        "failed": "No se pudo iniciar el reinicio."
       },
       "schedule": {
         "title": "Reinicio programado",
-        "description": "Reiniciar en un intervalo fijo, independientemente de las actualizaciones.",
         "save": "Guardar programación",
         "enable": "Reiniciar según programación",
         "enableHint": "Todas las aplicaciones quedan sin servicio alrededor de un minuto cada vez.",
@@ -2816,7 +2808,6 @@
   },
   "diskCleaner": {
     "title": "Limpiador de disco",
-    "subtitle": "Libera espacio borrando cachés, registros antiguos y archivos temporales.",
     "loadFailed": "No pudimos leer el uso de disco de este servidor.",
     "noPermission": "Tu rol no incluye Limpiador de disco con acceso de gestión. Pide a un administrador que te lo conceda.",
     "summary": {
@@ -2829,7 +2820,6 @@
     },
     "list": {
       "title": "Qué se puede limpiar",
-      "subtitle": "Elige qué eliminar. No se borra nada hasta que confirmes.",
       "allClean": "No hay nada que limpiar ahora mismo: todo está en orden.",
       "alreadyCleanList": "Ya está limpio: {items}",
       "showPaths": "Ver carpetas exactas",
@@ -2903,7 +2893,6 @@
     },
     "runs": {
       "title": "Limpiezas recientes",
-      "subtitle": "Qué se liberó y cuándo.",
       "colWhen": "Cuándo",
       "colWhat": "Qué se limpió",
       "colHow": "Cómo",

@@ -732,7 +732,7 @@
     "loadFailed": "The activity log could not be loaded. Try again in a moment.",
     "server": {
       "title": "Activity Log",
-      "subtitle": "What everyone with access has changed on this server. Your logins and account changes are on your Account page.",
+      "subtitle": "Your logins and account changes are on your Account page.",
       "loadFailed": "We couldn't load the activity log.",
       "empty": "Nothing has happened on this server yet.",
       "searchPlaceholder": "Search activity…"
@@ -1487,8 +1487,7 @@
   },
   "logs": {
     "title": "System Logs",
-    "subtitle": "Read log files from this server.",
-    "subtitleWithLocked": "Read log files from this server. {count} of {total} need elevated access and can’t be opened yet.",
+    "subtitleWithLocked": "{count} of {total} logs need elevated access and can’t be opened yet.",
     "sourcesLabel": "Log sources",
     "viewerLabel": "Log contents",
     "noSource": "No log selected",
@@ -2107,7 +2106,6 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Server-wide configuration — name, access, memory and updates.",
     "loadFailed": "We couldn't read this server's settings.",
     "tabs": {
       "label": "Settings sections",
@@ -2153,7 +2151,6 @@
       "saved": "Server settings saved.",
       "localTime": "Now: {time}",
       "save": "Save server details",
-      "description": "This server’s name and clock.",
       "clockDrift": "Not in sync",
       "clockDriftHint": "NTP is on but the clock has not synced — scheduled jobs may run late and log times will be wrong.",
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
@@ -2213,7 +2210,6 @@
         },
         "save": "Save SSH settings"
       },
-      "description": "Who can reach the command line, and how.",
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
       "saveFailed": "SSH settings could not be saved."
     },
@@ -2266,7 +2262,6 @@
         "saved": "Redis settings saved.",
         "save": "Save Redis",
         "passwordLocked": "This install cannot change the Redis password — the panel is unable to update its own configuration file.",
-        "description": "How much memory Redis may use, and what it drops at the limit.",
         "removePassword": "Remove password",
         "removeTitle": "Remove the Redis password?",
         "removeDescription": "Redis will accept connections without a password. Only do this if it is not reachable from outside this server.",
@@ -2310,7 +2305,6 @@
         "afterUpdateHint": "Restart only when an installed patch requires one to take effect.",
         "rebootTimeHint": "Server time. Choose a period of low traffic.",
         "withUsersHint": "Disabled, the restart waits for all sessions to end. Enabled, active sessions are terminated.",
-        "description": "Security patches, and the restarts they need.",
         "pending": "{count, plural, one {# security update waiting} other {# security updates waiting}}",
         "upToDate": "No security updates waiting.",
         "checked": "Checked {when}",
@@ -2374,12 +2368,10 @@
         "cancelled": "Scheduled restart cancelled.",
         "cancelFailed": "Could not cancel the restart.",
         "scheduledAt": "Restart scheduled for {at}.",
-        "failed": "The restart couldn't be started.",
-        "summary": "Restart this server now, or after a short delay."
+        "failed": "The restart couldn't be started."
       },
       "schedule": {
         "title": "Scheduled restart",
-        "description": "Restart on a fixed interval, independent of updates.",
         "save": "Save schedule",
         "enable": "Restart on a schedule",
         "enableHint": "Every application is offline for approximately one minute each time.",
@@ -2816,7 +2808,6 @@
   },
   "diskCleaner": {
     "title": "Disk Cleaner",
-    "subtitle": "Free up space by clearing caches, old logs and temporary files.",
     "loadFailed": "We couldn't read this server's disk usage.",
     "noPermission": "Your role does not include Disk Cleaner with Manage access. Ask an administrator to grant it.",
     "summary": {
@@ -2829,7 +2820,6 @@
     },
     "list": {
       "title": "What can be cleaned",
-      "subtitle": "Pick what to remove. Nothing is deleted until you confirm.",
       "allClean": "Nothing to clean right now — everything is already tidy.",
       "alreadyCleanList": "Already clean: {items}",
       "showPaths": "Show exact folders",
@@ -2903,7 +2893,6 @@
     },
     "runs": {
       "title": "Recent cleanups",
-      "subtitle": "What was freed, and when.",
       "colWhen": "When",
       "colWhat": "What was cleaned",
       "colHow": "How",

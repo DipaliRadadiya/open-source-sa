@@ -124,10 +124,11 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
         <Card className="gap-0 overflow-hidden pb-0">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold">{t("list.title")}</CardTitle>
-            <CardDescription className="@max-sm/card-header:col-span-full">
-              {t("list.subtitle")}
-              {measuredAt ? <MeasuredAt at={measuredAt} /> : null}
-            </CardDescription>
+            {measuredAt ? (
+              <CardDescription className="@max-sm/card-header:col-span-full">
+                <MeasuredAt at={measuredAt} />
+              </CardDescription>
+            ) : null}
             {/* View controls, not actions; below a phone's width they drop under the text. */}
             <CardAction className="flex items-center gap-2 @max-sm/card-header:col-start-1 @max-sm/card-header:row-span-1 @max-sm/card-header:row-start-3 @max-sm/card-header:mt-3 @max-sm/card-header:justify-self-start">
               {!nothingToClean ? (

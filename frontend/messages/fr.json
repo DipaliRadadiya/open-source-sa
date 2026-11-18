@@ -732,7 +732,7 @@
     "loadFailed": "Le journal d'activité n'a pas pu être chargé. Réessayez dans un instant.",
     "server": {
       "title": "Journal d'activité",
-      "subtitle": "Ce que toutes les personnes ayant accès ont modifié sur ce serveur. Vos connexions et modifications de compte sont sur votre page Compte.",
+      "subtitle": "Vos connexions et modifications de compte sont sur votre page Compte.",
       "loadFailed": "Impossible de charger le journal d'activité.",
       "empty": "Rien ne s'est encore passé sur ce serveur.",
       "searchPlaceholder": "Rechercher dans l'activité…"
@@ -1487,8 +1487,7 @@
   },
   "logs": {
     "title": "Journaux système",
-    "subtitle": "Lire les fichiers journaux de ce serveur.",
-    "subtitleWithLocked": "Lire les fichiers journaux de ce serveur. {count} sur {total} nécessitent un accès élevé et ne peuvent pas encore être ouverts.",
+    "subtitleWithLocked": "{count} sur {total} nécessitent un accès élevé et ne peuvent pas encore être ouverts.",
     "sourcesLabel": "Sources des journaux",
     "viewerLabel": "Contenu des journaux",
     "noSource": "Aucun journal sélectionné",
@@ -2107,7 +2106,6 @@
   },
   "settings": {
     "title": "Paramètres",
-    "subtitle": "Configuration du serveur — nom, accès, mémoire et mises à jour.",
     "loadFailed": "Impossible de lire les paramètres de ce serveur.",
     "tabs": {
       "label": "Sections des paramètres",
@@ -2153,7 +2151,6 @@
       "saved": "Paramètres du serveur enregistrés.",
       "localTime": "Maintenant : {time}",
       "save": "Enregistrer les détails du serveur",
-      "description": "Le nom et l'horloge de ce serveur.",
       "clockDrift": "Non synchronisée",
       "clockDriftHint": "NTP est activé mais l'horloge n'est pas synchronisée — les tâches peuvent tourner en retard et les heures des journaux seront fausses.",
       "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
@@ -2213,7 +2210,6 @@
         },
         "save": "Enregistrer les paramètres SSH"
       },
-      "description": "Qui peut accéder à la ligne de commande, et comment.",
       "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "saveFailed": "Les paramètres SSH n'ont pas pu être enregistrés."
     },
@@ -2266,7 +2262,6 @@
         "saved": "Paramètres Redis enregistrés.",
         "save": "Enregistrer Redis",
         "passwordLocked": "Cette installation ne peut pas modifier le mot de passe Redis — le panneau ne peut pas mettre à jour son propre fichier de configuration.",
-        "description": "Quantité de mémoire que Redis peut utiliser, et ce qu'il supprime à la limite.",
         "removePassword": "Retirer le mot de passe",
         "removeTitle": "Supprimer le mot de passe Redis ?",
         "removeDescription": "Redis acceptera les connexions sans mot de passe. Ne le faites que s'il n'est pas joignable depuis l'extérieur de ce serveur.",
@@ -2310,7 +2305,6 @@
         "afterUpdateHint": "Redémarre uniquement quand un correctif installé l'exige pour prendre effet.",
         "rebootTimeHint": "Heure du serveur. Choisissez une période de faible trafic.",
         "withUsersHint": "Désactivé, le redémarrage attend la fin de toutes les sessions. Activé, les sessions actives sont terminées.",
-        "description": "Correctifs de sécurité et les redémarrages qu'ils nécessitent.",
         "pending": "{count, plural, one {# mise à jour de sécurité en attente} other {# mises à jour de sécurité en attente}}",
         "upToDate": "Aucune mise à jour de sécurité en attente.",
         "checked": "Vérifié {when}",
@@ -2374,12 +2368,10 @@
         "cancelled": "Redémarrage planifié annulé.",
         "cancelFailed": "Impossible d'annuler le redémarrage.",
         "scheduledAt": "Redémarrage planifié pour {at}.",
-        "failed": "Le redémarrage n'a pas pu être lancé.",
-        "summary": "Redémarrer ce serveur maintenant, ou après un court délai."
+        "failed": "Le redémarrage n'a pas pu être lancé."
       },
       "schedule": {
         "title": "Redémarrage planifié",
-        "description": "Redémarrer à intervalle régulier, indépendamment des mises à jour.",
         "save": "Enregistrer la planification",
         "enable": "Redémarrer selon une planification",
         "enableHint": "Chaque application est hors ligne pendant environ une minute à chaque fois.",
@@ -2816,7 +2808,6 @@
   },
   "diskCleaner": {
     "title": "Nettoyeur de disque",
-    "subtitle": "Libérer de l'espace en vidant les caches, anciens journaux et fichiers temporaires.",
     "loadFailed": "Impossible de lire l'usage du disque de ce serveur.",
     "noPermission": "Votre rôle n'inclut pas le Nettoyeur de disque avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
     "summary": {
@@ -2829,7 +2820,6 @@
     },
     "list": {
       "title": "Éléments à nettoyer",
-      "subtitle": "Choisir ce qu'il faut supprimer. Rien n'est supprimé avant votre confirmation.",
       "allClean": "Rien à nettoyer pour l'instant — tout est déjà en ordre.",
       "alreadyCleanList": "Déjà propre : {items}",
       "showPaths": "Afficher les dossiers exacts",
@@ -2903,7 +2893,6 @@
     },
     "runs": {
       "title": "Nettoyages récents",
-      "subtitle": "Ce qui a été libéré et quand.",
       "colWhen": "Quand",
       "colWhat": "Ce qui a été nettoyé",
       "colHow": "Comment",

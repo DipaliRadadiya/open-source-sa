@@ -58,11 +58,8 @@ export default async function LogsPage({ searchParams }) {
     <div className="space-y-6">
       <PageHeader
         title={t("title")}
-        subtitle={
-          lockedCount > 0
-            ? t("subtitleWithLocked", { count: lockedCount, total: sources.length })
-            : t("subtitle")
-        }
+        // Only the locked count is worth a line under the title.
+        subtitle={lockedCount > 0 ? t("subtitleWithLocked", { count: lockedCount, total: sources.length }) : null}
       />
 
       {/* A failed request must never render as "there are no logs". */}

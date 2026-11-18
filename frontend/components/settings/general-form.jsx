@@ -58,7 +58,6 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
           <Section
             icon={Server}
             title={t("title")}
-            description={t("description")}
             readOnly={!canManage}
             changedBy={changedBy}
             actions={

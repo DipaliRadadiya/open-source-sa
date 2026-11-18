@@ -732,7 +732,7 @@
     "loadFailed": "Das Aktivitätsprotokoll konnte nicht geladen werden. Versuchen Sie es gleich noch einmal.",
     "server": {
       "title": "Aktivitätsprotokoll",
-      "subtitle": "Was alle mit Zugriff auf diesem Server geändert haben. Ihre Anmeldungen und Kontoänderungen finden Sie auf Ihrer Kontoseite.",
+      "subtitle": "Ihre Anmeldungen und Kontoänderungen finden Sie auf Ihrer Kontoseite.",
       "loadFailed": "Das Aktivitätsprotokoll konnte nicht geladen werden.",
       "empty": "Auf diesem Server ist noch nichts passiert.",
       "searchPlaceholder": "Aktivität durchsuchen…"
@@ -1487,8 +1487,7 @@
   },
   "logs": {
     "title": "Systemprotokolle",
-    "subtitle": "Protokolldateien dieses Servers lesen.",
-    "subtitleWithLocked": "Protokolldateien dieses Servers lesen. {count} von {total} benötigen erweiterten Zugriff und können noch nicht geöffnet werden.",
+    "subtitleWithLocked": "{count} von {total} benötigen erweiterten Zugriff und können noch nicht geöffnet werden.",
     "sourcesLabel": "Protokollquellen",
     "viewerLabel": "Protokollinhalt",
     "noSource": "Kein Protokoll ausgewählt",
@@ -2107,7 +2106,6 @@
   },
   "settings": {
     "title": "Einstellungen",
-    "subtitle": "Serverweite Konfiguration — Name, Zugang, Speicher und Updates.",
     "loadFailed": "Die Einstellungen dieses Servers konnten nicht gelesen werden.",
     "tabs": {
       "label": "Einstellungsbereiche",
@@ -2153,7 +2151,6 @@
       "saved": "Servereinstellungen gespeichert.",
       "localTime": "Jetzt: {time}",
       "save": "Serverdaten speichern",
-      "description": "Name und Uhr dieses Servers.",
       "clockDrift": "Nicht synchron",
       "clockDriftHint": "NTP ist an, aber die Uhr wurde nicht synchronisiert — geplante Jobs können zu spät laufen und Protokollzeiten sind falsch.",
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
@@ -2213,7 +2210,6 @@
         },
         "save": "SSH-Einstellungen speichern"
       },
-      "description": "Wer die Kommandozeile erreichen darf und wie.",
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "saveFailed": "Die SSH-Einstellungen konnten nicht gespeichert werden."
     },
@@ -2266,7 +2262,6 @@
         "saved": "Redis-Einstellungen gespeichert.",
         "save": "Redis speichern",
         "passwordLocked": "Diese Installation kann das Redis-Passwort nicht ändern – das Panel kann seine eigene Konfigurationsdatei nicht aktualisieren.",
-        "description": "Wie viel Speicher Redis nutzen darf und was es bei Erreichen des Limits verwirft.",
         "removePassword": "Passwort entfernen",
         "removeTitle": "Redis-Passwort entfernen?",
         "removeDescription": "Redis akzeptiert dann Verbindungen ohne Passwort. Tun Sie dies nur, wenn Redis von außerhalb dieses Servers nicht erreichbar ist.",
@@ -2310,7 +2305,6 @@
         "afterUpdateHint": "Startet nur neu, wenn ein installierter Patch dies zur Aktivierung erfordert.",
         "rebootTimeHint": "Serverzeit. Wählen Sie einen Zeitraum mit wenig Datenverkehr.",
         "withUsersHint": "Deaktiviert wartet der Neustart, bis alle Sitzungen beendet sind. Aktiviert werden aktive Sitzungen beendet.",
-        "description": "Sicherheitspatches und die dafür nötigen Neustarts.",
         "pending": "{count, plural, one {# Sicherheitsupdate ausstehend} other {# Sicherheitsupdates ausstehend}}",
         "upToDate": "Keine Sicherheitsupdates ausstehend.",
         "checked": "Geprüft {when}",
@@ -2374,12 +2368,10 @@
         "cancelled": "Geplanter Neustart abgebrochen.",
         "cancelFailed": "Der Neustart konnte nicht abgebrochen werden.",
         "scheduledAt": "Neustart geplant für {at}.",
-        "failed": "Der Neustart konnte nicht gestartet werden.",
-        "summary": "Diesen Server sofort oder nach kurzer Verzögerung neu starten."
+        "failed": "Der Neustart konnte nicht gestartet werden."
       },
       "schedule": {
         "title": "Geplanter Neustart",
-        "description": "Neustart in festen Intervallen, unabhängig von Updates.",
         "save": "Zeitplan speichern",
         "enable": "Nach Zeitplan neu starten",
         "enableHint": "Jede Anwendung ist dabei jeweils etwa eine Minute offline.",
@@ -2816,7 +2808,6 @@
   },
   "diskCleaner": {
     "title": "Datenträgerbereinigung",
-    "subtitle": "Schaffen Sie Platz, indem Sie Caches, alte Protokolle und temporäre Dateien löschen.",
     "loadFailed": "Die Speicherbelegung dieses Servers konnte nicht gelesen werden.",
     "noPermission": "Ihre Rolle enthält nicht „Datenträgerbereinigung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "summary": {
@@ -2829,7 +2820,6 @@
     },
     "list": {
       "title": "Was bereinigt werden kann",
-      "subtitle": "Wählen Sie, was entfernt wird. Es wird nichts gelöscht, bis Sie bestätigen.",
       "allClean": "Gerade nichts zu bereinigen — alles ist schon aufgeräumt.",
       "alreadyCleanList": "Schon bereinigt: {items}",
       "showPaths": "Genaue Ordner zeigen",
@@ -2903,7 +2893,6 @@
     },
     "runs": {
       "title": "Letzte Bereinigungen",
-      "subtitle": "Was freigegeben wurde und wann.",
       "colWhen": "Wann",
       "colWhat": "Was bereinigt wurde",
       "colHow": "Wie",

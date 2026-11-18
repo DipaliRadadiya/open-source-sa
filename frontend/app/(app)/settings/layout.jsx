@@ -32,7 +32,7 @@ export default async function SettingsLayout({ children }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* One width for the tabs and every section, so nothing shifts between sections. */}
       <div className="space-y-6">

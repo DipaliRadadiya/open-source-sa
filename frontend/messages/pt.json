@@ -732,7 +732,7 @@
     "loadFailed": "O registro de atividades não pôde ser carregado. Tente novamente em instantes.",
     "server": {
       "title": "Registro de atividades",
-      "subtitle": "O que todas as pessoas com acesso alteraram neste servidor. Seus logins e alterações de conta ficam na sua página Conta.",
+      "subtitle": "Seus logins e alterações de conta ficam na sua página Conta.",
       "loadFailed": "Não foi possível carregar o registro de atividades.",
       "empty": "Nada aconteceu neste servidor ainda.",
       "searchPlaceholder": "Buscar atividade…"
@@ -1487,8 +1487,7 @@
   },
   "logs": {
     "title": "Logs do sistema",
-    "subtitle": "Leia os arquivos de log deste servidor.",
-    "subtitleWithLocked": "Leia os arquivos de log deste servidor. {count} de {total} precisam de acesso elevado e ainda não podem ser abertos.",
+    "subtitleWithLocked": "{count} de {total} precisam de acesso elevado e ainda não podem ser abertos.",
     "sourcesLabel": "Fontes de log",
     "viewerLabel": "Conteúdo do log",
     "noSource": "Nenhum log selecionado",
@@ -2107,7 +2106,6 @@
   },
   "settings": {
     "title": "Configurações",
-    "subtitle": "Configurações do servidor — nome, acesso, memória e atualizações.",
     "loadFailed": "Não foi possível ler as configurações deste servidor.",
     "tabs": {
       "label": "Seções de configurações",
@@ -2153,7 +2151,6 @@
       "saved": "Configurações do servidor salvas.",
       "localTime": "Agora: {time}",
       "save": "Salvar detalhes do servidor",
-      "description": "O nome e o relógio deste servidor.",
       "clockDrift": "Fora de sincronia",
       "clockDriftHint": "O NTP está ativo, mas o relógio não sincronizou — tarefas agendadas podem rodar tarde e os logs ficarão com horário errado.",
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
@@ -2213,7 +2210,6 @@
         },
         "save": "Salvar configurações de SSH"
       },
-      "description": "Quem alcança a linha de comando, e como.",
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "saveFailed": "Não foi possível salvar as configurações de SSH."
     },
@@ -2266,7 +2262,6 @@
         "saved": "Configurações do Redis salvas.",
         "save": "Salvar Redis",
         "passwordLocked": "Esta instalação não pode alterar a senha do Redis — o painel não consegue atualizar o próprio arquivo de configuração.",
-        "description": "Quanta memória o Redis pode usar e o que ele remove no limite.",
         "removePassword": "Remover senha",
         "removeTitle": "Remover a senha do Redis?",
         "removeDescription": "O Redis aceitará conexões sem senha. Faça isso apenas se não estiver acessível de fora deste servidor.",
@@ -2310,7 +2305,6 @@
         "afterUpdateHint": "Reinicia apenas quando um patch instalado exige um reinício para fazer efeito.",
         "rebootTimeHint": "Horário do servidor. Escolha um período de pouco tráfego.",
         "withUsersHint": "Desativado, o reinício espera todas as sessões terminarem. Ativado, sessões ativas são encerradas.",
-        "description": "Patches de segurança e os reinícios que eles exigem.",
         "pending": "{count, plural, one {# atualização de segurança pendente} other {# atualizações de segurança pendentes}}",
         "upToDate": "Nenhuma atualização de segurança pendente.",
         "checked": "Verificado {when}",
@@ -2374,12 +2368,10 @@
         "cancelled": "Reinício agendado cancelado.",
         "cancelFailed": "Não foi possível cancelar o reinício.",
         "scheduledAt": "Reinício agendado para {at}.",
-        "failed": "O reinício não pôde ser iniciado.",
-        "summary": "Reinicie este servidor agora ou após um curto intervalo."
+        "failed": "O reinício não pôde ser iniciado."
       },
       "schedule": {
         "title": "Reinício agendado",
-        "description": "Reiniciar em um intervalo fixo, independente de atualizações.",
         "save": "Salvar agendamento",
         "enable": "Reiniciar em um agendamento",
         "enableHint": "Cada aplicação fica offline por aproximadamente um minuto a cada vez.",
@@ -2816,7 +2808,6 @@
   },
   "diskCleaner": {
     "title": "Disk Cleaner",
-    "subtitle": "Libere espaço limpando caches, logs antigos e arquivos temporários.",
     "loadFailed": "Não conseguimos ler o uso de disco deste servidor.",
     "noPermission": "Seu papel não inclui o Disk Cleaner com acesso de Gerenciar. Peça a um administrador para concedê-lo.",
     "summary": {
@@ -2829,7 +2820,6 @@
     },
     "list": {
       "title": "O que pode ser limpo",
-      "subtitle": "Escolha o que remover. Nada é excluído até você confirmar.",
       "allClean": "Nada para limpar agora — tudo já está em ordem.",
       "alreadyCleanList": "Já está limpo: {items}",
       "showPaths": "Mostrar pastas exatas",
@@ -2903,7 +2893,6 @@
     },
     "runs": {
       "title": "Limpezas recentes",
-      "subtitle": "O que foi liberado e quando.",
       "colWhen": "Quando",
       "colWhat": "O que foi limpo",
       "colHow": "Como",
