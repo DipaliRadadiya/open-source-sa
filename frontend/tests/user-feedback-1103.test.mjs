@@ -51,8 +51,8 @@ test("a queued first deploy reads Deploying, not Stopped", () => {
 
 test("the setup banner names what is left", () => {
   const banner = read("components/setup/setup-banner.jsx");
-  const dashboard = read("app/(app)/dashboard/page.jsx");
-  assert.match(dashboard, /<SetupBanner remaining=\{setupLeft\.length\} names=\{setupLeft\.map\(\(c\) => c\.title\)\} \/>/);
+  const notes = read("components/dashboard/setup-notes.jsx");
+  assert.match(notes, /<SetupBanner remaining=\{left\.length\} names=\{left\.map\(\(c\) => c\.title\)\} \/>/);
   assert.match(banner, /format\.list\(names, \{ type: "conjunction" \}\)/);
   for (const l of LOCALES) assert.match(messages[l].setup.bannerBodyNamed, /\{names\}/, l);
 });

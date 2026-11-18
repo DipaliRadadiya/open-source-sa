@@ -186,6 +186,10 @@ test("setup page: a second restart 503 tells the user to try again in a moment",
 });
 
 test("dashboard shows the same note from the setup it already reads", () => {
+  // 18 Nov: streamed after the page, so the slow /setup read holds nothing else up.
   const page = readFileSync("app/(app)/dashboard/page.jsx", "utf8");
-  assert.match(page, /<SystemUpdatesNote running=\{setupResult\.setup\?\.system_updates_running\} \/>/);
+  assert.match(page, /<Suspense fallback=\{null\}>\s*<DashboardSetupNotes read=\{setupRead\} \/>/);
+  assert.ok(page.indexOf("const setupRead =") < page.indexOf("? await Promise.all"));
+  const notes = readFileSync("components/dashboard/setup-notes.jsx", "utf8");
+  assert.match(notes, /<SystemUpdatesNote running=\{setup\?\.system_updates_running\} \/>/);
 });

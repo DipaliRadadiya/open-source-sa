@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { ShieldOff } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -8,19 +9,18 @@ import { getServerHistory } from "@/lib/server/get-server-history";
 import { historySeries } from "@/lib/server/history-series";
 import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
-import { getSetup } from "@/lib/setup/get-setup";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { getEngines } from "@/lib/databases/get-databases";
 import { attentionFindings } from "@/lib/dashboard/attention";
-import { SetupBanner } from "@/components/setup/setup-banner";
-import { SystemUpdatesNote } from "@/components/setup/system-updates-note";
+import { DashboardSetupNotes } from "@/components/dashboard/setup-notes";
+import { getSetup } from "@/lib/setup/get-setup";
+import { getDashboardOverview } from "@/lib/dashboard/get-overview";
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/dashboard/server-info-card";
 import { AttentionPanel } from "@/components/dashboard/attention-panel";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
-import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
-import { getDashboardOverview } from "@/lib/dashboard/get-overview";
+import { DashboardOverviewSection, DashboardOverviewSkeleton } from "@/components/dashboard/dashboard-overview-section";
 import { ProcessesCard } from "@/components/dashboard/processes-card";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -38,12 +38,8 @@ export default async function DashboardPage() {
     getTranslations("common.permissionDenied"),
   ]);
 
-  // Only someone who could act on setup gets the nudge, and only while the
-  // recommended set is incomplete.
-  const setupResult = can(permissions, "setting", "view") ? await getSetup() : { setup: null };
-  const setupLeft = setupResult.setup && !setupResult.setup.complete
-    ? setupResult.setup.components.filter((c) => c.recommended && c.state !== "installed")
-    : [];
+  // Only someone who could act on setup gets the nudge (streamed in below).
+  const canViewSetup = can(permissions, "setting", "view");
 
   // Without `view` the page stays empty rather than redirecting: it is the
   // landing route, so a redirect would loop.
@@ -54,9 +50,20 @@ export default async function DashboardPage() {
   // Engines from `/databases/engines`, not `/server/facts`: facts misreport
   // MariaDB and miss MongoDB and PostgreSQL.
   const canViewDatabases = can(permissions, "database", "view");
+  // The two slow reads (about a second each) start now, beside the others, and stream
+  // into their own Suspense boundaries: nothing else waits for them (18 Nov).
+  const overviewRead = allowed
+    ? getDashboardOverview({
+        databases: canViewDatabases,
+        cronjobs: can(permissions, "cronjob", "view"),
+        systemUsers: can(permissions, "system_user", "view"),
+        firewall: can(permissions, "firewall", "view"),
+      })
+    : null;
+  const setupRead = canViewSetup ? getSetup() : null;
   // History is the last 24 hours at five-minute samples, so fetched once per
   // render rather than polled.
-  const [facts, processResult, health, history, appResult, engineResult, overview] = allowed
+  const [facts, processResult, health, history, appResult, engineResult] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
@@ -68,14 +75,8 @@ export default async function DashboardPage() {
         canViewApplications ? getAllApplications() : Promise.resolve(null),
         // Without database `view` the engine chips are simply omitted.
         canViewDatabases ? getEngines() : Promise.resolve({ engines: [] }),
-        getDashboardOverview({
-          databases: canViewDatabases,
-          cronjobs: can(permissions, "cronjob", "view"),
-          systemUsers: can(permissions, "system_user", "view"),
-          firewall: can(permissions, "firewall", "view"),
-        }),
       ])
-    : [null, { data: [], failed: false }, null, [], null, { engines: [] }, null];
+    : [null, { data: [], failed: false }, null, [], null, { engines: [] }];
 
   // A failed read must never become "no sites" or "everything is fine".
   const known = Boolean(appResult && !appResult.failed);
@@ -102,17 +103,23 @@ export default async function DashboardPage() {
         <PageHeader title={t("title")} subtitle={t("subtitle")} />
       )}
 
-      {allowed && overview ? (
+      {allowed ? (
         // Right under the status bar: what is on this server, and whether the firewall is on.
-        <DashboardOverview
-          applications={canViewApplications ? (known ? applications : null) : undefined}
-          overview={overview}
-          canManageFirewall={can(permissions, "firewall", "manage")}
-        />
+        // Streamed: the firewall read is slow, and the rest of the page need not wait for it.
+        <Suspense fallback={<DashboardOverviewSkeleton />}>
+          <DashboardOverviewSection
+            applications={canViewApplications ? (known ? applications : null) : undefined}
+            read={overviewRead}
+            canManageFirewall={can(permissions, "firewall", "manage")}
+          />
+        </Suspense>
       ) : null}
 
-      <SetupBanner remaining={setupLeft.length} names={setupLeft.map((c) => c.title)} />
-      <SystemUpdatesNote running={setupResult.setup?.system_updates_running} />
+      {setupRead ? (
+        <Suspense fallback={null}>
+          <DashboardSetupNotes read={setupRead} />
+        </Suspense>
+      ) : null}
 
       {allowed ? (
         <>

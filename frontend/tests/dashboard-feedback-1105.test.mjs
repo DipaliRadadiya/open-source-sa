@@ -28,7 +28,12 @@ test("the firewall tile switches it on and off through the Firewall page's confi
 
 test("counts and the firewall sit under the status bar, each only for who may open it", () => {
   const page = read("app/(app)/dashboard/page.jsx");
+  // 18 Nov: streamed in its own Suspense (the firewall read is slow), same permissions.
+  assert.match(page, /<Suspense fallback=\{<DashboardOverviewSkeleton \/>\}>\s*<DashboardOverviewSection/);
   assert.match(page, /getDashboardOverview\(\{\s*databases: canViewDatabases,\s*cronjobs: can\(permissions, "cronjob", "view"\),\s*systemUsers: can\(permissions, "system_user", "view"\),\s*firewall: can\(permissions, "firewall", "view"\),/);
+  // Started before the page's other reads are awaited, so it runs beside them.
+  assert.ok(page.indexOf("const overviewRead =") < page.indexOf("? await Promise.all"));
+  assert.match(read("components/dashboard/dashboard-overview-section.jsx"), /const overview = await read;/);
   const overview = read("lib/dashboard/get-overview.js");
   // The smallest page the API accepts (1 is a 422); an unread count is null ("—"), never 0.
   assert.match(overview, /searchParams: \{ per_page: 10 \}/);
