@@ -1523,8 +1523,7 @@
       "body": "Die Datei wurde entfernt oder rotiert, seit diese Seite geladen wurde. Laden Sie neu, um die Liste zu aktualisieren."
     },
     "emptyFile": {
-      "title": "Dieses Protokoll ist leer",
-      "body": "Es wurde noch nichts hineingeschrieben."
+      "title": "Dieses Protokoll ist leer"
     },
     "noMatches": {
       "title": "Keine passenden Zeilen",
@@ -3817,7 +3816,6 @@
   "applications": {
     "logs": {
       "pageTitle": "Protokolle",
-      "pageSubtitle": "Lesen Sie die Zugriffs-, Fehler- und Ausgabeprotokolle dieser Anwendung.",
       "provisioning": "Protokolle erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "loadFailed": "Die Protokolle konnten nicht geladen werden.",
       "sourcesLabel": "Protokollquelle",
@@ -4345,7 +4343,6 @@
       "manage": "Domains verwalten",
       "loadFailed": "Die Domains dieser Anwendung konnten nicht geladen werden.",
       "pageTitle": "Domains & SSL",
-      "pageSubtitle": "Verwalten Sie die Namen, unter denen diese Anwendung antwortet, und ihr HTTPS-Zertifikat.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -4355,7 +4352,6 @@
       },
       "provisioning": "Domains und SSL erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "sectionTitle": "Domains",
-      "sectionSubtitle": "Jeder Name, unter dem diese Anwendung antwortet.",
       "emptyTitle": "Noch keine Domains",
       "emptyBody": "Fügen Sie eine Domain hinzu, um sie auf diese Anwendung zu richten. Weitere Namen und Aliase können Sie jederzeit ergänzen.",
       "testDomain": "Testdomain",
@@ -4448,11 +4444,11 @@
         "sectionTitle": "SSL-Zertifikat",
         "sectionSubtitle": "Ein Zertifikat sichert diese Anwendung über HTTPS.",
         "none": "Diese Anwendung wird über einfaches HTTP ausgeliefert.",
-        "noneBody": "Klicken Sie auf „HTTPS aktivieren“ — wir prüfen jede Domain und sagen Ihnen genau, was zu tun ist, wenn ein Name noch nicht bereit ist.",
+        "noneBody": "Wir prüfen zuerst jede Domain und sagen Ihnen, was zu korrigieren ist.",
         "notCertifiable": "Für Testdomains (etwa *.nip.io) gibt es kein SSL. Fügen Sie zuerst eine echte Domain hinzu.",
         "enable": "HTTPS aktivieren",
         "issuing": "Zertifikat wird ausgestellt…",
-        "issuingBody": "Dazu gehört eine Anfrage bei Let's Encrypt, das kann eine Minute dauern.",
+        "issuingBody": "Das kann eine Minute dauern.",
         "issuingStuck": "Nach einigen Minuten immer noch hier? Entfernen Sie es und versuchen Sie es erneut.",
         "failed": "Das Zertifikat konnte nicht ausgestellt werden",
         "reference": "Referenz: {reference}",
@@ -4715,7 +4711,6 @@
     },
     "files": {
       "pageTitle": "Dateien",
-      "pageSubtitle": "Durchsuchen, ansehen und bearbeiten Sie die Dateien dieser Anwendung.",
       "loadFailed": "Die Dateien konnten nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Die Dateien stehen bereit, sobald sie läuft.",
       "noPermission": "Ihre Rolle enthält nicht „Dateien“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
@@ -5105,7 +5100,7 @@
         "notMeasured": "Nicht gemessen"
       },
       "exactBytes": "{bytes, plural, one {# Byte} other {# Byte}}",
-      "dockerNote": "Bearbeiten Sie <code>compose.yml</code> auf der Seite <link>Compose-Datei</link>: Eine Änderung hier wird bei der nächsten Aktualisierung des Containers ersetzt. Die Daten des Containers liegen in Docker-Volumes, nicht in diesem Ordner."
+      "dockerNote": "Bearbeiten Sie <code>compose.yml</code> auf der Seite <link>Compose-Datei</link>. Änderungen hier gehen beim nächsten Update verloren, und die Daten des Containers liegen in Docker-Volumes, nicht hier."
     },
     "workers": {
       "pageTitle": "Worker",
@@ -7637,7 +7632,6 @@
     },
     "application": {
       "pageTitle": "Backups",
-      "pageSubtitle": "Kopien dieser Anwendung außerhalb des Servers und wann sie erstellt werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Backups lassen sich konfigurieren, sobald sie bereit ist.",
       "loadFailed": "Die Backup-Einstellungen dieser Anwendung konnten nicht geladen werden.",
       "state": {
@@ -7651,7 +7645,7 @@
         },
         "unprotected": {
           "title": "Diese Anwendung wird nicht gesichert",
-          "body": "Geht der Server verloren, geht diese Anwendung mit. Legen Sie einen Zeitplan fest, um sie zu schützen.",
+          "body": "Geht der Server verloren, geht diese Anwendung mit.",
           "bodyReadOnly": "Geht der Server verloren, geht diese Anwendung mit. Bitten Sie eine Administratorin oder einen Administrator, Backups einzurichten."
         },
         "empty": {
@@ -7740,8 +7734,7 @@
       "historyForbidden": "Ihre Rolle darf den Backup-Verlauf nicht sehen. Bitten Sie eine Administratorin oder einen Administrator um die Berechtigung „Backups“.",
       "noneKept": "Keins aufbewahrt",
       "emptyHint": {
-        "unprotected": "Sobald ein Zeitplan eingerichtet ist, erscheint hier jedes Backup – mit einem Klick wiederherstellbar.",
-        "scheduled": "Jedes Backup erscheint hier, sobald es fertig ist – mit einem Klick wiederherstellbar. Starten Sie jetzt eines, um zu prüfen, ob alles funktioniert."
+        "scheduled": "Starten Sie jetzt eines, um zu prüfen, ob alles funktioniert."
       }
     },
     "empty": {
@@ -7853,7 +7846,7 @@
         },
         "unprotected": {
           "title": "Diese Datenbank wird nicht gesichert",
-          "body": "Geht der Server verloren, geht diese Datenbank mit. Legen Sie einen Zeitplan fest, um sie zu schützen.",
+          "body": "Geht der Server verloren, geht diese Datenbank mit.",
           "bodyReadOnly": "Geht der Server verloren, geht diese Datenbank mit. Bitten Sie eine Administratorin oder einen Administrator, Backups einzurichten."
         }
       },

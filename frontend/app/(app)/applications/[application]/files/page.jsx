@@ -97,10 +97,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("pageTitle")}
-        subtitle={t("pageSubtitle")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
       {/* The panel rewrites compose.yml here from its own copy every time it applies
           the container, so an edit in Files looks saved and is then lost. */}

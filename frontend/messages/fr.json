@@ -1523,8 +1523,7 @@
       "body": "Le fichier a été supprimé ou archivé par rotation depuis le chargement de cette page. Rechargez pour rafraîchir la liste."
     },
     "emptyFile": {
-      "title": "Ce journal est vide",
-      "body": "Rien n'y a encore été écrit."
+      "title": "Ce journal est vide"
     },
     "noMatches": {
       "title": "Aucune ligne correspondante",
@@ -3817,7 +3816,6 @@
   "applications": {
     "logs": {
       "pageTitle": "Journaux",
-      "pageSubtitle": "Lisez les journaux d'accès, d'erreur et de sortie de cette application.",
       "provisioning": "Les journaux apparaissent dès que l'application a fini d'être préparée.",
       "loadFailed": "Impossible de charger les journaux.",
       "sourcesLabel": "Source du journal",
@@ -4345,7 +4343,6 @@
       "manage": "Gérer les domaines",
       "loadFailed": "Nous n'avons pas pu charger les domaines de cette application.",
       "pageTitle": "Domaines & SSL",
-      "pageSubtitle": "Gérez les noms auxquels cette application répond et son certificat HTTPS.",
       "tabs": {
         "domains": "Domaines",
         "ssl": "SSL",
@@ -4355,7 +4352,6 @@
       },
       "provisioning": "Les domaines et le SSL apparaissent dès que l'application a fini d'être préparée.",
       "sectionTitle": "Domaines",
-      "sectionSubtitle": "Tous les noms auxquels cette application répond.",
       "emptyTitle": "Aucun domaine pour l'instant",
       "emptyBody": "Ajoutez un domaine pour le pointer vers cette application. Vous pouvez ajouter d'autres noms et alias à tout moment.",
       "testDomain": "Domaine de test",
@@ -4448,11 +4444,11 @@
         "sectionTitle": "Certificat SSL",
         "sectionSubtitle": "Un certificat sécurise cette application en HTTPS.",
         "none": "Cette application est servie en HTTP simple.",
-        "noneBody": "Cliquez sur Activer HTTPS — nous vérifierons chaque domaine et vous dirons exactement quoi corriger si un nom n'est pas prêt.",
+        "noneBody": "Nous vérifions d'abord chaque domaine et vous disons quoi corriger.",
         "notCertifiable": "Le SSL n'est pas disponible pour les domaines de test (comme *.nip.io). Ajoutez d'abord un vrai domaine.",
         "enable": "Activer HTTPS",
         "issuing": "Émission du certificat…",
-        "issuingBody": "Ceci implique un aller-retour vers Let's Encrypt et peut prendre une minute.",
+        "issuingBody": "Cela peut prendre une minute.",
         "issuingStuck": "Toujours là après quelques minutes ? Supprimez-le et réessayez.",
         "failed": "Le certificat n'a pas pu être émis",
         "reference": "Référence : {reference}",
@@ -4715,7 +4711,6 @@
     },
     "files": {
       "pageTitle": "Fichiers",
-      "pageSubtitle": "Parcourez, consultez et modifiez les fichiers de cette application.",
       "loadFailed": "Les fichiers n'ont pas pu être chargés.",
       "provisioning": "Cette application est encore en cours de configuration. Les fichiers seront disponibles dès qu'elle sera en exécution.",
       "noPermission": "Votre rôle n'inclut pas Fichiers pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
@@ -5105,7 +5100,7 @@
         "notMeasured": "Non mesuré"
       },
       "exactBytes": "{bytes, plural, one {# octet} other {# octets}}",
-      "dockerNote": "Modifiez <code>compose.yml</code> sur la page <link>Fichier compose</link> : une modification faite ici est remplacée à la prochaine mise à jour du conteneur. Les données du conteneur sont dans des volumes Docker, pas dans ce dossier."
+      "dockerNote": "Modifiez <code>compose.yml</code> sur la page <link>Fichier compose</link>. Les modifications faites ici sont perdues à la prochaine mise à jour, et les données du conteneur sont dans des volumes Docker, pas ici."
     },
     "workers": {
       "pageTitle": "Workers",
@@ -7637,7 +7632,6 @@
     },
     "application": {
       "pageTitle": "Sauvegardes",
-      "pageSubtitle": "Copies de cette application conservées hors du serveur, et quand elles sont prises.",
       "provisioning": "Cette application est encore en cours de configuration. Les sauvegardes pourront être configurées une fois qu'elle sera prête.",
       "loadFailed": "Les paramètres de sauvegarde de cette application n'ont pas pu être chargés.",
       "state": {
@@ -7651,7 +7645,7 @@
         },
         "unprotected": {
           "title": "Cette application n'est pas sauvegardée",
-          "body": "Si le serveur est perdu, cette application l'est aussi. Définissez une planification pour la protéger.",
+          "body": "Si le serveur est perdu, cette application l'est aussi.",
           "bodyReadOnly": "Si le serveur est perdu, cette application l'est aussi. Demandez à un administrateur de configurer les sauvegardes."
         },
         "empty": {
@@ -7740,8 +7734,7 @@
       "historyForbidden": "Votre rôle ne peut pas voir l'historique des sauvegardes. Demandez à un administrateur l'autorisation Sauvegardes.",
       "noneKept": "Aucune conservée",
       "emptyHint": {
-        "unprotected": "Une fois une planification configurée, chaque sauvegarde apparaît ici, restaurable en un clic.",
-        "scheduled": "Chaque sauvegarde apparaît ici une fois terminée, restaurable en un clic. Lancez-en une maintenant pour vérifier que tout fonctionne."
+        "scheduled": "Lancez-en une maintenant pour vérifier que tout fonctionne."
       }
     },
     "empty": {
@@ -7853,7 +7846,7 @@
         },
         "unprotected": {
           "title": "Cette base de données n'est pas sauvegardée",
-          "body": "Si le serveur est perdu, cette base de données l'est aussi. Définissez une planification pour la protéger.",
+          "body": "Si le serveur est perdu, cette base de données l'est aussi.",
           "bodyReadOnly": "Si le serveur est perdu, cette base de données l'est aussi. Demandez à un administrateur de configurer les sauvegardes."
         }
       },

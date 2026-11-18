@@ -32,7 +32,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -212,13 +211,10 @@ export function DomainsSection({
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-base font-semibold">
-            {t("sectionTitle")}
-          </CardTitle>
-          <CardDescription>{t("sectionSubtitle")}</CardDescription>
-        </div>
+      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="text-base font-semibold">
+          {t("sectionTitle")}
+        </CardTitle>
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           {addButton}

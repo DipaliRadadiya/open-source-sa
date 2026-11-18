@@ -1523,8 +1523,7 @@
       "body": "O arquivo foi removido ou rotacionado desde que esta página foi carregada. Recarregue para atualizar a lista."
     },
     "emptyFile": {
-      "title": "Este log está vazio",
-      "body": "Nada foi escrito nele ainda."
+      "title": "Este log está vazio"
     },
     "noMatches": {
       "title": "Nenhuma linha correspondente",
@@ -3817,7 +3816,6 @@
   "applications": {
     "logs": {
       "pageTitle": "Logs",
-      "pageSubtitle": "Leia os logs de acesso, erro e saída desta aplicação.",
       "provisioning": "Os logs aparecem quando a aplicação terminar de ser configurada.",
       "loadFailed": "Não foi possível carregar os logs.",
       "sourcesLabel": "Origem do log",
@@ -4345,7 +4343,6 @@
       "manage": "Gerenciar domínios",
       "loadFailed": "Não foi possível carregar os domínios desta aplicação.",
       "pageTitle": "Domínios e SSL",
-      "pageSubtitle": "Gerencie os nomes para os quais esta aplicação responde e seu certificado HTTPS.",
       "tabs": {
         "domains": "Domínios",
         "ssl": "SSL",
@@ -4355,7 +4352,6 @@
       },
       "provisioning": "Os domínios e o SSL aparecem quando a aplicação terminar de ser configurada.",
       "sectionTitle": "Domínios",
-      "sectionSubtitle": "Todos os nomes para os quais esta aplicação responde.",
       "emptyTitle": "Ainda sem domínios",
       "emptyBody": "Adicione um domínio para apontá-lo a esta aplicação. Você pode adicionar mais nomes e aliases a qualquer momento.",
       "testDomain": "Domínio de teste",
@@ -4448,11 +4444,11 @@
         "sectionTitle": "Certificado SSL",
         "sectionSubtitle": "Um certificado protege esta aplicação via HTTPS.",
         "none": "Esta aplicação é servida em HTTP simples.",
-        "noneBody": "Clique em Ativar HTTPS — verificaremos cada domínio e diremos exatamente o que corrigir se algum nome não estiver pronto.",
+        "noneBody": "Primeiro verificamos cada domínio e dizemos o que corrigir.",
         "notCertifiable": "SSL não está disponível para domínios de teste (como *.nip.io). Adicione um domínio real primeiro.",
         "enable": "Ativar HTTPS",
         "issuing": "Emitindo certificado…",
-        "issuingBody": "Isso envolve uma ida até a Let's Encrypt e pode levar um minuto.",
+        "issuingBody": "Isso pode levar um minuto.",
         "issuingStuck": "Continua assim ao fim de alguns minutos? Remova-o e tente de novo.",
         "failed": "Não foi possível emitir o certificado",
         "reference": "Referência: {reference}",
@@ -4715,7 +4711,6 @@
     },
     "files": {
       "pageTitle": "Arquivos",
-      "pageSubtitle": "Navegue, visualize e edite os arquivos desta aplicação.",
       "loadFailed": "Os arquivos não puderam ser carregados.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Os arquivos ficarão disponíveis quando estiver em execução.",
       "noPermission": "Seu papel não inclui Arquivos para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
@@ -5105,7 +5100,7 @@
         "notMeasured": "Não medido"
       },
       "exactBytes": "{bytes, plural, one {# byte} other {# bytes}}",
-      "dockerNote": "Edite <code>compose.yml</code> na página <link>Ficheiro compose</link>: uma alteração feita aqui é substituída na próxima vez que o contentor for atualizado. Os dados do contentor ficam em volumes Docker, não nesta pasta."
+      "dockerNote": "Edite <code>compose.yml</code> na página <link>Ficheiro compose</link>. As alterações feitas aqui se perdem na próxima atualização, e os dados do contentor ficam em volumes Docker, não aqui."
     },
     "workers": {
       "pageTitle": "Workers",
@@ -7637,7 +7632,6 @@
     },
     "application": {
       "pageTitle": "Backups",
-      "pageSubtitle": "Cópias desta aplicação mantidas fora do servidor e quando são feitas.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Os backups poderão ser configurados quando estiver pronta.",
       "loadFailed": "Não foi possível carregar as configurações de backup desta aplicação.",
       "state": {
@@ -7651,7 +7645,7 @@
         },
         "unprotected": {
           "title": "Esta aplicação não está com backup",
-          "body": "Se o servidor for perdido, esta aplicação também será. Defina um agendamento para protegê-la.",
+          "body": "Se o servidor for perdido, esta aplicação também será.",
           "bodyReadOnly": "Se o servidor for perdido, esta aplicação também será. Peça a um administrador para configurar os backups."
         },
         "empty": {
@@ -7740,8 +7734,7 @@
       "historyForbidden": "Seu papel não pode ver o histórico de backups. Peça a um administrador a permissão de Backups.",
       "noneKept": "Nenhum mantido",
       "emptyHint": {
-        "unprotected": "Depois de configurar um agendamento, cada backup aparece aqui, pronto para restaurar com um clique.",
-        "scheduled": "Cada backup aparece aqui quando termina, pronto para restaurar com um clique. Execute um agora para verificar se funciona."
+        "scheduled": "Execute um agora para verificar se funciona."
       }
     },
     "empty": {
@@ -7853,7 +7846,7 @@
         },
         "unprotected": {
           "title": "Este banco de dados não está com backup",
-          "body": "Se o servidor for perdido, este banco de dados também será. Defina um agendamento para protegê-lo.",
+          "body": "Se o servidor for perdido, este banco de dados também será.",
           "bodyReadOnly": "Se o servidor for perdido, este banco de dados também será. Peça a um administrador para configurar os backups."
         }
       },

@@ -1523,8 +1523,7 @@
       "body": "The file was removed or rotated away since this page loaded. Reload to refresh the list."
     },
     "emptyFile": {
-      "title": "This log is empty",
-      "body": "Nothing has been written to it yet."
+      "title": "This log is empty"
     },
     "noMatches": {
       "title": "No matching lines",
@@ -3817,7 +3816,6 @@
   "applications": {
     "logs": {
       "pageTitle": "Logs",
-      "pageSubtitle": "Read this application's access, error and output logs.",
       "provisioning": "Logs appear once the application has finished setting up.",
       "loadFailed": "We couldn't load the logs.",
       "sourcesLabel": "Log source",
@@ -4345,7 +4343,6 @@
       "manage": "Manage domains",
       "loadFailed": "We could not load the domains for this application.",
       "pageTitle": "Domains & SSL",
-      "pageSubtitle": "Manage the names this application answers to and its HTTPS certificate.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -4355,7 +4352,6 @@
       },
       "provisioning": "Domains and SSL appear once the application has finished setting up.",
       "sectionTitle": "Domains",
-      "sectionSubtitle": "Every name this application answers to.",
       "emptyTitle": "No domains yet",
       "emptyBody": "Add a domain to point it at this application. You can add more names and aliases at any time.",
       "testDomain": "Test domain",
@@ -4448,11 +4444,11 @@
         "sectionTitle": "SSL certificate",
         "sectionSubtitle": "One certificate secures this application over HTTPS.",
         "none": "This application is served over plain HTTP.",
-        "noneBody": "Click Enable HTTPS — we'll check each domain and tell you exactly what to fix if a name isn't ready.",
+        "noneBody": "We check each domain first and tell you what to fix.",
         "notCertifiable": "SSL isn't available for test domains (like *.nip.io). Add a real domain first.",
         "enable": "Enable HTTPS",
         "issuing": "Issuing certificate…",
-        "issuingBody": "This involves a round trip to Let's Encrypt and can take a minute.",
+        "issuingBody": "This can take a minute.",
         "issuingStuck": "Still here after a few minutes? Remove it and try again.",
         "failed": "Certificate could not be issued",
         "reference": "Reference: {reference}",
@@ -4715,7 +4711,6 @@
     },
     "files": {
       "pageTitle": "Files",
-      "pageSubtitle": "Browse, view and edit this application's files.",
       "loadFailed": "Files could not be loaded.",
       "provisioning": "This application is still being set up. Files will be available once it's running.",
       "noPermission": "Your role does not include Files for this application with Manage access. Ask an administrator to grant it.",
@@ -5105,7 +5100,7 @@
         "notMeasured": "Not measured"
       },
       "exactBytes": "{bytes, plural, one {# byte} other {# bytes}}",
-      "dockerNote": "Edit <code>compose.yml</code> on the <link>Compose File</link> page: an edit made here is replaced the next time the container is updated. The container's data lives in Docker volumes, not in this folder."
+      "dockerNote": "Edit <code>compose.yml</code> on the <link>Compose File</link> page. Changes made here are lost on the next update, and the container's data is in Docker volumes, not here."
     },
     "workers": {
       "pageTitle": "Workers",
@@ -7637,7 +7632,6 @@
     },
     "application": {
       "pageTitle": "Backups",
-      "pageSubtitle": "Copies of this application kept off the server, and when they are taken.",
       "provisioning": "This application is still being set up. Backups can be configured once it is ready.",
       "loadFailed": "This application's backup settings could not be loaded.",
       "state": {
@@ -7651,7 +7645,7 @@
         },
         "unprotected": {
           "title": "This application is not backed up",
-          "body": "If the server is lost, so is this application. Set up a schedule to protect it.",
+          "body": "If the server is lost, so is this application.",
           "bodyReadOnly": "If the server is lost, so is this application. Ask an administrator to set up backups."
         },
         "empty": {
@@ -7740,8 +7734,7 @@
       "historyForbidden": "Your role can't see backup history. Ask an administrator for the Backups permission.",
       "noneKept": "None kept",
       "emptyHint": {
-        "unprotected": "Once a schedule is set up, every backup appears here, ready to restore in one click.",
-        "scheduled": "Each backup appears here when it finishes, ready to restore in one click. Run one now to check it works."
+        "scheduled": "Run one now to check it works."
       }
     },
     "empty": {
@@ -7853,7 +7846,7 @@
         },
         "unprotected": {
           "title": "This database is not backed up",
-          "body": "If the server is lost, so is this database. Set up a schedule to protect it.",
+          "body": "If the server is lost, so is this database.",
           "bodyReadOnly": "If the server is lost, so is this database. Ask an administrator to set up backups."
         }
       },

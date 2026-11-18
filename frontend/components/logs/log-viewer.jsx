@@ -129,7 +129,7 @@ export function LogViewer({
       <Notice
         icon={Inbox}
         title={filtered ? t("noMatches.title") : t("emptyFile.title")}
-        body={filtered ? noMatchBody : t("emptyFile.body")}
+        body={filtered ? noMatchBody : null}
       />
     );
   }
@@ -220,7 +220,7 @@ function Notice({ icon: Icon, title, body }) {
       </span>
       <div className="space-y-1">
         <p className="font-medium text-console-foreground">{title}</p>
-        <p className="max-w-sm text-sm text-console-muted">{body}</p>
+        {body ? <p className="max-w-sm text-sm text-console-muted">{body}</p> : null}
       </div>
     </div>
   );

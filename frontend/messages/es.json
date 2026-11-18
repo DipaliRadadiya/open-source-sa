@@ -1523,8 +1523,7 @@
       "body": "El archivo se eliminó o rotó desde que se cargó esta página. Recarga para actualizar la lista."
     },
     "emptyFile": {
-      "title": "Este registro está vacío",
-      "body": "Todavía no se ha escrito nada en él."
+      "title": "Este registro está vacío"
     },
     "noMatches": {
       "title": "Sin líneas coincidentes",
@@ -3817,7 +3816,6 @@
   "applications": {
     "logs": {
       "pageTitle": "Registros",
-      "pageSubtitle": "Consulta los registros de acceso, error y salida de esta aplicación.",
       "provisioning": "Los registros aparecen cuando la aplicación termina de configurarse.",
       "loadFailed": "No pudimos cargar los registros.",
       "sourcesLabel": "Fuente de registro",
@@ -4345,7 +4343,6 @@
       "manage": "Gestionar dominios",
       "loadFailed": "No pudimos cargar los dominios de esta aplicación.",
       "pageTitle": "Dominios y SSL",
-      "pageSubtitle": "Gestiona los nombres a los que responde esta aplicación y su certificado HTTPS.",
       "tabs": {
         "domains": "Dominios",
         "ssl": "SSL",
@@ -4355,7 +4352,6 @@
       },
       "provisioning": "Los dominios y el SSL aparecen cuando la aplicación termina de configurarse.",
       "sectionTitle": "Dominios",
-      "sectionSubtitle": "Todos los nombres a los que responde esta aplicación.",
       "emptyTitle": "Aún no hay dominios",
       "emptyBody": "Agrega un dominio para apuntarlo a esta aplicación. Puedes añadir más nombres y alias en cualquier momento.",
       "testDomain": "Dominio de prueba",
@@ -4448,11 +4444,11 @@
         "sectionTitle": "Certificado SSL",
         "sectionSubtitle": "Un certificado protege esta aplicación con HTTPS.",
         "none": "Esta aplicación se sirve por HTTP sin cifrar.",
-        "noneBody": "Pulsa Habilitar HTTPS: comprobaremos cada dominio y te diremos exactamente qué corregir si un nombre no está listo.",
+        "noneBody": "Primero comprobamos cada dominio y te decimos qué corregir.",
         "notCertifiable": "El SSL no está disponible para dominios de prueba (como *.nip.io). Añade primero un dominio real.",
         "enable": "Activar HTTPS",
         "issuing": "Emitiendo certificado…",
-        "issuingBody": "Esto implica una ida y vuelta a Let's Encrypt y puede tardar un minuto.",
+        "issuingBody": "Puede tardar un minuto.",
         "issuingStuck": "¿Sigue así después de unos minutos? Elimínalo e inténtalo de nuevo.",
         "failed": "No se pudo emitir el certificado",
         "reference": "Referencia: {reference}",
@@ -4715,7 +4711,6 @@
     },
     "files": {
       "pageTitle": "Archivos",
-      "pageSubtitle": "Explora, visualiza y edita los archivos de esta aplicación.",
       "loadFailed": "No se pudieron cargar los archivos.",
       "provisioning": "Esta aplicación todavía se está configurando. Los archivos estarán disponibles cuando esté en funcionamiento.",
       "noPermission": "Tu rol no incluye Archivos de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
@@ -5105,7 +5100,7 @@
         "notMeasured": "Sin medir"
       },
       "exactBytes": "{bytes, plural, one {# byte} other {# bytes}}",
-      "dockerNote": "Edite <code>compose.yml</code> en la página <link>Archivo compose</link>: un cambio hecho aquí se reemplaza la próxima vez que se actualice el contenedor. Los datos del contenedor están en volúmenes de Docker, no en esta carpeta."
+      "dockerNote": "Edite <code>compose.yml</code> en la página <link>Archivo compose</link>. Los cambios hechos aquí se pierden en la próxima actualización, y los datos del contenedor están en volúmenes de Docker, no aquí."
     },
     "workers": {
       "pageTitle": "Workers",
@@ -7637,7 +7632,6 @@
     },
     "application": {
       "pageTitle": "Copias de seguridad",
-      "pageSubtitle": "Copias de esta aplicación guardadas fuera del servidor, y cuándo se toman.",
       "provisioning": "Esta aplicación todavía se está preparando. Podrás configurar las copias cuando esté lista.",
       "loadFailed": "No se pudieron cargar los ajustes de copia de esta aplicación.",
       "state": {
@@ -7651,7 +7645,7 @@
         },
         "unprotected": {
           "title": "Esta aplicación no tiene copias de seguridad",
-          "body": "Si se pierde el servidor, se pierde esta aplicación. Configura una programación para protegerla.",
+          "body": "Si se pierde el servidor, se pierde esta aplicación.",
           "bodyReadOnly": "Si se pierde el servidor, se pierde esta aplicación. Pide a un administrador que configure las copias."
         },
         "empty": {
@@ -7740,8 +7734,7 @@
       "historyForbidden": "Tu rol no puede ver el historial de copias. Pide a un administrador el permiso de Copias de seguridad.",
       "noneKept": "No se conserva ninguna",
       "emptyHint": {
-        "unprotected": "Cuando configure una programación, cada copia aparecerá aquí, lista para restaurarse con un clic.",
-        "scheduled": "Cada copia aparece aquí al terminar, lista para restaurarse con un clic. Ejecute una ahora para comprobar que funciona."
+        "scheduled": "Ejecute una ahora para comprobar que funciona."
       }
     },
     "empty": {
@@ -7853,7 +7846,7 @@
         },
         "unprotected": {
           "title": "Esta base de datos no tiene copias de seguridad",
-          "body": "Si se pierde el servidor, se pierde esta base de datos. Configura una programación para protegerla.",
+          "body": "Si se pierde el servidor, se pierde esta base de datos.",
           "bodyReadOnly": "Si se pierde el servidor, se pierde esta base de datos. Pide a un administrador que configure las copias."
         }
       },

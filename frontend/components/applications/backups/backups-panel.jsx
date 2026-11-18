@@ -724,9 +724,8 @@ function FirstBackupEmpty({ hasTarget, subject = "application" }) {
       <EmptyArt icon={Archive} />
       <div className="max-w-md space-y-1.5">
         <p className="font-semibold">{t("noRuns")}</p>
-        <p className="text-sm text-muted-foreground">
-          {hasTarget ? t("emptyHint.scheduled") : t("emptyHint.unprotected")}
-        </p>
+        {/* Unprotected needs no hint: the status card above already offers Set up. */}
+        {hasTarget ? <p className="text-sm text-muted-foreground">{t("emptyHint.scheduled")}</p> : null}
       </div>
     </div>
   );
