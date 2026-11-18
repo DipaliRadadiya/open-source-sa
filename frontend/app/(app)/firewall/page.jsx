@@ -49,7 +49,7 @@ export default async function FirewallPage({ searchParams }) {
   redirectOutOfRange("/firewall", sp, meta, rulesFailed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* A failed read must never render as "nothing is protecting this server". */}
       {failed || !data ? (

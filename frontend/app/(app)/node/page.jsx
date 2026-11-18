@@ -103,7 +103,7 @@ export default async function NodePage() {
         />
       ) : null}
 
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* Some npm packages compile on install; without a compiler the deploy dies in
           node-gyp with an error that never says so. The install lives on Setup. */}
@@ -157,7 +157,6 @@ export default async function NodePage() {
               t("table.colActions"),
             ]}
             action={install}
-            footnote={t("versions.defaultHint")}
           >
             {/* Newest first: the API lists in-flight installs ahead of installed versions. */}
             {ordered.map((version) => (

@@ -43,7 +43,7 @@ test("firewall and fail2ban layout fixes from the 1024 pass", () => {
   }
   assert.match(rules, /<div className="sm:max-w-xs sm:min-w-56 sm:flex-1">\s*<SearchInput placeholder=\{t\("rules\.search"\)\} \/>/);
   assert.match(rules, /<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">/);
-  assert.match(read("components/fail2ban/banned-card.jsx"), /xl:flex-row xl:items-start xl:justify-between/);
+  assert.match(read("components/fail2ban/banned-card.jsx"), /xl:flex-row xl:items-center xl:justify-between/);
 });
 
 test("a service restart/stop confirm closes on confirm; only the row shows progress (Krishna, 1 Oct)", () => {

@@ -45,7 +45,7 @@ export default async function Fail2banPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* A failed read must never render as "no protection". */}
       {failed || !data ? (

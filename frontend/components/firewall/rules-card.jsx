@@ -24,7 +24,6 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -330,13 +329,8 @@ export function RulesCard({
       ) : null}
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-semibold">{t("rules.title")}</CardTitle>
-            <CardDescription>
-              {enabled ? t("rules.description") : t("rules.descriptionOff")}
-            </CardDescription>
-          </div>
+        <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base font-semibold">{t("rules.title")}</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <RefreshButton />
             <HistoryDialog everyone={historyForEveryone} variant="neutral" />

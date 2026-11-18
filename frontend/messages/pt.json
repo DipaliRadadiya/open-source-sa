@@ -107,7 +107,6 @@
   },
   "systemUsers": {
     "title": "Usuários do sistema",
-    "subtitle": "Contas do SO Linux que possuem e executam suas aplicações.",
     "searchPlaceholder": "Buscar usuários…",
     "clearSearch": "Limpar busca",
     "columns": {
@@ -1589,7 +1588,6 @@
   },
   "services": {
     "title": "Serviços",
-    "subtitle": "Servidor web, banco de dados e outros serviços instalados neste servidor.",
     "loadFailed": "Não foi possível ler os serviços deste servidor. Nada foi iniciado nem parado.",
     "protectedHint": "Este serviço roda o próprio painel, então não pode ser parado nem desativado por aqui.",
     "noPermission": "Seu papel não inclui Serviço com acesso Gerenciar. Peça a um administrador para conceder.",
@@ -1717,8 +1715,7 @@
         "hint": "Estes não estão em execução. Cada um informa o motivo e o que fazer."
       },
       "running": {
-        "title": "Serviços instalados",
-        "hint": "Memória, uso de processador e se cada um inicia com o servidor."
+        "title": "Serviços instalados"
       },
       "installing": {
         "title": "Em instalação",
@@ -1739,7 +1736,6 @@
   },
   "fail2ban": {
     "title": "Fail2ban",
-    "subtitle": "Banir quem fica tentando adivinhar senhas no seu servidor.",
     "loadFailed": "Não conseguimos verificar o Fail2ban agora. Isso não significa que seu servidor esteja exposto — apenas não obtivemos uma resposta.",
     "status": {
       "running": "Em execução",
@@ -1763,7 +1759,6 @@
     },
     "jails": {
       "title": "Jails",
-      "description": "Cada jail monitora um serviço. Ative os que você quer proteger.",
       "toggle": "Ativar {name}",
       "enabled": "{name} está ativado",
       "disabled": "{name} está desativado",
@@ -1801,7 +1796,6 @@
     },
     "banned": {
       "title": "Endereços banidos",
-      "description": "Quem está banido agora e por quanto tempo ainda.",
       "ip": "Endereço",
       "jail": "Jail",
       "since": "Banido",
@@ -1926,7 +1920,6 @@
   },
   "firewall": {
     "title": "Firewall",
-    "subtitle": "Controla quais portas o mundo externo pode alcançar neste servidor.",
     "loadFailed": "Não conseguimos verificar o firewall agora. Isso não significa que seu servidor está exposto — apenas não obtivemos uma resposta.",
     "common": {
       "cancel": "Cancelar",
@@ -1968,8 +1961,6 @@
     },
     "rules": {
       "title": "Regras",
-      "description": "O que é permitido passar, na ordem em que foi adicionado.",
-      "descriptionOff": "Salvas, mas não estão sendo aplicadas enquanto o firewall estiver desativado.",
       "added": "Adicionado",
       "actions": "Ações",
       "delete": "Excluir",
@@ -2708,10 +2699,8 @@
   },
   "node": {
     "title": "Node.js",
-    "subtitle": "As versões do Node.js neste servidor.",
     "table": {
       "title": "Versões instaladas",
-      "description": "Instale, remova e escolha a versão padrão.",
       "colVersion": "Versão",
       "colSupport": "Suporte",
       "colNpm": "npm",
@@ -2751,7 +2740,6 @@
       "usedByNone": "Nenhuma aplicação usa esta versão ainda.",
       "makeDefault": "Tornar padrão",
       "remove": "Remover",
-      "defaultHint": "Novas aplicações começam na versão padrão. Os comandos node, npm e npx também a usam.",
       "defaultSet": "Node.js {version} agora é o padrão.",
       "defaultFailed": "Não foi possível tornar essa versão a padrão.",
       "removed": "Node.js {version} removido.",

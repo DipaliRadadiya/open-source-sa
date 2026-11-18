@@ -57,7 +57,8 @@ test("jail explainer lives in the header with a stable accessible relationship",
   assert.match(header, /t\("jails.whatIs"\)/);
   assert.match(header, /aria-expanded=\{explaining\}/);
   assert.match(header, /aria-controls=\{explainerId\}/);
-  assert.match(header, /CardDescription className="col-span-2 row-start-2"/);
+  // 18 Nov: no description under the title (too much text, Krishna).
+  assert.doesNotMatch(header, /CardDescription/);
   assert.match(source, /const explainerId = useId\(\)/);
   assert.match(source, /id=\{explainerId\}\s+hidden=\{!explaining\}/);
 });

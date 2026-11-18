@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { CircleCheck, CircleStop, Clock, TriangleAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { listServices } from "@/lib/api/services";
 import { servicesResponseSchema } from "@/lib/schemas/service";
 import { ServicesTable } from "@/components/services/services-table";
@@ -163,7 +164,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
       {showRunning ? (
       <Section
         title={t("sections.running.title")}
-        hint={t("sections.running.hint")}
         action={<RefreshButton />}
       >
         {/* Container query, not lg: 900px is where the widest locale's headers fit. */}
@@ -197,10 +197,10 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 function Section({ title, hint, action, children }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">
-      <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+      <div className={cn("flex gap-3 px-4 pt-4 pb-3", hint ? "items-start" : "items-center")}>
         <div className="min-w-0 flex-1 space-y-1">
           <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
-          <p className="text-sm text-muted-foreground">{hint}</p>
+          {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
         </div>
         {action}
       </div>

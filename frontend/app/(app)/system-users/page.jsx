@@ -50,7 +50,7 @@ export default async function SystemUsersPage({ searchParams }) {
   redirectOutOfRange("/system-users", sp, usersPage.meta, usersPage.failed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
       {/* A failed read must not render the empty state. */}
       {usersPage.failed ? (
         <LoadFailed

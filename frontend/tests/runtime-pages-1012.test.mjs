@@ -13,8 +13,8 @@ test("both pages list every version in one table with Install in its header", ()
     const src = read(page);
     assert.match(src, /<VersionsCard/, page);
     assert.match(src, /action=\{install\}/, page);
-    // 18 Nov: PHP dropped its footnote (too much text, Krishna); Node keeps its own until its pass.
-    if (page.includes("node")) assert.match(src, /footnote=\{t\("versions\.defaultHint"\)\}/, page);
+    // 18 Nov: both pages dropped the footnote (too much text, Krishna).
+    assert.doesNotMatch(src, /footnote=/, page);
     assert.doesNotMatch(src, /VersionBar|PhpVersionList/, `${page} brought back the chips or the two-pane list`);
   }
 });
@@ -97,7 +97,6 @@ test("every locale has the new labels, and the help text speaks to users", () =>
       assert.ok(m.php.table?.[key], `${locale} php.table.${key}`);
       assert.ok(m.node.table?.[key], `${locale} node.table.${key}`);
     }
-    assert.ok(m.node.table.description, `${locale} node.table.description`);
     assert.ok(m.node.table.colNpm && m.node.table.npmCurrent, `${locale} node npm labels`);
     assert.ok(m.php.settings?.title?.includes("{version}"), `${locale} php.settings.title`);
     assert.ok(m.php.tabs?.ini, `${locale} php.tabs.ini`);

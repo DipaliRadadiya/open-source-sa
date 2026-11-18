@@ -16,7 +16,6 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -140,8 +139,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
             <Info className="size-3.5 shrink-0" />
             {t("jails.whatIs")}
           </button>
-          {/* The description gets the whole row, not the narrow space beside the help link. */}
-          <CardDescription className="col-span-2 row-start-2">{t("jails.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <p

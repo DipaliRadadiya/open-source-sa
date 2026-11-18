@@ -107,7 +107,6 @@
   },
   "systemUsers": {
     "title": "Utilisateurs système",
-    "subtitle": "Comptes Linux du système qui détiennent et exécutent vos applications.",
     "searchPlaceholder": "Rechercher des utilisateurs…",
     "clearSearch": "Effacer la recherche",
     "columns": {
@@ -1589,7 +1588,6 @@
   },
   "services": {
     "title": "Services",
-    "subtitle": "Serveur web, base de données et autres services installés sur ce serveur.",
     "loadFailed": "Les services de ce serveur n'ont pas pu être lus. Rien n'a été démarré ni arrêté.",
     "protectedHint": "Ce service fait fonctionner le panneau lui-même, il ne peut donc pas être arrêté ni désactivé d'ici.",
     "noPermission": "Votre rôle n'inclut pas l'accès Gérer pour Service. Demandez à un administrateur de l'accorder.",
@@ -1717,8 +1715,7 @@
         "hint": "Ils ne tournent pas. Chacun indique pourquoi et ce qu'il faut faire."
       },
       "running": {
-        "title": "Services installés",
-        "hint": "Mémoire, utilisation du processeur et démarrage automatique de chacun."
+        "title": "Services installés"
       },
       "installing": {
         "title": "En cours d'installation",
@@ -1739,7 +1736,6 @@
   },
   "fail2ban": {
     "title": "Fail2ban",
-    "subtitle": "Bannit les personnes qui s'acharnent à deviner les mots de passe sur votre serveur.",
     "loadFailed": "Impossible de vérifier Fail2ban pour l'instant. Cela ne signifie pas que votre serveur est ouvert — nous n'avons juste pas obtenu de réponse.",
     "status": {
       "running": "En exécution",
@@ -1763,7 +1759,6 @@
     },
     "jails": {
       "title": "Jails",
-      "description": "Chaque jail surveille un service. Activez ceux que vous voulez protéger.",
       "toggle": "Activer {name}",
       "enabled": "{name} est activé",
       "disabled": "{name} est désactivé",
@@ -1801,7 +1796,6 @@
     },
     "banned": {
       "title": "Adresses bannies",
-      "description": "Qui est banni en ce moment et pour combien de temps.",
       "ip": "Adresse",
       "jail": "Jail",
       "since": "Bannie",
@@ -1926,7 +1920,6 @@
   },
   "firewall": {
     "title": "Pare-feu",
-    "subtitle": "Contrôle les ports accessibles de l'extérieur sur ce serveur.",
     "loadFailed": "Le pare-feu n'a pas pu être vérifié. Cela ne signifie pas que votre serveur est ouvert — nous n'avons juste pas obtenu de réponse.",
     "common": {
       "cancel": "Annuler",
@@ -1968,8 +1961,6 @@
     },
     "rules": {
       "title": "Règles",
-      "description": "Ce qui est autorisé, dans l'ordre où vous l'avez ajouté.",
-      "descriptionOff": "Enregistrées, mais non appliquées tant que le pare-feu est désactivé.",
       "added": "Ajouté",
       "actions": "Actions",
       "delete": "Supprimer",
@@ -2708,10 +2699,8 @@
   },
   "node": {
     "title": "Node.js",
-    "subtitle": "Les versions Node.js sur ce serveur.",
     "table": {
       "title": "Versions installées",
-      "description": "Installez, supprimez et choisissez la version par défaut.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colNpm": "npm",
@@ -2751,7 +2740,6 @@
       "usedByNone": "Aucune application n'utilise encore cette version.",
       "makeDefault": "Définir par défaut",
       "remove": "Retirer",
-      "defaultHint": "Les nouvelles applications démarrent sur la version par défaut. Les commandes node, npm et npx l’utilisent aussi.",
       "defaultSet": "Node.js {version} est désormais la version par défaut.",
       "defaultFailed": "Cette version n'a pas pu être définie par défaut.",
       "removed": "Node.js {version} supprimée.",

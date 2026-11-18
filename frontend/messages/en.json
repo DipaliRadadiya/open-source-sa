@@ -107,7 +107,6 @@
   },
   "systemUsers": {
     "title": "System Users",
-    "subtitle": "The Linux accounts that own and run your applications.",
     "searchPlaceholder": "Search users…",
     "clearSearch": "Clear search",
     "columns": {
@@ -1589,7 +1588,6 @@
   },
   "services": {
     "title": "Services",
-    "subtitle": "Web server, database and other services installed on this server.",
     "loadFailed": "The services on this server could not be read. Nothing has been started or stopped.",
     "protectedHint": "This service runs the panel itself, so it cannot be stopped or disabled from here.",
     "noPermission": "Your role does not include Service with Manage access. Ask an administrator to grant it.",
@@ -1717,8 +1715,7 @@
         "hint": "These are not running. Each one says why, and what to do about it."
       },
       "running": {
-        "title": "Installed services",
-        "hint": "Memory, processor use and whether each one starts with the server."
+        "title": "Installed services"
       },
       "installing": {
         "title": "Being installed",
@@ -1739,7 +1736,6 @@
   },
   "fail2ban": {
     "title": "Fail2ban",
-    "subtitle": "Bans people who keep guessing passwords on your server.",
     "loadFailed": "We could not check Fail2ban just now. That does not mean your server is open — we just could not get an answer.",
     "status": {
       "running": "Running",
@@ -1763,7 +1759,6 @@
     },
     "jails": {
       "title": "Jails",
-      "description": "Each jail watches one service. Turn on the ones you want protected.",
       "toggle": "Enable {name}",
       "enabled": "{name} is on",
       "disabled": "{name} is off",
@@ -1801,7 +1796,6 @@
     },
     "banned": {
       "title": "Banned addresses",
-      "description": "Who is banned right now, and for how much longer.",
       "ip": "Address",
       "jail": "Jail",
       "since": "Banned",
@@ -1926,7 +1920,6 @@
   },
   "firewall": {
     "title": "Firewall",
-    "subtitle": "Controls which ports the outside world can reach on this server.",
     "loadFailed": "We could not check the firewall just now. That does not mean your server is open — we just could not get an answer.",
     "common": {
       "cancel": "Cancel",
@@ -1968,8 +1961,6 @@
     },
     "rules": {
       "title": "Rules",
-      "description": "What is allowed through, in the order you added it.",
-      "descriptionOff": "Saved, but not being enforced while the firewall is off.",
       "added": "Added",
       "actions": "Actions",
       "delete": "Delete",
@@ -2708,10 +2699,8 @@
   },
   "node": {
     "title": "Node.js",
-    "subtitle": "The Node.js versions on this server.",
     "table": {
       "title": "Installed versions",
-      "description": "Install, remove and choose the default version.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colNpm": "npm",
@@ -2751,7 +2740,6 @@
       "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "New applications start on the default version. The node, npm and npx commands use it too.",
       "defaultSet": "Node.js {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "Node.js {version} removed.",

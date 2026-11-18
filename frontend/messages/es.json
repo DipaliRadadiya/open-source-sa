@@ -107,7 +107,6 @@
   },
   "systemUsers": {
     "title": "Usuarios del sistema",
-    "subtitle": "Cuentas del sistema operativo Linux que poseen y ejecutan tus aplicaciones.",
     "searchPlaceholder": "Buscar usuarios…",
     "clearSearch": "Borrar búsqueda",
     "columns": {
@@ -1589,7 +1588,6 @@
   },
   "services": {
     "title": "Servicios",
-    "subtitle": "Servidor web, base de datos y otros servicios instalados en este servidor.",
     "loadFailed": "No se pudieron leer los servicios de este servidor. No se ha iniciado ni detenido nada.",
     "protectedHint": "Este servicio ejecuta el propio panel, así que no se puede detener ni desactivar desde aquí.",
     "noPermission": "Tu rol no incluye Servicio con acceso de gestión. Pide a un administrador que te lo conceda.",
@@ -1717,8 +1715,7 @@
         "hint": "Estos no están funcionando. Cada uno indica por qué y qué hacer."
       },
       "running": {
-        "title": "Servicios instalados",
-        "hint": "Memoria, uso del procesador y si cada uno arranca con el servidor."
+        "title": "Servicios instalados"
       },
       "installing": {
         "title": "Instalándose",
@@ -1739,7 +1736,6 @@
   },
   "fail2ban": {
     "title": "Fail2ban",
-    "subtitle": "Bloquea a quien insiste en adivinar contraseñas en tu servidor.",
     "loadFailed": "No hemos podido consultar Fail2ban ahora mismo. Eso no significa que tu servidor esté abierto — simplemente no obtuvimos respuesta.",
     "status": {
       "running": "En ejecución",
@@ -1763,7 +1759,6 @@
     },
     "jails": {
       "title": "Jaulas",
-      "description": "Cada jaula vigila un servicio. Activa las que quieras proteger.",
       "toggle": "Habilitar {name}",
       "enabled": "{name} está activada",
       "disabled": "{name} está desactivada",
@@ -1801,7 +1796,6 @@
     },
     "banned": {
       "title": "Direcciones bloqueadas",
-      "description": "Quién está bloqueado ahora y cuánto le queda.",
       "ip": "Dirección",
       "jail": "Jail",
       "since": "Bloqueada",
@@ -1926,7 +1920,6 @@
   },
   "firewall": {
     "title": "Cortafuegos",
-    "subtitle": "Controla a qué puertos puede llegar el exterior en este servidor.",
     "loadFailed": "No hemos podido consultar el cortafuegos ahora mismo. Eso no significa que tu servidor esté abierto — simplemente no obtuvimos respuesta.",
     "common": {
       "cancel": "Cancelar",
@@ -1968,8 +1961,6 @@
     },
     "rules": {
       "title": "Reglas",
-      "description": "Lo que se permite pasar, en el orden en que lo añadiste.",
-      "descriptionOff": "Guardadas, pero sin aplicarse mientras el cortafuegos está apagado.",
       "added": "Añadida",
       "actions": "Acciones",
       "delete": "Eliminar",
@@ -2708,10 +2699,8 @@
   },
   "node": {
     "title": "Node.js",
-    "subtitle": "Las versiones de Node.js en este servidor.",
     "table": {
       "title": "Versiones instaladas",
-      "description": "Instala, quita y elige la versión predeterminada.",
       "colVersion": "Versión",
       "colSupport": "Soporte",
       "colNpm": "npm",
@@ -2751,7 +2740,6 @@
       "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
-      "defaultHint": "Las nuevas aplicaciones empiezan con la versión predeterminada. Los comandos node, npm y npx también la usan.",
       "defaultSet": "Node.js {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "Node.js {version} eliminada.",

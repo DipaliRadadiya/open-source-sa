@@ -26,7 +26,6 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -227,11 +226,8 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-3 space-y-0 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 space-y-1">
-          <CardTitle className="text-base font-semibold">{t("banned.title")}</CardTitle>
-          <CardDescription>{t("banned.description")}</CardDescription>
-        </div>
+      <CardHeader className="flex flex-col gap-3 space-y-0 xl:flex-row xl:items-center xl:justify-between">
+        <CardTitle className="min-w-0 text-base font-semibold">{t("banned.title")}</CardTitle>
         <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
           <RefreshButton />
           {/* The log shows what triggered a ban. */}

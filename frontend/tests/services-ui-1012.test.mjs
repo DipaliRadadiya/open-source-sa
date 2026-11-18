@@ -174,7 +174,7 @@ test("the top of the page is the shared status tiles, coloured only when somethi
   assert.match(panel, /tone=\{stopped > 0 \? "warning" : "neutral"\}/);
   assert.match(panel, /tone=\{attention\.length > 0 \? "destructive" : "neutral"\}/);
   // Refresh lives in the Installed services header (Krishna, 12 Oct), never in a tile.
-  assert.match(panel, /title=\{t\("sections\.running\.title"\)\}\s*hint=\{t\("sections\.running\.hint"\)\}\s*action=\{<RefreshButton \/>\}/);
+  assert.match(panel, /title=\{t\("sections\.running\.title"\)\}\s*action=\{<RefreshButton \/>\}/);
   assert.equal((panel.match(/<RefreshButton/g) ?? []).length, 3, "running + the two fallbacks");
   assert.doesNotMatch(panel.slice(panel.indexOf("tiles.checked"), panel.indexOf("tiles.checked") + 300), /RefreshButton/);
   assert.equal((panel.match(/<Tile\n\s*compact\n/g) ?? []).length, 4);

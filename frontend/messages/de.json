@@ -107,7 +107,6 @@
   },
   "systemUsers": {
     "title": "Systembenutzer",
-    "subtitle": "Linux-Konten, die Ihre Anwendungen besitzen und ausführen.",
     "searchPlaceholder": "Benutzer suchen…",
     "clearSearch": "Suche zurücksetzen",
     "columns": {
@@ -1589,7 +1588,6 @@
   },
   "services": {
     "title": "Dienste",
-    "subtitle": "Webserver, Datenbank und weitere Dienste, die auf diesem Server installiert sind.",
     "loadFailed": "Die Dienste auf diesem Server konnten nicht gelesen werden. Es wurde nichts gestartet oder gestoppt.",
     "protectedHint": "Dieser Dienst betreibt das Panel selbst und kann daher hier nicht gestoppt oder deaktiviert werden.",
     "noPermission": "Ihre Rolle enthält nicht „Dienst“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
@@ -1717,8 +1715,7 @@
         "hint": "Diese laufen nicht. Jeder nennt den Grund und was zu tun ist."
       },
       "running": {
-        "title": "Installierte Dienste",
-        "hint": "Speicher, Prozessorlast und ob der Dienst mit dem Server startet."
+        "title": "Installierte Dienste"
       },
       "installing": {
         "title": "Wird installiert",
@@ -1739,7 +1736,6 @@
   },
   "fail2ban": {
     "title": "Fail2ban",
-    "subtitle": "Sperrt Leute, die auf Ihrem Server immer wieder Passwörter erraten wollen.",
     "loadFailed": "Fail2ban konnte gerade nicht geprüft werden. Das heißt nicht, dass Ihr Server offen ist — wir haben nur keine Antwort bekommen.",
     "status": {
       "running": "Läuft",
@@ -1763,7 +1759,6 @@
     },
     "jails": {
       "title": "Jails",
-      "description": "Jedes Jail überwacht einen Dienst. Schalten Sie die ein, die geschützt sein sollen.",
       "toggle": "{name} aktivieren",
       "enabled": "{name} ist an",
       "disabled": "{name} ist aus",
@@ -1801,7 +1796,6 @@
     },
     "banned": {
       "title": "Gesperrte Adressen",
-      "description": "Wer gerade gesperrt ist und wie lange noch.",
       "ip": "Adresse",
       "jail": "Jail",
       "since": "Gesperrt",
@@ -1926,7 +1920,6 @@
   },
   "firewall": {
     "title": "Firewall",
-    "subtitle": "Bestimmt, welche Ports von außen auf diesem Server erreichbar sind.",
     "loadFailed": "Die Firewall konnte gerade nicht geprüft werden. Das heißt nicht, dass Ihr Server offen ist — wir haben nur keine Antwort bekommen.",
     "common": {
       "cancel": "Abbrechen",
@@ -1968,8 +1961,6 @@
     },
     "rules": {
       "title": "Regeln",
-      "description": "Was durchgelassen wird, in der Reihenfolge, in der Sie es hinzugefügt haben.",
-      "descriptionOff": "Gespeichert, wird aber nicht angewendet, solange die Firewall aus ist.",
       "added": "Hinzugefügt",
       "actions": "Aktionen",
       "delete": "Löschen",
@@ -2708,10 +2699,8 @@
   },
   "node": {
     "title": "Node.js",
-    "subtitle": "Die Node.js-Versionen auf diesem Server.",
     "table": {
       "title": "Installierte Versionen",
-      "description": "Versionen installieren, entfernen und die Standardversion wählen.",
       "colVersion": "Version",
       "colSupport": "Support",
       "colNpm": "npm",
@@ -2751,7 +2740,6 @@
       "usedByNone": "Noch keine Anwendung nutzt diese Version.",
       "makeDefault": "Als Standard festlegen",
       "remove": "Entfernen",
-      "defaultHint": "Neue Anwendungen starten mit der Standardversion. Auch die Befehle node, npm und npx nutzen sie.",
       "defaultSet": "Node.js {version} ist jetzt der Standard.",
       "defaultFailed": "Diese Version konnte nicht als Standard festgelegt werden.",
       "removed": "Node.js {version} entfernt.",
