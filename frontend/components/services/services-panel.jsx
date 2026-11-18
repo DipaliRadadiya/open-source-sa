@@ -86,7 +86,9 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           2 / 4 across by the page's own width (auto-fit split them 3 + 1). Two on a phone
           too: one per row filled the first screen with four short facts (Krishna, 13 Oct). */}
       <div className="@container/tiles">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 @min-[52rem]/tiles:grid-cols-4">
+      {/* Stopped and Needs attention only when they count something (Krishna, 18 Nov); the
+          row takes as many columns as it has tiles, and a lone last tile spans a phone row. */}
+      <div className={cn("grid grid-cols-2 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 @min-[52rem]/tiles:[&>*:last-child:nth-child(odd)]:col-span-1", TILE_COLUMNS[2 + (stopped > 0) + (attention.length > 0)])}>
         <Tile
           compact
           icon={CircleCheck}
@@ -99,20 +101,24 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           }
           tone={active.length > 0 ? "success" : "neutral"}
         />
-        <Tile
-          compact
-          icon={CircleStop}
-          label={t("tiles.stopped")}
-          value={stopped > 0 ? t("tiles.count", { count: stopped }) : t("tiles.none")}
-          tone={stopped > 0 ? "warning" : "neutral"}
-        />
-        <Tile
-          compact
-          icon={TriangleAlert}
-          label={t("tiles.attention")}
-          value={attention.length > 0 ? t("tiles.count", { count: attention.length }) : t("tiles.none")}
-          tone={attention.length > 0 ? "destructive" : "neutral"}
-        />
+        {stopped > 0 ? (
+          <Tile
+            compact
+            icon={CircleStop}
+            label={t("tiles.stopped")}
+            value={t("tiles.count", { count: stopped })}
+            tone="warning"
+          />
+        ) : null}
+        {attention.length > 0 ? (
+          <Tile
+            compact
+            icon={TriangleAlert}
+            label={t("tiles.attention")}
+            value={t("tiles.count", { count: attention.length })}
+            tone="destructive"
+          />
+        ) : null}
         {/* Moves only on a successful poll, so a stalled backend shows as a stopped clock. */}
         <Tile
           compact
@@ -194,6 +200,13 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 }
 
 // A card with the panel's card head; tables inside run edge to edge.
+// Literal classes for Tailwind: one column per tile on a wide card.
+const TILE_COLUMNS = {
+  2: "@min-[52rem]/tiles:grid-cols-2",
+  3: "@min-[52rem]/tiles:grid-cols-3",
+  4: "@min-[52rem]/tiles:grid-cols-4",
+};
+
 function Section({ title, hint, action, children }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">

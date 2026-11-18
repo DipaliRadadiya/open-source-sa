@@ -1698,7 +1698,6 @@
       "stopped": "Detenidos",
       "attention": "Requiere atención",
       "count": "{count, plural, =1 {1 servicio} other {# servicios}}",
-      "none": "Ninguna",
       "checked": "Última comprobación"
     },
     "sections": {
@@ -3293,10 +3292,8 @@
       "saveFailed": "No se pudo guardar el usuario."
     },
     "detail": {
-      "size": "Tamaño",
       "charset": "Juego de caracteres",
       "collation": "Cotejamiento",
-      "created": "Creada",
       "createdWhen": "creada {when}",
       "engineDown": "{engine} no está en ejecución, así que nada puede conectarse a esta base de datos. Su tamaño y sus tablas no se pueden leer hasta que vuelva."
     },
@@ -6599,31 +6596,9 @@
         "more": "Más comandos"
       }
     },
-    "health": {
-      "online": "En línea",
-      "paused": "En pausa",
-      "pausedDetail": "Los visitantes ven una página de espera hasta que la reanudes.",
-      "https": "HTTPS está activado",
-      "httpsDetail": "Los visitantes obtienen una conexión segura.",
-      "degraded": "En línea, con avisos",
-      "degradedDetail": "La aplicación responde, pero {services} requiere atención.",
-      "containerDownDetail": "Un contenedor de esta aplicación no está en marcha, así que los visitantes pueden ver un error."
-    },
     "tiles": {
-      "status": "Estado",
-      "deploy": "Último despliegue",
-      "runtime": "Funciona con",
-      "lastBackup": "Última copia {when}",
-      "deployed": "Desplegado",
       "deployFailed": "El despliegue falló",
-      "deployFailedDetail": "El último despliegue no terminó.",
-      "notDeployed": "Aún no desplegado",
-      "stoppedDetail": "El proceso no está en ejecución, así que los visitantes ven un error.",
-      "deployingDetail": "La nueva versión se publica cuando termine.",
-      "expiresSoon": "El certificado caduca pronto",
-      "staticFiles": "Archivos estáticos",
-      "runtimeDetail": "Cambia la versión y los límites",
-      "staticDetail": "Se sirven tal cual, no hay nada que ejecutar"
+      "staticFiles": "Archivos estáticos"
     },
     "update": {
       "title": "Versión de {app}",

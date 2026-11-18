@@ -42,10 +42,9 @@ test("'All N services running' opens Services and names them", () => {
 });
 
 test("a queued first deploy reads Deploying, not Stopped", () => {
-  const tiles = read("components/applications/app-status-tiles.jsx");
+  // 18 Nov: the status tiles are gone; the header badge carries this alone.
   const badge = read("components/applications/application-status-badge.jsx");
   const page = read("app/(app)/applications/[application]/page.jsx");
-  assert.match(tiles, /isRedeploying\(application\) \|\| deploy\?\.inFlight/);
   assert.match(badge, /isRedeploying\(application\) \|\| deploying/);
   assert.match(page, /<ApplicationStatusBadge application=\{application\} deploying=\{Boolean\(deployTile\?\.inFlight\)\} \/>/);
 });

@@ -1698,7 +1698,6 @@
       "stopped": "Arrêtés",
       "attention": "À vérifier",
       "count": "{count, plural, =1 {1 service} other {# services}}",
-      "none": "Aucune",
       "checked": "Dernière vérification"
     },
     "sections": {
@@ -3293,10 +3292,8 @@
       "saveFailed": "L'utilisateur n'a pas pu être enregistré."
     },
     "detail": {
-      "size": "Taille",
       "charset": "Jeu de caractères",
       "collation": "Collation",
-      "created": "Créé le",
       "createdWhen": "créé le {when}",
       "engineDown": "{engine} n'est pas en cours d'exécution, donc rien ne peut se connecter à cette base de données. Sa taille et ses tables ne peuvent pas être lues tant qu'il n'est pas relancé."
     },
@@ -6599,31 +6596,9 @@
         "more": "Plus de commandes"
       }
     },
-    "health": {
-      "online": "En ligne",
-      "paused": "En pause",
-      "pausedDetail": "Les visiteurs voient une page d'attente jusqu'à la reprise.",
-      "https": "HTTPS est activé",
-      "httpsDetail": "Les visiteurs bénéficient d'une connexion sécurisée.",
-      "degraded": "En ligne, avec avertissements",
-      "degradedDetail": "L'application répond, mais {services} demande votre attention.",
-      "containerDownDetail": "Un conteneur de cette application ne tourne pas, les visiteurs peuvent donc voir une erreur."
-    },
     "tiles": {
-      "status": "Statut",
-      "deploy": "Dernier déploiement",
-      "runtime": "Tourne sur",
-      "lastBackup": "Dernière sauvegarde {when}",
-      "deployed": "Déployé",
       "deployFailed": "Échec du déploiement",
-      "deployFailedDetail": "Le dernier déploiement n'est pas allé au bout.",
-      "notDeployed": "Pas encore déployé",
-      "stoppedDetail": "Le processus ne tourne pas, les visiteurs obtiennent donc une erreur.",
-      "deployingDetail": "La nouvelle version sera en ligne à la fin.",
-      "expiresSoon": "Le certificat expire bientôt",
-      "staticFiles": "Fichiers statiques",
-      "runtimeDetail": "Modifier la version et les limites",
-      "staticDetail": "Servis tels quels, rien à exécuter"
+      "staticFiles": "Fichiers statiques"
     },
     "update": {
       "title": "Version de {app}",

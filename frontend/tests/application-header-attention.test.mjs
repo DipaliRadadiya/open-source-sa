@@ -29,18 +29,18 @@ const page = read("app/(app)/applications/[application]/page.jsx");
  * list repeated what the Domains, Backups and Deployment cards already said.
  */
 
-test("each tile is claimed only from a read that succeeded", () => {
-  assert.match(page, /canSeeDomains && !certificate\.failed\s*\?/);
-  assert.match(page, /canSeeBackups && !backup\.failed\s*\?/);
-  assert.match(tiles, /if \(https\)/);
-  assert.match(tiles, /if \(backup\)/);
+// 18 Nov (Krishna): no status tiles; every one repeated a card below.
+test("the overview has no status tiles, only the attention lines", () => {
+  assert.doesNotMatch(page, /AppStatusTiles/);
+  assert.match(page, /<AttentionList alerts=\{alerts\} \/>/);
+  assert.doesNotMatch(tiles, /export function AppStatusTiles/);
 });
 
-test("problems the tiles already show are not repeated as lines", () => {
-  assert.match(page, /const tileKeys = new Set\(\["ssl", "backups"\]\);/);
-  assert.match(page, /!\/\^issue-\(certificate\|deploy_failed\)-\/\.test\(item\.key\)/);
-  // No coloured top bars: the rejected tile look.
-  assert.doesNotMatch(tiles, /absolute inset-x-0 top-0/);
+test("lines skip only what a card below already says", () => {
+  // Backups: the Backups card's state. A failed deploy: the Source card.
+  assert.match(page, /item\.key !== "backups" && !\/\^issue-deploy_failed-\/\.test\(item\.key\)/);
+  // A missing certificate is a line again, and only from a read that succeeded.
+  assert.match(page, /canSeeDomains && !domainList\.failed && !certificate\.failed && !secured && !certificateIssuing && \{/);
 });
 
 test("the header is an identity card carrying the site's own mark", () => {
@@ -59,15 +59,15 @@ test("the header is an identity card carrying the site's own mark", () => {
 
 test("the application's details lead the page, inside the header card", () => {
   // Krishna, 7 Oct: "Application detail is main thing on that page but that is far down".
-  const header = page.slice(page.indexOf("@container/masthead"), page.indexOf("<AppStatusTiles"));
+  const header = page.slice(page.indexOf("@container/masthead"), page.indexOf("<AttentionList"));
   assert.match(header, /<SiteFactsCard[\s\S]*?\bstrip\b/);
-  assert.ok(page.indexOf("<SiteFactsCard") < page.indexOf("<AppStatusTiles"));
+  assert.ok(page.indexOf("<SiteFactsCard") < page.indexOf("<AttentionList"));
 });
 
 test("the page has no quick actions: the sidebar already lists every screen", () => {
   assert.doesNotMatch(page, /QuickActions/);
   // Status first; then the deploy card, then the packed cards.
-  assert.ok(page.indexOf("<AppStatusTiles") < page.indexOf("<SourceCard"));
+  assert.ok(page.indexOf("<AttentionList") < page.indexOf("<SourceCard"));
   // The cards are built above the return; their placement is `{domainsCard}`.
   assert.ok(page.indexOf("<SourceCard") < page.indexOf("{domainsCard}"));
 });
@@ -130,10 +130,12 @@ test("Database page follows Krishna's reference: Overview tab, phpMyAdmin in the
   assert.match(read("components/databases/phpmyadmin-button.jsx"), /^"use client";/);
 });
 
-test("Database Details: all six facts on one row when the card is wide (Krishna, 8 Oct)", () => {
+test("Database Details: all facts on one row when the card is wide (Krishna, 8 Oct)", () => {
   const card = read("components/databases/database-details-card.jsx");
   assert.match(card, /@container\/details/);
-  assert.match(card, /@4xl\/details:grid-cols-6/);
+  // 18 Nov: four facts; size and created are only under the name in the header.
+  assert.match(card, /@3xl\/details:grid-cols-4/);
+  assert.doesNotMatch(card, /key: "(size|created)"/);
   assert.match(card, /flex flex-wrap items-center justify-between gap-x-2/);
 });
 

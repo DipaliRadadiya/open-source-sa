@@ -1698,7 +1698,6 @@
       "stopped": "Parados",
       "attention": "Precisa de atenção",
       "count": "{count, plural, =1 {1 serviço} other {# serviços}}",
-      "none": "Nenhum",
       "checked": "Última verificação"
     },
     "sections": {
@@ -3293,10 +3292,8 @@
       "saveFailed": "Não foi possível salvar o usuário."
     },
     "detail": {
-      "size": "Tamanho",
       "charset": "Charset",
       "collation": "Collation",
-      "created": "Criado em",
       "createdWhen": "criado {when}",
       "engineDown": "{engine} não está em execução, então nada consegue se conectar a este banco de dados. O tamanho e as tabelas só podem ser lidos quando ele voltar."
     },
@@ -6599,31 +6596,9 @@
         "more": "Mais comandos"
       }
     },
-    "health": {
-      "online": "Online",
-      "paused": "Em pausa",
-      "pausedDetail": "Os visitantes veem uma página de espera até você retomá-la.",
-      "https": "HTTPS está ativado",
-      "httpsDetail": "Os visitantes recebem uma conexão segura.",
-      "degraded": "Online, com avisos",
-      "degradedDetail": "A aplicação responde, mas {services} precisa de atenção.",
-      "containerDownDetail": "Um contêiner desta aplicação não está em execução, então os visitantes podem ver um erro."
-    },
     "tiles": {
-      "status": "Status",
-      "deploy": "Última implantação",
-      "runtime": "Roda em",
-      "lastBackup": "Último backup {when}",
-      "deployed": "Implantado",
       "deployFailed": "A implantação falhou",
-      "deployFailedDetail": "A última implantação não foi concluída.",
-      "notDeployed": "Ainda não implantado",
-      "stoppedDetail": "O processo não está em execução, então os visitantes recebem um erro.",
-      "deployingDetail": "A nova versão entra no ar quando terminar.",
-      "expiresSoon": "O certificado expira em breve",
-      "staticFiles": "Arquivos estáticos",
-      "runtimeDetail": "Altere a versão e os limites",
-      "staticDetail": "Servidos como estão, nada para executar"
+      "staticFiles": "Arquivos estáticos"
     },
     "update": {
       "title": "Versão do {app}",

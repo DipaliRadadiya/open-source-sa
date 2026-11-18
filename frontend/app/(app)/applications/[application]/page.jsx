@@ -31,7 +31,7 @@ import { SourceCard } from "@/components/applications/source-card";
 import { ProcessCard } from "@/components/applications/process-card";
 import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
-import { AppStatusTiles } from "@/components/applications/app-status-tiles";
+import { AttentionList } from "@/components/applications/app-status-tiles";
 import { RootLockButton } from "@/components/applications/root-lock-button";
 import { getRootLock } from "@/lib/applications/get-root-lock";
 import { issueItems, localKeysSupersededBy } from "@/lib/applications/issue-items";
@@ -287,23 +287,12 @@ export default async function ApplicationDetailPage({ params }) {
     // Drop local inferences the server's own findings already cover.
     .filter((item) => !superseded.has(item.key));
 
-  // A paused site serves a holding page: worth saying first, but not a fault.
-  // Covered by a status tile, so not repeated as a line under them.
-  const tileKeys = new Set(["ssl", "backups"]);
+  // Said by a card below already: the Backups card's state, the Source card's failed deploy.
+  // The status tiles are gone (Krishna, 18 Nov), so a missing certificate is a line here again.
   const alerts = attentionItems.filter(
-    (item) => !tileKeys.has(item.key) && !/^issue-(certificate|deploy_failed)-/.test(item.key),
+    (item) => item.key !== "backups" && !/^issue-deploy_failed-/.test(item.key),
   );
-  // Each tile only when its read succeeded: a failed read is not a fact.
-  const httpsTile =
-    canSeeDomains && !certificate.failed
-      ? {
-          secured,
-          issuing: certificateIssuing,
-          expiringSoon: Boolean(certificate.certificate?.expiring_soon),
-          expiresHuman: certificate.certificate?.expires_at_human ?? null,
-        }
-      : null;
-  const backupTile =
+  const backupState =
     canSeeBackups && !backup.failed
       ? {
           target: backup.target,
@@ -341,7 +330,7 @@ export default async function ApplicationDetailPage({ params }) {
       backups={backupRuns.backups}
       // The target keeps its last run time after every backup is
       // deleted, so the list decides whether one is actually kept.
-      noneKept={backupTile?.noneKept ?? false}
+      noneKept={backupState?.noneKept ?? false}
       failed={backup.failed}
       canManage={canRunBackup}
       href={`/applications/${id}/backups`}
@@ -475,17 +464,9 @@ export default async function ApplicationDetailPage({ params }) {
               have saved them, and these cannot be rotated from the panel. */}
           {showFirstRunCredentials ? <FirstRunCredentials application={application} /> : null}
 
-          {/* The four answers people come for (is it up, secure, restorable, deployed),
-              each said once; then two columns: what you work on, and the reference.
-              Krishna, 6 Oct: the old rows repeated each fact in two cards. */}
-          <AppStatusTiles
-            application={application}
-            appId={id}
-            https={httpsTile}
-            backup={backupTile}
-            deploy={deployTile}
-            alerts={alerts}
-          />
+          {/* What needs attention, one line each. No status tiles (Krishna, 18 Nov): the
+              header badge and the cards below already say up, secure and restorable. */}
+          <AttentionList alerts={alerts} />
 
           {/* Wide, like Source: three facts in one row. Streamed on its own because the
               first open can wait on a release lookup; renders nothing for other types. */}

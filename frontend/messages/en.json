@@ -1698,7 +1698,6 @@
       "stopped": "Stopped",
       "attention": "Needs attention",
       "count": "{count, plural, =1 {1 service} other {# services}}",
-      "none": "None",
       "checked": "Last checked"
     },
     "sections": {
@@ -3293,10 +3292,8 @@
       "saveFailed": "The user could not be saved."
     },
     "detail": {
-      "size": "Size",
       "charset": "Character set",
       "collation": "Collation",
-      "created": "Created",
       "createdWhen": "created {when}",
       "engineDown": "{engine} isn't running, so nothing can connect to this database. Its size and tables can't be read until it's back."
     },
@@ -6599,31 +6596,9 @@
         "more": "More commands"
       }
     },
-    "health": {
-      "online": "Online",
-      "paused": "Paused",
-      "pausedDetail": "Visitors see a holding page until you resume it.",
-      "https": "HTTPS is on",
-      "httpsDetail": "Visitors get a secure connection.",
-      "degraded": "Online, with warnings",
-      "degradedDetail": "The app answers, but {services} needs attention.",
-      "containerDownDetail": "A container of this application is not running, so visitors may get an error."
-    },
     "tiles": {
-      "status": "Status",
-      "deploy": "Last deploy",
-      "runtime": "Runs on",
-      "lastBackup": "Last backup {when}",
-      "deployed": "Deployed",
       "deployFailed": "Deploy failed",
-      "deployFailedDetail": "The last deploy did not finish.",
-      "notDeployed": "Not deployed yet",
-      "stoppedDetail": "The process is not running, so visitors get an error.",
-      "deployingDetail": "The new version goes live when it finishes.",
-      "expiresSoon": "Certificate expires soon",
-      "staticFiles": "Static files",
-      "runtimeDetail": "Change the version and limits",
-      "staticDetail": "Served as they are, nothing to run"
+      "staticFiles": "Static files"
     },
     "update": {
       "title": "{app} version",

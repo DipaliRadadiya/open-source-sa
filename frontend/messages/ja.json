@@ -1698,7 +1698,6 @@
       "stopped": "停止しました",
       "attention": "対応が必要",
       "count": "{count, plural, other {# 件}}",
-      "none": "なし",
       "checked": "最終確認"
     },
     "sections": {
@@ -3293,10 +3292,8 @@
       "saveFailed": "ユーザーを保存できませんでした。"
     },
     "detail": {
-      "size": "サイズ",
       "charset": "文字セット",
       "collation": "照合順序",
-      "created": "作成日",
       "createdWhen": "{when} に作成",
       "engineDown": "{engine} が実行されていないため、このデータベースには接続できません。再開するまでサイズとテーブルを読み取れません。"
     },
@@ -6599,31 +6596,9 @@
         "more": "その他のコマンド"
       }
     },
-    "health": {
-      "online": "オンライン",
-      "paused": "一時停止中",
-      "pausedDetail": "再開するまで、訪問者には待機ページが表示されます。",
-      "https": "HTTPS が有効です",
-      "httpsDetail": "訪問者は安全な接続を利用できます。",
-      "degraded": "オンライン（警告あり）",
-      "degradedDetail": "アプリは応答していますが、{services} の確認が必要です。",
-      "containerDownDetail": "このアプリケーションのコンテナーが動いていないため、訪問者にエラーが表示される場合があります。"
-    },
     "tiles": {
-      "status": "状態",
-      "deploy": "前回のデプロイ",
-      "runtime": "実行環境",
-      "lastBackup": "最終バックアップ {when}",
-      "deployed": "デプロイ済み",
       "deployFailed": "デプロイに失敗しました",
-      "deployFailedDetail": "前回のデプロイは完了しませんでした。",
-      "notDeployed": "まだデプロイされていません",
-      "stoppedDetail": "プロセスが停止しているため、訪問者にはエラーが表示されます。",
-      "deployingDetail": "完了すると新しいバージョンが公開されます。",
-      "expiresSoon": "証明書の有効期限が近づいています",
-      "staticFiles": "静的ファイル",
-      "runtimeDetail": "バージョンと上限を変更",
-      "staticDetail": "そのまま配信され、実行するものはありません"
+      "staticFiles": "静的ファイル"
     },
     "update": {
       "title": "{app} のバージョン",

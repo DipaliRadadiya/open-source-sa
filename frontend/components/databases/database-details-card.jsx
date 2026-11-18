@@ -52,14 +52,12 @@ export function DatabaseDetailsCard({
         </>
       ),
     },
-    { key: "size", label: t("detail.size"), value: engineDown ? "—" : (database.size_human ?? "—") },
     { key: "users", label: t("columns.users"), value: database.users?.length ?? 0 },
     {
       key: "export",
       label: t("columns.lastExport"),
       value: lastExport === undefined ? "—" : (lastExport ?? t("columns.neverExported")),
     },
-    { key: "created", label: t("detail.created"), value: database.created_at_human ?? "—" },
     {
       key: "usedBy",
       label: tu("title"),
@@ -107,9 +105,10 @@ export function DatabaseDetailsCard({
           <h2 className="text-[15px] font-semibold tracking-tight">{t("detailsTitle")}</h2>
         </div>
 
-        {/* All six on one row when the card is wide enough (Krishna, 8 Oct); three, then
-            two, then one as it narrows. Measured on the card, not the window. */}
-        <dl className="grid gap-px bg-border @md/details:grid-cols-2 @2xl/details:grid-cols-3 @4xl/details:grid-cols-6">
+        {/* All four on one row when the card is wide enough (Krishna, 8 Oct), then two, then
+            one as it narrows. Size and created live under the name in the header (18 Nov).
+            Measured on the card, not the window. */}
+        <dl className="grid gap-px bg-border @md/details:grid-cols-2 @3xl/details:grid-cols-4">
           {cells.map((cell) => (
             <div key={cell.key} className="min-w-0 space-y-1 bg-card px-5 py-3.5">
               {/* Wraps: in a sixth of the card, "Change" was cut off in Russian. */}

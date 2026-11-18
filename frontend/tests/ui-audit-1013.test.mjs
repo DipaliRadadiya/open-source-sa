@@ -19,7 +19,10 @@ test("passed health checks are one compact list", () => {
 });
 
 test("services: plain Restart, two summary tiles per phone row", () => {
-  assert.match(read("components/services/services-panel.jsx"), /grid grid-cols-2 gap-3 sm:gap-4 @min-\[52rem\]\/tiles:grid-cols-4/);
+  const panel = read("components/services/services-panel.jsx");
+  assert.match(panel, /grid grid-cols-2 gap-3 sm:gap-4/);
+  // 18 Nov: as many columns as tiles on a wide card (two to four).
+  assert.match(panel, /TILE_COLUMNS\[2 \+ \(stopped > 0\) \+ \(attention\.length > 0\)\]/);
 });
 
 test("log toolbar controls wrap one by one", () => {

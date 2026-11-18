@@ -171,8 +171,9 @@ test("table density, failed-unit signal and responsive card boundary stay unchan
 test("the top of the page is the shared status tiles, coloured only when something is wrong", () => {
   const panel = read("components/services/services-panel.jsx");
   assert.match(panel, /import \{ Tile \} from "@\/components\/applications\/app-status-tiles"/);
-  assert.match(panel, /tone=\{stopped > 0 \? "warning" : "neutral"\}/);
-  assert.match(panel, /tone=\{attention\.length > 0 \? "destructive" : "neutral"\}/);
+  // 18 Nov: Stopped and Needs attention appear only when they count something.
+  assert.match(panel, /\{stopped > 0 \? \(\s*<Tile/);
+  assert.match(panel, /\{attention\.length > 0 \? \(\s*<Tile/);
   // Refresh lives in the Installed services header (Krishna, 12 Oct), never in a tile.
   assert.match(panel, /title=\{t\("sections\.running\.title"\)\}\s*action=\{<RefreshButton \/>\}/);
   assert.equal((panel.match(/<RefreshButton/g) ?? []).length, 3, "running + the two fallbacks");
@@ -183,7 +184,7 @@ test("the top of the page is the shared status tiles, coloured only when somethi
   assert.match(tiles, /export function Tile\(/);
   for (const locale of ["en", "es", "de", "fr", "pt", "ja", "ru", "hi"]) {
     const s = JSON.parse(read(`messages/${locale}.json`)).services;
-    for (const key of ["running", "runningValue", "stopped", "attention", "count", "none", "checked"]) {
+    for (const key of ["running", "runningValue", "stopped", "attention", "count", "checked"]) {
       assert.ok(s.tiles?.[key], `${locale} tiles.${key}`);
     }
     assert.equal(s.checkedAt, undefined, `${locale} old checkedAt removed`);

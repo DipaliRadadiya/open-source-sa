@@ -54,15 +54,12 @@ test("the schema keeps health_warnings and survives a malformed one", async () =
   assert.match(src, /health_warnings: z\.array\(z\.object\(\{ service: z\.string\(\), state: z\.string\(\) \}\)\)\.catch\(\[\]\)/);
 });
 
-test("badge, notes, tile and attention lines use them", () => {
+test("badge, notes and attention lines use them", () => {
   const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
   const badge = read("components/applications/application-status-badge.jsx");
   assert.match(badge, /degraded: \{ variant: "warning", key: "containerState\.degraded" \}/);
   assert.match(badge, /t\("markers\.helperUnhealthy", \{ count: warnings\.length, services: describeWarnings\(warnings, t\) \}\)/);
   assert.match(badge, /t\("markers\.mainUnhealthy", \{/);
-  const tiles = read("components/applications/app-status-tiles.jsx");
-  assert.match(tiles, /container === "degraded"/);
-  assert.match(tiles, /t\("health\.degradedDetail", \{ services: describeWarnings\(warnings, t\) \}\)/);
   const page = read("app/(app)/applications/[application]/page.jsx");
   assert.match(page, /\["degraded", "failed", "restarting"\]\.includes\(containerState\(application\)\) \? healthWarnings\(application\) : \[\]/);
 });

@@ -1698,7 +1698,6 @@
       "stopped": "Gestoppt",
       "attention": "Handlungsbedarf",
       "count": "{count, plural, =1 {1 Dienst} other {# Dienste}}",
-      "none": "Keine",
       "checked": "Zuletzt geprüft"
     },
     "sections": {
@@ -3293,10 +3292,8 @@
       "saveFailed": "Der Benutzer konnte nicht gespeichert werden."
     },
     "detail": {
-      "size": "Größe",
       "charset": "Zeichensatz",
       "collation": "Sortierung",
-      "created": "Erstellt",
       "createdWhen": "erstellt {when}",
       "engineDown": "{engine} läuft nicht, daher kann sich nichts mit dieser Datenbank verbinden. Größe und Tabellen lassen sich erst wieder lesen, wenn es läuft."
     },
@@ -6599,31 +6596,9 @@
         "more": "Weitere Befehle"
       }
     },
-    "health": {
-      "online": "Online",
-      "paused": "Pausiert",
-      "pausedDetail": "Besucher sehen eine Platzhalterseite, bis Sie sie fortsetzen.",
-      "https": "HTTPS ist aktiv",
-      "httpsDetail": "Besucher erhalten eine sichere Verbindung.",
-      "degraded": "Online, mit Warnungen",
-      "degradedDetail": "Die Anwendung antwortet, aber {services} braucht Aufmerksamkeit.",
-      "containerDownDetail": "Ein Container dieser Anwendung läuft nicht, daher sehen Besucher womöglich einen Fehler."
-    },
     "tiles": {
-      "status": "Status",
-      "deploy": "Letztes Deployment",
-      "runtime": "Läuft mit",
-      "lastBackup": "Letztes Backup {when}",
-      "deployed": "Deployt",
       "deployFailed": "Deployment fehlgeschlagen",
-      "deployFailedDetail": "Das letzte Deployment wurde nicht abgeschlossen.",
-      "notDeployed": "Noch nicht deployt",
-      "stoppedDetail": "Der Prozess läuft nicht, daher sehen Besucher einen Fehler.",
-      "deployingDetail": "Die neue Version geht live, sobald es fertig ist.",
-      "expiresSoon": "Zertifikat läuft bald ab",
-      "staticFiles": "Statische Dateien",
-      "runtimeDetail": "Version und Limits ändern",
-      "staticDetail": "Werden unverändert ausgeliefert, nichts läuft"
+      "staticFiles": "Statische Dateien"
     },
     "update": {
       "title": "{app}-Version",
