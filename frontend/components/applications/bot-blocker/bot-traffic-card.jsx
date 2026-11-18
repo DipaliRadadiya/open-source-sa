@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { filterToggleClass } from "@/lib/theme/filter-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -31,11 +31,8 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
 
   return (
     <Card >
-      <CardHeader className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <CardTitle as="h2">{t("title")}</CardTitle>
-          <CardDescription>{t("subtitle")}</CardDescription>
-        </div>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+        <CardTitle as="h2" className="min-w-0">{t("title")}</CardTitle>
         {/* Links, so the range lives in the URL and the server component re-runs. */}
         <div className="flex items-center gap-1">
           <RefreshButton className="me-1 size-8" />

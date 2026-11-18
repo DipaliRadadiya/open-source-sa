@@ -57,10 +57,7 @@ export default async function CloneApplicationPage({ params }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("pageTitle")}
-        subtitle={t("pageSubtitle", { name: application.name })}
-      />
+      <PageHeader title={t("pageTitle")} />
 
       <CloneApplicationPanel
         application={application}
@@ -79,7 +76,7 @@ async function TypeNotSupported({ application, t }) {
   const type = siteTypes.find((candidate) => candidate.name === application.site_type);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("pageTitle")} subtitle={t("pageSubtitle", { name: application.name })} />
+      <PageHeader title={t("pageTitle")} />
       <CloneTypeNotSupported typeTitle={type?.title ?? application.site_type} />
     </div>
   );

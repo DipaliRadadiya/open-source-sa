@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -108,7 +107,6 @@ export function EnvironmentHistoryCard({
         <CardTitle>
           {t("title")}
         </CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
         {/* A failed read must not render as "no changes yet". */}

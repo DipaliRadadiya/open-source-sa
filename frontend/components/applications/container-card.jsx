@@ -83,7 +83,6 @@ export function ContainerCard({
 }) {
   const t = useTranslations("applications.container");
   const tImage = useTranslations("applications.dockerImage");
-  const [portEditing, setPortEditing] = useState(false);
   const inspected = useImageInspection(application.image, application.registry_id);
   const detectedPort =
     inspected?.found && inspected.port_confidence !== "none"
@@ -161,6 +160,9 @@ export function ContainerCard({
     );
 
   // Memory and CPU, the same fields and rules for a simple app and a 1-Click Recipe.
+  // Side by side, a pair's inputs share one line however long either hint wraps (18 Nov).
+  const PAIRED = "@3xl/section:row-span-2 @3xl/section:grid-rows-subgrid";
+
   const limitFields = (
     <>
       <FormField
@@ -169,6 +171,7 @@ export function ContainerCard({
         render={({ field }) => (
           <Row
             label={t("memoryLimit")}
+            className={PAIRED}
             hint={
               limits.defaultMemoryLimit
                 ? t("memoryLimitHint", { default: limits.defaultMemoryLimit })
@@ -187,6 +190,7 @@ export function ContainerCard({
         render={({ field }) => (
           <Row
             label={t("cpuLimit")}
+            className={PAIRED}
             // The server's real core count; the rule only when it could not be asked.
             hint={limits.cpus ? t("cpuLimitHint", { cores: limits.cpus }) : t("cpuLimitHintUnknown")}
           >
@@ -292,7 +296,6 @@ export function ContainerCard({
             <Section
               icon={Package}
               title={t("imageSection")}
-              description={t("imageSectionHint")}
               changedBy={canManage ? t("restartNote") : null}
               actions={
                 <SectionActions
@@ -305,7 +308,7 @@ export function ContainerCard({
                 />
               }
             >
-              <InfoRow label={t("image")} hint={t("imageHint")}>
+              <InfoRow label={t("image")}>
                 {/* Not editable: a new image pulls, and a bad reference fails after the
                     old container is gone. Pull is its own button, not part of Save. */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -347,9 +350,7 @@ export function ContainerCard({
                             {t("noRegistriesLink")}
                           </Link>
                         </>
-                      ) : (
-                        t("registryHint")
-                      )
+                      ) : null
                     }
                   >
                     <Select value={field.value} onValueChange={field.onChange} disabled={!canManage}>
@@ -432,7 +433,6 @@ export function ContainerCard({
                 <Section
                   icon={Gauge}
                   title={t("settingsSection")}
-                  description={t("settingsSectionHint")}
                   changedBy={canManage ? t("restartNote") : null}
                   actions={
                     <SectionActions
@@ -451,6 +451,7 @@ export function ContainerCard({
                     render={({ field }) => (
                       <Row
                         label={t("network")}
+                        className={PAIRED}
                         hint={
                           joinable.length === 0 ? (
                             <>
@@ -510,30 +511,14 @@ export function ContainerCard({
                     control={form.control}
                     name="container_port"
                     render={({ field }) => {
-                      // Matching what the image declares: shown as a fact, editable on request.
+                      // An input like every other field (Krishna, 18 Nov); only a port the image
+                      // does not declare gets a line under it.
                       const matches = detectedPort && Number(field.value) === detectedPort;
                       return (
-                        <Row label={t("containerPort")} hint={t("containerPortHint")}>
-                          {matches && !portEditing ? (
-                            <p className="flex min-h-9 flex-wrap items-center gap-x-2 text-sm">
-                              <span className="font-mono text-sm font-medium">{field.value}</span>
-                              <span className="text-muted-foreground">{tImage("portDetected")}</span>
-                              {canManage ? (
-                                <Button
-                                  type="button"
-                                  variant="link"
-                                  className="h-auto p-0 text-sm"
-                                  onClick={() => setPortEditing(true)}
-                                >
-                                  {tImage("portChange")}
-                                </Button>
-                              ) : null}
-                            </p>
-                          ) : (
-                            <FormControl>
-                              <Input type="number" inputMode="numeric" disabled={!canManage} {...field} />
-                            </FormControl>
-                          )}
+                        <Row label={t("containerPort")} hint={t("containerPortHint")} className={PAIRED}>
+                          <FormControl>
+                            <Input type="number" inputMode="numeric" disabled={!canManage} {...field} />
+                          </FormControl>
                           {detectedPort && !matches ? (
                             // Main's higher-contrast amber; plain `text-warning` is faint on white.
                             <p className="flex flex-wrap items-center gap-x-2 text-xs text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning">

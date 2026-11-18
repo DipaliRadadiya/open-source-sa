@@ -82,7 +82,7 @@ test("the restore list scrolls inside the dialog, keeping its buttons in view", 
 test("a site type with no .env is not found, and a viewer is told they can only view", () => {
   const page = read(`${APP}/environment/page.jsx`);
   assert.match(page, /if \(\(await getApplicationEnvironment\(id\)\)\.status === 404\) notFound\(\);/);
-  assert.match(page, /subtitle=\{canManage \? t\("pageSubtitle"\) : t\("pageSubtitleReadOnly"\)\}/);
+  assert.match(page, /subtitle=\{canManage \? null : t\("pageSubtitleReadOnly"\)\}/);
 });
 
 test("every new Environment string exists in every locale", () => {

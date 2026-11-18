@@ -630,7 +630,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                     </div>
                     {/* Shown as text, not a `title`, so it is readable on touch. */}
                     <p className="mt-1.5 min-h-4 text-xs text-muted-foreground">
-                      {activePreset?.description ?? t("presetsCustom")}
+                      {activePreset?.description ?? null}
                     </p>
                   </div>
                 ) : null}

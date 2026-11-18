@@ -18,7 +18,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -112,7 +111,8 @@ export function DeployCard({
 
   return (
     <Card className={cn(PANEL_CARD, "border-primary/20 bg-gradient-to-br from-primary/[0.04] via-card to-card")}>
-      <CardHeader>
+      {/* No description: the title and Deploy now share one centred row. */}
+      <CardHeader className="items-center">
         <CardTitle className="flex items-center gap-2.5">
           {/* Filled rather than tinted: this card is not a peer of the tab cards. */}
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
@@ -120,10 +120,9 @@ export function DeployCard({
           </span>
           {t("deploy.title")}
         </CardTitle>
-        <CardDescription>{t("deploy.subtitle")}</CardDescription>
         {/* Shown disabled with the reason to read-only roles, as in the history's Deploy
             again buttons. */}
-        <CardAction>
+        <CardAction className="row-span-1 self-center">
             <ReasonTooltip
               reason={deploying ? null : !canManage ? t("history.noPermission") : unlinked ? tSource("accountMissing") : null}
             >

@@ -105,7 +105,7 @@ export default async function ApplicationContainerPage({ params }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("pageSubtitle")} />
+      <PageHeader title={t("title")} />
       <ContainerCard
         application={application}
         networks={networks}

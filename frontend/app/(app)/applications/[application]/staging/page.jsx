@@ -62,10 +62,7 @@ export default async function ApplicationStagingPage({ params }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("pageTitle")}
-        subtitle={t("pageSubtitle")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
       {!settled ? (
         <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">
@@ -99,7 +96,7 @@ function Unsupported({ children }) {
 function TypeNotSupported({ application, t }) {
   return (
     <div className="space-y-6">
-      <PageHeader title={t("pageTitle")} subtitle={t("pageSubtitle")} />
+      <PageHeader title={t("pageTitle")} />
       <Unsupported>{t("unsupported")}</Unsupported>
     </div>
   );

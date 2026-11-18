@@ -57,16 +57,9 @@ export default async function ApplicationWorkersPage({ params }) {
   const supervisorMissing =
     !services.failed && !services.services.some((service) => service.key === "supervisor");
 
-  // Queue workers and Horizon only mean something where the API offers them (Laravel);
-  // elsewhere the page talks about commands (Krishna, 14 Oct).
-  const laravelKinds = (workersResult.presets ?? []).some((p) => p.kind === "queue" || p.kind === "horizon");
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("pageTitle")}
-        subtitle={t(laravelKinds ? "pageSubtitle" : "pageSubtitleGeneric")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
       {!settled ? (
         <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">

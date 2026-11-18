@@ -450,8 +450,6 @@ export function BotBlockerSection({
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="space-y-4">
-        <Note icon={Bot}>{t("explainer")}</Note>
-  
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
             {/* Selectable cards over a real RadioGroup, keeping keyboard and
@@ -546,10 +544,7 @@ export function BotBlockerSection({
             {/* Per-site exceptions share the policy's Save: the backend resolves
                 all three in one request. */}
             <div className="space-y-3 border-t pt-5">
-              <div>
-                <p className="text-sm font-medium">{t("exceptions.title")}</p>
-                <p className="text-xs text-muted-foreground">{t("exceptions.hint")}</p>
-              </div>
+              <p className="text-sm font-medium">{t("exceptions.title")}</p>
   
               <div className="grid gap-4 sm:grid-cols-2">
                 <RuleEditor

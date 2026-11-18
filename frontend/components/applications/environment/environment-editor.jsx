@@ -201,9 +201,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
 
   const footerNote = dirty
     ? t("unsaved")
-    : env.requires_restart
-      ? t("restartHint")
-      : env.requires_apply
+    : env.requires_apply
         ? t("applyHint")
         : null;
 

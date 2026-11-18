@@ -3860,7 +3860,6 @@
     },
     "environment": {
       "pageTitle": "Environment",
-      "pageSubtitle": "Edit this application's .env file.",
       "provisioning": "Environment settings appear once the application has finished setting up.",
       "loadFailed": "We couldn't load the environment.",
       "sectionTitle": "Environment",
@@ -3877,7 +3876,6 @@
       "saveFailed": "We couldn't save the environment.",
       "revert": "Revert",
       "unsaved": "Unsaved changes",
-      "restartHint": "This application reads the file at startup — Save & restart to apply changes.",
       "applyHint": "This application caches its config — Save & apply clears the cache for you.",
       "readOnly": "You have read-only access to this file.",
       "syntaxTitle": "Not saved — syntax error",
@@ -3896,7 +3894,6 @@
       },
       "history": {
         "title": "Change history",
-        "subtitle": "Who edited this file and which keys they changed. Values are never recorded.",
         "loadFailed": "The change history could not be loaded.",
         "empty": "This file has not been changed through the panel yet.",
         "actionRestored": "restored an earlier version",
@@ -4567,12 +4564,10 @@
     "sourceLabel": "Source",
     "deployment": {
       "pageTitle": "Deployment",
-      "pageSubtitle": "Deploy your code and set up automatic deploys on push.",
       "loadFailed": "This deployment could not be loaded.",
       "provisioning": "This application is still being set up. Deployment will be available once it's running.",
       "deploy": {
         "title": "Deploy",
-        "subtitle": "Pull the latest code from your repository and rebuild the application.",
         "repository": "Repository",
         "branch": "Branch",
         "lastDeploy": "Last successful deploy",
@@ -4699,7 +4694,6 @@
         "logFailed": "The build log could not be loaded.",
         "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
-        "subtitle": "Every deploy, newest first. Open one to read its build log.",
         "pushStarted": "New deploy started from a push to {branch}.",
         "loadFailed": "The deploy history and settings could not be loaded."
       },
@@ -5104,8 +5098,6 @@
     },
     "workers": {
       "pageTitle": "Workers",
-      "pageSubtitle": "Keep long-running processes — queue workers, Horizon, or your own command — running for this application.",
-      "pageSubtitleGeneric": "Keep long-running commands running for this application. They are restarted if they stop.",
       "loadFailed": "Workers could not be loaded.",
       "provisioning": "This application is still being set up. Workers will be available once it's running.",
       "addWorker": "Add worker",
@@ -5299,10 +5291,8 @@
     },
     "botBlocker": {
       "pageTitle": "AI Bot Blocker",
-      "pageSubtitle": "Choose which AI bots are allowed to read this application.",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This application is still being set up. The AI bot blocker will be available once it's running.",
-      "explainer": "AI bots are automated visitors from AI companies. Some only copy your content; others can send you real visitors.",
       "activeNow": "Active now",
       "chooseLabel": "Choose what to allow",
       "blockedCount": "{count, plural, =0 {Nothing blocked} one {# bot blocked} other {# bots blocked}}",
@@ -5312,7 +5302,6 @@
       "hideBots": "Hide the list",
       "traffic": {
         "title": "AI bots that visited this application",
-        "subtitle": "Read from this application’s access log.",
         "range": "{days} days",
         "unavailable": "This application’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
         "empty": "No AI bots have visited in the last {days} days.",
@@ -5344,7 +5333,6 @@
       },
       "exceptions": {
         "title": "Your own exceptions",
-        "hint": "Add a bot this preset has never heard of, or let one through that it blocks.",
         "blocked": {
           "label": "Always block",
           "description": "Blocked as well as everything the preset covers."
@@ -5387,16 +5375,13 @@
     },
     "firewall": {
       "pageTitle": "Web Firewall",
-      "pageSubtitle": "Turn away common attacks before they reach this application.",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This application is still being set up. The firewall will be available once it's running.",
-      "explainer": "Blocks requests that look like attacks before they reach your application.",
       "openlitespeed": "This server runs OpenLiteSpeed, where these rules aren't applied yet. Your settings are saved, but nothing is checked until support for it ships.",
       "enable": "Protect this application",
       "statusOff": "Off",
       "statusWatching": "Watching only",
       "statusBlocking": "Blocking",
-      "offHint": "Requests aren't checked at all.",
       "watchingHint": "Suspicious requests are recorded, but still allowed through.",
       "blockingHint": "Suspicious requests are refused.",
       "whenToUseTitle": "When to use this",
@@ -5453,7 +5438,6 @@
     },
     "clone": {
       "pageTitle": "Application Clone",
-      "pageSubtitle": "Make an independent copy of {name} at a new domain.",
       "loadFailed": "This application could not be loaded.",
       "failed": "The clone could not be started.",
       "what": {
@@ -5489,7 +5473,6 @@
       },
       "create": {
         "title": "Create the copy",
-        "subtitle": "{name} is copied to a new domain. The original is not changed.",
         "placeholder": "new domain"
       },
       "before": {
@@ -5592,8 +5575,7 @@
       },
       "warnings": {
         "dns": "Point the new domain at this server first — the copy gets its own HTTPS certificate automatically once it does.",
-        "password": "Password protection is not copied. The copy is public until you turn it on.",
-        "time": "A large application takes a few minutes to copy."
+        "password": "Password protection is not copied. The copy is public until you turn it on."
       },
       "confirm": {
         "title": "Create copy of {name}?",
@@ -5607,7 +5589,6 @@
     },
     "php": {
       "pageTitle": "PHP Settings",
-      "pageSubtitle": "The PHP version and limits this application runs with.",
       "loadFailed": "These settings could not be loaded.",
       "provisioning": "This application is still being set up. Its PHP settings will appear once it finishes.",
       "saved": "PHP settings saved.",
@@ -5747,7 +5728,6 @@
         "limits": "Request limits"
       },
       "advancedNote": "Most applications never need these. Change them only if you know why.",
-      "presetsCustom": "Custom — not one of the presets above.",
       "reset": "Reset",
       "resetDone": "Back to the default.",
       "resetFailed": "Could not reset this setting.",
@@ -5792,12 +5772,11 @@
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
-      "pageSubtitle": "Bans addresses that keep attacking this application.",
       "loadFailed": "We could not check this application's protection.",
       "provisioning": "This application is still being set up. Protection can be added once it finishes.",
       "empty": {
         "title": "Fail2ban is not set up",
-        "body": "Nothing stops password guessing on this application yet. Set it up to ban repeat offenders.",
+        "body": "Nothing stops password guessing on this application yet.",
         "action": "Set up Fail2ban"
       },
       "state": {
@@ -5861,7 +5840,6 @@
     },
     "staging": {
       "pageTitle": "Staging Area",
-      "pageSubtitle": "A copy of this application you can break without anyone noticing.",
       "loadFailed": "We could not check this application's staging area.",
       "provisioning": "This application is still being set up. A staging copy can be made once it finishes.",
       "unsupported": "Staging is only for WordPress applications.",
@@ -6326,7 +6304,6 @@
       "title": "Container",
       "image": "Image",
       "noImage": "No image recorded",
-      "imageHint": "Pull and redeploy fetches it again and restarts the container.",
       "network": "Network",
       "networkHint": "Containers on the same network reach each other by name.",
       "ownNetwork": "Its own network (no other application on it)",
@@ -6354,7 +6331,7 @@
       "noPermission": "You don't have permission to change this application.",
       "volumes": {
         "title": "Volumes",
-        "empty": "No volumes mounted. The container keeps nothing that survives a rebuild.",
+        "empty": "No volumes. Nothing in this container survives a rebuild.",
         "choose": "Choose a volume",
         "alreadyMounted": "{name} (already mounted)",
         "pathPlaceholder": "/var/lib/mysql",
@@ -6367,7 +6344,7 @@
         "invalid": "Pick a volume and give an absolute path inside the container, for example /var/lib/mysql.",
         "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
         "noVolumesLink": "Create a volume on the Docker page.",
-        "hint": "Data in a volume survives rebuilds. Mounting one restarts the container, and the path starts empty."
+        "hint": "Mounting a volume restarts the container, and the path starts empty."
       },
       "credentials": {
         "title": "Generated credentials",
@@ -6396,14 +6373,12 @@
       },
       "registry": "Registry",
       "noRegistry": "None — pull anonymously",
-      "registryHint": "Leave it as None for a public image.",
       "missingRegistryOption": "Deleted credential — this application's next pull will be anonymous",
       "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
       "noRegistriesLink": "Add one under Integrations → Docker Registries.",
       "pull": "Pull and redeploy",
       "pulled": "The image was pulled and the container recreated.",
       "pullFailed": "The image could not be pulled.",
-      "pageSubtitle": "The network, ports, CPU and memory limits and volumes this container runs with.",
       "ownCompose": {
         "title": "Set in the compose file",
         "body": "This application runs its own compose file, so its port, memory and CPU limits, network and volumes are changed there, not here.",
@@ -6416,15 +6391,12 @@
         "composeBody": "This application runs its own compose file, so these are changed there."
       },
       "imageSection": "Image",
-      "imageSectionHint": "What this container runs, and the credential it pulls with.",
       "saveImage": "Save registry",
       "settingsSection": "Network and limits",
-      "settingsSectionHint": "How this container connects, and how much of the server it may use.",
       "pulling": "Pulling and redeploying…"
     },
     "compose": {
       "title": "Compose file",
-      "hint": "Image, ports, volumes and environment variables for this application all live in this file.",
       "loadFailed": "The compose file could not be read.",
       "safety": "Saving restarts the container, so the application is briefly down. If the new file won't start, the panel puts the previous one back.",
       "takeover": "Saving here means this file runs, and the settings on the Container page stop driving it. There is no way back except clearing this file.",

@@ -80,8 +80,9 @@ test("14 Oct: every permission in the catalog has a description on the role form
 });
 
 test("14 Oct: Workers mentions queue workers and Horizon only where the API offers them", () => {
-  assert.match(read("app/(app)/applications/[application]/workers/page.jsx"), /t\(laravelKinds \? "pageSubtitle" : "pageSubtitleGeneric"\)/);
+  // 18 Nov: no page subtitle at all (too much text, Krishna); the empty state still differs.
+  assert.doesNotMatch(read("app/(app)/applications/[application]/workers/page.jsx"), /subtitle=/);
   assert.match(read("components/applications/workers/workers-panel.jsx"), /\? "empty\.description"\s*: "empty\.descriptionGeneric"/);
   const w = JSON.parse(read("messages/en.json")).applications.workers;
-  assert.doesNotMatch(w.pageSubtitleGeneric + w.empty.descriptionGeneric, /Horizon|queue/i);
+  assert.doesNotMatch(w.empty.descriptionGeneric, /Horizon|queue/i);
 });

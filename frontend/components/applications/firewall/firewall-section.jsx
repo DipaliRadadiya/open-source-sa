@@ -168,10 +168,12 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                 locked ? "cursor-not-allowed" : "cursor-pointer",
               )}
             >
-              <div className="flex min-w-0 flex-1 items-start gap-3">
+              {/* A title alone centres on the icon; with a line under it, both start at its top. */}
+              <div className={cn("flex min-w-0 flex-1 gap-3", pending || saved.enabled ? "items-start" : "items-center")}>
                 <span
                   className={cn(
-                    "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
+                    "hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
+                    (pending || saved.enabled) && "mt-0.5",
                     blocking && "bg-success/15 text-success",
                     caution && "bg-warning/15 text-warning",
                     !blocking && !caution && "bg-muted-foreground/10 text-muted-foreground",
@@ -184,9 +186,12 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     <span className="font-medium">{t("enable")}</span>
                     <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {pending ? tPending("hint") : blocking ? t("blockingHint") : saved.enabled ? t("watchingHint") : t("offHint")}
-                  </p>
+                  {/* Off needs no line: the Off badge says it. */}
+                  {pending || saved.enabled ? (
+                    <p className="text-sm text-muted-foreground">
+                      {pending ? tPending("hint") : blocking ? t("blockingHint") : t("watchingHint")}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex h-5 shrink-0 items-center">
@@ -201,11 +206,10 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   
             <Collapsible open={!enabled}>
               <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
-                {/* One note, not a page banner plus this one (Krishna, 13 Oct): what it does,
-                    then when to turn it on. Once on, the status line says what it does. */}
+                {/* One note, not a page banner plus this one (Krishna, 13 Oct). Only the advice:
+                    the page no longer explains what a firewall is (18 Nov). */}
                 <Note icon={Lightbulb} title={t("whenToUseTitle")}>
-                  <p>{t("explainer")}</p>
-                  <p className="mt-1">{t("whenToUseBody")}</p>
+                  {t("whenToUseBody")}
                 </Note>
               </CollapsibleContent>
             </Collapsible>

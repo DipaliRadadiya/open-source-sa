@@ -99,10 +99,11 @@ test("a note carries its own feature's mark", () => {
   // generic info bubble.
   const firewall = read("components/applications/firewall/firewall-section.jsx");
   const bots = read("components/applications/bot-blocker/bot-blocker-section.jsx");
-  assert.match(bots, /<Note icon=\{Bot\}>/);
-  // One note on the firewall page since 13 Oct (a page banner plus this one read as two):
-  // what it does, then when to turn it on.
-  assert.match(firewall, /<Note icon=\{Lightbulb\} title=\{t\("whenToUseTitle"\)\}>\s*<p>\{t\("explainer"\)\}<\/p>/);
+  // 18 Nov: the bot blocker's explainer note is gone (too much text, Krishna).
+  assert.doesNotMatch(bots, /t\("explainer"\)/);
+  // One note on the firewall page since 13 Oct (a page banner plus this one read as two);
+  // since 18 Nov only the advice on when to turn it on.
+  assert.match(firewall, /<Note icon=\{Lightbulb\} title=\{t\("whenToUseTitle"\)\}>\s*\{t\("whenToUseBody"\)\}/);
   assert.doesNotMatch(firewall, /<Note icon=\{ShieldCheck\}>/);
 });
 

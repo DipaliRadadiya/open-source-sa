@@ -10,7 +10,7 @@ import { installDom, loadComponent } from "./support/dom.mjs";
 
 installDom();
 const { createElement } = await import("react");
-const { cleanup, fireEvent, render, screen, within } = await import("@testing-library/react");
+const { cleanup, fireEvent, render, screen, waitFor, within } = await import("@testing-library/react");
 
 const messages = JSON.parse(readFileSync("messages/en.json", "utf8"));
 let ContainerCardHarness;
@@ -44,19 +44,18 @@ function renderCard({ port, detected, canManage = true }) {
 
 const portField = () => within(screen.getByText("Container port").closest("[data-slot=form-item]"));
 
-test("a saved port that matches the image is a fact with a Change link", async () => {
+// 18 Nov (Krishna): the port is an input like the other fields, not a fact with a Change link.
+test("a saved port that matches the image is a plain input with no warning", async () => {
   renderCard({ port: 5230, detected: 5230 });
-  await screen.findByText("detected from the image");
-  assert.equal(portField().queryAllByRole("spinbutton").length, 0);
-
-  fireEvent.click(portField().getByRole("button", { name: "Change" }));
-  assert.equal(portField().getByRole("spinbutton").value, "5230");
+  const input = await portField().findByRole("spinbutton");
+  assert.equal(input.value, "5230");
+  assert.equal(Boolean(portField().queryByRole("button", { name: "Change" })), false);
+  assert.equal(Boolean(portField().queryByText(/The image uses port/)), false);
 });
 
-test("without manage permission the matching port has no Change link", async () => {
+test("without manage permission the port input is disabled", async () => {
   renderCard({ port: 5230, detected: 5230, canManage: false });
-  await screen.findByText("detected from the image");
-  assert.equal(Boolean(portField().queryByRole("button", { name: "Change" })), false);
+  assert.equal((await portField().findByRole("spinbutton")).disabled, true);
 });
 
 test("a saved port the image does not declare stays editable, with a fix to the declared one", async () => {
@@ -66,9 +65,9 @@ test("a saved port the image does not declare stays editable, with a fix to the 
   assert.equal(portField().getByRole("spinbutton").value, "8082");
 
   fireEvent.click(fix);
-  // Back to the declared port: shown as a fact again.
-  await screen.findByText("detected from the image");
-  assert.equal(portField().queryAllByRole("spinbutton").length, 0);
+  // Back to the declared port: the warning goes, the input stays.
+  await waitFor(() => assert.equal(Boolean(portField().queryByText(/The image uses port/)), false));
+  assert.equal(portField().getByRole("spinbutton").value, "5230");
 });
 
 test("an image that declares no port leaves a plain input and no warning", async () => {

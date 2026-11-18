@@ -3860,7 +3860,6 @@
     },
     "environment": {
       "pageTitle": "Umgebung",
-      "pageSubtitle": "Bearbeiten Sie die .env-Datei dieser Anwendung.",
       "provisioning": "Die Umgebungseinstellungen erscheinen, sobald die Anwendung fertig eingerichtet ist.",
       "loadFailed": "Die Umgebung konnte nicht geladen werden.",
       "sectionTitle": "Umgebung",
@@ -3877,7 +3876,6 @@
       "saveFailed": "Die Umgebung konnte nicht gespeichert werden.",
       "revert": "Zurücksetzen",
       "unsaved": "Nicht gespeicherte Änderungen",
-      "restartHint": "Diese Anwendung liest die Datei beim Start — „Speichern & neu starten“, damit die Änderungen greifen.",
       "applyHint": "Diese Anwendung cacht ihre Konfiguration — „Speichern & anwenden“ leert den Cache für Sie.",
       "readOnly": "Sie haben auf diese Datei nur Lesezugriff.",
       "syntaxTitle": "Nicht gespeichert — Syntaxfehler",
@@ -3896,7 +3894,6 @@
       },
       "history": {
         "title": "Änderungsverlauf",
-        "subtitle": "Wer diese Datei bearbeitet hat und welche Schlüssel geändert wurden. Werte werden nie aufgezeichnet.",
         "loadFailed": "Der Änderungsverlauf konnte nicht geladen werden.",
         "empty": "Diese Datei wurde über das Panel noch nicht geändert.",
         "actionRestored": "hat eine frühere Version wiederhergestellt",
@@ -4567,12 +4564,10 @@
     "sourceLabel": "Quelle",
     "deployment": {
       "pageTitle": "Deployment",
-      "pageSubtitle": "Deployen Sie Ihren Code und richten Sie automatische Deploys bei Push ein.",
       "loadFailed": "Dieses Deployment konnte nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Das Deployment steht bereit, sobald sie läuft.",
       "deploy": {
         "title": "Deployen",
-        "subtitle": "Holen Sie den neuesten Code aus Ihrem Repository und bauen Sie die Anwendung neu.",
         "repository": "Repository",
         "branch": "Branch",
         "lastDeploy": "Zuletzt erfolgreich deployt",
@@ -4699,7 +4694,6 @@
         "logFailed": "Das Build-Protokoll konnte nicht geladen werden.",
         "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
-        "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen.",
         "pushStarted": "Neues Deployment durch einen Push auf {branch} gestartet.",
         "loadFailed": "Der Deploy-Verlauf und die Einstellungen konnten nicht geladen werden."
       },
@@ -5104,8 +5098,6 @@
     },
     "workers": {
       "pageTitle": "Worker",
-      "pageSubtitle": "Halten Sie lang laufende Prozesse — Queue-Worker, Horizon oder Ihren eigenen Befehl — für diese Anwendung am Laufen.",
-      "pageSubtitleGeneric": "Hält lang laufende Befehle dieser Anwendung am Laufen. Sie werden neu gestartet, wenn sie anhalten.",
       "loadFailed": "Die Worker konnten nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Die Worker stehen bereit, sobald sie läuft.",
       "addWorker": "Worker hinzufügen",
@@ -5299,10 +5291,8 @@
     },
     "botBlocker": {
       "pageTitle": "KI-Bot-Blocker",
-      "pageSubtitle": "Wählen Sie, welche KI-Bots diese Anwendung lesen dürfen.",
       "loadFailed": "Das konnte nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Der KI-Bot-Blocker steht bereit, sobald sie läuft.",
-      "explainer": "KI-Bots sind automatische Besucher von KI-Firmen. Manche kopieren nur Ihre Inhalte; andere können Ihnen echte Besucher schicken.",
       "activeNow": "Jetzt aktiv",
       "chooseLabel": "Wählen, was erlaubt ist",
       "blockedCount": "{count, plural, =0 {Nichts blockiert} one {# Bot blockiert} other {# Bots blockiert}}",
@@ -5312,7 +5302,6 @@
       "hideBots": "Liste ausblenden",
       "traffic": {
         "title": "KI-Bots, die diese Anwendung besucht haben",
-        "subtitle": "Aus dem Zugriffsprotokoll dieser Anwendung gelesen.",
         "range": "{days} Tage",
         "unavailable": "Das Zugriffsprotokoll dieser Anwendung konnte nicht gelesen werden, daher gibt es noch nichts zu zeigen. Das ist nicht dasselbe wie „keine Bots waren da“.",
         "empty": "In den letzten {days} Tagen war kein KI-Bot hier.",
@@ -5344,7 +5333,6 @@
       },
       "exceptions": {
         "title": "Ihre eigenen Ausnahmen",
-        "hint": "Fügen Sie einen Bot hinzu, den diese Voreinstellung nicht kennt, oder lassen Sie einen durch, den sie blockiert.",
         "blocked": {
           "label": "Immer blockieren",
           "description": "Wird zusätzlich zu allem blockiert, was die Voreinstellung abdeckt."
@@ -5387,16 +5375,13 @@
     },
     "firewall": {
       "pageTitle": "Web-Firewall",
-      "pageSubtitle": "Weist verbreitete Angriffe ab, bevor sie diese Anwendung erreichen.",
       "loadFailed": "Das konnte nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Die Firewall steht bereit, sobald sie läuft.",
-      "explainer": "Blockiert Anfragen, die nach Angriffen aussehen, bevor sie Ihre Anwendung erreichen.",
       "openlitespeed": "Auf diesem Server läuft OpenLiteSpeed, wo diese Regeln noch nicht angewendet werden. Ihre Einstellungen werden gespeichert, geprüft wird aber nichts, bis die Unterstützung dafür kommt.",
       "enable": "Diese Anwendung schützen",
       "statusOff": "Aus",
       "statusWatching": "Nur beobachten",
       "statusBlocking": "Blockiert",
-      "offHint": "Anfragen werden überhaupt nicht geprüft.",
       "watchingHint": "Verdächtige Anfragen werden aufgezeichnet, aber weiterhin durchgelassen.",
       "blockingHint": "Verdächtige Anfragen werden abgewiesen.",
       "whenToUseTitle": "Wann Sie das nutzen",
@@ -5453,7 +5438,6 @@
     },
     "clone": {
       "pageTitle": "Anwendung klonen",
-      "pageSubtitle": "Erstellen Sie eine eigenständige Kopie von {name} unter einer neuen Domain.",
       "loadFailed": "Diese Anwendung konnte nicht geladen werden.",
       "failed": "Der Klon konnte nicht gestartet werden.",
       "what": {
@@ -5489,7 +5473,6 @@
       },
       "create": {
         "title": "Kopie erstellen",
-        "subtitle": "{name} wird auf eine neue Domain kopiert. Das Original bleibt unverändert.",
         "placeholder": "neue Domain"
       },
       "before": {
@@ -5592,8 +5575,7 @@
       },
       "warnings": {
         "dns": "Richten Sie die neue Domain zuerst auf diesen Server — sobald sie dorthin zeigt, erhält die Kopie automatisch ein eigenes HTTPS-Zertifikat.",
-        "password": "Der Passwortschutz wird nicht kopiert. Die Kopie ist öffentlich, bis Sie ihn einschalten.",
-        "time": "Eine große Anwendung braucht einige Minuten zum Kopieren."
+        "password": "Der Passwortschutz wird nicht kopiert. Die Kopie ist öffentlich, bis Sie ihn einschalten."
       },
       "confirm": {
         "title": "Kopie von {name} erstellen?",
@@ -5607,7 +5589,6 @@
     },
     "php": {
       "pageTitle": "PHP-Einstellungen",
-      "pageSubtitle": "Die PHP-Version und die Limits, mit denen diese Anwendung läuft.",
       "loadFailed": "Diese Einstellungen konnten nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Ihre PHP-Einstellungen erscheinen, sobald das fertig ist.",
       "saved": "PHP-Einstellungen gespeichert.",
@@ -5747,7 +5728,6 @@
         "limits": "Anfragelimits"
       },
       "advancedNote": "Die meisten Anwendungen brauchen das nie. Ändern Sie es nur, wenn Sie wissen, warum.",
-      "presetsCustom": "Eigene — keine der Voreinstellungen oben.",
       "reset": "Zurücksetzen",
       "resetDone": "Zurück auf den Standard.",
       "resetFailed": "Diese Einstellung konnte nicht zurückgesetzt werden.",
@@ -5792,12 +5772,11 @@
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
-      "pageSubtitle": "Sperrt Adressen, die diese Anwendung immer wieder angreifen.",
       "loadFailed": "Der Schutz dieser Anwendung konnte nicht geprüft werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Schutz lässt sich hinzufügen, sobald das fertig ist.",
       "empty": {
         "title": "Fail2ban ist nicht eingerichtet",
-        "body": "Noch hält nichts das Erraten von Passwörtern bei dieser Anwendung auf. Richten Sie es ein, um Wiederholungstäter zu sperren.",
+        "body": "Noch schützt nichts diese Anwendung vor dem Erraten von Passwörtern.",
         "action": "Fail2ban einrichten"
       },
       "state": {
@@ -5861,7 +5840,6 @@
     },
     "staging": {
       "pageTitle": "Staging-Bereich",
-      "pageSubtitle": "Eine Kopie dieser Anwendung, die Sie kaputt machen können, ohne dass es jemand merkt.",
       "loadFailed": "Der Staging-Bereich dieser Anwendung konnte nicht geprüft werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Eine Staging-Kopie lässt sich anlegen, sobald das fertig ist.",
       "unsupported": "Staging gibt es nur für WordPress-Anwendungen.",
@@ -6326,7 +6304,6 @@
       "title": "Container",
       "image": "Image",
       "noImage": "Kein Image erfasst",
-      "imageHint": "„Laden und neu ausrollen“ lädt es erneut und startet den Container neu.",
       "network": "Netzwerk",
       "networkHint": "Container im selben Netzwerk erreichen sich gegenseitig über den Namen.",
       "ownNetwork": "Eigenes Netzwerk (keine andere Anwendung darin)",
@@ -6354,7 +6331,7 @@
       "noPermission": "Sie haben keine Berechtigung, diese Anwendung zu ändern.",
       "volumes": {
         "title": "Volumes",
-        "empty": "Keine Volumes eingebunden. Der Container behält nichts, was einen Neuaufbau übersteht.",
+        "empty": "Keine Volumes. Nichts in diesem Container übersteht einen Neuaufbau.",
         "choose": "Volume auswählen",
         "alreadyMounted": "{name} (bereits eingebunden)",
         "pathPlaceholder": "/var/lib/mysql",
@@ -6367,7 +6344,7 @@
         "invalid": "Wählen Sie ein Volume und geben Sie einen absoluten Pfad im Container an, zum Beispiel /var/lib/mysql.",
         "noVolumes": "Dieser Server hat noch keine Volumes, es gibt also nichts einzubinden.",
         "noVolumesLink": "Auf der Docker-Seite ein Volume erstellen.",
-        "hint": "Daten in einem Volume überstehen Neuaufbauten. Das Einbinden startet den Container neu, und der Pfad ist anfangs leer."
+        "hint": "Ein Volume einzubinden startet den Container neu, und der Pfad ist anfangs leer."
       },
       "credentials": {
         "title": "Erzeugte Zugangsdaten",
@@ -6396,14 +6373,12 @@
       },
       "registry": "Registry",
       "noRegistry": "Keine — anonym laden",
-      "registryHint": "Für ein öffentliches Image auf „Keine“ lassen.",
       "missingRegistryOption": "Gelöschte Anmeldedaten — der nächste Pull dieser Anwendung ist anonym",
       "noRegistries": "Auf diesem Server sind keine Registry-Anmeldedaten gespeichert, es können also nur öffentliche Images geladen werden.",
       "noRegistriesLink": "Fügen Sie welche unter Integrationen → Docker-Registries hinzu.",
       "pull": "Laden und neu ausrollen",
       "pulled": "Das Image wurde geladen und der Container neu erstellt.",
       "pullFailed": "Das Image konnte nicht geladen werden.",
-      "pageSubtitle": "Netzwerk, Ports, CPU- und Speicherlimits und Volumes, mit denen dieser Container läuft.",
       "ownCompose": {
         "title": "In der Compose-Datei festgelegt",
         "body": "Diese Anwendung läuft mit ihrer eigenen Compose-Datei. Port, Speicher- und CPU-Limit, Netzwerk und Volumes werden dort geändert, nicht hier.",
@@ -6416,15 +6391,12 @@
         "composeBody": "Diese Anwendung läuft mit ihrer eigenen Compose-Datei, daher werden diese dort geändert."
       },
       "imageSection": "Image",
-      "imageSectionHint": "Was dieser Container ausführt und mit welchen Anmeldedaten er es abruft.",
       "saveImage": "Registry speichern",
       "settingsSection": "Netzwerk und Limits",
-      "settingsSectionHint": "Wie dieser Container verbunden ist und wie viel vom Server er nutzen darf.",
       "pulling": "Wird geladen und neu ausgerollt…"
     },
     "compose": {
       "title": "Compose-Datei",
-      "hint": "Image, Ports, Volumes und Umgebungsvariablen dieser Anwendung stehen alle in dieser Datei.",
       "loadFailed": "Die Compose-Datei konnte nicht gelesen werden.",
       "safety": "Beim Speichern wird der Container neu gestartet, die Anwendung ist also kurz offline. Startet die neue Datei nicht, legt das Panel die vorherige zurück.",
       "takeover": "Wenn Sie hier speichern, läuft diese Datei, und die Einstellungen der Container-Seite steuern sie nicht mehr. Zurück geht es nur, indem Sie diese Datei leeren.",

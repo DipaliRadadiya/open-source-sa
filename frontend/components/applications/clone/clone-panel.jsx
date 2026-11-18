@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import {
   ArrowRight,
   Check,
-  Clock,
   Copy,
   Loader2,
   Lock,
@@ -43,7 +42,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -250,13 +248,10 @@ export function CloneApplicationPanel({
         <div className="space-y-6">
           <div className="min-w-0">
             <PanelCard>
-              {/* Same card shape as the rest of the panel: title and one line, then a rule.
+              {/* Same card shape as the rest of the panel: a title, then a rule.
                   No icon chips on titles (7 Oct). */}
               <CardHeader className="border-b">
                 <CardTitle as="h2">{t("create.title")}</CardTitle>
-                <CardDescription>
-                  {t("create.subtitle", { name: application.name })}
-                </CardDescription>
               </CardHeader>
 
               <Form {...form}>
@@ -527,7 +522,6 @@ function BeforeNotes({ sourceProtected }) {
     ...(sourceProtected
       ? [{ key: "password", icon: Lock, tone: "warning" }]
       : []),
-    { key: "time", icon: Clock, tone: "muted" },
   ];
 
   return (

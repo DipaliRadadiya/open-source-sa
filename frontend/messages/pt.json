@@ -3860,7 +3860,6 @@
     },
     "environment": {
       "pageTitle": "Ambiente",
-      "pageSubtitle": "Edite o arquivo .env desta aplicação.",
       "provisioning": "As configurações de ambiente aparecem quando a aplicação terminar de ser configurada.",
       "loadFailed": "Não foi possível carregar o ambiente.",
       "sectionTitle": "Ambiente",
@@ -3877,7 +3876,6 @@
       "saveFailed": "Não foi possível salvar o ambiente.",
       "revert": "Reverter",
       "unsaved": "Alterações não salvas",
-      "restartHint": "Esta aplicação lê o arquivo na inicialização — Salvar e reiniciar para aplicar as alterações.",
       "applyHint": "Esta aplicação armazena o config em cache — Salvar e aplicar limpa o cache para você.",
       "readOnly": "Você tem acesso somente leitura a este arquivo.",
       "syntaxTitle": "Não salvo — erro de sintaxe",
@@ -3896,7 +3894,6 @@
       },
       "history": {
         "title": "Histórico de alterações",
-        "subtitle": "Quem editou este arquivo e quais chaves alterou. Os valores nunca são registrados.",
         "loadFailed": "Não foi possível carregar o histórico de alterações.",
         "empty": "Este arquivo ainda não foi alterado pelo painel.",
         "actionRestored": "restaurou uma versão anterior",
@@ -4567,12 +4564,10 @@
     "sourceLabel": "Origem",
     "deployment": {
       "pageTitle": "Deploy",
-      "pageSubtitle": "Faça deploy do seu código e configure deploys automáticos em push.",
       "loadFailed": "Este deploy não pôde ser carregado.",
       "provisioning": "Esta aplicação ainda está sendo configurada. O deploy ficará disponível quando estiver em execução.",
       "deploy": {
         "title": "Deploy",
-        "subtitle": "Puxe o código mais recente do seu repositório e reconstrua a aplicação.",
         "repository": "Repositório",
         "branch": "Branch",
         "lastDeploy": "Último deploy bem-sucedido",
@@ -4699,7 +4694,6 @@
         "logFailed": "O log de build não pôde ser carregado.",
         "noPermission": "Seu papel não inclui Deploy para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "title": "Histórico de deploy",
-        "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build.",
         "pushStarted": "Novo deploy iniciado por um push para {branch}.",
         "loadFailed": "Não foi possível carregar o histórico e as configurações de deploy."
       },
@@ -5104,8 +5098,6 @@
     },
     "workers": {
       "pageTitle": "Workers",
-      "pageSubtitle": "Mantenha processos de longa duração — queue workers, Horizon ou seu próprio comando — em execução para esta aplicação.",
-      "pageSubtitleGeneric": "Mantém em execução os comandos de longa duração desta aplicação. Eles são reiniciados se pararem.",
       "loadFailed": "Não foi possível carregar os workers.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Os workers estarão disponíveis quando estiver em execução.",
       "addWorker": "Adicionar worker",
@@ -5299,10 +5291,8 @@
     },
     "botBlocker": {
       "pageTitle": "Bloqueador de bots de IA",
-      "pageSubtitle": "Escolha quais bots de IA podem ler esta aplicação.",
       "loadFailed": "Não foi possível carregar isso.",
       "provisioning": "Esta aplicação ainda está sendo configurada. O bloqueador de bots de IA estará disponível quando estiver em execução.",
-      "explainer": "Bots de IA são visitantes automatizados de empresas de IA. Alguns apenas copiam seu conteúdo; outros podem enviar visitantes reais.",
       "activeNow": "Ativo agora",
       "chooseLabel": "Escolha o que permitir",
       "blockedCount": "{count, plural, =0 {Nada bloqueado} one {# bot bloqueado} other {# bots bloqueados}}",
@@ -5312,7 +5302,6 @@
       "hideBots": "Ocultar a lista",
       "traffic": {
         "title": "Bots de IA que visitaram esta aplicação",
-        "subtitle": "Lido a partir do log de acesso desta aplicação.",
         "range": "{days} dias",
         "unavailable": "Não foi possível ler o log de acesso desta aplicação, então ainda não há nada para mostrar. Isso não é o mesmo que nenhum bot ter visitado.",
         "empty": "Nenhum bot de IA visitou nos últimos {days} dias.",
@@ -5344,7 +5333,6 @@
       },
       "exceptions": {
         "title": "Suas próprias exceções",
-        "hint": "Adicione um bot que este preset nunca ouviu falar, ou permita a passagem de um bot que ele bloqueia.",
         "blocked": {
           "label": "Sempre bloquear",
           "description": "Bloqueado, assim como tudo o que o preset abrange."
@@ -5387,16 +5375,13 @@
     },
     "firewall": {
       "pageTitle": "Firewall web",
-      "pageSubtitle": "Bloqueie ataques comuns antes que cheguem a esta aplicação.",
       "loadFailed": "Não foi possível carregar isso.",
       "provisioning": "Esta aplicação ainda está sendo configurada. O firewall estará disponível quando terminar.",
-      "explainer": "Bloqueia requisições que parecem ataques antes que cheguem à sua aplicação.",
       "openlitespeed": "Este servidor roda OpenLiteSpeed, onde essas regras ainda não são aplicadas. Suas configurações estão salvas, mas nada é verificado até que o suporte seja disponibilizado.",
       "enable": "Proteger esta aplicação",
       "statusOff": "Desligado",
       "statusWatching": "Apenas monitorando",
       "statusBlocking": "Bloqueando",
-      "offHint": "As requisições não são verificadas.",
       "watchingHint": "Requisições suspeitas são registradas, mas ainda são permitidas.",
       "blockingHint": "Requisições suspeitas são recusadas.",
       "whenToUseTitle": "Quando usar isso",
@@ -5453,7 +5438,6 @@
     },
     "clone": {
       "pageTitle": "Clone de aplicação",
-      "pageSubtitle": "Faça uma cópia independente de {name} em um novo domínio.",
       "loadFailed": "Esta aplicação não pôde ser carregada.",
       "failed": "A clonagem não pôde ser iniciada.",
       "what": {
@@ -5489,7 +5473,6 @@
       },
       "create": {
         "title": "Criar a cópia",
-        "subtitle": "{name} é copiado para um novo domínio. O original não é alterado.",
         "placeholder": "novo domínio"
       },
       "before": {
@@ -5592,8 +5575,7 @@
       },
       "warnings": {
         "dns": "Aponte primeiro o novo domínio para este servidor — assim que apontar, a cópia recebe automaticamente o próprio certificado HTTPS.",
-        "password": "A proteção por senha não é copiada. A cópia está pública até você ativá-la.",
-        "time": "Uma aplicação grande leva alguns minutos para ser copiada."
+        "password": "A proteção por senha não é copiada. A cópia está pública até você ativá-la."
       },
       "confirm": {
         "title": "Criar cópia de {name}?",
@@ -5607,7 +5589,6 @@
     },
     "php": {
       "pageTitle": "Configurações do PHP",
-      "pageSubtitle": "A versão e os limites do PHP com que esta aplicação roda.",
       "loadFailed": "Não foi possível carregar estas configurações.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Suas configurações de PHP aparecerão quando terminar.",
       "saved": "Configurações do PHP salvas.",
@@ -5747,7 +5728,6 @@
         "limits": "Limites de requisição"
       },
       "advancedNote": "A maioria das aplicações nunca precisa disso. Altere apenas se souber o motivo.",
-      "presetsCustom": "Personalizado — não é um dos predefinições acima.",
       "reset": "Redefinir",
       "resetDone": "Voltou ao padrão.",
       "resetFailed": "Não foi possível redefinir esta configuração.",
@@ -5792,12 +5772,11 @@
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
-      "pageSubtitle": "Bane endereços que insistem em atacar esta aplicação.",
       "loadFailed": "Não foi possível verificar a proteção desta aplicação.",
       "provisioning": "Esta aplicação ainda está sendo configurada. A proteção pode ser adicionada quando terminar.",
       "empty": {
         "title": "Fail2ban não configurado",
-        "body": "Nada impede ainda a adivinhação de senhas nesta aplicação. Configure para bloquear quem insiste.",
+        "body": "Nada impede ainda que adivinhem senhas nesta aplicação.",
         "action": "Configurar Fail2ban"
       },
       "state": {
@@ -5861,7 +5840,6 @@
     },
     "staging": {
       "pageTitle": "Área de Staging",
-      "pageSubtitle": "Uma cópia desta aplicação onde você pode quebrar tudo sem ninguém perceber.",
       "loadFailed": "Não foi possível verificar a área de staging desta aplicação.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Uma cópia de staging pode ser feita quando terminar.",
       "unsupported": "Staging é só para aplicações WordPress.",
@@ -6326,7 +6304,6 @@
       "title": "Contentor",
       "image": "Imagem",
       "noImage": "Nenhuma imagem registada",
-      "imageHint": "«Obter e reimplantar» volta a obtê-la e reinicia o contentor.",
       "network": "Rede",
       "networkHint": "Os contentores na mesma rede comunicam entre si pelo nome.",
       "ownNetwork": "A sua própria rede (sem outra aplicação)",
@@ -6354,7 +6331,7 @@
       "noPermission": "Você não tem permissão para alterar esta aplicação.",
       "volumes": {
         "title": "Volumes",
-        "empty": "Nenhum volume montado. O contentor não guarda nada que sobreviva a uma reconstrução.",
+        "empty": "Sem volumes. Nada neste contentor sobrevive a uma reconstrução.",
         "choose": "Escolha um volume",
         "alreadyMounted": "{name} (já montado)",
         "pathPlaceholder": "/var/lib/mysql",
@@ -6367,7 +6344,7 @@
         "invalid": "Escolha um volume e indique um caminho absoluto dentro do contentor, por exemplo /var/lib/mysql.",
         "noVolumes": "Este servidor ainda não tem volumes, por isso não há nada para montar.",
         "noVolumesLink": "Crie um volume na página do Docker.",
-        "hint": "Os dados de um volume sobrevivem às reconstruções. Montar um reinicia o contentor, e o caminho começa vazio."
+        "hint": "Montar um volume reinicia o contentor, e o caminho começa vazio."
       },
       "credentials": {
         "title": "Credenciais geradas",
@@ -6396,14 +6373,12 @@
       },
       "registry": "Registo",
       "noRegistry": "Nenhum — obter anonimamente",
-      "registryHint": "Deixe em Nenhum para uma imagem pública.",
       "missingRegistryOption": "Credencial eliminada — a próxima obtenção desta aplicação será anónima",
       "noRegistries": "Não há credenciais de registo guardadas neste servidor, pelo que só podem ser obtidas imagens públicas.",
       "noRegistriesLink": "Adicione uma em Integrações → Registos Docker.",
       "pull": "Obter e reimplantar",
       "pulled": "A imagem foi obtida e o contentor recriado.",
       "pullFailed": "Não foi possível obter a imagem.",
-      "pageSubtitle": "A rede, as portas, os limites de CPU e memória e os volumes com que este contêiner é executado.",
       "ownCompose": {
         "title": "Definido no ficheiro compose",
         "body": "Esta aplicação usa o seu próprio ficheiro compose, por isso a porta, os limites de memória e CPU, a rede e os volumes mudam-se lá, não aqui.",
@@ -6416,15 +6391,12 @@
         "composeBody": "Esta aplicação usa o seu próprio ficheiro compose, por isso estes mudam-se lá."
       },
       "imageSection": "Imagem",
-      "imageSectionHint": "O que este contentor executa e a credencial com que o descarrega.",
       "saveImage": "Guardar registo",
       "settingsSection": "Rede e limites",
-      "settingsSectionHint": "Como este contentor se liga e quanto do servidor pode usar.",
       "pulling": "Obtendo e reimplantando…"
     },
     "compose": {
       "title": "Ficheiro compose",
-      "hint": "A imagem, as portas, os volumes e as variáveis de ambiente desta aplicação estão todos neste ficheiro.",
       "loadFailed": "Não foi possível ler o ficheiro compose.",
       "safety": "Guardar reinicia o contentor, pelo que a aplicação fica brevemente em baixo. Se o novo ficheiro não arrancar, o painel repõe o anterior.",
       "takeover": "Salvar aqui faz este arquivo ser executado, e as configurações da página Contentor deixam de controlá-lo. Não há volta, a não ser limpando este arquivo.",

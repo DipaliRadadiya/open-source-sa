@@ -88,7 +88,7 @@ export default async function ApplicationComposePage({ params }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("hint")} />
+      <PageHeader title={t("title")} />
       <ComposeEditor
         application={result.application}
         canManage={canManage}

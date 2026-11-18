@@ -108,12 +108,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments }) {
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
 
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
-        <div className="flex min-w-0 items-start gap-3">
-        <div className="space-y-1">
-          <p className="font-semibold">{t("title")}</p>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-        </div>
-        </div>
+        <p className="min-w-0 font-semibold">{t("title")}</p>
         <RefreshButton />
       </div>
 
