@@ -1211,3 +1211,58 @@ describe('the user may change a jail without a copy (2026-10-29)', function () {
             ->assertJsonValidationErrors('safety_copy');
     });
 });
+
+/*
+ * QA, 2026-11-17: with fail2ban not installed, saving a site's jail was a
+ * 500 — the config test stages a copy of /etc/fail2ban, which is not there.
+ */
+function fakeNoFail2ban(array &$ran): void
+{
+    Process::fake(function ($process) use (&$ran) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $ran[] = implode(' ', $args);
+
+        // `fail2ban-client ping` with no fail2ban on the box.
+        if (str_ends_with($args[0] ?? '', 'fail2ban-client')) {
+            return Process::result(exitCode: 127, errorOutput: 'fail2ban-client: command not found');
+        }
+
+        return Process::result();
+    });
+}
+
+it('refuses to save a jail when fail2ban is not installed, as the server screen does', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $ran = [];
+    fakeNoFail2ban($ran);
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), [
+            'jail_config_content' => "[panel-site-shop]\nenabled = true\n",
+            'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n",
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', __('errors/fail2ban.not_installed'));
+
+    // Nothing was staged or written.
+    expect(collect($ran)->contains(fn (string $c) => str_starts_with($c, 'cp ') || str_starts_with($c, 'tee ')))->toBeFalse()
+        ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
+});
+
+it('still turns a site\'s jail off when fail2ban is gone, without a daemon to reload', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $this->application->forceFill([
+        'fail2ban_jail_name' => 'panel-site-shop',
+        'fail2ban_jail_content' => "[panel-site-shop]\nenabled = true\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST>\n",
+    ])->save();
+    $ran = [];
+    fakeNoFail2ban($ran);
+
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertOk();
+
+    // The files go — reinstalling fail2ban would bring the jail back on — but nothing is reloaded.
+    expect(collect($ran)->contains(fn (string $c) => str_starts_with($c, 'rm -f') && str_contains($c, 'panel-site-shop')))->toBeTrue()
+        ->and(collect($ran)->contains(fn (string $c) => str_contains($c, 'fail2ban-client reload')))->toBeFalse()
+        ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
+});

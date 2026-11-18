@@ -30,6 +30,9 @@ use Illuminate\Validation\ValidationException;
  */
 class ApplicationFail2banManager
 {
+    /** Whether fail2ban answers here, asked once per instance ({@see self::installed()}). */
+    private ?bool $installed = null;
+
     /**
      * Every name this feature writes — jail, filter, both files — starts
      * here. They used to be the bare site slug, so a site called `sshd`,
@@ -53,10 +56,11 @@ class ApplicationFail2banManager
      */
     public function installed(): bool
     {
-        static $installed = null;
-
-        if ($installed !== null) {
-            return $installed;
+        // Per instance, not a function `static`: that one lives as long as the
+        // process, so a queue worker that once saw fail2ban missing went on
+        // saying so after it was installed (found 2026-11-18).
+        if ($this->installed !== null) {
+            return $this->installed;
         }
 
         $result = $this->serverOps->run(
@@ -65,7 +69,7 @@ class ApplicationFail2banManager
             timeout: 10,
         );
 
-        return $installed = $result->ok;
+        return $this->installed = $result->ok;
     }
 
     /**
@@ -539,7 +543,11 @@ class ApplicationFail2banManager
      * well, with the same care `migrateLegacy()` takes over a filter the
      * fail2ban package owns.
      */
-    public function disableForApp(Application $application, bool $keepCopy = true): void
+    /**
+     * @param  bool  $reload  false when fail2ban is not installed: the files go,
+     *                        and there is no daemon to tell.
+     */
+    public function disableForApp(Application $application, bool $keepCopy = true, bool $reload = true): void
     {
         $context = ['feature' => 'application', 'application' => $application->id];
 
@@ -555,7 +563,10 @@ class ApplicationFail2banManager
                 ['rm', '-f', ...array_keys($backups)],
                 $context + ['op' => 'fail2ban_remove_jail'],
             ));
-            $this->must($this->client(['reload']));
+
+            if ($reload) {
+                $this->must($this->client(['reload']));
+            }
         } catch (Fail2banOperationException $exception) {
             $this->restore($backups, $context);
             $this->client(['reload']);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Exceptions\Server\Application\Fail2banConfigRejectedException;
+use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\CustomFail2banRequest;
 use App\Http\Requests\Server\Application\DisableFail2banRequest;
@@ -130,6 +131,13 @@ class ApplicationFail2banController extends Controller
         ApplicationFail2banManager $manager,
         ActivityLogger $log,
     ): JsonResponse {
+        // Before anything is staged: the config test copies /etc/fail2ban,
+        // which is not there, and that crashed as a 500 (QA, 2026-11-17). The
+        // same answer the server-level fail2ban screen gives.
+        if (! $manager->installed()) {
+            throw Fail2banException::notInstalled();
+        }
+
         $jailContent = (string) $request->input('jail_config_content');
         $filterContent = (string) $request->input('filter_config_content');
 
@@ -181,7 +189,9 @@ class ApplicationFail2banController extends Controller
             ], 422);
         }
 
-        $manager->disableForApp($application, $request->safetyCopy());
+        // Without fail2ban the jail's files still go — or reinstalling it would
+        // bring this jail back on — but there is no daemon to reload.
+        $manager->disableForApp($application, $request->safetyCopy(), reload: $manager->installed());
 
         $application->fail2ban_jail_name = null;
         $application->fail2ban_jail_content = null;
