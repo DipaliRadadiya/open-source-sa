@@ -98,6 +98,25 @@ class WordPressInstaller extends AbstractPhpInstaller
                 report($e);
             }
         }
+
+        // `--locale` above only saves WPLANG: the language files are not
+        // downloaded, so the site stayed in English (QA, 2026-11-17). Fetched
+        // from wordpress.org and switched on here. Best-effort like the
+        // timezone: an offline server keeps a working English site.
+        $locale = (string) ($settings['site_language'] ?? '');
+
+        if ($locale !== '' && $locale !== 'en_US') {
+            try {
+                $this->runAsSiteUser('install_language', $application, [
+                    ...$this->phpCommand($application),
+                    (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
+                    'language', 'core', 'install', $locale, '--activate',
+                    '--path='.$documentRoot,
+                ]);
+            } catch (ProvisioningFailedException $e) {
+                report($e);
+            }
+        }
     }
 
     public function syncUrl(Application $application, string $url): void

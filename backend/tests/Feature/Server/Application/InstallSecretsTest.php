@@ -193,3 +193,49 @@ it('stores a password sent through an update where the installer reads it, not i
         ->and($app->settings['site_title'])->toBe('Renamed')
         ->and($app->install_secrets)->toBe(['admin_password' => 'retry-password']);
 });
+
+/*
+ * QA, 2026-11-17: `wp core install --locale` saves the language but does not
+ * download it, so a site created in German stayed in English.
+ */
+it('downloads and switches on the site language after the install', function () {
+    $ran = collect();
+    Process::fake(function ($process) use ($ran) {
+        $ran->push(implode(' ', (array) $process->command));
+
+        return Process::result();
+    });
+
+    $app = secretsWordPressSite(['settings' => ['site_title' => 'Blog', 'admin_user' => 'admin', 'admin_email' => 'a@example.com', 'site_language' => 'de_DE']]);
+
+    app(WordPressInstaller::class)->install($app, '/home/deploy/blog/public_html', [
+        'database' => 'blog', 'db_user' => 'blog', 'db_password' => 'db-secret', 'host' => '127.0.0.1',
+    ]);
+
+    $install = $ran->search(fn (string $c) => str_contains($c, 'core install'));
+    $language = $ran->search(fn (string $c) => str_contains($c, 'language core install de_DE --activate --path=/home/deploy/blog/public_html'));
+
+    expect($language)->not->toBeFalse()
+        ->and($language)->toBeGreaterThan($install);
+});
+
+it('needs no language download for English, and survives one that fails', function () {
+    $ran = collect();
+    Process::fake(function ($process) use ($ran) {
+        $command = implode(' ', (array) $process->command);
+        $ran->push($command);
+
+        return str_contains($command, 'language core install')
+            ? Process::result(exitCode: 1, errorOutput: 'Could not reach downloads.wordpress.org')
+            : Process::result();
+    });
+    $context = ['database' => 'blog', 'db_user' => 'blog', 'db_password' => 'db-secret', 'host' => '127.0.0.1'];
+
+    // Offline: the download fails, the install does not.
+    app(WordPressInstaller::class)->install(secretsWordPressSite(['settings' => ['site_language' => 'fr_FR']]), '/home/deploy/blog/public_html', $context);
+    expect($ran->filter(fn (string $c) => str_contains($c, 'language core install fr_FR'))->count())->toBe(1);
+
+    $ran->splice(0);
+    app(WordPressInstaller::class)->install(secretsWordPressSite(['slug' => 'blog2', 'name' => 'Blog2', 'settings' => ['site_language' => 'en_US']]), '/home/deploy/blog2/public_html', $context);
+    expect($ran->contains(fn (string $c) => str_contains($c, 'language core install')))->toBeFalse();
+});
