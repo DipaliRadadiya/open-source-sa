@@ -133,7 +133,7 @@ function Header({ t }) {
   return (
     <div className="space-y-3">
       <BackLink href="/databases">{t("backToList")}</BackLink>
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
     </div>
   );
 }

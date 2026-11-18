@@ -137,14 +137,9 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
       <Card className={cn("gap-0 overflow-hidden py-0", fill && "h-full")}>
         <div className="flex shrink-0 flex-col gap-2 border-b px-5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
-            <div>
-              <h2 className="text-[15px] font-semibold tracking-tight">
-                {t("processes")}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {t("processesDescription")}
-              </p>
-            </div>
+            <h2 className="text-[15px] font-semibold tracking-tight">
+              {t("processes")}
+            </h2>
           </div>
 
           {/* The running count answers "is anything stuck?" in the header; idle

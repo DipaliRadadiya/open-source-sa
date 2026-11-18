@@ -1202,7 +1202,6 @@
   },
   "cronJobs": {
     "title": "Tarefas cron",
-    "subtitle": "Comandos agendados que executam automaticamente neste servidor.",
     "addJob": "Adicionar tarefa cron",
     "cancel": "Cancelar",
     "saving": "Salvando…",
@@ -3004,7 +3003,6 @@
   },
   "databases": {
     "title": "Bancos de dados",
-    "subtitle": "Crie bancos de dados, gerencie quem pode se conectar a eles e baixe exportações.",
     "loadFailed": "Não foi possível carregar seus bancos de dados.",
     "noPermission": "Seu papel não inclui Banco de dados com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
     "cancel": "Cancelar",
@@ -3255,7 +3253,6 @@
     },
     "credentials": {
       "title": "Detalhes da conexão",
-      "description": "Aponte sua aplicação para este banco de dados.",
       "host": "Host",
       "port": "Porta",
       "database": "Banco de dados",
@@ -3272,7 +3269,6 @@
     },
     "users": {
       "title": "Usuários",
-      "description": "Quem pode entrar neste banco de dados.",
       "add": "Adicionar usuário",
       "addTitle": "Adicionar um usuário a {name}",
       "addSubtitle": "Um nome de usuário e de onde ele pode se conectar.",
@@ -3439,7 +3435,6 @@
     "monitor": {
       "link": "Saúde",
       "title": "Saúde do banco de dados",
-      "subtitle": "O que o engine do banco de dados está fazendo agora e nas últimas 24 horas.",
       "crumb": "Saúde",
       "running": "Em execução",
       "connections": "Conexões",
@@ -3460,7 +3455,6 @@
       "collecting": "Sem histórico ainda. As medições são feitas a cada 5 minutos.",
       "noActivity": "Nenhuma atividade de banco de dados foi registrada nas últimas 24 horas.",
       "processes": "Queries em execução",
-      "processesDescription": "Conexões ativas executando trabalho. As ociosas são contadas, não listadas.",
       "noProcesses": "Nada em execução agora.",
       "idleCount": "{count, plural, one {# conexão ociosa} other {# conexões ociosas}}",
       "seconds": "{seconds}s",
@@ -3499,7 +3493,6 @@
       "health": {
         "healthy": "Saudável",
         "attention": "Precisa de atenção",
-        "healthyBody": "Nada precisa da sua atenção agora.",
         "issueCount": "{count, plural, one {# item para verificar} other {# itens para verificar}}",
         "running": "Em execução",
         "uptimeDays": "Há {days, plural, one {# dia} other {# dias}} no ar",
@@ -3531,7 +3524,6 @@
       },
       "runningQueries": "Queries em execução",
       "longRunningCount": "{count, plural, one {# longa} other {# longas}}",
-      "chartDescription": "Consultas por segundo, conexões e threads em execução, amostrados a cada 5 minutos.",
       "zoomHint": "Arraste as alças abaixo do gráfico, ou role sobre ele, para ampliar um intervalo de tempo.",
       "cannotStopOwn": "Esta é a própria conexão do painel com o banco de dados. Interrompê-la cortaria esta página.",
       "loadFailed": "Não foi possível verificar os motores de banco de dados.",
@@ -7224,7 +7216,6 @@
   },
   "backups": {
     "title": "Backups",
-    "subtitle": "Quais aplicações estão protegidas e como restaurar uma.",
     "loadFailed": "Não foi possível carregar os backups. Tente novamente em instantes.",
     "tabs": {
       "label": "Seções de backup",
@@ -7248,7 +7239,7 @@
       "unknownApplication": "Aplicação excluída",
       "allCovered": "Todas as aplicações estão com backup.",
       "exposed": "{count, plural, one {# aplicação sem backup automático funcionando} other {# aplicações sem backup automático funcionando}}",
-      "exposedHint": "Se este servidor for perdido, tudo o que mudou desde o último backup delas não poderá ser recuperado. Configurar um leva cerca de um minuto.",
+      "exposedHint": "Se este servidor for perdido, tudo o que mudou desde o último backup se perde.",
       "columns": {
         "site": "Aplicação",
         "status": "Backups",
@@ -7827,7 +7818,7 @@
       "alreadyRunning": "Já existe um backup deste banco de dados em execução. Você pode iniciar outro quando este terminar.",
       "backedUpWith": {
         "title": "Com backup junto de {application}",
-        "body": "Este banco de dados pertence a essa aplicação, então os backups dela o incluem. Configure-os ou altere-os lá.",
+        "body": "Os backups dele são configurados nessa aplicação.",
         "action": "Abrir os backups dela"
       },
       "archived": {

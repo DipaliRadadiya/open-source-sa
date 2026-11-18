@@ -1202,7 +1202,6 @@
   },
   "cronJobs": {
     "title": "Tâches cron",
-    "subtitle": "Commandes planifiées qui s'exécutent automatiquement sur ce serveur.",
     "addJob": "Ajouter une tâche cron",
     "cancel": "Annuler",
     "saving": "Enregistrement…",
@@ -3004,7 +3003,6 @@
   },
   "databases": {
     "title": "Bases de données",
-    "subtitle": "Créez des bases de données, gérez les connexions et téléchargez des exports.",
     "loadFailed": "Impossible de charger vos bases de données.",
     "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
     "cancel": "Annuler",
@@ -3255,7 +3253,6 @@
     },
     "credentials": {
       "title": "Détails de connexion",
-      "description": "Connectez votre application à cette base.",
       "host": "Host",
       "port": "Port",
       "database": "Base de données",
@@ -3272,7 +3269,6 @@
     },
     "users": {
       "title": "Utilisateurs",
-      "description": "Qui peut se connecter à cette base.",
       "add": "Ajouter un utilisateur",
       "addTitle": "Ajouter un utilisateur à {name}",
       "addSubtitle": "Un identifiant et depuis où il peut se connecter.",
@@ -3439,7 +3435,6 @@
     "monitor": {
       "link": "Santé",
       "title": "Santé de la base de données",
-      "subtitle": "Ce que le moteur de base de données fait en ce moment et sur les dernières 24 heures.",
       "crumb": "Santé",
       "running": "En exécution",
       "connections": "Connexions",
@@ -3460,7 +3455,6 @@
       "collecting": "Pas encore d'historique. Les mesures sont prises toutes les 5 minutes.",
       "noActivity": "Aucune activité de base de données enregistrée au cours des 24 dernières heures.",
       "processes": "Requêtes en cours",
-      "processesDescription": "Connexions actives qui travaillent. Les connexions inactives sont comptées, pas listées.",
       "noProcesses": "Rien en cours d'exécution pour le moment.",
       "idleCount": "{count, plural, one {# connexion inactive} other {# connexions inactives}}",
       "seconds": "{seconds} s",
@@ -3499,7 +3493,6 @@
       "health": {
         "healthy": "Sain",
         "attention": "À vérifier",
-        "healthyBody": "Rien ne nécessite votre attention pour le moment.",
         "issueCount": "{count, plural, one {# élément à examiner} other {# éléments à examiner}}",
         "running": "En exécution",
         "uptimeDays": "Actif depuis {days, plural, one {# jour} other {# jours}}",
@@ -3531,7 +3524,6 @@
       },
       "runningQueries": "Requêtes en cours",
       "longRunningCount": "{count, plural, one {# longue} other {# longues}}",
-      "chartDescription": "Requêtes par seconde, connexions et threads actifs, échantillonnés toutes les 5 minutes.",
       "zoomHint": "Faites glisser les poignées sous le graphique, ou utilisez la molette, pour zoomer sur une plage de temps.",
       "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page.",
       "loadFailed": "Impossible de vérifier les moteurs de base de données.",
@@ -7224,7 +7216,6 @@
   },
   "backups": {
     "title": "Sauvegardes",
-    "subtitle": "Quelles applications sont protégées, et comment en restaurer une.",
     "loadFailed": "Les sauvegardes n'ont pas pu être chargées. Réessayez dans un instant.",
     "tabs": {
       "label": "Sections de sauvegarde",
@@ -7248,7 +7239,7 @@
       "unknownApplication": "Application supprimée",
       "allCovered": "Toutes les applications sont sauvegardées.",
       "exposed": "{count, plural, one {# application n’a aucune sauvegarde automatique qui fonctionne} other {# applications n’ont aucune sauvegarde automatique qui fonctionne}}",
-      "exposedHint": "Si ce serveur est perdu, tout ce qui a changé depuis leur dernière sauvegarde ne pourra pas être récupéré. En configurer une prend environ une minute.",
+      "exposedHint": "Si ce serveur est perdu, tout ce qui a changé depuis leur dernière sauvegarde est perdu.",
       "columns": {
         "site": "Application",
         "status": "Sauvegardes",
@@ -7827,7 +7818,7 @@
       "alreadyRunning": "Une sauvegarde de cette base de données est déjà en cours. Vous pourrez en démarrer une autre une fois terminée.",
       "backedUpWith": {
         "title": "Sauvegardée avec {application}",
-        "body": "Cette base de données appartient à cette application, ses sauvegardes l'incluent donc. Configurez-les ou modifiez-les là-bas.",
+        "body": "Ses sauvegardes se règlent sur cette application.",
         "action": "Ouvrir ses sauvegardes"
       },
       "archived": {

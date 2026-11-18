@@ -181,7 +181,7 @@ export default async function DatabasesPage({ searchParams }) {
   redirectOutOfRange("/databases", sp, dbMeta, dbFailed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {usable ? (
         <div className="space-y-4">

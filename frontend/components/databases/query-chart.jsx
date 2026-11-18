@@ -11,7 +11,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -183,7 +182,6 @@ export function QueryChart({ metrics = [], timeZone }) {
     <Card>
       <CardHeader>
         <CardTitle as="h2">{t("chartTitle")}</CardTitle>
-        <CardDescription>{t("chartDescription")}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">

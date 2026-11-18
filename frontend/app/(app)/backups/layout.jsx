@@ -32,7 +32,7 @@ export default async function BackupsLayout({ children }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {/* Lets a restore started on any tab raise the banner immediately. */}
       <RestoreWatch initial={active}>

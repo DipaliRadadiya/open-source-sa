@@ -45,10 +45,7 @@ export function ConnectionDetails({ database, canManage = false }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <div className="flex min-w-48 flex-1 items-center gap-3">
           <CardIcon icon={Plug} />
-          <div>
-            <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
-            <p className="text-sm text-muted-foreground">{t("description")}</p>
-          </div>
+          <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
         </div>
         {/* Where this user may connect from: the first thing a remote app needs to know. */}
         <Badge variant={ACCESS_TONE[access] ?? "muted"} className="font-normal">

@@ -56,7 +56,7 @@ export default async function CronjobsPage({ searchParams }) {
   redirectOutOfRange("/cron-jobs", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} />
 
       {failed ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />

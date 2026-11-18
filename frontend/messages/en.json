@@ -1202,7 +1202,6 @@
   },
   "cronJobs": {
     "title": "Cron Jobs",
-    "subtitle": "Scheduled commands that run automatically on this server.",
     "addJob": "Add cron job",
     "cancel": "Cancel",
     "saving": "Saving…",
@@ -3004,7 +3003,6 @@
   },
   "databases": {
     "title": "Databases",
-    "subtitle": "Create databases, manage who can connect to them, and download exports.",
     "loadFailed": "We couldn't load your databases.",
     "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
     "cancel": "Cancel",
@@ -3255,7 +3253,6 @@
     },
     "credentials": {
       "title": "Connection details",
-      "description": "Point your application at this database.",
       "host": "Host",
       "port": "Port",
       "database": "Database",
@@ -3272,7 +3269,6 @@
     },
     "users": {
       "title": "Users",
-      "description": "Who can sign in to this database.",
       "add": "Add user",
       "addTitle": "Add a user to {name}",
       "addSubtitle": "A username and where it may connect from.",
@@ -3439,7 +3435,6 @@
     "monitor": {
       "link": "Health",
       "title": "Database health",
-      "subtitle": "What the database engine is doing right now, and over the last day.",
       "crumb": "Health",
       "running": "Running",
       "connections": "Connections",
@@ -3460,7 +3455,6 @@
       "collecting": "No history yet. Measurements are taken every 5 minutes.",
       "noActivity": "No database activity was recorded in the last 24 hours.",
       "processes": "Running queries",
-      "processesDescription": "Live connections doing work. Idle ones are counted, not listed.",
       "noProcesses": "Nothing is running right now.",
       "idleCount": "{count, plural, one {# idle connection} other {# idle connections}}",
       "seconds": "{seconds}s",
@@ -3499,7 +3493,6 @@
       "health": {
         "healthy": "Healthy",
         "attention": "Needs attention",
-        "healthyBody": "Nothing needs your attention right now.",
         "issueCount": "{count, plural, one {# thing to look at} other {# things to look at}}",
         "running": "Running",
         "uptimeDays": "Up {days, plural, one {# day} other {# days}}",
@@ -3531,7 +3524,6 @@
       },
       "runningQueries": "Running queries",
       "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}",
-      "chartDescription": "Queries per second, connections, and running threads, sampled every 5 minutes.",
       "zoomHint": "Drag the handles below the chart, or scroll on it, to zoom into a time range.",
       "cannotStopOwn": "This is the panel's own connection to the database. Stopping it would cut off this page.",
       "loadFailed": "We couldn't check the database engines.",
@@ -7224,7 +7216,6 @@
   },
   "backups": {
     "title": "Backups",
-    "subtitle": "Which applications are protected, and how to put one back.",
     "loadFailed": "Backups could not be loaded. Try again in a moment.",
     "tabs": {
       "label": "Backup sections",
@@ -7248,7 +7239,7 @@
       "unknownApplication": "Deleted application",
       "allCovered": "Every application is backed up.",
       "exposed": "{count, plural, one {# application has no working automatic backup} other {# applications have no working automatic backup}}",
-      "exposedHint": "If this server is lost, anything changed since their last backup cannot be brought back. Setting one up takes about a minute.",
+      "exposedHint": "If this server is lost, everything changed since their last backup is gone.",
       "columns": {
         "site": "Application",
         "status": "Backups",
@@ -7827,7 +7818,7 @@
       "alreadyRunning": "A backup of this database is already running. You can start another once it finishes.",
       "backedUpWith": {
         "title": "Backed up with {application}",
-        "body": "This database belongs to that application, so the application's backups include it. Set them up or change them there.",
+        "body": "Its backups are set up on that application.",
         "action": "Open its backups"
       },
       "archived": {

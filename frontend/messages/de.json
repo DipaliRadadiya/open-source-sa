@@ -1202,7 +1202,6 @@
   },
   "cronJobs": {
     "title": "Cronjobs",
-    "subtitle": "Geplante Befehle, die automatisch auf diesem Server ausgeführt werden.",
     "addJob": "Cronjob hinzufügen",
     "cancel": "Abbrechen",
     "saving": "Wird gespeichert…",
@@ -3004,7 +3003,6 @@
   },
   "databases": {
     "title": "Datenbanken",
-    "subtitle": "Datenbanken anlegen, Zugänge verwalten und Exporte herunterladen.",
     "loadFailed": "Ihre Datenbanken konnten nicht geladen werden.",
     "noPermission": "Ihre Rolle enthält nicht „Datenbank“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "cancel": "Abbrechen",
@@ -3255,7 +3253,6 @@
     },
     "credentials": {
       "title": "Verbindungsdaten",
-      "description": "Richten Sie Ihre Anwendung auf diese Datenbank aus.",
       "host": "Host",
       "port": "Port",
       "database": "Datenbank",
@@ -3272,7 +3269,6 @@
     },
     "users": {
       "title": "Benutzer",
-      "description": "Wer sich bei dieser Datenbank anmelden darf.",
       "add": "Benutzer hinzufügen",
       "addTitle": "Benutzer zu {name} hinzufügen",
       "addSubtitle": "Ein Benutzername und woher er verbinden darf.",
@@ -3439,7 +3435,6 @@
     "monitor": {
       "link": "Zustand",
       "title": "Datenbankzustand",
-      "subtitle": "Was die Datenbank-Engine gerade tut und im Laufe des letzten Tages getan hat.",
       "crumb": "Zustand",
       "running": "Läuft",
       "connections": "Verbindungen",
@@ -3460,7 +3455,6 @@
       "collecting": "Noch kein Verlauf. Gemessen wird alle 5 Minuten.",
       "noActivity": "In den letzten 24 Stunden wurde keine Datenbankaktivität aufgezeichnet.",
       "processes": "Laufende Abfragen",
-      "processesDescription": "Aktive Verbindungen, die arbeiten. Untätige werden gezählt, aber nicht aufgeführt.",
       "noProcesses": "Gerade läuft nichts.",
       "idleCount": "{count, plural, one {# untätige Verbindung} other {# untätige Verbindungen}}",
       "seconds": "{seconds} s",
@@ -3499,7 +3493,6 @@
       "health": {
         "healthy": "Gesund",
         "attention": "Handlungsbedarf",
-        "healthyBody": "Gerade braucht nichts Ihre Aufmerksamkeit.",
         "issueCount": "{count, plural, one {# Punkt zum Ansehen} other {# Punkte zum Ansehen}}",
         "running": "Läuft",
         "uptimeDays": "Läuft seit {days, plural, one {# Tag} other {# Tagen}}",
@@ -3531,7 +3524,6 @@
       },
       "runningQueries": "Laufende Abfragen",
       "longRunningCount": "{count, plural, one {# lang laufend} other {# lang laufend}}",
-      "chartDescription": "Abfragen pro Sekunde, Verbindungen und laufende Threads, alle 5 Minuten gemessen.",
       "zoomHint": "Ziehen Sie die Griffe unter dem Diagramm oder scrollen Sie darauf, um in einen Zeitraum zu zoomen.",
       "cannotStopOwn": "Das ist die eigene Verbindung des Panels zur Datenbank. Sie zu stoppen würde diese Seite abschneiden.",
       "loadFailed": "Die Datenbank-Engines konnten nicht geprüft werden.",
@@ -7224,7 +7216,6 @@
   },
   "backups": {
     "title": "Backups",
-    "subtitle": "Welche Anwendungen geschützt sind und wie Sie eine zurückholen.",
     "loadFailed": "Die Backups konnten nicht geladen werden. Versuchen Sie es gleich erneut.",
     "tabs": {
       "label": "Backup-Bereiche",
@@ -7248,7 +7239,7 @@
       "unknownApplication": "Gelöschte Anwendung",
       "allCovered": "Jede Anwendung wird gesichert.",
       "exposed": "{count, plural, one {# Anwendung hat keine funktionierende automatische Sicherung} other {# Anwendungen haben keine funktionierende automatische Sicherung}}",
-      "exposedHint": "Geht dieser Server verloren, lässt sich alles, was sich seit ihrer letzten Sicherung geändert hat, nicht zurückholen. Eine einzurichten dauert etwa eine Minute.",
+      "exposedHint": "Geht dieser Server verloren, ist alles weg, was sich seit dem letzten Backup geändert hat.",
       "columns": {
         "site": "Anwendung",
         "status": "Backups",
@@ -7827,7 +7818,7 @@
       "alreadyRunning": "Es läuft schon ein Backup dieser Datenbank. Sobald es fertig ist, können Sie ein weiteres starten.",
       "backedUpWith": {
         "title": "Gesichert mit {application}",
-        "body": "Diese Datenbank gehört zu dieser Anwendung, ihre Backups enthalten sie also. Richten Sie sie dort ein oder ändern Sie sie dort.",
+        "body": "Die Backups werden bei dieser Anwendung eingerichtet.",
         "action": "Ihre Backups öffnen"
       },
       "archived": {

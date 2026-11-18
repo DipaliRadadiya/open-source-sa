@@ -101,7 +101,7 @@ export function HealthSummary({ engine, status, processes = [] }) {
                   : "text-muted-foreground",
               )}
             >
-              {lead ? issueText(lead) : t("healthyBody")}
+              {lead ? issueText(lead) : null}
             </p>
             {rest.length ? (
               <p className="text-xs text-muted-foreground">
