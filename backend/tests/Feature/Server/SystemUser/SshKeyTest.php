@@ -9,16 +9,16 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 // A valid ed25519 public key (test fixture).
-const TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXyz deploy@host';
-// Same valid base64 length as TEST_KEY, different content → different fingerprint.
-const TEST_KEY_2 = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXy0 backup@host';
+const TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesAXyz deploy@host';
+// Same length as TEST_KEY (a whole 32-byte key), different content → different fingerprint.
+const TEST_KEY_2 = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesAXy0 backup@host';
 // Real keys from ssh-keygen (OpenSSH 9.6), public halves only.
 const RSA_1024 = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC4X0VLa/qlRhSETAvqoZRd/HIvXjTvMeJIzlqJmg6hZnKQMJqbuLQJ9nRKdmFiz9Lu2ZM5mpFDWTuuhqY40K608ZvNzmp/WtdC4ek72Py6fUPxkNCy9PE9+eq3PysX5v0rJHZEz64owSfirW2QhrMwtoRnfXRI1Kveul51mmoyWQ== fixture@host';
 const RSA_2048 = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQChjarT1779kt/06QZtxEGizi5L/kLXz7IIMVK5DH78Ch9er1XI3kcTAsDsdzffyx5rw+NeduHd5tG8YW1z2mooRDHAEwqWUnJqQUYRcUmAA2Al25whlzlgopmOpxnY91SOWtWCV4toq2FPhG6tPhIA/evjcOiFHzklmHfa9MilJ7Jc5x5T35mjM282pjIVPWZOzLBdNdg5CUmkjrXW74SjvLuTLrSybqZxALS7MnW6+Kwq9cvjCfUkog5u7AaZdtlLUqdVpIxSxVbd6d/AsfkrgwaM2eA2UzqqODg7D2bo3tw+6j35oX80NUb2cV4XGzYE5zgx7HPG3mBvg6/Kb6GR fixture@host';
 const DSA_KEY = 'ssh-dss AAAAB3NzaC1kc3MAAACBAK0vXYQ4r90njURwyzJD0fEWvsX4GP1T5GStM3vTY8Q2NJ7P4dbh43XOkdZ3ElCn03beTlsEtgIjnQfbmXqEX29co4Px+bs5gbzRCoJxcgxXnZqiXqeIITs7d3FlKeataLy29CCW1ncwJDEHbfnL48Z6dAEL2pPc1F1ltMpmEpMVAAAAFQD+5a/ZM48nyuCDhCKpm572M+UcWQAAAIABfJilen2pjKKWg8qvtCoiC0ACvC5YP6HQxDCcmz9Dn7V5FvXnuAux5hpxhh8JAsnrUqYqmFmJVMhx8WIl9rhCDUVd4ipf8FcjyYckS2r7K4K1hkQMhaaZMSfN7a3yiWFztRnk5ooWqA7zdzw6p2EVRKpgg0EoPVpQluPsDcn2CwAAAIBqTq1jj/zEhv1I5v4xQNKvfOMKXPZhbMNn5fbNizBFhMPgc+R572sYFsXrB/EZWMUzoFtGrz45w6inmNnOavK8K2XvsGfkZS53V1ROPcPzMgkM7gn2IeBMXUDHdXCveLsDJ766+VG+GZgRbudwaTlZtV/sRwewFdgUBd0Oie0WVw== fixture@host';
 const ECDSA_KEY = 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCguwu0p73gccVW/zfKg0igRqXlLABwpeBWUnd0MpLhvcQKA8u4goapFIztRdpI4TtuqAICJfhAKRLYql37MOqA= fixture@host';
 // A key put on the server by hand, never through the panel.
-const HAND_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QhandyBASE64keyForTestingPurposesXyz admin@laptop';
+const HAND_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QhandyBASE64keyForTestingPurposesAXyz admin@laptop';
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -186,6 +186,37 @@ it('refuses a public key that carries a second line', function () {
     expect($this->su->sshKeys()->count())->toBe(0);
     Process::assertNothingRan();
 });
+
+/** The same key with its blob replaced, type and comment kept. */
+function withBlob(string $key, string $blob): string
+{
+    [$type, , $comment] = explode(' ', $key, 3);
+
+    return "{$type} {$blob} {$comment}";
+}
+
+/*
+ * QA 2026-11-19: a key cut short while copying is still valid base64 and still
+ * starts with its type. It was saved and written to authorized_keys, and sshd
+ * never logged anyone in with it.
+ */
+it('refuses a key that was cut short', function (callable $cut) {
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson("/api/system-users/{$this->su->id}/ssh-keys", ['name' => 'cut', 'public_key' => $cut()])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.public_key.0', __('errors/system-user.invalid_public_key'));
+
+    expect($this->su->sshKeys()->count())->toBe(0);
+})->with([
+    'ed25519, first 40 characters' => [fn () => withBlob(TEST_KEY, substr(explode(' ', TEST_KEY)[1], 0, 40))],
+    'ed25519, one byte short' => [fn () => withBlob(TEST_KEY, base64_encode(substr(base64_decode(explode(' ', TEST_KEY)[1]), 0, -1)))],
+    'ed25519, a field too many' => [fn () => withBlob(TEST_KEY, base64_encode(base64_decode(explode(' ', TEST_KEY)[1]).pack('N', 1).'x'))],
+    'rsa, modulus missing' => [fn () => withBlob(RSA_2048, base64_encode(substr(base64_decode(explode(' ', RSA_2048)[1]), 0, 4 + 7 + 4 + 3)))],
+    'rsa, first 100 characters' => [fn () => withBlob(RSA_2048, substr(explode(' ', RSA_2048)[1], 0, 100))],
+    'ecdsa, point cut' => [fn () => withBlob(ECDSA_KEY, substr(explode(' ', ECDSA_KEY)[1], 0, 60))],
+    // Every byte still there, but sshd will not read it without the `=`.
+    'ecdsa, closing = lost' => [fn () => withBlob(ECDSA_KEY, rtrim(explode(' ', ECDSA_KEY)[1], '='))],
+]);
 
 it('refuses a key whose blob is not the type it claims to be', function () {
     // Valid base64, but the blob names ssh-ed25519 and the line says ssh-rsa.

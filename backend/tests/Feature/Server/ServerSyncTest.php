@@ -303,7 +303,7 @@ describe('what a preview promises', function () {
                 $binary === 'getent' => Process::result(output: "brown:x:1001:1001::/home/brown:/bin/bash\n"),
                 $binary === 'find' && str_contains($path, 'nginx') => Process::result(output: "/etc/nginx/sites-available/brownsite.conf\n"),
                 $binary === 'cat' && str_ends_with($path, 'brownsite.conf') => Process::result(output: nginxVhost('brown.example.com', '/home/brown/brownsite/public_html')),
-                $binary === 'cat' && $path === '/home/brown/.ssh/authorized_keys' => Process::result(output: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForTests laptop@home\n"),
+                $binary === 'cat' && $path === '/home/brown/.ssh/authorized_keys' => Process::result(output: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForTestsAndSomeMoreBytes1 laptop@home\n"),
                 $binary === 'stat' => Process::result(output: 'brown'),
                 $binary === 'crontab' && ($args[3] ?? '') === 'brown' => Process::result(output: "*/5 * * * * php /home/brown/brownsite/cron.php\n"),
                 in_array($binary, ['cat', 'crontab', 'test', 'find'], true) => Process::result(exitCode: 1, errorOutput: 'nothing'),
@@ -383,7 +383,7 @@ describe('apply', function () {
 });
 
 describe('ssh keys', function () {
-    $key = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForTests laptop@home';
+    $key = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForTestsAndSomeMoreBytes1 laptop@home';
 
     it('finds keys the panel has no record of', function () use ($key) {
         SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);

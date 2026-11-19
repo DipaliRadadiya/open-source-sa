@@ -58,15 +58,78 @@ class SshKeyManager
             return false;
         }
 
+        // Padding included: PHP decodes a key whose closing `=` was lost, sshd
+        // does not, and refuses it at login (measured, 2026-11-19).
+        if (strlen($parts[1]) % 4 !== 0) {
+            return false;
+        }
+
         $blob = base64_decode($parts[1], true);
 
         if ($blob === false || strlen($blob) < 4) {
             return false;
         }
 
-        $length = unpack('N', substr($blob, 0, 4))[1];
+        $fields = $this->blobFields($blob);
 
-        return substr($blob, 4, $length) === $parts[0];
+        if ($fields === null || ($fields[0] ?? null) !== $parts[0]) {
+            return false;
+        }
+
+        // The whole key, not just its start: a key cut short while copying
+        // is still valid base64 and still names its type, so it was saved,
+        // written to authorized_keys — and never logged anyone in (QA,
+        // 2026-11-19). Each type has a fixed number of fields (RFC 4253
+        // §6.6, RFC 5656 §3.1, RFC 8709 §4, OpenSSH PROTOCOL.u2f).
+        $expected = match ($parts[0]) {
+            'ssh-ed25519' => 2,
+            'ssh-rsa' => 3,
+            'ssh-dss' => 5,
+            'sk-ssh-ed25519@openssh.com' => 3,
+            'sk-ecdsa-sha2-nistp256@openssh.com' => 4,
+            default => 3, // ecdsa-sha2-*: type, curve, point
+        };
+
+        if (count($fields) !== $expected) {
+            return false;
+        }
+
+        // An Ed25519 public key is exactly 32 bytes.
+        if (in_array($parts[0], ['ssh-ed25519', 'sk-ssh-ed25519@openssh.com'], true)) {
+            return strlen($fields[1]) === 32;
+        }
+
+        return true;
+    }
+
+    /**
+     * The length-prefixed fields of a key blob, or null when the blob does
+     * not split into whole fields — the last one cut short.
+     *
+     * @return array<int, string>|null
+     */
+    private function blobFields(string $blob): ?array
+    {
+        $fields = [];
+        $offset = 0;
+        $size = strlen($blob);
+
+        while ($offset < $size) {
+            if ($size - $offset < 4) {
+                return null;
+            }
+
+            $length = unpack('N', substr($blob, $offset, 4))[1];
+
+            if ($length > $size - $offset - 4) {
+                return null;
+            }
+
+            $fields[] = substr($blob, $offset + 4, $length);
+            $offset += 4 + $length;
+        }
+
+        return $fields;
     }
 
     /** RSA keys shorter than this are refused: OpenSSH itself refuses below 1024 and calls under 2048 weak. */

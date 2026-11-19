@@ -187,6 +187,28 @@ describe('every paged list', function () {
             ->and($sql)->not->toContain('password');
     });
 
+    /*
+     * QA 2026-11-19: `%` and `_` are LIKE wildcards, so `shop_db` also found
+     * `shopxdb`, `%` found every row and `50%` found `sale50off`.
+     */
+    it('matches what was typed, wildcard characters included', function () {
+        foreach (['shopxdb', 'shop_db', 'sale50off', 'sale50%off', 'bang!db', 'bangxdb'] as $name) {
+            Database::factory()->create(['name' => $name, 'engine' => 'mariadb']);
+        }
+        grantPermission($this->user, 'database');
+
+        $names = fn (string $search) => collect($this->getJson('/api/databases?search='.rawurlencode($search))
+            ->assertOk()->json('databases'))->pluck('name')->sort()->values()->all();
+
+        expect($names('shop_db'))->toBe(['shop_db'])
+            ->and($names('_'))->toBe(['shop_db'])
+            ->and($names('50%'))->toBe(['sale50%off'])
+            ->and($names('%'))->toBe(['sale50%off'])
+            ->and($names('!'))->toBe(['bang!db'])
+            ->and($names('!d'))->toBe(['bang!db'])
+            ->and($names('SHOP'))->toBe(['shop_db', 'shopxdb']);
+    });
+
     it('compiles portable case-insensitive search for PostgreSQL', function () {
         $connection = Database::query()->getConnection();
         $original = $connection->getQueryGrammar();

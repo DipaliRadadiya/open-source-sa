@@ -411,7 +411,11 @@ class LogManager
     private function readPrivileged(array $source, int $lines, ?string $filter): ?array
     {
         $lines = max(1, min($lines, self::MAX_LINES));
-        $window = $filter !== null && $filter !== '' ? self::PRIVILEGED_WINDOW : $lines;
+        // One line more than asked for: it is the only way to know there was
+        // more above. Reading exactly $lines made `truncated` always false
+        // here, while the sources the panel reads itself said true (QA,
+        // 2026-11-19).
+        $window = $filter !== null && $filter !== '' ? self::PRIVILEGED_WINDOW : $lines + 1;
 
         $command = ($source['kind'] ?? 'file') === 'journal'
             ? $this->journalCommand($source, $window)

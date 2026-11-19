@@ -3,12 +3,13 @@
 namespace App\Support;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Grammars\PostgresGrammar;
 
 /**
  * Portable case-insensitive free-text search for an Eloquent list query.
  *
- * Laravel compiles whereLike(caseSensitive: false) to the native equivalent
- * for each supported database: LIKE on SQLite/MySQL and ILIKE on PostgreSQL.
+ * Case-insensitive the native way for each supported database: LIKE on
+ * SQLite/MySQL and ILIKE on PostgreSQL. The search text is matched literally.
  * Columns are declared by the caller, never accepted from request input.
  */
 class ListSearch
@@ -24,17 +25,19 @@ class ListSearch
             return $query;
         }
 
-        $like = '%'.$search.'%';
+        // What was typed is matched as text: `%` and `_` are LIKE wildcards,
+        // so a search for `shop_db` also found `shopxdb` and `%` found every
+        // row (QA, 2026-11-19). `!` is the escape character because SQLite has
+        // none by default and a backslash means different things in MySQL
+        // and PostgreSQL string literals.
+        $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
 
-        return $query->where(function (Builder $query) use ($columns, $like) {
-            foreach (array_values($columns) as $index => $column) {
-                if ($index === 0) {
-                    $query->whereLike($column, $like);
+        $grammar = $query->getQuery()->getGrammar();
+        $operator = $grammar instanceof PostgresGrammar ? 'ilike' : 'like';
 
-                    continue;
-                }
-
-                $query->orWhereLike($column, $like);
+        return $query->where(function (Builder $query) use ($columns, $like, $grammar, $operator) {
+            foreach (array_values($columns) as $column) {
+                $query->orWhereRaw($grammar->wrap($column)." {$operator} ? escape '!'", [$like]);
             }
         });
     }

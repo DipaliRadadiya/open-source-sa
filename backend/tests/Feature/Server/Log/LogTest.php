@@ -362,6 +362,38 @@ describe('sources the panel cannot open itself', function () {
             && in_array('/var/log/letsencrypt/letsencrypt.log', $p->command, true));
     });
 
+    /*
+     * QA 2026-11-19: `tail -n` asked for exactly the lines shown, so there was
+     * never one more to prove there was log above them — a 1077-line file read
+     * five lines at a time said `truncated: false`. The fake honours `-n` the
+     * way tail does, or this would measure nothing.
+     */
+    it('says when there are older lines above the ones it read', function () {
+        $file = collect(range(1, 12))->map(fn ($n) => "certbot: line {$n}")->all();
+
+        Process::fake(function ($process) use ($file) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match ($args[0] ?? '') {
+                'stat' => Process::result(output: "4096 1755264000\n"),
+                'tail' => Process::result(output: implode("\n", array_slice($file, -(int) $args[2]))."\n"),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        $read = fn (int $lines) => $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson("/api/logs/letsencrypt?lines={$lines}")
+            ->assertOk();
+
+        $read(5)->assertJsonPath('log.truncated', true)
+            ->assertJsonPath('log.lines', array_slice($file, -5));
+
+        // The whole file, and exactly the whole file: nothing above.
+        $read(12)->assertJsonPath('log.truncated', false)
+            ->assertJsonPath('log.lines', $file);
+        $read(50)->assertJsonPath('log.truncated', false);
+    });
+
     it('reads a php-fpm log the panel account cannot open through sudo', function () {
         if (posix_geteuid() === 0) {
             $this->markTestSkipped('root can read a 0600 file, so there is nothing to prove.');

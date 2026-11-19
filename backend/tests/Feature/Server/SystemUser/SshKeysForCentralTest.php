@@ -18,7 +18,7 @@ use Illuminate\Testing\TestResponse;
 
 function centralKey(string $tail = 'Xyz'): string
 {
-    return 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QcentrBASE64keyForTestingPurposes'.$tail.' central@laptop';
+    return 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QcentrBASE64keyForTestingPurposesA'.$tail.' central@laptop';
 }
 
 /**

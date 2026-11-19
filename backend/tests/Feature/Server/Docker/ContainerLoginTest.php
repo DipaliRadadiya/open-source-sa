@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Process;
  * endpoint grows the app owner's state and the exact lines to type, and gains
  * POST (turn it on) and DELETE (turn it off).
  */
-const LOGIN_TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXyz deploy@host';
+const LOGIN_TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesAXyz deploy@host';
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
