@@ -54,7 +54,7 @@ export default async function AdminLayout({ children }) {
               <AdminHeader breadcrumb={<AdminBreadcrumb />} />
             </div>
             <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col">
-              <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
+              <div className="@container/page mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                 {children}
               </div>
             </main>

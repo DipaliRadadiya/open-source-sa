@@ -68,8 +68,8 @@ test("table: Allow/Block always shown, state in its own column, port and protoco
   assert.doesNotMatch(read("components/firewall/rules-cards.jsx"), /anyDeny/);
   const order = ["header: t(\"rules.name\")", "id: \"action\"", "header: t(\"rules.port\")", "id: \"source\"", "id: \"state\"", "id: \"actions\""].map((k) => rules.indexOf(k));
   assert.ok(order.every((i, n) => i > 0 && (n === 0 || i > order[n - 1])), String(order));
-  // A protected row keeps the delete button's space, so the pencils line up.
-  assert.match(rules, /className=\{locked \? "invisible" : undefined\}/);
+  // A protected row's menu keeps Delete, disabled with the reason.
+  assert.match(rules, /deletable=\{!locked\}/);
   assert.match(rules, /const showFilters = total > 10 \|\| hasFilters;/);
   assert.match(read("app/(app)/firewall/page.jsx"), /total=\{meta\?\.total \?\? rules\.length\}/);
 });

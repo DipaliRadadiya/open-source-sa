@@ -35,7 +35,7 @@ export function CronjobName({ job }) {
       {/* Paused gets a badge; a switch position alone is easy to miss. */}
       {!job.active ? (
         // Amber like a paused application: nothing is broken, but it must be seen.
-        <Badge variant="warning" className="font-normal">
+        <Badge variant="warning" className="h-auto font-normal whitespace-normal">
           {t("paused")}
         </Badge>
       ) : null}
@@ -51,8 +51,8 @@ export function CronjobSchedule({ job, presets = [] }) {
   // Plain language when nameable; otherwise the expression alone, not "Custom".
   return label ? (
     <div className="flex flex-col gap-0.5">
-      {/* A sentence wraps (TableCell defaults to nowrap); short preset names do not. */}
-      <span className={preset ? "whitespace-nowrap" : "max-w-44 whitespace-normal"}>{label}</span>
+      {/* Wraps (TableCell defaults to nowrap): long presets in Russian kept the table off a laptop. */}
+      <span className="max-w-44 whitespace-normal">{label}</span>
       <span className="font-mono text-xs text-muted-foreground">{job.expression}</span>
     </div>
   ) : (
@@ -75,8 +75,8 @@ export function CronjobNextRun({ job }) {
   return (
     <div className="flex flex-col gap-0.5">
       {/* Server and client render a moment apart ("in 19s" vs "in 18s"); expected. */}
-      <span className="whitespace-nowrap" suppressHydrationWarning>{human}</span>
-      <span className="whitespace-nowrap text-xs text-muted-foreground">{at}</span>
+      <span className="whitespace-normal" suppressHydrationWarning>{human}</span>
+      <span className="text-xs whitespace-normal text-muted-foreground">{at}</span>
     </div>
   );
 }
@@ -123,13 +123,13 @@ function RunAsCell({ row }) {
 
 function CommandCell({ row, table }) {
   return (
-    <div className="max-w-40 space-y-1">
+    <div className="max-w-34 space-y-1">
     <Tooltip>
       <TooltipTrigger asChild>
         {/* tabIndex: a truncated value must be reachable without a mouse. */}
         <span
           tabIndex={0}
-          className="block max-w-40 truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="block max-w-34 truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           {row.original.command}
         </span>
@@ -207,8 +207,8 @@ export function CronjobsTable({
 
   // Cards until the table fits. Seven columns need ~950px, so xl did. Last run makes eight, whose narrowest is
   // 1097px in Russian (981 en): more than xl's 958px beside the sidebar, so the switch reads the list's own width.
-  const cardsClass = historySupported ? "@min-[69rem]:hidden" : "xl:hidden";
-  const tableClass = historySupported ? "hidden @min-[69rem]:block" : "hidden xl:block";
+  const cardsClass = "@min-[900px]/page:hidden";
+  const tableClass = "hidden @min-[900px]/page:block";
 
   return (
     <div className="@container">

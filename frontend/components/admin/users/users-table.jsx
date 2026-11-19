@@ -29,7 +29,7 @@ function NameCell({ row, table }) {
       <Avatar className="size-7">
         <AvatarFallback className="text-xs">{initials(row.original.name)}</AvatarFallback>
       </Avatar>
-      <span className="font-medium">{row.original.name}</span>
+      <span className="min-w-0 font-medium whitespace-normal">{row.original.name}</span>
       {row.original.id === table.options.meta.currentUserId ? (
         <Badge variant="secondary" className="font-normal">
           {t("you")}
@@ -62,9 +62,9 @@ function RolesCell({ row }) {
   const shown = userRoles.slice(0, MAX_ROLE_BADGES);
   const extra = userRoles.length - shown.length;
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex max-w-44 flex-wrap items-center gap-1 whitespace-normal">
       {shown.map((r) => (
-        <Badge key={r.id} variant="outline" className="font-normal">
+        <Badge key={r.id} variant="outline" className="h-auto font-normal whitespace-normal">
           {roleName(r, tr)}
         </Badge>
       ))}
@@ -79,7 +79,7 @@ function RolesCell({ row }) {
 
 function JoinedCell({ row }) {
   return (
-    <span className="whitespace-nowrap text-muted-foreground">
+    <span className="whitespace-normal text-muted-foreground">
       {row.original.created_at_human}
     </span>
   );
@@ -90,7 +90,7 @@ function LastSignInCell({ row }) {
   const user = row.original;
   if (!user.last_login_at_human) return <span className="text-muted-foreground">{t("neverSignedIn")}</span>;
   return (
-    <span className="whitespace-nowrap">
+    <span className="whitespace-normal">
       {user.last_login_at_human}
       {user.last_login_ip ? <span className="block font-mono text-xs text-muted-foreground">{user.last_login_ip}</span> : null}
     </span>
@@ -174,14 +174,14 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
         isPending && "pointer-events-none opacity-60",
       )}
     >
-      <div className="lg:hidden">
+      <div className="@min-[900px]/page:hidden">
         <UsersCards
           users={data}
           roles={roles}
           currentUserId={currentUserId}
         />
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden @min-[900px]/page:block">
         <DataTable bare roomy columns={columns} data={data} meta={{ roles, rolesFailed, currentUserId }} />
       </div>
     </div>

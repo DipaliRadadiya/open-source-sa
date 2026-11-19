@@ -212,7 +212,7 @@ export function DomainsSection({
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-base font-semibold">
+        <CardTitle>
           {t("sectionTitle")}
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">

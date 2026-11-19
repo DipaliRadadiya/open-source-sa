@@ -9,7 +9,7 @@ test("backup History and Restores are tables from 900px, like Overview", () => {
   for (const f of ["components/backups/backups-history.jsx", "components/backups/restores-list.jsx"]) {
     const s = read(f);
     assert.match(s, /<ListCard from="c900"/);
-    assert.match(s, /hidden @min-\[900px\]:block/);
+    assert.match(s, /hidden @min-\[900px\]\/page:block/);
   }
 });
 

@@ -85,7 +85,7 @@ test("CJ-6 + preview + badge + hint", () => {
   assert.match(f, /data-error=\{selectInvalid\}/);
   assert.match(f, /<FormControl aria-invalid=\{selectInvalid\}>/);
   assert.match(f, /showRawField \? <SchedulePreview expression=\{expression\} timezone=\{timezone\} \/> : null/);
-  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<Badge variant="warning" className="font-normal">\s*\{t\("paused"\)\}/);
+  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<Badge variant="warning" className="h-auto font-normal whitespace-normal">\s*\{t\("paused"\)\}/);
   assert.match(read("components/cron-jobs/command-field.jsx"), /t\.rich\("form\.commandHint"/);
 });
 
@@ -96,12 +96,11 @@ test("CJ-7: a per_page the list refuses shows a size on offer, not a blank box",
   assert.match(src, /PER_PAGE_OPTIONS\.includes\(Number\(fromUrl\)\) \? fromUrl : served/);
 });
 
-test("layout: table only from xl, where its seven columns fit", () => {
+test("layout: table from 900px of content, like every list (Krishna, 19 Nov)", () => {
   const s = read("components/cron-jobs/cronjobs-table.jsx");
-  // Without run history (seven columns) the switch is still xl.
-  assert.match(s, /const cardsClass = historySupported \? "@min-\[69rem\]:hidden" : "xl:hidden";/);
-  assert.match(s, /const tableClass = historySupported \? "hidden @min-\[69rem\]:block" : "hidden xl:block";/);
-  assert.match(s, /max-w-40 truncate/);
+  assert.match(s, /const cardsClass = "@min-\[900px\]\/page:hidden";/);
+  assert.match(s, /const tableClass = "hidden @min-\[900px\]\/page:block";/);
+  assert.match(s, /max-w-34 truncate/);
 });
 
 test("CJ-B2/B3 guard: the form refuses what Linux cron cannot read", async () => {
@@ -115,7 +114,7 @@ test("CJ-B2/B3 guard: the form refuses what Linux cron cannot read", async () =>
 });
 
 test("next run countdown does not trip a hydration error", () => {
-  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<span className="whitespace-nowrap" suppressHydrationWarning>\{human\}<\/span>/);
+  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<span className="whitespace-normal" suppressHydrationWarning>\{human\}<\/span>/);
 });
 
 test("round 2: hourly wording shows example times, sentences wrap, rows keyed by id, last row leaves to the previous page", () => {

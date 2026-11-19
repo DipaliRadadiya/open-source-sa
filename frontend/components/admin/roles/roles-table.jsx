@@ -40,7 +40,7 @@ function NameCell({ row }) {
 function DescriptionCell({ row }) {
   const t = useTranslations("roles");
   return (
-    <span className="line-clamp-1 max-w-sm text-muted-foreground">
+    <span className="line-clamp-2 block max-w-64 whitespace-normal text-muted-foreground">
       {roleDescription(row.original, t) || "—"}
     </span>
   );
@@ -49,7 +49,7 @@ function DescriptionCell({ row }) {
 function PermissionsCell({ row }) {
   const t = useTranslations("roles");
   return (
-    <Badge variant="secondary">
+    <Badge variant="secondary" className="h-auto max-w-40 whitespace-normal">
       {t("accessCount", accessCounts(row.original))}
     </Badge>
   );
@@ -143,11 +143,11 @@ function RolesList({ data, meta }) {
         </ListCard>
       ) : (
         // Below lg the rows are cards of their own, so the list drops its frame there.
-        <ListCard from="lg" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
-          <div className="lg:hidden">
+        <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
+          <div className="@min-[900px]/page:hidden">
             <RolesCards roles={filtered} />
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden @min-[900px]/page:block">
             <DataTable bare roomy columns={columns} data={filtered} />
           </div>
         </ListCard>

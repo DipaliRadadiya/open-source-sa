@@ -523,7 +523,6 @@
     },
     "form": {
       "createTitle": "Nouveau rôle",
-      "createSubtitle": "Créez un rôle d'autorisation et choisissez ce à quoi il peut accéder.",
       "editTitle": "Modifier le rôle",
       "editSubtitle": "Mettez à jour les détails et les autorisations de ce rôle.",
       "details": "Détails",
@@ -5210,7 +5209,6 @@
     },
     "security": {
       "pageTitle": "Protection par mot de passe",
-      "pageSubtitle": "Exigez un nom d'utilisateur et un mot de passe avant que quiconque puisse consulter cette application.",
       "loadFailed": "Impossible de charger ces données.",
       "provisioning": "Cette application est encore en cours de configuration. La protection par mot de passe sera disponible une fois opérationnelle.",
       "statusProtected": "Protégé",
@@ -6767,7 +6765,7 @@
     }
   },
   "doctor": {
-    "title": "État du système",
+    "title": "Santé du système",
     "recheck": "Vérifier à nouveau",
     "loadFailed": "Impossible d'exécuter les vérifications. Réessayez dans un instant.",
     "statusPass": "Réussi",
@@ -6787,7 +6785,7 @@
   "errorLogs": {
     "rawTitle": "Réponse brute",
     "rawCopy": "Copier la réponse brute",
-    "title": "Journal d'erreurs du panneau",
+    "title": "Journal d'erreurs",
     "summary": {
       "healthy": "Aucune erreur inattendue du panneau.",
       "healthyHint": "Le panneau n'a pas rencontré de défaillance interne sur la période enregistrée.",
@@ -7960,7 +7958,7 @@
     }
   },
   "central": {
-    "title": "Gestion centralisée",
+    "title": "Central",
     "pageSubtitle": "Laissez un panel central gérer ce serveur pour vous.",
     "disconnected": "Ce serveur n'est plus connecté à Central.",
     "cancel": "Annuler",
@@ -8107,7 +8105,7 @@
       "noPermission": "Votre rôle n'inclut pas l'accès en gestion aux applications. Demandez à un administrateur de l'accorder."
     },
     "registries": {
-      "title": "Identifiants de registre",
+      "title": "Registres Docker",
       "add": "Ajouter un registre",
       "save": "Enregistrer",
       "edit": "Modifier",

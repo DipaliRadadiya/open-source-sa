@@ -72,10 +72,10 @@ export function ArchivedBackups({ backups, canManage, hasFilters, pager }) {
         // Same container name as History, so the table folds its Size column the same way.
         <div className="@container/history">
           <ListCard from="c900" toolbar={toolbar} footer={pager}>
-            <div className="@min-[900px]:hidden">
+            <div className="@min-[900px]/page:hidden">
               <BackupsCards {...listProps} />
             </div>
-            <div className="hidden @min-[900px]:block">
+            <div className="hidden @min-[900px]/page:block">
               <BackupsHistoryTable {...listProps} bare />
             </div>
           </ListCard>

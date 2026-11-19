@@ -184,7 +184,7 @@ export function CronjobsPanel({
         </ListCard>
       ) : (
         // Below xl the rows are cards of their own, so the list drops its frame there.
-        <ListCard from="xl" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
+        <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           <CronjobsTable
             data={cronjobs}
             canViewLogs={canViewLogs}

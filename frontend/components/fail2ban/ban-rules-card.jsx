@@ -91,7 +91,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Card className="@container/ban-rules min-w-0 gap-0 py-0">
         <CardHeader className="border-b px-5 py-4">
-          <CardTitle className="text-base font-semibold">{t("settings.title")}</CardTitle>
+          <CardTitle>{t("settings.title")}</CardTitle>
           <CardDescription>{t("settings.description")}</CardDescription>
         </CardHeader>
 

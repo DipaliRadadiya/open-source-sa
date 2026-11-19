@@ -1,9 +1,17 @@
-import { Lock, Trash2 } from "lucide-react";
+import { Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { protectedReasonFor } from "@/lib/firewall/protected-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
@@ -140,5 +148,39 @@ export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, 
         <Trash2 className="size-4" />
       </Button>
     </ReasonTooltip>
+  );
+}
+
+/**
+ * The row's ⋯ menu, as on every other list: Edit, then Delete. Delete stays in the menu on a
+ * protected rule, disabled with the reason, so the menu reads the same on every row.
+ */
+export function RuleRowMenu({ rule, enabled, canManage, pending, onDelete, onRename, deletable = true, labels }) {
+  const deleteReason = protectedReasonFor({ rule, enabled, canManage, labels });
+  const noDelete = !deletable || !canManage || Boolean(rule.protected) || pending;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="size-8" disabled={pending}>
+          <MoreHorizontal className="size-4" />
+          <span className="sr-only">{labels.actions}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <MenuItemHint hint={canManage ? null : labels.noPermission}>
+          <DropdownMenuItem disabled={!canManage} onSelect={() => onRename(rule)}>
+            <Pencil className="size-4" />
+            {labels.rename}
+          </DropdownMenuItem>
+        </MenuItemHint>
+        <DropdownMenuSeparator />
+        <MenuItemHint hint={noDelete ? (deleteReason ?? (deletable ? null : labels.protectedReason)) : null}>
+          <DropdownMenuItem variant="destructive" disabled={noDelete} onSelect={() => onDelete(rule)}>
+            <Trash2 className="size-4" />
+            {labels.delete}
+          </DropdownMenuItem>
+        </MenuItemHint>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -169,6 +169,10 @@ function RowActionsCell({ row, table }) {
       phpmyadminSites={table.options.meta.phpmyadminSites}
       adminerSites={table.options.meta.adminerSites}
       showManage={false}
+      // The ⋯ menu, as on every list: the client buttons made the row ~1100px, so the
+      // table only fitted from 1440 (Krishna, 19 Nov: tables on a laptop).
+      menu
+      className="flex justify-end"
     />
   );
 }
@@ -265,7 +269,7 @@ function DatabasesList({
             enableSorting: false,
             header: () => <span className="sr-only">{t("actions")}</span>,
       // Same placement as other lists: last column, fixed width, right-aligned.
-            meta: { className: "w-40 text-right" },
+            meta: { className: "w-12 text-right" },
             cell: RowActionsCell,
           },
         ]
@@ -347,10 +351,10 @@ function DatabasesList({
         </ListCard>
       ) : (
         // Below 1440 the rows are cards of their own, so the list drops its frame there.
-        <ListCard from="wide" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
+        <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           {/* 1440 is measured: seven columns plus the sidebar first fit there.
               The cards carry every field, so using them wider loses nothing. */}
-          <div className="min-[1440px]:hidden">
+          <div className="@min-[900px]/page:hidden">
             <DatabasesCards
               databases={data}
               canManage={canManage}
@@ -366,7 +370,7 @@ function DatabasesList({
               onAttach={canManage ? setAttaching : null}
             />
           </div>
-          <div className="hidden min-[1440px]:block">
+          <div className="hidden @min-[900px]/page:block">
             <DataTable
               bare
               roomy

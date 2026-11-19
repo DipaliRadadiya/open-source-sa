@@ -523,7 +523,6 @@
     },
     "form": {
       "createTitle": "Novo papel",
-      "createSubtitle": "Crie um papel de permissão e escolha o que ele pode acessar.",
       "editTitle": "Editar papel",
       "editSubtitle": "Atualize os detalhes e permissões deste papel.",
       "details": "Detalhes",
@@ -5210,7 +5209,6 @@
     },
     "security": {
       "pageTitle": "Proteção por senha",
-      "pageSubtitle": "Exija um nome de usuário e senha antes que alguém possa visualizar esta aplicação.",
       "loadFailed": "Não foi possível carregar isso.",
       "provisioning": "Esta aplicação ainda está sendo configurada. A proteção por senha estará disponível quando estiver em execução.",
       "statusProtected": "Protegido",
@@ -6787,7 +6785,7 @@
   "errorLogs": {
     "rawTitle": "Resposta bruta",
     "rawCopy": "Copiar resposta bruta",
-    "title": "Log de erros do painel",
+    "title": "Log de erros",
     "summary": {
       "healthy": "Sem erros inesperados do painel.",
       "healthyHint": "O painel não teve falha interna no período registrado.",
@@ -7960,7 +7958,7 @@
     }
   },
   "central": {
-    "title": "Gerenciamento central",
+    "title": "Central",
     "pageSubtitle": "Permita que um painel central gerencie este servidor por você.",
     "disconnected": "Este servidor não está mais conectado ao Central.",
     "cancel": "Cancelar",
@@ -8107,7 +8105,7 @@
       "noPermission": "Seu papel não inclui acesso de Gerência em Aplicações. Peça a um administrador para conceder."
     },
     "registries": {
-      "title": "Credenciais de registo",
+      "title": "Registos Docker",
       "add": "Adicionar registo",
       "save": "Salvar",
       "edit": "Editar",

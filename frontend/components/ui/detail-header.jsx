@@ -18,7 +18,7 @@ export function DetailHeader({ icon, title, mono = false, badges = null, facts =
           </span>
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className={cn("min-w-0 text-xl font-semibold tracking-tight break-words", mono && "font-mono")}>
+              <h1 className={cn("min-w-0 text-lg leading-tight font-semibold tracking-tight break-words", mono && "font-mono")}>
                 {title}
               </h1>
               {badges}

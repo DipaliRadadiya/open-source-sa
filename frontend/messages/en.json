@@ -522,8 +522,7 @@
       "systemHint": "System roles are protected and can't be edited or deleted."
     },
     "form": {
-      "createTitle": "New role",
-      "createSubtitle": "Create a permission role and choose what it can access.",
+      "createTitle": "New Role",
       "editTitle": "Edit role",
       "editSubtitle": "Update this role's details and permissions.",
       "details": "Details",
@@ -3401,7 +3400,7 @@
     "manage": "Manage",
     "monitor": {
       "link": "Health",
-      "title": "Database health",
+      "title": "Database Health",
       "crumb": "Health",
       "running": "Running",
       "connections": "Connections",
@@ -3914,7 +3913,7 @@
     "loadFailed": "We could not load applications.",
     "noPermission": "Your role does not include Application with Manage access. Ask an administrator to grant it.",
     "create": "Create application",
-    "createTitle": "Create application",
+    "createTitle": "Create Application",
     "chooseType": "Choose an application type",
     "unavailable": "Unavailable",
     "requires": "Requires {runtime}",
@@ -5210,7 +5209,6 @@
     },
     "security": {
       "pageTitle": "Password Protection",
-      "pageSubtitle": "Require a username and password before anyone can view this application.",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This application is still being set up. Password protection will be available once it's running.",
       "statusProtected": "Protected",
@@ -6353,7 +6351,7 @@
       "pulling": "Pulling and redeploying…"
     },
     "compose": {
-      "title": "Compose file",
+      "title": "Compose File",
       "loadFailed": "The compose file could not be read.",
       "safety": "Saving restarts the container, so the application is briefly down. If the new file won't start, the panel puts the previous one back.",
       "takeover": "Saving here means this file runs, and the settings on the Container page stop driving it. There is no way back except clearing this file.",
@@ -6698,7 +6696,7 @@
     }
   },
   "panelUpdate": {
-    "title": "Panel update",
+    "title": "Panel Update",
     "subtitle": "Hosted applications stay online; only this panel restarts.",
     "loadFailed": "We couldn't load the update status. Try again in a moment.",
     "versionValue": "v{version}",
@@ -6767,7 +6765,7 @@
     }
   },
   "doctor": {
-    "title": "System health",
+    "title": "System Health",
     "recheck": "Re-check",
     "loadFailed": "We couldn't run the health checks. Try again in a moment.",
     "statusPass": "Passed",
@@ -6787,7 +6785,7 @@
   "errorLogs": {
     "rawTitle": "Raw response",
     "rawCopy": "Copy raw response",
-    "title": "Panel Error Log",
+    "title": "Error Log",
     "summary": {
       "healthy": "No unexpected panel errors.",
       "healthyHint": "The panel has not hit an internal failure in the recorded period.",
@@ -7960,7 +7958,7 @@
     }
   },
   "central": {
-    "title": "Central management",
+    "title": "Central",
     "pageSubtitle": "Let a central panel manage this server on your behalf.",
     "disconnected": "This server is no longer connected to Central.",
     "cancel": "Cancel",
@@ -8107,7 +8105,7 @@
       "noPermission": "Your role does not include Application with Manage access. Ask an administrator to grant it."
     },
     "registries": {
-      "title": "Registry credentials",
+      "title": "Docker Registries",
       "add": "Add registry",
       "save": "Save",
       "edit": "Edit",

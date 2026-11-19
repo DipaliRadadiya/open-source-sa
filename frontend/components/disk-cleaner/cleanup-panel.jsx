@@ -125,7 +125,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
         {/* pb-0 so the footer band reaches the card edge. */}
         <Card className="gap-0 overflow-hidden pb-0">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold">{t("list.title")}</CardTitle>
+            <CardTitle>{t("list.title")}</CardTitle>
             {measuredAt ? (
               <CardDescription className="@max-sm/card-header:col-span-full">
                 <MeasuredAt at={measuredAt} />

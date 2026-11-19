@@ -174,7 +174,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
       >
         {/* Container query, not lg: 900px is where the widest locale's headers fit. */}
         <div className="@container/svc">
-        <div className="px-4 pb-4 @min-[900px]/svc:hidden">
+        <div className="px-4 pb-4 @min-[900px]/page:hidden">
           <ServicesCards
             data={running}
             phpVersions={phpVersions}
@@ -183,7 +183,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
             setRowBusy={setRowBusy}
           />
         </div>
-        <div className="hidden border-t @min-[900px]/svc:block">
+        <div className="hidden border-t @min-[900px]/page:block">
           <ServicesTable
             data={running}
             phpVersions={phpVersions}

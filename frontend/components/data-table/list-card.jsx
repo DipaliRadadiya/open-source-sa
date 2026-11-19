@@ -30,9 +30,9 @@ const FRAMES = {
   },
   // The Backups overview: its table fits from 900px of content.
   c900: {
-    root: "list-card-c900 space-y-4 @min-[900px]:space-y-0 @min-[900px]:overflow-hidden @min-[900px]:rounded-2xl @min-[900px]:border @min-[900px]:border-border/70 @min-[900px]:bg-card @min-[900px]:shadow-e1",
-    head: "@min-[900px]:border-b @min-[900px]:p-3",
-    foot: "@min-[900px]:border-t @min-[900px]:px-4 @min-[900px]:py-3",
+    root: "list-card-c900 space-y-4 @min-[900px]/page:space-y-0 @min-[900px]/page:overflow-hidden @min-[900px]/page:rounded-2xl @min-[900px]/page:border @min-[900px]/page:border-border/70 @min-[900px]/page:bg-card @min-[900px]/page:shadow-e1",
+    head: "@min-[900px]/page:border-b @min-[900px]/page:p-3",
+    foot: "@min-[900px]/page:border-t @min-[900px]/page:px-4 @min-[900px]/page:py-3",
   },
   wide: {
     root: "list-card-wide space-y-4 min-[1440px]:space-y-0 min-[1440px]:overflow-hidden min-[1440px]:rounded-2xl min-[1440px]:border min-[1440px]:border-border/70 min-[1440px]:bg-card min-[1440px]:shadow-e1",
@@ -56,5 +56,7 @@ export function ListCard({ toolbar = null, footer = null, from = "always", child
       {footer ? <div className={cn(frame.foot, "empty:hidden")}>{footer}</div> : null}
     </div>
   );
-  return from === "c1000" || from === "c900" ? <div className="@container">{card}</div> : card;
+  // c900 reads the page's content width (@container/page in the layouts), so every list switches at
+  // the same screen width (Krishna, 19 Nov: tables on a laptop, cards below).
+  return from === "c1000" ? <div className="@container">{card}</div> : card;
 }

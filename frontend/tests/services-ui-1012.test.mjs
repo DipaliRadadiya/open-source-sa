@@ -166,7 +166,7 @@ test("table density, failed-unit signal and responsive card boundary stay unchan
   assert.match(props.rowClassName({ status: "active", state: "installed" }), /py-2/);
   assert.match(props.rowClassName({ status: "failed", state: "installed" }), /bg-destructive/);
   assert.doesNotMatch(props.rowClassName({ status: "failed", state: "install_failed" }), /bg-destructive/);
-  assert.match(read("components/services/services-panel.jsx"), /@min-\[900px\]\/svc:block/);
+  assert.match(read("components/services/services-panel.jsx"), /@min-\[900px\]\/page:block/);
 });
 
 test("the top of the page is the shared status tiles, coloured only when something is wrong", () => {

@@ -52,7 +52,7 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
     // Rows reach the card edges, like the cleanup list above.
     <Card className="gap-0 overflow-hidden pb-0">
       <CardHeader className="items-center pb-4">
-        <CardTitle className="text-base font-semibold">{t("runs.title")}</CardTitle>
+        <CardTitle>{t("runs.title")}</CardTitle>
         <CardAction className="row-span-1 self-center">
           <RefreshButton />
         </CardAction>
@@ -61,7 +61,8 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
       {/* A table, not name-left/size-right rows: the API sends what each run cleaned
           and freed, which filled the empty middle (Krishna, 13 Oct). */}
       {/* Phone: one stacked block per run; five columns do not fit 390px. */}
-      <ul className="divide-y border-t md:hidden">
+      <div className="@container">
+      <ul className="divide-y border-t @min-[900px]/page:hidden">
         {runs.map((run) => {
           const at = parseApiWallClock(run.created_at);
           return (
@@ -84,7 +85,7 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
         })}
       </ul>
 
-      <div className="hidden border-t md:block">
+      <div className="hidden border-t @min-[900px]/page:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -130,6 +131,7 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
             })}
           </TableBody>
         </Table>
+      </div>
       </div>
 
       {meta && meta.last_page > 1 ? (

@@ -18,7 +18,7 @@ test("the summary counts a stopped service as stopped, not running", () => {
 test("table or cards is decided by the space the content has, not the screen", () => {
   const panel = read("components/services/services-panel.jsx");
   assert.match(panel, /@container\/svc/);
-  assert.match(panel, /@min-\[900px\]\/svc:hidden/);
+  assert.match(panel, /@min-\[900px\]\/page:hidden/);
   assert.doesNotMatch(panel, /className="hidden lg:block"/);
 });
 

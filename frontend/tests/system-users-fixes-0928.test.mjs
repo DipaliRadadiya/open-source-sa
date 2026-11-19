@@ -22,10 +22,10 @@ test("SU-1: every change is announced once the list shows it", () => {
   }
 });
 
-test("SU-2/12: the table fits at 1280 — cards below xl, home under the name, shell sized to its title", () => {
+test("SU-2/12: the table fits at 1280 — cards below 900px of content, home under the name, shell sized to its title", () => {
   const table = su("system-users-table.jsx");
-  assert.match(table, /className="xl:hidden"/);
-  assert.match(table, /className="hidden xl:block"/);
+  assert.match(table, /className="@min-\[900px\]\/page:hidden"/);
+  assert.match(table, /className="hidden @min-\[900px\]\/page:block"/);
   assert.doesNotMatch(table, /accessorKey: "home_path"/);
   assert.match(su("shell-select.jsx"), /h-8 w-auto max-w-72/);
 });

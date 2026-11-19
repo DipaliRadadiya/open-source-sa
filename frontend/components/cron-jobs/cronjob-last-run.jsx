@@ -49,7 +49,7 @@ export function CronjobLastRun({ job }) {
       </div>
     );
   }
-  if (!run) return <span className="text-muted-foreground">{t("notYet")}</span>;
+  if (!run) return <span className="whitespace-normal text-muted-foreground">{t("notYet")}</span>;
 
   // Server clock, read as the server wrote it, then said relative to now.
   const at = run.finished_at ?? run.started_at;
@@ -69,11 +69,11 @@ export function CronjobLastRun({ job }) {
       </div>
       {/* Two lines, not "when · took": one line made the column too wide for the table at 1280px. */}
       {when ? (
-        <HoverHint content={at}><span className="text-xs whitespace-nowrap text-muted-foreground" suppressHydrationWarning>
+        <HoverHint content={at}><span className="text-xs whitespace-normal text-muted-foreground" suppressHydrationWarning>
           {when}
         </span></HoverHint>
       ) : null}
-      {took ? <span className="-mt-1 text-xs whitespace-nowrap text-muted-foreground">{t("took", { duration: took })}</span> : null}
+      {took ? <span className="-mt-1 text-xs whitespace-normal text-muted-foreground">{t("took", { duration: took })}</span> : null}
     </div>
   );
 }

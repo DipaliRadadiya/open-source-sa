@@ -245,10 +245,10 @@ export function CoverageCard({
             // Container query, not viewport. The table from 900px (a 1280 laptop with the
             // sidebar open); the status is a badge beside the name, not a column.
             <ListCard from="c900" toolbar={toolbar} footer={footer}>
-              <div className="@min-[900px]/coverage:hidden">
+              <div className="@min-[900px]/page:hidden">
                 <CoverageCards {...listProps} />
               </div>
-              <div className="hidden @min-[900px]/coverage:block">
+              <div className="hidden @min-[900px]/page:block">
                 <CoverageTable {...listProps} bare />
               </div>
             </ListCard>

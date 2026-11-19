@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { SearchX, ShieldX, Trash2, Pencil, Shield } from "lucide-react";
+import { SearchX, ShieldX, Trash2, Shield } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import { unreachablePorts } from "@/lib/firewall/listening";
@@ -36,7 +36,7 @@ import {
   ActionBadge,
   PortProtocol,
   SourceText,
-  DeleteRuleButton,
+  RuleRowMenu,
   ProtectedTag,
   isLockedOn,
   protectedReasonFor,
@@ -94,31 +94,17 @@ function ActionsCell({ row, table }) {
   const locked = isLockedOn(rule, shownEnabled(rule));
 
   return (
-    <div className="flex items-center justify-end gap-1">
-      <ReasonTooltip reason={canManage ? null : labels.noPermission}>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!canManage || busy}
-          onClick={() => onRename(rule)}
-          aria-label={labels.rename}
-        >
-          <Pencil className="size-4" />
-        </Button>
-      </ReasonTooltip>
-
-      {/* Renaming a protected rule is allowed; delete never is. Its space is kept so the
-          pencils stay in one column. */}
-      <div className={locked ? "invisible" : undefined} aria-hidden={locked || undefined}>
-        <DeleteRuleButton
-          rule={rule}
-          enabled={enabled}
-          canManage={canManage}
-          pending={busy}
-          onDelete={onDelete}
-          labels={labels}
-        />
-      </div>
+    <div className="flex justify-end">
+      <RuleRowMenu
+        rule={rule}
+        enabled={enabled}
+        canManage={canManage}
+        pending={busy}
+        onDelete={onDelete}
+        onRename={onRename}
+        deletable={!locked}
+        labels={labels}
+      />
     </div>
   );
 }
@@ -189,6 +175,7 @@ export function RulesCard({
     protectedTag: t("rules.protectedTag"),
     toggle: t("rules.toggle"),
     rename: t("rules.edit"),
+    actions: t("rules.actions"),
   };
 
   async function onToggle(rule) {
@@ -330,7 +317,7 @@ export function RulesCard({
 
       <Card>
         <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base font-semibold">{t("rules.title")}</CardTitle>
+          <CardTitle>{t("rules.title")}</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <RefreshButton />
             <HistoryDialog everyone={historyForEveryone} variant="neutral" />
@@ -435,8 +422,8 @@ export function RulesCard({
               />
             )
           ) : (
-            <>
-              <div className="lg:hidden">
+            <div className="@container">
+              <div className="@min-[900px]/page:hidden">
                 <RulesCards
                   rules={rules}
                     enabled={enabled}
@@ -452,7 +439,7 @@ export function RulesCard({
 
               {/* Edge to edge at the foot of the card, as every table inside a card; up against
                   the header band, whose line it shares (the phone cards before it are hidden). */}
-              <div className="-mx-(--card-spacing) -mb-(--card-spacing) hidden max-h-[30rem] overflow-auto lg:-mt-(--card-spacing) lg:block">
+              <div className="-mx-(--card-spacing) -mb-(--card-spacing) hidden max-h-[30rem] overflow-auto @min-[900px]/page:-mt-(--card-spacing) @min-[900px]/page:block">
                 {/* The API owns sort order, so pages are never re-sorted locally. */}
                 <DataTable
                   bare
@@ -471,7 +458,7 @@ export function RulesCard({
                   }}
                 />
               </div>
-            </>
+            </div>
           )}
         </CardContent>
 

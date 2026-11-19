@@ -182,8 +182,8 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
         </ListCard>
       ) : (
         // Below lg the rows are cards of their own, so the list drops its frame there.
-        <ListCard from="lg" toolbar={toolbar}>
-          <div className="lg:hidden">
+        <ListCard from="c900" toolbar={toolbar}>
+          <div className="@min-[900px]/page:hidden">
             <WorkersCards
               data={workers}
               appId={appId}
@@ -195,7 +195,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
               onWorkerUpdated={applyWorker}
             />
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden @min-[900px]/page:block">
             <WorkersTable
               data={workers}
               appId={appId}

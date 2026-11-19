@@ -416,8 +416,8 @@ export function FilesPanel({
           }
         />
       ) : (
-        <>
-          <div className="lg:hidden">
+        <div className="@container">
+          <div className="@min-[900px]/page:hidden">
             <FilesCards
               appId={appId}
               data={filtered}
@@ -429,7 +429,7 @@ export function FilesPanel({
               folderSizes={folderSizes}
             />
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden @min-[900px]/page:block">
             <FilesTable
               appId={appId}
               path={path}
@@ -451,7 +451,7 @@ export function FilesPanel({
               {t("dropHint")}
             </p>
           ) : null}
-        </>
+        </div>
       )}
 
       <NewFolderDialog

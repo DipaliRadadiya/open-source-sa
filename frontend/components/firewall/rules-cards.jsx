@@ -1,5 +1,3 @@
-import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
@@ -8,7 +6,7 @@ import {
   ActionBadge,
   PortProtocol,
   SourceText,
-  DeleteRuleButton,
+  RuleRowMenu,
   ProtectedTag,
   isLockedOn,
   protectedReasonFor,
@@ -74,27 +72,16 @@ export function RulesCards({
                   </ReasonTooltip>
                 </>
               )}
-              <ReasonTooltip reason={canManage ? null : labels.noPermission}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={!canManage || pending.includes(rule.id)}
-                  onClick={() => onRename(rule)}
-                  aria-label={labels.rename}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-              </ReasonTooltip>
-              {isLockedOn(rule, shownEnabled(rule)) ? null : (
-                <DeleteRuleButton
-                  rule={rule}
-                  enabled={enabled}
-                  canManage={canManage}
-                  pending={pending.includes(rule.id)}
-                  onDelete={onDelete}
-                  labels={labels}
-                />
-              )}
+              <RuleRowMenu
+                rule={rule}
+                enabled={enabled}
+                canManage={canManage}
+                pending={pending.includes(rule.id)}
+                onDelete={onDelete}
+                onRename={onRename}
+                deletable={!isLockedOn(rule, shownEnabled(rule))}
+                labels={labels}
+              />
             </div>
           </div>
 

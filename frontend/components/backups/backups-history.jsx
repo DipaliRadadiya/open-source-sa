@@ -276,10 +276,10 @@ export function BackupsHistory({
         // Named, so the table can fold its Size column on this page only.
         <div className="@container/history">
         <ListCard from="c900" toolbar={toolbar} footer={pager}>
-          <div className="@min-[900px]:hidden">
+          <div className="@min-[900px]/page:hidden">
             <BackupsCards {...listProps} />
           </div>
-          <div className="hidden @min-[900px]:block">
+          <div className="hidden @min-[900px]/page:block">
             <BackupsHistoryTable {...listProps} bare />
           </div>
         </ListCard>

@@ -23,7 +23,7 @@ export function AppsCell({ user }) {
       >
         <Badge
           variant="outline"
-          className="cursor-pointer font-normal hover:bg-muted"
+          className="h-auto cursor-pointer font-normal whitespace-normal hover:bg-muted"
         >
           {t("appsCount", { count })}
         </Badge>

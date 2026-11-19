@@ -135,7 +135,7 @@ test("mobile bans show complete IPv6/jail names and keep labelled per-address un
   assert.match(source, /t\("banned.timeLeft"\)/);
   assert.match(source, /onClick=\{\(\) => onRequestUnban\(ban\)\}/);
   assert.match(source, /t\("banned.unban"\)/);
-  assert.match(card("banned-card"), /"lg:hidden"/);
+  assert.match(card("banned-card"), /"@min-\[900px\]\/page:hidden"/);
 });
 
 test("ban fields pair with a draft preview and retain bounds, custom presets and permanent handling", () => {

@@ -69,7 +69,7 @@ test("history is a paged table that names what each run cleaned", () => {
   assert.match(runs, /run\.categories \?\? \[\]\)\.map/);
   assert.match(runs, /formatBytes\(freed\[key\], format\)/);
   // Phone gets a stacked list: five columns cut "Freed" off at 390px.
-  assert.match(runs, /<ul className="divide-y border-t md:hidden">/);
+  assert.match(runs, /<ul className="divide-y border-t @min-\[900px\]\/page:hidden">/);
   assert.match(runs, /<DataTablePagination meta=\{meta\} \/>/);
   const page = read("app/(app)/disk-cleaner/page.jsx");
   assert.match(page, /getCleanerRuns\(runsPage, perPage\)/);

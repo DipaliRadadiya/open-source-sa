@@ -53,7 +53,7 @@ export function CardSaveFooter({
             onClick={submit ? undefined : onSave}
             disabled={Boolean(saveReason) || saving}
             // Long, localised labels wrap instead of widening the card.
-            className="h-auto max-w-full py-2 text-center whitespace-normal"
+            className="h-auto min-h-9 max-w-full py-1.5 text-center whitespace-normal"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {saving ? t("saving") : (saveLabel ?? t("save"))}

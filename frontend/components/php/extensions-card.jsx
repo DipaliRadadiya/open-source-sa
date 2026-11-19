@@ -107,7 +107,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
   return (
     <Card className="@container/ext">
       <CardHeader>
-        <CardTitle className="text-base font-semibold">{t("extensions.title")}</CardTitle>
+        <CardTitle>{t("extensions.title")}</CardTitle>
         <CardDescription>
           {t("extensions.summary", { on: onCount, total: changeable.length })}
         </CardDescription>

@@ -367,11 +367,11 @@ function ApplicationsList({
 
   return (
     // Below lg the rows are cards of their own, so the list drops its frame there.
-    <ListCard from="lg" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
+    <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
       {/* Cards below lg, the table from lg up. */}
-      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} gitProviders={gitProviders} siteTypes={siteTypes} /></div>
+      <div className="@min-[900px]/page:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} gitProviders={gitProviders} siteTypes={siteTypes} /></div>
       {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
-      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin, canRemoveSystemUser, canManageDocker, backupStanding }} fixedLayout bare roomy /></div>
+      <div className="hidden @min-[900px]/page:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin, canRemoveSystemUser, canManageDocker, backupStanding }} fixedLayout bare roomy /></div>
     </ListCard>
   );
 }

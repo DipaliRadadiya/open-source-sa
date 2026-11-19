@@ -126,7 +126,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
     <>
       <Card>
         <CardHeader className="grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
-          <CardTitle className="col-start-1 row-start-1 min-w-0 break-words text-base font-semibold">
+          <CardTitle className="col-start-1 row-start-1 min-w-0 break-words font-semibold">
             {t("jails.title")}
           </CardTitle>
           <button

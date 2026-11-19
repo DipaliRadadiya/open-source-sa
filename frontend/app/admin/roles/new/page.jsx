@@ -16,7 +16,7 @@ export default async function NewRolePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("form.createTitle")} subtitle={t("form.createSubtitle")} />
+      <PageHeader title={t("form.createTitle")} />
       <RoleForm mode="create" catalog={catalog} />
     </div>
   );

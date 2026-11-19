@@ -212,11 +212,11 @@ export function DockerResourcesPanel({
         {networks.length === 0 ? (
           <EmptyState icon={Network} title={t("networks.empty")} description={t("networks.emptyBody")} action={createButton("network")} />
         ) : (
-          <>
-            <div className="hidden md:block">
+          <div className="@container">
+            <div className="hidden @min-[900px]/page:block">
               <DataTable bare roomy columns={networkColumns} data={networks} rowId={(network) => network.name} />
             </div>
-            <CardList className="p-4 sm:grid-cols-1 md:hidden">
+            <CardList className="p-4 sm:grid-cols-1 @min-[900px]/page:hidden">
               {networks.map((network) => (
                 <CardListItem key={network.name}>
                   <div className="flex items-start justify-between gap-3">
@@ -231,7 +231,7 @@ export function DockerResourcesPanel({
                 </CardListItem>
               ))}
             </CardList>
-          </>
+          </div>
         )}
       </ListSection>
 
@@ -244,11 +244,11 @@ export function DockerResourcesPanel({
         {initialVolumes.length === 0 ? (
           <EmptyState icon={HardDrive} title={t("volumes.empty")} description={t("volumes.emptyBody")} action={createButton("volume")} />
         ) : (
-          <>
-            <div className="hidden md:block">
+          <div className="@container">
+            <div className="hidden @min-[900px]/page:block">
               <DataTable bare roomy columns={volumeColumns} data={initialVolumes} rowId={(volume) => volume.name} />
             </div>
-            <CardList className="p-4 sm:grid-cols-1 md:hidden">
+            <CardList className="p-4 sm:grid-cols-1 @min-[900px]/page:hidden">
               {initialVolumes.map((volume) => (
                 <CardListItem key={volume.name}>
                   <div className="flex items-start justify-between gap-3">
@@ -264,7 +264,7 @@ export function DockerResourcesPanel({
                 </CardListItem>
               ))}
             </CardList>
-          </>
+          </div>
         )}
       </ListSection>
 

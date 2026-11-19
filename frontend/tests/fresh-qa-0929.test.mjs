@@ -495,8 +495,8 @@ test("Backups overview: the table only shows when the widest locale fits, and it
   // 8 Oct (Krishna: a table, cards take too much room with many applications): the table
   // from 900px; status is a badge beside the name. Measured: French needed 1,097
   // with every column, because untruncatable names set the first column's width.
-  assert.match(card, /<ListCard from="c900" toolbar=\{toolbar\} footer=\{footer\}>\s*<div className="@min-\[900px\]\/coverage:hidden">\s*<CoverageCards/);
-  assert.match(card, /<div className="hidden @min-\[900px\]\/coverage:block">\s*<CoverageTable \{\.\.\.listProps\} bare \/>/);
+  assert.match(card, /<ListCard from="c900" toolbar=\{toolbar\} footer=\{footer\}>\s*<div className="@min-\[900px\]\/page:hidden">\s*<CoverageCards/);
+  assert.match(card, /<div className="hidden @min-\[900px\]\/page:block">\s*<CoverageTable \{\.\.\.listProps\} bare \/>/);
   // Filters inside the list's card, as on Applications (Krishna, 8 Oct: "looks conjuncted").
   assert.doesNotMatch(card, /ToggleGroup/);
   // "Manual only" once per row, in the Schedule column, not as a badge (Krishna, 8 Oct).

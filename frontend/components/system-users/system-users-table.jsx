@@ -92,7 +92,7 @@ function SelectCell({ row }) {
 // Masked until asked for.
 function PasswordCell({ row }) {
   return (
-    <div className="w-44">
+    <div className="w-40">
       <PasswordReveal password={row.original.password} />
     </div>
   );
@@ -106,7 +106,7 @@ function ShellCell({ row, table }) {
       user={row.original}
       shells={table.options.meta.shells}
       canManage={table.options.meta.canManage}
-      className="min-h-8 w-48 py-1 text-left leading-snug whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-2"
+      className="min-h-8 w-44 py-1 text-left leading-snug whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-2"
     />
   );
 }
@@ -200,8 +200,8 @@ function SystemUsersList({
     { accessorKey: "shell", header: () => <Head>{t("columns.shell")}</Head>, cell: ShellCell },
     // Tighter padding on the narrow control columns gives German and Russian the room
     // they need at 1280.
-    { id: "sudo", header: () => <Head>{t("sudo")}</Head>, meta: { className: "px-3" }, cell: SudoCell },
-    { id: "ssh", header: () => <Head>{t("ssh")}</Head>, meta: { className: "px-3" }, cell: SshCell },
+    { id: "sudo", header: () => <Head>{t("sudo")}</Head>, meta: { className: "px-2" }, cell: SudoCell },
+    { id: "ssh", header: () => <Head>{t("ssh")}</Head>, meta: { className: "px-2" }, cell: SshCell },
     { id: "applications", header: () => <Head>{t("columns.applications")}</Head>, cell: ApplicationsCell },
     // Hidden below 2xl, where nine columns push Actions off screen. Home stays:
     // adopted accounts can live anywhere.
@@ -327,10 +327,10 @@ function SystemUsersList({
         </ListCard>
       ) : (
         // Below xl the rows are cards of their own, so the list drops its frame there.
-        <ListCard from="xl" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
+        <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           {/* Cards below xl (1280), the table from there up, as in Cron Jobs: seven columns
               need ~950px, available at 1280 with the sidebar open. */}
-          <div className="xl:hidden">
+          <div className="@min-[900px]/page:hidden">
             <SystemUsersCards
               users={filtered}
               shells={shells}
@@ -344,7 +344,7 @@ function SystemUsersList({
               failures={failures}
             />
           </div>
-          <div className="hidden xl:block">
+          <div className="hidden @min-[900px]/page:block">
             <DataTable
               bare
               roomy

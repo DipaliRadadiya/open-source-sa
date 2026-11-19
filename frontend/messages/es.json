@@ -523,7 +523,6 @@
     },
     "form": {
       "createTitle": "Nuevo rol",
-      "createSubtitle": "Crea un rol de permisos y elige a qué puede acceder.",
       "editTitle": "Editar rol",
       "editSubtitle": "Actualiza los detalles y permisos de este rol.",
       "details": "Detalles",
@@ -5210,7 +5209,6 @@
     },
     "security": {
       "pageTitle": "Protección con contraseña",
-      "pageSubtitle": "Exige un usuario y una contraseña antes de que cualquiera pueda ver esta aplicación.",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Esta aplicación todavía se está configurando. La protección con contraseña estará disponible cuando esté en funcionamiento.",
       "statusProtected": "Protegido",
@@ -6787,7 +6785,7 @@
   "errorLogs": {
     "rawTitle": "Respuesta original",
     "rawCopy": "Copiar respuesta original",
-    "title": "Registro de errores del panel",
+    "title": "Registro de errores",
     "summary": {
       "healthy": "No hay errores inesperados del panel.",
       "healthyHint": "El panel no ha sufrido ningún fallo interno en el periodo registrado.",
@@ -7960,7 +7958,7 @@
     }
   },
   "central": {
-    "title": "Gestión central",
+    "title": "Central",
     "pageSubtitle": "Permite que un panel central gestione este servidor en tu nombre.",
     "disconnected": "Este servidor ya no está conectado a Central.",
     "cancel": "Cancelar",
@@ -8107,7 +8105,7 @@
       "noPermission": "Tu rol no incluye Aplicación con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "registries": {
-      "title": "Credenciales de registro",
+      "title": "Registros de Docker",
       "add": "Añadir registro",
       "save": "Guardar",
       "edit": "Editar",

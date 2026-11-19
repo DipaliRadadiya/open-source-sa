@@ -101,7 +101,7 @@ export function Section({
             </span>
           ) : null}
           <div className="min-w-0 flex-1">
-            <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold tracking-tight">
+            <h3 className="flex flex-wrap items-center gap-2 text-[15px] font-semibold tracking-tight">
               {title}
               {badge}
             </h3>

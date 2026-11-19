@@ -93,10 +93,10 @@ export function DatabaseCoverageCard({ coverage, options, canOpenDatabases = fal
       {watching ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
       {/* The applications list's switch point, so both turn into cards together. */}
       <ListCard from="c900" toolbar={heading}>
-        <div className="@min-[900px]:hidden">
+        <div className="@min-[900px]/page:hidden">
           <DatabaseCards {...listProps} />
         </div>
-        <div className="hidden @min-[900px]:block">
+        <div className="hidden @min-[900px]/page:block">
           <DatabaseTable {...listProps} />
         </div>
       </ListCard>

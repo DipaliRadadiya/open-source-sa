@@ -523,7 +523,6 @@
     },
     "form": {
       "createTitle": "新しいロール",
-      "createSubtitle": "権限ロールを作成し、アクセス範囲を設定します。",
       "editTitle": "ロールを編集",
       "editSubtitle": "このロールの詳細と権限を更新します。",
       "details": "詳細",
@@ -5210,7 +5209,6 @@
     },
     "security": {
       "pageTitle": "パスワード保護",
-      "pageSubtitle": "誰もがこのアプリケーションを閲覧する前に、ユーザー名とパスワードを要求します。",
       "loadFailed": "読み込みに失敗しました。",
       "provisioning": "このアプリケーションは現在セットアップ中です。アプリケーションが稼働してからパスワード保護が利用可能になります。",
       "statusProtected": "保護中",
@@ -6767,7 +6765,7 @@
     }
   },
   "doctor": {
-    "title": "システム状態",
+    "title": "システムヘルス",
     "recheck": "再確認",
     "loadFailed": "ヘルスチェックを実行できませんでした。少し経ってから再度お試しください。",
     "statusPass": "成功",
@@ -6787,7 +6785,7 @@
   "errorLogs": {
     "rawTitle": "生のレスポンス",
     "rawCopy": "生レスポンスをコピー",
-    "title": "パネルのエラーログ",
+    "title": "エラーログ",
     "summary": {
       "healthy": "パネルに予期しないエラーはありません。",
       "healthyHint": "記録期間中にパネル内部の障害は発生していません。",
@@ -7960,7 +7958,7 @@
     }
   },
   "central": {
-    "title": "Central管理",
+    "title": "セントラル",
     "pageSubtitle": "セントラルパネルからこのサーバーを管理できるようにします。",
     "disconnected": "このサーバーはCentralに接続されていません。",
     "cancel": "キャンセル",
@@ -8107,7 +8105,7 @@
       "noPermission": "あなたのロールには Application の Manage 権限がありません。管理者に依頼して付与してもらってください。"
     },
     "registries": {
-      "title": "レジストリ認証情報",
+      "title": "Docker レジストリ",
       "add": "レジストリを追加",
       "save": "保存",
       "edit": "編集",

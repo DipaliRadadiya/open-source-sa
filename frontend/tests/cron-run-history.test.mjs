@@ -73,7 +73,7 @@ test("with Last run, the table waits for room for eight columns (1097px in Russi
   const s = strip(read("components/cron-jobs/cronjobs-table.jsx"));
   assert.match(s, /return \(\s*<div className="@container">\s*<div className=\{cardsClass\}>/);
   assert.match(s, /<div className=\{tableClass\}>\s*<DataTable/);
-  assert.match(s, /historySupported \? "hidden @min-\[69rem\]:block"/);
+  assert.match(s, /const tableClass = "hidden @min-\[900px\]\/page:block";/);
 });
 
 test("every new string exists in all 8 languages", () => {

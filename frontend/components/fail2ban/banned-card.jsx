@@ -227,7 +227,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 space-y-0 xl:flex-row xl:items-center xl:justify-between">
-        <CardTitle className="min-w-0 text-base font-semibold">{t("banned.title")}</CardTitle>
+        <CardTitle className="min-w-0 font-semibold">{t("banned.title")}</CardTitle>
         <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
           <RefreshButton />
           {/* The log shows what triggered a ban. */}
@@ -291,10 +291,10 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
         ) : visible.length === 0 ? (
           <EmptyState compact icon={SearchX} subject={Ban} title={t("banned.noMatches")} />
         ) : (
-          <>
-            {/* Cards below lg, table from lg. The cards dim themselves here
+          <div className="@container">
+            {/* Cards below 900px of content, table from there (every list). The cards dim themselves here
                 since they are not a DataTable. */}
-            <div className={cn("lg:hidden", pending && "pointer-events-none opacity-60")}>
+            <div className={cn("@min-[900px]/page:hidden", pending && "pointer-events-none opacity-60")}>
               <BannedCards
                 data={visible}
                 canManage={canManage}
@@ -310,7 +310,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
             {/* Edge to edge, as every table inside a card; at the foot when there is no pager. */}
             <div
               className={cn(
-                "-mx-(--card-spacing) hidden max-h-[26rem] overflow-auto border-t lg:block",
+                "-mx-(--card-spacing) hidden max-h-[26rem] overflow-auto border-t @min-[900px]/page:block",
                 pageCount > 1 ? "border-b" : "-mb-(--card-spacing)",
               )}
             >
@@ -324,7 +324,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
                 meta={{ canManage, onRequestUnban: setUnbanConfirm, unbanning, t }}
               />
             </div>
-          </>
+          </div>
         )}
 
         {pageCount > 1 ? (

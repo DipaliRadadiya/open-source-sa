@@ -523,7 +523,6 @@
     },
     "form": {
       "createTitle": "Neue Rolle",
-      "createSubtitle": "Erstellen Sie eine Berechtigungsrolle und legen Sie den Zugriff fest.",
       "editTitle": "Rolle bearbeiten",
       "editSubtitle": "Details und Berechtigungen dieser Rolle aktualisieren.",
       "details": "Details",
@@ -5210,7 +5209,6 @@
     },
     "security": {
       "pageTitle": "Passwortschutz",
-      "pageSubtitle": "Verlangen Sie Benutzername und Passwort, bevor jemand diese Anwendung ansehen kann.",
       "loadFailed": "Das konnte nicht geladen werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Der Passwortschutz steht bereit, sobald sie läuft.",
       "statusProtected": "Geschützt",
@@ -6787,7 +6785,7 @@
   "errorLogs": {
     "rawTitle": "Rohantwort",
     "rawCopy": "Rohantwort kopieren",
-    "title": "Panel-Fehlerprotokoll",
+    "title": "Fehlerprotokoll",
     "summary": {
       "healthy": "Keine unerwarteten Panel-Fehler.",
       "healthyHint": "Das Panel hatte im erfassten Zeitraum keinen internen Fehler.",
@@ -7960,7 +7958,7 @@
     }
   },
   "central": {
-    "title": "Zentrale Verwaltung",
+    "title": "Central",
     "pageSubtitle": "Lassen Sie ein zentrales Panel diesen Server für Sie verwalten.",
     "disconnected": "Dieser Server ist nicht mehr mit Central verbunden.",
     "cancel": "Abbrechen",
@@ -8107,7 +8105,7 @@
       "noPermission": "Ihre Rolle enthält nicht „Anwendung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
     },
     "registries": {
-      "title": "Registry-Anmeldedaten",
+      "title": "Docker-Registries",
       "add": "Registry hinzufügen",
       "save": "Speichern",
       "edit": "Bearbeiten",

@@ -55,7 +55,7 @@ export default async function AdminUsersPage({ searchParams }) {
       <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
         {/* Below lg the rows are cards of their own, so the list drops its frame there. The
             pager is not gated on row count: it hides itself when the list is too short. */}
-        <ListCard from="lg" toolbar={<UsersToolbar />} footer={<DataTablePagination meta={meta} />}>
+        <ListCard from="c900" toolbar={<UsersToolbar />} footer={<DataTablePagination meta={meta} />}>
           <UsersTable
             data={usersWithRoles}
             roles={roleOptions}
