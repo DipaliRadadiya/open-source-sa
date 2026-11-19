@@ -166,21 +166,21 @@
 }
 
 .dark {
-    --background: oklch(0.155 0.007 135);
-    --card-head: oklch(0.209 0.0064 179);
-    --foreground: oklch(0.935 0.0045 135);
-    --card: oklch(0.188 0.0067 135);
-    --card-foreground: oklch(0.935 0.0045 135);
-    --popover: oklch(0.2 0.005 135);
-    --popover-foreground: oklch(0.95 0.005 135);
+    --background: oklch(0.15 0.003 250);
+    --card-head: oklch(0.209 0.0064 255);
+    --foreground: oklch(0.935 0.0045 255);
+    --card: oklch(0.188 0.0067 255);
+    --card-foreground: oklch(0.935 0.0045 255);
+    --popover: oklch(0.2 0.005 255);
+    --popover-foreground: oklch(0.95 0.005 255);
     --primary: oklch(0.922 0 0);
     --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.235 0.005 135);
-    --secondary-foreground: oklch(0.95 0.004 135);
-    --muted: oklch(0.235 0.005 135);
-    --muted-foreground: oklch(0.66 0.0065 165);
-    --accent: oklch(0.26 0.005 135);
-    --accent-foreground: oklch(0.97 0.002 135);
+    --secondary: oklch(0.235 0.005 255);
+    --secondary-foreground: oklch(0.95 0.004 255);
+    --muted: oklch(0.235 0.005 255);
+    --muted-foreground: oklch(0.66 0.0065 255);
+    --accent: oklch(0.26 0.005 255);
+    --accent-foreground: oklch(0.97 0.002 255);
     --destructive: oklch(0.704 0.191 22.216);
     --success: oklch(0.72 0.145 158);
     --warning: oklch(0.78 0.13 70);
@@ -189,10 +189,10 @@
     --destructive-soft: oklch(0.3 0.07 22);
     /* Same console surface in dark mode: it is already terminal-dark, only the
        border needs to sit against a dark card rather than a white one. */
-    --console: oklch(0.17 0.012 135);
-    --console-border: oklch(0.26 0.012 135);
-    --border: oklch(0.29 0.006 135);
-    --input: oklch(0.33 0.006 135);
+    --console: oklch(0.17 0.012 255);
+    --console-border: oklch(0.26 0.012 255);
+    --border: oklch(0.29 0.006 255);
+    --input: oklch(0.33 0.006 255);
     --ring: var(--primary);
     /* Lifted lightness so the same hues stay readable on dark surfaces. */
     --chart-1: oklch(0.74 0.06 225);
@@ -200,13 +200,13 @@
     --chart-3: oklch(0.78 0.15 70);
     --chart-4: oklch(0.7 0.19 15);
     --chart-5: oklch(0.7 0.045 250);
-    --sidebar: oklch(0.17 0.007 135);
-    --sidebar-foreground: oklch(0.9 0.01 135);
+    --sidebar: oklch(0.17 0.007 255);
+    --sidebar-foreground: oklch(0.9 0.01 255);
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.235 0.005 135);
-    --sidebar-accent-foreground: oklch(0.97 0.002 135);
-    --sidebar-border: oklch(0.29 0.006 135);
+    --sidebar-accent: oklch(0.235 0.005 255);
+    --sidebar-accent-foreground: oklch(0.97 0.002 255);
+    --sidebar-border: oklch(0.29 0.006 255);
     --sidebar-ring: var(--primary);
 }
 
@@ -354,8 +354,8 @@
     --iso-stroke: rgba(255, 255, 255, 0.6);
     --iso-chip-stroke: transparent;
     --iso-line: rgba(255, 255, 255, 0.16);
-    --iso-face: oklch(0.17 0.006 135);
-    --iso-side: oklch(0.145 0.006 135);
+    --iso-face: oklch(0.17 0.006 255);
+    --iso-side: oklch(0.145 0.006 255);
     background: var(--card);
     box-shadow: inset 0 0 0 1px var(--border);
   }
@@ -551,11 +551,11 @@
     var(--steel-ring);
 }
 .dark :is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *) {
-  background-image: linear-gradient(oklch(0.34 0.008 135) 0%, oklch(0.27 0.006 135) 55%, oklch(0.235 0.006 135) 100%);
+  background-image: linear-gradient(oklch(0.34 0.008 255) 0%, oklch(0.27 0.006 255) 55%, oklch(0.235 0.006 255) 100%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.16),
     inset 0 -1px 0 rgb(0 0 0 / 0.5),
-    0 0 0 1px oklch(0.11 0.003 135),
+    0 0 0 1px oklch(0.11 0.003 255),
     0 6px 14px -6px rgb(0 0 0 / 0.75),
     var(--steel-ring);
 }
@@ -578,13 +578,13 @@
 .dark :is([data-slot="button"], [data-slot$="-trigger"]):is([data-variant="outline"], [data-variant="neutral"], [data-variant="secondary"]):not(header *)[data-size]:not([data-size^="icon"]):hover {
   background-image:
     linear-gradient(var(--primary), var(--primary)),
-    linear-gradient(oklch(0.37 0.008 135) 0%, oklch(0.29 0.006 135) 55%, oklch(0.25 0.006 135) 100%);
+    linear-gradient(oklch(0.37 0.008 255) 0%, oklch(0.29 0.006 255) 55%, oklch(0.25 0.006 255) 100%);
   background-size: 3px 100%, auto;
   background-repeat: no-repeat;
   background-origin: border-box;
   /* No top highlight here: an inset shadow paints over the bar's top pixel. */
   box-shadow:
-    0 0 0 1px oklch(0.11 0.003 135),
+    0 0 0 1px oklch(0.11 0.003 255),
     0 6px 20px -6px color-mix(in oklch, var(--primary) 45%, transparent),
     var(--steel-ring);
 }

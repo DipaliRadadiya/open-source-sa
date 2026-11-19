@@ -62,7 +62,7 @@ export default async function RootLayout({ children }) {
       {/* Grayscale smoothing, as in the redesign: subpixel text read heavier. */}
       <body className="antialiased">
         <IntlProvider locale={locale} messages={messages}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <BrandingProvider branding={branding}>
               {children}
               <NavigationProgress />
