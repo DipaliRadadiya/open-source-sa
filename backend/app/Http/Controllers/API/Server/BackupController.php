@@ -182,7 +182,7 @@ class BackupController extends Controller
         }
 
         $applications = Application::query()
-            ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
+            ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'backupTarget.latestRun'])
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'domain']));
 
         $applications = $this->coverage($applications, 'application_id', $filter);
@@ -641,7 +641,7 @@ class BackupController extends Controller
         $own = fn () => Database::query()->whereNull('application_id');
 
         $databases = $own()
-            ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
+            ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'backupTarget.latestRun'])
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name']));
 
         $databases = $this->coverage($databases, 'database_id', $filter);

@@ -123,6 +123,21 @@ class BackupTarget extends Model
     }
 
     /**
+     * The newest run of this target — scheduled or "Back up now", whatever its
+     * status — never a safety copy taken before a restore. The same rule the
+     * coverage list's `state` uses (BackupCoverage), so a row's `last_backup`
+     * and its `state` can never disagree: a failed safety copy says nothing
+     * about whether the schedule works.
+     */
+    public function latestRun(): HasOne
+    {
+        return $this->hasOne(Backup::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where('is_safety', false),
+        );
+    }
+
+    /**
      * The newest good backup that still exists — what "last backup" means to
      * a user (BK-A).
      *

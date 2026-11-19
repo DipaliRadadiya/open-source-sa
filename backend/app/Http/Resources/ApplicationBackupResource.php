@@ -35,9 +35,11 @@ class ApplicationBackupResource extends JsonResource
             'backup_target' => $this->backupTarget === null
                 ? null
                 : BackupTargetResource::make($this->backupTarget)->resolve(),
-            'last_backup' => $this->latestBackup === null
+            // The newest run of this row's own target, never a safety copy —
+            // the run `state` is decided by (BackupTarget::latestRun).
+            'last_backup' => $this->backupTarget?->latestRun === null
                 ? null
-                : BackupResource::make($this->latestBackup)->resolve(),
+                : BackupResource::make($this->backupTarget->latestRun)->resolve(),
         ];
     }
 }

@@ -3786,7 +3786,7 @@ Paged. `?search=` case-insensitively matches application name and domain; `?per_
 | `failing` | on a schedule, and the latest backup failed |
 | `protected` | on a schedule, and the latest backup did not fail (none yet, running, verified) |
 
-"Latest backup" is the newest run of the site's own target — scheduled or "Back up now" — never a safety copy taken before a restore. A later successful run makes a failing site protected again.
+"Latest backup" is the newest run of the site's own target — scheduled or "Back up now" — never a safety copy taken before a restore. A later successful run makes a failing site protected again. **Each row's `last_backup` is that same run** (since 2026-11-19), so it always agrees with `state`: a failed safety copy after a restore no longer shows as the row's last backup. A row with no backup settings has `last_backup: null`. The same holds for `kind=database`.
 
 Filters (combine freely, with each other and with `search` and paging; an unknown value is `422`):
 - **`?filter[state]=failing,paused`**: one or more states, comma separated.

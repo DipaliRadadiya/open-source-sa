@@ -135,6 +135,45 @@ describe('the state of each row', function () {
     });
 });
 
+describe('last_backup', function () {
+    it('is the run the state was decided by, never a failed safety copy', function () {
+        $target = stateTarget(Application::factory()->create());
+        $run = stateRun($target, BackupStatus::Verified);
+        stateRun($target, BackupStatus::Failed, safety: true);
+
+        $this->getJson('/api/backup-targets')
+            ->assertJsonPath('backup_targets.0.state', 'protected')
+            ->assertJsonPath('backup_targets.0.last_backup.id', $run->id)
+            ->assertJsonPath('backup_targets.0.last_backup.status', 'verified');
+    });
+
+    it('agrees with state on every row', function () {
+        stateSites();
+
+        foreach ($this->getJson('/api/backup-targets?per_page=100')->assertOk()->json('backup_targets') as $row) {
+            $status = $row['last_backup']['status'] ?? null;
+
+            match ($row['state']) {
+                'failing' => expect($status)->toBe('failed', $row['application_name']),
+                'protected' => expect($status)->not->toBe('failed', $row['application_name']),
+                'unprotected' => expect($row['last_backup'])->toBeNull($row['application_name']),
+                default => null,
+            };
+        }
+    });
+
+    it('is the same rule for a standalone database', function () {
+        $target = stateTarget(Database::create(['name' => 'ledger', 'engine' => 'mysql']));
+        $run = stateRun($target, BackupStatus::Verified);
+        stateRun($target, BackupStatus::Failed, safety: true);
+
+        $this->getJson('/api/backup-targets?kind=database')
+            ->assertJsonPath('backup_targets.0.state', 'protected')
+            ->assertJsonPath('backup_targets.0.last_backup.id', $run->id)
+            ->assertJsonPath('backup_targets.0.last_backup.status', 'verified');
+    });
+});
+
 describe('filter[state]', function () {
     it('returns only the rows in :dataset', function (string $state, array $names) {
         stateSites();
