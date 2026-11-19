@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { formatBytes, localizeSizeText } from "@/lib/format/bytes";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { Loader2, Trash2, Check, TriangleAlert, FolderTree, Sparkles } from "lucide-react";
@@ -36,6 +37,7 @@ import {
 
 // Nothing is pre-selected: a destructive action must be deliberate.
 export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
+  const format = useFormatter();
   const t = useTranslations("diskCleaner");
   const keepLabel = useKeepLabel();
   const { choices, recommended } = keepOptions(keepDays);
@@ -179,14 +181,14 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                 <div className="space-y-1">
                   <p className="font-medium">
                     {t("clean.freed", {
-                      size: result.freed_total_human ?? "0 B",
+                      size: localizeSizeText(result.freed_total_human ?? "0 B", format),
                       percent: result.disk?.percent ?? 0,
                     })}
                   </p>
                   {/* Per category, so a "0 B" on one is visible behind the total. */}
                   <p className="text-xs text-muted-foreground">
                     {result.cleaned
-                      .map((c) => `${labelFor(categories, c.key)} ${c.freed_human ?? "0 B"}`)
+                      .map((c) => `${labelFor(categories, c.key)} ${localizeSizeText(c.freed_human ?? "0 B", format)}`)
                       .join(" · ")}
                   </p>
                 </div>
@@ -273,7 +275,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
                                 <span className="flex shrink-0 flex-col items-end">
                                   <span className="text-sm font-semibold tabular-nums">
-                                    {category.human ?? humanBytes(category.bytes)}
+                                    {localizeSizeText(category.human, format) ?? humanBytes(category.bytes, format)}
                                   </span>
                                   {/* The choice does not apply here: unused packages go whole. */}
                                   {category.keeps_days === false && keep !== 0 ? (
@@ -323,7 +325,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                   {chosen.length > 0
                     ? t("action.selectedSummary", {
                         count: chosen.length,
-                        size: humanBytes(chosenBytes),
+                        size: humanBytes(chosenBytes, format),
                       })
                     : t("action.pickSomething")}
                 </p>
@@ -347,7 +349,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                   >
                     {/* The button states the amount it will free. */}
                     {chosen.length > 0
-                      ? t("action.cleanSized", { size: humanBytes(chosenBytes) })
+                      ? t("action.cleanSized", { size: humanBytes(chosenBytes, format) })
                       : t("action.clean")}
                   </Button>
                 </ReasonTooltip>
@@ -382,7 +384,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-sm font-medium">{category.label}</span>
                     <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                      {category.human ?? humanBytes(category.bytes)}
+                      {localizeSizeText(category.human, format) ?? humanBytes(category.bytes, format)}
                     </span>
                   </div>
                   {/* One path per line, wrapping: a truncated path misleads. */}
@@ -402,7 +404,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             {/* The number the button promises, restated where the list ends. */}
             <div className="flex items-baseline justify-between gap-3 border-t bg-muted/40 px-3 py-2.5 text-sm font-medium">
               <span>{t("confirm.total")}</span>
-              <span className="tabular-nums">{humanBytes(chosenBytes)}</span>
+              <span className="tabular-nums">{humanBytes(chosenBytes, format)}</span>
             </div>
           </div>
 
@@ -494,10 +496,6 @@ function labelFor(categories, key) {
 }
 
 // Only for the live selection total; other sizes are API-formatted strings.
-function humanBytes(bytes) {
-  if (!bytes) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  const value = bytes / 1024 ** i;
-  return `${value >= 10 || i === 0 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
+function humanBytes(bytes, format) {
+  return formatBytes(bytes || 0, format);
 }

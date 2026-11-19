@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRefresh } from "@/hooks/use-refresh";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { HardDrive, Link2, Loader2, Lock, MoreHorizontal, Network, Plus, Trash2 } from "lucide-react";
 import {
@@ -47,6 +47,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { formatDockerSize } from "@/lib/format/bytes";
 
 /**
  * Networks and volumes on this server, as two lists built like every other list in
@@ -65,6 +66,7 @@ export function DockerResourcesPanel({
   canManageSites = false,
 }) {
   const t = useTranslations("docker");
+  const format = useFormatter();
   const { refreshAndWait } = useRefresh();
 
   const [removing, setRemoving] = useState(false);
@@ -175,7 +177,7 @@ export function DockerResourcesPanel({
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
       meta: { className: "w-28 text-right" },
-      cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.size || "—"}</span>,
+      cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{formatDockerSize(row.original.size, format) || "—"}</span>,
     },
     {
       id: "usedBy",
@@ -254,7 +256,7 @@ export function DockerResourcesPanel({
                     {rowMenu("volume", volume, volumeRemoveReason(volume))}
                   </div>
                   <CardFacts>
-                    <CardFact label={t("columns.size")} value={volume.size || "—"} />
+                    <CardFact label={t("columns.size")} value={formatDockerSize(volume.size, format) || "—"} />
                     <CardFact label={t("columns.usedBy")}>
                       <VolumeUsage volume={volume} />
                     </CardFact>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 import { userCount } from "@/lib/databases/phpmyadmin-state";
+import { SizeText } from "@/components/ui/size-text";
 
 // Engine shows only when the server has more than one.
 export function DatabasesCards({
@@ -113,7 +114,7 @@ export function DatabasesCards({
                 ) : null}
                 <div className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{t("columns.size")}</dt>
-                  <dd className="tabular-nums">{database.size_human ?? "—"}</dd>
+                  <dd className="tabular-nums"><SizeText value={database.size_human} /></dd>
                 </div>
                 {users > 0 ? (
                   <div className="flex justify-between gap-3">

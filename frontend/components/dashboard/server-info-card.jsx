@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortVersion } from "@/lib/databases/short-version";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { SizeText } from "@/components/ui/size-text";
 
 // Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
 const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
@@ -110,8 +111,8 @@ export async function ServerInfoCard({ facts, health, engines = [], enginesFaile
           <Fact label={t("info.hostname")} value={facts.hostname} mono />
           <Fact label={t("info.os")} value={facts.os} />
           <Fact label={t("info.cpuModel")} value={processor} />
-          <Fact label={t("info.memory")} value={facts.memory_total_human} />
-          <Fact label={t("info.disk")} value={facts.disk_total_human} />
+          <Fact label={t("info.memory")} value={facts.memory_total_human ? <SizeText value={facts.memory_total_human} /> : null} />
+          <Fact label={t("info.disk")} value={facts.disk_total_human ? <SizeText value={facts.disk_total_human} /> : null} />
           <Fact label={t("info.kernel")} value={facts.kernel} mono />
           <Fact label={t("info.arch")} value={facts.arch} mono />
           <Fact label={t("info.timezone")} value={facts.timezone} mono />

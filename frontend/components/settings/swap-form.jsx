@@ -7,7 +7,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import { getLiveMetrics } from "@/lib/api/server-metrics";
-import { formatBytes } from "@/lib/format/bytes";
+import { formatBytes, localizeSizeText } from "@/lib/format/bytes";
 import { Caution } from "@/components/ui/caution";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { HardDriveDownload } from "lucide-react";
@@ -156,7 +156,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
               hint={
                 memoryTotal?.human
                   ? t("swap.memoryTotal", {
-                      size: formatBytes(memoryTotal.bytes, format) ?? memoryTotal.human,
+                      size: formatBytes(memoryTotal.bytes, format) ?? localizeSizeText(memoryTotal.human, format),
                     })
                   : undefined
               }
@@ -166,8 +166,8 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                 <p className="text-sm tabular-nums">
                   {swap?.enabled
                     ? t("swap.currentValue", {
-                        size: formatBytes(swap.size, format) ?? swap.size_human,
-                        used: formatBytes(swap.used, format) ?? swap.used_human,
+                        size: formatBytes(swap.size, format) ?? localizeSizeText(swap.size_human, format),
+                        used: formatBytes(swap.used, format) ?? localizeSizeText(swap.used_human, format),
                       })
                     : t("swap.none")}
                 </p>
@@ -176,8 +176,8 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                   <Progress
                     value={Math.min(100, (swap.used / swap.size) * 100)}
                     aria-label={t("swap.currentValue", {
-                      size: formatBytes(swap.size, format) ?? swap.size_human,
-                      used: formatBytes(swap.used, format) ?? swap.used_human,
+                      size: formatBytes(swap.size, format) ?? localizeSizeText(swap.size_human, format),
+                      used: formatBytes(swap.used, format) ?? localizeSizeText(swap.used_human, format),
                     })}
                   />
                 ) : null}
@@ -266,7 +266,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
           confirmVariant="destructive"
           title={t("swap.confirmTitle")}
           description={t("swap.confirmDescription", {
-            used: swap?.used_human ?? "0 B",
+            used: localizeSizeText(swap?.used_human ?? "0 B", format),
           })}
           cancelLabel={t("swap.confirmCancel")}
           confirmLabel={t("swap.confirmSubmit")}

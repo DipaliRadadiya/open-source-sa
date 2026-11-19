@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { formatBytes, localizeSizeText } from "@/lib/format/bytes";
 import { HardDrive, Sparkles } from "lucide-react";
 import { usageStatus } from "@/lib/metrics/usage-level";
 import { Tile } from "@/components/applications/app-status-tiles";
@@ -13,10 +14,11 @@ const TONE = { normal: "info", watch: "warning", high: "destructive" };
 
 export function DiskSummary({ disk, categories }) {
   const t = useTranslations("diskCleaner");
+  const format = useFormatter();
   // Priced for the Clean panel's current choice, so the tile and the list never disagree.
   const [keep] = useKeepChoice();
   const { bytes, count: reclaimableCount } = reclaimableFor(categories, keep);
-  const reclaimableHuman = humanBytes(bytes);
+  const reclaimableHuman = formatBytes(bytes || 0, format);
 
   return (
     <>
@@ -26,9 +28,9 @@ export function DiskSummary({ disk, categories }) {
         label={t("summary.label")}
         value={t("summary.percentUsed", { percent: Math.round(disk?.percent ?? 0) })}
         detail={t("summary.usedLine", {
-          used: disk?.used_human ?? "—",
-          total: disk?.total_human ?? "—",
-          free: disk?.free_human ?? "—",
+          used: localizeSizeText(disk?.used_human, format) ?? "—",
+          total: localizeSizeText(disk?.total_human, format) ?? "—",
+          free: localizeSizeText(disk?.free_human, format) ?? "—",
         })}
         tone={TONE[usageStatus(disk?.percent)] ?? "neutral"}
       />
@@ -44,11 +46,3 @@ export function DiskSummary({ disk, categories }) {
   );
 }
 
-// Only this total is formatted locally: the API never sends the sum.
-function humanBytes(bytes) {
-  if (!bytes) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  const value = bytes / 1024 ** i;
-  return `${value >= 10 || i === 0 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
-}

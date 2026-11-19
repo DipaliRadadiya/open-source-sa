@@ -41,6 +41,7 @@ import { Caution } from "@/components/ui/caution";
 import { DetailHeader } from "@/components/ui/detail-header";
 import { BackLink } from "@/components/ui/back-link";
 import { Database } from "lucide-react";
+import { SizeText } from "@/components/ui/size-text";
 
 export const dynamic = "force-dynamic";
 
@@ -159,7 +160,7 @@ export default async function DatabasePage({ params, searchParams }) {
           badges={<Badge variant="muted">{engineName}</Badge>}
           facts={[
             // The API reports 0 B while the engine is down, which would read as empty.
-            engineDown ? null : <span className="font-mono">{data.size_human}</span>,
+            engineDown ? null : <span className="font-mono"><SizeText value={data.size_human} fallback={null} /></span>,
             data.created_at_human ? t("detail.createdWhen", { when: data.created_at_human }) : null,
           ]}
           // The one thing people open a database page to do, so it is the filled button.

@@ -11,6 +11,7 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { parseApiWallClock } from "@/lib/format/api-date";
 import { formatBytes } from "@/lib/format/bytes";
+import { SizeText } from "@/components/ui/size-text";
 
 // The API's status vocabulary is undocumented, so anything that is not an
 // explicit success is flagged: a false alarm beats a silently failing schedule.
@@ -74,7 +75,7 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
                   {failed(run.status) ? <Badge variant="destructive" className="font-normal">{t("runs.failed")}</Badge> : null}
                   <Badge variant="outline" className="font-normal">{triggerOf(run)}</Badge>
                   {keepOf(run) ? <span className="text-xs text-muted-foreground">{keepOf(run)}</span> : null}
-                  <span className="text-sm font-medium tabular-nums">{run.freed_total_human ?? "0 B"}</span>
+                  <span className="text-sm font-medium tabular-nums"><SizeText value={run.freed_total_human} fallback="0 B" /></span>
                 </span>
               </div>
               <Cleaned run={run} />
@@ -121,7 +122,7 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
                       {failed(run.status) ? (
                         <Badge variant="destructive" className="font-normal">{t("runs.failed")}</Badge>
                       ) : null}
-                      <span className="font-medium tabular-nums">{run.freed_total_human ?? "0 B"}</span>
+                      <span className="font-medium tabular-nums"><SizeText value={run.freed_total_human} fallback="0 B" /></span>
                     </span>
                   </TableCell>
                 </TableRow>

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { pct, usageStatus } from "@/lib/metrics/usage-level";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatBytes } from "@/lib/format/bytes";
+import { formatBytes, localizeSizeText } from "@/lib/format/bytes";
 
 // Steel UI (Krishna's prototype, 14 Oct): the level is a square chip and the bar
 // takes the level's colour; "off"/"unknown" stay grey.
@@ -88,7 +88,7 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const format = useFormatter();
   const loading = !metrics;
   // The API's *_human strings are English-formatted ("1,024 MB" reads as about 1 MB in German).
-  const size = (value, human) => formatBytes(value, format) ?? human;
+  const size = (value, human) => formatBytes(value, format) ?? localizeSizeText(human, format);
 
   // Same thresholds that colour the bar. `fallback` covers a real state with no
   // percentage (no swap: Off; unreadable disk: Unknown).

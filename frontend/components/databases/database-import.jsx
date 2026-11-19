@@ -23,6 +23,8 @@ import { Progress } from "@/components/ui/progress";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
+import { SizeText } from "@/components/ui/size-text";
+import { localizeSizeText } from "@/lib/format/bytes";
 
 const POLL_MS = 2500;
 // Older imports fold away so the history cannot push the page out of reach.
@@ -195,7 +197,7 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
   const skipsCopy = upload ? upload.safetyCopy === false : running?.safety_copy === false;
   const steps = skipsCopy ? IMPORT_STEPS.filter((step) => step !== "backing_up") : IMPORT_STEPS;
   const activeFile = upload?.file.name ?? running?.file_name ?? "";
-  const activeSize = upload ? formatBytes(upload.file.size, format) : (running?.size_human ?? "");
+  const activeSize = upload ? formatBytes(upload.file.size, format) : localizeSizeText(running?.size_human ?? "", format);
   const history = rows.filter((row) => row.id !== running?.id);
   // A warning, not a block: the name may be wrong, and a failed run puts the data back.
   const mismatch = chosen ? engineMismatch(chosen.name, database) : null;
@@ -435,7 +437,7 @@ function ImportRow({ row, canManage, busy, canStart, onStart, onRemove, backup =
             {t(`status.${row.status}`)}
           </Badge>
           <span className="min-w-0 font-mono text-sm break-all">{row.file_name}</span>
-          {row.size_human ? <span className="text-sm tabular-nums text-muted-foreground">{row.size_human}</span> : null}
+          {row.size_human ? <span className="text-sm tabular-nums text-muted-foreground"><SizeText value={row.size_human} /></span> : null}
         </div>
         <p className="text-xs text-muted-foreground">
           {[

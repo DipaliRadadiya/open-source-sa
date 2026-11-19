@@ -27,6 +27,7 @@ import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dia
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { SizeText } from "@/components/ui/size-text";
 
 /* Cells are module-level: inline cell functions remount every cell on each search keystroke. */
 
@@ -72,7 +73,7 @@ function EngineCell({ row, table }) {
 function SizeCell({ row }) {
   return (
     <span className="whitespace-nowrap tabular-nums">
-      {row.original.size_human ?? "—"}
+      <SizeText value={row.original.size_human} />
     </span>
   );
 }

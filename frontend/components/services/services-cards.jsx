@@ -8,6 +8,7 @@ import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { ServiceVersion } from "@/components/services/service-version";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
+import { SizeText } from "@/components/ui/size-text";
 
 export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowBusy }) {
   const t = useTranslations("services");
@@ -73,7 +74,7 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
             <div className="mt-3 flex items-center gap-4 border-t pt-3 text-xs">
               <Figure
                 label={t("memoryShort")}
-                value={usage?.memory_human}
+                value={usage?.memory_human ? <SizeText value={usage.memory_human} /> : usage?.memory_human}
                 emptyLabel={t("notMeasured")}
               />
               <Figure

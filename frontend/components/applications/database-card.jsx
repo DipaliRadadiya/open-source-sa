@@ -4,6 +4,7 @@ import { Database, TriangleAlert } from "lucide-react";
 import { DatabaseCardActions } from "@/components/applications/database-card-actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SizeText } from "@/components/ui/size-text";
 
 // The databases backups, staging, cloning and restoring use, not what the site
 // connects to. The empty state warns only for types that declare a database need.
@@ -77,7 +78,7 @@ export async function DatabaseCard({
                   {database.name}
                 </Link>
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  {database.size_human}
+                  <SizeText value={database.size_human} fallback={null} />
                 </span>
               </li>
             ))}

@@ -82,8 +82,8 @@ test("restart delay strings agree with their number in every locale", () => {
 
 test("swap usage line: bytes formatted for the locale, and free to wrap", () => {
   const form = read("components/settings/swap-form.jsx");
-  assert.match(form, /size: formatBytes\(swap\.size, format\) \?\? swap\.size_human/);
-  assert.match(form, /used: formatBytes\(swap\.used, format\) \?\? swap\.used_human/);
+  assert.match(form, /size: formatBytes\(swap\.size, format\) \?\? localizeSizeText\(swap\.size_human, format\)/);
+  assert.match(form, /used: formatBytes\(swap\.used, format\) \?\? localizeSizeText\(swap\.used_human, format\)/);
   assert.doesNotMatch(form, /<p className="text-sm whitespace-nowrap">\s*\{swap\?\.enabled/, "Russian ran 24px past the card at 1280");
 });
 
@@ -194,7 +194,7 @@ test("central #32: a bad filter or sort in the Databases link falls back to the 
 
 test("central #9: dashboard stat cards format sizes for the locale", () => {
   const cards = read("components/dashboard/stat-cards.jsx");
-  assert.match(cards, /const size = \(value, human\) => formatBytes\(value, format\) \?\? human;/);
+  assert.match(cards, /const size = \(value, human\) => formatBytes\(value, format\) \?\? localizeSizeText\(human, format\);/);
   assert.doesNotMatch(cards, /used: (memory|swap|disk)\.used_human/);
 });
 

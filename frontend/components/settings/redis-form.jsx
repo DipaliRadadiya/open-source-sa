@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { formatBytes } from "@/lib/format/bytes";
+import { formatBytes, localizeSizeText } from "@/lib/format/bytes";
 import { memoryBytes, memoryInput } from "@/lib/settings/redis-memory";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
@@ -76,7 +76,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const usedLabel =
     typeof redis?.memory_used === "number"
       ? formatBytes(redis.memory_used, format)
-      : (redis?.memory_used_human ?? null);
+      : (localizeSizeText(redis?.memory_used_human, format) ?? null);
 
   const form = useForm({
     resolver: zodResolver(redisFormSchema),

@@ -32,6 +32,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SizeText } from "@/components/ui/size-text";
+import { localizeSizeText } from "@/lib/format/bytes";
 
 const POLL_MS = 3000;
 
@@ -272,7 +274,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
         tone="warning"
         title={t("confirmTitle", { name: database.name })}
         description={t("confirmDescription", {
-          size: database.size_human ?? "",
+          size: localizeSizeText(database.size_human ?? "", format),
         })}
         cancelLabel={t("cancel")}
         confirmLabel={starting ? t("starting") : t("action")}
@@ -326,7 +328,7 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
           </Tooltip>
           {row.size_human ? (
             <span className="text-sm tabular-nums text-muted-foreground">
-              {row.size_human}
+              <SizeText value={row.size_human} />
             </span>
           ) : null}
           {/* Taken by an import before it replaced the database. */}

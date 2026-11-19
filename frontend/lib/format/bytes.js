@@ -37,7 +37,7 @@ export function formatBytes(bytes, format) {
 
   const n = Number(bytes);
   if (!Number.isFinite(n) || n < 0) return null;
-  const units = ["B", "KB", "MB", "GB"];
+  const units = ["B", "KB", "MB", "GB", "TB"];
   let value = n;
   let i = 0;
   while (value >= 1024 && i < units.length - 1) {
@@ -76,4 +76,36 @@ export function formatFileSize(bytes, format) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })} ${FILE_UNITS[i]}`;
+}
+
+// "1.6 GB", "1,000 MB" (the API's Bytes::human) or Docker's "1.618MB": a number and a unit.
+const SIZE_TEXT = /^\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?\s*([kKMGTP]?i?B)\s*$/;
+const DOCKER_POWERS = { B: 0, kB: 1, KB: 1, MB: 2, GB: 3, TB: 4, PB: 5 };
+
+/**
+ * A size the API already rendered, re-rendered in the reader's number format: "1.6 GB" stays
+ * "1.6 GB" in English and becomes "1,6 GB" in German. The digits after the point are kept.
+ * Anything that is not a plain size (a dash, a sentence) comes back unchanged.
+ */
+export function localizeSizeText(text, format) {
+  if (typeof text !== "string") return text;
+  const match = SIZE_TEXT.exec(text);
+  if (!match) return text;
+  const [, whole, fraction = "", unit] = match;
+  const value = Number(`${whole.replaceAll(",", "")}.${fraction || "0"}`);
+  const digits = fraction.length;
+  return `${format.number(value, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${unit}`;
+}
+
+/**
+ * Docker's own size text (`docker system df`: "1.618MB", "0B", decimal units) as a file size:
+ * one decimal and the reader's number format, the same as the file manager shows.
+ */
+export function formatDockerSize(text, format) {
+  if (typeof text !== "string") return null;
+  const match = SIZE_TEXT.exec(text);
+  const power = match ? DOCKER_POWERS[match[3]] : undefined;
+  if (power === undefined) return text || null;
+  const value = Number(`${match[1].replaceAll(",", "")}.${match[2] || "0"}`);
+  return formatFileSize(value * 1000 ** power, format);
 }

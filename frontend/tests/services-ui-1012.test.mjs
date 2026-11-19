@@ -57,6 +57,7 @@ const { ServicesTable } = load("components/services/services-table.jsx", {
   "@/components/services/service-boot-switch": { ServiceBootSwitch: () => null },
   "@/components/services/service-status-badge": { ServiceStatusBadge },
   "@/components/services/service-version": { ServiceVersion },
+  "@/components/ui/size-text": { SizeText: ({ value, fallback = "—" }) => value || fallback },
   "@/lib/services/install-home": { installHome: () => ({ href: "/php", retryLabel: "retryPhp" }) },
 });
 function tableProps() {

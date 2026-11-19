@@ -8,6 +8,7 @@ import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { ServiceVersion } from "@/components/services/service-version";
 import { installHome } from "@/lib/services/install-home";
+import { SizeText } from "@/components/ui/size-text";
 
 // Cells are module-level on purpose: flexRender uses the function as the
 // component type, so inline cells would remount on every poll and lose state.
@@ -212,5 +213,5 @@ function Measure({ value }) {
   if (value == null || value === "") {
     return <span className="text-sm text-muted-foreground">—</span>;
   }
-  return <span className="text-sm tabular-nums">{value}</span>;
+  return <span className="text-sm tabular-nums"><SizeText value={value} /></span>;
 }
