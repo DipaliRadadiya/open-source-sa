@@ -182,6 +182,7 @@ export function RegistriesCard({ initialRegistries, canManage }) {
           key={dialog.registry?.id ?? "new"}
           registry={dialog.registry}
           onOpenChange={(next) => !next && setDialog(null)}
+          onTest={test}
         />
       ) : null}
 
@@ -335,7 +336,7 @@ function focusAddButton(event) {
  * Add: choose where the image is hosted, then that host's fields. Edit opens on the
  * fields for the stored host.
  */
-function RegistryDialog({ registry, onOpenChange }) {
+function RegistryDialog({ registry, onOpenChange, onTest }) {
   const t = useTranslations("docker.registries");
   const tc = useTranslations("common");
   const { refreshAndWait } = useRefresh();
@@ -383,10 +384,13 @@ function RegistryDialog({ registry, onOpenChange }) {
       provider={provider}
       onBack={creating ? () => setProvider(null) : null}
       onOpenChange={onOpenChange}
-      onSaved={async (name) => {
+      onSaved={async (name, saved, credentialChanged) => {
         await refreshAndWait();
         toast.success(creating ? t("created", { name }) : t("updated", { name }));
         onOpenChange(false);
+        // A wrong token used to surface only at the first failed pull; test it now, like Storage.
+        // After the close, so the save never waits on the registry.
+        if (saved?.id && credentialChanged) onTest?.(saved);
       }}
       tc={tc}
     />
@@ -426,9 +430,14 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
     // An absent token means "keep"; an empty string is not "clear it".
     if (!payload.token) delete payload.token;
     try {
-      if (creating) await createRegistry(payload);
-      else await updateRegistry(registry.id, payload);
-      await onSaved(payload.name);
+      const { data } = creating ? await createRegistry(payload) : await updateRegistry(registry.id, payload);
+      // A rename alone leaves the stored verdict true; anything the login uses makes it stale.
+      const credentialChanged =
+        creating ||
+        Boolean(payload.token) ||
+        payload.registry !== registry.registry ||
+        payload.username !== registry.username;
+      await onSaved(payload.name, data?.registry, credentialChanged);
     } catch (error) {
       if (error.response?.data?.errors) {
         handleValidationError(error, form);
