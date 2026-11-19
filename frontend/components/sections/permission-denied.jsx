@@ -12,9 +12,10 @@ import { EmptyState } from "@/components/data-table/empty-state";
 // would send the administrator in a circle.
 // `typeFeature`: an application screen granted per site type. Admins hold every
 // feature a type offers, so for them a missing grant means the screen does not apply.
-export async function PermissionDenied({ title, description, feature, typeFeature }) {
+// `notForType`: the API already said this site type has no such screen (its 404), for anyone.
+export async function PermissionDenied({ title, description, feature, typeFeature, notForType = false }) {
   const t = await getTranslations("common.permissionDenied");
-  if (typeFeature && (await getCurrentUser().catch(() => null))?.is_admin) {
+  if (notForType || (typeFeature && (await getCurrentUser().catch(() => null))?.is_admin)) {
     return (
       <div className="space-y-6">
         <PageHeader title={title} />

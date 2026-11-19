@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -42,7 +42,7 @@ export default async function ApplicationWorkersPage({ params }) {
   // as Environment/Deployment.
   if (!can(appPermissions, "app_worker", "view", "application")) {
     // 404: site type has nothing to supervise; 403: missing grant.
-    if ((await getWorkers(id)).status === 404) notFound();
+    if ((await getWorkers(id)).status === 404) return <PermissionDenied title={t("pageTitle")} notForType />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_worker", "manage", "application");

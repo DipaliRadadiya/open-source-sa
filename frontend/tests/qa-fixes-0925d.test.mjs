@@ -45,10 +45,10 @@ test("View logs is gated on the server Logs permission", () => {
   for (const l of LOCALES) assert.ok(JSON.parse(read(`messages/${l}.json`)).applications.workers.actions.viewLogsNoPermission, l);
 });
 
-test("a site type with no workers is not found, not refused", () => {
+test("a site type with no workers says the page is not used for it, not refused", () => {
   const page = read("app/(app)/applications/[application]/workers/page.jsx");
-  assert.match(page, /if \(\(await getWorkers\(id\)\)\.status === 404\) notFound\(\);/);
-  assert.match(page, /import \{ notFound, redirect \}/);
+  assert.match(page, /if \(\(await getWorkers\(id\)\)\.status === 404\) return <PermissionDenied title=\{t\("pageTitle"\)\} notForType \/>;/);
+  assert.match(page, /import \{ redirect \} from "next\/navigation";/);
 });
 
 test("a form dialog lands on its first control, not a hint button", () => {

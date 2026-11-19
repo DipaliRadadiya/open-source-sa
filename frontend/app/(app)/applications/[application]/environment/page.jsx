@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -42,7 +42,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
   // 403: not allowed; 404: the site type has no .env (e.g. WordPress).
   // They need different messages.
   if (!can(appPermissions, "app_environment", "view", "application")) {
-    if ((await getApplicationEnvironment(id)).status === 404) notFound();
+    if ((await getApplicationEnvironment(id)).status === 404) return <PermissionDenied title={t("pageTitle")} notForType />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(

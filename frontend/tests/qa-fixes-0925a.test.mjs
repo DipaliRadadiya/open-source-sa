@@ -64,9 +64,10 @@ test("rotating a panel-managed webhook does not tell you to update it yourself",
   }
 });
 
-test("a non-git site is not found, not 'no access'", () => {
+test("a non-git site says the page is not used for it, not 'no access'", () => {
   const src = page();
-  assert.ok(src.indexOf("if (!isGit) notFound();") < src.indexOf('can(appPermissions, "app_deployment", "view"'));
+  const notUsed = src.indexOf('if (!isGit) return <PermissionDenied title={t("pageTitle")} notForType />;');
+  assert.ok(notUsed > 0 && notUsed < src.indexOf('can(appPermissions, "app_deployment", "view"'));
 });
 
 test("the runtime card shows its own error, not the generic one", () => {

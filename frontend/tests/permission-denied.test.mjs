@@ -250,10 +250,11 @@ test("an application sub-page refuses in place too, not just the server ones", (
     );
     assert.match(
       src,
-      // Environment and Workers first ask whether the screen exists for this site type;
+      // Environment and Workers first ask whether the screen exists for this site type ("Not used
+      // for this application", 19 Nov);
       // Clone tells an administrator the type can't be cloned (they hold every grant);
       // `typeFeature` does the same inside PermissionDenied.
-      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*(?:if \(\(await get\w+\(id\)\)\.status === 404\) notFound\(\);\s*)?(?:if \(\(await getCurrentUser\(\)[^\n]*\)\?\.is_admin\) return <TypeNotSupported [^\n]*\/>;\s*)?return <PermissionDenied title=\{t\("(pageTitle|title)"\)\}(?: typeFeature)? \/>;/,
+      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*(?:if \(\(await get\w+\(id\)\)\.status === 404\) return <PermissionDenied title=\{t\("pageTitle"\)\} notForType \/>;\s*)?(?:if \(\(await getCurrentUser\(\)[^\n]*\)\?\.is_admin\) return <TypeNotSupported [^\n]*\/>;\s*)?return <PermissionDenied title=\{t\("(pageTitle|title)"\)\}(?: typeFeature)? \/>;/,
       `${p} must refuse in place, named`,
     );
   }

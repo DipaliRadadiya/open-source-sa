@@ -79,9 +79,9 @@ test("the restore list scrolls inside the dialog, keeping its buttons in view", 
   assert.match(read("components/applications/environment/restore-backup-dialog.jsx"), /max-h-\[min\(20rem,45dvh\)\] space-y-2 overflow-y-auto/);
 });
 
-test("a site type with no .env is not found, and a viewer is told they can only view", () => {
+test("a site type with no .env says the page is not used for it, and a viewer is told they can only view", () => {
   const page = read(`${APP}/environment/page.jsx`);
-  assert.match(page, /if \(\(await getApplicationEnvironment\(id\)\)\.status === 404\) notFound\(\);/);
+  assert.match(page, /if \(\(await getApplicationEnvironment\(id\)\)\.status === 404\) return <PermissionDenied title=\{t\("pageTitle"\)\} notForType \/>;/);
   assert.match(page, /subtitle=\{canManage \? null : t\("pageSubtitleReadOnly"\)\}/);
 });
 

@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -43,7 +43,7 @@ export default async function ApplicationDeploymentPage({ params }) {
   // Git sites only: the deploy endpoint 404s for anything else. Checked before
   // the grant because the API drops `app_deployment` for non-git sites.
   const isGit = Boolean(application.repository || application.repository_url);
-  if (!isGit) notFound();
+  if (!isGit) return <PermissionDenied title={t("pageTitle")} notForType />;
   // Deployment is its own grant, separate from the server-level `application`.
   if (!can(appPermissions, "app_deployment", "view", "application")) {
     return <PermissionDenied title={t("pageTitle")} />;
