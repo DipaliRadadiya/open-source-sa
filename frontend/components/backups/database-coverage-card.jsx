@@ -206,7 +206,7 @@ function DatabaseActions({ row, canOpenDatabases, canManage, onBackUpNow, busy, 
 }
 
 const wrapping = (label) => function WrappingHeader() {
-  return <span className="whitespace-normal">{label}</span>;
+  return <span className="whitespace-nowrap">{label}</span>;
 };
 
 function DatabaseTable({ rows, options, canOpenDatabases, canManage, onBackUpNow, busyIds }) {

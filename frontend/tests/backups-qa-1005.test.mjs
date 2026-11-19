@@ -91,8 +91,9 @@ test("a destination whose last upload failed is named as failing, not 'never tes
   const src = read("components/backups/destination-health.jsx");
   assert.match(src, /const UPLOAD_REASONS = \["upload_artifact", "upload_stalled"\];/);
   assert.match(src, /backup\.storage_destination_id === destination\.id \|\| backup\.storage_destination_name === destination\.name/);
-  // The overview's `last_backup` carries no destination name, so the card passes the site's id.
-  assert.match(read("components/backups/coverage-card.jsx"), /storage_destination_id: row\.target\?\.storage_destination_id/);
+  // The overview's `last_backup` carries no destination name, so the site's id is passed along;
+  // read over every configured site, not one page (RC-42).
+  assert.match(read("lib/backups/get-backups.js"), /storage_destination_id: row\.backup_target\?\.storage_destination_id/);
   assert.match(en.backups.destinationHealth.uploadFailedBody, /could not be uploaded/);
 });
 

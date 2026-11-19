@@ -1,5 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
+import { wrappableTimezoneLabel } from "@/lib/format/timezone";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
@@ -17,7 +18,7 @@ import { CoverageCard, CoverageCardActions, CoverageFact, NotSetUpList, NotSetUp
 
 // Phone and tablet layout: a table would scroll sideways and hide the action button.
 
-export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null }) {
+export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, scheduleTimezone = null }) {
   const t = useTranslations("backups.coverage");
   const tb = useTranslations("backups");
   const ta = useTranslations("backups.application");
@@ -25,7 +26,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
   const tn = useTranslations("applications.backups");
   const format = useFormatter();
 
-  // "Daily · 2:00 AM · keeps 7"; the timezone is named on the site's backups page instead.
+  // "Daily · 2:00 AM · keeps 7"; the time zone is in the Schedule label when every site shares one.
   const scheduleFact = (target) => {
     const when = scheduleWhen(target, options, format);
     return [
@@ -122,7 +123,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                 <CoverageFact label={t("columns.typeShort")}>{target.type_title ?? target.type}</CoverageFact>
                 {/* Includes the hour, same as the table; amber when paused, since the card has
                     no "Manual only" badge. */}
-                <CoverageFact label={t("columns.schedule")} className={state === "paused" ? "[&>dd]:font-medium [&>dd]:text-warning" : undefined}>
+                <CoverageFact label={scheduleTimezone ? t("columns.scheduleIn", { timezone: wrappableTimezoneLabel(scheduleTimezone) }) : t("columns.schedule")} className={state === "paused" ? "[&>dd]:font-medium [&>dd]:text-warning" : undefined}>
                   {scheduleFact(target)}
                 </CoverageFact>
                 <CoverageFact label={t("columns.storage")}>

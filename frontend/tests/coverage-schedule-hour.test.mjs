@@ -56,40 +56,30 @@ test("the phone layout gets the hour too", () => {
   assert.match(cards, /<NotSetUpList[\s\S]{0,300}<NotSetUpRow/);
 });
 
-test("the timezone is named once, outside the table", () => {
+test("the timezone is named once, in the Schedule header (as Cron Jobs' \"Next run · UTC\")", () => {
   /*
-   * It went in the column header first. Measured before and after: the header
-   * is the widest thing in a 96px column, and "Schedule · Asia/Kolkata" pushed
-   * the table 96px further into horizontal scroll at both 1024 and 1280. Above
-   * the list it costs the table nothing, and the final measurement matches the
-   * pre-change baseline exactly.
+   * 19 Nov (Krishna): the caption under the pager read as detached. It went into the header
+   * before and was dropped because the header could not wrap and pushed the table 96px into
+   * horizontal scroll; DataTable headers wrap now (cce1cba80), measured again at 1220/1280.
    */
   assert.match(parent, /const scheduleZones = new Set\(rows\.map\(\(row\) => row\.target\?\.timezone\)\.filter\(Boolean\)\)/);
   assert.match(parent, /scheduleZones\.size === 1 \? \[\.\.\.scheduleZones\]\[0\] : null/);
-  assert.match(parent, /t\("timesShownIn", \{ timezone: timezoneLabel\(scheduleTimezone\) \}\)/);
-
-  // The rejected route must not come back — it is invisible in a green build.
-  assert.doesNotMatch(table, /columns\.scheduleIn/);
+  assert.doesNotMatch(parent, /timesShownIn/);
+  assert.match(table, /scheduleTimezone \? t\("columns\.scheduleIn", \{ timezone: wrappableTimezoneLabel\(scheduleTimezone\) \}\) : t\("columns\.schedule"\)/);
 });
 
-test("no timezone means no caption, not an assumed one", () => {
+test("no timezone means the plain header, not an assumed one", () => {
   // An older backend, or targets that disagree. Asserting UTC over hours it
   // cannot vouch for is the failure this whole thread has been about.
-  assert.match(parent, /\{scheduleTimezone \? \(/);
+  assert.match(table, /scheduleTimezone = null/);
 });
 
-test("the caption exists in every locale and names the zone", () => {
+test("the header names the zone in every locale", () => {
   for (const locale of LOCALES) {
     const m = JSON.parse(read(`messages/${locale}.json`));
-    const caption = m.backups.coverage.timesShownIn;
-    assert.ok(caption, `${locale}: backups.coverage.timesShownIn missing`);
-    assert.match(caption, /\{timezone\}/, `${locale}: the caption must name the zone`);
-    // The header variant was measured and dropped; leaving it behind would
-    // invite someone to wire it back up.
-    assert.equal(
-      m.backups.coverage.columns.scheduleIn,
-      undefined,
-      `${locale}: columns.scheduleIn should have been removed`,
-    );
+    const header = m.backups.coverage.columns.scheduleIn;
+    assert.ok(header, `${locale}: backups.coverage.columns.scheduleIn missing`);
+    assert.match(header, /\{timezone\}/, `${locale}: the header must name the zone`);
+    assert.equal(m.backups.coverage.timesShownIn, undefined, `${locale}: the old caption key should be gone`);
   }
 });

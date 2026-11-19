@@ -7186,7 +7186,8 @@
         "actions": "Actions",
         "type": "Backup type",
         "typeShort": "Type",
-        "storage": "Storage"
+        "storage": "Storage",
+        "scheduleIn": "Schedule · {timezone}"
       },
       "status": {
         "protected": "Protected",
@@ -7203,7 +7204,6 @@
       "viewBackups": "View backups",
       "searchPlaceholder": "Search applications",
       "noMatches": "No applications match those filters.",
-      "showing": "Showing {shown} of {total}",
       "filters": {
         "all": "All",
         "protected": "Protected",
@@ -7226,7 +7226,6 @@
       "notSetUpLine": "Not set up — nothing on this application is being backed up.",
       "notSetUpListHint": "Nothing on these applications is being backed up.",
       "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first.",
-      "timesShownIn": "Times shown in {timezone}",
       "minutePast": ":{minute} past each hour"
     },
     "setup": {
@@ -7381,7 +7380,7 @@
       "columns": {
         "site": "Application",
         "status": "Status",
-        "type": "Backup type",
+        "type": "Type",
         "destination": "Destination",
         "when": "When",
         "size": "Size",

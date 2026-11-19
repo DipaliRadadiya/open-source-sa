@@ -172,7 +172,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     {
       id: "boot",
       // Wraps: "Beim Systemstart starten" is twice the column's width.
-      header: () => <span className="block whitespace-normal leading-tight">{t("columns.boot")}</span>,
+      header: () => <span className="block whitespace-nowrap">{t("columns.boot")}</span>,
       meta: { className: "w-[16%] text-center" },
       cell: BootCell,
     },

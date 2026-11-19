@@ -11,7 +11,8 @@ test("UTC aliases display as UTC; real zones are left alone", () => {
 });
 
 test("every place that prints the server zone uses the label, not the raw id", () => {
-  for (const file of ["components/cron-jobs/cronjobs-table.jsx", "components/cron-jobs/cronjobs-cards.jsx", "components/cron-jobs/schedule-field.jsx", "components/cron-jobs/run-history-sheet.jsx", "components/backups/backup-settings-fields.jsx", "components/backups/coverage-card.jsx"]) {
-    assert.match(fs.readFileSync(file, "utf8"), /timezone: timezoneLabel\(/, file);
+  for (const file of ["components/cron-jobs/cronjobs-table.jsx", "components/cron-jobs/cronjobs-cards.jsx", "components/cron-jobs/schedule-field.jsx", "components/cron-jobs/run-history-sheet.jsx", "components/backups/backup-settings-fields.jsx", "components/backups/coverage-table.jsx", "components/backups/coverage-cards.jsx"]) {
+    // The Overview's narrow Schedule header uses the label that may break after "/".
+    assert.match(fs.readFileSync(file, "utf8"), /timezone: (?:wrappableT|t)imezoneLabel\(/, file);
   }
 });

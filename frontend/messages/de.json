@@ -1203,8 +1203,8 @@
       "runAs": "Läuft als",
       "command": "Befehl",
       "active": "Aktiv",
-      "nextRun": "Nächste Ausführung",
-      "nextRunIn": "Nächste Ausführung · {timezone}"
+      "nextRun": "Nächster Lauf",
+      "nextRunIn": "Nächster Lauf · {timezone}"
     },
     "filter": {
       "allUsers": "Alle Benutzer",
@@ -7186,7 +7186,8 @@
         "actions": "Aktionen",
         "type": "Backup-Art",
         "typeShort": "Typ",
-        "storage": "Speicher"
+        "storage": "Speicher",
+        "scheduleIn": "Zeitplan · {timezone}"
       },
       "status": {
         "protected": "Geschützt",
@@ -7203,7 +7204,6 @@
       "viewBackups": "Backups ansehen",
       "searchPlaceholder": "Anwendungen suchen",
       "noMatches": "Keine Anwendung passt zu diesen Filtern.",
-      "showing": "{shown} von {total} werden gezeigt",
       "filters": {
         "all": "Alle",
         "protected": "Geschützt",
@@ -7226,7 +7226,6 @@
       "notSetUpLine": "Nicht eingerichtet — von dieser Anwendung wird nichts gesichert.",
       "notSetUpListHint": "Von diesen Anwendungen wird nichts gesichert.",
       "needsDestination": "Es ist noch kein Speicherziel eingerichtet. Fügen Sie zuerst eines unter Integrationen → Speicher hinzu.",
-      "timesShownIn": "Zeiten in {timezone}",
       "minutePast": ":{minute} nach jeder vollen Stunde"
     },
     "setup": {
@@ -7381,7 +7380,7 @@
       "columns": {
         "site": "Anwendung",
         "status": "Status",
-        "type": "Backup-Art",
+        "type": "Typ",
         "destination": "Ziel",
         "when": "Wann",
         "size": "Größe",
@@ -7701,7 +7700,7 @@
       "columns": {
         "site": "Anwendung",
         "status": "Status",
-        "type": "Was zurückgeholt wurde",
+        "type": "Zurückgeholt",
         "when": "Gestartet",
         "undo": "Sicherheitskopie"
       },

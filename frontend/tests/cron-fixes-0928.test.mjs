@@ -100,7 +100,7 @@ test("layout: table from 900px of content, like every list (Krishna, 19 Nov)", (
   const s = read("components/cron-jobs/cronjobs-table.jsx");
   assert.match(s, /const cardsClass = "@min-\[900px\]\/page:hidden";/);
   assert.match(s, /const tableClass = "hidden @min-\[900px\]\/page:block";/);
-  assert.match(s, /max-w-34 truncate/);
+  assert.match(s, /max-w-32 truncate/);
 });
 
 test("CJ-B2/B3 guard: the form refuses what Linux cron cannot read", async () => {

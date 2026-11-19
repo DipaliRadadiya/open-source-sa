@@ -168,6 +168,9 @@ export const backupTargetSchema = z
   .passthrough();
 
 // Nested so "not configured" (null) differs from "configured with nothing set".
+// A site's backup state (GET /backup-targets), in the server's `sort=state` order.
+export const COVERAGE_STATES = ["failing", "protected", "paused", "unprotected"];
+
 export const applicationBackupSchema = z
   .object({
     application_id: z.number(),
@@ -175,10 +178,13 @@ export const applicationBackupSchema = z
     application_domain: z.string(),
     backup_target: backupTargetSchema.nullable(),
     last_backup: backupSchema.nullable(),
+    // Decided by the server (BackupCoverage), the same rule as its filter and counts.
+    state: z.enum(COVERAGE_STATES).optional(),
   })
   .passthrough();
 
-// `matched` is what the current search and filter hit; `protected`/`unprotected` are unused here.
+// `matched` is what the current search and filter hit; `total` and the four state counts cover
+// every application, whatever the page or filter.
 export const backupTargetsResponseSchema = z.object({
   backup_targets: z.array(applicationBackupSchema).default([]),
   meta: z
@@ -186,6 +192,9 @@ export const backupTargetsResponseSchema = z.object({
       total: z.number(),
       protected: z.number(),
       unprotected: z.number(),
+      paused: z.number().default(0),
+      failing: z.number().default(0),
+      configured: z.number().default(0),
       matched: z.number().default(0),
       current_page: z.number().default(1),
       per_page: z.number().default(10),
@@ -195,6 +204,9 @@ export const backupTargetsResponseSchema = z.object({
       total: 0,
       protected: 0,
       unprotected: 0,
+      paused: 0,
+      failing: 0,
+      configured: 0,
       matched: 0,
       current_page: 1,
       per_page: 10,

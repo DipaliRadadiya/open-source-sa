@@ -23,11 +23,14 @@ test("table headers are 44px tall and typed the same everywhere", () => {
   }
 });
 
-test("a header can wrap on its own without wrapping its cells", () => {
+test("headers stay on one line; the Users table fits by its columns instead (Krishna, 19 Nov)", () => {
   assert.match(read("components/ui/data-table.jsx"), /header\.column\.columnDef\.meta\?\.headClassName/);
-  // fr/ru at 1280px: these two headers were the only thing making the table scroll.
   const users = read("components/admin/users/users-table.jsx");
-  assert.equal((users.match(/meta: \{ headClassName: HEAD_WRAPS \}/g) ?? []).length, 2);
+  // fr/ru at 1280px: Username and Account type wrapped to fit. Account type is a badge beside an
+  // administrator's name now, so no header has to wrap.
+  assert.doesNotMatch(users, /HEAD_WRAPS|headClassName/);
+  assert.doesNotMatch(users, /header: t\("columns\.accountType"\)/);
+  assert.match(users, /row\.original\.is_admin \? <Badge>\{t\("roleBadge\.admin"\)\}<\/Badge> : null/);
 });
 
 test("the Automatic cleanup icon button names itself on hover", () => {

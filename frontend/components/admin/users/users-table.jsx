@@ -16,7 +16,6 @@ import { useCreateUser } from "@/components/admin/users/users-view";
 import { initials } from "@/lib/format/initials";
 import { UsersCards } from "@/components/admin/users/users-cards";
 
-const HEAD_WRAPS = "h-auto py-2.5 whitespace-normal";
 
 const MAX_ROLE_BADGES = 2;
 
@@ -25,7 +24,7 @@ const MAX_ROLE_BADGES = 2;
 function NameCell({ row, table }) {
   const t = useTranslations("users");
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
       <Avatar className="size-7">
         <AvatarFallback className="text-xs">{initials(row.original.name)}</AvatarFallback>
       </Avatar>
@@ -35,22 +34,15 @@ function NameCell({ row, table }) {
           {t("you")}
         </Badge>
       ) : null}
+      {/* Account type as a badge beside an administrator's name, not a column of its own: with
+          headers on one line the table did not fit a laptop in Russian (19 Nov). */}
+      {row.original.is_admin ? <Badge>{t("roleBadge.admin")}</Badge> : null}
     </div>
   );
 }
 
 function UsernameCell({ row }) {
   return <span className="text-muted-foreground">@{row.original.username}</span>;
-}
-
-function AccountTypeCell({ row }) {
-  const t = useTranslations("users");
-  const admin = row.original.is_admin;
-  return (
-    <Badge variant={admin ? "default" : "muted"}>
-      {admin ? t("roleBadge.admin") : t("roleBadge.user")}
-    </Badge>
-  );
 }
 
 function RolesCell({ row }) {
@@ -155,8 +147,7 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
     { accessorKey: "name", header: t("columns.name"), cell: NameCell },
     // These two headers are wider than anything under them (fr/ru): letting them wrap
     // kept the table from scrolling sideways at 1280px once headers went to 14px.
-    { accessorKey: "username", header: t("columns.username"), cell: UsernameCell, meta: { headClassName: HEAD_WRAPS } },
-    { accessorKey: "is_admin", header: t("columns.accountType"), cell: AccountTypeCell, meta: { headClassName: HEAD_WRAPS } },
+    { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
     { id: "roles", header: t("columns.roles"), cell: RolesCell },
     { accessorKey: "last_login_at_human", header: t("columns.lastSignIn"), cell: LastSignInCell },
     { accessorKey: "created_at_human", header: t("columns.joined"), cell: JoinedCell },

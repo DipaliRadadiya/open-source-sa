@@ -7186,7 +7186,8 @@
         "actions": "क्रियाएँ",
         "type": "बैकअप प्रकार",
         "typeShort": "प्रकार",
-        "storage": "स्टोरेज"
+        "storage": "स्टोरेज",
+        "scheduleIn": "शेड्यूल · {timezone}"
       },
       "status": {
         "protected": "सुरक्षित",
@@ -7203,7 +7204,6 @@
       "viewBackups": "बैकअप देखें",
       "searchPlaceholder": "ऐप्लिकेशन खोजें",
       "noMatches": "उन फ़िल्टरों से कोई ऐप्लिकेशन मेल नहीं खाता।",
-      "showing": "{total} में से {shown} दिख रहे हैं",
       "filters": {
         "all": "सभी",
         "protected": "सुरक्षित",
@@ -7226,7 +7226,6 @@
       "notSetUpLine": "सेट अप नहीं है — इस ऐप्लिकेशन का कुछ भी बैकअप नहीं हो रहा।",
       "notSetUpListHint": "इन ऐप्लिकेशन का कुछ भी बैकअप नहीं हो रहा।",
       "needsDestination": "अभी कोई स्टोरेज डेस्टिनेशन सेट नहीं है। पहले Integrations → Storage में एक जोड़ें।",
-      "timesShownIn": "समय {timezone} में दिखाया गया है",
       "minutePast": "हर घंटे के :{minute} पर"
     },
     "setup": {
@@ -7381,7 +7380,7 @@
       "columns": {
         "site": "ऐप्लिकेशन",
         "status": "स्थिति",
-        "type": "बैकअप प्रकार",
+        "type": "प्रकार",
         "destination": "गंतव्य",
         "when": "कब",
         "size": "आकार",

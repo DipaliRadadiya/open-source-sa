@@ -395,7 +395,7 @@ export function BackupsHistoryTable({
     // Wider without the Site column: the safety badge sits here then, and is 175px in French.
     { accessorKey: "status", header: t("columns.status"), meta: { className: showSite ? "w-[17%]" : "w-[22%]" }, cell: StatusCell },
     // One line: "Files and / database" read as two values.
-    { id: "type", header: t("columns.type"), meta: { className: "w-[16%] whitespace-nowrap", headClassName: "whitespace-normal" }, cell: TypeCell },
+    { id: "type", header: t("columns.type"), meta: { className: "w-[16%] whitespace-nowrap" }, cell: TypeCell },
     // Only when the API sends it: the field is absent (not null) on older
     // backends, and an always-empty column would look like a load failure.
     showDestination
@@ -408,7 +408,7 @@ export function BackupsHistoryTable({
           cell: DestinationCell,
         }
       : null,
-    { id: "when", header: t("columns.when"), meta: { className: "w-[13%] whitespace-nowrap", headClassName: "whitespace-normal" }, cell: WhenCell },
+    { id: "when", header: t("columns.when"), meta: { className: "w-[13%] whitespace-nowrap" }, cell: WhenCell },
     {
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,

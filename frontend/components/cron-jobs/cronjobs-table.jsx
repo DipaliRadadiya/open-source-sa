@@ -98,11 +98,22 @@ export function CronjobRunAs({ job }) {
 
 // Headers may wrap, so long translations don't push the ⋯ column off screen.
 function Head({ children }) {
-  return <span className="block whitespace-normal">{children}</span>;
+  return <span className="block whitespace-nowrap">{children}</span>;
 }
 
+// "Runs as" sits under the name, not in a column of its own: with headers on one line the
+// eighth column kept the table past a laptop's width in German and Russian (19 Nov).
 function NameCell({ row }) {
-  return <CronjobName job={row.original} />;
+  const t = useTranslations("cronJobs");
+  return (
+    <div className="space-y-1">
+      <CronjobName job={row.original} />
+      <div className="flex flex-wrap items-center gap-x-1.5 text-xs whitespace-normal text-muted-foreground">
+        <span>{t("columns.runAs")}</span>
+        <CronjobRunAs job={row.original} />
+      </div>
+    </div>
+  );
 }
 
 function ScheduleCell({ row, table }) {
@@ -117,19 +128,15 @@ function LastRunCell({ row }) {
   return <CronjobLastRun job={row.original} />;
 }
 
-function RunAsCell({ row }) {
-  return <CronjobRunAs job={row.original} />;
-}
-
 function CommandCell({ row, table }) {
   return (
-    <div className="max-w-34 space-y-1">
+    <div className="max-w-32 space-y-1">
     <Tooltip>
       <TooltipTrigger asChild>
         {/* tabIndex: a truncated value must be reachable without a mouse. */}
         <span
           tabIndex={0}
-          className="block max-w-34 truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="block max-w-32 truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           {row.original.command}
         </span>
@@ -194,7 +201,6 @@ export function CronjobsTable({
       cell: NextRunCell,
     },
     ...(historySupported ? [{ id: "last_run", header: () => <Head>{t("lastRun.column")}</Head>, cell: LastRunCell }] : []),
-    { accessorKey: "username", header: () => <Head>{t("columns.runAs")}</Head>, cell: RunAsCell },
     { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
     { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
     // Always there: a view-only reader still gets the menu, each item saying why it is off.

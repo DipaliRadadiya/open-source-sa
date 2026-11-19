@@ -189,17 +189,18 @@ export const getDatabaseBackupTarget = cache(async function getDatabaseBackupTar
   };
 });
 
-// Requests the API maximum of 100 rows: the counts need every row. Sites beyond
-// 100 are missing until the backend offers a full count.
-export async function getBackupCoverage() {
-  const [result, { applications }] = await Promise.all([
-    read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } }),
-    getAllApplications(),
-  ]);
+// The Overview's status filter, as the URL carries it. "unprotected" is the "Not protected"
+// option: no settings, paused and failing together (`filter[protected]=0`).
+export const COVERAGE_FILTERS = ["unprotected", "protected", "failing", "paused"];
 
-  const byId = new Map(applications.map((application) => [application.id, application]));
+function coverageStateParams(value) {
+  if (!COVERAGE_FILTERS.includes(value)) return {};
+  if (value === "unprotected") return { "filter[protected]": 0 };
+  return { "filter[state]": value };
+}
 
-  const rows = (result.data?.backup_targets ?? []).map((entry) => ({
+function coverageRow(entry, byId) {
+  return {
     application: {
       id: entry.application_id,
       name: entry.application_name,
@@ -208,23 +209,70 @@ export async function getBackupCoverage() {
     },
     target: entry.backup_target,
     lastBackup: entry.last_backup,
-    state: classify(entry.backup_target, entry.last_backup),
-  }));
+    // The server's state (one rule with its filter and counts); worked out here only
+    // for an older backend that does not send it.
+    state: entry.state ?? classify(entry.backup_target, entry.last_backup),
+  };
+}
 
-  const meta = result.data?.meta;
+// One page of the Overview, searched, filtered and sorted by the server (RC-42): it used to
+// load 100 rows and filter them here, so sites past the 100th never showed.
+// The counts in `meta` cover every application, whatever the page or filter.
+export async function getBackupCoverage(searchParams = {}) {
+  const [result, { applications }] = await Promise.all([
+    read("/backup-targets", backupTargetsResponseSchema, {
+      searchParams: {
+        page: searchParams.page,
+        per_page: await perPage(searchParams.per_page),
+        search: searchParams.search || undefined,
+        ...coverageStateParams(searchParams.state),
+        "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
+      },
+    }),
+    getAllApplications(),
+  ]);
+
+  const byId = new Map(applications.map((application) => [application.id, application]));
+  const rows = (result.data?.backup_targets ?? []).map((entry) => coverageRow(entry, byId));
+  const meta = result.data?.meta ?? backupTargetsResponseSchema.parse({}).meta;
 
   return {
     rows,
-    // Counted here: the backend treats any target as protected, including
-    // disabled or manual ones that back nothing up.
-    protected: rows.filter((row) => row.state === "protected").length,
-    unprotected: rows.filter((row) => row.state === "unprotected").length,
-    paused: rows.filter((row) => row.state === "paused").length,
-    failing: rows.filter((row) => row.state === "failing").length,
-    total: meta?.total ?? rows.length,
+    // Every application, for the setup dialog and the first-run screen: the rows are one page.
+    applications,
+    protected: meta.protected,
+    unprotected: meta.unprotected,
+    paused: meta.paused,
+    failing: meta.failing,
+    configured: meta.configured,
+    total: meta.total,
+    // For the pager: what the search and filter matched, not how many sites exist.
+    meta: { ...meta, total: meta.matched },
     failed: result.failed,
     status: result.status,
     failure: result.failure, message: result.message, debug: result.debug,
+  };
+}
+
+// What the storage warning needs from every configured site, not one page: which destinations
+// are in use, and each site's newest run (an upload that failed). Paged through at the API's
+// maximum; only sites with backup settings, so usually one request.
+export async function getBackupDestinationUsage() {
+  const rows = [];
+  for (let page = 1; page <= 50; page += 1) {
+    const result = await read("/backup-targets", backupTargetsResponseSchema, {
+      searchParams: { page, per_page: 100, "filter[state]": "protected,paused,failing" },
+    });
+    if (result.failed) return { inUse: [], lastBackups: [], failed: true };
+    rows.push(...(result.data?.backup_targets ?? []));
+    if (page >= (result.data?.meta?.last_page ?? 1)) break;
+  }
+  return {
+    inUse: [...new Set(rows.map((row) => row.backup_target?.storage_destination_id).filter(Boolean))],
+    lastBackups: rows
+      .filter((row) => row.last_backup)
+      .map((row) => ({ ...row.last_backup, storage_destination_id: row.backup_target?.storage_destination_id })),
+    failed: false,
   };
 }
 

@@ -1,5 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
+import { wrappableTimezoneLabel } from "@/lib/format/timezone";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
 import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
@@ -24,15 +25,7 @@ import { HoverHint } from "@/components/ui/hover-hint";
 
 // Failing first, as it needs attention today; unprotected last, since its
 // placeholders keep it legible anywhere in the list.
-const STATE_ORDER = { failing: 0, protected: 1, paused: 2, unknown: 3, unprotected: 4 };
-
-export function sortCoverage(rows) {
-  return [...rows].sort(
-    (a, b) =>
-      STATE_ORDER[a.state] - STATE_ORDER[b.state] ||
-      a.application.name.localeCompare(b.application.name),
-  );
-}
+// Rows arrive in the server's order (`sort=state`: failing first), so none is applied here.
 
 function SiteCell({ row }) {
   const t = useTranslations("backups.coverage");
@@ -272,7 +265,7 @@ export const COVERAGE_WIDTHS = {
   actions: "w-44",
 };
 
-export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, bare = false }) {
+export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, scheduleTimezone = null, bare = false }) {
   const t = useTranslations("backups.coverage");
 
   const columns = [
@@ -289,7 +282,9 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
     // "Type", not "Backup type": on this page it can only mean that, and the long
     // form wrapped to two lines at 1280.
     { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: COVERAGE_WIDTHS.kind }, cell: TypeCell },
-    { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: COVERAGE_WIDTHS.schedule }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
+    // The time zone is named in the header of the one column with clock times, as Cron Jobs does
+    // ("Next run · UTC"); a footer line under the pager read as detached (Krishna, 19 Nov).
+    { id: "schedule", header: wrapping(scheduleTimezone ? t("columns.scheduleIn", { timezone: wrappableTimezoneLabel(scheduleTimezone) }) : t("columns.schedule")), meta: { className: COVERAGE_WIDTHS.schedule }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
     { id: "storage", header: wrapping(t("columns.storage")), meta: { className: COVERAGE_WIDTHS.storage }, cell: StorageCell },
     { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: COVERAGE_WIDTHS.runs }, cell: RunsCell },
     {
@@ -319,7 +314,7 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
 }
 
 const wrapping = (label) => function WrappingHeader() {
-  return <span className="whitespace-normal">{label}</span>;
+  return <span className="whitespace-nowrap">{label}</span>;
 };
 
 function NotSetUp() {

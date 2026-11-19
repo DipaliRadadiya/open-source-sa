@@ -142,9 +142,8 @@ export function DataTable({
                       // `meta.className` lets a caller constrain a column's width;
                       // `meta.headClassName` styles the header cell alone (e.g. let it wrap).
                       className={cn(
-                        // A long header wraps instead of widening its column: German and Russian headers
-                        // pushed tables past a laptop's width (19 Nov). One line still measures 44px.
-                        "h-auto py-3 whitespace-normal",
+                        // Headers stay on one line (Krishna, 19 Nov): a wrapped header, or a sort arrow
+                        // dropped under its name, read as broken. Tables fit by their cells instead.
                         stickyHeader && "bg-[color-mix(in_srgb,var(--muted)_40%,var(--card))]",
                         header.column.columnDef.meta?.className,
                         header.column.columnDef.meta?.headClassName,

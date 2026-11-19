@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Clock, SearchX, ShieldAlert, ShieldCheck, Archive } from "lucide-react";
+import { SearchX, ShieldAlert, ShieldCheck, Archive } from "lucide-react";
 import { BACKUP_IN_FLIGHT, BACKUP_TYPES, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { runBackupNow } from "@/lib/api/backups";
@@ -13,25 +14,30 @@ import { backupStartedWithin } from "@/lib/backups/just-started";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
-import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { SearchInput } from "@/components/data-table/search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ListCard } from "@/components/data-table/list-card";
-import { FilterSelect } from "@/components/data-table/filter-select";
+import { FacetSelect } from "@/components/data-table/facet-select";
+import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { DestinationHealth } from "@/components/backups/destination-health";
-import { CoverageTable, sortCoverage } from "@/components/backups/coverage-table";
+import { CoverageTable } from "@/components/backups/coverage-table";
 import { CoverageCards } from "@/components/backups/coverage-cards";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
-import { timezoneLabel } from "@/lib/format/timezone";
 
 // How long a "Run backup" press keeps the page polling on its own: long enough
 // for the queue to pick the job up, short enough to stop if it never starts.
 const JUST_STARTED_MS = 90_000;
 
-// Filtering is client-side: the coverage list is fully loaded during SSR.
+// The URL keys the Overview's filters live under; cleared together.
+const FILTER_KEYS = ["search", "state", "type"];
+
+// One page at a time: search, filters, sort and paging are the server's (RC-42), from the URL.
 export function CoverageCard({
   coverage,
   applications,
+  destinationUsage = { inUse: [], lastBackups: [] },
+  pager = null,
   destinations,
   canManage,
   databaseCounts = null,
@@ -40,7 +46,6 @@ export function CoverageCard({
   backupOptions = null,
 }) {
   const t = useTranslations("backups.coverage");
-  const tc = useTranslations("common");
   const th = useTranslations("backups.history");
   const { refreshAndWait } = useRefresh();
   // Run backup is refused for the site a restore is writing to: a copy taken mid-restore
@@ -55,29 +60,10 @@ export function CoverageCard({
   // `Date.now()`, to keep render pure.
   const [justStarted, setJustStarted] = useState(() => backupStartedWithin(JUST_STARTED_MS));
 
-  const [state, setState] = useState("all");
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState("all");
-
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return sortCoverage(
-      coverage.rows.filter((row) => {
-        if (state === "protected" && row.state !== "protected") return false;
-        // "Not protected" includes paused and unreadable, not just unconfigured.
-        if (state === "unprotected" && row.state === "protected") return false;
-        if (type !== "all" && row.target?.type !== type) return false;
-        if (
-          term &&
-          !row.application.name.toLowerCase().includes(term) &&
-          !row.application.domain.toLowerCase().includes(term)
-        ) {
-          return false;
-        }
-        return true;
-      }),
-    );
-  }, [coverage.rows, state, search, type]);
+  const searchParams = useSearchParams();
+  const hasFilters = FILTER_KEYS.some((key) => searchParams.get(key));
+  // Already in the server's order (failing first); nothing is filtered here.
+  const rows = coverage.rows;
 
   const exposed = coverage.total - coverage.protected;
   const allCovered = coverage.total > 0 && exposed === 0;
@@ -111,12 +97,12 @@ export function CoverageCard({
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys, restoringId };
-
-  // The Schedule column's timezone, only when every target agrees. An older
-  // backend that sends none leaves the caption off rather than assuming UTC.
+  // The Schedule column's time zone, only when every row on the page agrees. An older backend
+  // that sends none leaves it unnamed rather than assuming UTC.
   const scheduleZones = new Set(rows.map((row) => row.target?.timezone).filter(Boolean));
   const scheduleTimezone = scheduleZones.size === 1 ? [...scheduleZones][0] : null;
+
+  const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys, restoringId, scheduleTimezone };
 
   // Right after a run is accepted the row still shows the previous backup, so
   // status alone would never start the poller.
@@ -125,23 +111,24 @@ export function CoverageCard({
 
   const toolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} />
-      <FilterSelect
-        value={state}
-        onChange={setState}
+      <SearchInput placeholder={t("searchPlaceholder")} />
+      {/* "Not protected" is no settings, paused and failing together; the last two also alone. */}
+      <FacetSelect
+        paramKey="state"
         allLabel={th("allStatuses")}
         label={t("columns.status")}
         options={[
           { value: "unprotected", label: t("filters.unprotected") },
           { value: "protected", label: t("filters.protected") },
+          { value: "failing", label: t("states.failing") },
+          { value: "paused", label: t("states.paused") },
         ]}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
       {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
       <div className="flex items-center gap-3 sm:contents">
-        <FilterSelect
-          value={type}
-          onChange={setType}
+        <FacetSelect
+          paramKey="type"
           allLabel={t("filters.anyType")}
           label={t("columns.type")}
           options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
@@ -154,18 +141,7 @@ export function CoverageCard({
     </div>
   );
 
-  const footer = (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      <span className="tabular-nums">{t("showing", { shown: rows.length, total: coverage.total })}</span>
-      {/* Stated once here: in the column header it forced horizontal scroll. */}
-      {scheduleTimezone ? (
-        <span className="flex items-center gap-1.5">
-          <Clock className="size-3.5 shrink-0" />
-          {t("timesShownIn", { timezone: timezoneLabel(scheduleTimezone) })}
-        </span>
-      ) : null}
-    </div>
-  );
+  const footer = pager;
 
   return (
     <>
@@ -176,10 +152,8 @@ export function CoverageCard({
             backing up to a bucket that rejects every write. */}
         <DestinationHealth
           destinations={destinations}
-          inUse={coverage.rows.map((row) => row.target?.storage_destination_id).filter(Boolean)}
-          lastBackups={coverage.rows
-            .filter((row) => row.lastBackup)
-            .map((row) => ({ ...row.lastBackup, storage_destination_id: row.target?.storage_destination_id }))}
+          inUse={destinationUsage.inUse}
+          lastBackups={destinationUsage.lastBackups}
         />
 
         {/* Warning (amber), not danger: unprotected sites are a risk, not a breakage. */}
@@ -221,24 +195,12 @@ export function CoverageCard({
             time zone underneath. Loose above the table they read as part of the banner. */}
         <div className="@container/coverage">
           {rows.length === 0 ? (
-            // The filters are not in the URL, so an emptied list must say so.
             <ListCard toolbar={toolbar}>
               <EmptyState
                 icon={SearchX}
                 subject={Archive}
                 title={t("noMatches")}
-                action={
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSearch("");
-                      setState("all");
-                      setType("all");
-                    }}
-                  >
-                    {tc("clearFilters")}
-                  </Button>
-                }
+                action={hasFilters ? <ClearFiltersButton keys={FILTER_KEYS} /> : null}
               />
             </ListCard>
           ) : (

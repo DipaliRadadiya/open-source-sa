@@ -36,7 +36,7 @@ import { BULK_FIXES } from "@/lib/system-users/bulk-delete";
 // Headers may wrap: in French and Russian a one-line "NOM D'UTILISATEUR" pushed
 // the row menu off the edge.
 function Head({ children }) {
-  return <span className="block whitespace-normal">{children}</span>;
+  return <span className="block whitespace-nowrap">{children}</span>;
 }
 
 function UsernameCell({ row, table }) {
@@ -92,7 +92,7 @@ function SelectCell({ row }) {
 // Masked until asked for.
 function PasswordCell({ row }) {
   return (
-    <div className="w-40">
+    <div className="w-36">
       <PasswordReveal password={row.original.password} />
     </div>
   );

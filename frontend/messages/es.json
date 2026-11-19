@@ -7186,7 +7186,8 @@
         "actions": "Acciones",
         "type": "Tipo de copia",
         "typeShort": "Tipo",
-        "storage": "Almacenamiento"
+        "storage": "Almacenamiento",
+        "scheduleIn": "Programación · {timezone}"
       },
       "status": {
         "protected": "Protegido",
@@ -7203,7 +7204,6 @@
       "viewBackups": "Ver copias",
       "searchPlaceholder": "Buscar aplicaciones",
       "noMatches": "Ninguna aplicación coincide con esos filtros.",
-      "showing": "Mostrando {shown} de {total}",
       "filters": {
         "all": "Todos",
         "protected": "Protegidos",
@@ -7226,7 +7226,6 @@
       "notSetUpLine": "Sin configurar: no se respalda nada de esta aplicación.",
       "notSetUpListHint": "No se respalda nada de estas aplicaciones.",
       "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero.",
-      "timesShownIn": "Horas mostradas en {timezone}",
       "minutePast": "a los :{minute} de cada hora"
     },
     "setup": {
@@ -7381,7 +7380,7 @@
       "columns": {
         "site": "Aplicación",
         "status": "Estado",
-        "type": "Tipo de copia",
+        "type": "Tipo",
         "destination": "Destino",
         "when": "Cuándo",
         "size": "Tamaño",

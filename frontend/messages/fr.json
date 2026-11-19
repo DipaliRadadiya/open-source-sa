@@ -7186,7 +7186,8 @@
         "actions": "Actions",
         "type": "Type de sauvegarde",
         "typeShort": "Type",
-        "storage": "Stockage"
+        "storage": "Stockage",
+        "scheduleIn": "Planification · {timezone}"
       },
       "status": {
         "protected": "Protégé",
@@ -7203,7 +7204,6 @@
       "viewBackups": "Voir les sauvegardes",
       "searchPlaceholder": "Rechercher des applications",
       "noMatches": "Aucune application ne correspond à ces filtres.",
-      "showing": "{shown} sur {total} affichés",
       "filters": {
         "all": "Tout",
         "protected": "Protégé",
@@ -7226,7 +7226,6 @@
       "notSetUpLine": "Non configurée — rien n'est sauvegardé sur cette application.",
       "notSetUpListHint": "Rien n'est sauvegardé sur ces applications.",
       "needsDestination": "Aucune destination de stockage n'est encore configurée. Ajoutez-en une via Intégrations → Stockage.",
-      "timesShownIn": "Heures affichées en {timezone}",
       "minutePast": "à :{minute} de chaque heure"
     },
     "setup": {
@@ -7381,7 +7380,7 @@
       "columns": {
         "site": "Application",
         "status": "Statut",
-        "type": "Type de sauvegarde",
+        "type": "Type",
         "destination": "Destination",
         "when": "Quand",
         "size": "Taille",
