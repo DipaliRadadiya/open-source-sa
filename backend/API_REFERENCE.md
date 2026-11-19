@@ -3775,28 +3775,48 @@ Every application and its backup configuration — the overview screen.
 
 **Driven from applications, not from backup targets** — a list built from targets could only ever return the sites that are already protected, and the question this screen exists to answer is which ones are not.
 
-Paged. `?search=` case-insensitively matches application name and domain; **`?filter[protected]=0`** is the one this screen exists for — the sites with no backup configured at all; `?sort=name|domain|created_at`, default `name` ascending with case-insensitive name ordering; `?per_page=10|20|30|50|100`, default 10.
+Paged. `?search=` case-insensitively matches application name and domain; `?per_page=10|20|30|50|100`, default 10.
 
-**`?kind=database`** (2026-10-20, RC-23) lists **databases** instead: every database that is not part of a site — only those can have a schedule of their own; a site's database is backed up with the site. Same paging, `search` (name), `filter[protected]` and `meta` counts (over those databases), plus `meta.kind: "database"`; `sort=name|engine|created_at`. Each row: `{"database_id", "database_name", "database_engine", "backup_target": {…}|null, "last_backup": {…}|null}`. Without `kind` (or `kind=application`) the answer is exactly as below.
+**Every row has a `state`** (2026-11-19), decided by the server so the list can be filtered, counted and paged without loading every site:
 
-**`meta.total` / `meta.protected` / `meta.unprotected` count every application on the server**, not the current page and not the current filter — the header reads "N of M sites protected", and that sentence must not change when you turn the page. **`meta.matched` is the separate number**: how many rows the current search and filter found. Two different questions, two fields.
+| `state` | Rule |
+|---|---|
+| `unprotected` | no backup settings (`backup_target` is `null`) |
+| `paused` | settings exist, but switched off (`enabled: false`) or `frequency: manual` |
+| `failing` | on a schedule, and the latest backup failed |
+| `protected` | on a schedule, and the latest backup did not fail (none yet, running, verified) |
+
+"Latest backup" is the newest run of the site's own target — scheduled or "Back up now" — never a safety copy taken before a restore. A later successful run makes a failing site protected again.
+
+Filters (combine freely, with each other and with `search` and paging; an unknown value is `422`):
+- **`?filter[state]=failing,paused`**: one or more states, comma separated.
+- **`?filter[protected]=1`**: `protected` only. **`?filter[protected]=0`**: everything else, i.e. `unprotected`, `paused` **and `failing`** (before 2026-11-19 a failing site counted as protected).
+- **`?filter[type]=full,database`**: the target's backup type, one or more of `full` · `filesystem` · `database` · `volumes` · `config` · `volumes_config`. Sites with no settings never match.
+
+**`?sort=state`** (the default): `failing`, `protected`, `paused`, `unprotected`, then case-insensitive name; `-state` reverses it. `?sort=name|domain|created_at` as before (name ascending, case-insensitive).
+
+**`?kind=database`** (2026-10-20, RC-23) lists **databases** instead: every database that is not part of a site — only those can have a schedule of their own; a site's database is backed up with the site. Same paging, `search` (name), `state`, the same filters (`filter[state]`, `filter[protected]`, `filter[type]`) and `meta` counts (over those databases), plus `meta.kind: "database"`; `sort=state|name|engine|created_at`, default `state`. Each row: `{"database_id", "database_name", "database_engine", "state", "backup_target": {…}|null, "last_backup": {…}|null}`. Without `kind` (or `kind=application`) the answer is exactly as below.
+
+**`meta.total` and the four state counts `meta.protected` / `meta.unprotected` / `meta.paused` / `meta.failing` count every application on the server**, not the current page and not the current filter — the header reads "N of M sites protected", and that sentence must not change when you turn the page. **The four add up to `total`.** **`meta.matched` is the separate number**: how many rows the current search and filter found. Two different questions, two fields.
 
 ```json
 {"backup_targets": [
   {
     "application_id": 1, "application_name": "shop", "application_domain": "shop.example.com",
+    "state": "protected",
     "backup_target": {"id": 1, "type": "full", "frequency": "daily", "…": "…"},
     "last_backup": {"id": 15, "status": "verified", "created_at": "28-07-2026 02:00:00", "…": "…"}
   },
   {
     "application_id": 2, "application_name": "blog", "application_domain": "blog.example.com",
+    "state": "unprotected",
     "backup_target": null,
     "last_backup": null
   }
-], "meta": {"total": 7, "protected": 4, "unprotected": 3, "configured": 5}}
+], "meta": {"total": 7, "protected": 3, "unprotected": 2, "paused": 1, "failing": 1, "configured": 5, "matched": 7, "current_page": 1, "per_page": 10, "last_page": 1}}
 ```
 
-**`protected` means backed up on a schedule** (since 2026-10-08, OLD-9): a target that is switched off, or `manual`, does not count, and `filter[protected]` uses the same rule. `configured` is how many sites have backup settings at all.
+**Since 2026-11-19 `unprotected` means no settings at all**: paused and failing sites are counted under `paused` and `failing`, not inside `unprotected` (they used to be). `configured` is how many sites have backup settings at all (`total - unprotected`).
 
 There is no `configured` flag — `backup_target === null` is the unprotected state. `backup_target` and `last_backup` are the full objects documented below.
 

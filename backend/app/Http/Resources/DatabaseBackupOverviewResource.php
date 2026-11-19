@@ -25,6 +25,9 @@ class DatabaseBackupOverviewResource extends JsonResource
             'database_id' => $this->id,
             'database_name' => $this->name,
             'database_engine' => $this->engine,
+            // unprotected | paused | failing | protected (BackupCoverage). Only
+            // present on the coverage list, which selects it with the row.
+            'state' => $this->when(isset($this->backup_state), fn () => $this->backup_state),
             'backup_target' => $this->backupTarget === null
                 ? null
                 : BackupTargetResource::make($this->backupTarget)->resolve(),

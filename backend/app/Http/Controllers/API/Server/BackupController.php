@@ -31,6 +31,7 @@ use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Disk\DiskSpaceCheck;
 use App\Services\Server\Docker\VolumeSizes;
+use App\Support\BackupCoverage;
 use App\Support\ListSearch;
 use App\Support\ListSort;
 use Carbon\Carbon;
@@ -182,40 +183,34 @@ class BackupController extends Controller
 
         $applications = Application::query()
             ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
-            // The filter this screen exists for: which sites are unprotected.
-            // array_key_exists rather than `??`, so `filter[protected]=0` is
-            // read as a request for the unprotected ones and not as absent.
-            // "Protected" means backed up on a schedule (OLD-9): a target that
-            // is paused, or manual-only, takes no backup unless somebody
-            // remembers to press the button, and counting it as protected
-            // told the user a site was covered when it was not.
-            ->when(array_key_exists('protected', $filter) && $filter['protected'] !== null,
-                fn ($query) => $filter['protected']
-                    ? $query->whereHas('backupTarget', $this->scheduled(...))
-                    : $query->whereDoesntHave('backupTarget', $this->scheduled(...)))
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'domain']));
 
-        $applications = ListSort::apply(
+        $applications = $this->coverage($applications, 'application_id', $filter);
+
+        $applications = $this->sortCoverage(
             $applications,
+            'application_id',
             $request->validated('sort'),
             IndexBackupTargetsRequest::SORTS,
-            'asc',
-            caseInsensitive: ['name'],
         )->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
 
-        // Counted, not fetched. `whereHas` on a fresh query is one aggregate
-        // each; loading every application to call ->filter() on it would undo
-        // the paging this method just did.
-        $total = Application::query()->count();
-        $protected = Application::query()->whereHas('backupTarget', $this->scheduled(...))->count();
+        // Counted, not fetched: one grouped query over every application, so
+        // the four states add up to `total` whatever the page, search or filter.
+        $states = BackupCoverage::counts(Application::query(), 'application_id');
+        $total = array_sum($states);
         $configured = Application::query()->whereHas('backupTarget')->count();
 
         return response()->json([
             'backup_targets' => ApplicationBackupResource::collection($applications->items())->resolve(),
             'meta' => [
                 'total' => $total,
-                'protected' => $protected,
-                'unprotected' => $total - $protected,
+                // The four states (BackupCoverage); they add up to `total`.
+                // `unprotected` is the sites with no settings at all, as the
+                // state says — paused and failing are counted on their own.
+                'protected' => $states[BackupCoverage::PROTECTED],
+                'unprotected' => $states[BackupCoverage::UNPROTECTED],
+                'paused' => $states[BackupCoverage::PAUSED],
+                'failing' => $states[BackupCoverage::FAILING],
                 // Has backup settings at all, scheduled or not.
                 'configured' => $configured,
                 'current_page' => $applications->currentPage(),
@@ -647,30 +642,29 @@ class BackupController extends Controller
 
         $databases = $own()
             ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
-            ->when(array_key_exists('protected', $filter) && $filter['protected'] !== null,
-                fn ($query) => $filter['protected']
-                    ? $query->whereHas('backupTarget', $this->scheduled(...))
-                    : $query->whereDoesntHave('backupTarget', $this->scheduled(...)))
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name']));
 
-        $databases = ListSort::apply(
+        $databases = $this->coverage($databases, 'database_id', $filter);
+
+        $databases = $this->sortCoverage(
             $databases,
+            'database_id',
             $request->validated('sort'),
             IndexBackupTargetsRequest::DATABASE_SORTS,
-            'asc',
-            caseInsensitive: ['name'],
         )->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
 
-        $total = $own()->count();
-        $protected = $own()->whereHas('backupTarget', $this->scheduled(...))->count();
+        $states = BackupCoverage::counts($own(), 'database_id');
+        $total = array_sum($states);
 
         return response()->json([
             'backup_targets' => DatabaseBackupOverviewResource::collection($databases->items())->resolve(),
             'meta' => [
                 'kind' => 'database',
                 'total' => $total,
-                'protected' => $protected,
-                'unprotected' => $total - $protected,
+                'protected' => $states[BackupCoverage::PROTECTED],
+                'unprotected' => $states[BackupCoverage::UNPROTECTED],
+                'paused' => $states[BackupCoverage::PAUSED],
+                'failing' => $states[BackupCoverage::FAILING],
                 'configured' => $own()->whereHas('backupTarget')->count(),
                 'current_page' => $databases->currentPage(),
                 'per_page' => $databases->perPage(),
@@ -680,8 +674,51 @@ class BackupController extends Controller
         ]);
     }
 
-    private function scheduled(Builder $query): void
+    /**
+     * The coverage list's filters, every one through BackupCoverage so a row's
+     * `state` and the filter that found it are the same rule.
+     *
+     * `filter[protected]`: `1` is the protected sites only; `0` is everything
+     * else — unprotected, paused AND failing. A failing schedule is not
+     * protection, and `0` used to leave it out.
+     *
+     * @param  array<string, mixed>  $filter
+     */
+    private function coverage(Builder $query, string $ownerColumn, array $filter): Builder
     {
-        $query->where('enabled', true)->where('frequency', '!=', 'manual');
+        BackupCoverage::select($query, $ownerColumn);
+
+        if (array_key_exists('protected', $filter) && $filter['protected'] !== null) {
+            BackupCoverage::only($query, $ownerColumn, $filter['protected']
+                ? [BackupCoverage::PROTECTED]
+                : [BackupCoverage::UNPROTECTED, BackupCoverage::PAUSED, BackupCoverage::FAILING]);
+        }
+
+        if (! empty($filter['state'])) {
+            BackupCoverage::only($query, $ownerColumn, (array) $filter['state']);
+        }
+
+        if (! empty($filter['type'])) {
+            $query->whereHas('backupTarget', fn (Builder $target) => $target->whereIn('type', (array) $filter['type']));
+        }
+
+        return $query;
+    }
+
+    /**
+     * `sort=state` (the default) or `-state` through BackupCoverage; any other
+     * whitelisted column through ListSort, as before.
+     *
+     * @param  list<string>  $columns
+     */
+    private function sortCoverage(Builder $query, string $ownerColumn, ?string $sort, array $columns): Builder
+    {
+        $sort = trim((string) $sort);
+
+        if ($sort === '' || ltrim($sort, '-') === 'state') {
+            return BackupCoverage::sort($query, $ownerColumn, str_starts_with($sort, '-'));
+        }
+
+        return ListSort::apply($query, $sort, $columns, 'asc', caseInsensitive: ['name']);
     }
 }

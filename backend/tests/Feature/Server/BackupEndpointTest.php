@@ -351,9 +351,9 @@ describe('the cross-application overview', function () {
             targetPayload(),
         ));
 
-        $response = $this->withHeaders(backupHeaders())->getJson('/api/backup-targets');
+        $response = $this->withHeaders(backupHeaders())->getJson('/api/backup-targets?sort=name');
 
-        // Ordered by name: Blog before Shop.
+        // Ordered by name: Blog before Shop. (The default is by state.)
         $response->assertOk()
             ->assertJsonPath('backup_targets.0.application_name', 'Blog')
             ->assertJsonPath('backup_targets.0.application_domain', 'blog.example.test')
@@ -391,10 +391,12 @@ describe('the cross-application overview', function () {
         ]);
 
         $this->withHeaders(backupHeaders())
-            ->getJson('/api/backup-targets')
+            ->getJson('/api/backup-targets?sort=name')
             ->assertOk()
             ->assertJsonPath('backup_targets.1.last_backup.id', $failed->id)
-            ->assertJsonPath('backup_targets.1.last_backup.status', 'failed');
+            ->assertJsonPath('backup_targets.1.last_backup.status', 'failed')
+            // And the row's state says so too: scheduled, last run failed.
+            ->assertJsonPath('backup_targets.1.state', 'failing');
     });
 
     it('denies a user without the backup permission', function () {
@@ -1176,7 +1178,9 @@ it('does not count a paused or manual-only target as protected (OLD-9)', functio
     $this->withHeaders(backupHeaders())->getJson('/api/backup-targets')
         ->assertJsonPath('meta.protected', 0)
         ->assertJsonPath('meta.configured', 2)
-        ->assertJsonPath('meta.unprotected', 2);
+        // Paused, not unprotected: they have settings (BackupCoverage).
+        ->assertJsonPath('meta.paused', 2)
+        ->assertJsonPath('meta.unprotected', 0);
 
     $this->withHeaders(backupHeaders())->getJson('/api/backup-targets?filter[protected]=0')
         ->assertJsonCount(2, 'backup_targets');
