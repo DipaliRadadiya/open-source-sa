@@ -149,6 +149,12 @@ function fieldLabel(config) {
 // Progress comes from the Create button's checklist, so the two cannot disagree. A
 // numbered step, not an icon (7 Oct): the page is three steps in order, and a finished
 // step turns into a tick.
+// The Domain hint sits in a row under both fields, outside its FormItem: add it to what
+// FormControl (via Slot) already describes the input with, the error message included.
+function DescribedInput({ helpId, ...props }) {
+  return <Input {...props} aria-describedby={cn(props["aria-describedby"], helpId)} />;
+}
+
 function SectionHeading({ step, title, description, headingId, done = false }) {
   return (
     <div className={cn("flex gap-3", description ? "items-start" : "items-center")}>
@@ -1792,7 +1798,8 @@ export function CreateApplicationForm({
                       </div>
 
                       <FormControl>
-                        <Input
+                        <DescribedInput
+                          helpId="create-domain-help"
                           inputMode="url"
                           autoComplete="url"
                           autoCapitalize="none"
@@ -1817,57 +1824,56 @@ export function CreateApplicationForm({
                         />
                       </FormControl>
 
-                      <FormDescription>
-                        {suggestedDomain ? (
-                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span>{t("form.domainSuggestion")}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                form.setValue("domain", suggestedDomain, {
-                                  shouldDirty: true,
-                                  shouldTouch: true,
-                                  shouldValidate: true,
-                                })
-                              }
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {t("form.useDomain", { domain: suggestedDomain })}
-                            </button>
-                          </span>
-                        ) : (
-                          // No SSL control here: the certificate is issued after create, and
-                          // users went looking for the option (3 Nov).
-                          <>
-                            {temporary ? t("form.temporaryDomainHint") : t("form.domainHint")}{" "}
-                            {t("form.httpsAutomatic")}
-                          </>
-                        )}
-                      </FormDescription>
-
-                      {!temporary &&
-                      serverIp &&
-                      isValidApplicationDomain(domain) ? (
-                        // Same shape as the add-domain note: sentence, then the IP on its own row,
-                        // icon on the first line.
-                        <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
-                          <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-                          <div className="min-w-0 space-y-1.5">
-                            <p>{t("form.dnsNote")}</p>
-                            <div className="flex items-center gap-1.5">
-                              <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
-                                {serverIp}
-                              </code>
-                              <CopyButton value={serverIp} className="size-6" />
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                {/* The domain's hint and DNS line, one note across both columns: inside the Domain cell
+                    they left an empty block under Name (Krishna, 19 Nov). */}
+                <div className="flex min-w-0 items-start gap-2.5 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground @2xl:col-span-2">
+                  <Info className="mt-px size-3.5 shrink-0" aria-hidden />
+                  <div className="min-w-0 space-y-1.5">
+                    <p id="create-domain-help">
+                      {suggestedDomain ? (
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span>{t("form.domainSuggestion")}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              form.setValue("domain", suggestedDomain, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              })
+                            }
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {t("form.useDomain", { domain: suggestedDomain })}
+                          </button>
+                        </span>
+                      ) : (
+                        // No SSL control here: the certificate is issued after create, and
+                        // users went looking for the option (3 Nov).
+                        <>
+                          {temporary ? t("form.temporaryDomainHint") : t("form.domainHint")}{" "}
+                          {t("form.httpsAutomatic")}
+                        </>
+                      )}
+                    </p>
+                    {/* As in the add-domain note: the sentence, then the IP on its own row. */}
+                    {!temporary && serverIp && isValidApplicationDomain(domain) ? (
+                      <>
+                        <p>{t("form.dnsNote")}</p>
+                        <div className="flex items-center gap-1.5">
+                          <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
+                            {serverIp}
+                          </code>
+                          <CopyButton value={serverIp} className="size-6" />
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
                 <FormField
                   control={form.control}
                   name="system_user_id"

@@ -29,8 +29,9 @@ test("domain DNS note icons sit on the first line, with the IP on its own row", 
     const source = fs.readFileSync(path.join(root, file), "utf8");
     const note = dnsNote(source, key);
 
-    assert.match(note, /className="flex items-start gap-2\.5 rounded-lg/);
+    assert.match(note, /className="flex (?:min-w-0 )?items-start gap-2\.5 rounded-lg/);
     assert.match(note, /<Info className="mt-px size-3\.5 shrink-0"/);
-    assert.match(note, /<div className="min-w-0 space-y-1\.5">\s*<p>\{$/);
+    // Create form (19 Nov): the domain hint comes first in the same note, then this sentence.
+    assert.match(note, /<div className="min-w-0 space-y-1\.5">[\s\S]*<p>\{$/);
   }
 });
