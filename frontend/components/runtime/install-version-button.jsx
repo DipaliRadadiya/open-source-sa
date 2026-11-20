@@ -97,8 +97,8 @@ export function InstallVersionButton({
   return (
     <>
       <ReasonTooltip reason={unavailable ?? (canManage ? null : t("noPermission"))}>
+        {/* Filled, as every page's main add button is (Create application, Add user…). */}
         <Button
-          variant="outline"
           disabled={!canManage || Boolean(unavailable)}
           onClick={() => setOpen(true)}
         >

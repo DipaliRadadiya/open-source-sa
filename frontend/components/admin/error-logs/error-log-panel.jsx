@@ -55,14 +55,12 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
 
   return (
     <div className="space-y-4">
-      {/* The everyday search first and widest, the kind filter beside it; a reference is a
+      {/* The everyday search first (the same width as every list's), the kind filter beside it; a reference is a
           rare support step, so it waits behind its own button (Krishna, 17 Oct: two
           look-alike search boxes side by side). */}
       <div className="flex flex-wrap items-center gap-2">
         {hasEntries ? (
-          <div className="min-w-48 flex-1">
-            <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} className="sm:max-w-none" />
-          </div>
+          <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} />
         ) : null}
 
         {counts.api && counts.operation ? (

@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import {
   ArrowDownNarrowWide,
   ArrowUpNarrowWide,
-  RotateCw,
+  RefreshCw,
   Download,
   Eraser,
   WrapText,
@@ -326,7 +326,7 @@ export function LogToolbar({
             />
             <ReasonTooltip reason={disabled && !reloadable ? reloadReason : null} className="inline-flex h-full">
               <IconAction
-                icon={RotateCw}
+                icon={RefreshCw}
                 label={t("reload")}
                 onClick={onReload}
                 disabled={disabled && !reloadable}

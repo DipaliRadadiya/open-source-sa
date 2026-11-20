@@ -76,8 +76,9 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
     {/* Only the blocked state gets the wrapper: `ReasonTooltip` makes its span
         focusable, which would add a second tab stop to an enabled button. */}
     <ReasonTooltip reason={blocker}>
+      {/* Plain as an icon in a table row, like every list's row buttons; framed with its label on a card. */}
       <HoverHint content={blocker ? undefined : size ? t("hintWithSize", { size }) : t("hint")}><Button
-        variant="outline"
+        variant={label ? "outline" : "ghost"}
         size={label ? "sm" : "icon-sm"}
         disabled={Boolean(blocker) || pending}
         onClick={download}
