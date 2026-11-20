@@ -191,7 +191,7 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="mt-0.5 size-8 shrink-0" disabled={!canManage}>
+          <Button variant="ghost" size="icon" className="mt-0.5 size-8 shrink-0" disabled={!canManage}>
             <MoreHorizontal className="size-4" />
             <span className="sr-only">{t("actions")}</span>
           </Button>

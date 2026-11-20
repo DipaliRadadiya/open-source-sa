@@ -63,7 +63,7 @@ export function DatabaseRowActions({
         canManage && (hasClientActions || onDelete) ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="size-8 shrink-0" aria-label={`${t("actions")}: ${database.name}`}>
+              <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label={`${t("actions")}: ${database.name}`}>
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
