@@ -334,7 +334,10 @@
       "heading": "{count, plural, one {# item precisa da sua atenção} other {# itens precisam da sua atenção}}",
       "rowUpdateFailed": "A última atualização do painel falhou",
       "rowUpdateBlocked": "A atualização v{version} ainda não pode ser instalada",
-      "openUpdate": "Abrir atualização do painel"
+      "openUpdate": "Abrir atualização do painel",
+      "rowSignIns": "{count, plural, one {# login com falha nas últimas 24 horas} other {# logins com falha nas últimas 24 horas}}",
+      "signInsFrom": "A maioria de {address}",
+      "openSignIns": "Ver logins"
     },
     "feed": {
       "title": "Atividade recente",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Mais recente {when}",
       "someone": "Alguém",
-      "between": "De {first} a {last}"
+      "between": "De {first} a {last}",
+      "central": "Central",
+      "onlySignIns": "Ultimamente só houve logins; nada foi alterado."
     },
     "people": {
-      "title": "Acesso",
-      "admins": "Administradores",
-      "roles": "Papéis",
-      "manage": "Gerenciar usuários",
       "impersonation": "Representação",
       "impersonationNever": "Nunca usado",
       "impersonationUsed": "{count, plural, one {Usado uma vez} other {Usado # vezes}}, último {when}",
       "users": "Usuários",
-      "rolesInUse": "Papéis em uso",
-      "roleMembers": "{count, plural, one {# usuário} other {# usuários}}",
-      "rolesFailed": "Não foi possível carregar a contagem de papéis.",
-      "rolesNone": "Nenhum usuário tem um papel ainda."
+      "usersCount": "{count, plural, one {# usuário} other {# usuários}}",
+      "adminsCount": "{count, plural, one {# administrador} other {# administradores}}",
+      "neverCount": "{count, plural, one {# conta nunca fez login} other {# contas nunca fizeram login}}"
     },
     "navigationLabel": "Menu de administração",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "Saúde do sistema",
       "update": "Atualizar painel",
       "centralWaiting": "Aguardando o Central"
+    },
+    "signIns": {
+      "title": "Logins com falha",
+      "failed": "Não foi possível carregar as tentativas de login.",
+      "none": "Nenhum nos últimos 7 dias",
+      "failedCount": "{shown} nos últimos 7 dias"
     }
   },
   "users": {

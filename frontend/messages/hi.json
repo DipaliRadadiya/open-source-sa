@@ -334,7 +334,10 @@
       "heading": "{count, plural, one {# चीज़ पर आपका ध्यान चाहिए} other {# चीज़ों पर आपका ध्यान चाहिए}}",
       "rowUpdateFailed": "पिछला पैनल अपडेट विफल रहा",
       "rowUpdateBlocked": "अपडेट v{version} अभी इंस्टॉल नहीं हो सकता",
-      "openUpdate": "पैनल अपडेट खोलें"
+      "openUpdate": "पैनल अपडेट खोलें",
+      "rowSignIns": "{count, plural, one {पिछले 24 घंटों में # असफल साइन-इन} other {पिछले 24 घंटों में # असफल साइन-इन}}",
+      "signInsFrom": "सबसे ज़्यादा {address} से",
+      "openSignIns": "साइन-इन देखें"
     },
     "feed": {
       "title": "हाल की गतिविधि",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who} ने {what}",
       "mostRecent": "सबसे हाल में {when}",
       "someone": "किसी ने",
-      "between": "{first} से {last} तक"
+      "between": "{first} से {last} तक",
+      "central": "सेंट्रल",
+      "onlySignIns": "हाल में सिर्फ़ साइन-इन हुए; कुछ नहीं बदला।"
     },
     "people": {
-      "title": "पहुँच",
-      "admins": "एडमिन",
-      "roles": "भूमिकाएं",
-      "manage": "उपयोगकर्ता प्रबंधित करें",
       "impersonation": "प्रतिरूपण",
       "impersonationNever": "कभी इस्तेमाल नहीं हुआ",
       "impersonationUsed": "{count, plural, one {एक बार इस्तेमाल} other {# बार इस्तेमाल}}, पिछली {when}",
       "users": "उपयोगकर्ता",
-      "rolesInUse": "उपयोग में भूमिकाएँ",
-      "roleMembers": "{count, plural, one {# उपयोगकर्ता} other {# उपयोगकर्ता}}",
-      "rolesFailed": "भूमिकाओं की गिनती लोड नहीं हो सकी।",
-      "rolesNone": "अभी किसी उपयोगकर्ता के पास कोई भूमिका नहीं है।"
+      "usersCount": "{count, plural, one {# उपयोगकर्ता} other {# उपयोगकर्ता}}",
+      "adminsCount": "{count, plural, one {# एडमिन} other {# एडमिन}}",
+      "neverCount": "{count, plural, one {# खाते ने कभी साइन-इन नहीं किया} other {# खातों ने कभी साइन-इन नहीं किया}}"
     },
     "navigationLabel": "एडमिन मेनू",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "सिस्टम स्थिति",
       "update": "पैनल अपडेट करें",
       "centralWaiting": "Central की प्रतीक्षा"
+    },
+    "signIns": {
+      "title": "असफल साइन-इन",
+      "failed": "साइन-इन प्रयास लोड नहीं हो सके।",
+      "none": "पिछले 7 दिनों में कोई नहीं",
+      "failedCount": "पिछले 7 दिनों में {shown}"
     }
   },
   "users": {

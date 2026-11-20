@@ -7,18 +7,27 @@ import { Card } from "@/components/ui/card";
 import { actionDotClass, humanizeActivity } from "@/lib/activity-log/labels";
 import { collapseRepeats } from "@/lib/activity-log/collapse-repeats";
 import { pickFeedRows, QUIET_ACTIONS } from "@/lib/activity-log/pick-feed-rows";
+import { isMachineActor, SIGN_IN_ACTIONS } from "@/lib/admin/sign-in-facts";
 import { lowerFirst } from "@/lib/activity-log/lower-first";
 
-// Repeats are collapsed before the cap so a run of logins cannot fill the card.
-const SHOWN = 6;
+// The latest few changes; the full log is one click away.
+const SHOWN = 5;
 
-export async function ActivityFeed({ entries = [], todayCount = 0, failed = false, todayKnown = true }) {
+// `people`: the complete list of people, to recognise the Central integration's machine
+// account (null when the list is incomplete or failed, and the username is shown).
+export async function ActivityFeed({ entries = [], todayCount = 0, failed = false, todayKnown = true, people = null }) {
   const [t, locale] = await Promise.all([getTranslations("admin.feed"), getLocale()]);
-  // Collapse first, then choose; quiet actions (logins) are capped.
-  const rows = pickFeedRows(collapseRepeats(entries, { mergeAcross: QUIET_ACTIONS }), {
+  // Sign-ins have their own card; the feed shows what changed.
+  const changes = entries.filter((entry) => !SIGN_IN_ACTIONS.includes(entry.action));
+  const rows = pickFeedRows(collapseRepeats(changes, { mergeAcross: QUIET_ACTIONS }), {
     max: SHOWN,
     maxQuiet: 3,
   });
+  const actorName = (entry) => {
+    if (entry.is_system) return t("system");
+    if (isMachineActor(entry, people)) return t("central");
+    return entry.user?.username ?? t("someone");
+  };
 
   return (
     // h-full: the card sits inside a col-span wrapper that stretches, not the card.
@@ -38,7 +47,7 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
           {rows.map(({ key, newest, oldest, count }) => {
             // One sentence ("test logged in 50 times") rather than columns.
             const what = lowerFirst(newest.description || humanizeActivity(newest.action), locale);
-            const who = newest.is_system ? t("system") : (newest.user?.username ?? t("someone"));
+            const who = actorName(newest);
             return (
               <li key={key} className="flex items-start gap-3 px-5 py-3">
                 <span
@@ -72,7 +81,7 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
       ) : (
         /* A failed read must not render as "nothing has happened". */
         <div className="p-5">
-          <EmptyState compact icon={failed ? CircleAlert : History} badge={null} title={failed ? t("failed") : t("empty")} />
+          <EmptyState compact icon={failed ? CircleAlert : History} badge={null} title={failed ? t("failed") : entries.length ? t("onlySignIns") : t("empty")} />
         </div>
       )}
 

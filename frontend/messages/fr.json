@@ -334,7 +334,10 @@
       "heading": "{count, plural, one {# point demande votre attention} other {# points demandent votre attention}}",
       "rowUpdateFailed": "La dernière mise à jour du panneau a échoué",
       "rowUpdateBlocked": "La mise à jour v{version} ne peut pas encore être installée",
-      "openUpdate": "Ouvrir la mise à jour du panneau"
+      "openUpdate": "Ouvrir la mise à jour du panneau",
+      "rowSignIns": "{count, plural, one {# connexion échouée au cours des dernières 24 heures} other {# connexions échouées au cours des dernières 24 heures}}",
+      "signInsFrom": "Surtout depuis {address}",
+      "openSignIns": "Voir les connexions"
     },
     "feed": {
       "title": "Activité récente",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Le plus récent {when}",
       "someone": "Quelqu'un",
-      "between": "De {first} à {last}"
+      "between": "De {first} à {last}",
+      "central": "Central",
+      "onlySignIns": "Récemment, uniquement des connexions ; rien n'a été modifié."
     },
     "people": {
-      "title": "Accès",
-      "admins": "Administrateurs",
-      "roles": "Rôles",
-      "manage": "Gérer les utilisateurs",
       "impersonation": "Usurpation d'identité",
       "impersonationNever": "Jamais utilisé",
       "impersonationUsed": "{count, plural, one {Utilisé une fois} other {Utilisé # fois}}, dernier {when}",
       "users": "Utilisateurs",
-      "rolesInUse": "Rôles utilisés",
-      "roleMembers": "{count, plural, one {# utilisateur} other {# utilisateurs}}",
-      "rolesFailed": "Le nombre d'utilisateurs par rôle n'a pas pu être chargé.",
-      "rolesNone": "Aucun utilisateur n'a encore de rôle."
+      "usersCount": "{count, plural, one {# utilisateur} other {# utilisateurs}}",
+      "adminsCount": "{count, plural, one {# administrateur} other {# administrateurs}}",
+      "neverCount": "{count, plural, one {# compte ne s'est jamais connecté} other {# comptes ne se sont jamais connectés}}"
     },
     "navigationLabel": "Menu d'administration",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "État du système",
       "update": "Mettre à jour le panneau",
       "centralWaiting": "En attente de Central"
+    },
+    "signIns": {
+      "title": "Connexions échouées",
+      "failed": "Les tentatives de connexion n'ont pas pu être chargées.",
+      "none": "Aucune au cours des 7 derniers jours",
+      "failedCount": "{shown} au cours des 7 derniers jours"
     }
   },
   "users": {

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { centralState, updateAttention, roleCounts } from "../lib/admin/dashboard-facts.js";
+import { centralState, updateAttention } from "../lib/admin/dashboard-facts.js";
 
 test("Central reads connected only once Central has used the key", () => {
   assert.equal(centralState(null), null, "a failed read gives no verdict");
@@ -34,12 +34,4 @@ test("a failed update and an update that cannot start each get an attention row"
   assert.deepEqual(updateAttention({ update_available: false, preflight: { ready: false, checks: [] } }), { failed: null, blocked: null });
   assert.deepEqual(updateAttention({ update_available: true, preflight: { ready: true, checks: [] } }), { failed: null, blocked: null });
   assert.deepEqual(updateAttention(null), { failed: null, blocked: null });
-});
-
-test("roles in use are counted from the users list, most-held first", () => {
-  const admin = { id: 1, name: "Administrator" };
-  const view = { id: 2, name: "View only" };
-  const counts = roleCounts([{ roles: [admin] }, { roles: [view, admin] }, { roles: [] }, {}]);
-  assert.deepEqual(counts.map((c) => [c.role.name, c.count]), [["Administrator", 2], ["View only", 1]]);
-  assert.deepEqual(roleCounts(), []);
 });

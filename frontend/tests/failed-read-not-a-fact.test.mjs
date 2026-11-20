@@ -199,7 +199,8 @@ test("the admin audit feed does not report silence it did not observe", () => {
    * useless." The fetcher was fixed; this caller was not.
    */
   const feed = strip(read("components/admin/dashboard/activity-feed.jsx"));
-  assert.match(feed, /failed \? t\("failed"\) : t\("empty"\)/);
+  // A window that held only sign-ins says so; it is not "nothing has happened" either.
+  assert.match(feed, /failed \? t\("failed"\) : entries\.length \? t\("onlySignIns"\) : t\("empty"\)/);
   assert.match(feed, /todayKnown \? t\("today"/);
   assert.match(strip(read("app/admin/page.jsx")), /failed=\{activity\.failed\}/);
   for (const locale of LOCALES) {
@@ -222,15 +223,13 @@ test("the access card shows a dash, not a zero, when stats did not load", () => 
    * impersonation row of this same component already refuses to speak without
    * an answer; two of its three rows did not.
    */
-  const card = strip(read("components/admin/dashboard/people-card.jsx"));
-  // Every count goes through one helper that answers "—" for a missing figure.
-  assert.match(card, /const num = \(n\) => \(n === undefined \|\| n === null \? "—" : format\.number\(n\)\);/);
-  for (const field of ["users\\?\\.total", "users\\?\\.admins", "roles\\?\\.total"]) {
-    assert.match(card, new RegExp(`value: num\\(${field}\\)`), field);
-  }
+  const card = strip(read("components/admin/dashboard/admin-summary.jsx"));
+  // The counts show "—" for a missing figure, never a zero.
+  assert.match(card, /const known = \(n\) => n !== undefined && n !== null;/);
+  assert.match(card, /known\(users\?\.total\) && known\(users\?\.admins\)[\s\S]*?: "—";/);
   assert.doesNotMatch(card, /\?\? 0/);
-  // The role counts come from the users list; a failed list says so instead of "no roles".
-  assert.match(card, /userList === null \? \(\s*<p[^>]*>\{t\("rolesFailed"\)\}/);
+  // A failed impersonation read is a dash too, not "Never used".
+  assert.match(card, /impersonation\?\.failed\s*\? "—"/);
 });
 
 test("the dashboard says so when it could not read the database engines", () => {

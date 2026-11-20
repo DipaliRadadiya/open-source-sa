@@ -334,7 +334,10 @@
       "heading": "{count, plural, one {# thing needs your attention} other {# things need your attention}}",
       "rowUpdateFailed": "The last panel update failed",
       "rowUpdateBlocked": "Update v{version} can't be installed yet",
-      "openUpdate": "Open panel update"
+      "openUpdate": "Open panel update",
+      "rowSignIns": "{count, plural, one {# failed sign-in in the last 24 hours} other {# failed sign-ins in the last 24 hours}}",
+      "signInsFrom": "Most from {address}",
+      "openSignIns": "See sign-ins"
     },
     "feed": {
       "title": "Recent activity",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Most recent {when}",
       "someone": "Someone",
-      "between": "From {first} to {last}"
+      "between": "From {first} to {last}",
+      "central": "Central",
+      "onlySignIns": "Only sign-ins lately; nothing was changed."
     },
     "people": {
-      "title": "Access",
-      "admins": "Admins",
-      "roles": "Roles",
-      "manage": "Manage users",
       "impersonation": "Impersonation",
       "impersonationNever": "Never used",
       "impersonationUsed": "{count, plural, one {Used once} other {Used # times}}, last {when}",
       "users": "Users",
-      "rolesInUse": "Roles in use",
-      "roleMembers": "{count, plural, one {# user} other {# users}}",
-      "rolesFailed": "Role counts could not be loaded.",
-      "rolesNone": "No user holds a role yet."
+      "usersCount": "{count, plural, one {# user} other {# users}}",
+      "adminsCount": "{count, plural, one {# admin} other {# admins}}",
+      "neverCount": "{count, plural, one {# account has never signed in} other {# accounts have never signed in}}"
     },
     "navigationLabel": "Admin menu",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "System health",
       "update": "Update panel",
       "centralWaiting": "Waiting for Central"
+    },
+    "signIns": {
+      "title": "Failed sign-ins",
+      "failed": "Sign-in attempts could not be loaded.",
+      "none": "None in the last 7 days",
+      "failedCount": "{shown} in the last 7 days"
     }
   },
   "users": {

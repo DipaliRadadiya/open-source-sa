@@ -1,9 +1,10 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations, getFormatter } from "next-intl/server";
-import { ArrowRight, ArrowUpCircle, CircleX, Terminal, TriangleAlert } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, CircleX, ShieldAlert, Terminal, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MAX_NAMES, summarizeAttention } from "@/lib/admin/attention-summary";
 import { updateAttention } from "@/lib/admin/dashboard-facts";
+import { FAILED_SIGN_IN_ALERT } from "@/lib/admin/sign-in-facts";
 import { HoverHint } from "@/components/ui/hover-hint";
 
 // One slim line per kind of problem (at most three), linking to its detail page: the
@@ -45,7 +46,7 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
   );
 }
 
-export async function AttentionList({ checks = [], errorGroups = [], update = null }) {
+export async function AttentionList({ checks = [], errorGroups = [], update = null, signIns = null }) {
   const [t, tUpdate, format] = await Promise.all([
     getTranslations("admin.attention"),
     getTranslations("admin.panelUpdate"),
@@ -89,6 +90,19 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
       summary: nameList(failed.names),
       action: t("openHealth"),
       href: "/admin/doctor",
+    });
+  }
+
+  // Many failed attempts in a day: someone may be guessing passwords.
+  if (signIns && signIns.day >= FAILED_SIGN_IN_ALERT) {
+    rows.push({
+      key: "sign-ins",
+      tone: "warn",
+      icon: ShieldAlert,
+      title: t("rowSignIns", { count: signIns.day }),
+      summary: signIns.address ? t("signInsFrom", { address: signIns.address.value }) : null,
+      action: t("openSignIns"),
+      href: "/admin/activity-log?security=1",
     });
   }
 

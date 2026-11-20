@@ -1,12 +1,15 @@
+// A deleted account has no id, only its name.
+const actor = (entry) => entry.user?.id ?? entry.user?.username ?? null;
+
 // Only CONSECUTIVE identical entries merge, so the feed keeps its order.
 const sameEvent = (a, b) =>
   a.action === b.action &&
   a.type === b.type &&
-  (a.user?.id ?? null) === (b.user?.id ?? null) &&
+  actor(a) === actor(b) &&
   Boolean(a.is_system) === Boolean(b.is_system);
 
 const identity = (entry) =>
-  [entry.type, entry.action, entry.user?.id ?? "", Boolean(entry.is_system)].join("|");
+  [entry.type, entry.action, actor(entry) ?? "", Boolean(entry.is_system)].join("|");
 
 // `mergeAcross` actions merge per actor even when not adjacent, at that actor's latest position.
 export function collapseRepeats(entries = [], { max = Infinity, mergeAcross = [] } = {}) {

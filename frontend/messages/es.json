@@ -334,7 +334,10 @@
       "heading": "{count, plural, one {# cosa necesita tu atención} other {# cosas necesitan tu atención}}",
       "rowUpdateFailed": "La última actualización del panel falló",
       "rowUpdateBlocked": "La actualización v{version} aún no se puede instalar",
-      "openUpdate": "Abrir actualización del panel"
+      "openUpdate": "Abrir actualización del panel",
+      "rowSignIns": "{count, plural, one {# inicio de sesión fallido en las últimas 24 horas} other {# inicios de sesión fallidos en las últimas 24 horas}}",
+      "signInsFrom": "La mayoría desde {address}",
+      "openSignIns": "Ver inicios de sesión"
     },
     "feed": {
       "title": "Actividad reciente",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who} {what}",
       "mostRecent": "Más reciente {when}",
       "someone": "Alguien",
-      "between": "Desde {first} hasta {last}"
+      "between": "Desde {first} hasta {last}",
+      "central": "Central",
+      "onlySignIns": "Últimamente solo hubo inicios de sesión; no se cambió nada."
     },
     "people": {
-      "title": "Acceso",
-      "admins": "Administradores",
-      "roles": "Roles",
-      "manage": "Gestionar usuarios",
       "impersonation": "Suplantación",
       "impersonationNever": "Nunca usada",
       "impersonationUsed": "{count, plural, one {Usada una vez} other {Usada # veces}}, última {when}",
       "users": "Usuarios",
-      "rolesInUse": "Roles en uso",
-      "roleMembers": "{count, plural, one {# usuario} other {# usuarios}}",
-      "rolesFailed": "No se pudieron cargar los recuentos de roles.",
-      "rolesNone": "Ningún usuario tiene un rol todavía."
+      "usersCount": "{count, plural, one {# usuario} other {# usuarios}}",
+      "adminsCount": "{count, plural, one {# administrador} other {# administradores}}",
+      "neverCount": "{count, plural, one {# cuenta nunca ha iniciado sesión} other {# cuentas nunca han iniciado sesión}}"
     },
     "navigationLabel": "Menú de administración",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "Estado del sistema",
       "update": "Actualizar panel",
       "centralWaiting": "Esperando a Central"
+    },
+    "signIns": {
+      "title": "Inicios de sesión fallidos",
+      "failed": "No se pudieron cargar los intentos de inicio de sesión.",
+      "none": "Ninguno en los últimos 7 días",
+      "failedCount": "{shown} en los últimos 7 días"
     }
   },
   "users": {

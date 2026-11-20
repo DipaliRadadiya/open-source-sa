@@ -334,7 +334,10 @@
       "heading": "{count, plural, one {# Punkt braucht Ihre Aufmerksamkeit} other {# Punkte brauchen Ihre Aufmerksamkeit}}",
       "rowUpdateFailed": "Das letzte Panel-Update ist fehlgeschlagen",
       "rowUpdateBlocked": "Update v{version} kann noch nicht installiert werden",
-      "openUpdate": "Panel-Update öffnen"
+      "openUpdate": "Panel-Update öffnen",
+      "rowSignIns": "{count, plural, one {# fehlgeschlagene Anmeldung in den letzten 24 Stunden} other {# fehlgeschlagene Anmeldungen in den letzten 24 Stunden}}",
+      "signInsFrom": "Meiste von {address}",
+      "openSignIns": "Anmeldungen anzeigen"
     },
     "feed": {
       "title": "Letzte Aktivität",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who}: {what}",
       "mostRecent": "Zuletzt {when}",
       "someone": "Jemand",
-      "between": "Von {first} bis {last}"
+      "between": "Von {first} bis {last}",
+      "central": "Central",
+      "onlySignIns": "Zuletzt nur Anmeldungen; nichts wurde geändert."
     },
     "people": {
-      "title": "Zugriff",
-      "admins": "Admins",
-      "roles": "Rollen",
-      "manage": "Benutzer verwalten",
       "impersonation": "Identitätswechsel",
       "impersonationNever": "Nie verwendet",
       "impersonationUsed": "{count, plural, one {Einmal verwendet} other {# Mal verwendet}}, zuletzt {when}",
       "users": "Benutzer",
-      "rolesInUse": "Rollen in Verwendung",
-      "roleMembers": "{count, plural, one {# Benutzer} other {# Benutzer}}",
-      "rolesFailed": "Die Rollenzahlen konnten nicht geladen werden.",
-      "rolesNone": "Noch kein Benutzer hat eine Rolle."
+      "usersCount": "{count, plural, one {# Benutzer} other {# Benutzer}}",
+      "adminsCount": "{count, plural, one {# Admin} other {# Admins}}",
+      "neverCount": "{count, plural, one {# Konto hat sich noch nie angemeldet} other {# Konten haben sich noch nie angemeldet}}"
     },
     "navigationLabel": "Admin-Menü",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "Systemzustand",
       "update": "Panel aktualisieren",
       "centralWaiting": "Warten auf Central"
+    },
+    "signIns": {
+      "title": "Fehlgeschlagene Anmeldungen",
+      "failed": "Anmeldeversuche konnten nicht geladen werden.",
+      "none": "Keine in den letzten 7 Tagen",
+      "failedCount": "{shown} in den letzten 7 Tagen"
     }
   },
   "users": {

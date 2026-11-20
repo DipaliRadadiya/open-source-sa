@@ -22,16 +22,3 @@ export function updateAttention(update) {
       : null;
   return { failed, blocked };
 }
-
-/** How many users hold each role, most-held first: the roles endpoint has no member counts. */
-export function roleCounts(users = []) {
-  const byRole = new Map();
-  for (const user of users) {
-    for (const role of user.roles ?? []) {
-      const entry = byRole.get(role.id) ?? { role, count: 0 };
-      entry.count += 1;
-      byRole.set(role.id, entry);
-    }
-  }
-  return [...byRole.values()].sort((a, b) => b.count - a.count);
-}

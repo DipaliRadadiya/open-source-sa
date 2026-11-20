@@ -334,7 +334,10 @@
       "heading": "{count, plural, other {確認が必要な項目が#件あります}}",
       "rowUpdateFailed": "前回のパネル更新に失敗しました",
       "rowUpdateBlocked": "更新 v{version} はまだインストールできません",
-      "openUpdate": "パネルの更新を開く"
+      "openUpdate": "パネルの更新を開く",
+      "rowSignIns": "{count, plural, other {直近 24 時間に失敗したサインイン: # 件}}",
+      "signInsFrom": "最多の送信元: {address}",
+      "openSignIns": "サインインを表示"
     },
     "feed": {
       "title": "最近のアクティビティ",
@@ -347,21 +350,18 @@
       "sentenceOnce": "{who} が {what}",
       "mostRecent": "直近 {when}",
       "someone": "誰か",
-      "between": "{first} から {last}"
+      "between": "{first} から {last}",
+      "central": "セントラル",
+      "onlySignIns": "最近はサインインのみで、変更はありません。"
     },
     "people": {
-      "title": "アクセス",
-      "admins": "管理者",
-      "roles": "ロール",
-      "manage": "ユーザーを管理",
       "impersonation": "なりすまし",
       "impersonationNever": "未使用",
       "impersonationUsed": "{count, plural, other {使用回数: # 回}}、最終 {when}",
       "users": "ユーザー",
-      "rolesInUse": "使用中のロール",
-      "roleMembers": "{count, plural, other {# 人}}",
-      "rolesFailed": "ロールの人数を読み込めませんでした。",
-      "rolesNone": "ロールを持つユーザーはまだいません。"
+      "usersCount": "{count, plural, other {ユーザー # 人}}",
+      "adminsCount": "{count, plural, other {管理者 # 人}}",
+      "neverCount": "{count, plural, other {一度もサインインしていないアカウント: # 件}}"
     },
     "navigationLabel": "管理メニュー",
     "navGroups": {
@@ -381,6 +381,12 @@
       "health": "システム状態",
       "update": "パネルを更新",
       "centralWaiting": "Central を待機中"
+    },
+    "signIns": {
+      "title": "失敗したサインイン",
+      "failed": "サインインの試行を読み込めませんでした。",
+      "none": "過去 7 日間はありません",
+      "failedCount": "過去 7 日間で {shown} 件"
     }
   },
   "users": {

@@ -7,7 +7,8 @@ export const activityEntrySchema = z.object({
   scope: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   user: z
-    .object({ id: z.number(), username: z.string() })
+    // `deleted`: the account is gone and `id` is null (the API keeps the name).
+    .object({ id: z.number().nullable(), username: z.string(), deleted: z.boolean().optional() })
     .nullable()
     .optional(),
   // Distinguishes "a person did this" from "the panel did it on a timer".
