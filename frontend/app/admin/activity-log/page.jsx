@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { getActivityLog } from "@/lib/activity-log/get-activity-log";
 import { getActivityFilters } from "@/lib/activity-log/get-activity-filters";
 import { getActivityRetention } from "@/lib/activity-log/get-activity-retention";
-import { RetentionCard } from "@/components/admin/activity/retention-card";
+import { RetentionButton } from "@/components/admin/activity/retention-button";
 import { Caution } from "@/components/ui/caution";
 import { ActivityToolbar } from "@/components/activity-log/activity-toolbar";
 import { ActivityTable } from "@/components/admin/activity/activity-table";
@@ -37,12 +37,11 @@ export default async function AdminActivityLogPage({ searchParams }) {
   redirectOutOfRange("/admin/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} />
+      {/* The log first; how long it is kept is a button showing the setting. */}
+      <PageHeader title={t("title")} actions={retention.retention ? <RetentionButton retention={retention.retention} /> : null} />
 
-      {/* Unanswered is said so: an empty card would read as "kept forever". */}
-      {retention.retention ? (
-        <RetentionCard retention={retention.retention} />
-      ) : (
+      {/* Unanswered is said so: a missing button would read as "kept forever". */}
+      {retention.retention ? null : (
         <Caution size="md">
           <p>{t("retention.loadFailed")}</p>
         </Caution>

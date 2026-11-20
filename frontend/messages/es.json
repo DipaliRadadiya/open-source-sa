@@ -767,19 +767,25 @@
     "retention": {
       "title": "Cuánto tiempo se guarda el registro de actividad",
       "description": "Se aplica al historial de todos los usuarios. Las entradas más antiguas se eliminan para siempre.",
-      "label": "Eliminar las entradas del registro de actividad con más de",
+      "label": "Conservar las entradas del registro de actividad durante",
       "months": "{count, plural, one {# mes} other {# meses}}",
       "recommended": "{label} (recomendado)",
-      "never": "Nunca",
       "hint": "Se comprueba una vez al día. Las entradas de los últimos 30 días siempre se conservan.",
-      "now": "Ahora en el registro",
       "entries": "{count, plural, one {{entries} entrada} other {{entries} entradas}}",
       "entriesSince": "{count, plural, one {{entries} entrada, la más antigua del {date}} other {{entries} entradas, la más antigua del {date}}}",
       "entriesUnknown": "No se sabe",
       "save": "Guardar conservación",
       "saved": "Se guardó la conservación del registro de actividad.",
       "saveFailed": "No se pudo guardar cuánto tiempo se guarda el registro de actividad.",
-      "loadFailed": "No se pudo cargar cuánto tiempo se guarda el registro de actividad."
+      "loadFailed": "No se pudo cargar cuánto tiempo se guarda el registro de actividad.",
+      "forever": "Para siempre",
+      "keptForever": "Se conserva siempre",
+      "kept": "Se conserva {period}",
+      "previewNever": "Nunca se elimina nada.",
+      "previewDelete": "Las entradas anteriores al {date} se eliminarán en la próxima comprobación diaria.",
+      "previewNone": "Todavía no hay nada que eliminar. La entrada más antigua es del {date}.",
+      "previewEmpty": "Todavía no hay nada que eliminar.",
+      "inLog": "Ahora en el registro: {summary}"
     }
   },
   "pagination": {
