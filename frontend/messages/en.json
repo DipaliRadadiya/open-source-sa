@@ -8014,13 +8014,17 @@
       "generate": "Generate a key",
       "generateText": "Shown once, so copy it straight away.",
       "paste": "Paste it into {brand} Central",
-      "pasteText": "Where you add this server in your central panel.",
+      "pasteText": "Paste the API address and the key where you add this server in your central panel.",
       "pasteWaiting": "Waiting for Central to use the key…",
       "managed": "Central manages this server",
       "managedText": "Starts the first time Central uses the key.",
       "srDone": "done",
       "srCurrent": "current step",
       "srNext": "not yet"
+    },
+    "apiAddress": {
+      "label": "API address",
+      "copy": "Copy API address"
     }
   },
   "docker": {

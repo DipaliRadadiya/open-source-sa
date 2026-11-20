@@ -8014,13 +8014,17 @@
       "generate": "Generar una clave",
       "generateText": "Se muestra una sola vez, así que cópiala enseguida.",
       "paste": "Pégala en {brand} Central",
-      "pasteText": "Donde añades este servidor en tu panel central.",
+      "pasteText": "Pega la dirección de la API y la clave donde añades este servidor en tu panel central.",
       "pasteWaiting": "Esperando a que Central use la clave…",
       "managed": "Central administra este servidor",
       "managedText": "Empieza la primera vez que Central usa la clave.",
       "srDone": "hecho",
       "srCurrent": "paso actual",
       "srNext": "todavía no"
+    },
+    "apiAddress": {
+      "label": "Dirección de la API",
+      "copy": "Copiar dirección de la API"
     }
   },
   "docker": {

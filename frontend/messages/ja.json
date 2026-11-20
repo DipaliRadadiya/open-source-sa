@@ -8014,13 +8014,17 @@
       "generate": "鍵を生成",
       "generateText": "表示は一度だけなので、すぐにコピーしてください。",
       "paste": "{brand} Central に貼り付け",
-      "pasteText": "セントラルパネルでこのサーバーを追加する場所です。",
+      "pasteText": "セントラルパネルでこのサーバーを追加する場所に、API アドレスと鍵を貼り付けます。",
       "pasteWaiting": "Central が鍵を使うのを待っています…",
       "managed": "Central がこのサーバーを管理",
       "managedText": "Central が初めて鍵を使った時点で始まります。",
       "srDone": "完了",
       "srCurrent": "現在のステップ",
       "srNext": "未完了"
+    },
+    "apiAddress": {
+      "label": "API アドレス",
+      "copy": "API アドレスをコピー"
     }
   },
   "docker": {

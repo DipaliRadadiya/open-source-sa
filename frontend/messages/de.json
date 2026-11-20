@@ -8014,13 +8014,17 @@
       "generate": "Schlüssel erzeugen",
       "generateText": "Wird nur einmal angezeigt, also gleich kopieren.",
       "paste": "In {brand} Central einfügen",
-      "pasteText": "Dort, wo Sie diesen Server in Ihrem Central-Panel hinzufügen.",
+      "pasteText": "Fügen Sie die API-Adresse und den Schlüssel dort ein, wo Sie diesen Server in Ihrem Central-Panel hinzufügen.",
       "pasteWaiting": "Warten, bis Central den Schlüssel verwendet…",
       "managed": "Central verwaltet diesen Server",
       "managedText": "Beginnt, sobald Central den Schlüssel zum ersten Mal verwendet.",
       "srDone": "erledigt",
       "srCurrent": "aktueller Schritt",
       "srNext": "noch nicht"
+    },
+    "apiAddress": {
+      "label": "API-Adresse",
+      "copy": "API-Adresse kopieren"
     }
   },
   "docker": {

@@ -10,6 +10,7 @@ import { disableCentral, enableCentral } from "@/lib/api/central";
 import { centralEnableResponseSchema } from "@/lib/schemas/central";
 import { apiMessage } from "@/lib/api/error-message";
 import { KeyReveal } from "@/components/admin/central/key-reveal";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Section, InfoRow } from "@/components/settings/setting-row";
@@ -19,6 +20,17 @@ import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
+
+// What Central's "Connect a panel" asks for next to the key: this panel's API address, the
+// address the panel itself calls (scheme + host, as Central stores it). It was shown nowhere,
+// so it had to be guessed (Central audit, 20 Nov).
+function panelApiAddress() {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_URL).origin;
+  } catch {
+    return null;
+  }
+}
 
 // Connect and regenerate share one endpoint; pressing it while connected
 // rotates the token and breaks the old one, so only that press is confirmed.
@@ -99,6 +111,8 @@ export function CentralPanel({ status }) {
     },
   ];
 
+  const apiAddress = panelApiAddress();
+
   return (
     <>
       {/* Picks up Central's first use without a reload. */}
@@ -166,6 +180,15 @@ export function CentralPanel({ status }) {
             </li>
           ))}
         </ol>
+
+        {apiAddress ? (
+          <InfoRow label={t("apiAddress.label")} className="col-span-full">
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 py-1 pr-1 pl-3">
+              <code className="min-w-0 flex-1 font-mono text-xs break-all">{apiAddress}</code>
+              <CopyButton value={apiAddress} label={t("apiAddress.copy")} />
+            </div>
+          </InfoRow>
+        ) : null}
 
         {token ? (
           <KeyReveal token={token} onDone={() => setToken(null)} />
