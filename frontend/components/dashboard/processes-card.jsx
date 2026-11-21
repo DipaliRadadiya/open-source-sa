@@ -63,7 +63,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="pt-(--card-spacing)">
         {/* ProcessTable handles the failed state itself. */}
         <ProcessTable
           data={data}
