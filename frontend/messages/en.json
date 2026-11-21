@@ -6969,7 +6969,14 @@
       "failedLocalNotWritable": "The last test failed {when} — the folder could not be written to.",
       "failedLocalNoSpace": "The last test failed {when} — there is not enough free disk space.",
       "failedLocalPath": "The last test failed {when} — this folder is not allowed for backups.",
-      "neverTestedFolder": "Never tested — nobody has checked the panel can write to this folder."
+      "neverTestedFolder": "Never tested — nobody has checked the panel can write to this folder.",
+      "usedBy": "Backs up {count, plural, one {# application} other {# applications}}",
+      "notUsed": "No application backs up here yet",
+      "lastBackup": "Last backup {when}",
+      "colBackups": "Backups",
+      "colTest": "Last test",
+      "lastBackupFailed": "Last backup failed {when}",
+      "backingUp": "A backup is running now"
     },
     "form": {
       "provider": "Provider",

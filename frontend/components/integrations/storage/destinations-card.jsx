@@ -26,7 +26,7 @@ import { ReplaceCredentialsDialog } from "@/components/integrations/storage/repl
 const EMPTY_STATE_PROVIDERS = PRESETS.filter((preset) => !preset.legacy).map((preset) => preset.value);
 
 // A plain card of rows rather than a DataTable: the list is always short.
-export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null, localSettings = null }) {
+export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null, localSettings = null, usage = null }) {
   const t = useTranslations("storage");
   const { refreshAndWait } = useRefresh();
   const [connecting, setConnecting] = useState(false);
@@ -174,6 +174,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
                 canManage={canManage}
                 testing={testing.isPending(destination.id)}
                 result={results[destination.id]}
+                usage={usage ? (usage[destination.id] ?? { applications: 0, lastBackup: null }) : null}
                 onTest={() => test(destination)}
                 onEdit={() => setEditing(destination)}
                 onReplace={() => setReplacing(destination)}

@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { describeDestination, hasCredentials } from "@/lib/storage/providers";
 import { formatBytes } from "@/lib/format/bytes";
+import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ActionIcon } from "@/components/ui/action-icon";
@@ -55,6 +56,7 @@ export function DestinationRow({
   canManage,
   testing,
   result,
+  usage = null,
   onTest,
   onEdit,
   onReplace,
@@ -74,22 +76,48 @@ export function DestinationRow({
   const needsConnect =
     destination.provider === "google_drive_oauth" && destination.config?.connected === false;
 
-  // Written once, placed twice (phone and wide layouts) so they cannot drift.
-  const facts = (
-    <>
-      <p className="text-foreground">
-        {isS3 ? destination.config?.region || t("row.regionDefault") : destination.provider_title}
+  const verdict = testing ? (
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Loader2 className="size-3 animate-spin" />
+      {t("row.testing")}
+    </p>
+  ) : needsConnect ? (
+    /* Shown instead of the failed-test line: same fact, and this one has the button. */
+    <div className="space-y-1.5">
+      <p className="flex items-start gap-1.5 text-xs text-warning">
+        <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+        {t("row.needsConnect")}
       </p>
-      {destination.created_at_human ? (
-        <p>{t("row.added", { when: destination.created_at_human })}</p>
-      ) : null}
-    </>
+      {canManage ? <GoogleDriveConnect destination={destination} compact /> : null}
+    </div>
+  ) : result ? (
+    <p
+      className={
+        result.ok
+          ? "flex items-start gap-1.5 text-xs text-success"
+          : result.notRun
+            ? "flex items-start gap-1.5 text-xs text-muted-foreground"
+            : "flex items-start gap-1.5 text-xs text-destructive"
+      }
+    >
+      {result.ok ? <CheckCircle2 className="mt-0.5 size-3 shrink-0" /> : <TriangleAlert className="mt-0.5 size-3 shrink-0" />}
+      {/* The probe's round-trip time, evidence the check reached the provider. */}
+      <span>
+        {result.ok ? (result.latency ? t("row.testPassedIn", { ms: result.latency }) : t("row.testPassed")) : result.message}
+        {/* Wrong keys are the common cause, so the fix is a link at the end of the line. */}
+        {!result.ok && !result.notRun && canManage && secrets ? <ReplaceLink onClick={onReplace} /> : null}
+      </span>
+    </p>
+  ) : (
+    <StoredVerdict destination={destination} canManage={canManage} onReplace={onReplace} />
   );
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <div className="flex flex-wrap items-start gap-3 py-3.5">
-        <div className="flex w-full min-w-0 gap-3 sm:w-auto sm:flex-1">
+      {/* Wide: what and where · what backs up here · its last test · actions. Below lg the
+          two middle columns stack under the name, indented to its text. */}
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2 py-3.5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)_minmax(0,3fr)_auto] lg:gap-6">
+        <div className="flex w-full min-w-0 gap-3 lg:w-auto">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
             <HardDrive className="size-4" />
           </span>
@@ -111,91 +139,50 @@ export function DestinationRow({
                   <Badge variant="warning">{t("row.credentialsMissing")}</Badge>
                   {/* Without keys nothing works, so the fix is offered inline. */}
                   {canManage ? (
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs"
-                      onClick={onReplace}
-                    >
+                    <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onReplace}>
                       {t("row.addCredentials")}
                     </Button>
                   ) : null}
                 </>
               )}
             </div>
-  
-            {location ? (
-              <p className="truncate font-mono text-xs text-muted-foreground">{location}</p>
-            ) : null}
+            {location ? <p className="truncate font-mono text-xs text-muted-foreground">{location}</p> : null}
             {address ? (
               <p className="truncate font-mono text-xs text-muted-foreground">{address}</p>
             ) : isS3 ? (
               <p className="text-xs text-muted-foreground">{t("row.awsDefault")}</p>
             ) : null}
+            {isS3 ? (
+              <p className="text-xs text-muted-foreground">{destination.config?.region || t("row.regionDefault")}</p>
+            ) : null}
             {free && total ? (
               <p className="text-xs text-muted-foreground tabular-nums">{t("row.diskFree", { free, total })}</p>
             ) : null}
-  
-            {/* Phone: region and age share the same indent as everything else. */}
-            <div className="space-y-0.5 text-xs text-muted-foreground sm:hidden">{facts}</div>
-  
-            {testing ? (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Loader2 className="size-3 animate-spin" />
-                {t("row.testing")}
-              </p>
-            ) : needsConnect ? (
-              /* Shown instead of the failed-test line: same fact, and this one
-                 has the button. */
-              <div className="space-y-1.5 pt-0.5">
-                <p className="flex items-start gap-1.5 text-xs text-warning">
-                  <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-                  {t("row.needsConnect")}
-                </p>
-                {canManage ? <GoogleDriveConnect destination={destination} compact /> : null}
-              </div>
-            ) : result ? (
-              <div className="space-y-1.5 pt-0.5">
-                <p
-                  className={
-                    result.ok
-                      ? "flex items-start gap-1.5 text-xs text-success"
-                      : result.notRun
-                        ? "flex items-start gap-1.5 text-xs text-muted-foreground"
-                        : "flex items-start gap-1.5 text-xs text-destructive"
-                  }
-                >
-                  {result.ok ? (
-                    <CheckCircle2 className="mt-0.5 size-3 shrink-0" />
-                  ) : (
-                    <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-                  )}
-                  {/* The probe's round-trip time, evidence the check reached the provider. */}
-                  <span>
-                    {result.ok
-                      ? result.latency
-                        ? t("row.testPassedIn", { ms: result.latency })
-                        : t("row.testPassed")
-                      : result.message}
-                    {/* Wrong keys are the common cause, so the fix is a link at the end of the line. */}
-                    {!result.ok && !result.notRun && canManage && secrets ? (
-                      <ReplaceLink onClick={onReplace} />
-                    ) : null}
-                  </span>
-                </p>
-              </div>
-            ) : (
-              <StoredVerdict destination={destination} canManage={canManage} onReplace={onReplace} />
-            )}
           </div>
         </div>
-  
-        {/* Wide screen only: own column, right-aligned so values line up. */}
-        <div className="hidden space-y-0.5 text-xs text-muted-foreground sm:block sm:min-w-40 sm:text-right">
-          {facts}
+
+        <div className="w-full space-y-0.5 ps-11 text-xs lg:w-auto lg:ps-0">
+          <p className="hidden font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase lg:block">{t("row.colBackups")}</p>
+          {usage === null ? (
+            <p className="hidden text-muted-foreground lg:block">—</p>
+          ) : usage.applications > 0 ? (
+            <>
+              <p className="text-foreground">{t("row.usedBy", { count: usage.applications })}</p>
+              <LastBackupLine backup={usage.lastBackup} />
+            </>
+          ) : (
+            <p className="text-muted-foreground">{t("row.notUsed")}</p>
+          )}
         </div>
-  
+
+        <div className="w-full space-y-0.5 ps-11 lg:w-auto lg:ps-0">
+          <p className="hidden font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase lg:block">{t("row.colTest")}</p>
+          {verdict}
+          {destination.created_at_human ? (
+            <p className="text-xs text-muted-foreground">{t("row.added", { when: destination.created_at_human })}</p>
+          ) : null}
+        </div>
+
         {/* `ml-auto` drops these to their own right-aligned line on a phone. */}
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {/* Nothing to test without keys: disabled with the reason. */}
@@ -284,6 +271,30 @@ function StoredVerdict({ destination, canManage, onReplace }) {
       </span>
     </p>
   );
+}
+
+// The newest backup to this destination: a failed one is the line that matters most here.
+function LastBackupLine({ backup }) {
+  const t = useTranslations("storage");
+  if (!backup) return null;
+  if (BACKUP_IN_FLIGHT.includes(backup.status)) {
+    return (
+      <p className="flex items-center gap-1.5 text-muted-foreground">
+        <Loader2 className="size-3 shrink-0 animate-spin" />
+        {t("row.backingUp")}
+      </p>
+    );
+  }
+  if (!backup.created_at_human) return null;
+  if (backup.status === "failed") {
+    return (
+      <p className="flex items-start gap-1.5 text-destructive">
+        <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+        {t("row.lastBackupFailed", { when: backup.created_at_human })}
+      </p>
+    );
+  }
+  return <p className="text-muted-foreground">{t("row.lastBackup", { when: backup.created_at_human })}</p>;
 }
 
 // Inline after the failure text, so the fix reads as part of the sentence.

@@ -6969,7 +6969,14 @@
       "failedLocalNotWritable": "O último teste falhou {when} — não foi possível gravar na pasta.",
       "failedLocalNoSpace": "O último teste falhou {when} — não há espaço livre suficiente em disco.",
       "failedLocalPath": "O último teste falhou {when} — esta pasta não é permitida para backups.",
-      "neverTestedFolder": "Nunca testado — ninguém verificou se o painel consegue gravar nesta pasta."
+      "neverTestedFolder": "Nunca testado — ninguém verificou se o painel consegue gravar nesta pasta.",
+      "usedBy": "Faz backup de {count, plural, one {# aplicação} other {# aplicações}}",
+      "notUsed": "Nenhuma aplicação faz backup aqui ainda",
+      "lastBackup": "Último backup em {when}",
+      "lastBackupFailed": "Último backup falhou em {when}",
+      "backingUp": "Um backup está em andamento",
+      "colBackups": "Backups",
+      "colTest": "Último teste"
     },
     "form": {
       "provider": "Provedor",

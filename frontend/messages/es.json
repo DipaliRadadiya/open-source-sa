@@ -6969,7 +6969,14 @@
       "failedLocalNotWritable": "La última prueba falló {when}: no se pudo escribir en la carpeta.",
       "failedLocalNoSpace": "La última prueba falló {when}: no hay suficiente espacio libre en el disco.",
       "failedLocalPath": "La última prueba falló {when}: esta carpeta no está permitida para copias.",
-      "neverTestedFolder": "Nunca probado: nadie ha comprobado que el panel pueda escribir en esta carpeta."
+      "neverTestedFolder": "Nunca probado: nadie ha comprobado que el panel pueda escribir en esta carpeta.",
+      "usedBy": "Hace copia de {count, plural, one {# aplicación} other {# aplicaciones}}",
+      "notUsed": "Ninguna aplicación guarda copias aquí todavía",
+      "lastBackup": "Última copia {when}",
+      "lastBackupFailed": "La última copia falló {when}",
+      "backingUp": "Hay una copia en curso",
+      "colBackups": "Copias de seguridad",
+      "colTest": "Última prueba"
     },
     "form": {
       "provider": "Proveedor",

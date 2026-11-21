@@ -6969,7 +6969,14 @@
       "failedLocalNotWritable": "前回のテストは{when}に失敗しました — フォルダーに書き込めませんでした。",
       "failedLocalNoSpace": "前回のテストは{when}に失敗しました — ディスクの空き容量が足りません。",
       "failedLocalPath": "前回のテストは{when}に失敗しました — このフォルダーはバックアップに使用できません。",
-      "neverTestedFolder": "未テスト — パネルがこのフォルダーに書き込めるかは確認されていません。"
+      "neverTestedFolder": "未テスト — パネルがこのフォルダーに書き込めるかは確認されていません。",
+      "usedBy": "{count, plural, other {# 件のアプリケーションをバックアップ}}",
+      "notUsed": "まだここにバックアップしているアプリケーションはありません",
+      "lastBackup": "{when} に最終バックアップ",
+      "lastBackupFailed": "{when} の最終バックアップは失敗しました",
+      "backingUp": "バックアップを実行中です",
+      "colBackups": "バックアップ",
+      "colTest": "最終テスト"
     },
     "form": {
       "provider": "プロバイダー",

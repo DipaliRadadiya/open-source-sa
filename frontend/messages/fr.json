@@ -6969,7 +6969,14 @@
       "failedLocalNotWritable": "Le dernier test a échoué {when} — impossible d'écrire dans le dossier.",
       "failedLocalNoSpace": "Le dernier test a échoué {when} — il n'y a pas assez d'espace disque libre.",
       "failedLocalPath": "Le dernier test a échoué {when} — ce dossier n'est pas autorisé pour les sauvegardes.",
-      "neverTestedFolder": "Jamais testé — personne n'a vérifié que le panneau peut écrire dans ce dossier."
+      "neverTestedFolder": "Jamais testé — personne n'a vérifié que le panneau peut écrire dans ce dossier.",
+      "usedBy": "Sauvegarde {count, plural, one {# application} other {# applications}}",
+      "notUsed": "Aucune application n'y sauvegarde encore",
+      "lastBackup": "Dernière sauvegarde {when}",
+      "lastBackupFailed": "Dernière sauvegarde échouée {when}",
+      "backingUp": "Une sauvegarde est en cours",
+      "colBackups": "Sauvegardes",
+      "colTest": "Dernier test"
     },
     "form": {
       "provider": "Fournisseur",

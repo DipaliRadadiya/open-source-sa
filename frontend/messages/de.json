@@ -6969,7 +6969,14 @@
       "failedLocalNotWritable": "Der letzte Test ist {when} fehlgeschlagen — in den Ordner konnte nicht geschrieben werden.",
       "failedLocalNoSpace": "Der letzte Test ist {when} fehlgeschlagen — es ist nicht genug Speicherplatz frei.",
       "failedLocalPath": "Der letzte Test ist {when} fehlgeschlagen — dieser Ordner ist für Backups nicht erlaubt.",
-      "neverTestedFolder": "Nie getestet — niemand hat geprüft, ob das Panel in diesen Ordner schreiben kann."
+      "neverTestedFolder": "Nie getestet — niemand hat geprüft, ob das Panel in diesen Ordner schreiben kann.",
+      "usedBy": "Sichert {count, plural, one {# Anwendung} other {# Anwendungen}}",
+      "notUsed": "Noch keine Anwendung sichert hierher",
+      "lastBackup": "Letztes Backup {when}",
+      "lastBackupFailed": "Letztes Backup fehlgeschlagen {when}",
+      "backingUp": "Gerade läuft ein Backup",
+      "colBackups": "Backups",
+      "colTest": "Letzter Test"
     },
     "form": {
       "provider": "Anbieter",

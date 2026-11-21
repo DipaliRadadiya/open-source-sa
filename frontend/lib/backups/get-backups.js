@@ -269,6 +269,8 @@ export async function getBackupDestinationUsage() {
   }
   return {
     inUse: [...new Set(rows.map((row) => row.backup_target?.storage_destination_id).filter(Boolean))],
+    // One entry per configured site, for "used by N applications".
+    targets: rows.map((row) => row.backup_target?.storage_destination_id).filter(Boolean),
     lastBackups: rows
       .filter((row) => row.last_backup)
       .map((row) => ({ ...row.last_backup, storage_destination_id: row.backup_target?.storage_destination_id })),
