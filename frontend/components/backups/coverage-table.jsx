@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { COVERAGE_WIDTHS } from "@/components/backups/coverage-widths";
 
 // Cells are module-level components: flexRender treats a cell function's identity
 // as the component type, so one defined in render remounts every time.
@@ -255,15 +256,7 @@ function ActionsCell({ row, table }) {
   );
 }
 
-// Shared with the databases table so the two line up. The fixed columns grow on wide
-// cards; otherwise the name column takes all the spare room (Krishna, 5 Nov).
-export const COVERAGE_WIDTHS = {
-  kind: "w-28 @min-[1050px]:w-32 @min-[1180px]:w-36",
-  schedule: "w-32 @min-[1050px]:w-36 @min-[1180px]:w-40",
-  storage: "w-32 @min-[1050px]:w-40 @min-[1180px]:w-44",
-  runs: "w-40 @min-[1050px]:w-48 @min-[1180px]:w-52",
-  actions: "w-44",
-};
+export { COVERAGE_WIDTHS };
 
 export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, scheduleTimezone = null, bare = false }) {
   const t = useTranslations("backups.coverage");

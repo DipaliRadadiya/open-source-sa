@@ -220,8 +220,8 @@ test("both backup tables use binding, identical column widths", () => {
     assert.match(src, /className: `\$\{COVERAGE_WIDTHS\.actions\} text-right`/);
   }
   // One set of widths, defined once, so the two tables cannot drift apart again.
-  assert.match(apps, /export const COVERAGE_WIDTHS = \{/);
-  assert.doesNotMatch(dbs, /COVERAGE_WIDTHS = /);
+  assert.match(read("components/backups/coverage-widths.js"), /export const COVERAGE_WIDTHS = \{/);
+  assert.doesNotMatch(apps + dbs, /COVERAGE_WIDTHS = /);
   assert.doesNotMatch(apps + dbs, /w-\[28%\]/);
   // The next-run line wraps inside the fixed column rather than losing its end.
   assert.match(apps, /<p className="text-xs whitespace-normal tabular-nums text-muted-foreground">\s*\{t\("nextRun"/);
@@ -251,7 +251,7 @@ test("backup cards share one frame: who, four aligned facts, one action row; not
 // 5 Nov (Krishna): on a wide card the name column took all the spare room while
 // Engine/Schedule/Storage/Last run stayed cramped. The fixed columns now grow with the card.
 test("the fixed backup columns grow on wide cards", () => {
-  const apps = read("components/backups/coverage-table.jsx");
+  const apps = read("components/backups/coverage-widths.js");
   for (const c of ["kind", "schedule", "storage", "runs"]) {
     const line = apps.match(new RegExp(`  ${c}: "([^"]+)"`))?.[1] ?? "";
     assert.match(line, /^w-\d+ @min-\[1050px\]:w-\d+ @min-\[1180px\]:w-\d+$/, c);
