@@ -604,6 +604,39 @@ describe('the driver', function () {
             ->and($vhost)->toMatch('/^realm '.$realm.' \{\n  userDB \{\n    location\s+\/home\/shopuser\/shop\/conf\/openlitespeed\/\.htpasswd\n  \}\n\}/m');
     })->with(['php', 'static', 'node']);
 
+    /*
+     * OLS rotates a site's access and error logs itself, and the panel's
+     * logrotate policy leaves them alone, so the vhost is the only place that
+     * says how long rotated copies stay. Without keepDays OLS keeps every
+     * rotated error log; v7 kept 30 days of both and compressed old access
+     * logs (2026-11-22).
+     */
+    it('keeps rotated logs for 30 days and compresses old access logs', function (string $profile, bool $waf) {
+        $this->app_->forceFill([
+            'serving_profile' => $profile,
+            'site_type' => $profile === 'node' ? 'n8n' : 'wordpress',
+            'app_port' => $profile === 'node' ? 5678 : null,
+            'waf_enabled' => $waf,
+        ])->save();
+
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh('systemUser'), '/home/shopuser/shop/public_html');
+
+        $vhost = collect($runs)->last(fn (array $run) => $run['command'][0] === 'tee'
+            && str_contains($run['command'][1], 'vhosts/shop/vhconf.conf'))['input'];
+
+        preg_match('/^errorlog \S+ \{\n(.*?)\n\}/ms', $vhost, $error);
+        preg_match('/^accesslog \S+ \{\n(.*?)\n\}/ms', $vhost, $access);
+
+        expect($error[1] ?? '')->toMatch('/^\s*keepDays\s+30$/m')
+            ->toMatch('/^\s*logLevel\s+WARN$/m')
+            // As v7: only old access logs are compressed.
+            ->not->toMatch('/compressArchive/')
+            ->and($access[1] ?? '')->toMatch('/^\s*keepDays\s+30$/m')
+            ->toMatch('/^\s*compressArchive\s+1$/m');
+    })->with(['php', 'static', 'node'])->with(['waf off' => false, 'waf on' => true]);
+
     it('writes nothing for a site whose name is one of the server\'s own vhosts', function () {
         // The shared config refuses on its own, but by then the site's
         // `vhconf.conf` has been written — into the panel's own vhost folder,

@@ -87,10 +87,15 @@ set Retry-After 3600
 }
 @endif
 
+{{-- OLS rotates these two logs itself (ApplicationLogRotation leaves them
+     alone), so how long the copies stay and whether they are compressed is
+     said here. Without keepDays OLS keeps every rotated error log; v7 kept 30
+     days and compressed old access logs. --}}
 errorlog $VH_ROOT/logs/error.log {
   useServer               0
   logLevel                WARN
   rollingSize             10M
+  keepDays                30
 }
 
 accesslog $VH_ROOT/logs/access.log {
@@ -105,6 +110,7 @@ accesslog $VH_ROOT/logs/access.log {
 @endif
   rollingSize             10M
   keepDays                30
+  compressArchive         1
 }
 
 index {
