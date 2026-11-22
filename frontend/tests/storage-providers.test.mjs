@@ -9,6 +9,7 @@ import {
   isRequired,
   keyDocsUrl,
   presetForProvider,
+  s3ServiceFor,
   providerForPreset,
   secretFieldsFor,
 } from "../lib/storage/providers.js";
@@ -193,4 +194,22 @@ test("key docs exist for the services that have a console, and not for the ones 
   for (const preset of ["other", "ftp", "sftp"]) {
     assert.equal(keyDocsUrl(preset), null);
   }
+});
+
+// 22 Nov (Krishna): an Amazon S3 destination's badge said "S3-compatible". The API keeps no preset,
+// so the badge names the service from the endpoint; an unknown host keeps the API's title.
+test("an S3 destination's badge names its service from the endpoint", () => {
+  const s3 = (endpoint) => ({ provider: "s3", config: { endpoint } });
+  assert.equal(s3ServiceFor(s3("")), "aws");
+  assert.equal(s3ServiceFor(s3(undefined)), "aws");
+  assert.equal(s3ServiceFor(s3("https://s3.eu-west-1.amazonaws.com")), "aws");
+  assert.equal(s3ServiceFor(s3("https://abc123.r2.cloudflarestorage.com")), "r2");
+  assert.equal(s3ServiceFor(s3("https://s3.us-west-004.backblazeb2.com")), "b2");
+  assert.equal(s3ServiceFor(s3("https://s3.eu-central-1.wasabisys.com")), "wasabi");
+  assert.equal(s3ServiceFor(s3("https://fra1.digitaloceanspaces.com")), "spaces");
+  assert.equal(s3ServiceFor(s3("https://minio.example.com")), null);
+  assert.equal(s3ServiceFor(s3("not a url")), null);
+  // Look-alike hosts are not the real service.
+  assert.equal(s3ServiceFor(s3("https://amazonaws.com.evil.example")), null);
+  assert.equal(s3ServiceFor({ provider: "ftp", config: {} }), null);
 });

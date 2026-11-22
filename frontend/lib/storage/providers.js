@@ -1,4 +1,4 @@
-// `provider` is a real API column; nothing is inferred from the endpoint. PRESETS is what the user
+// `provider` is a real API column; nothing sent is inferred from the endpoint (s3ServiceFor only names a badge). PRESETS is what the user
 // picks (several are `s3` to the backend); FIELDS, keyed by backend provider, says which inputs to render.
 
 import { localStorageSettings } from "./local-settings.js";
@@ -51,6 +51,29 @@ export function presetFor(value) {
 
 export function providerForPreset(value) {
   return presetFor(value)?.provider ?? "s3";
+}
+
+// Display only: which S3 service a saved `s3` destination is, so its badge can say "Amazon S3"
+// instead of the API's generic "S3-compatible". The API keeps no preset; the endpoint tells them
+// apart (empty means Amazon). Never used to decide what is sent.
+const S3_HOSTS = [
+  ["aws", /(^|\.)amazonaws\.com$/],
+  ["r2", /\.r2\.cloudflarestorage\.com$/],
+  ["b2", /(^|\.)backblazeb2\.com$/],
+  ["wasabi", /(^|\.)wasabisys\.com$/],
+  ["spaces", /(^|\.)digitaloceanspaces\.com$/],
+];
+export function s3ServiceFor(destination) {
+  if (destination?.provider !== "s3") return null;
+  const endpoint = (destination.config?.endpoint ?? "").trim();
+  if (!endpoint) return "aws";
+  let host;
+  try {
+    host = new URL(endpoint).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  return S3_HOSTS.find(([, pattern]) => pattern.test(host))?.[0] ?? null;
 }
 
 // `s3` deliberately resolves to the generic "other" preset rather than guessing from the endpoint.

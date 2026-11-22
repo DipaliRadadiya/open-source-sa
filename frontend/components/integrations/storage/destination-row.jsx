@@ -14,7 +14,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { describeDestination, hasCredentials } from "@/lib/storage/providers";
+import { describeDestination, hasCredentials, s3ServiceFor } from "@/lib/storage/providers";
 import { formatBytes } from "@/lib/format/bytes";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,7 @@ export function DestinationRow({
   // Per-provider: "bucket/prefix" is meaningless for an FTP host.
   const { location, address } = describeDestination(destination);
   const isS3 = destination.provider === "s3";
+  const service = s3ServiceFor(destination);
   const secrets = hasCredentials(destination.provider);
   // "This server": its disk, as measured when the list was read.
   const free = destination.provider === "local" ? formatBytes(destination.config?.free_bytes, format) : null;
@@ -124,10 +125,10 @@ export function DestinationRow({
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 font-medium break-all">{destination.name}</span>
-              {/* From the API's `provider` column, not inferred. */}
-              {destination.provider_title ? (
+              {/* The API's provider name, except an S3 service the endpoint identifies. */}
+              {service || destination.provider_title ? (
                 <Badge variant="outline" className="font-normal">
-                  {destination.provider_title}
+                  {service ? t(`form.providers.${service}`) : destination.provider_title}
                 </Badge>
               ) : null}
               {/* Not "verified" — only that both secret columns are populated.
