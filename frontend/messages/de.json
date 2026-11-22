@@ -6059,7 +6059,15 @@
       "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, bitten Sie eine Administratorin oder einen Administrator, den Systemzustand zu prüfen.",
       "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung.",
       "noneKept": "Keins aufbewahrt",
-      "notSetUp": "Nicht eingerichtet"
+      "notSetUp": "Nicht eingerichtet",
+      "storedOn": "Gespeichert auf",
+      "keeps": "Aufbewahrt",
+      "keepsCount": "{count, plural, one {Das letzte Backup} other {Die letzten # Backups}}",
+      "filesSize": "Dateien",
+      "databaseRow": "Datenbank",
+      "noDatabase": "Keine verknüpft",
+      "atRisk": "Geht dieser Server verloren, lässt sich {name} nicht wiederherstellen.",
+      "lastFailed": "Fehlgeschlagen {when}"
     },
     "attention": {
       "title": "Handlungsbedarf",

@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { formatBytes } from "@/lib/format/bytes";
 import {
   ArrowRight,
+  Archive,
   CalendarArrowUp,
+  Database,
+  Folder,
+  HardDrive,
   CalendarClock,
   CircleAlert,
   History,
@@ -38,8 +43,12 @@ export function BackupCard({
   noneKept = false,
   canManage,
   href,
+  // For the rows: what a backup holds (unprotected) — the site's size and its databases.
+  application = null,
+  databases = null,
 }) {
   const t = useTranslations("applications.backups");
+  const format = useFormatter();
   const { refreshAndWait } = useRefresh();
   const [starting, setStarting] = useState(false);
   // The newest backup id at the moment a run was started here, or null.
@@ -153,19 +162,50 @@ export function BackupCard({
               <History className="size-4 shrink-0 text-muted-foreground" />
               <dt className="flex-1 font-medium">{t("lastRun")}</dt>
               {/* Never blank: "never" is a real answer. */}
-              <dd className="text-right text-muted-foreground">
-                {!target?.last_run_at_human ? t("never") : noneKept ? t("noneKept") : target.last_run_at_human}
-              </dd>
+              {/* The newest run failing is the one fact that must not read as routine. */}
+              {target && backups[0]?.status === "failed" && backups[0]?.created_at_human ? (
+                <dd className="text-right font-medium text-destructive">{t("lastFailed", { when: backups[0].created_at_human })}</dd>
+              ) : (
+                <dd className="text-right text-muted-foreground">
+                  {!target?.last_run_at_human ? t("never") : noneKept ? t("noneKept") : target.last_run_at_human}
+                </dd>
+              )}
             </div>
             {target?.next_run_at_human && state === "protected" ? (
-              <div className="flex items-center gap-3 px-(--card-spacing) py-3">
-                <CalendarArrowUp className="size-4 shrink-0 text-muted-foreground" />
-                <dt className="flex-1 font-medium">{t("nextRun")}</dt>
-                <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
-              </div>
+              <Row icon={CalendarArrowUp} label={t("nextRun")}>{target.next_run_at_human}</Row>
             ) : null}
+            {/* Five rows whatever the state, beside Security's five (22 Nov: the card stood
+                half empty). Set up: where they go and how many are kept. Not set up: what a
+                backup would hold, so the size of the risk is on the screen. */}
+            {target ? (
+              <>
+                <Row icon={HardDrive} label={t("storedOn")}>{target.storage_destination_name ?? "—"}</Row>
+                <Row icon={Archive} label={t("keeps")}>
+                  {target.retention_count ? t("keepsCount", { count: target.retention_count }) : "—"}
+                </Row>
+              </>
+            ) : (
+              <>
+                <Row icon={Folder} label={t("filesSize")}>
+                  {formatBytes(application?.directory_size_bytes, format) ?? "—"}
+                </Row>
+                <Row icon={Database} label={t("databaseRow")}>
+                  {databases === null
+                    ? "—"
+                    : databases.length > 0
+                    ? databases.map((database) => [database.name, database.size_human].filter(Boolean).join(" · ")).join(", ")
+                    : t("noDatabase")}
+                </Row>
+              </>
+            )}
           </dl>
         )}
+        {!failed && state === "unprotected" && application?.name ? (
+          <p className="flex items-start gap-2 border-t px-(--card-spacing) py-3 text-sm text-destructive">
+            <CircleAlert className="mt-0.5 size-4 shrink-0" />
+            {t("atRisk", { name: application.name })}
+          </p>
+        ) : null}
         {/* Paused is called out because it looks set up. Outside the <dl>: a note is not a
             term/value pair. */}
         {!failed && state === "paused" ? (
@@ -191,5 +231,15 @@ export function BackupCard({
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function Row({ icon: Icon, label, children }) {
+  return (
+    <div className="flex items-center gap-3 px-(--card-spacing) py-3">
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <dt className="flex-1 font-medium">{label}</dt>
+      <dd className="min-w-0 truncate text-right text-muted-foreground">{children}</dd>
+    </div>
   );
 }

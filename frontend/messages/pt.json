@@ -6059,7 +6059,15 @@
       "queuedStalled": "Este backup ainda não começou. Se continuar assim, peça a um administrador que verifique Saúde do sistema.",
       "alreadyRunning": "Um backup desta aplicação já está rodando.",
       "noneKept": "Nenhum mantido",
-      "notSetUp": "Não configurado"
+      "notSetUp": "Não configurado",
+      "storedOn": "Armazenado em",
+      "keeps": "Mantidos",
+      "keepsCount": "{count, plural, one {O último backup} other {Os últimos # backups}}",
+      "filesSize": "Arquivos",
+      "databaseRow": "Banco de dados",
+      "noDatabase": "Nenhum vinculado",
+      "atRisk": "Se este servidor for perdido, {name} não poderá ser recuperado.",
+      "lastFailed": "Falhou {when}"
     },
     "attention": {
       "title": "Precisa de atenção",

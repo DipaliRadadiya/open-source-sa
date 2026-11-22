@@ -6059,7 +6059,15 @@
       "queuedStalled": "このバックアップはまだ始まっていません。このままの場合は、管理者にシステムヘルスを確認してもらってください。",
       "alreadyRunning": "このアプリケーションのバックアップはすでに実行中です。",
       "noneKept": "保持なし",
-      "notSetUp": "未設定"
+      "notSetUp": "未設定",
+      "storedOn": "保存先",
+      "keeps": "保持数",
+      "keepsCount": "{count, plural, other {直近 # 件のバックアップ}}",
+      "filesSize": "ファイル",
+      "databaseRow": "データベース",
+      "noDatabase": "接続なし",
+      "atRisk": "このサーバーが失われると、{name} は復元できません。",
+      "lastFailed": "失敗 {when}"
     },
     "attention": {
       "title": "対応が必要",

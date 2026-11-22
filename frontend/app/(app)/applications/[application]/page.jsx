@@ -334,6 +334,9 @@ export default async function ApplicationDetailPage({ params }) {
       failed={backup.failed}
       canManage={canRunBackup}
       href={`/applications/${id}/backups`}
+      application={application}
+      // Unknown (no permission, failed read) is null: never "None attached".
+      databases={canSeeDatabases && !siteDatabases.failed ? siteDatabases.databases : null}
     />
   ) : null;
   const protectionCard = <ProtectionCard application={application} items={protectionItems} />;

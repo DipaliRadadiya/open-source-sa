@@ -6059,7 +6059,15 @@
       "queuedStalled": "Esta copia de seguridad aún no ha empezado. Si sigue así, pide a un administrador que revise Estado del sistema.",
       "alreadyRunning": "Ya se está haciendo una copia de esta aplicación.",
       "noneKept": "No se conserva ninguna",
-      "notSetUp": "Sin configurar"
+      "notSetUp": "Sin configurar",
+      "storedOn": "Guardado en",
+      "keeps": "Se conservan",
+      "keepsCount": "{count, plural, one {La última copia} other {Las últimas # copias}}",
+      "filesSize": "Archivos",
+      "databaseRow": "Base de datos",
+      "noDatabase": "Ninguna vinculada",
+      "atRisk": "Si se pierde este servidor, {name} no se podrá recuperar.",
+      "lastFailed": "Falló {when}"
     },
     "attention": {
       "title": "Requiere atención",

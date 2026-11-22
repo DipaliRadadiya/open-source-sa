@@ -6059,7 +6059,15 @@
       "queuedStalled": "Cette sauvegarde n'a pas encore démarré. Si cela dure, demandez à un administrateur de vérifier Santé du système.",
       "alreadyRunning": "Une sauvegarde de cette application est déjà en cours.",
       "noneKept": "Aucune conservée",
-      "notSetUp": "Non configurée"
+      "notSetUp": "Non configurée",
+      "storedOn": "Stocké sur",
+      "keeps": "Conservées",
+      "keepsCount": "{count, plural, one {La dernière sauvegarde} other {Les # dernières sauvegardes}}",
+      "filesSize": "Fichiers",
+      "databaseRow": "Base de données",
+      "noDatabase": "Aucune associée",
+      "atRisk": "Si ce serveur est perdu, {name} ne pourra pas être récupérée.",
+      "lastFailed": "Échec {when}"
     },
     "attention": {
       "title": "À vérifier",

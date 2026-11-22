@@ -6059,7 +6059,15 @@
       "queuedStalled": "This backup has not started yet. If it stays this way, ask an administrator to check System Health.",
       "alreadyRunning": "A backup of this application is already running.",
       "noneKept": "None kept",
-      "notSetUp": "Not set up"
+      "notSetUp": "Not set up",
+      "storedOn": "Stored on",
+      "keeps": "Kept",
+      "keepsCount": "{count, plural, one {The last backup} other {The last # backups}}",
+      "filesSize": "Files",
+      "databaseRow": "Database",
+      "noDatabase": "None attached",
+      "atRisk": "If this server is lost, {name} can't be brought back.",
+      "lastFailed": "Failed {when}"
     },
     "attention": {
       "title": "Needs attention",
