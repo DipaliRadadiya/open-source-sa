@@ -5,7 +5,6 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationBans, getApplicationFail2ban } from "@/lib/applications/get-applications";
 import { BannedAddressesCard } from "@/components/applications/fail2ban/banned-addresses-card";
-import { Caution } from "@/components/ui/caution";
 import { Fail2banPanel } from "@/components/applications/fail2ban/fail2ban-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -61,18 +60,13 @@ export default async function ApplicationFail2banPage({ params }) {
         <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} message={status.message} debug={status.debug} />
       ) : (
         <div className="space-y-4">
-          {/* The default rules only catch WordPress logins; the API words it per site type. */}
-          {status.filterNote ? (
-            <Caution tone="warning" size="md">
-              <p>{status.filterNote}</p>
-            </Caution>
-          ) : null}
           <Fail2banPanel
             appId={id}
             config={status.config}
             jailTemplate={status.jailTemplate}
             filterTemplate={status.filterTemplate}
             canManage={canManage}
+            filterNote={status.filterNote}
           />
           {bans ? <BannedAddressesCard appId={id} bans={bans} jailName={status.config?.jail_name ?? null} canManage={canManage} /> : null}
         </div>

@@ -79,12 +79,25 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   // Refresh sits in the Installed services header; when that card is hidden, in the
   // first card that is shown, so the page never loses it.
   const refreshIn = showRunning ? "running" : attention.length > 0 ? "attention" : "installing";
+  // All well: one line in the list's head instead of two big tiles holding a few words (22 Nov).
+  // The tiles come back when something is stopped or failed, so trouble still stands out.
+  const healthy = stopped === 0 && attention.length === 0 && showRunning;
+  const healthyLine = (
+    <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      <CircleCheck className={cn("size-3.5 shrink-0", active.length > 0 ? "text-success" : "text-muted-foreground")} />
+      <span>{t("summary.healthyLine", { active: active.length, total: services.length })}</span>
+      <span aria-hidden>·</span>
+      <span className="tabular-nums">{t("summary.checkedAt", { time: checkedAt })}</span>
+      {installing.length > 0 ? <span>· {t("summary.installing", { count: installing.length })}</span> : null}
+    </span>
+  );
 
   return (
     <div className="space-y-6">
       {/* Colour only when something is wrong: amber for stopped, red for failed.
           2 / 4 across by the page's own width (auto-fit split them 3 + 1). Two on a phone
           too: one per row filled the first screen with four short facts (Krishna, 13 Oct). */}
+      {healthy ? null : (
       <div className="@container/tiles">
       {/* Stopped and Needs attention only when they count something (Krishna, 18 Nov); the
           row takes as many columns as it has tiles, and a lone last tile spans a phone row. */}
@@ -129,6 +142,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
         />
       </div>
       </div>
+      )}
 
       {attention.length > 0 ? (
         <Section
@@ -170,6 +184,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
       {showRunning ? (
       <Section
         title={t("sections.running.title")}
+        hint={healthy ? healthyLine : null}
         action={<RefreshButton />}
       >
         {/* Container query, not lg: 900px is where the widest locale's headers fit. */}

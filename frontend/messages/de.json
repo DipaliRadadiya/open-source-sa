@@ -1701,7 +1701,9 @@
       "retryOnDocker": "Auf der Docker-Seite erneut versuchen"
     },
     "summary": {
-      "installing": "{count, plural, =1 {1 wird installiert} other {# werden installiert}}"
+      "installing": "{count, plural, =1 {1 wird installiert} other {# werden installiert}}",
+      "healthyLine": "{active} von {total} laufen",
+      "checkedAt": "geprüft um {time}"
     },
     "tiles": {
       "running": "Läuft",
@@ -8027,7 +8029,8 @@
       "connected": "Verbunden",
       "waiting": "Warten auf Central",
       "lastUsed": "Zuletzt von Central verwendet: {ago}.",
-      "off": "Nicht verbunden"
+      "off": "Nicht verbunden",
+      "lastUsedShort": "zuletzt verwendet {ago}"
     },
     "steps": {
       "generate": "Schlüssel erzeugen",

@@ -16,7 +16,8 @@ test("a view-only user sees Clear disabled with the reason, not hidden", () => {
 
 test("Clear log is red: the destructive variant, not outline overridden by hand", () => {
   const bar = read("components/logs/log-toolbar.jsx");
-  const clear = bar.slice(bar.indexOf('<div className="ml-auto">'), bar.indexOf('{t("clear")}'));
+  const clear = bar.slice(bar.indexOf("const clearButton = onClear ? ("), bar.indexOf('{t("clear")}'));
+  assert.ok(clear.length > 0);
   assert.match(clear, /variant="destructive"/);
   assert.doesNotMatch(clear, /variant="outline"/);
 });

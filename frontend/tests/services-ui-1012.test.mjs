@@ -176,11 +176,16 @@ test("the top of the page is the shared status tiles, coloured only when somethi
   assert.match(panel, /\{stopped > 0 \? \(\s*<Tile/);
   assert.match(panel, /\{attention\.length > 0 \? \(\s*<Tile/);
   // Refresh lives in the Installed services header (Krishna, 12 Oct), never in a tile.
-  assert.match(panel, /title=\{t\("sections\.running\.title"\)\}\s*action=\{<RefreshButton \/>\}/);
+  assert.match(panel, /title=\{t\("sections\.running\.title"\)\}\s*hint=\{healthy \? healthyLine : null\}\s*action=\{<RefreshButton \/>\}/);
   assert.equal((panel.match(/<RefreshButton/g) ?? []).length, 3, "running + the two fallbacks");
   assert.doesNotMatch(panel.slice(panel.indexOf("tiles.checked"), panel.indexOf("tiles.checked") + 300), /RefreshButton/);
   assert.equal((panel.match(/<Tile\n\s*compact\n/g) ?? []).length, 4);
   assert.doesNotMatch(panel, /summary\.allRunning|t\("checkedAt"/);
+  // 22 Nov (Krishna): all well, the tiles give way to one line in that header; they return
+  // when something is stopped or failed, so trouble still stands out.
+  assert.match(panel, /const healthy = stopped === 0 && attention\.length === 0 && showRunning;/);
+  assert.match(panel, /\{healthy \? null : \(\s*<div className="@container\/tiles">/);
+  assert.match(panel, /t\("summary\.healthyLine", \{ active: active\.length, total: services\.length \}\)/);
   const tiles = read("components/applications/app-status-tiles.jsx");
   assert.match(tiles, /export function Tile\(/);
   for (const locale of ["en", "es", "de", "fr", "pt", "ja", "ru", "hi"]) {
@@ -189,5 +194,7 @@ test("the top of the page is the shared status tiles, coloured only when somethi
       assert.ok(s.tiles?.[key], `${locale} tiles.${key}`);
     }
     assert.equal(s.checkedAt, undefined, `${locale} old checkedAt removed`);
+    assert.match(s.summary.healthyLine, /\{active\}[\s\S]*\{total\}|\{total\}[\s\S]*\{active\}/, `${locale} summary.healthyLine`);
+    assert.match(s.summary.checkedAt, /\{time\}/, `${locale} summary.checkedAt`);
   }
 });

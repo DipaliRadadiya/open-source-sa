@@ -1701,7 +1701,9 @@
       "retryOnDocker": "Retry on the Docker page"
     },
     "summary": {
-      "installing": "{count, plural, =1 {1 installing} other {# installing}}"
+      "installing": "{count, plural, =1 {1 installing} other {# installing}}",
+      "healthyLine": "{active} of {total} running",
+      "checkedAt": "checked {time}"
     },
     "tiles": {
       "running": "Running",
@@ -8027,7 +8029,8 @@
       "connected": "Connected",
       "waiting": "Waiting for Central",
       "lastUsed": "Last used by Central: {ago}.",
-      "off": "Not connected"
+      "off": "Not connected",
+      "lastUsedShort": "last used {ago}"
     },
     "steps": {
       "generate": "Generate a key",

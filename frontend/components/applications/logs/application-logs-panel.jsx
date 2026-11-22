@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -44,6 +45,9 @@ const WEB_FORMAT_KEYS = new Set(["access", "access_ssl", "waf_detect"]);
 // The web server's own logs, HTTP and HTTPS: on a process site they describe the proxy.
 const PROXY_LOG_KEYS = new Set(["access", "error", "access_ssl", "error_ssl"]);
 const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
+
+// Lines that fit without the console needing a window-tall box.
+const SHORT_LOG = 15;
 
 export function ApplicationLogsPanel({
   appId,
@@ -252,6 +256,8 @@ export function ApplicationLogsPanel({
         : lines.filter((line) => matchesSeverity(line, group, severity)),
     [lines, severity, group],
   );
+  const shortLog =
+    !["loading", "locked", "missing", "failed"].includes(status) && visible.length <= SHORT_LOG;
 
   const effectiveTail =
     tailState === "paused"
@@ -364,7 +370,14 @@ export function ApplicationLogsPanel({
     >
       {/* Target of the tabs' aria-controls; text size and flex reset so the console is unchanged. */}
       <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
-      <section className="flex h-[calc(100svh-16rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-[24rem]">
+      {/* A short log gets a short console instead of a window-tall black box (22 Nov); past
+          SHORT_LOG lines it takes the window's height and scrolls inside. */}
+      <section
+        className={cn(
+          "flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm",
+          shortLog ? "[&_[role=log]]:min-h-48" : "h-[calc(100svh-16rem)] min-h-[34rem] lg:min-h-[24rem]",
+        )}
+      >
         <LogToolbar
           label={source?.label ?? t("noSource")}
           // The source switch IS the card's title: a strip above the card and the same

@@ -502,17 +502,15 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold tracking-tight">{t(`state.${state}.title`)}</h2>
-          {/* `state.protected.body` requires {schedule} and {destination}. */}
-          <p className="text-sm text-muted-foreground">
-            {state === "protected"
-              ? t("state.protected.body", {
-                  schedule,
-                  destination: target.storage_destination_name ?? t("summary.noStorage"),
-                })
-              : state === "unprotected" && !canManage
+          {/* Protected: no line under the title. Schedule and storage are in the facts just
+              below, and the line repeated them word for word (22 Nov). */}
+          {state === "protected" ? null : (
+            <p className="text-sm text-muted-foreground">
+              {state === "unprotected" && !canManage
                 ? t("state.unprotected.bodyReadOnly")
                 : t(`state.${state}.body`)}
-          </p>
+            </p>
+          )}
         </div>
 
         {/* Column on a phone so long labels cannot overflow (buttons never

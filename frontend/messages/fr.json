@@ -1701,7 +1701,9 @@
       "retryOnDocker": "Réessayer depuis la page Docker"
     },
     "summary": {
-      "installing": "{count, plural, =1 {1 en cours d'installation} other {# en cours d'installation}}"
+      "installing": "{count, plural, =1 {1 en cours d'installation} other {# en cours d'installation}}",
+      "healthyLine": "{active} sur {total} en exécution",
+      "checkedAt": "vérifié à {time}"
     },
     "tiles": {
       "running": "En exécution",
@@ -8027,7 +8029,8 @@
       "connected": "Connecté",
       "waiting": "En attente de Central",
       "lastUsed": "Dernière utilisation par Central : {ago}.",
-      "off": "Non connecté"
+      "off": "Non connecté",
+      "lastUsedShort": "dernière utilisation {ago}"
     },
     "steps": {
       "generate": "Générer une clé",

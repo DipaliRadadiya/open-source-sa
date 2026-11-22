@@ -151,6 +151,19 @@ export function CentralPanel({ status }) {
           )
         }
       >
+        {/* Once Central uses the key the three setup steps are history: one line says so
+            instead of three ticked cards taking a row (22 Nov). */}
+        {linked ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-sm">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-white" aria-hidden>
+              <Check className="size-3.5" />
+            </span>
+            <span className="font-medium">{t("steps.managed", { brand })}</span>
+            {lastUsedAgo ? (
+              <span className="text-muted-foreground" suppressHydrationWarning>· {t("state.lastUsedShort", { ago: lastUsedAgo })}</span>
+            ) : null}
+          </p>
+        ) : (
         <ol className="grid gap-3 sm:grid-cols-3">
           {steps.map((step, index) => (
             <li
@@ -180,6 +193,7 @@ export function CentralPanel({ status }) {
             </li>
           ))}
         </ol>
+        )}
 
         {apiAddress ? (
           <InfoRow label={t("apiAddress.label")} className="col-span-full">

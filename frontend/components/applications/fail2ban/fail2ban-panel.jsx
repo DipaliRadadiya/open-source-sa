@@ -54,7 +54,7 @@ const FILES = [
 ];
 
 // Edits the two raw INI files the backend writes verbatim to `/etc/fail2ban/{jail,filter}.d/`.
-export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage }) {
+export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage, filterNote = null }) {
   const t = useTranslations("applications.fail2ban");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
@@ -207,6 +207,14 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
   return (
     <div className="space-y-4">
+      {/* The default rules only catch WordPress logins; the API words it per site type. Shown
+          once there is a rule or one is being written, not beside the "not set up" card,
+          which already says nothing is protected (22 Nov: the page said it twice). */}
+      {filterNote ? (
+        <Caution tone="warning" size="md">
+          <p>{filterNote}</p>
+        </Caution>
+      ) : null}
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
           <span

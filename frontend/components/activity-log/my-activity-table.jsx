@@ -101,17 +101,19 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
     { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
     ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden w-44 sm:table-cell" } }] : []),
     {
-      accessorKey: "type",
-      header: t("table.type"),
-      cell: TypeCell,
-      meta: { className: "hidden w-68 xl:table-cell" },
-    },
-    {
       accessorKey: "description",
       header: wrap(t("table.description")),
       cell: DescriptionCell,
       // TableCell is nowrap by default; the description must wrap.
       meta: { className: "whitespace-normal", showUser },
+    },
+    // Last, not before the description: its width is sized for the longest label in any
+    // locale, so in the middle it left an empty band before "What happened" (22 Nov).
+    {
+      accessorKey: "type",
+      header: t("table.type"),
+      cell: TypeCell,
+      meta: { className: "hidden w-68 xl:table-cell" },
     },
   ];
 

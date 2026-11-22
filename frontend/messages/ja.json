@@ -1701,7 +1701,9 @@
       "retryOnDocker": "Docker ページで再試行"
     },
     "summary": {
-      "installing": "{count, plural, =1 {1 件インストール中} other {# 件インストール中}}"
+      "installing": "{count, plural, =1 {1 件インストール中} other {# 件インストール中}}",
+      "healthyLine": "{total} 件中 {active} 件が実行中",
+      "checkedAt": "{time} に確認"
     },
     "tiles": {
       "running": "実行中",
@@ -8027,7 +8029,8 @@
       "connected": "接続済み",
       "waiting": "Central を待機中",
       "lastUsed": "Central の最終使用: {ago}",
-      "off": "未接続"
+      "off": "未接続",
+      "lastUsedShort": "最終使用 {ago}"
     },
     "steps": {
       "generate": "鍵を生成",

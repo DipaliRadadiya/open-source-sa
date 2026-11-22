@@ -1701,7 +1701,9 @@
       "retryOnDocker": "Docker पृष्ठ पर पुनः प्रयास करें"
     },
     "summary": {
-      "installing": "{count, plural, =1 {1 इंस्टॉल हो रही} other {# इंस्टॉल हो रही}}"
+      "installing": "{count, plural, =1 {1 इंस्टॉल हो रही} other {# इंस्टॉल हो रही}}",
+      "healthyLine": "{total} में से {active} चल रही हैं",
+      "checkedAt": "{time} पर जाँचा गया"
     },
     "tiles": {
       "running": "चल रही हैं",
@@ -8027,7 +8029,8 @@
       "connected": "जुड़ा हुआ",
       "waiting": "Central की प्रतीक्षा",
       "lastUsed": "Central ने आखिरी बार इस्तेमाल किया: {ago}।",
-      "off": "जुड़ा नहीं"
+      "off": "जुड़ा नहीं",
+      "lastUsedShort": "आखिरी इस्तेमाल {ago}"
     },
     "steps": {
       "generate": "कुंजी बनाएँ",

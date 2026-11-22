@@ -1701,7 +1701,9 @@
       "retryOnDocker": "Повторить на странице Docker"
     },
     "summary": {
-      "installing": "{count, plural, =1 {1 устанавливается} other {# устанавливаются}}"
+      "installing": "{count, plural, =1 {1 устанавливается} other {# устанавливаются}}",
+      "healthyLine": "Выполняется {active} из {total}",
+      "checkedAt": "проверено в {time}"
     },
     "tiles": {
       "running": "Выполняется",
@@ -8027,7 +8029,8 @@
       "connected": "Подключено",
       "waiting": "Ожидание Central",
       "lastUsed": "Последнее использование Central: {ago}.",
-      "off": "Не подключено"
+      "off": "Не подключено",
+      "lastUsedShort": "последнее использование {ago}"
     },
     "steps": {
       "generate": "Создайте ключ",

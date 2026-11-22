@@ -93,6 +93,25 @@ export function LogToolbar({
   // Swaps the preset selector for a number field, and back once applied.
   const [customLines, setCustomLines] = useState(false);
 
+  // In the head beside Live, not at the end of the filter row: in the narrower system-logs card it
+  // wrapped onto a row of its own (22 Nov).
+  const clearButton = onClear ? (
+    <Button
+      type="button"
+      // The destructive variant, not outline + red classes: inside a card the outline
+      // variant's tint outranks them and the button rendered blue.
+      variant="destructive"
+      size="sm"
+      className="h-8 rounded-lg border-destructive/40"
+      onClick={onClear}
+      disabled={disabled || clearing || Boolean(clearReason)}
+      disabledReason={clearReason}
+    >
+      {clearing ? <Loader2 className="size-4 animate-spin" /> : <Eraser className="size-4" />}
+      {t("clear")}
+    </Button>
+  ) : null;
+
   return (
     // Two rows, as the panel's cards: the header (title, Live) over a rule, then the
     // tools. One grey block holding both read as clutter (7 Oct).
@@ -131,6 +150,8 @@ export function LogToolbar({
           ) : null}
         </div>
 
+        <div className="flex shrink-0 items-center gap-2">
+        {clearButton}
         {/* Fixed height in every state so the pill does not resize when the tail drops. */}
         <div
           className={cn(
@@ -176,6 +197,7 @@ export function LogToolbar({
               />
             </>
           )}
+        </div>
         </div>
       </div>
 
@@ -344,31 +366,6 @@ export function LogToolbar({
             ) : null}
           </div>
 
-          {/* Last, apart from the view actions: it empties the file for good. */}
-          {onClear ? (
-            // ml-auto on a wrapper, not a divider (which would strand on a wrapped line): a
-            // disabled Button sits inside its reason tooltip's span.
-            <div className="ml-auto">
-            <Button
-              type="button"
-              // The destructive variant, not outline + red classes: inside a card the outline
-              // variant's tint outranks them and the button rendered blue.
-              variant="destructive"
-              size="sm"
-              className="h-9 rounded-lg border-destructive/40"
-              onClick={onClear}
-              disabled={disabled || clearing || Boolean(clearReason)}
-              disabledReason={clearReason}
-            >
-              {clearing ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Eraser className="size-4" />
-              )}
-              {t("clear")}
-            </Button>
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
