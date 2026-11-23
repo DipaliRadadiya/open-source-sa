@@ -39,7 +39,9 @@ test("curated response shows Username admin and Password <x>, no raw keys or DB 
   show();
   await screen.findByText("admin");
   assert.equal(screen.getByText("Username").closest("li").textContent, "Usernameadmin");
-  assert.equal(screen.getByText("Password").closest("li").textContent, "Password<x>");
+  // 23 Nov (Krishna): masked until the eye is pressed; the username is not a secret.
+  assert.equal(screen.getByText("Password").closest("li").textContent, "Password••••••••••••");
+  assert.equal(screen.getByText("Username").closest("li").querySelector('button[aria-label="Show password"]'), null);
   assert.equal(screen.queryByText("ADMIN_PASSWORD"), null);
   assert.equal(screen.queryByText("DB_ROOT_PASSWORD"), null);
   assert.equal(screen.queryByText("db-private-fixture"), null);
@@ -48,14 +50,22 @@ test("curated response shows Username admin and Password <x>, no raw keys or DB 
   assert.deepEqual(acknowledgements, [], "reading never acknowledges");
   const copies = [];
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (value) => copies.push(value) } });
-  fireEvent.click(screen.getByText("Password").closest("li").querySelector("button"));
+  // Copy works while masked.
+  fireEvent.click(screen.getByText("Password").closest("li").querySelector('button[aria-label="Copy"]'));
   await waitFor(() => assert.deepEqual(copies, ["<x>"]));
+  fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+  assert.equal(screen.getByText("Password").closest("li").textContent, "Password<x>");
+  fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+  assert.equal(screen.queryByText("<x>"), null);
 });
 for (const credentials of [undefined, null, { invalid: true }]) {
   test(`non-array credentials ${JSON.stringify(credentials)} falls back to legacy rows`, async () => {
     const old = globalThis.__firstRunApi.secrets;
     globalThis.__firstRunApi.secrets = async (id) => { const result = await old(id); result.data.credentials = credentials; return result; };
-    show(); await screen.findByText("legacy-value");
+    show(); await screen.findAllByRole("button", { name: "Show password" });
+    // A raw key named like a password is masked too.
+    assert.equal(screen.getByText("ADMIN_PASSWORD").closest("li").textContent, "ADMIN_PASSWORD••••••••••••");
+    fireEvent.click(screen.getByText("ADMIN_PASSWORD").closest("li").querySelector('button[aria-label="Show password"]'));
     assert.equal(screen.getByText("ADMIN_PASSWORD").closest("li").textContent, "ADMIN_PASSWORDlegacy-value");
     assert.ok(screen.getByText("DB_ROOT_PASSWORD"));
   });
@@ -67,8 +77,9 @@ test("an empty curated array stays empty, never exposes legacy secrets", async (
   assert.equal(screen.queryByText("db-private-fixture"), null);
 });
 test("all five curated labels are translated literally", async () => {
-  curated(["username", "password", "email", "url", "token"].map(label => ({ label, value: `fixture-${label}`, secret: true })));
-  show();await screen.findByText("fixture-token");
+  curated(["username", "password", "email", "url", "token"].map(label => ({ label, value: `fixture-${label}`, secret: label === "password" || label === "token" })));
+  show();await screen.findByText("fixture-url");
+  assert.equal(screen.queryByText("fixture-token"), null, "a token is masked like a password");
   for (const label of ["Username", "Password", "Email", "Admin URL", "Token"]) assert.ok(screen.getByText(label));
 });
 test("loading prevents acknowledgement until values arrive; only the existing button sends it", async () => {
@@ -77,7 +88,7 @@ test("loading prevents acknowledgement until values arrive; only the existing bu
   show();const button = screen.getByRole("button", { name: messages.applications.container.firstRun.acknowledge });
   assert.equal(button.disabled, true);assert.ok(screen.getAllByLabelText(messages.applications.container.firstRun.loading).length);
   finish({ data: { secrets: { ADMIN_PASSWORD: "shown" }, credentials: [{ label: "password", value: "shown" }] } });
-  await screen.findByText("shown");
+  await screen.findByRole("button", { name: "Show password" });
   const ready = screen.getByRole("button", { name: messages.applications.container.firstRun.acknowledge });
   await waitFor(() => assert.equal(ready.disabled, false));assert.deepEqual(acknowledgements, []);
   fireEvent.click(ready);await waitFor(() => assert.deepEqual(acknowledgements, [7]));

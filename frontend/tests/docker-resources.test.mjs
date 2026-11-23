@@ -683,7 +683,10 @@ test("the first-run card fetches the values instead of hiding them behind a butt
   // values stay available under Container → Reveal, and the first version of this
   // test failed on its own prose.
   assert.doesNotMatch(firstRun, /function reveal\(/);
-  assert.doesNotMatch(firstRun, /\bEye\b/);
+  // 23 Nov (Krishna): the password is masked on screen, but the eye only toggles what is
+  // already loaded; it never gates the fetch.
+  assert.match(firstRun, /const masked = secret && !shown;/);
+  assert.doesNotMatch(firstRun, /setShown[\s\S]{0,80}getContainerSecrets/);
 });
 
 test("it is dismissed only by an explicit acknowledgement", () => {

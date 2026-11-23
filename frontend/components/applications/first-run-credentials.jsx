@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { KeyRound, Loader2 } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import {
   acknowledgeContainerSecrets,
   getContainerSecrets,
@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Masked until asked for: the card stays on the dashboard on every visit until dismissed,
+// so a shown password sat on every screen share (Krishna, 23 Nov). The API's own `secret`
+// flag decides; without it, the label (or a raw env key's name) does.
+const SECRET_LABELS = new Set(["password", "token"]);
+const SECRET_KEY = /PASS|SECRET|TOKEN|KEY/i;
 
 /**
  * The credentials a one-click app generated, shown once, where the user lands.
@@ -25,11 +32,10 @@ import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts"
  * day they install something. A password generated and never shown is the same as an
  * account nobody can sign into.
  *
- * **Shown, not hidden behind a button, and that is the difference from
- * `ContainerCredentials`.** There the values are masked until asked for, because that
- * screen is somewhere you go back to and a password on a page you visit for other
- * reasons is a password on a shoulder-surfed screen. Here the entire purpose is that
- * the first view happens, so it fetches on mount.
+ * **Fetched on mount, password masked.** The values load as soon as the card shows, so
+ * the first view happens without a Reveal click; the password itself sits behind an eye
+ * (Krishna, 23 Nov), because this card stays on the dashboard on every visit until it is
+ * dismissed. Copy works while it is masked.
  *
  * **Dismissed only by the button.** The values cannot be rotated from the panel —
  * changing one means rewriting the compose file AND the credential inside the running
@@ -59,8 +65,8 @@ export function FirstRunCredentials({ application, className }) {
     token: t("labels.token"),
   };
   const rows = Array.isArray(credentials)
-    ? credentials.map((item, index) => ({ key: `${item.label}-${index}`, label: LABELS[item.label], value: item.value, curated: true }))
-    : keys.map((key) => ({ key, label: key, value: secrets?.[key], curated: false }));
+    ? credentials.map((item, index) => ({ key: `${item.label}-${index}`, label: LABELS[item.label], value: item.value, curated: true, secret: typeof item.secret === "boolean" ? item.secret : SECRET_LABELS.has(item.label) }))
+    : keys.map((key) => ({ key, label: key, value: secrets?.[key], curated: false, secret: SECRET_KEY.test(key) }));
 
   useEffect(() => {
     let cancelled = false;
@@ -146,13 +152,7 @@ export function FirstRunCredentials({ application, className }) {
                   </span>
                   {secrets ? (
                     <span className="flex min-w-0 items-center gap-1.5">
-                      {/* Not truncated. A password clipped to fit is a password
-                          somebody transcribes wrongly, and this card exists for
-                          exactly the one reading where that matters. */}
-                      <code className="min-w-0 break-all font-mono text-[13px] font-medium">
-                        {row.value}
-                      </code>
-                      <CopyButton value={row.value ?? ""} />
+                      <SecretValue value={row.value} secret={row.secret} />
                     </span>
                   ) : (
                     <Loader2
@@ -169,5 +169,39 @@ export function FirstRunCredentials({ application, className }) {
         <p className="border-t pt-3 text-xs text-muted-foreground">{t("laterHint")}</p>
       </CardContent>
     </Card>
+  );
+}
+
+// Copy works while masked; the eye shows the value for whoever wants to read it.
+function SecretValue({ value, secret }) {
+  const t = useTranslations("common");
+  const [shown, setShown] = useState(false);
+  const masked = secret && !shown;
+
+  return (
+    <>
+      {/* Not truncated when shown. A password clipped to fit is a password somebody
+          transcribes wrongly, and this card exists for exactly that one reading. */}
+      <code className="min-w-0 break-all font-mono text-[13px] font-medium">
+        {masked ? "••••••••••••" : value}
+      </code>
+      {secret ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setShown((s) => !s)}
+              aria-label={shown ? t("hidePassword") : t("showPassword")}
+              aria-pressed={shown}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{shown ? t("hidePassword") : t("showPassword")}</TooltipContent>
+        </Tooltip>
+      ) : null}
+      <CopyButton value={value ?? ""} />
+    </>
   );
 }
