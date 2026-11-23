@@ -7,6 +7,7 @@ import { PROVISION_STEPS, provisionStepLabel } from "@/lib/applications/provisio
 import { isRedeploying } from "@/lib/applications/settled";
 import { containerState, describeWarnings, healthWarnings } from "@/lib/applications/container-state";
 import { Badge } from "@/components/ui/badge";
+import { HoverHint } from "@/components/ui/hover-hint";
 
 /* Kept out of `applications-table.jsx` so the sidebar does not pull DataTable into the shell bundle. */
 // The statuses `filter[status]` accepts, in API order. Fixed rather than derived
@@ -164,10 +165,11 @@ export function ApplicationStatusNotes({ application, className }) {
   const deployFailed = isGit && application.status === "active" && Boolean(application.failed_step);
   const provisioning =
     (application.status === "pending" || application.status === "provisioning") && application.steps?.length;
-  const reference = application.status === "failed" && application.reference;
   // Containers that need attention: a helper while the main part works (yellow), or the main
   // container that made it red, named first. Raw service names, worded states.
   const container = containerState(application);
+  // The badge already says "Restarting", and the API's sentence for it is a paragraph.
+  const reference = application.status === "failed" && application.reference && container !== "restarting";
   const warnings = healthWarnings(application);
   const helperNote = (container === "degraded" || container === "starting") && warnings.length > 0;
   const mainNote = (container === "failed" || container === "restarting") && warnings.length > 0;
@@ -186,11 +188,19 @@ export function ApplicationStatusNotes({ application, className }) {
       {reference ? (
         // Prefer the server's localized cause. Show the step only when `provisionStepLabel`
         // can name it; its fallback reads as nonsense here.
-        application.failed_reason_title ? (
-          /* Wrapped: a truncated sentence loses its meaning. */
+        application.last_failure?.message ? (
+          // A container's own one-line reason; the paragraph is on the application's page.
           <p className="max-w-52 text-xs text-pretty text-destructive">
-            {application.failed_reason_title}
+            {application.last_failure.message}
           </p>
+        ) : application.failed_reason_title ? (
+          // The API's cause is a paragraph: two lines here, the whole of it on hover and on
+          // the application's page (Krishna, 23 Nov: the full text made one row huge).
+          <HoverHint content={application.failed_reason_title}>
+            <p className="line-clamp-2 max-w-52 text-xs text-pretty text-destructive">
+              {application.failed_reason_title}
+            </p>
+          </HoverHint>
         ) : PROVISION_STEPS.has(application.failed_step) ? (
           <p className="max-w-52 text-xs text-pretty text-destructive">
             {/* Same string as the detail page: both describe one failure. */}

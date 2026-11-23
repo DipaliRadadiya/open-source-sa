@@ -29,7 +29,9 @@ test("a status explanation wraps; only the support reference truncates", () => {
 
   for (const re of [
     /<p className="max-w-40 text-xs text-pretty text-muted-foreground">/,     // provisioning step
-    /<p className="max-w-52 text-xs text-pretty text-destructive">[\s\S]{0,80}failed_reason_title/, // the reason
+    /<p className="max-w-52 text-xs text-pretty text-destructive">\s*\{application\.last_failure\.message\}/, // a container's short reason
+    // 23 Nov (Krishna): the API's cause is a paragraph, so two lines with the whole of it on hover.
+    /<HoverHint content=\{application\.failed_reason_title\}>\s*<p className="line-clamp-2 max-w-52 text-xs text-pretty text-destructive">/,
   ]) {
     assert.match(src, re);
   }
@@ -70,4 +72,10 @@ test("the four statuses the API can send all have a variant", () => {
     .split(",").map((s) => s.trim().replace(/['"]/g, "")).filter(Boolean);
   const variants = src.match(/export const STATUS_VARIANTS = \{([\s\S]*?)\}/)[1];
   for (const s of statuses) assert.match(variants, new RegExp(`\\b${s}:`), `no variant for ${s}`);
+});
+
+test("a restarting container gets no note under its badge; the badge already says it", () => {
+  const src = read("components/applications/application-status-badge.jsx");
+  assert.match(src, /const reference = application\.status === "failed" && application\.reference && container !== "restarting";/);
+  assert.ok(src.indexOf("const container = containerState(application);") < src.indexOf("const reference ="));
 });
