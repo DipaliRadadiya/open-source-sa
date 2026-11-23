@@ -151,7 +151,7 @@ export function AttachSiteDialog({
         <div className="space-y-2">
           <Label>{t("site")}</Label>
           <Select value={site} onValueChange={setSite} disabled={pending}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={t("chooseSite")} />
             </SelectTrigger>
             <SelectContent>
