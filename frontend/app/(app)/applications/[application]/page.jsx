@@ -515,26 +515,32 @@ export default async function ApplicationDetailPage({ params }) {
               deployInFlight={Boolean(latestDeploy.latest?.in_flight)}
             />
           ) : null}
-          {/* A container app: two independent columns, so a short card never stretches to
-              its neighbour's height (Krishna, 20 Oct: one domain left a half-empty card and
-              Security sat alone under it). Website on the left, operations on the right. */}
+          {/* A container app, in rows of cards of about the same height (Krishna, 23 Nov:
+              Command-line access in the right column made it ~185px longer than the left, and
+              on 20 Oct one domain left a half-empty card). Domains (and an attached database)
+              on top, Security beside Backups (291 vs 311px measured), then Command-line access
+              full width, where its commands sit side by side. */}
           {showContainerAccess ? (
-            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-              <div className="space-y-6">
-                {domainsCard}
-                {databaseCard}
+            <>
+              {databaseCard ? (
+                <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+                  {domainsCard}
+                  {databaseCard}
+                </div>
+              ) : (
+                domainsCard
+              )}
+              <div className="grid gap-6 lg:grid-cols-2">
                 {protectionCard}
-              </div>
-              <div className="space-y-6">
                 {backupCard}
-                <ContainerAccessCard
-                  application={application}
-                  canSeeSystemUsers={can(permissions, "system_user", "view")}
-                  canManageSystemUsers={can(permissions, "system_user", "manage")}
-                  canOpenSecurity={can(permissions, "setting", "manage")}
-                />
               </div>
-            </div>
+              <ContainerAccessCard
+                application={application}
+                canSeeSystemUsers={can(permissions, "system_user", "view")}
+                canManageSystemUsers={can(permissions, "system_user", "manage")}
+                canOpenSecurity={can(permissions, "setting", "manage")}
+              />
+            </>
           ) : (
             <div className="grid gap-6 lg:grid-cols-2">
               {domainsCard}

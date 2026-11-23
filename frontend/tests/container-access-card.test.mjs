@@ -512,3 +512,12 @@ for (const [label, reply] of [
     assert.equal(warnings.length, 1);
   });
 }
+
+// 23 Nov (Krishna): in the right column the card made it ~185px longer than the left.
+test("a container app's dashboard: Domains row, Security beside Backups, Command-line access full width", () => {
+  const page = readFileSync("app/(app)/applications/[application]/page.jsx", "utf8");
+  const block = page.slice(page.indexOf("{showContainerAccess ? ("), page.indexOf("{application.has_process ?"));
+  assert.match(block, /<div className="grid gap-6 lg:grid-cols-2">\s*\{protectionCard\}\s*\{backupCard\}\s*<\/div>\s*<ContainerAccessCard/);
+  const card = readFileSync("components/applications/container-access-card.jsx", "utf8");
+  assert.match(card, /<div className="grid gap-4 @2xl\/cmds:grid-cols-2">/);
+});

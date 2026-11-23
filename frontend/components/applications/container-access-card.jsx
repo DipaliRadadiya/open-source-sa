@@ -569,8 +569,13 @@ function Commands({ access, canSeeSystemUsers }) {
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 pt-3">
-          <CommandLine label={t("exec")} command={commands.exec_example} testId="container-access-exec" />
-          <CommandLine label={t("logs")} command={commands.logs} testId="container-access-logs" />
+          {/* Side by side on the full-width card; stacked when it is narrow. */}
+          <div className="@container/cmds">
+            <div className="grid gap-4 @2xl/cmds:grid-cols-2">
+              <CommandLine label={t("exec")} command={commands.exec_example} testId="container-access-exec" />
+              <CommandLine label={t("logs")} command={commands.logs} testId="container-access-logs" />
+            </div>
+          </div>
           <p className="text-xs leading-5 text-muted-foreground">
             {t.rich("note", {
               username: owner.username,
