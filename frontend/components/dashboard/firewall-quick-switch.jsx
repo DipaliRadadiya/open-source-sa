@@ -37,14 +37,16 @@ export function FirewallQuickSwitch({ enabled, canManage, label }) {
     }
   }
 
-  const reason = !canManage ? t("disabled.noPermission") : unknown ? t("status.unknownTitle") : null;
+  // Without the permission the switch only shows whether the firewall is on.
+  const reason = canManage && unknown ? t("status.unknownTitle") : null;
 
   return (
     <>
       <ReasonTooltip reason={reason}>
         <Switch
+          readOnly={!canManage}
           checked={Boolean(enabled)}
-          disabled={Boolean(reason) || pending}
+          disabled={!canManage || unknown || pending}
           onCheckedChange={(next) => setConfirming(next ? "on" : "off")}
           aria-label={label}
         />

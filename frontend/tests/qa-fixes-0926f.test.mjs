@@ -17,7 +17,9 @@ test("ST-A: an administrator on a non-WordPress site is told staging is WordPres
 
 test("ST-B: push is only offered for a copy that finished being created", () => {
   assert.match(panel, /const ready = staging\?\.status === "active";/);
-  assert.match(panel, /\{canManage && ready \? \(/);
+  // Pull and push rows are both inside `canManage` (hidden from view-only, 23 Nov).
+  assert.match(panel, /\{canManage \? \(\s*<>/);
+  assert.match(panel, /\{ready \? \(/);
   assert.match(panel, /t\("push\.notReady"\)/);
 });
 
@@ -26,8 +28,8 @@ test("ST-D: a failed push or create re-reads the page", () => {
   assert.match(create, /toast\.error\(apiMessage\(error, t\("failed"\)\)\);[\s\S]{0,200}router\.refresh\(\);/);
 });
 
-test("ST-E: view-only is told why there is no button", () => {
-  assert.equal((panel.match(/t\("noPermission"\)/g) ?? []).length, 2);
+test("ST-E: view-only gets no buttons and no permission notes (23 Nov)", () => {
+  assert.equal((panel.match(/noPermission/g) ?? []).length, 0);
 });
 
 test("ST-F: the length limit is named", () => {

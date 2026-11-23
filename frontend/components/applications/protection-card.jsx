@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Status only, no toggles: enabling most of these needs real choices, and a
 // toggle could wipe settings (the firewall PUT requires `mode` and `categories`).
-export async function ProtectionCard({ application, items }) {
+export async function ProtectionCard({ application, items, totals = null }) {
   const t = await getTranslations("applications.protection");
 
   if (items.length === 0) return null;
@@ -29,9 +29,13 @@ export async function ProtectionCard({ application, items }) {
         <CardTitle icon={Shield} id="security-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           <span className="text-xs font-normal tabular-nums text-muted-foreground">
-            {on
-              ? t("summaryNamed", { on, total: items.length, names: format.list(onItems.map((item) => item.label), { type: "conjunction" }) })
-              : t("summary", { on, total: items.length })}
+            {/* Some rows hidden by the role: the count covers them all, without naming
+                protections this reader cannot open. */}
+            {totals && totals.total > items.length
+              ? t("summary", { on: totals.on, total: totals.total })
+              : on
+                ? t("summaryNamed", { on, total: items.length, names: format.list(onItems.map((item) => item.label), { type: "conjunction" }) })
+                : t("summary", { on, total: items.length })}
           </span>
         </CardTitle>
       </CardHeader>

@@ -9,12 +9,11 @@ import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 // A refusal keeps the dialog open with the server's reason, which names the fix.
 export function RootLockButton({ applicationId, path, canManage = true }) {
   const t = useTranslations("applications.rootLock");
-  const tApp = useTranslations("applications");
   const { pending: refreshing, refreshThen } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -39,7 +38,7 @@ export function RootLockButton({ applicationId, path, canManage = true }) {
 
   return (
     <>
-      <ReasonTooltip reason={canManage ? null : tApp("noPermission")}>
+      <ReasonTooltip reason={canManage ? null : DENIED}>
         <Button
           type="button"
           size="sm"

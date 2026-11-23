@@ -139,7 +139,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(save)}>
           {/* Uses the shared settings `Section`/`Row` layout: label and hint left of a

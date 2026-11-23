@@ -77,12 +77,11 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
 
   return (
     <>
-      {/* Both disable reasons get a sentence; permission comes first because it applies
-          regardless of the shell. */}
+      {/* Shell and sudo locks get a sentence; without the permission the switch only shows the value. */}
       <ReasonTooltip
         reason={
           !canManage
-            ? t("noPermission")
+            ? null
             : sshBlocked
               ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell })
               : viaSudo
@@ -91,6 +90,7 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
         }
       >
         <PendingSwitch
+          readOnly={!canManage}
           checked={viaSudo ? true : shown}
           pending={busy}
           disabled={!canManage || locked}

@@ -6,7 +6,7 @@ import { Cog, Plus, Wand2 } from "lucide-react";
 import { listWorkers } from "@/lib/api/workers";
 import { workersResponseSchema } from "@/lib/schemas/worker";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ListCard } from "@/components/data-table/list-card";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -88,7 +88,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
   }, [appId, anyBusy]);
 
   const addButton = (
-    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button disabled={!canManage} onClick={() => openCreate()}>
         <Plus className="size-4" />
         {t("addWorker")}

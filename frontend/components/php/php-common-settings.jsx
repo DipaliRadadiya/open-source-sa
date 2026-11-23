@@ -98,7 +98,6 @@ export function PhpCommonSettings({ version, canManage }) {
 function SettingsForm({ version, settings, canManage, onSaved }) {
   const t = useTranslations("php.common");
   const tApp = useTranslations("applications.php");
-  const tPhp = useTranslations("php");
   const defaults = toForm(settings);
   const [pending, setPending] = useState(false);
   // Keep php.ini.panel-bak; on again after each save or discard.
@@ -160,7 +159,7 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
     upload && /^(-1|\d+[KMG]?)$/i.test(upload) && phpSizeToBytes(settings.post_max_size ?? "8M") < phpSizeToBytes(upload);
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : tPhp("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
     <Form {...form}>
       <form noValidate onSubmit={form.handleSubmit(save)}>
         <Section

@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CardIcon } from "@/components/ui/card-icon";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { SizeText } from "@/components/ui/size-text";
@@ -110,7 +110,7 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
   // Said before a file is chosen: the server refuses the start (422) after the user confirmed.
   const noAccount = !hasImportAccount(database);
   const blocked = !canManage
-    ? t("noPermission")
+    ? DENIED
     : unavailable
       ? t("engineDown", { engine: unavailable })
       : noAccount
@@ -208,6 +208,9 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
     return found?.status === "completed" && found.available && found.download_url ? found.download_url : null;
   };
 
+  // A role that cannot import sees past imports only, and no card when there are none.
+  if (!canManage && !stage && history.length === 0) return null;
+
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0">
@@ -260,7 +263,7 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
 
               <p className="text-xs text-muted-foreground">{upload ? t("keepOpen") : t("serverNote")}</p>
             </div>
-          ) : (
+          ) : !canManage ? null : (
             // One row: the button is the way in, the whole row also takes a dropped file.
             <div
               onDragOver={(e) => {

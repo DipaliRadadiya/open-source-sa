@@ -12,7 +12,7 @@ import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import { unreachablePorts } from "@/lib/firewall/listening";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip, readOnlyReason } from "@/components/ui/reason-tooltip";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
@@ -75,8 +75,9 @@ function StateCell({ row, table }) {
   if (isLockedOn(rule, shownEnabled(rule))) return <ProtectedTag labels={labels} />;
   return (
     // Off keeps the rule but stops enforcing it, so a rule can be tested without deleting it.
-    <ReasonTooltip reason={guarded}>
+    <ReasonTooltip reason={readOnlyReason(guarded)}>
       <PendingSwitch
+        readOnly={!canManage}
         checked={shownEnabled(rule)}
         pending={pending.includes(rule.id)}
         onCheckedChange={() => onToggle(rule)}
@@ -169,7 +170,7 @@ export function RulesCard({
     unnamed: t("rules.unnamed"),
     off: t("rules.off"),
     delete: t("rules.delete"),
-    noPermission: t("disabled.noPermission"),
+    noPermission: DENIED,
     protectedHint: t("rules.protectedHint"),
     protectedReason: t("rules.protectedReason"),
     protectedTag: t("rules.protectedTag"),

@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Card,
   CardContent,
@@ -184,17 +183,18 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                     <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{jail.name}</span>
                   </div>
 
-                  <div className="col-start-2 row-start-1 flex justify-end">
-                    <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                  {/* The badge beside the name already says the state, so a role that
+                      cannot change it gets no switch. */}
+                  {canManage ? (
+                    <div className="col-start-2 row-start-1 flex justify-end">
                       <PendingSwitch
                         checked={shown(jail)}
                         pending={pending === jail.name}
-                        disabled={!canManage}
                         onCheckedChange={(next) => toggle(jail, next)}
                         aria-label={t("jails.toggle", { name: jailLabel(t, jail) })}
                       />
-                    </ReasonTooltip>
-                  </div>
+                    </div>
+                  ) : null}
 
                 </div>
               </div>

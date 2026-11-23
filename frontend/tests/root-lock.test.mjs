@@ -24,7 +24,8 @@ test("Lock asks first, keeps a refusal in the dialog, and says it worked", () =>
   assert.match(BUTTON, /setError\(apiMessage\(e, t\("failed"\)\)\)/);
   // Before the re-read, which unmounts this button once the row reads Locked.
   assert.match(BUTTON, /toast\.success\(t\("done"\)\);\s*refreshThen/);
-  assert.match(BUTTON, /reason=\{canManage \? null : tApp\("noPermission"\)\}/);
+  // Hidden from a role that cannot change it (23 Nov).
+  assert.match(BUTTON, /reason=\{canManage \? null : DENIED\}/);
 });
 
 test("server sync: a whole-type placeholder row is not a name and cannot be ignored", () => {

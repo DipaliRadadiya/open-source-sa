@@ -82,7 +82,9 @@ export default async function DashboardPage() {
   const known = Boolean(appResult && !appResult.failed);
   const applications = known ? appResult.applications : [];
   const firstRun = known && applications.length === 0;
-  const attention = attentionFindings(applications);
+  // Each finding links only where the role may go (23 Nov: "Set up SSL" opened a refusal).
+  const appCatalog = await getPermissions("application").catch(() => null);
+  const attention = attentionFindings(applications, appCatalog);
   const canViewServices = can(permissions, "service", "view");
   // With neither answer there is nothing the panel could vouch for.
   const showAttention = canViewApplications || Boolean(health);

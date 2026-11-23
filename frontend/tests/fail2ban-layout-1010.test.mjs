@@ -44,7 +44,8 @@ test("jail status badge groups with the name above ID and preserves comfortable 
   assert.match(source, /col-start-2 row-start-1 flex justify-end/);
   assert.match(source, /checked=\{shown\(jail\)\}/);
   assert.match(source, /pending=\{pending === jail.name\}/);
-  assert.match(source, /disabled=\{!canManage\}/);
+  // Hidden, not disabled, without the permission: the badge already says the state (23 Nov).
+  assert.match(source, /\{canManage \? \(\s*<div className="col-start-2 row-start-1 flex justify-end">/);
   assert.match(source, /jail\.stats\?\.currently_failed > 0 && "border-warning\/40 bg-warning\/5"/);
   assert.match(source, /<Badge variant=\{variant\} className="font-normal" aria-label=\{text\}>/);
   assert.match(source, /aria-label=\{text\}/);
@@ -427,9 +428,11 @@ test("actual rendered toolbar DOM respects Refresh/log/Unban all/Ban under every
     const context = {
       require, module: { exports: {} }, CardHeader: div, CardTitle: div, CardDescription: div, Button,
       Link: ({children, ...props}) => React.createElement("a", props, children),
-      ScrollText: () => null, Ban: () => null, ReasonTooltip: ({children}) => children,
+      ScrollText: () => null, Ban: () => null, DENIED: "__denied__",
+      ReasonTooltip: ({reason, children}) => (reason === "__denied__" ? null : children),
       RefreshButton: () => React.createElement("button", {}, "Refresh"),
-      BanIpDialog: ({canManage}) => React.createElement("button", {disabled: !canManage}, "Ban"),
+      // Hidden without the permission, like the real one (23 Nov).
+      BanIpDialog: ({canManage}) => (canManage ? React.createElement("button", {}, "Ban") : null),
       logHref, banned: Array(count), canManage, jails: [], yourIp: null, serverIp: null,
       setConfirmAll: () => {}, t: (key) => key,
     };
@@ -437,7 +440,12 @@ test("actual rendered toolbar DOM respects Refresh/log/Unban all/Ban under every
     vm.runInNewContext(code, context);
     const html = renderToStaticMarkup(React.createElement(context.module.exports));
     const controls = [...html.matchAll(/<(button|a)\b[^>]*>(.*?)<\/(?:button|a)>/gs)].map(match => match[2]);
-    assert.deepEqual(controls, ["Refresh", ...(logHref ? ["banned.seeLog"] : []), ...(count ? ["banned.unbanAll"] : []), "Ban"]);
-    assert.equal((html.match(/ disabled=""/g) ?? []).length, canManage ? 0 : count ? 2 : 1);
+    assert.deepEqual(controls, [
+      "Refresh",
+      ...(logHref ? ["banned.seeLog"] : []),
+      ...(count && canManage ? ["banned.unbanAll"] : []),
+      ...(canManage ? ["Ban"] : []),
+    ]);
+    assert.equal((html.match(/ disabled=""/g) ?? []).length, 0);
   }
 });

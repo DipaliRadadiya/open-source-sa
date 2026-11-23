@@ -156,6 +156,7 @@ export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, 
  * protected rule, disabled with the reason, so the menu reads the same on every row.
  */
 export function RuleRowMenu({ rule, enabled, canManage, pending, onDelete, onRename, deletable = true, labels }) {
+  if (!canManage) return null;
   const deleteReason = protectedReasonFor({ rule, enabled, canManage, labels });
   const noDelete = !deletable || !canManage || Boolean(rule.protected) || pending;
   return (
@@ -167,12 +168,10 @@ export function RuleRowMenu({ rule, enabled, canManage, pending, onDelete, onRen
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <MenuItemHint hint={canManage ? null : labels.noPermission}>
-          <DropdownMenuItem disabled={!canManage} onSelect={() => onRename(rule)}>
-            <Pencil className="size-4" />
-            {labels.rename}
-          </DropdownMenuItem>
-        </MenuItemHint>
+        <DropdownMenuItem onSelect={() => onRename(rule)}>
+          <Pencil className="size-4" />
+          {labels.rename}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <MenuItemHint hint={noDelete ? (deleteReason ?? (deletable ? null : labels.protectedReason)) : null}>
           <DropdownMenuItem variant="destructive" disabled={noDelete} onSelect={() => onDelete(rule)}>

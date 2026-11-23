@@ -90,8 +90,8 @@ test("only the step that can be done now has a button", () => {
   // Steps 3–5 need an application; a button there would lead nowhere yet.
   assert.match(start, /\{current \? \(/);
   assert.match(start, /: !complete \? \(\s*<span[^>]*>\{t\("afterApp"\)\}/);
-  // And a viewer reads why there is no Create, rather than meeting a missing button.
-  assert.match(start, /\{tApplications\("noPermission"\)\}<\/span>/);
+  // A viewer gets no Create and no "no permission" line (Krishna, 23 Nov).
+  assert.doesNotMatch(start, /noPermission/);
 });
 
 test("every checklist string exists in every locale", () => {

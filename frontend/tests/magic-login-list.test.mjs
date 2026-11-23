@@ -14,7 +14,8 @@ const actions = read("components/applications/application-row-actions.jsx");
 test("the list asks for the application catalog once, not once per row", () => {
   // Role grants are global; `application_id` only narrows the catalog by one
   // site's features. Passing an id here would mean a request per row.
-  assert.match(page, /getPermissions\("application"\)\.catch\(\(\) => \[\]\)/);
+  // Null on a failed read (23 Nov): an empty catalog would read as "may open nothing".
+  assert.match(page, /getPermissions\("application"\)\.catch\(\(\) => null\)/);
   assert.doesNotMatch(page, /getPermissions\("application",\s*\w+\)/);
 });
 
@@ -30,7 +31,7 @@ test("the row is gated on the Magic Login permission, not on application manage"
 test("the flag reaches the row through both the table and the cards", () => {
   // A break anywhere along here hides the item silently rather than erroring.
   assert.match(table, /canMagicLogin = false,/);
-  assert.match(table, /meta=\{\{ canManage, canMagicLogin, canRemoveSystemUser, canManageDocker, backupStanding \}\}/);
+  assert.match(table, /meta=\{\{ canManage, canOpen, canMagicLogin, canRemoveSystemUser, canManageDocker, backupStanding \}\}/);
   assert.match(table, /table\.options\.meta\?\.canMagicLogin \?\? false/);
   assert.match(cards, /canMagicLogin = false/);
   assert.match(cards, /canMagicLogin=\{canMagicLogin\}/);

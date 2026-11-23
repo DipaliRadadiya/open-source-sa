@@ -71,7 +71,7 @@ export function InstallPrompt({ canManage, install = null }) {
       : t("install.body");
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center">
         <span
           className={
@@ -103,14 +103,11 @@ export function InstallPrompt({ canManage, install = null }) {
           ) : null}
         </div>
   
-        {installing ? null : (
-          <Button disabled={!canManage} onClick={start}>
+        {installing || !canManage ? null : (
+          <Button onClick={start}>
             {failed ? t("install.retry") : t("install.action")}
           </Button>
         )}
-        {!canManage && !installing ? (
-          <p className="text-xs text-muted-foreground">{t("install.noPermission")}</p>
-        ) : null}
       </div>
     </DisabledReasonProvider>
   );

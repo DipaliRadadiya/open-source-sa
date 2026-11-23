@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
+import { canOpenApplication } from "@/lib/permissions/app-screens";
 import { getApplications, getSiteTypes } from "@/lib/applications/get-applications";
 import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import { getGitAccounts } from "@/lib/git/get-git";
@@ -35,7 +36,7 @@ export default async function ApplicationsPage({ searchParams }) {
     getPermissions(),
     // Application-level catalog, unfiltered: role grants are global, so one
     // call answers Magic Login for every row.
-    getPermissions("application").catch(() => []),
+    getPermissions("application").catch(() => null),
     getTranslations("applications"),
     getApplications(query),
     // Filter options come from the catalog, not the current page of rows.
@@ -93,6 +94,8 @@ export default async function ApplicationsPage({ searchParams }) {
         meta={result.meta}
         siteTypes={siteTypes}
         canManage={can(permissions, "application", "manage")}
+        // A role with no screen inside any application sees the list, not links into empty pages.
+        canOpen={canOpenApplication(appPermissions)}
         // The API enforces `app_magic_login`, not `application` manage. The
         // catalog is unfiltered by site type, so the row checks `site_type`.
         canMagicLogin={can(appPermissions, "app_magic_login", "manage", "application")}

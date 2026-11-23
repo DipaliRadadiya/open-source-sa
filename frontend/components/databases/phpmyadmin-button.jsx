@@ -157,7 +157,7 @@ export function PhpmyadminButton({
       );
     }
     return (
-      <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <DisabledReasonProvider denied={!canManage}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -199,7 +199,7 @@ export function PhpmyadminButton({
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       {/* Arrow function, not a bare reference: `onClick={open}` hands the
           click event straight to the site-id parameter. */}
       <Button

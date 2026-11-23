@@ -13,6 +13,7 @@ import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { SystemUserPasswordDialog } from "@/components/system-users/system-user-password-dialog";
 import { SshKeysDialog } from "@/components/system-users/ssh-keys-dialog";
 import { DeleteSystemUserDialog } from "@/components/system-users/delete-system-user-dialog";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 // Shown to viewers too: the menu is the only way to view a user's SSH keys.
 // Actions they cannot take stay visible, disabled with the reason.
@@ -55,7 +56,7 @@ export function SystemUserRowActions({
             e.preventDefault();
           }}
         >
-          <MenuItemHint hint={canManage ? null : t("noPermission")}>
+          <MenuItemHint hint={canManage ? null : DENIED}>
             <DropdownMenuItem disabled={!canManage} onSelect={open(setPwOpen)}>
               <KeyRound className="size-4" />
               {t("password.open")}
@@ -65,9 +66,9 @@ export function SystemUserRowActions({
             <KeySquare className="size-4" />
             {t("sshKeysAction")}
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
+          {canManage ? <DropdownMenuSeparator /> : null}
           <MenuItemHint
-            hint={!canManage ? t("noPermission") : ownsApps ? t("actions.deleteAppsHint") : null}
+            hint={!canManage ? DENIED : ownsApps ? t("actions.deleteAppsHint") : null}
           >
             <DropdownMenuItem
               variant="destructive"

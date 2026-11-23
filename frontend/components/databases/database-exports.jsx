@@ -26,7 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CardIcon } from "@/components/ui/card-icon";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -194,7 +194,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
             <RefreshButton />
             <ReasonTooltip
               reason={
-                !canManage ? t("noPermission") : inFlight ? t("alreadyRunning") : null
+                !canManage ? DENIED : inFlight ? t("alreadyRunning") : null
               }
             >
               {/* The button shows progress itself, since that is where the user looks. */}

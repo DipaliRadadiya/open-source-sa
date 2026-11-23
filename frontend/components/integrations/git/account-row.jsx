@@ -63,7 +63,7 @@ export function AccountRow({
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="flex flex-wrap items-start justify-between gap-3 py-3.5">
         {/* min-w-64 + flex-1: the account keeps its width and the buttons wrap below it on a phone. */}
         <div className="flex min-w-64 flex-1 gap-3">

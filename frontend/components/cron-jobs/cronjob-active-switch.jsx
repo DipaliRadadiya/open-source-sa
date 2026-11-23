@@ -51,11 +51,11 @@ export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) 
 
   return (
     <PendingSwitch
+      readOnly={!canManage}
       checked={shown}
       pending={busy}
+      // Without the permission it only shows whether the job is on.
       disabled={!canManage}
-      // Only for missing permission; while busy the switch is mid-request.
-      disabledReason={canManage ? undefined : t("noPermission")}
       onCheckedChange={canManage ? onToggle : undefined}
       // Names the job so screen readers can tell the switches apart.
       aria-label={t("activeFor", { name: job.name })}

@@ -10,7 +10,7 @@ import { backupFailureText } from "@/lib/backups/reason";
 import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -279,7 +279,7 @@ function ActionsCell({ row, table }) {
 
   const blocker = canRestore
     ? restoreBlocker(backup, tr, restoreInFlight, table.options.meta?.subject === "database")
-    : t("noPermission");
+    : DENIED;
 
   return (
     <div className="flex items-center justify-end gap-2">

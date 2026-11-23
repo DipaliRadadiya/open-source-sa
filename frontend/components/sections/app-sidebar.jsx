@@ -28,6 +28,7 @@ import { NavIcon } from "@/components/nav-icon";
 import { SidebarServerCard } from "@/components/sections/sidebar-server-card";
 import { ApplicationSwitcher } from "@/components/sections/application-switcher";
 import { can } from "@/lib/permissions/can";
+import { landingPath } from "@/lib/permissions/landing-path";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HoverHint } from "@/components/ui/hover-hint";
 import {
@@ -102,6 +103,7 @@ function PendingNavIcon({ name }) {
 }
 
 export function AppSidebar({ items, initialGroups = {} }) {
+  const home = landingPath(items);
   const pathname = usePathname();
   const params = useParams();
   const t = useTranslations("common");
@@ -149,11 +151,13 @@ export function AppSidebar({ items, initialGroups = {} }) {
   return (
     <Sidebar collapsible="icon" label={t("serverNavigation")}>
       <SidebarHeader className="h-16 justify-center border-b px-3">
+        {/* Home is the first screen the role can open, not /dashboard for everyone (23 Nov:
+            a role without Dashboard clicked the logo into a refusal). */}
         <Link
-          href="/dashboard"
+          href={home}
           className="flex items-center"
           onClick={(event) => {
-            if (pathname !== "/dashboard" && guardNavigation("/dashboard")) event.preventDefault();
+            if (pathname !== home && guardNavigation(home)) event.preventDefault();
           }}
         >
           {iconOnly ? (

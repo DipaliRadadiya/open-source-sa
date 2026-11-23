@@ -19,7 +19,6 @@ import {
   CircleCheck,
   Download,
   Loader2,
-  Lock,
   Power,
   RotateCcw,
   ShieldCheck,
@@ -85,20 +84,11 @@ export function MaintenanceCard({
   pendingReboot,
   pendingRebootFailed,
 }) {
-  const tc = useTranslations("settings.common");
 
   return (
-    // Gives each disabled control the same permission reason as the banner below.
-    <DisabledReasonProvider reason={canManage ? null : tc("noPermission")}>
+    // Without the permission, buttons are hidden and fields only show their values.
+    <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-4">
-        {/* Stated once above the three cards. */}
-        {!canManage ? (
-          <p className="flex w-fit items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-            <Lock className="size-3.5 shrink-0" />
-            {tc("readOnly")}
-          </p>
-        ) : null}
-
         <UpdatesSection updates={updates} canManage={canManage} />
 
         <ScheduleSection
@@ -861,6 +851,9 @@ function ManualSection({
     }
   }
 
+  // A role that cannot restart sees this card only when a restart is due or scheduled.
+  if (!canManage && !rebootRequired && !pendingReboot?.scheduled && !pendingRebootFailed) return null;
+
   return (
     <Section
       icon={TriangleAlert}
@@ -874,14 +867,11 @@ function ManualSection({
         ) : null
       }
       actions={
-        <Button
-          type="button"
-          variant="destructive"
-          disabled={!canManage}
-          onClick={() => setConfirming(true)}
-        >
-          {t("reboot.action")}
-        </Button>
+        canManage ? (
+          <Button type="button" variant="destructive" onClick={() => setConfirming(true)}>
+            {t("reboot.action")}
+          </Button>
+        ) : null
       }
     >
       {/* Read from systemd, so one scheduled from a shell shows up too. */}
@@ -936,6 +926,9 @@ function ManualSection({
         </p>
       ) : null}
 
+      {/* The restart form itself only for a role that can restart. */}
+      {canManage ? (
+      <>
       <p className="text-sm text-muted-foreground">
         {t("reboot.description")}
       </p>
@@ -957,6 +950,8 @@ function ManualSection({
           </SelectContent>
         </Select>
       </InfoRow>
+      </>
+      ) : null}
 
       <ConfirmDialog
         open={confirming}

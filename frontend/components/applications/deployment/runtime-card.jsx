@@ -57,7 +57,7 @@ export function RuntimeCard({ application, canManage }) {
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(save)}>
           {/* Same Section/Row layout as the card above. A value that fits the 224px control

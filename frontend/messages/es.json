@@ -103,7 +103,9 @@
     "keepFileCopy": "Guardar una copia del archivo actual",
     "keepFileCopyOff": "Sin una copia, no podrás volver a la versión actual.",
     "keepSettingsCopy": "Guardar una copia de la configuración actual",
-    "keepSettingsCopyOff": "Sin una copia, la configuración anterior solo se guarda en memoria mientras se comprueba la nueva. Si el panel se detiene durante el guardado, no se podrá recuperar."
+    "keepSettingsCopyOff": "Sin una copia, la configuración anterior solo se guarda en memoria mientras se comprueba la nueva. Si el panel se detiene durante el guardado, no se podrá recuperar.",
+    "on": "Activado",
+    "off": "Desactivado"
   },
   "systemUsers": {
     "title": "Usuarios del sistema",
@@ -6715,7 +6717,8 @@
       "lastFailed": "El último Descargar y volver a desplegar falló: {reason}",
       "lastFailedPlain": "El último Descargar y volver a desplegar falló.",
       "reference": "Referencia: {reference}"
-    }
+    },
+    "noScreens": "Tu rol no da acceso a ninguna parte de esta aplicación. Pide a un administrador que te conceda alguna."
   },
   "panelUpdate": {
     "title": "Actualización del panel",

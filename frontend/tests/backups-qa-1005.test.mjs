@@ -33,13 +33,14 @@ test("Run backup is refused on the overview for the site being restored", () => 
   }
 });
 
-test("viewers see Set up and Run backup disabled with the reason, not hidden", () => {
+// 23 Nov (Krishna): actions a role cannot use are hidden, not shown disabled with a reason.
+test("viewers do not see Set up or Run backup", () => {
   for (const f of ["coverage-cards.jsx", "coverage-table.jsx"]) {
     const src = read(`components/backups/${f}`);
-    assert.match(src, /th\("noPermission"\)/, f);
-    assert.doesNotMatch(src, /canManage \? \(\s*<ReasonTooltip/, f);
+    assert.match(src, /DENIED/, f);
+    assert.doesNotMatch(src, /noPermission/, f);
   }
-  assert.doesNotMatch(read("components/backups/backups-empty-state.jsx"), /\{!canManage \? null :/);
+  assert.match(read("components/backups/backups-empty-state.jsx"), /\{!canManage \? null :/);
 });
 
 test("the restore banner ticks its finished time and never says 'now'", () => {

@@ -73,9 +73,11 @@ test("UX-11: every disabled switch lets the tap through to its reason (phones)",
   assert.match(read("components/ui/switch.jsx"), /data-disabled:pointer-events-none/);
 });
 
-test("Services: the locked boot switch explains itself on a tap too", () => {
+// 23 Nov (Krishna): no "no permission" tooltips; the switch just shows the state.
+test("Services: the boot switch shows its state read-only without the permission", () => {
   const src = read("components/services/service-boot-switch.jsx");
-  assert.match(src, /<ReasonTooltip reason=\{canToggle \? null : t\("noPermission"\)\}>\{control\}<\/ReasonTooltip>/);
+  assert.match(src, /disabled=\{!canToggle\}/);
+  assert.doesNotMatch(src, /noPermission|ReasonTooltip/);
 });
 
 // Krishna, 4 Nov: the popup's two narrow columns cut every domain and broke long names

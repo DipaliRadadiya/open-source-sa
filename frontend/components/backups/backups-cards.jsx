@@ -16,6 +16,7 @@ import { ArchivedBadge, subjectLine } from "@/components/backups/backups-history
 import { sizeNote } from "@/components/backups/backups-history-table";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 import { backupTypeLabel } from "@/lib/backups/type-label";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 // `showSite` is off on a site's own page.
 export function BackupsCards({
@@ -54,7 +55,7 @@ export function BackupsCards({
           ? null
           : canRestore
           ? restoreBlocker(backup, tr, restoreInFlight, subject === "database")
-          : t("noPermission");
+          : DENIED;
         const about = backupSubject(backup);
 
         return (
@@ -113,7 +114,7 @@ export function BackupsCards({
 
             {/* mt-auto pins the buttons to the bottom; the blocker gets its own line. */}
             <div className="mt-auto flex flex-col items-end gap-2">
-              {blocker && backup.status !== "failed" ? (
+              {blocker && blocker !== DENIED && backup.status !== "failed" ? (
                 <span className="text-xs text-muted-foreground">{blocker}</span>
               ) : null}
               <div className="flex flex-wrap items-center justify-end gap-2">

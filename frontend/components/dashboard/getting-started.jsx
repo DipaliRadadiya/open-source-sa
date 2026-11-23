@@ -78,10 +78,7 @@ export async function GettingStarted({ canCreate = false, ip = null }) {
                         <Plus /> {tApplications("create")}
                       </Link>
                     </Button>
-                  ) : (
-                    // Said in words, not behind a disabled button's tooltip.
-                    <span className="max-w-60 text-xs text-muted-foreground">{tApplications("noPermission")}</span>
-                  )
+                  ) : null
                 ) : !complete ? (
                   <span className="shrink-0 text-xs text-muted-foreground">{t("afterApp")}</span>
                 ) : null}

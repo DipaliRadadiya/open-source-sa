@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Copy, FileArchive, FolderInput, Lock, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { BULK_PATH_LIMIT } from "@/lib/api/files";
 import { dirname } from "@/lib/files/path-helpers";
 
@@ -17,7 +17,7 @@ export function SelectionBar({ selected, onClear, onAction, canManage }) {
   const spansFolders = new Set(selected.map((path) => dirname(path))).size > 1;
 
   const blocked = !canManage
-    ? t("noPermission")
+    ? DENIED
     : overLimit
       ? t("bulk.tooMany", { limit: BULK_PATH_LIMIT, count: selected.length })
       : null;

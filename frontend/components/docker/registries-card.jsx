@@ -33,9 +33,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { ReasonTooltip, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import {
   DropdownMenu,
@@ -101,7 +100,7 @@ export function RegistriesCard({ initialRegistries, canManage }) {
   }
 
   const addButton = (
-    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button disabled={!canManage} onClick={() => setDialog({ registry: null })} data-registry-add>
         <Plus className="size-4" />
         {t("add")}
@@ -243,7 +242,7 @@ function RegistryRow({ registry, canManage, testing, onTest, onEdit, onDelete })
   const provider = providerForAddress(registry.registry);
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="flex flex-wrap items-start justify-between gap-3 py-3.5">
         <div className="flex min-w-64 flex-1 gap-3">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -276,6 +275,7 @@ function RegistryRow({ registry, canManage, testing, onTest, onEdit, onDelete })
             {testing ? <Loader2 className="size-3.5 animate-spin" /> : <PlugZap className="size-3.5" />}
             {t("test")}
           </Button>
+          {canManage ? (
           <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -288,21 +288,18 @@ function RegistryRow({ registry, canManage, testing, onTest, onEdit, onDelete })
               <TooltipContent>{t("moreActions", { name: registry.name })}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-48">
-              <MenuItemHint hint={canManage ? null : t("noPermission")}>
-                <DropdownMenuItem disabled={!canManage} onSelect={onEdit}>
-                  <Pencil className="size-4" />
-                  {t("edit")}
-                </DropdownMenuItem>
-              </MenuItemHint>
+              <DropdownMenuItem onSelect={onEdit}>
+                <Pencil className="size-4" />
+                {t("edit")}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <MenuItemHint hint={canManage ? null : t("noPermission")}>
-                <DropdownMenuItem variant="destructive" disabled={!canManage} onSelect={onDelete}>
-                  <Trash2 className="size-4" />
-                  {t("remove")}
-                </DropdownMenuItem>
-              </MenuItemHint>
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                <Trash2 className="size-4" />
+                {t("remove")}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          ) : null}
         </div>
       </div>
     </DisabledReasonProvider>

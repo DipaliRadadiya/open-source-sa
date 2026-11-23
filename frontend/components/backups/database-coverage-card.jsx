@@ -13,7 +13,7 @@ import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { DataTable } from "@/components/ui/data-table";
@@ -145,7 +145,6 @@ function ActionsCell({ row, table }) {
 
 function DatabaseActions({ row, canOpenDatabases, canManage, onBackUpNow, busy, stacked = false }) {
   const tc = useTranslations("backups.coverage");
-  const td = useTranslations("databases");
   const { database, target } = row;
   const settings = `/databases/${database.id}?tab=backups`;
 
@@ -167,7 +166,7 @@ function DatabaseActions({ row, canOpenDatabases, canManage, onBackUpNow, busy, 
   }
 
   const run = (
-    <ReasonTooltip reason={canManage ? null : td("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button size="sm" variant="outline" disabled={!canManage || busy} onClick={() => onBackUpNow(database.id, database.name)}>
         <ActionIcon icon={PlayCircle} pending={busy} className="size-4" />
         {tc("runBackup")}
@@ -243,7 +242,6 @@ function DatabaseCards({ rows, options, canOpenDatabases, canManage, onBackUpNow
   const t = useTranslations("backups.databases");
   const tc = useTranslations("backups.coverage");
   const tb = useTranslations("backups");
-  const td = useTranslations("databases");
   const tn = useTranslations("applications.backups");
   const format = useFormatter();
   const engineName = useEngineName();
@@ -283,7 +281,7 @@ function DatabaseCards({ rows, options, canOpenDatabases, canManage, onBackUpNow
                     historyHref={`/backups/history?database=${database.id}`}
                     settingsHref={settingsHref(database)}
                     run={
-                      <ReasonTooltip reason={canManage ? null : td("noPermission")}>
+                      <ReasonTooltip reason={canManage ? null : DENIED}>
                         <Button size="sm" variant="outline" disabled={!canManage || busy} onClick={() => onBackUpNow(database.id, database.name)}>
                           <ActionIcon icon={PlayCircle} pending={busy} className="size-4" />
                           {tc("runBackup")}

@@ -100,9 +100,12 @@ test("B1/B2: retry stays busy until the page shows the new run", () => {
   assert.match(read("components/applications/application-row-actions.jsx"), /refreshThen\(\(\) => setRetrying\(false\)\)/);
 });
 
-test("B1: view-only sees Create disabled with a reason, and the create page says why", () => {
-  // The button moved to the page header (redesign); same rule there.
-  assert.match(read("components/applications/create-application-button.jsx"), /<ReasonTooltip reason=\{t\("noPermission"\)\}>/);
+test("B1: view-only gets no Create button, and the create page says why", () => {
+  // The button moved to the page header (redesign). Hidden without the permission (23 Nov).
+  const button = read("components/applications/create-application-button.jsx");
+  assert.match(button, /return canManage \? \(/);
+  assert.match(button, /\) : null;/);
+  assert.doesNotMatch(button, /noPermission|ReasonTooltip/);
   assert.match(read("app/(app)/applications/create/page.jsx"), /<PermissionDenied title=\{t\("createTitle"\)\} description=\{t\("noPermission"\)\} \/>/);
 });
 
@@ -126,7 +129,7 @@ test("B3: stopping a process announces once the list no longer shows it; view-on
   assert.match(src, /refreshThen\(\(\) => \{\s*toast\.success\(t\("kill\.stopped"/);
   // The reason also covers processes the server will not stop (backend junior bug #4, 6 Oct).
   assert.match(src, /<ReasonTooltip reason=\{refusal\}>/);
-  assert.match(src, /\? t\("kill\.noPermission"\)/);
+  assert.match(src, /\? DENIED/);
 });
 
 test("B3: the attention panel counts kinds of problem, and names each application once per kind", () => {
@@ -167,7 +170,8 @@ test("Application skeletons above a section draw that section, not their own pag
 });
 
 test("The sidebar logo asks before leaving unsaved changes, like every other sidebar link", () => {
-  assert.match(read("components/sections/app-sidebar.jsx"), /href="\/dashboard"[\s\S]{0,120}guardNavigation\("\/dashboard"\)\) event\.preventDefault\(\);/);
+  // 23 Nov: home is the role's first screen (landingPath), not /dashboard for everyone.
+  assert.match(read("components/sections/app-sidebar.jsx"), /href=\{home\}[\s\S]{0,120}guardNavigation\(home\)\) event\.preventDefault\(\);/);
 });
 
 test("Bulk dialogs keep the paths they opened with, so a move that empties the list does not crash the page", () => {
@@ -215,7 +219,7 @@ test("View-only File Manager roles cannot open, download or preview files (backe
   assert.match(read(`${dir}/file-shortcuts.jsx`), /disabled=\{!canManage\}/);
   assert.match(read(`${dir}/file-thumb.jsx`), /const thumbnail = canPreview && /);
   for (const f of ["file-row-actions.jsx", "file-actions-menu.jsx"]) {
-    assert.match(read(`${dir}/${f}`), /downloadReason = symlinkReason \?\? \(canManage \? null : t\("noPermission"\)\)/, f);
+    assert.match(read(`${dir}/${f}`), /downloadReason = symlinkReason \?\? \(canManage \? null : DENIED\)/, f);
   }
   // A blocked download is a real disabled button, not a link with `disabled`.
   assert.match(read(`${dir}/file-row-actions.jsx`), /\{downloadReason \? \(\s*<Button[^>]*disabled/);

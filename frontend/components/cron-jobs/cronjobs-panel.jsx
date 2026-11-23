@@ -9,7 +9,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { OTHER_USER } from "@/lib/schemas/cronjob";
 import { serverTimeToEpoch } from "@/lib/cron-jobs/schedule";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { ListCard } from "@/components/data-table/list-card";
@@ -93,7 +93,7 @@ export function CronjobsPanel({
 
   // Disabled with a reason rather than hidden when permission is missing.
   const addButton = (
-    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button disabled={!canManage} onClick={() => openCreate()}>
         <Plus className="size-4" />
         {t("addJob")}

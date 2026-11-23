@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
@@ -244,7 +244,7 @@ function SystemUsersList({
           </>
         ) : null}
         <RefreshButton />
-        <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+        <ReasonTooltip reason={canManage ? null : DENIED}>
           <Button disabled={!canManage} onClick={() => setCreateOpen(true)} data-su-add>
             <Plus className="size-4" />
             {t("addUser")}
@@ -315,7 +315,7 @@ function SystemUsersList({
               description={t("empty.desc")}
               action={
                 // Even on the empty state: a disabled button explains why the user can't act.
-                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <ReasonTooltip reason={canManage ? null : DENIED}>
                   <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
                     <Plus className="size-4" />
                     {t("addUser")}

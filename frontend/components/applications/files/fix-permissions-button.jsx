@@ -5,7 +5,7 @@ import { Wrench } from "lucide-react";
 import { fixApplicationPermissions } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -38,7 +38,7 @@ export function FixPermissionsButton({ appId, canManage, servingProfile = null }
   }
 
   const reason = !canManage
-    ? t("noPermission")
+    ? DENIED
     : !RESETTABLE_PROFILES.includes(servingProfile)
       ? t("fixPermissions.notForRuntime")
       : null;

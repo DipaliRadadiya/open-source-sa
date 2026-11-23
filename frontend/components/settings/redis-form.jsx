@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { CircleAlert, Database, KeyRound, Loader2 } from "lucide-react";
 import { redisFormSchema, REDIS_POLICIES } from "@/lib/schemas/settings";
 import { updateRedisSettings } from "@/lib/api/settings";
@@ -133,7 +133,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
           <Section
@@ -330,7 +330,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
                             disabled={passwordLocked}
                             disabledReason={
                               !canManage
-                                ? t("noPermission")
+                                ? DENIED
                                 : passwordUnreadable
                                   ? t("redis.passwordUnknown")
                                   : t("passwordNotManageable")

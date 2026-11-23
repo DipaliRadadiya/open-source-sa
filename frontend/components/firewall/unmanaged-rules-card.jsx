@@ -67,9 +67,9 @@ export function UnmanagedRulesCard({ rules, canManage }) {
         </div>
         <ul className="divide-y">
           {rules.map((rule) => {
-            const adoptReason = !canManage ? t("noPermission") : !rule.adoptable ? (rule.reason || t("notAdoptable")) : null;
+            const adoptReason = !rule.adoptable ? (rule.reason || t("notAdoptable")) : null;
             // The API refuses to remove a rule it cannot hold, too (422 on `key`).
-            const removeReason = !canManage ? t("noPermission") : !rule.adoptable ? t("removeOnServer") : null;
+            const removeReason = !rule.adoptable ? t("removeOnServer") : null;
             return (
               <li key={rule.key} className="flex items-center gap-3 px-5 py-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/40">
@@ -81,6 +81,7 @@ export function UnmanagedRulesCard({ rules, canManage }) {
                     {rule.adoptable ? t("adoptableLine") : (rule.reason || t("notAdoptable"))}
                   </p>
                 </div>
+                {canManage ? (
                 <DropdownMenu>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -111,6 +112,7 @@ export function UnmanagedRulesCard({ rules, canManage }) {
                     </MenuItemHint>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                ) : null}
               </li>
             );
           })}

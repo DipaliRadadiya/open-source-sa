@@ -25,7 +25,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { DataTable } from "@/components/ui/data-table";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -86,7 +86,7 @@ export function DockerResourcesPanel({
   // stopped application names as well as one with containers on it.
   const networkRemoveReason = (network) =>
     !canManage
-      ? t("noPermission")
+      ? DENIED
       : network.containers.length > 0
         ? t("networks.removeBusy")
         : network.sites.length > 0
@@ -94,7 +94,7 @@ export function DockerResourcesPanel({
           : null;
   const volumeRemoveReason = (volume) =>
     !canManage
-      ? t("noPermission")
+      ? DENIED
       : volume.in_use
         ? t("volumes.removeBusy")
         : volume.sites.length > 0
@@ -102,7 +102,7 @@ export function DockerResourcesPanel({
           : null;
   // Another application's own network or volume is its private one.
   const attachReason = (resource) =>
-    resource.application_id ? t("attach.ownedReason") : !canManageSites ? t("attach.noPermission") : null;
+    resource.application_id ? t("attach.ownedReason") : !canManageSites ? DENIED : null;
 
   async function remove() {
     if (!confirm) return;
@@ -138,7 +138,7 @@ export function DockerResourcesPanel({
   );
 
   const createButton = (kind) => (
-    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button disabled={!canManage} onClick={() => setCreating(kind)}>
         <Plus className="size-4" />
         {t(`${kind}s.createAction`)}
@@ -344,6 +344,7 @@ function ListSection({ title, icon = null, count, description, action, footer, c
 
 function RowMenu({ label, attachReason, removeReason, onAttach, onRemove }) {
   const t = useTranslations("docker");
+  if (attachReason === DENIED && removeReason === DENIED) return null;
   return (
     <div className="text-right">
       <DropdownMenu>
@@ -364,7 +365,7 @@ function RowMenu({ label, attachReason, removeReason, onAttach, onRemove }) {
               {t("attach.action")}
             </DropdownMenuItem>
           </MenuItemHint>
-          <DropdownMenuSeparator />
+          {attachReason === DENIED || removeReason === DENIED ? null : <DropdownMenuSeparator />}
           <MenuItemHint hint={removeReason}>
             <DropdownMenuItem variant="destructive" disabled={Boolean(removeReason)} onSelect={onRemove}>
               <Trash2 className="size-4" />

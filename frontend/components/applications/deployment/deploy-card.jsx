@@ -31,7 +31,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
 import { StepList } from "@/components/applications/step-list";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 
@@ -120,11 +120,10 @@ export function DeployCard({
           </span>
           {t("deploy.title")}
         </CardTitle>
-        {/* Shown disabled with the reason to read-only roles, as in the history's Deploy
-            again buttons. */}
+        {/* Hidden from roles that cannot deploy. */}
         <CardAction className="row-span-1 self-center">
             <ReasonTooltip
-              reason={deploying ? null : !canManage ? t("history.noPermission") : unlinked ? tSource("accountMissing") : null}
+              reason={!canManage ? DENIED : deploying ? null : unlinked ? tSource("accountMissing") : null}
             >
             <Button onClick={onDeploy} disabled={deploying || unlinked || !canManage}>
               {deploying ? (

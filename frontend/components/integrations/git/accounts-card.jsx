@@ -14,7 +14,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { useBranding } from "@/components/branding-provider";
 import { Card, CardContent } from "@/components/ui/card";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { AccountRow } from "@/components/integrations/git/account-row";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
@@ -88,7 +88,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
   const statusFor = (id) => statuses?.find((row) => row.id === id);
 
   const connectReason = !canManage
-    ? t("noPermission")
+    ? DENIED
     : providersFailed || providers.length === 0
       ? t("connect.unavailable")
       : null;

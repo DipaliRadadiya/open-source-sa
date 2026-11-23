@@ -103,7 +103,9 @@
     "keepFileCopy": "Conserver une copie du fichier actuel",
     "keepFileCopyOff": "Sans copie, vous ne pourrez pas revenir à la version actuelle.",
     "keepSettingsCopy": "Conserver une copie des réglages actuels",
-    "keepSettingsCopyOff": "Sans copie, les anciens réglages ne sont gardés qu'en mémoire pendant la vérification des nouveaux. Si le panneau s'arrête pendant l'enregistrement, ils ne pourront pas être remis."
+    "keepSettingsCopyOff": "Sans copie, les anciens réglages ne sont gardés qu'en mémoire pendant la vérification des nouveaux. Si le panneau s'arrête pendant l'enregistrement, ils ne pourront pas être remis.",
+    "on": "Activé",
+    "off": "Désactivé"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -6715,7 +6717,8 @@
       "lastFailed": "Le dernier « Récupérer et redéployer » a échoué : {reason}",
       "lastFailedPlain": "Le dernier « Récupérer et redéployer » a échoué.",
       "reference": "Référence : {reference}"
-    }
+    },
+    "noScreens": "Votre rôle ne donne accès à aucune partie de cette application. Demandez à un administrateur de vous en accorder une."
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",

@@ -1,5 +1,5 @@
 import Link from "@/components/ui/app-link";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { useTranslations } from "next-intl";
 import { Image as ImageIcon, Palette, Plug, FileCog } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export function FileShortcuts({ appId, siteType, path, onAction, canManage = tru
           // A file opens in the editor rather than navigating to its parent folder.
           const name = target.split("/").pop();
           return (
-            <ReasonTooltip key={key} reason={canManage ? null : t("noPermission")}>
+            <ReasonTooltip key={key} reason={canManage ? null : DENIED}>
               <button
                 type="button"
                 className={cn(chip, !canManage && "cursor-not-allowed opacity-50 hover:bg-card")}

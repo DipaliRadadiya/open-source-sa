@@ -103,7 +103,9 @@
     "keepFileCopy": "Keep a copy of the current file",
     "keepFileCopyOff": "Without a copy, you can't go back to the current version.",
     "keepSettingsCopy": "Keep a copy of the current settings",
-    "keepSettingsCopyOff": "Without a copy, the old settings are only kept in memory while the new ones are checked. If the panel stops during the save, they can't be put back."
+    "keepSettingsCopyOff": "Without a copy, the old settings are only kept in memory while the new ones are checked. If the panel stops during the save, they can't be put back.",
+    "on": "On",
+    "off": "Off"
   },
   "systemUsers": {
     "title": "System Users",
@@ -6715,7 +6717,8 @@
       "lastFailed": "The last Pull and redeploy failed: {reason}",
       "lastFailedPlain": "The last Pull and redeploy failed.",
       "reference": "Reference: {reference}"
-    }
+    },
+    "noScreens": "Your role doesn't give access to any part of this application. Ask an administrator to grant one."
   },
   "panelUpdate": {
     "title": "Panel Update",

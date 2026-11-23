@@ -77,9 +77,10 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
   const allowed = service.actions ?? [];
   // Intersected with what the API permits, so a protected unit never shows Stop.
-  const actions = (BY_STATUS[service.status] ?? ["restart"]).filter((a) =>
-    allowed.includes(a),
-  );
+  // Without the permission only the read-only items (logs, config test) remain.
+  const actions = canManage
+    ? (BY_STATUS[service.status] ?? ["restart"]).filter((a) => allowed.includes(a))
+    : [];
   const busy = pending !== null;
 
   // If the primary is not permitted (e.g. a reload-only protected unit), use whatever is allowed.
@@ -144,7 +145,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
         <Tooltip>
           <TooltipTrigger asChild>
             {/* Wrapped: a disabled button swallows pointer events, and that is when the tooltip matters. */}
-            <span tabIndex={!canManage || busy ? 0 : -1} className="inline-flex">
+            <span tabIndex={busy ? 0 : -1} className="inline-flex">
               <Button
                 // Neutral, not outline: inside a card outline turns blue and overrides the verb's colour.
                 variant="neutral"
@@ -152,7 +153,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
                 // Restart is every running row's button, so it stays plain: ten amber buttons
                 // read as ten warnings (Krishna, 13 Oct). Start on a stopped unit keeps its green.
                 className={cn(primary === "restart" ? null : ACTION_META[primary].tone)}
-                disabled={!canManage || busy}
+                disabled={busy}
                 onClick={() => trigger(primary)}
               >
                 {pending === primary ? (
@@ -168,7 +169,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               </Button>
             </span>
           </TooltipTrigger>
-          {canManage ? null : <TooltipContent>{t("noPermission")}</TooltipContent>}
         </Tooltip>
       ) : null}
 
@@ -199,7 +199,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               return (
                 <DropdownMenuItem
                   key={action}
-                  disabled={!canManage}
                   onSelect={() => trigger(action)}
                   variant={action === "stop" ? "destructive" : undefined}
                 >

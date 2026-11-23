@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { banApplicationIp, unbanApplicationIp } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
@@ -31,7 +31,7 @@ export function BannedAddressesCard({ appId, bans, jailName = null, canManage })
   const running = Boolean(bans.jail);
   const name = bans.jail ?? jailName;
   const serverWide = Boolean(name) && !name.startsWith("panel-site-");
-  const blocked = !canManage ? t("noPermission") : !running ? t("notRunning") : null;
+  const blocked = !canManage ? DENIED : !running ? t("notRunning") : null;
 
   async function ban(event) {
     event.preventDefault();
@@ -94,7 +94,7 @@ export function BannedAddressesCard({ appId, bans, jailName = null, canManage })
               <li key={address} className="flex items-center gap-3 px-3 py-2">
                 <ShieldX className="size-4 shrink-0 text-destructive" aria-hidden />
                 <span className="min-w-0 flex-1 truncate font-mono text-sm">{address}</span>
-                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <ReasonTooltip reason={canManage ? null : DENIED}>
                   <Button
                     variant="outline"
                     size="sm"

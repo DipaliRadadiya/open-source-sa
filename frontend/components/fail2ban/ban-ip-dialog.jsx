@@ -6,7 +6,7 @@ import { Loader2, Plus, ShieldBan, TriangleAlert } from "lucide-react";
 import { banIp } from "@/lib/api/fail2ban";
 import { isIpAddress } from "@/lib/validation/ip";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
@@ -85,7 +85,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = n
 
   return (
     <>
-      <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+      <ReasonTooltip reason={canManage ? null : DENIED}>
         <Button disabled={!canManage} onClick={openDialog}>
           <Plus className="size-4" />
           {t("ban.action")}

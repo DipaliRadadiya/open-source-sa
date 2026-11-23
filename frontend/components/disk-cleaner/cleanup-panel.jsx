@@ -120,7 +120,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const nothingToClean = cleanable.length === 0;
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <>
         {/* pb-0 so the footer band reaches the card edge. */}
         <Card className="gap-0 overflow-hidden pb-0">
@@ -208,24 +208,20 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             ) : (
               <div className="border-t">
                 {/* One control, both directions; half-ticked while only some are chosen. */}
-                {/* px-7 lines this checkbox up with the ones inside the tiles (16px + 12px). */}
+                {/* px-7 lines this checkbox up with the ones inside the tiles (16px + 12px).
+                    Picking only feeds Clean, so a role that cannot clean gets neither. */}
+                {canManage ? (
                 <div className="flex items-center gap-3 border-b bg-muted/40 px-7 py-2.5">
                   <Checkbox
                     id="clean-all"
                     checked={allSelected ? true : chosen.length > 0 ? "indeterminate" : false}
-                    disabled={!canManage}
                     onCheckedChange={toggleAll}
                   />
-                  <label
-                    htmlFor="clean-all"
-                    className={cn(
-                      "text-xs font-medium text-muted-foreground",
-                      canManage ? "cursor-pointer" : "cursor-default",
-                    )}
-                  >
+                  <label htmlFor="clean-all" className="cursor-pointer text-xs font-medium text-muted-foreground">
                     {t("list.selectAll")}
                   </label>
                 </div>
+                ) : null}
 
                 {/* Selectable tiles, two across when there is room: in full-width rows the
                     size sat a whole card away from its name (Krishna, 13 Oct). */}
@@ -245,14 +241,15 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                               canManage ? "cursor-pointer hover:border-primary/30" : "cursor-default",
                             )}
                           >
-                            <Checkbox
-                              id={`clean-${category.key}`}
-                              className="mt-0.5"
-                              checked={checked}
-                              disabled={!canManage}
-                              onCheckedChange={() => toggle(category.key)}
-                              aria-label={category.label}
-                            />
+                            {canManage ? (
+                              <Checkbox
+                                id={`clean-${category.key}`}
+                                className="mt-0.5"
+                                checked={checked}
+                                onCheckedChange={() => toggle(category.key)}
+                                aria-label={category.label}
+                              />
+                            ) : null}
 
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <div className="flex items-start justify-between gap-3">
@@ -319,7 +316,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
               </div>
             )}
 
-            {!nothingToClean ? (
+            {!nothingToClean && canManage ? (
               <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-4 py-4">
                 <p className="min-w-0 text-sm text-muted-foreground tabular-nums">
                   {chosen.length > 0
@@ -330,17 +327,9 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                     : t("action.pickSomething")}
                 </p>
 
-                <ReasonTooltip
-                  reason={
-                    !canManage
-                      ? t("noPermission")
-                      : chosen.length === 0
-                        ? t("action.pickSomething")
-                        : null
-                  }
-                >
+                <ReasonTooltip reason={chosen.length === 0 ? t("action.pickSomething") : null}>
                   <Button
-                    disabled={!canManage || chosen.length === 0}
+                    disabled={chosen.length === 0}
                     onClick={() => {
                       // Opening from here skips onOpenChange, so clear a stale error explicitly.
                       setError(null);

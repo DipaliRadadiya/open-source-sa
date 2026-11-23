@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RequiredMark } from "@/components/ui/form";
 import { FormModal } from "@/components/ui/form-modal";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
@@ -204,7 +204,7 @@ export function AddRuleDialog({
     <>
       {/* Plain <Button>, like every other "add" in the app. */}
       {controlled ? null : (
-        <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+        <ReasonTooltip reason={canManage ? null : DENIED}>
           <Button disabled={!canManage} onClick={() => setOpen(true)}>
             <Plus className="size-4" />
             {t("add.action")}

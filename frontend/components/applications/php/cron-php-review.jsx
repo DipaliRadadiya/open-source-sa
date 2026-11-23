@@ -7,28 +7,27 @@ import { cronjobsToReviewSchema } from "@/lib/schemas/cronjob-php";
 import { apiMessage } from "@/lib/api/error-message";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 // After a site's PHP version changes, its cron jobs still on another PHP are offered, never
 // moved on their own (#5): one pinned to the old version keeps running it until switched.
+// Not offered to a role that cannot change cron jobs.
 export function useCronPhpReview({ appId, canManageCron }) {
   const [review, setReview] = useState(null);
 
   function offer(data, version) {
     const jobs = cronjobsToReviewSchema.parse(data?.cronjobs_to_review ?? []);
-    if (jobs.length > 0) setReview({ version, jobs });
+    if (canManageCron && jobs.length > 0) setReview({ version, jobs });
   }
 
   const dialog = review ? (
-    <CronPhpReviewDialog appId={appId} review={review} canManageCron={canManageCron} onDone={() => setReview(null)} />
+    <CronPhpReviewDialog appId={appId} review={review} onDone={() => setReview(null)} />
   ) : null;
 
   return { offer, dialog };
 }
 
-function CronPhpReviewDialog({ appId, review, canManageCron, onDone }) {
+function CronPhpReviewDialog({ appId, review, onDone }) {
   const t = useTranslations("applications.php.cronReview");
-  const tCron = useTranslations("cronJobs");
   const { version, jobs } = review;
   const [ticked, setTicked] = useState(() => new Set(jobs.filter((job) => job.suggested).map((job) => job.id)));
   const [pending, setPending] = useState(false);
@@ -66,7 +65,7 @@ function CronPhpReviewDialog({ appId, review, canManageCron, onDone }) {
       description={t("description", { version })}
       cancelLabel={t("notNow")}
       confirmLabel={t("confirm", { count: ticked.size })}
-      confirmDisabled={!canManageCron || ticked.size === 0}
+      confirmDisabled={ticked.size === 0}
       pending={pending}
       error={error}
       onConfirm={onConfirm}
@@ -77,14 +76,13 @@ function CronPhpReviewDialog({ appId, review, canManageCron, onDone }) {
           return (
             <li key={job.id}>
               <label htmlFor={id} className="flex cursor-pointer items-start gap-3 px-3 py-2.5">
-                <ReasonTooltip reason={canManageCron ? null : tCron("noPermission")} className="mt-0.5 inline-flex">
-                  <Checkbox
-                    id={id}
-                    checked={ticked.has(job.id)}
-                    disabled={!canManageCron || pending}
-                    onCheckedChange={(value) => toggle(job.id, value === true)}
-                  />
-                </ReasonTooltip>
+                <Checkbox
+                  id={id}
+                  className="mt-0.5"
+                  checked={ticked.has(job.id)}
+                  disabled={pending}
+                  onCheckedChange={(value) => toggle(job.id, value === true)}
+                />
                 <span className="min-w-0 space-y-1">
                   <span className="block text-sm font-medium wrap-anywhere">{job.name}</span>
                   <span className="block text-xs text-muted-foreground">
@@ -97,7 +95,6 @@ function CronPhpReviewDialog({ appId, review, canManageCron, onDone }) {
           );
         })}
       </ul>
-      {!canManageCron ? <p className="text-xs text-muted-foreground">{tCron("noPermission")}</p> : null}
     </ConfirmDialog>
   );
 }

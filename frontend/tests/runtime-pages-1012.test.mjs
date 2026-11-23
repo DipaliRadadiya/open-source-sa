@@ -82,7 +82,7 @@ test("php.ini is a tab that keeps its edit while you look at another tab", () =>
   assert.match(ini, /useWatchUnsaved\(`php-ini-\$\{version\}`, dirty\);/);
   // The acknowledgement still gates Save, and only shows once there is an edit.
   assert.match(ini, /: !acknowledged\s*\? t\("phpIni\.blockedAcknowledge"\)/);
-  assert.match(ini, /\) : dirty \? \(/);
+  assert.match(ini, /\{readOnly \? null : dirty \? \(/);
 });
 
 test("an up-to-date npm is said, not offered as a dead button", () => {

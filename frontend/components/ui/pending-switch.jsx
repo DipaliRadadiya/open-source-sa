@@ -4,7 +4,10 @@ import { Switch } from "@/components/ui/switch";
 
 // `checked` should be the requested value, not the server's. The spinner slot is always
 // reserved so nothing shifts; `aside` fills it when not pending.
-export function PendingSwitch({ pending = false, disabled = false, aside = null, className, onCheckedChange, ...props }) {
+export function PendingSwitch({ pending = false, disabled = false, aside = null, className, onCheckedChange, readOnly = false, ...props }) {
+  // Read-only: just the On/Off state, without the spinner slot beside it.
+  if (readOnly) return <Switch {...props} readOnly />;
+
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       {/* Locked by ignoring changes, not `disabled`, which would drop keyboard focus. */}

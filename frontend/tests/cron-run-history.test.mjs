@@ -45,7 +45,7 @@ test("a duration reads as seconds, minutes or hours", () => {
 
 test("Run now asks first, says why it is off, and sends nothing but the start", () => {
   const actions = strip(read("components/cron-jobs/cronjob-row-actions.jsx"));
-  assert.match(actions, /const runReason = !canManage \? t\("noPermission"\) : !job\.active \? t\("runNow\.paused"\) : null;/);
+  assert.match(actions, /const runReason = !canManage \? DENIED : !job\.active \? t\("runNow\.paused"\) : null;/);
   assert.match(actions, /<MenuItemHint hint=\{runReason\}>/);
   // The old Logs link stays for an API without run history.
   assert.match(actions, /\{historySupported \? \([\s\S]*?\) : !canViewLogs \? \(/);

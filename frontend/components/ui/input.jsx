@@ -1,4 +1,4 @@
-import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
+import { ReasonTooltip, readOnlyReason, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 
 function Input({
@@ -32,7 +32,7 @@ function Input({
       className="inline-flex w-full"
       reason={
         disabled
-          ? (disabledReason ?? inheritedReason?.reason)
+          ? readOnlyReason(disabledReason ?? inheritedReason?.reason)
           : null
       }
     >

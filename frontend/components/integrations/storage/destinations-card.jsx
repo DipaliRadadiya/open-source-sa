@@ -16,7 +16,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Note } from "@/components/ui/note";
 import { useConfirmAction } from "@/hooks/use-confirm-action";
 import { InfoHint } from "@/components/ui/info-hint";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DestinationRow } from "@/components/integrations/storage/destination-row";
 import { ConnectDestinationDialog } from "@/components/integrations/storage/connect-dialog";
 import { EditDestinationDialog } from "@/components/integrations/storage/edit-dialog";
@@ -69,7 +69,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
   // Shared by the header and the empty state so the two cannot differ.
   const addButton = (
-    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button
         type="button"
         disabled={!canManage}
@@ -141,7 +141,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
                           {EMPTY_STATE_PROVIDERS.map((provider) => {
                             const name = provider === "other" ? t("empty.otherS3") : t(`form.providers.${provider}`);
                             return (
-                              <ReasonTooltip key={provider} reason={canManage ? null : t("noPermission")}>
+                              <ReasonTooltip key={provider} reason={canManage ? null : DENIED}>
                                 <Button
                                   type="button"
                                   variant="outline"

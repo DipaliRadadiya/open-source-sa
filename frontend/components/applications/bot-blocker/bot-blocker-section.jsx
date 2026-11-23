@@ -6,7 +6,7 @@ import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { Bot, ChevronDown, FileText, Globe, History, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
@@ -158,7 +158,8 @@ function BotList({ bots }) {
 }
 
 // Names are checked against the backend's rules before adding (`bot` would match Googlebot).
-function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onRemove }) {
+// `readOnly`: the list only, without the add field or the remove buttons.
+function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly = false, onAdd, onRemove }) {
   const t = useTranslations("applications.botBlocker.exceptions");
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(null);
@@ -209,6 +210,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
               )}
             >
               {bot}
+              {readOnly ? null : (
               <button
                 type="button"
                 data-chip-remove
@@ -219,6 +221,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
               >
                 <X className="size-3" />
               </button>
+              )}
             </span>
           ))}
         </div>
@@ -233,6 +236,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
         </p>
       ))}
 
+      {readOnly ? null : (
       <div className="flex gap-2 pt-1">
         <Input
           ref={inputRef}
@@ -266,6 +270,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
           {t("add")}
         </Button>
       </div>
+      )}
 
       {error ? <p className="text-xs text-destructive">{t(`errors.${error}`)}</p> : null}
     </div>
@@ -388,7 +393,7 @@ export function BotBlockerSection({
   // Warns before a client-side navigation drops the edit (components/ui/unsaved-guard.jsx).
   useWatchUnsaved("app-bot-blocker", isDirty);
 
-  const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
+  const saveReason = !canManage ? DENIED : !isDirty ? t("nothingToSave") : null;
 
   // A bot lives in one list only: the backend lets an allow win over a block.
   function addRule(kind, value) {
@@ -448,7 +453,7 @@ export function BotBlockerSection({
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-4">
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
@@ -554,6 +559,7 @@ export function BotBlockerSection({
                   bots={blocked}
                   refused={refused.blocked}
                   disabled={!canManage || saving}
+                  readOnly={!canManage}
                   onAdd={(value) => addRule("blocked", value)}
                   onRemove={(value) => removeRule("blocked", value)}
                 />
@@ -564,6 +570,7 @@ export function BotBlockerSection({
                   bots={allowed}
                   refused={refused.allowed}
                   disabled={!canManage || saving}
+                  readOnly={!canManage}
                   onAdd={(value) => addRule("allowed", value)}
                   onRemove={(value) => removeRule("allowed", value)}
                 />

@@ -9,13 +9,13 @@ import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 // The restore row names its exact safety copy, so Undo opens the restore of that copy,
 // as the banner's Undo does — not the site's whole history.
 export function UndoRestoreButton({ restore, canRestore = false, className }) {
   const t = useTranslations("backups.restores");
   const tp = useTranslations("backups.progress");
-  const th = useTranslations("backups.history");
   const tb = useTranslations("backups.application");
   const router = useRouter();
   const { active, start } = useRestoreWatch();
@@ -49,7 +49,7 @@ export function UndoRestoreButton({ restore, canRestore = false, className }) {
         className={className}
         onClick={open}
         disabled={!canRestore || restoreRunning || loading}
-        disabledReason={!canRestore ? th("noPermission") : restoreRunning ? tb("restoreRunning") : null}
+        disabledReason={!canRestore ? DENIED : restoreRunning ? tb("restoreRunning") : null}
       >
         {loading ? <Loader2 className="size-4 animate-spin" /> : <Undo2 className="size-4" />}
         {t("undo")}

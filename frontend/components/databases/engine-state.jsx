@@ -19,7 +19,7 @@ import {
   findPresentSqlEngine,
   isSqlEngine,
 } from "@/lib/databases/install-lifecycle";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 
 // Shown when no engine is reachable yet. No outer Card: it would be a box inside a box.
@@ -135,7 +135,7 @@ function EngineCard({
 
   // Reasons that are worth a tooltip on a button that could otherwise work.
   const blocked = !canManage
-    ? t("noPermission")
+    ? DENIED
     : busy && !installing
       ? t("install.oneAtATime")
       : null;

@@ -17,6 +17,7 @@ import { RunNowDialog } from "@/components/cron-jobs/run-now-dialog";
 import { RunHistorySheet } from "@/components/cron-jobs/run-history-sheet";
 import { SwitchPhpDialog } from "@/components/cron-jobs/switch-php-dialog";
 import { phpMismatch } from "@/lib/cron-jobs/php-mismatch";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 export function CronjobRowActions({
   job,
@@ -42,7 +43,7 @@ export function CronjobRowActions({
   // Offered only when both PHPs are known: the switch swaps one recognised interpreter for another.
   const mismatch = phpMismatch(job, applications);
   const switchTo = mismatch?.current && mismatch.target ? mismatch.target : null;
-  const runReason = !canManage ? t("noPermission") : !job.active ? t("runNow.paused") : null;
+  const runReason = !canManage ? DENIED : !job.active ? t("runNow.paused") : null;
   // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog
   // takes it, then hands it back); Escape or a click away returns it there.
   const openingDialog = useRef(false);
@@ -105,28 +106,28 @@ export function CronjobRowActions({
             </DropdownMenuItem>
           )}
           {switchTo ? (
-            <MenuItemHint hint={canManage ? null : t("noPermission")}>
+            <MenuItemHint hint={canManage ? null : DENIED}>
               <DropdownMenuItem disabled={!canManage} onSelect={() => { openingDialog.current = true; setSwitchOpen(true); }}>
                 <ArrowRightLeft className="size-4" />
                 {t("phpMismatch.switchAction", { version: switchTo })}
               </DropdownMenuItem>
             </MenuItemHint>
           ) : null}
-          <DropdownMenuSeparator />
-          <MenuItemHint hint={canManage ? null : t("noPermission")}>
+          {canManage ? <DropdownMenuSeparator /> : null}
+          <MenuItemHint hint={canManage ? null : DENIED}>
             <DropdownMenuItem disabled={!canManage} onSelect={() => { openingDialog.current = true; setEditOpen(true); }}>
               <Pencil className="size-4" />
               {t("actions.edit")}
             </DropdownMenuItem>
           </MenuItemHint>
-          <MenuItemHint hint={canManage ? null : t("noPermission")}>
+          <MenuItemHint hint={canManage ? null : DENIED}>
             <DropdownMenuItem disabled={!canManage} onSelect={() => { openingDialog.current = true; onDuplicate?.(job); }}>
               <Copy className="size-4" />
               {t("actions.duplicate")}
             </DropdownMenuItem>
           </MenuItemHint>
-          <DropdownMenuSeparator />
-          <MenuItemHint hint={canManage ? null : t("noPermission")}>
+          {canManage ? <DropdownMenuSeparator /> : null}
+          <MenuItemHint hint={canManage ? null : DENIED}>
             <DropdownMenuItem variant="destructive" disabled={!canManage} onSelect={() => { openingDialog.current = true; setDelOpen(true); }}>
               <Trash2 className="size-4" />
               {t("actions.delete")}

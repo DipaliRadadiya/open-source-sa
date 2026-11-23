@@ -6,13 +6,15 @@ import { Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CardIcon } from "@/components/ui/card-icon";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 
-// Its own card at the bottom: destructive actions live at the end of a page.
+// Its own card at the bottom: destructive actions live at the end of a page. Not shown
+// to a role that cannot delete.
 export function DeleteDatabaseCard({ database, application = null, canManage }) {
   const t = useTranslations("databases.delete");
   const [open, setOpen] = useState(false);
+
+  if (!canManage) return null;
 
   return (
     <>
@@ -25,27 +27,19 @@ export function DeleteDatabaseCard({ database, application = null, canManage }) 
           </div>
         </div>
 
-        <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-          <Button
-            variant="destructive"
-            disabled={!canManage}
-            onClick={() => setOpen(true)}
-          >
-            <Trash2 className="size-4" />
-            {t("action")}
-          </Button>
-        </ReasonTooltip>
+        <Button variant="destructive" onClick={() => setOpen(true)}>
+          <Trash2 className="size-4" />
+          {t("action")}
+        </Button>
       </Card>
 
-      {canManage ? (
-        <DeleteDatabaseDialog
-          database={database}
-          application={application}
-          open={open}
-          onOpenChange={(next) => !next && setOpen(false)}
-          redirectTo="/databases"
-        />
-      ) : null}
+      <DeleteDatabaseDialog
+        database={database}
+        application={application}
+        open={open}
+        onOpenChange={(next) => !next && setOpen(false)}
+        redirectTo="/databases"
+      />
     </>
   );
 }

@@ -85,11 +85,11 @@ test("the source schema names clearable, or the action disappears on poll", () =
 
 test("server logs offer the action only where the API says it is allowed", () => {
   // Never inferred from the key: the registry decides, and a second client must
-  // not be able to offer what the server will refuse. Without manage it is shown
-  // disabled with the reason (tests/logs-1002.test.mjs), not hidden.
+  // not be able to offer what the server will refuse. Without manage it is hidden
+  // (tests/logs-1002.test.mjs; Krishna, 23 Nov).
   assert.match(
     serverPanel,
-    /clearReason=\{!source\?\.clearable \? t\("notClearable"\) : canManage \? null : t\("noPermission"\)\}/,
+    /clearReason=\{!source\?\.clearable \? t\("notClearable"\) : canManage \? null : DENIED\}/,
   );
 });
 

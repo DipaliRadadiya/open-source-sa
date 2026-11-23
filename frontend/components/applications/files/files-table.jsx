@@ -361,7 +361,8 @@ export function FilesTable({
 
   return (
     <DataTable
-      columns={columns}
+      // The checkboxes only feed the bulk actions, which need manage.
+      columns={canManage ? columns : columns.filter((column) => column.id !== "select")}
       data={data}
       meta={{
         appId,

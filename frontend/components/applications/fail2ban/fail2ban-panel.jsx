@@ -28,6 +28,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 // CodeMirror is large and only needed here and in the file editor, so it is loaded on demand.
 const CodeEditor = dynamic(
@@ -196,9 +197,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
               <Button className="mt-1" onClick={() => setEditing(true)}>
                 {t("empty.action")}
               </Button>
-            ) : (
-              <p className="mx-auto max-w-md text-xs text-muted-foreground">{t("noPermission")}</p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -384,7 +383,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             }}
             saveReason={
               !canManage
-                ? t("noPermission")
+                ? DENIED
                 : empty
                   ? t("bothRequired")
                   : !dirty

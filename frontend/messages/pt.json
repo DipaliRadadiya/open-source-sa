@@ -103,7 +103,9 @@
     "keepFileCopy": "Manter uma cópia do arquivo atual",
     "keepFileCopyOff": "Sem uma cópia, você não poderá voltar à versão atual.",
     "keepSettingsCopy": "Manter uma cópia das configurações atuais",
-    "keepSettingsCopyOff": "Sem uma cópia, as configurações antigas ficam só na memória enquanto as novas são verificadas. Se o painel parar durante o salvamento, elas não poderão ser recuperadas."
+    "keepSettingsCopyOff": "Sem uma cópia, as configurações antigas ficam só na memória enquanto as novas são verificadas. Se o painel parar durante o salvamento, elas não poderão ser recuperadas.",
+    "on": "Ligado",
+    "off": "Desligado"
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -6715,7 +6717,8 @@
       "lastFailed": "O último Obter e reimplantar falhou: {reason}",
       "lastFailedPlain": "O último Obter e reimplantar falhou.",
       "reference": "Referência: {reference}"
-    }
+    },
+    "noScreens": "Sua função não dá acesso a nenhuma parte desta aplicação. Peça a um administrador que conceda acesso."
   },
   "panelUpdate": {
     "title": "Atualização do painel",

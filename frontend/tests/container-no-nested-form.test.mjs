@@ -90,6 +90,7 @@ test("the Docker page offers attaching only to applications on a generated compo
 // application to it from the Docker page breaks that isolation (20 Oct).
 test("the Docker page does not offer attaching to an application's own network or volume", () => {
   const panel = read("components/docker/docker-resources-panel.jsx");
-  // One rule for both rows, shown as the reason on the disabled menu item (21 Oct).
-  assert.match(panel, /resource\.application_id \? t\("attach\.ownedReason"\) : !canManageSites \? t\("attach\.noPermission"\) : null/);
+  // One rule for both rows, shown as the reason on the disabled menu item (21 Oct);
+  // without the site permission the item is hidden (23 Nov).
+  assert.match(panel, /resource\.application_id \? t\("attach\.ownedReason"\) : !canManageSites \? DENIED : null/);
 });

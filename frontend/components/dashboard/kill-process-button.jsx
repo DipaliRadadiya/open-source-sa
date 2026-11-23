@@ -7,7 +7,7 @@ import { killProcess } from "@/lib/api/server-metrics";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -26,7 +26,7 @@ export function KillProcessButton({ process, canManage }) {
   const engine = databaseEngine(process.command);
   // The server refuses some processes outright; say so before the click.
   const refusal = !canManage
-    ? t("kill.noPermission")
+    ? DENIED
     : process.stoppable === false
       ? process.reason || t("kill.refused")
       : null;

@@ -193,9 +193,7 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
               <TooltipTrigger asChild>{configureButton}</TooltipTrigger>
               <TooltipContent>{t("schedule.setUp")}</TooltipContent>
             </Tooltip>
-          ) : (
-            <ReasonTooltip reason={t("noPermission")}>{configureButton}</ReasonTooltip>
-          )
+          ) : null
         }
       />
 

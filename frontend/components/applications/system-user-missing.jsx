@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FailurePanel } from "@/components/ui/failure-panel";
 import { PageHeader } from "@/components/ui/page-header";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 
 // The API answers 409 on every app route except open and delete, so this offers delete.
@@ -22,7 +22,7 @@ export function SystemUserMissing({ application, canDelete }) {
         title={t("title")}
         description={t("description", { name: application.name })}
         action={
-          <ReasonTooltip reason={canDelete ? null : ta("noPermission")}>
+          <ReasonTooltip reason={canDelete ? null : DENIED}>
             <Button variant="destructive" onClick={() => setDeleteOpen(true)} disabled={!canDelete}>
               <Trash2 className="size-4" />
               {ta("actions.delete")}

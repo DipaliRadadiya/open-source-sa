@@ -7,7 +7,7 @@ import { CircleCheck, Database, TriangleAlert } from "lucide-react";
 import { applicationById } from "@/lib/backups/database-availability";
 import { Card } from "@/components/ui/card";
 import { CardIcon } from "@/components/ui/card-icon";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 import { FACT_LABEL } from "@/lib/theme/facts";
@@ -62,7 +62,7 @@ export function DatabaseDetailsCard({
       key: "usedBy",
       label: tu("title"),
       action: (
-        <ReasonTooltip reason={canManage ? null : tu("noPermission")}>
+        <ReasonTooltip reason={canManage ? null : DENIED}>
           <button
             type="button"
             disabled={!canManage}

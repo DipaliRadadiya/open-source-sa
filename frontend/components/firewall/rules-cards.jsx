@@ -1,5 +1,5 @@
 import { PendingSwitch } from "@/components/ui/pending-switch";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { ReasonTooltip, readOnlyReason } from "@/components/ui/reason-tooltip";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import {
   RuleName,
@@ -46,15 +46,16 @@ export function RulesCards({
                   {/* Same directional guard as the table: a protected rule can always be switched
                       back ON, never OFF. */}
                   <ReasonTooltip
-                    reason={protectedReasonFor({
+                    reason={readOnlyReason(protectedReasonFor({
                       rule,
                       enabled,
                       canManage,
                       labels,
                       turningOff: shownEnabled(rule),
-                    })}
+                    }))}
                   >
                     <PendingSwitch
+                      readOnly={!canManage}
                       checked={shownEnabled(rule)}
                       pending={pending.includes(rule.id)}
                       onCheckedChange={() => onToggle(rule)}

@@ -2,7 +2,7 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip"
+import { ReasonTooltip, readOnlyReason, useDisabledReason } from "@/components/ui/reason-tooltip"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
 // Radix keeps `disabled` on the root; the trigger needs it to show why.
@@ -68,7 +68,7 @@ function SelectTrigger({
     <ReasonTooltip
       // The wrapper takes the trigger's width only when the trigger fills its row.
       className={/(^|\s)w-full(\s|$)/.test(className ?? "") ? "flex w-full" : "inline-flex"}
-      reason={disabled ? (disabledReason ?? inheritedReason?.reason) : null}
+      reason={disabled ? readOnlyReason(disabledReason ?? inheritedReason?.reason) : null}
     >
       {control}
     </ReasonTooltip>

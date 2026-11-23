@@ -19,6 +19,7 @@ import { HoverHint } from "@/components/ui/hover-hint";
 export function ApplicationsCards({
   applications = [],
   canManage = false,
+  canOpen = true,
   canMagicLogin = false,
   canRemoveSystemUser = false,
   canManageDocker = false,
@@ -42,15 +43,19 @@ export function ApplicationsCards({
             />
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <Link
-                  href={`/applications/${application.id}`}
-                  prefetch={false}
-                  // White like the desktop list: green means "OK" in the steel UI (Krishna, 14 Oct).
-                  className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
-                >
-                  <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>
-                  <ChevronRight className="size-3.5 shrink-0" />
-                </Link>
+                {canOpen ? (
+                  <Link
+                    href={`/applications/${application.id}`}
+                    prefetch={false}
+                    // White like the desktop list: green means "OK" in the steel UI (Krishna, 14 Oct).
+                    className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                  >
+                    <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>
+                    <ChevronRight className="size-3.5 shrink-0" />
+                  </Link>
+                ) : (
+                  <HoverHint content={application.name}><span className="min-w-0 truncate font-medium text-foreground">{application.name}</span></HoverHint>
+                )}
                 {/* A copy and its source have near-identical names. */}
                 {application.is_staging ? (
                   <Badge variant="warning" className="shrink-0 font-normal">
@@ -73,7 +78,7 @@ export function ApplicationsCards({
             </div>
             {/* shrink-0 keeps the menu in place however long the name is. */}
             <div className="-me-2 -mt-1 shrink-0">
-              <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} />
+              <ApplicationRowActions application={application} canManage={canManage} canOpen={canOpen} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} />
             </div>
           </div>
 

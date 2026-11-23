@@ -13,6 +13,7 @@ import {
 import { fileDownloadUrl } from "@/lib/api/files";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { useServerPath } from "@/components/applications/files/files-root-context";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/i;
 
@@ -34,10 +35,10 @@ export function FileActionItems({
   const symlink = file.type === "symlink";
   const symlinkReason = symlink ? t("symlinkHint") : null;
   const canWrite = canManage;
-  const permReason = symlinkReason ?? (canWrite ? null : t("noPermission"));
+  const permReason = symlinkReason ?? (canWrite ? null : DENIED);
   const isArchive = file.type === "file" && ARCHIVE_RE.test(file.name);
   // Downloading reads the file, which needs File Manager manage.
-  const downloadReason = symlinkReason ?? (canManage ? null : t("noPermission"));
+  const downloadReason = symlinkReason ?? (canManage ? null : DENIED);
 
   async function copyPath() {
     try {
@@ -112,7 +113,7 @@ export function FileActionItems({
             </Item>
           </MenuItemHint>
           <Separator />
-          <MenuItemHint hint={canWrite ? null : t("noPermission")}>
+          <MenuItemHint hint={canWrite ? null : DENIED}>
             <Item variant="destructive" disabled={!canWrite} onSelect={() => onAction("delete", file)}>
               <Trash2 className="size-4" />
               {t("actions.delete")}

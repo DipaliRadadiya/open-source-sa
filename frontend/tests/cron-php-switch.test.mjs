@@ -28,7 +28,9 @@ test("switching sends only the ticked ids for the saved version", () => {
   // Ticked by default only where the API suggests it (a pinned version, not plain `php`).
   assert.match(review, /new Set\(jobs\.filter\(\(job\) => job\.suggested\)\.map\(\(job\) => job\.id\)\)/);
   assert.match(review, /cronjobIds: jobs\.filter\(\(job\) => ticked\.has\(job\.id\)\)\.map\(\(job\) => job\.id\)/);
-  assert.match(review, /confirmDisabled=\{!canManageCron \|\| ticked\.size === 0\}/);
+  assert.match(review, /confirmDisabled=\{ticked\.size === 0\}/);
+  // Not offered at all to a role that cannot change cron jobs (23 Nov).
+  assert.match(review, /if \(canManageCron && jobs\.length > 0\) setReview/);
   // A refusal stays in the dialog with the API's words; nothing moved.
   assert.match(review, /setError\(apiMessage\(err, t\("failed"\)\)\);/);
   assert.match(review, /\{job\.new_command\}/);

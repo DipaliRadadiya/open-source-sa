@@ -22,7 +22,7 @@ import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallOutput } from "@/components/runtime/install-output";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -72,7 +72,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   const nothingToRemove = failedWithNothingInstalled(version);
 
   const removeReason = !canManage
-    ? t("noPermission")
+    ? DENIED
     : installState === "installing" || installState === "removing"
       ? notReadyReason
       : version.is_default
@@ -195,7 +195,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                 <span className="text-xs text-muted-foreground">{t("table.npmCurrent")}</span>
               ) : (
                 <ReasonTooltip
-                  reason={canManage ? (notReadyReason ?? null) : t("noPermission")}
+                  reason={canManage ? (notReadyReason ?? null) : DENIED}
                 >
                   <Button
                     variant="outline"
@@ -220,7 +220,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
 
         <div className="flex flex-wrap items-center gap-2 @3xl/versions:justify-end">
           {version.is_default ? null : (
-            <ReasonTooltip reason={canManage ? notReadyReason : t("noPermission")}>
+            <ReasonTooltip reason={canManage ? notReadyReason : DENIED}>
               <Button
                 variant="outline"
                 size="sm"
@@ -234,7 +234,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           )}
 
           {nothingToRemove ? (
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <Button
                 variant="outline"
                 size="sm"
@@ -247,7 +247,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
             </ReasonTooltip>
           ) : null}
           {nothingToRemove ? (
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
                 {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("versions.dismiss")}

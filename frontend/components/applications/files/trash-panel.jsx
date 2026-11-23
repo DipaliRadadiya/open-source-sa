@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -53,7 +53,7 @@ export function TrashPanel({
   const [restored, setRestored] = useState(() => new Set());
   const [confirming, setConfirming] = useState(null);
 
-  const manageReason = canManage ? null : t("noPermission");
+  const manageReason = canManage ? null : DENIED;
 
   // Map keeps insertion order, so the API's newest-first order survives.
   const batches = new Map();

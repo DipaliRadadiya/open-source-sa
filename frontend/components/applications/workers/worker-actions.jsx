@@ -90,6 +90,8 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
     else run(action);
   }
 
+  if (!canManage) return null;
+
   return (
     <div className="flex items-center justify-end gap-0.5">
       {SLOTS.map((slot) => {
@@ -99,7 +101,7 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
         const meta = ACTION_META[action];
         const Icon = meta.icon;
         const label = t(`actions.${action}`);
-        const disabled = !canManage || busy;
+        const disabled = busy;
 
         return (
           <Tooltip key={slot[0]}>
@@ -121,7 +123,7 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
                 </Button>
               </span>
             </TooltipTrigger>
-            <TooltipContent>{canManage ? label : t("noPermission")}</TooltipContent>
+            <TooltipContent>{label}</TooltipContent>
           </Tooltip>
         );
       })}

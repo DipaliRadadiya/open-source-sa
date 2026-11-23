@@ -5,7 +5,7 @@ import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Database, Plus, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -279,7 +279,7 @@ function DatabasesList({
   // No running engine means create would fail before it started.
   const usable = engines.filter((engine) => engine.running);
   const createReason = !canManage
-    ? t("noPermission")
+    ? DENIED
     : usable.length === 0
       ? t("create.noEngine")
       : null;

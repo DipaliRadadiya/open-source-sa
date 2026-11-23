@@ -1,17 +1,29 @@
 import * as React from "react"
 import { Switch as SwitchPrimitive } from "radix-ui"
 
-import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
+import { useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
+import { DENIED, ReasonTooltip, readOnlyReason, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
+/**
+ * `readOnly`: the role cannot change it, so the state is shown as an On/Off pill instead of a
+ * locked switch (Krishna, 23 Nov: a greyed switch reads as broken). Also on inside a `denied`
+ * area or with a DENIED reason.
+ */
 function Switch({
   className,
   size = "default",
   disabled = false,
   disabledReason,
+  readOnly = false,
   ...props
 }) {
   const inheritedReason = useDisabledReason();
+  const t = useTranslations("common");
+  if (readOnly || (disabled && (disabledReason === DENIED || inheritedReason?.denied || inheritedReason?.reason === DENIED))) {
+    return <SwitchState checked={props.checked} label={props["aria-label"]} t={t} />;
+  }
   // Disabled = no pointer events, like Button, so taps reach the wrapping
   // ReasonTooltip instead of the widened hit area.
   const control = (
@@ -36,11 +48,20 @@ function Switch({
   return (
     <ReasonTooltip reason={
         disabled
-          ? (disabledReason ?? inheritedReason?.reason)
+          ? readOnlyReason(disabledReason ?? inheritedReason?.reason)
           : null
       }>
       {control}
     </ReasonTooltip>
+  );
+}
+
+function SwitchState({ checked, label, t }) {
+  return (
+    <Badge data-slot="switch-state" variant={checked ? "success" : "muted"} className="shrink-0 uppercase">
+      {label ? <span className="sr-only">{label}: </span> : null}
+      {checked ? t("on") : t("off")}
+    </Badge>
   );
 }
 

@@ -52,7 +52,7 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
           <Section

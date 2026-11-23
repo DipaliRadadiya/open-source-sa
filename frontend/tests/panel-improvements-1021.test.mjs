@@ -203,7 +203,7 @@ test("databases on their own share the applications table's columns, actions and
   assert.deepEqual(widths(card), widths(apps));
   assert.match(card, /runDatabaseBackupNow\(databaseId\)/);
   assert.match(card, /href=\{`\/backups\/history\?database=\$\{database\.id\}`\}/);
-  assert.match(card, /ReasonTooltip reason=\{canManage \? null : td\("noPermission"\)\}/);
+  assert.match(card, /ReasonTooltip reason=\{canManage \? null : DENIED\}/);
   assert.match(card, /<ListCard from="c900"/);
   assert.match(card, /<DatabaseCards \{\.\.\.listProps\} \/>/);
   assert.match(read("app/(app)/backups/page.jsx"), /canManage=\{can\(permissions, "database", "manage"\)\}/);

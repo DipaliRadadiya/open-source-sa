@@ -233,7 +233,7 @@ export function CloneApplicationPanel({
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-6">
         {/* One form card (fields left, what to do first right), then what gets copied in
             two columns. Two tall side-by-side cards left one half mostly empty (7 Oct). */}
@@ -334,13 +334,8 @@ export function CloneApplicationPanel({
 
                   {/* Just the button: a source → copy line beside it cut both domains short,
                       and the field above and the confirm dialog already show the copy's domain. */}
+                  {canManage ? (
                   <CardFooter className="flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    {canManage ? null : (
-                      <p className="text-sm text-muted-foreground sm:mr-auto">
-                        {t("form.noPermission")}
-                      </p>
-                    )}
-
                     <Button
                       type="submit"
                       disabled={!canManage || starting || !ready}
@@ -354,6 +349,7 @@ export function CloneApplicationPanel({
                       {t("form.submit")}
                     </Button>
                   </CardFooter>
+                  ) : null}
                 </form>
               </Form>
             </PanelCard>

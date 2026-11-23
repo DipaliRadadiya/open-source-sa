@@ -207,9 +207,7 @@ export function IniEditor({ version, canManage }) {
           </p>
         ) : null}
 
-        {readOnly ? (
-          <p className="text-sm text-muted-foreground">{tPhp("noPermission")}</p>
-        ) : dirty ? (
+        {readOnly ? null : dirty ? (
           // Asked only once there is something to save.
           <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
             <Checkbox

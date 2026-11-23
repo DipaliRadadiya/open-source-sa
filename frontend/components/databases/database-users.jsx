@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { KeyRound, MoreHorizontal, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
   const users = database?.users ?? [];
 
   const addButton = (
-    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+    <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button disabled={!canManage} onClick={() => setAdding(true)}>
         <Plus className="size-4" />
         {t("add")}
@@ -52,7 +52,7 @@ export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
   );
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <>
         <Card className="gap-0 overflow-hidden py-0">
           {/* flex-wrap plus a minimum width on the text, so the button drops to

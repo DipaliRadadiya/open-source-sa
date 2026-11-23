@@ -1,5 +1,5 @@
 import { useFormatter, useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import {
   CheckCircle2,
@@ -114,7 +114,7 @@ export function DestinationRow({
   );
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       {/* Wide: what and where · what backs up here · its last test · actions. Below lg the
           two middle columns stack under the name, indented to its text. */}
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2 py-3.5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)_minmax(0,3fr)_auto] lg:gap-6">
@@ -190,7 +190,7 @@ export function DestinationRow({
           <ReasonTooltip
             reason={
               !canManage
-                ? t("noPermission")
+                ? DENIED
                 : !destination.has_credentials
                   ? t("row.testNeedsCredentials")
                   : null

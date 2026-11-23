@@ -4,7 +4,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { PERMANENT_BANTIME } from "@/lib/schemas/fail2ban";
@@ -83,13 +83,13 @@ export function BanRulesCard({ settings, presets, canManage }) {
   }
 
   const saveReason = !canManage
-    ? t("disabled.noPermission")
+    ? DENIED
     : !dirty
       ? t("disabled.noChanges")
       : maxretryError || findtimeError;
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <Card className="@container/ban-rules min-w-0 gap-0 py-0">
         <CardHeader className="border-b px-5 py-4">
           <CardTitle icon={SlidersHorizontal}>{t("settings.title")}</CardTitle>

@@ -22,7 +22,7 @@ import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Card,
   CardContent,
@@ -120,7 +120,7 @@ function ActionsCell({ row, table }) {
   const { canManage, onRequestUnban, unbanning, t } = table.options.meta;
   return (
     <div className="flex justify-end">
-      <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+      <ReasonTooltip reason={canManage ? null : DENIED}>
         <Button
           variant="destructive"
           size="sm"
@@ -241,7 +241,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
           ) : null}
           {/* Kept visible for a fast recovery; confirmation remains destructive. */}
           {banned.length > 0 ? (
-            <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <Button
                 variant="neutral"
                 disabled={!canManage}

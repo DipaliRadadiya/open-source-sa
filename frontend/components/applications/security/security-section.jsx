@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import Link from "@/components/ui/app-link";
 import { Eye, EyeOff, Lightbulb, Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -121,7 +121,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   const alreadyProtected = savedProtected ?? serverProtected;
   const cannotEnable = conflicts && !alreadyProtected;
 
-  const controlReason = !canManage ? t("noPermission") : cannotEnable ? t("unsupportedForType") : null;
+  const controlReason = !canManage ? DENIED : cannotEnable ? t("unsupportedForType") : null;
   const saveReason = controlReason ?? (!isDirty ? t("nothingToSave") : null);
 
   return (
@@ -183,16 +183,19 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex h-5 shrink-0 items-center">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={!canManage || submitting || cannotEnable}
-                            aria-label={t("enable")}
-                          />
-                        </FormControl>
-                      </div>
+                      {/* The badge beside the title already says the state. */}
+                      {canManage ? (
+                        <div className="flex h-5 shrink-0 items-center">
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={submitting || cannotEnable}
+                              aria-label={t("enable")}
+                            />
+                          </FormControl>
+                        </div>
+                      ) : null}
                     </label>
                     {/* Shows a 422 on `enabled` (the Authorization-header rule). */}
                     <FormMessage />

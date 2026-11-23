@@ -170,6 +170,7 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
       size="sm"
       variant={state === "available" || state === "failed" ? "default" : "outline"}
       className="h-auto min-h-8 max-w-full py-1.5 text-center whitespace-normal"
+      denied={!canManage}
       disabled={Boolean(blockedKey) || starting}
       disabledReason={blockedKey && blockedKey !== "up_to_date" ? t(`blocked.${blockedKey}`) : null}
       onClick={() => setConfirmOpen(true)}

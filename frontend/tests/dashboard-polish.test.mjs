@@ -367,7 +367,8 @@ test("the stop button has exactly one tooltip", () => {
   // One tooltip per state: a label when allowed, the tap-capable reason when not.
   assert.match(killButton, /<TooltipContent>\{t\("kill\.action"\)\}<\/TooltipContent>/);
   assert.match(killButton, /<ReasonTooltip reason=\{refusal\}>\{stopButton\}<\/ReasonTooltip>/);
-  assert.match(killButton, /const refusal = !canManage\s*\? t\("kill\.noPermission"\)/);
+  // Without the permission the button is hidden (23 Nov).
+  assert.match(killButton, /const refusal = !canManage\s*\? DENIED/);
 });
 
 test("the command column reads as the row's identity", () => {

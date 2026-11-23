@@ -41,13 +41,15 @@ export function FilesCards({
             )}
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              {/* Selection works on phones too. */}
-              <Checkbox
-                className="shrink-0"
-                checked={selected.includes(file.path)}
-                onCheckedChange={() => onToggle?.(file.path)}
-                aria-label={t("bulk.selectOne", { name: file.name })}
-              />
+              {/* Selection works on phones too; it only feeds the bulk actions, so it goes with them. */}
+              {canManage ? (
+                <Checkbox
+                  className="shrink-0"
+                  checked={selected.includes(file.path)}
+                  onCheckedChange={() => onToggle?.(file.path)}
+                  aria-label={t("bulk.selectOne", { name: file.name })}
+                />
+              ) : null}
               {file.type === "dir" ? (
                 <Folder className="size-4 shrink-0 text-primary" />
               ) : file.type === "symlink" ? (

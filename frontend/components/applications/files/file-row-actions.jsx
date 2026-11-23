@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileActionItems } from "@/components/applications/files/file-actions-menu";
 import { useServerPath } from "@/components/applications/files/files-root-context";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 
 export function FileRowActions({ file, appId, canManage, onAction }) {
@@ -25,7 +26,7 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
   const symlinkReason = symlink ? t("symlinkHint") : null;
   const canWrite = canManage;
   // Downloading reads the file, which needs File Manager manage.
-  const downloadReason = symlinkReason ?? (canManage ? null : t("noPermission"));
+  const downloadReason = symlinkReason ?? (canManage ? null : DENIED);
 
   async function copyPath() {
     try {

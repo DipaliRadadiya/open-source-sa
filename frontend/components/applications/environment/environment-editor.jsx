@@ -339,9 +339,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
           <NotSaved title={t(rawRefusal ? "protectedTitle" : "syntaxTitle")}>{syntaxError}</NotSaved>
         ) : null}
 
-        {!canManage ? (
-          <p className="text-sm text-muted-foreground">{t("readOnly")}</p>
-        ) : null}
       </CardContent>
 
       {canManage ? (

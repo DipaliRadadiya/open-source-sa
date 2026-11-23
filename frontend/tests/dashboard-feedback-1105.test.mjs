@@ -22,7 +22,9 @@ test("the firewall tile switches it on and off through the Firewall page's confi
   assert.match(sw, /title=\{t\("confirmOn\.title"\)\}/);
   assert.match(sw, /title=\{t\("confirmOff\.title"\)\}/);
   assert.match(sw, /toggleFirewall\(next\)/);
-  assert.match(sw, /!canManage \? t\("disabled\.noPermission"\) : unknown \? t\("status\.unknownTitle"\) : null/);
+  // Without the permission the switch shows the state, with no tooltip (23 Nov).
+  assert.match(sw, /const reason = canManage && unknown \? t\("status\.unknownTitle"\) : null;/);
+  assert.match(sw, /disabled=\{!canManage \|\| unknown \|\| pending\}/);
   assert.match(read("app/(app)/dashboard/page.jsx"), /canManageFirewall=\{can\(permissions, "firewall", "manage"\)\}/);
 });
 

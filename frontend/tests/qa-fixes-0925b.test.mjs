@@ -18,10 +18,10 @@ test("the dropdown chooses from the keyboard and says what it is", () => {
   assert.match(src, /aria-activedescendant=/);
 });
 
-test("a read-only role sees Deploy disabled with the reason, not no button", () => {
+// 23 Nov (Krishna): hidden from a role that cannot deploy, not disabled with a reason.
+test("a read-only role gets no Deploy button", () => {
   const src = read("components/applications/deployment/deploy-card.jsx");
-  assert.doesNotMatch(src, /\{canManage \? \(\s*<CardAction>/);
-  assert.match(src, /!canManage \? t\("history\.noPermission"\)/);
+  assert.match(src, /reason=\{!canManage \? DENIED : deploying \? null : unlinked \? tSource\("accountMissing"\) : null\}/);
   assert.match(src, /disabled=\{deploying \|\| unlinked \|\| !canManage\}/);
 });
 

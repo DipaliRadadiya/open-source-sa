@@ -40,9 +40,9 @@ const gitCard = fs.readFileSync(new URL("../components/integrations/git/accounts
 const gitDialog = fs.readFileSync(new URL("../components/integrations/git/connect-dialog.jsx", import.meta.url), "utf8");
 
 test("each destination in the empty state opens the form already on it", () => {
-  // Krishna (2 Nov). A button from the design system, disabled with the reason for a viewer,
+  // Krishna (2 Nov). A button from the design system, hidden from a viewer (23 Nov),
   // named for what it does ("Add Wasabi") and not only for what it is.
-  assert.match(card, /<ReasonTooltip key=\{provider\} reason=\{canManage \? null : t\("noPermission"\)\}>/);
+  assert.match(card, /<ReasonTooltip key=\{provider\} reason=\{canManage \? null : DENIED\}>/);
   assert.match(card, /variant="outline"\s+size="xs"\s+disabled=\{!canManage\}\s+aria-label=\{t\("empty\.addNamed", \{ name \}\)\}/);
   assert.match(card, /setConnectPreset\(provider\);\s+setConnecting\(true\);/);
   // "Add destination" still opens it on the usual default, not on the last one picked.

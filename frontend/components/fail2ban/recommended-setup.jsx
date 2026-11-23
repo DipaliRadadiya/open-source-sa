@@ -50,6 +50,9 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
     }
   }
 
+  // Its only content is the one-click setup, which a view-only role cannot run.
+  if (!canManage) return null;
+
   return (
     <Card className="border-primary/25 bg-[color-mix(in_oklab,var(--primary)_5%,var(--card))]">
       <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -67,8 +70,8 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
           </div>
         </div>
 
-        <ReasonTooltip reason={!canManage ? t("disabled.noPermission") : !ipSettled ? t("recommended.checkingIp") : null}>
-          <Button disabled={!canManage || pending || !ipSettled} onClick={apply}>
+        <ReasonTooltip reason={!ipSettled ? t("recommended.checkingIp") : null}>
+          <Button disabled={pending || !ipSettled} onClick={apply}>
             {pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

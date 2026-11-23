@@ -47,6 +47,8 @@ export function ApplicationRowActions({
   canManageDocker = false,
   // On the app's own dashboard, "Open dashboard" and "Visit" would be redundant.
   showNavigation = true,
+  // False when the role can open no screen inside the application: no "Open" item.
+  canOpen = true,
   // Permission-filtered keys of app screens. Only the detail header passes these,
   // to keep the list's row menu short.
   // Called after a successful delete, before redirecting (if redirectTo is set).
@@ -161,12 +163,14 @@ export function ApplicationRowActions({
         >
           {showNavigation ? (
             <>
-              <DropdownMenuItem asChild>
-                <Link href={href}>
-                  <LayoutDashboard className="size-4" />
-                  {t("actions.open")}
-                </Link>
-              </DropdownMenuItem>
+              {canOpen ? (
+                <DropdownMenuItem asChild>
+                  <Link href={href}>
+                    <LayoutDashboard className="size-4" />
+                    {t("actions.open")}
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
 
               {/* Uses `url`, never built from `domain`: the API serves http:// until the
                   site has a certificate, and an assumed https:// would be refused. */}

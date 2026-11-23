@@ -104,7 +104,7 @@ export function SshForm({
   const submitting = saving || form.formState.isSubmitting;
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
           <Section

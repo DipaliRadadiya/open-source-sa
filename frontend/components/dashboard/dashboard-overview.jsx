@@ -104,7 +104,10 @@ export async function DashboardOverview({ applications, overview, canManageFirew
       hint: t(`firewall.${state}Hint`),
       // Two cells where the grid has room to spare (2 and 3 columns), so no row ends half empty.
       className: "col-span-2 lg:col-span-1",
-      control: <FirewallQuickSwitch enabled={overview.firewall.enabled} canManage={canManageFirewall} label={tf("title")} />,
+      // The tile's own value already says On or Off, so a role that cannot change it gets no switch.
+      control: canManageFirewall ? (
+        <FirewallQuickSwitch enabled={overview.firewall.enabled} canManage={canManageFirewall} label={tf("title")} />
+      ) : null,
     });
   }
 

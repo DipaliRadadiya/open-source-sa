@@ -7,7 +7,7 @@ import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
 import { fetchBackupDownload, prepareBackupDownload } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { PrepareDownloadDialog } from "@/components/backups/prepare-download-dialog";
 import { HoverHint } from "@/components/ui/hover-hint";
 
@@ -23,7 +23,7 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
   // Only a verified run has an archive (others get 422 download_no_artifact). Use the
   // shared predicate: the success state is `verified`, not "completed".
   const blocker = !canDownload
-    ? t("blocked.noPermission")
+    ? DENIED
     : BACKUP_IN_FLIGHT.includes(backup.status)
       ? t("blocked.inFlight")
       : !backupHasArchive(backup.status)

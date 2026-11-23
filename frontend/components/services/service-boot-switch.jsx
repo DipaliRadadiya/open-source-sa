@@ -6,7 +6,6 @@ import { TriangleAlert, Lock } from "lucide-react";
 import { runServiceAction } from "@/lib/api/services";
 import { showActionError } from "@/components/services/service-toast";
 import { PendingSwitch } from "@/components/ui/pending-switch";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Tooltip,
@@ -93,6 +92,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
 
   const control = (
     <PendingSwitch
+      readOnly={!canToggle}
       checked={shown}
       pending={busy}
       disabled={!canToggle}
@@ -103,8 +103,8 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
 
   return (
     <>
-      {/* ReasonTooltip, not Tooltip: a plain tooltip never opens on a tap. */}
-      <ReasonTooltip reason={canToggle ? null : t("noPermission")}>{control}</ReasonTooltip>
+      {/* Without the permission the switch only shows whether the unit starts at boot. */}
+      {control}
 
       <ConfirmDialog
         open={confirming}

@@ -10,8 +10,10 @@ test("FB-A: leaving with edited files asks first", () => {
   assert.match(panel, /useWatchUnsaved\("app-fail2ban", canManage && changed\)/);
 });
 
-test("FB-C: view-only on a site that isn't set up says why there is no button", () => {
-  assert.match(panel, /: \(\s*<p className="mx-auto max-w-md text-xs text-muted-foreground">\{t\("noPermission"\)\}<\/p>/);
+// 23 Nov (Krishna): no "no permission" line; view-only just gets no button.
+test("FB-C: view-only on a site that isn't set up gets no button and no permission note", () => {
+  assert.match(panel, /\{t\("empty\.action"\)\}\s*<\/Button>\s*\) : null\}/);
+  assert.doesNotMatch(panel, /t\("noPermission"\)/);
 });
 
 test("FB-D: a create or remove holds until the refreshed props agree", () => {

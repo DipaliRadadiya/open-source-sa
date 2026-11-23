@@ -29,7 +29,7 @@ test("only a site's job that is known not to match is flagged; the target comes 
 test("Switch is offered only with both versions known, behind a confirm, through the site's switch", () => {
   const actions = strip(read("components/cron-jobs/cronjob-row-actions.jsx"));
   assert.match(actions, /const switchTo = mismatch\?\.current && mismatch\.target \? mismatch\.target : null;/);
-  assert.match(actions, /\{switchTo \? \(\s*<MenuItemHint hint=\{canManage \? null : t\("noPermission"\)\}>/);
+  assert.match(actions, /\{switchTo \? \(\s*<MenuItemHint hint=\{canManage \? null : DENIED\}>/);
   const dialog = strip(read("components/cron-jobs/switch-php-dialog.jsx"));
   assert.match(dialog, /switchApplicationCronjobsPhp\(job\.application_id, \{ version, cronjobIds: \[job\.id\] \}\)/);
   assert.match(dialog, /setError\(apiMessage\(err, t\("phpMismatch\.failed"\)\)\);/);

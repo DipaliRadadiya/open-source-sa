@@ -7,7 +7,7 @@ import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "luc
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { DomainText } from "@/components/ui/domain-text";
@@ -182,12 +182,11 @@ function BackupStatusDot({ status, label }) {
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
-  const th = useTranslations("backups.history");
   const ta = useTranslations("backups.application");
   const { canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null } = table.options.meta;
   const { application, target, state } = row.original;
 
-  // Viewers see the actions too, disabled with the reason.
+  // Run and Set up are hidden from roles that cannot change backups.
   if (state === "unprotected") {
     return (
       <div className="flex items-center justify-end gap-1">
@@ -195,7 +194,7 @@ function ActionsCell({ row, table }) {
           size="sm"
           variant="outline"
           disabled={!canManage}
-          disabledReason={canManage ? null : th("noPermission")}
+          disabledReason={canManage ? null : DENIED}
           onClick={() => onSetUp(application.id)}
         >
           <ShieldCheck className="size-4" />
@@ -213,7 +212,7 @@ function ActionsCell({ row, table }) {
       <ReasonTooltip
         reason={
           !canManage
-            ? th("noPermission")
+            ? DENIED
             : restoringId === application.id
               ? ta("restoreRunning")
               : !target && !busyIds.includes(application.id)

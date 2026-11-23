@@ -37,6 +37,7 @@ import { TurnOffBackupsDialog } from "@/components/applications/backups/turn-off
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { hasNoDatabase } from "@/lib/backups/database-availability";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 // How long "queued" is shown before reporting that the worker has not taken it.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
@@ -417,7 +418,6 @@ function stateOf(target, noneKept) {
 
 function ProtectionCard({ subject = "application", target, options = null, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
-  const tHistory = useTranslations("backups.history");
   const state = stateOf(target, noneKept);
   const { icon: Icon, tone } = STATE[state];
   // The stored time is 24-hour; format it so the card matches the locale-based picker.
@@ -478,7 +478,7 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
     : [];
 
   const excludes = (target?.file_excludes?.length ?? 0) + (target?.database_excludes?.length ?? 0);
-  const noPermission = tHistory("noPermission");
+  const noPermission = DENIED;
 
   return (
     // The state is carried by the icon tile and the button, not a coloured card edge:
@@ -502,7 +502,7 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
         </div>
 
         {/* Column on a phone so long labels cannot overflow (buttons never
-            wrap). Read-only roles see the buttons disabled with a reason. */}
+            wrap). Hidden from roles that cannot change backups. */}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {/* Filled when there is no schedule: setting one up is the page's main action. */}
           <Button
@@ -723,7 +723,7 @@ function ArchivedBackups({ backups, database, canRestore, blockedReason, onResto
   const t = useTranslations("backups.database.archived");
   const tHistory = useTranslations("backups.history");
   const format = useFormatter();
-  const reason = canRestore ? blockedReason : tHistory("noPermission");
+  const reason = canRestore ? blockedReason : DENIED;
 
   return (
     <Card className="gap-0 overflow-hidden py-0">

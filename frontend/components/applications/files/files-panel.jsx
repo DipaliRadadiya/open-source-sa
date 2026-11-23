@@ -8,7 +8,7 @@ import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye,
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { FileBreadcrumb } from "@/components/applications/files/file-breadcrumb";
@@ -160,7 +160,7 @@ export function FilesPanel({
     return selected.filter((entry) => onScreen.has(entry));
   }, [selected, filtered]);
   const canWrite = canManage;
-  const writeReason = canWrite ? null : t("noPermission");
+  const writeReason = canWrite ? null : DENIED;
 
   const hiddenHref = hiddenToggleHref({ appId, path, showHidden });
   // Remembered for the next folder too, not only this URL.
@@ -241,7 +241,9 @@ export function FilesPanel({
           button; grey text on this strip read as disabled. */}
       {/* Gated like the first one: wrapped onto a phone line it stood alone before Fix
           permissions. 52rem fits the widest locale's row (French, 815px). */}
-      <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center hidden @[52rem]/toolbar:block" />
+      {canWrite ? (
+        <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center hidden @[52rem]/toolbar:block" />
+      ) : null}
       <FixPermissionsButton appId={appId} canManage={canManage} servingProfile={servingProfile} />
       {/* Text is red mixed 22% toward foreground: plain `text-destructive` on this tint is under 4.5:1. */}
       <Button
@@ -352,7 +354,7 @@ export function FilesPanel({
       </div>
 
       <BulkResultPanel result={bulkOutcome} onDismiss={() => setBulkOutcome(null)} />
-      {siteSearch ? null : (
+      {siteSearch || !canManage ? null : (
         <SelectionBar
           selected={shownSelection}
           canManage={canManage}

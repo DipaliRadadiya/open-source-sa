@@ -103,7 +103,9 @@
     "keepFileCopy": "Eine Kopie der aktuellen Datei behalten",
     "keepFileCopyOff": "Ohne Kopie können Sie nicht zur aktuellen Version zurückkehren.",
     "keepSettingsCopy": "Eine Kopie der aktuellen Einstellungen behalten",
-    "keepSettingsCopyOff": "Ohne Kopie werden die alten Einstellungen nur im Speicher gehalten, während die neuen geprüft werden. Stoppt das Panel während des Speicherns, können sie nicht zurückgespielt werden."
+    "keepSettingsCopyOff": "Ohne Kopie werden die alten Einstellungen nur im Speicher gehalten, während die neuen geprüft werden. Stoppt das Panel während des Speicherns, können sie nicht zurückgespielt werden.",
+    "on": "An",
+    "off": "Aus"
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -6715,7 +6717,8 @@
       "lastFailed": "Das letzte „Laden und neu ausrollen“ ist fehlgeschlagen: {reason}",
       "lastFailedPlain": "Das letzte „Laden und neu ausrollen“ ist fehlgeschlagen.",
       "reference": "Referenz: {reference}"
-    }
+    },
+    "noScreens": "Ihre Rolle gewährt keinen Zugriff auf einen Bereich dieser Anwendung. Bitten Sie einen Administrator, Ihnen einen freizugeben."
   },
   "panelUpdate": {
     "title": "Panel-Update",

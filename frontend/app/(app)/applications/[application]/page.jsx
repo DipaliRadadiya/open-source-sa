@@ -48,6 +48,7 @@ import { ApplicationOriginBadge } from "@/components/applications/application-or
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { firstAllowedScreen } from "@/lib/permissions/app-screens";
 import { firstDeployPending, isSettled } from "@/lib/applications/settled";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
 
@@ -65,7 +66,8 @@ export default async function ApplicationDetailPage({ params }) {
     getPermissions(),
     // Application-level grants live in their own catalog; deploy and domains are
     // gated there, not by the server-level `application` permission.
-    getPermissions("application", id).catch(() => []),
+    // Null on a failed read, never []: an empty catalog would read as "may open nothing".
+    getPermissions("application", id).catch(() => null),
     getTranslations("applications"),
     getApplication(id),
   ]);
@@ -76,6 +78,14 @@ export default async function ApplicationDetailPage({ params }) {
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
+  // The dashboard is its own grant (`app_dashboard`), as the sidebar already treats it
+  // (23 Nov: a role with only server-level "Applications: view" landed on a half-empty
+  // dashboard with an empty menu). Without it, open the first screen the role does allow.
+  if (appPermissions && !can(appPermissions, "app_dashboard", "view", "application")) {
+    const first = firstAllowedScreen(appPermissions);
+    if (first !== null) redirect(`/applications/${id}${first}`);
+    return <PermissionDenied title={application.name} description={t("noScreens")} />;
+  }
   const canManage = can(permissions, "application", "manage");
   const canDeploy = can(appPermissions, "app_deployment", "manage", "application");
   const canSeeDeployment = can(appPermissions, "app_deployment", "view", "application");
@@ -215,6 +225,16 @@ export default async function ApplicationDetailPage({ params }) {
         ) : null,
     },
   ].filter(Boolean);
+  // Every protection whose state is known, whatever the role may open, so a role that sees
+  // one row does not read "1 of 1 on" when the site has 1 of 5 (23 Nov).
+  const allProtections = [
+    application.basic_auth_enabled,
+    application.waf_enabled,
+    application.fail2ban_enabled,
+    Boolean(application.ai_bot_policy) && application.ai_bot_policy !== "allow_all",
+    folderStatus === "locked" || folderStatus === "unlocked" ? folderStatus === "locked" : undefined,
+  ].filter((value) => value !== undefined);
+  const protectionTotals = { on: allProtections.filter(Boolean).length, total: allProtections.length };
 
 
   // Use the server's `application.url`; deriving the scheme from a failed certificate
@@ -339,7 +359,7 @@ export default async function ApplicationDetailPage({ params }) {
       databases={canSeeDatabases && !siteDatabases.failed ? siteDatabases.databases : null}
     />
   ) : null;
-  const protectionCard = <ProtectionCard application={application} items={protectionItems} />;
+  const protectionCard = <ProtectionCard application={application} items={protectionItems} totals={protectionTotals} />;
 
   return (
     <div className="space-y-6">

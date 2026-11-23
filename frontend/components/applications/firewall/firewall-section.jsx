@@ -6,7 +6,7 @@ import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { ChevronDown, Lightbulb, ShieldCheck, Sliders } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Note } from "@/components/ui/note";
@@ -93,7 +93,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   // Without this a sidebar click discards the edit with no warning.
   useWatchUnsaved("app-firewall", isDirty);
 
-  const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
+  const saveReason = !canManage ? DENIED : !isDirty ? t("nothingToSave") : null;
 
   // Not reloaded since a save, so nothing about the running firewall is known.
   const blocking = !pending && saved.enabled && saved.mode === "enforce";
@@ -154,7 +154,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   const locked = !canManage || saving;
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-4">
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
@@ -194,14 +194,18 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                   ) : null}
                 </div>
               </div>
-              <div className="flex h-5 shrink-0 items-center">
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={setEnabled}
-                  disabled={locked}
-                  aria-label={t("enable")}
-                />
-              </div>
+              {/* The badge beside the title already says On or Off, so a role that
+                  cannot change it gets no switch at all. */}
+              {canManage ? (
+                <div className="flex h-5 shrink-0 items-center">
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={setEnabled}
+                    disabled={locked}
+                    aria-label={t("enable")}
+                  />
+                </div>
+              ) : null}
             </label>
   
             <Collapsible open={!enabled}>

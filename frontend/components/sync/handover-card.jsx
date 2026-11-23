@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ArrowRightLeft, CircleAlert, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { completeSyncHandover } from "@/lib/api/sync";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -84,7 +84,7 @@ export function HandoverCard({ status, canManage }) {
         ) : null}
       </CardContent>
       <CardFooter className="justify-end border-t bg-muted/30 py-3">
-        <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+        <ReasonTooltip reason={canManage ? null : DENIED}>
           <Button onClick={complete} disabled={!canManage || pending}>
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
             {pending ? t("working") : t("action")}

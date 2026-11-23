@@ -20,6 +20,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eraser } from "lucide-react";
 import { cleanLines } from "@/lib/logs/clean-lines";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 const POLL_MS = 3000;
 // Long tailing sessions must not grow without bound.
@@ -402,7 +403,7 @@ export function LogsPanel({
           // Shown disabled with the reason rather than hidden, like every other action.
           downloadReason={source?.downloadable === false ? t("notDownloadable") : null}
           onClear={source ? () => setConfirmClear(true) : null}
-          clearReason={!source?.clearable ? t("notClearable") : canManage ? null : t("noPermission")}
+          clearReason={!source?.clearable ? t("notClearable") : canManage ? null : DENIED}
           // Big logs start with Live off (performance); say so unless the reader chose it.
           followHint={
             !follow && followPref !== "off" && appends && source?.readable && (source?.size ?? 0) > AUTO_FOLLOW_MAX_BYTES

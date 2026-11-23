@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
@@ -57,7 +57,7 @@ export function CronjobsToolbar({
 
       <div className="flex flex-wrap items-center gap-2">
         <RefreshButton />
-        <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+        <ReasonTooltip reason={canManage ? null : DENIED}>
           <Button disabled={!canManage} onClick={onCreate} data-cron-add>
             <Plus className="size-4" />
             {t("addJob")}

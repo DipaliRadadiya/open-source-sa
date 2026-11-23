@@ -21,7 +21,6 @@ import { stagingRunActive } from "@/lib/schemas/application-staging";
 // safety copy), so it needs typed confirmation and has no default mode.
 export function StagingPanel({ appId, production, staging, latestRun = null, canManage, canDelete = false, canBackUp = false, safetyCopies = [] }) {
   const t = useTranslations("applications.staging");
-  const tApp = useTranslations("applications");
   const [creating, setCreating] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
@@ -85,9 +84,7 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
               <Button className="mt-1" onClick={() => setCreating(true)}>
                 {t("empty.action")}
               </Button>
-            ) : (
-              <p className="mx-auto max-w-md text-xs text-muted-foreground">{t("noPermission")}</p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
@@ -140,14 +137,16 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
           </Button>
         </CardContent>
 
-        {/* The safe direction first: live is only read. Not-ready and permission
-            reasons are given once, on the push row below. */}
+        {/* The safe direction first: live is only read. The not-ready reason is given
+            once, on the push row below. Both rows are hidden from a role that cannot use them. */}
+        {canManage ? (
+        <>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-5 py-4">
           <div className="min-w-60 flex-1 space-y-1">
             <h2 className="text-[15px] font-semibold tracking-tight">{t("pull.title")}</h2>
             <p className="text-sm text-muted-foreground">{t("pull.body", { domain: production.domain })}</p>
           </div>
-          {canManage && ready ? (
+          {ready ? (
             <ReasonTooltip reason={busyReason}>
               <Button variant="outline" disabled={Boolean(busyReason)} onClick={() => setPulling(true)}>
                 <ArrowDownToLine className="size-4" />
@@ -169,11 +168,9 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>{t("push.notReady")}</span>
               </p>
-            ) : !canManage ? (
-              <p className="pt-1 text-xs text-muted-foreground">{t("noPermission")}</p>
             ) : null}
           </div>
-          {canManage && ready ? (
+          {ready ? (
             <ReasonTooltip reason={busyReason}>
               <Button variant="destructive" disabled={Boolean(busyReason)} onClick={() => setPushing(true)}>
                 <ArrowUpFromLine className="size-4" />
@@ -182,11 +179,14 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
             </ReasonTooltip>
           ) : null}
         </div>
+        </>
+        ) : null}
       </Card>
 
       {canManage && safetyCopies.length ? <SafetyCopiesCard appId={appId} copies={safetyCopies} /> : null}
 
       {/* Kept apart from Push so the two are never one misclick apart. */}
+      {canDelete ? (
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div className="flex min-w-60 flex-1 items-start gap-3">
@@ -198,14 +198,13 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
               </p>
             </div>
           </div>
-          <ReasonTooltip reason={canDelete ? null : tApp("noPermission")}>
-            <Button variant="destructive" className="shrink-0" disabled={!canDelete} onClick={() => setRemoving(true)}>
-              <Trash2 className="size-4" />
-              {t("remove.action")}
-            </Button>
-          </ReasonTooltip>
+          <Button variant="destructive" className="shrink-0" onClick={() => setRemoving(true)}>
+            <Trash2 className="size-4" />
+            {t("remove.action")}
+          </Button>
         </CardContent>
       </Card>
+      ) : null}
 
       <DeleteApplicationDialog application={staging} open={removing} onOpenChange={setRemoving} closeWhenGone />
 

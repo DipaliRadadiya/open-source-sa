@@ -289,7 +289,7 @@ export function ContainerCard({
   const showCredentials = canManage && (application.container_secret_keys ?? []).length > 0;
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-6">
         <Form {...imageForm}>
           <form noValidate onSubmit={imageForm.handleSubmit(saveImage)}>

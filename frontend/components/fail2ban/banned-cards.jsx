@@ -1,7 +1,7 @@
 import { ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { BanAge } from "@/components/fail2ban/banned-card";
 
@@ -28,7 +28,7 @@ export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, ren
               <p className="text-xs text-muted-foreground">{t("banned.timeLeft")}</p>
               {renderExpiry(ban)}
             </div>
-            <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <Button
                 variant="destructive"
                 size="sm"

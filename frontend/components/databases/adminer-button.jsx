@@ -146,7 +146,7 @@ export function AdminerButton({
       );
     }
     return (
-      <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <DisabledReasonProvider denied={!canManage}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -187,7 +187,7 @@ export function AdminerButton({
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       {/* An arrow function: `onClick={open}` would pass the event as the site id. */}
       <Button
         type="button"

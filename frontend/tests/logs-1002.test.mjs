@@ -4,14 +4,14 @@ import fs from "node:fs";
 
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
-test("a view-only user sees Clear disabled with the reason, not hidden", () => {
+// 23 Nov (Krishna): an action the role cannot use is hidden, not shown disabled.
+test("a view-only user gets no Clear button; an unclearable log keeps it disabled with the reason", () => {
   const panel = read("components/logs/logs-panel.jsx");
   assert.match(panel, /onClear=\{source \? \(\) => setConfirmClear\(true\) : null\}/);
-  assert.match(panel, /clearReason=\{!source\?\.clearable \? t\("notClearable"\) : canManage \? null : t\("noPermission"\)\}/);
+  assert.match(panel, /clearReason=\{!source\?\.clearable \? t\("notClearable"\) : canManage \? null : DENIED\}/);
   const bar = read("components/logs/log-toolbar.jsx");
   assert.match(bar, /disabled=\{disabled \|\| clearing \|\| Boolean\(clearReason\)\}/);
   assert.match(bar, /disabledReason=\{clearReason\}/);
-  for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) assert.ok(JSON.parse(read(`messages/${l}.json`)).logs.noPermission, l);
 });
 
 test("Clear log is red: the destructive variant, not outline overridden by hand", () => {
@@ -183,7 +183,8 @@ test("bug #82: the exceptions hint says path only and at least 4 characters", ()
 test("a disabled Select says why, like Button and Input", () => {
   const select = read("components/ui/select.jsx");
   assert.match(select, /SelectDisabledContext\.Provider value=\{Boolean\(props\.disabled\)\}/);
-  assert.match(select, /reason=\{disabled \? \(disabledReason \?\? inheritedReason\?\.reason\) : null\}/);
+  // A missing permission leaves the value readable with no tooltip (23 Nov).
+  assert.match(select, /reason=\{disabled \? readOnlyReason\(disabledReason \?\? inheritedReason\?\.reason\) : null\}/);
   assert.match(select, /if \(disabled && inheritedReason\?\.handled && !disabledReason\) return control;/);
 });
 

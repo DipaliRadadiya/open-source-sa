@@ -48,7 +48,8 @@ test("firewall history keeps its per-page selector while the history is longer t
 test("a staging copy can be deleted from its production's Staging page", () => {
   const panel = read("components/applications/staging/staging-panel.jsx");
   assert.match(panel, /<DeleteApplicationDialog application=\{staging\} open=\{removing\} onOpenChange=\{setRemoving\}( closeWhenGone)? \/>/);
-  assert.match(panel, /disabled=\{!canDelete\}/);
+  // The remove card is hidden from a role that cannot delete (23 Nov).
+  assert.match(panel, /\{canDelete \? \(\s*<Card/);
   // Gated like the API gates it: an application delete, not app_staging.
   assert.match(read("app/(app)/applications/[application]/staging/page.jsx"), /const canDelete = can\(permissions, "application", "manage"\);/);
   for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {

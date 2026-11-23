@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { useConfirmAction } from "@/hooks/use-confirm-action";
 import { activeQueries, isIdle } from "@/lib/databases/health";
@@ -217,7 +217,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
                 const level = tone(process.time);
                 const open = openQueries.has(process.id);
                 const stopReason = !canManage
-                  ? t("noPermission")
+                  ? DENIED
                   : process.is_panel
                     ? t("cannotStopOwn")
                     : null;

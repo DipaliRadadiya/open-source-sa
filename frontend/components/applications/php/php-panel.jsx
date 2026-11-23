@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import {
   Cpu,
@@ -137,7 +137,7 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-4">
         <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
   
@@ -939,7 +939,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
             saving={saving}
             dirty={form.formState.isDirty}
             saveReason={
-              !canManage ? t("noPermission") : !form.formState.isDirty ? t("nothingToSave") : null
+              !canManage ? DENIED : !form.formState.isDirty ? t("nothingToSave") : null
             }
             onDiscard={() => {
               form.reset(defaults);

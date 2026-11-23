@@ -11,7 +11,7 @@ import { engineLogo } from "@/lib/databases/engine-logo";
 import { shortVersion } from "@/lib/databases/short-version";
 import { Button } from "@/components/ui/button";
 import { RootPasswordDialog } from "@/components/databases/root-password-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
 import { DatabaseInstallProgress } from "@/components/databases/database-install-progress";
 import { useEngineInstallPolling } from "@/components/databases/use-engine-install-polling";
@@ -171,7 +171,7 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
 
         {/* The root password lives with the engine it belongs to; one engine, one button. */}
         {rootEngines.length === 1 ? (
-          <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+          <ReasonTooltip reason={canManage ? null : DENIED}>
             <Button variant="outline" size="sm" disabled={!canManage} onClick={() => setRootFor(rootEngines[0].engine)}>
               <KeyRound className="size-4" />
               {t("rootPassword.action")}
@@ -179,7 +179,7 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
           </ReasonTooltip>
         ) : rootEngines.length > 1 ? (
           <DropdownMenu>
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={!canManage}>
                   <KeyRound className="size-4" />
@@ -200,7 +200,7 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
         {/* Always named: one candidate gets its own button, several get a menu.
             The click is the choice, no follow-up dialog asks which. */}
         {only ? (
-          <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+          <ReasonTooltip reason={canManage ? null : DENIED}>
             <Button
               variant="outline"
               size="sm"
@@ -219,7 +219,7 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
           </ReasonTooltip>
         ) : addable.length > 1 ? (
           <DropdownMenu>
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={!canManage}>
                   <Plus className="size-4" />

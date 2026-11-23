@@ -24,6 +24,7 @@ import { DestinationHealth } from "@/components/backups/destination-health";
 import { CoverageTable } from "@/components/backups/coverage-table";
 import { CoverageCards } from "@/components/backups/coverage-cards";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
+import { DENIED } from "@/components/ui/reason-tooltip";
 
 // How long a "Run backup" press keeps the page polling on its own: long enough
 // for the queue to pick the job up, short enough to stop if it never starts.
@@ -183,7 +184,7 @@ export function CoverageCard({
           <Button
             onClick={() => openSetup(null)}
             disabled={!canManage || destinations.length === 0}
-            disabledReason={!canManage ? th("noPermission") : t("needsDestination")}
+            disabledReason={!canManage ? DENIED : t("needsDestination")}
             className="w-full sm:w-auto"
           >
             <ShieldCheck className="size-4" />

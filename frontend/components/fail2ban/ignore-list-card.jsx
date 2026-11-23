@@ -4,7 +4,7 @@ import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { X, UserCheck, ShieldCheck, TriangleAlert, Loader2 } from "lucide-react";
 import { addIgnoreIp, removeIgnoreIp } from "@/lib/api/fail2ban";
@@ -108,7 +108,7 @@ export function IgnoreListCard({ settings, canManage }) {
   }
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider denied={!canManage}>
       {/* The left editor sets the desktop row height; only this list may shrink. */}
       <Card className="@container/ignore-list min-w-0 gap-0 py-0 xl:@4xl/fail2ban-rules:h-0 xl:@4xl/fail2ban-rules:min-h-full">
         <CardHeader className="flex-none border-b px-5 py-4">
@@ -143,6 +143,7 @@ export function IgnoreListCard({ settings, canManage }) {
             </div>
           ) : null}
 
+          {canManage ? (
           <div className="flex-none space-y-2">
             <Label htmlFor="f2b-ignore-address">{t("settings.inputLabel")}</Label>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
@@ -171,7 +172,7 @@ export function IgnoreListCard({ settings, canManage }) {
                 className="inline-flex shrink-0"
                 reason={
                   !canManage
-                    ? t("disabled.noPermission")
+                    ? DENIED
                     : !draft.trim()
                       ? t("disabled.enterIp")
                       : null
@@ -200,6 +201,7 @@ export function IgnoreListCard({ settings, canManage }) {
               </p>
             ) : null}
           </div>
+          ) : null}
 
           {/* Focusable native scrolling keeps warning, entry controls and Save outside.
               Side by side it shrinks to scroll but never grows: grown to the card's height,

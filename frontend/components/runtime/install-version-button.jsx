@@ -10,7 +10,7 @@ import { installPhpVersion } from "@/lib/api/php";
 import { installNodeVersion } from "@/lib/api/node";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -96,7 +96,7 @@ export function InstallVersionButton({
 
   return (
     <>
-      <ReasonTooltip reason={unavailable ?? (canManage ? null : t("noPermission"))}>
+      <ReasonTooltip reason={unavailable ?? (canManage ? null : DENIED)}>
         {/* Filled, as every page's main add button is (Create application, Add user…). */}
         <Button
           disabled={!canManage || Boolean(unavailable)}

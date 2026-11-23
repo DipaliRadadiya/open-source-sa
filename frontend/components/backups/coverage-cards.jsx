@@ -9,7 +9,7 @@ import { PlayCircle, ShieldCheck, SearchX, Archive } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { CardList } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
@@ -22,7 +22,6 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
   const t = useTranslations("backups.coverage");
   const tb = useTranslations("backups");
   const ta = useTranslations("backups.application");
-  const th = useTranslations("backups.history");
   const tn = useTranslations("applications.backups");
   const format = useFormatter();
 
@@ -52,7 +51,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
       size="sm"
       variant="outline"
       disabled={!canManage}
-      disabledReason={canManage ? null : th("noPermission")}
+      disabledReason={canManage ? null : DENIED}
       onClick={() => onSetUp(application.id)}
     >
       <ShieldCheck className="size-4" />
@@ -98,13 +97,12 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                   </Badge>
                 )}
                 actions={
-                  // Viewers see the actions too, disabled with the reason.
                   state === "unprotected" ? setUpButton(application) : (
                     <CoverageCardActions
                       historyHref={`/backups/history?application=${application.id}`}
                       settingsHref={`/applications/${application.id}/backups`}
                       run={
-                        <ReasonTooltip reason={!canManage ? th("noPermission") : restoringId === application.id ? ta("restoreRunning") : null}>
+                        <ReasonTooltip reason={!canManage ? DENIED : restoringId === application.id ? ta("restoreRunning") : null}>
                           <Button
                             size="sm"
                             variant="outline"

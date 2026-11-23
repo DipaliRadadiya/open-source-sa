@@ -18,7 +18,7 @@ import { toggleFirewall } from "@/lib/api/firewall";
 import { firewallState } from "@/lib/firewall/state";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { apiMessage } from "@/lib/api/error-message";
@@ -91,14 +91,14 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
             <div className="col-start-2 flex flex-wrap gap-2 sm:col-start-auto">
               {/* The repair leads; the off switch stays beside it. */}
               {state === "exposed" ? (
-                <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                <ReasonTooltip reason={canManage ? null : DENIED}>
                   <Button disabled={!canManage || pending} onClick={() => setConfirming("secure")}>
                     <ShieldCheck className="size-4" />
                     {t("status.secureNow")}
                   </Button>
                 </ReasonTooltip>
               ) : null}
-              <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+              <ReasonTooltip reason={canManage ? null : DENIED}>
                 {/* Neutral when it is the off switch: the dangerous action is not the loudest on
                     the page. The confirm dialog carries the warning and the red button. */}
                 <Button

@@ -13,7 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FILTER_TOGGLE_ITEM } from "@/lib/theme/filter-toggle";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Card,
   CardContent,
@@ -177,7 +177,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                   const installing = extension.status === "installing";
                   // One at a time: each switch runs apt, and a second run would fail on the lock.
                   const reason = !canManage
-                    ? t("noPermission")
+                    ? DENIED
                     : required
                       ? t("extensions.panelNeeds")
                       : installing
@@ -284,16 +284,20 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                                       : t("extensions.stateOff")}
                                 </span>
                               )}
-                              <ReasonTooltip reason={reason}>
-                                <Switch
-                                  size="lg"
-                                  checked={extension.enabled}
-                                  onCheckedChange={() => toggle(extension)}
-                                  disabled={Boolean(reason) || pending?.name === extension.name}
-                                  aria-label={t("extensions.toggle", { name: extension.name })}
-                                  aria-busy={pending?.name === extension.name || undefined}
-                                />
-                              </ReasonTooltip>
+                              {/* The On/Off word beside it already says the state; a role that
+                                  cannot change it gets just the word. */}
+                              {canManage ? (
+                                <ReasonTooltip reason={reason}>
+                                  <Switch
+                                    size="lg"
+                                    checked={extension.enabled}
+                                    onCheckedChange={() => toggle(extension)}
+                                    disabled={Boolean(reason) || pending?.name === extension.name}
+                                    aria-label={t("extensions.toggle", { name: extension.name })}
+                                    aria-busy={pending?.name === extension.name || undefined}
+                                  />
+                                </ReasonTooltip>
+                              ) : null}
                             </>
                           )}
                         </span>

@@ -1,6 +1,6 @@
 import { HeadIcon } from "@/components/ui/head-icon";
 import { useTranslations } from "next-intl";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,8 +81,9 @@ export function Section({
   gridClassName,
   children,
 }) {
-  const t = useTranslations("settings.common");
   const destructive = tone === "destructive";
+  // A role that cannot change the card gets no Save band and no "read-only" note (Krishna, 23 Nov).
+  const showActions = Boolean(actions) && !readOnly && !(actions.type === SectionActions && actions.props.canManage === false);
 
   return (
     <Card className="@container/section gap-0 overflow-hidden py-0">
@@ -111,18 +112,12 @@ export function Section({
           gridClassName,
         )}
       >
-        {readOnly ? (
-          <p className="flex w-fit items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-            <Lock className="size-3.5 shrink-0" />
-            {t("readOnly")}
-          </p>
-        ) : null}
         {children}
       </CardContent>
 
       {/* Its own band, so the button that saves these rows sits inside the same
           box as the rows it saves. */}
-      {actions ? (
+      {showActions ? (
         <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
           {/* Opposite Save: who changed this last, on a shared server. */}
           {changedBy ? (
@@ -151,7 +146,9 @@ export function SectionActions({
 
   // Whatever is standing in the way, or null once the button is live. Ordered
   // by which one the user can do something about.
-  const reason = !canManage ? t("readOnly") : blockedReason ?? (!isDirty ? t("nothingToSave") : null);
+  const reason = blockedReason ?? (!isDirty ? t("nothingToSave") : null);
+
+  if (!canManage) return null;
 
   return (
     <>

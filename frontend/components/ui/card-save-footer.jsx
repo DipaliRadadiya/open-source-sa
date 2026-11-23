@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 // `submit` makes Save a submit button for react-hook-form cards; otherwise it calls `onSave`.
 export function CardSaveFooter({
@@ -22,6 +22,9 @@ export function CardSaveFooter({
   showUnsaved = true,
 }) {
   const t = useTranslations("common.saveFooter");
+
+  // A role that cannot change the card gets no save bar at all.
+  if (saveReason === DENIED) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
@@ -156,7 +156,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
 
         {canAct ? (
           <div className="shrink-0">
-            <ReasonTooltip reason={canManage ? null : tp("noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               {installed ? (
                 /* `destructive`, like every button that removes something. */
                 <Button

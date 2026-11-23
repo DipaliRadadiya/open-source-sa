@@ -6,15 +6,26 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 // `handled: false`: a fallback reason for controls with nothing more specific.
 const DisabledReasonContext = createContext(null);
 
+/** Pass as a reason when the role lacks the permission: the control is hidden, not explained. */
+export const DENIED = "__denied__";
+
+/** Fields and switches stay on screen to show their value; only the tooltip goes. */
+export function readOnlyReason(reason) {
+  return reason === DENIED ? null : reason;
+}
+
 export function useDisabledReason() {
   return useContext(DisabledReasonContext);
 }
 
-/** A control's own `disabledReason` takes precedence over this one. */
-export function DisabledReasonProvider({ reason, children }) {
+/** A control's own `disabledReason` takes precedence over this one.
+ * `denied`: the role lacks the permission for this area's actions. Buttons that would be
+ * disabled are hidden instead, and other controls show their value without a tooltip
+ * (Krishna, 23 Nov: hide what the role cannot do; no "no permission" tooltips). */
+export function DisabledReasonProvider({ reason, denied = false, children }) {
   return (
     <DisabledReasonContext.Provider
-      value={reason ? { reason, handled: false } : null}
+      value={denied ? { reason: null, handled: false, denied: true } : reason ? { reason, handled: false } : null}
     >
       {children}
     </DisabledReasonContext.Provider>
@@ -26,6 +37,7 @@ export function DisabledReasonProvider({ reason, children }) {
 export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   const coarse = useCoarsePointer();
 
+  if (reason === DENIED) return null;
   if (!reason) return children;
 
   const content = coarse ? (

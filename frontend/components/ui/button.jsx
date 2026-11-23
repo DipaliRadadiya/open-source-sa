@@ -4,7 +4,7 @@ import * as React from "react"
 import { cva } from "class-variance-authority";
 import { Slot } from "radix-ui"
 
-import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
 // Brand tint for labelled outline buttons in a card; dialogs, toolbars and the header
@@ -92,9 +92,12 @@ function Button({
   asChild = false,
   disabled = false,
   disabledReason,
+  // The role lacks the permission: the action is hidden, not shown disabled (23 Nov).
+  denied = false,
   ...props
 }) {
   const inheritedReason = useDisabledReason();
+  if (denied || disabledReason === DENIED || (disabled && inheritedReason?.denied)) return null;
   const Comp = asChild ? Slot.Root : "button";
   const control = (
     <Comp

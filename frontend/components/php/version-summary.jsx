@@ -18,7 +18,7 @@ import { setDefaultPhpVersion, removePhpVersion, installPhpVersion } from "@/lib
 import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 import { cronjobsOnDefaultSchema } from "@/lib/schemas/cronjob-php";
@@ -73,7 +73,7 @@ export function VersionSummary({
     : null;
 
   const removeReason = !canManage
-    ? t("noPermission")
+    ? DENIED
     : // Already removing: a second DELETE answers 404 once apt finishes.
       installState === "removing"
       ? t("versions.stillRemoving")
@@ -244,7 +244,7 @@ export function VersionSummary({
               reason={
                 notReadyReason ??
                 (incomplete ? t("versions.incompleteDefault") : null) ??
-                (canManage ? null : t("noPermission"))
+                (canManage ? null : DENIED)
               }
             >
               <Button
@@ -261,7 +261,7 @@ export function VersionSummary({
 
           {/* `PhpController::store` falls through to an idempotent apt install when incomplete. */}
           {!incomplete ? null : (
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+            <ReasonTooltip reason={canManage ? null : DENIED}>
               <Button
                 variant="outline"
                 size="sm"
@@ -276,7 +276,7 @@ export function VersionSummary({
 
           {!nothingToRemove ? null : (
             <>
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <ReasonTooltip reason={canManage ? null : DENIED}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -287,7 +287,7 @@ export function VersionSummary({
                   {t("versions.retry")}
                 </Button>
               </ReasonTooltip>
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <ReasonTooltip reason={canManage ? null : DENIED}>
                 <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
                   {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.dismiss")}
