@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { isDeployIncomplete, liveCommit } from "@/lib/applications/code-on-disk";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
-import { Loader2, Rocket, Settings2, Unlink, Webhook } from "lucide-react";
+import { Loader2, Rocket, Settings2, Unlink, Webhook, GitBranch } from "lucide-react";
 import { deployApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -64,7 +64,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
       {/* Same shape as the other cards here: title with its badges, the buttons on the
           right, a line, then the content. Stacks until the CARD is wide enough. */}
       <CardHeader className="flex flex-col gap-3 border-b @2xl/source:flex-row @2xl/source:items-center @2xl/source:justify-between">
-        <CardTitle as="h2" className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
+        <CardTitle icon={GitBranch} as="h2" className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
           {t("title")}
           {/* The provider, where known. */}
           {providerTitle ? (

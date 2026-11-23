@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert, IdCard, KeyRound } from "lucide-react";
 import { roleFormSchema, ACCESS_NONE } from "@/lib/schemas/role";
 import { createRole, updateRole } from "@/lib/api/roles";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -123,7 +123,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
       >
         <Card>
           <CardHeader>
-            <CardTitle>{t("form.details")}</CardTitle>
+            <CardTitle icon={IdCard}>{t("form.details")}</CardTitle>
           </CardHeader>
           <CardContent className="grid items-start gap-4 sm:grid-cols-2">
             <FormField
@@ -159,7 +159,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
           {/* Wraps: beside the longer view · manage badge, the hint went one word per line on a phone. */}
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2 space-y-0">
             <div className="min-w-48 flex-1 space-y-1">
-              <CardTitle>{t("form.permissions")}</CardTitle>
+              <CardTitle icon={KeyRound}>{t("form.permissions")}</CardTitle>
               <CardDescription>{t("form.permissionsHint")}</CardDescription>
             </div>
             <Badge variant={counts.view > 0 ? "success" : "muted"} className="shrink-0">

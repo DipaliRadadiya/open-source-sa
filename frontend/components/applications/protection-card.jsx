@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { ChevronRight, ShieldCheck, ShieldOff } from "lucide-react";
+import { ChevronRight, ShieldCheck, ShieldOff, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Status only, no toggles: enabling most of these needs real choices, and a
@@ -26,7 +26,7 @@ export async function ProtectionCard({ application, items }) {
       className="relative scroll-mt-[calc(var(--app-chrome,7rem)_+_1rem)] focus:outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-xl after:border-2 after:border-primary/40 after:opacity-0 after:transition-opacity after:duration-200 data-[jump-highlight=true]:after:opacity-100 motion-reduce:after:transition-none"
     >
       <CardHeader className="items-center border-b">
-        <CardTitle id="security-heading" as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={Shield} id="security-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           <span className="text-xs font-normal tabular-nums text-muted-foreground">
             {on

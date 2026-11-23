@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Globe2, Loader2 } from "lucide-react";
+import { ArrowRight, Globe2, Loader2, Globe } from "lucide-react";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
       {/* HTTPS and its renewal date are the HTTPS tile's; the card lists the names. The
           button sits in the header: a footer strip for one button was mostly empty (7 Oct). */}
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={Globe} as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           {!failed && issuing ? (
             <Badge variant="muted" className="gap-1.5 font-normal">

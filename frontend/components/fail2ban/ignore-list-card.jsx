@@ -112,7 +112,7 @@ export function IgnoreListCard({ settings, canManage }) {
       {/* The left editor sets the desktop row height; only this list may shrink. */}
       <Card className="@container/ignore-list min-w-0 gap-0 py-0 xl:@4xl/fail2ban-rules:h-0 xl:@4xl/fail2ban-rules:min-h-full">
         <CardHeader className="flex-none border-b px-5 py-4">
-          <CardTitle className="flex flex-wrap items-center gap-2 font-semibold">
+          <CardTitle icon={ShieldCheck} className="flex flex-wrap items-center gap-2 font-semibold">
             {t("settings.ignore")}
             <Badge variant="outline" className="font-normal">{t("settings.entriesCount", { count: ips.length })}</Badge>
           </CardTitle>

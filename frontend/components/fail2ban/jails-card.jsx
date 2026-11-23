@@ -3,7 +3,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { jailLabel } from "@/lib/fail2ban/jail-label";
 import { toast } from "sonner";
-import { ShieldAlert, TriangleAlert, Info, Loader2 } from "lucide-react";
+import { ShieldAlert, TriangleAlert, Info, Loader2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { ensureIgnored, settingsPayload } from "@/lib/fail2ban/settings-payload";
@@ -126,7 +126,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
     <>
       <Card>
         <CardHeader className="grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
-          <CardTitle className="col-start-1 row-start-1 min-w-0 break-words font-semibold">
+          <CardTitle icon={Lock} className="col-start-1 row-start-1 min-w-0 break-words font-semibold">
             {t("jails.title")}
           </CardTitle>
           <button

@@ -1,5 +1,6 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -77,9 +78,12 @@ export function BannedAddressesCard({ appId, bans, jailName = null, canManage })
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <CardContent className="space-y-4 px-5 py-4">
-        <div className="space-y-1">
-          <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
-          <p className="text-sm text-muted-foreground">{t(serverWide ? "subtitleServerWide" : "subtitle")}</p>
+        <div className="flex items-start gap-3">
+          <HeadIcon icon={Ban} />
+          <div className="min-w-0 space-y-1">
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{t(serverWide ? "subtitleServerWide" : "subtitle")}</p>
+          </div>
         </div>
 
         {bans.failed ? (

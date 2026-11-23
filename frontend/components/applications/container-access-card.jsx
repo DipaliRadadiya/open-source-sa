@@ -195,7 +195,7 @@ export function ContainerAccessCard({
     <Card className={className} aria-labelledby="container-access-heading">
       {/* The dashboard card head: title with its state, the one action on the right. */}
       <CardHeader className="items-center border-b">
-        <CardTitle id="container-access-heading" as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={SquareTerminal} id="container-access-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           {access ? (
             <span className="text-xs font-normal text-muted-foreground" data-testid="container-access-state">

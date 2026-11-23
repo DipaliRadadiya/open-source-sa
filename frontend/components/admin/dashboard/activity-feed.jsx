@@ -1,3 +1,4 @@
+import { HeadIcon } from "@/components/ui/head-icon";
 import Link from "@/components/ui/app-link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, CircleAlert, History } from "lucide-react";
@@ -32,10 +33,13 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
   return (
     // h-full: the card sits inside a col-span wrapper that stretches, not the card.
     <Card className="flex h-full flex-col gap-0 overflow-hidden py-0">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-5 py-3.5">
-        <h2 className="text-[15px] leading-snug font-semibold tracking-tight">
-          {t("title")}
-        </h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <HeadIcon icon={History} />
+          <h2 className="text-[15px] leading-snug font-semibold tracking-tight">
+            {t("title")}
+          </h2>
+        </div>
         {/* A failed stats read shows "—", never "0 today". */}
         <p className="text-sm text-muted-foreground">
           {todayKnown ? t("today", { count: todayCount }) : "—"}

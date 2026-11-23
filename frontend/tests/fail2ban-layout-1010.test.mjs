@@ -427,7 +427,7 @@ test("actual rendered toolbar DOM respects Refresh/log/Unban all/Ban under every
     const context = {
       require, module: { exports: {} }, CardHeader: div, CardTitle: div, CardDescription: div, Button,
       Link: ({children, ...props}) => React.createElement("a", props, children),
-      ScrollText: () => null, ReasonTooltip: ({children}) => children,
+      ScrollText: () => null, Ban: () => null, ReasonTooltip: ({children}) => children,
       RefreshButton: () => React.createElement("button", {}, "Refresh"),
       BanIpDialog: ({canManage}) => React.createElement("button", {disabled: !canManage}, "Ban"),
       logHref, banned: Array(count), canManage, jails: [], yourIp: null, serverIp: null,

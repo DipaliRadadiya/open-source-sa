@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowRightLeft, Loader2, Play, RotateCw, Square } from "lucide-react";
+import { ArrowRightLeft, Loader2, Play, RotateCw, Square, Power } from "lucide-react";
 import { controlApplicationProcess, getApplicationProcess } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -153,7 +153,7 @@ export function ProcessCard({ application, canManage = false, deploying = false,
     <Card id="process" className={cn("@container/process scroll-mt-[calc(var(--app-chrome,4rem)_+_1rem)]", className)}>
       {/* State beside the title and buttons in the header, like the other cards on this page. */}
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={Power} as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           {/* `muted` is the STATE pill; `secondary` below is a label. */}
           <Badge variant={STATE_VARIANT[state] ?? "muted"} className="font-normal">

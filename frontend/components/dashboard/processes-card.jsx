@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
     // Steel UI: title and actions over a hairline, the description opens the body (prototype).
     <Card className={cn("gap-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
       <CardHeader className="flex flex-col gap-3 space-y-0 border-b sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle as="h2" className="flex items-center gap-2">
+        <CardTitle icon={Cpu} as="h2" className="flex items-center gap-2">
           {t("processes.title")}
         </CardTitle>
         <div className="flex items-center gap-2">

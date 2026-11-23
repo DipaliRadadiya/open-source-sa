@@ -1,5 +1,6 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useCallback, useEffect, useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
 import Link from "@/components/ui/app-link";
@@ -112,7 +113,8 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
     <>
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
+            <HeadIcon icon={GitBranch} />
             <h2 className="text-[15px] font-semibold tracking-tight">
               {t("accounts.title")}
             </h2>

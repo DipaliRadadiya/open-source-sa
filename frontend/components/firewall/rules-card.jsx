@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { SearchX, ShieldX, Trash2, Shield } from "lucide-react";
+import { SearchX, ShieldX, Trash2, Shield, BrickWall } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import { unreachablePorts } from "@/lib/firewall/listening";
@@ -317,7 +317,7 @@ export function RulesCard({
 
       <Card>
         <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>{t("rules.title")}</CardTitle>
+          <CardTitle icon={BrickWall}>{t("rules.title")}</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <RefreshButton />
             <HistoryDialog everyone={historyForEveryone} variant="neutral" />

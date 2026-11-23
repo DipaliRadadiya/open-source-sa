@@ -1,5 +1,6 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
@@ -188,11 +189,14 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
       {/* Kept apart from Push so the two are never one misclick apart. */}
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-          <div className="min-w-60 flex-1 space-y-1">
-            <h2 className="text-[15px] font-semibold tracking-tight">{t("remove.title")}</h2>
-            <p className="text-sm break-words text-muted-foreground">
-              {t("remove.body", { domain: staging.domain, production: production.domain })}
-            </p>
+          <div className="flex min-w-60 flex-1 items-start gap-3">
+            <HeadIcon icon={Trash2} tone="destructive" />
+            <div className="min-w-0 flex-1 space-y-1">
+              <h2 className="text-[15px] font-semibold tracking-tight">{t("remove.title")}</h2>
+              <p className="text-sm break-words text-muted-foreground">
+                {t("remove.body", { domain: staging.domain, production: production.domain })}
+              </p>
+            </div>
           </div>
           <ReasonTooltip reason={canDelete ? null : tApp("noPermission")}>
             <Button variant="destructive" className="shrink-0" disabled={!canDelete} onClick={() => setRemoving(true)}>

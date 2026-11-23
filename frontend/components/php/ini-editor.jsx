@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, RotateCcw, TriangleAlert } from "lucide-react";
+import { Loader2, RotateCcw, TriangleAlert, FileCode2 } from "lucide-react";
 import { readPhpIni, savePhpIni } from "@/lib/api/php";
 import { phpIniResponseSchema } from "@/lib/schemas/php";
 import { Button } from "@/components/ui/button";
@@ -139,7 +139,7 @@ export function IniEditor({ version, canManage }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3">{t("phpIni.title", { version })}</CardTitle>
+        <CardTitle icon={FileCode2} as="h3">{t("phpIni.title", { version })}</CardTitle>
         {readOnly ? null : <CardDescription>{tPhp("ini.description")}</CardDescription>}
       </CardHeader>
 

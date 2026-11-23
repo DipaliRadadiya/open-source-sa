@@ -1,3 +1,4 @@
+import { History } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,7 +53,7 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
     // Rows reach the card edges, like the cleanup list above.
     <Card className="gap-0 overflow-hidden pb-0">
       <CardHeader className="items-center pb-4">
-        <CardTitle>{t("runs.title")}</CardTitle>
+        <CardTitle icon={History}>{t("runs.title")}</CardTitle>
         <CardAction className="row-span-1 self-center">
           <RefreshButton />
         </CardAction>

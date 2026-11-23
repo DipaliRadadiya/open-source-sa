@@ -1,3 +1,4 @@
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useTranslations } from "next-intl";
 import { Loader2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -90,16 +91,7 @@ export function Section({
       {title ? (
         // A title alone centres on the icon; with a description both lines start at its top.
         <div className={cn("flex min-w-0 gap-3 border-b bg-[var(--card-head)] px-5 py-4", description ? "items-start" : "items-center")}>
-          {Icon ? (
-            <span
-              className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-[2px] border",
-                destructive ? "border-destructive/45 bg-destructive/10 text-destructive" : "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary",
-              )}
-            >
-              <Icon className="size-[18px]" aria-hidden />
-            </span>
-          ) : null}
+          <HeadIcon icon={Icon} tone={destructive ? "destructive" : "default"} />
           <div className="min-w-0 flex-1">
             <h3 className="flex flex-wrap items-center gap-2 text-[15px] font-semibold tracking-tight">
               {title}

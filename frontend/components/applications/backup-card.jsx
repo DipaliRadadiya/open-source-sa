@@ -106,7 +106,7 @@ export function BackupCard({
       {/* State beside the title and the buttons in the header, like the other cards here:
           a footer strip held one button and was mostly empty (7 Oct). */}
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={Archive} as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           {/* A run in flight outranks the standing state, which is stale once it starts. */}
           {failed ? null : inProgress ? (

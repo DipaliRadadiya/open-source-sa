@@ -28,7 +28,7 @@ export async function DatabaseCard({
   return (
     <Card className={className}>
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={Database} as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           {failed ? null : warn ? (
             <Badge variant="warning" className="gap-1.5 font-normal">

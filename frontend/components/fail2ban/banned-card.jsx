@@ -227,7 +227,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 space-y-0 xl:flex-row xl:items-center xl:justify-between">
-        <CardTitle className="min-w-0 font-semibold">{t("banned.title")}</CardTitle>
+        <CardTitle icon={Ban} className="min-w-0 font-semibold">{t("banned.title")}</CardTitle>
         <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
           <RefreshButton />
           {/* The log shows what triggered a ban. */}

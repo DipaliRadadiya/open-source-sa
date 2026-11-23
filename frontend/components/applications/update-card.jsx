@@ -4,16 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import {
-  ArrowUpCircle,
-  CheckCircle2,
-  CircleAlert,
-  CircleCheck,
-  History,
-  Loader2,
-  PackageCheck,
-  RefreshCw,
-} from "lucide-react";
+import { ArrowUpCircle, CheckCircle2, CircleAlert, CircleCheck, History, Loader2, PackageCheck, RefreshCw, CircleArrowUp } from "lucide-react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { apiMessage } from "@/lib/api/error-message";
 import { fetchApplicationUpdate, startApplicationUpdate } from "@/lib/api/application-update";
@@ -193,7 +184,7 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
   return (
     <Card>
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={CircleArrowUp} as="h2" className="flex flex-wrap items-center gap-2">
           {t("title", { app: appTitle })}
           <Badge variant={badge.variant} className="gap-1.5 font-normal">
             <BadgeIcon className={badge.spin ? "size-3 animate-spin" : "size-3"} />

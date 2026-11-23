@@ -1,3 +1,4 @@
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useTranslations } from "next-intl";
 import { ChartSpline } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ export function ChartPill({ dotClassName, label, value, note }) {
 }
 
 export function LiveChartCard({
+  icon = null,
   // h3 inside the "Last 24 hours" section; the live pair stands alone, so h2.
   headingLevel = "h3",
   // The live pair is shorter than the 24h charts (the redesign); the wait matches it.
@@ -72,7 +74,8 @@ export function LiveChartCard({
             as={headingLevel}
             className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2"
           >
-            <span className="flex shrink-0 items-center gap-2.5">
+            <span className="flex shrink-0 items-center gap-3">
+              <HeadIcon icon={icon} />
               {/* nowrap: otherwise the heading is the only shrinkable item beside shrink-0 pills. */}
               <span className="whitespace-nowrap">{title}</span>
             </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -88,7 +89,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
       {/* Same header shape as the Git integration card. The add button only
           shows once there is a list; the empty state carries its own. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-start gap-3">
+          <HeadIcon icon={HardDrive} />
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="text-[15px] font-semibold tracking-tight">{t("card.title")}</h2>

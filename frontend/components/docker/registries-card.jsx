@@ -1,5 +1,6 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -7,21 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import {
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  ExternalLink,
-  KeyRound,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  PlugZap,
-  Plus,
-  Server,
-  Trash2,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, ExternalLink, KeyRound, Loader2, MoreHorizontal, Pencil, PlugZap, Plus, Server, Trash2, XCircle } from "lucide-react";
 import {
   createRegistry,
   deleteRegistry,
@@ -126,9 +113,12 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     <>
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div>
-            <h2 className="text-[15px] font-semibold tracking-tight">{t("listTitle")}</h2>
-            <p className="text-sm text-muted-foreground">{t("hint")}</p>
+          <div className="flex min-w-0 items-start gap-3">
+            <HeadIcon icon={KeyRound} />
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold tracking-tight">{t("listTitle")}</h2>
+              <p className="text-sm text-muted-foreground">{t("hint")}</p>
+            </div>
           </div>
           {/* Empty, Add sits in the empty state instead of twice. */}
           {initialRegistries.length > 0 ? addButton : null}

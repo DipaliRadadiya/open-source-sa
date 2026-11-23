@@ -1,5 +1,6 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -195,6 +196,7 @@ export function DockerResourcesPanel({
   return (
     <div className="space-y-6">
       <ListSection
+        icon={Network}
         title={t("networks.title")}
         count={networks.length}
         description={t("networks.hint")}
@@ -236,6 +238,7 @@ export function DockerResourcesPanel({
       </ListSection>
 
       <ListSection
+        icon={HardDrive}
         title={t("volumes.title")}
         count={initialVolumes.length}
         description={t("volumes.hint")}
@@ -317,16 +320,19 @@ export function DockerResourcesPanel({
 }
 
 /** The card head every list in the panel has: title, count and line; action right. */
-function ListSection({ title, count, description, action, footer, children }) {
+function ListSection({ title, icon = null, count, description, action, footer, children }) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          <HeadIcon icon={icon} />
+          <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
             {title}
             <span className="text-xs font-normal tabular-nums text-muted-foreground">{count}</span>
           </h2>
           <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
         </div>
         {action}
       </div>

@@ -1,25 +1,13 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useEffect, useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import {
-  CircleAlert,
-  CircleSlash,
-  Database,
-  History,
-  Loader2,
-  PauseCircle,
-  Pencil,
-  PlayCircle,
-  PowerOff,
-  ShieldAlert,
-  ShieldCheck,
-  Archive,
-} from "lucide-react";
+import { CircleAlert, CircleSlash, Database, History, Loader2, PauseCircle, Pencil, PlayCircle, PowerOff, ShieldAlert, ShieldCheck, Archive } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { EmptyArt } from "@/components/data-table/empty-art";
 import { cn } from "@/lib/utils";
@@ -646,7 +634,8 @@ function RecentBackups({
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
-      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3.5">
+      <div className="flex flex-wrap items-center gap-3 border-b px-5 py-3.5">
+        <HeadIcon icon={History} />
         {/* The count only shows when the list is capped at the newest five. */}
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <h3 className="text-[15px] font-semibold tracking-tight">{t("recentTitle")}</h3>

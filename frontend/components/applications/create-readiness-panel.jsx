@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleAlert } from "lucide-react";
+import { CheckCircle2, CircleAlert, ListChecks } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, 
       <CardHeader className="shrink-0 space-y-1 border-b py-4">
         {/* The title keeps its line; the badge drops below it when the column is narrow. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-          <CardTitle as="h2" className="shrink-0">{t("guided.stageReview")}</CardTitle>
+          <CardTitle icon={ListChecks} as="h2" className="shrink-0">{t("guided.stageReview")}</CardTitle>
           <Badge variant={complete ? "success" : "muted"} className="font-normal">
             {complete ? t("readiness.ready") : t("readiness.needsAttention")}
           </Badge>

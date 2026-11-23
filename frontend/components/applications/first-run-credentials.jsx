@@ -109,7 +109,7 @@ export function FirstRunCredentials({ application, className }) {
     <Card className={className}>
       {/* The application page's card head: the title, and the card's one button beside it. */}
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2">{t("title")}</CardTitle>
+        <CardTitle icon={KeyRound} as="h2">{t("title")}</CardTitle>
         <CardAction className="row-span-1 self-center">
           {/* Enabled only once the values are on screen. A dismiss button beside a
               row of spinners invites the one click that cannot be undone. */}

@@ -107,7 +107,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
   return (
     <Card className="@container/ext">
       <CardHeader>
-        <CardTitle>{t("extensions.title")}</CardTitle>
+        <CardTitle icon={Puzzle}>{t("extensions.title")}</CardTitle>
         <CardDescription>
           {t("extensions.summary", { on: onCount, total: changeable.length })}
         </CardDescription>

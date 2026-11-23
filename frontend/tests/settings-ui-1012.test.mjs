@@ -12,7 +12,11 @@ test("every settings card shows its icon, and colour lives in the chip, not the 
   const row = read("components/settings/setting-row.jsx");
   assert.match(row, /export function Section\(\{\s*icon: Icon,/);
   // Steel UI (14 Oct): the chip is a toned square; the colour still lives in the chip.
-  assert.match(row, /destructive \? "border-destructive\/45 bg-destructive\/10 text-destructive" : "border-primary\/45 bg-primary\/10/);
+  // 23 Nov: the chip moved to components/ui/head-icon.jsx so every card heading shares it.
+  assert.match(row, /<HeadIcon icon=\{Icon\} tone=\{destructive \? "destructive" : "default"\} \/>/);
+  const chip = read("components/ui/head-icon.jsx");
+  assert.match(chip, /default: "border-primary\/45 bg-primary\/10/);
+  assert.match(chip, /destructive: "border-destructive\/45 bg-destructive\/10 text-destructive"/);
   assert.doesNotMatch(row, /destructive && "text-destructive"/, "a red title reads as an error");
 });
 

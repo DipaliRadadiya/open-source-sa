@@ -1,6 +1,6 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
-import { CircleAlert, ChevronRight } from "lucide-react";
+import { CircleAlert, ChevronRight, Server } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +103,7 @@ export async function ServerInfoCard({ facts, health, engines = [], enginesFaile
   return (
     <Card className={cn("gap-0 pb-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
       <CardHeader className="border-b">
-        <CardTitle as="h2">{t("info.title")}</CardTitle>
+        <CardTitle icon={Server} as="h2">{t("info.title")}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {/* Eight facts so the four-across rows are always full. */}

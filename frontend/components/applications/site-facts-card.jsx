@@ -5,23 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  CalendarClock,
-  FileCode,
-  FolderTree,
-  HardDrive,
-  Hexagon,
-  KeyRound,
-  Package,
-  Loader2,
-  Pencil,
-  Plug,
-  MoreHorizontal,
-  Ruler,
-  ScanSearch,
-  Tags,
-  User,
-} from "lucide-react";
+import { CalendarClock, FileCode, FolderTree, HardDrive, Hexagon, KeyRound, Package, Loader2, Pencil, Plug, MoreHorizontal, Ruler, ScanSearch, Tags, User, Info } from "lucide-react";
 import { detectApplicationSiteType, measureApplicationSize } from "@/lib/api/applications";
 import { getSystemUserDetail } from "@/lib/api/system-users";
 import {
@@ -568,7 +552,7 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle as="h2" className="flex items-center gap-2">
+        <CardTitle icon={Info} as="h2" className="flex items-center gap-2">
           {t("facts.title")}
         </CardTitle>
         <CardDescription>{t("facts.description")}</CardDescription>

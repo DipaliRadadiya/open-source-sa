@@ -2,7 +2,7 @@
 
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
-import { AppWindow, ChevronRight } from "lucide-react";
+import { AppWindow, ChevronRight, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,7 +19,7 @@ export function VersionsCard({ namespace, columns, gridClass, action, footnote, 
     <Card className="@container/versions gap-0 overflow-hidden pb-0">
       {/* Without a description the title and the button share one centred row. */}
       <CardHeader className={cn("pb-4", !described && "items-center")}>
-        <CardTitle as="h2">{t("table.title")}</CardTitle>
+        <CardTitle icon={Layers} as="h2">{t("table.title")}</CardTitle>
         {described ? (
           <CardDescription className="@max-sm/card-header:col-span-full">{t("table.description")}</CardDescription>
         ) : null}

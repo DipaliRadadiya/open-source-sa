@@ -102,7 +102,7 @@ export function TrashPanel({
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-48 space-y-1">
-            <CardTitle>{t("title")}</CardTitle>
+            <CardTitle icon={Trash2}>{t("title")}</CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
             {/* The retention window is per-install and must never be hardcoded. */}
             {trash.length > 0 && (totalSize != null || retentionDays) ? (

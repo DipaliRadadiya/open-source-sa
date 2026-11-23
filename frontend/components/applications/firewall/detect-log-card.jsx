@@ -1,5 +1,6 @@
+import { HeadIcon } from "@/components/ui/head-icon";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { FileQuestion, ShieldCheck } from "lucide-react";
+import { FileQuestion, ShieldCheck, ScanSearch } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,8 @@ export async function DetectLogCard({ rows = [], failed = false }) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-        <div className="flex min-w-48 flex-1 items-center gap-2.5">
+        <div className="flex min-w-48 flex-1 items-start gap-3">
+          <HeadIcon icon={ScanSearch} />
           <div className="min-w-0">
             <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
             <p className="text-sm text-muted-foreground">{t("subtitle")}</p>

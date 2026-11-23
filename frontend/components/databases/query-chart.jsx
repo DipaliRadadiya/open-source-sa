@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, ArrowUp, Minus } from "lucide-react";
+import { Activity, ArrowUp, Minus, ChartLine } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
@@ -181,7 +181,7 @@ export function QueryChart({ metrics = [], timeZone }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h2">{t("chartTitle")}</CardTitle>
+        <CardTitle icon={ChartLine} as="h2">{t("chartTitle")}</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-3">

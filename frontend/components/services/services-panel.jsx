@@ -1,8 +1,9 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { CircleCheck, CircleStop, Clock, TriangleAlert } from "lucide-react";
+import { CircleCheck, CircleStop, Clock, TriangleAlert, Download, Blocks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { listServices } from "@/lib/api/services";
 import { servicesResponseSchema } from "@/lib/schemas/service";
@@ -146,6 +147,8 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 
       {attention.length > 0 ? (
         <Section
+          icon={TriangleAlert}
+          iconTone="destructive"
           title={t("sections.attention.title")}
           hint={t("sections.attention.hint")}
           action={refreshIn === "attention" ? <RefreshButton /> : null}
@@ -164,6 +167,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 
       {installing.length > 0 ? (
         <Section
+          icon={Download}
           title={t("sections.installing.title")}
           hint={t("sections.installing.hint")}
           action={refreshIn === "installing" ? <RefreshButton /> : null}
@@ -183,6 +187,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           when there are no services at all, to explain an otherwise blank page. */}
       {showRunning ? (
       <Section
+        icon={Blocks}
         title={t("sections.running.title")}
         hint={healthy ? healthyLine : null}
         action={<RefreshButton />}
@@ -222,10 +227,11 @@ const TILE_COLUMNS = {
   4: "@min-[52rem]/tiles:grid-cols-4",
 };
 
-function Section({ title, hint, action, children }) {
+function Section({ title, hint, action, icon = null, iconTone = "default", children }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">
       <div className={cn("flex gap-3 px-4 pt-4 pb-3", hint ? "items-start" : "items-center")}>
+        <HeadIcon icon={icon} tone={iconTone} />
         <div className="min-w-0 flex-1 space-y-1">
           <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
           {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}

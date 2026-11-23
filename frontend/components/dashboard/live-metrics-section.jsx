@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations, useFormatter } from "next-intl";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { clockFormatter } from "@/lib/format/time";
@@ -125,7 +125,7 @@ export function LiveMetricsSection({ timeZone, history = [], between = null }) {
       <Card className="gap-0 pb-0 [--card-spacing:--spacing(4)]">
         {/* Stacked on a phone: beside the title the pill squeezed it onto two lines. */}
         <CardHeader className="border-b max-sm:grid-cols-1">
-          <CardTitle as="h2">
+          <CardTitle icon={Activity} as="h2">
             {t("liveLabel")}
           </CardTitle>
           <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-2 max-sm:justify-self-start">

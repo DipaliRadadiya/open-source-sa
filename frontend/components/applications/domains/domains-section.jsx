@@ -4,22 +4,7 @@ import { useRef, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import {
-  Globe2,
-  Plus,
-  MoreHorizontal,
-  RotateCw,
-  Pencil,
-  Star,
-  Trash2,
-  ShieldAlert,
-  ShieldCheck,
-  ShieldOff,
-  CheckCircle2,
-  CircleDashed,
-  ArrowRight,
-  ExternalLink,
-} from "lucide-react";
+import { Globe2, Plus, MoreHorizontal, RotateCw, Pencil, Star, Trash2, ShieldAlert, ShieldCheck, ShieldOff, CheckCircle2, CircleDashed, ArrowRight, ExternalLink, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   verifyDomain,
@@ -212,7 +197,7 @@ export function DomainsSection({
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>
+        <CardTitle icon={Globe}>
           {t("sectionTitle")}
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">

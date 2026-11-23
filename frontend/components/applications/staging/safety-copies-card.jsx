@@ -1,7 +1,8 @@
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { DatabaseBackup, History, Loader2 } from "lucide-react";
+import { DatabaseBackup, History, Loader2, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -43,9 +44,12 @@ export function SafetyCopiesCard({ appId, copies, ns = "safetyCopies" }) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <CardContent className="space-y-3 px-5 py-4">
-        <div className="space-y-1">
-          <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <div className="flex items-start gap-3">
+          <HeadIcon icon={LifeBuoy} />
+          <div className="min-w-0 space-y-1">
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          </div>
         </div>
         <ul className="divide-y rounded-lg border">
           {copies.map((copy) => (

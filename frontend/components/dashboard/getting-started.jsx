@@ -31,7 +31,7 @@ export async function GettingStarted({ canCreate = false, ip = null }) {
           {done}/{STEPS.length}
         </UsageRing>
         <div className="min-w-0">
-          <CardTitle as="h2">{t("title")}</CardTitle>
+          <CardTitle icon={Rocket} as="h2">{t("title")}</CardTitle>
           <CardDescription className="text-sm">{t("progress", { done, total: STEPS.length })}</CardDescription>
         </div>
       </CardHeader>

@@ -1,9 +1,10 @@
 "use client";
 
+import { HeadIcon } from "@/components/ui/head-icon";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { MoreHorizontal, ShieldPlus, TerminalSquare, Trash2 } from "lucide-react";
+import { MoreHorizontal, ShieldPlus, TerminalSquare, Trash2, ShieldQuestion } from "lucide-react";
 import { adoptUnmanagedRule, deleteUnmanagedRule } from "@/lib/api/firewall";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -53,12 +54,15 @@ export function UnmanagedRulesCard({ rules, canManage }) {
     <>
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-start gap-3">
+            <HeadIcon icon={ShieldQuestion} />
+            <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
               {t("title")}
               <span className="text-xs font-normal tabular-nums text-muted-foreground">{rules.length}</span>
             </h2>
             <p className="text-sm text-muted-foreground">{t("description")}</p>
+            </div>
           </div>
         </div>
         <ul className="divide-y">

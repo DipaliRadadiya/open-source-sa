@@ -8,15 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import {
-  ArrowRight,
-  Check,
-  Copy,
-  Loader2,
-  Lock,
-  TriangleAlert,
-  X,
-} from "lucide-react";
+import { ArrowRight, Check, Copy, Loader2, Lock, TriangleAlert, X, ListChecks, CopyCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import {
@@ -251,7 +243,7 @@ export function CloneApplicationPanel({
               {/* Same card shape as the rest of the panel: a title, then a rule.
                   No icon chips on titles (7 Oct). */}
               <CardHeader className="border-b">
-                <CardTitle as="h2">{t("create.title")}</CardTitle>
+                <CardTitle icon={Copy} as="h2">{t("create.title")}</CardTitle>
               </CardHeader>
 
               <Form {...form}>
@@ -454,7 +446,7 @@ function ImpactCard({ siteType, application, sourceProtected }) {
   return (
     <PanelCard>
       <CardHeader className="border-b">
-        <CardTitle as="h2">{t("title")}</CardTitle>
+        <CardTitle icon={ListChecks} as="h2">{t("title")}</CardTitle>
       </CardHeader>
       {/* Two lines, label then the items running across: as two columns of lists the
           card was mostly empty space (7 Oct). */}
@@ -596,7 +588,7 @@ function ExistingCopies({ copies }) {
   return (
     <PanelCard>
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2">{t("title", { count: copies.length })}</CardTitle>
+        <CardTitle icon={CopyCheck} as="h2">{t("title", { count: copies.length })}</CardTitle>
         <CardAction className="row-span-1 self-center">
           <RefreshButton className="size-8" />
         </CardAction>

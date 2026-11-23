@@ -1,5 +1,6 @@
 "use client";
 
+import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
@@ -91,7 +92,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Card className="@container/ban-rules min-w-0 gap-0 py-0">
         <CardHeader className="border-b px-5 py-4">
-          <CardTitle>{t("settings.title")}</CardTitle>
+          <CardTitle icon={SlidersHorizontal}>{t("settings.title")}</CardTitle>
           <CardDescription>{t("settings.description")}</CardDescription>
         </CardHeader>
 

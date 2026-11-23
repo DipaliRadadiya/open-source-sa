@@ -207,8 +207,8 @@ test("both clocks are named, not just the older one", () => {
    * and left the block above unnamed — so the page read as some charts, then a
    * section. The live group gets a peer heading.
    */
-  // No leading icon since the redesign: card titles are words, as in the prototype.
-  assert.match(section, /<CardTitle as="h2">\s*\{t\("liveLabel"\)\}/);
+  // 23 Nov (Krishna): every card heading carries its icon chip again, dashboard included.
+  assert.match(section, /<CardTitle icon=\{Activity\} as="h2">\s*\{t\("liveLabel"\)\}/);
   assert.match(section, /title=\{t\("historyLabel"\)\}/);
   // Steel UI (14 Oct): the section label is mono caps, still an h2.
   assert.match(section, /<h2 className="font-mono text-xs font-medium tracking-\[0\.12em\] text-muted-foreground uppercase">/);
@@ -233,7 +233,7 @@ test("the cards inside a section drop to h3", () => {
   }
   assert.match(
     fs.readFileSync("components/dashboard/processes-card.jsx", "utf8"),
-    /<CardTitle as="h2"/,
+    /<CardTitle icon=\{Cpu\} as="h2"/,
   );
 });
 

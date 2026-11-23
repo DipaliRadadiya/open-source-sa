@@ -109,7 +109,7 @@ export function ComposeEditor({
   return (
     <Card>
       <CardHeader className="items-center border-b">
-        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+        <CardTitle icon={FileCode2} as="h2" className="flex flex-wrap items-center gap-2">
           <FileCode2 className="size-4 text-muted-foreground" />
           <span className="font-mono text-[13px]">compose.yml</span>
           <span className="text-xs font-normal tabular-nums text-muted-foreground">

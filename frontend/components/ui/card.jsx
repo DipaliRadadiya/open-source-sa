@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { HeadIcon } from "@/components/ui/head-icon"
 
 // A hairline border and the lowest elevation, so cards sit on the tinted page.
 
@@ -40,6 +41,10 @@ function CardHeader({
 function CardTitle({
   as: Comp = "div",
   className,
+  // The heading's icon chip (components/ui/head-icon.jsx); the description lines up under the text.
+  icon = null,
+  iconTone = "default",
+  children,
   ...props
 }) {
   return (
@@ -47,9 +52,17 @@ function CardTitle({
       data-slot="card-title"
       className={cn(
         "font-heading text-[15px] leading-snug font-semibold tracking-tight group-data-[size=sm]/card:text-sm",
-        className
+        className,
+        icon && "flex flex-nowrap items-center gap-3"
       )}
-      {...props} />
+      {...props}>
+      {icon ? (
+        <>
+          <HeadIcon icon={icon} tone={iconTone} />
+          <span className="flex min-w-0 flex-wrap items-center gap-2">{children}</span>
+        </>
+      ) : children}
+    </Comp>
   );
 }
 
@@ -60,7 +73,8 @@ function CardDescription({
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      // Under the title's text, not under its icon chip (size-9 + gap-3).
+      className={cn("text-sm text-muted-foreground group-has-[[data-slot=head-icon]]/card-header:pl-12", className)}
       {...props} />
   );
 }

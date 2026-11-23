@@ -32,7 +32,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
   return (
     <Card >
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-        <CardTitle as="h2" className="min-w-0">{t("title")}</CardTitle>
+        <CardTitle icon={Bot} as="h2" className="min-w-0">{t("title")}</CardTitle>
         {/* Links, so the range lives in the URL and the server component re-runs. */}
         <div className="flex items-center gap-1">
           <RefreshButton className="me-1 size-8" />
