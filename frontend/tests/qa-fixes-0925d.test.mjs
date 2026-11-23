@@ -89,3 +89,11 @@ test("the extra-config example is one that works, and edit says saving applies n
     assert.doesNotMatch(w.edit.subtitle, /next time|próxima vez|nächste Mal|prochain|次回|следующем|अगली बार/i, l);
   }
 });
+
+// 23 Nov (Krishna): a dialog with nothing left to ask showed an empty band between header and footer.
+test("FormModal drops its body band when every field is conditional and none apply", () => {
+  const src = fs.readFileSync("components/ui/form-modal.jsx", "utf8");
+  assert.match(src, /const hasBody = Children\.toArray\(children\)\.length > 0;/);
+  assert.match(src, /\{hasBody \? \(\s*<div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">/);
+  assert.match(src, /hasBody && "border-t"/);
+});

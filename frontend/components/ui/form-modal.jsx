@@ -1,3 +1,4 @@
+import { Children } from "react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -33,6 +34,10 @@ export function FormModal({
   initialFocus,
   onCloseAutoFocus,
 }) {
+  // Every field can be conditional (e.g. nothing left to ask). An empty body band between
+  // header and footer read as something failing to load (Krishna, 23 Nov), so it goes.
+  const hasBody = Children.toArray(children).length > 0;
+
   const inner = (
     <>
       {/* pe-10 reserves room for the absolutely positioned close button. */}
@@ -56,12 +61,15 @@ export function FormModal({
         </div>
       </DialogHeader>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
-        {children}
-      </div>
+      {hasBody ? (
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+          {children}
+        </div>
+      ) : null}
 
       {footer ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t bg-muted/50 px-6 py-4">
+        // Without a body the header's own bottom rule already separates the two.
+        <div className={cn("flex shrink-0 flex-wrap items-center justify-end gap-2 bg-muted/50 px-6 py-4", hasBody && "border-t")}>
           {footer}
         </div>
       ) : null}
