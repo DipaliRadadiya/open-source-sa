@@ -14,7 +14,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
-import { FACT_LABEL } from "@/lib/theme/facts";
+import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 
 /**
  * The credentials a one-click app generated, shown once, where the user lands.
@@ -134,37 +134,36 @@ export function FirstRunCredentials({ application, className }) {
             <p>{error}</p>
           </Caution>
         ) : (
-          // Flat divided rows, not a bordered box inside the card. In a narrow card the
-          // name sits above its value: side by side, the unbreakable password took the
-          // row and clipped the name ("MYSQL_ROOT_PA…").
-          <ul className="@container/creds divide-y">
-            {rows.map((row) => (
-              <li
-                key={row.key}
-                className="flex flex-col items-start gap-1 py-2.5 @md/creds:flex-row @md/creds:items-center @md/creds:justify-between @md/creds:gap-3"
-              >
-                <span className={row.curated ? `min-w-0 ${FACT_LABEL}` : `min-w-0 truncate ${FACT_LABEL}`}>
-                  {row.label}
-                </span>
-                {secrets ? (
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    {/* Not truncated. A password clipped to fit is a password
-                        somebody transcribes wrongly, and this card exists for
-                        exactly the one reading where that matters. */}
-                    <code className="min-w-0 break-all font-mono text-[13px] font-medium">
-                      {row.value}
-                    </code>
-                    <CopyButton value={row.value ?? ""} />
+          // Label over value in framed cells, side by side once the card is wide enough
+          // (Krishna, 23 Nov: username and password on one line, there is room). A narrow
+          // card stacks them, so the unbreakable password never clips its name.
+          <div className={FACT_FRAME}>
+            <ul className={`${FACT_GRID} grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]`}>
+              {rows.map((row) => (
+                <li key={row.key} className={`${FACT_CELL} space-y-1`}>
+                  <span className={row.curated ? `block ${FACT_LABEL}` : `block truncate ${FACT_LABEL}`}>
+                    {row.label}
                   </span>
-                ) : (
-                  <Loader2
-                    className="size-3.5 shrink-0 animate-spin text-muted-foreground"
-                    aria-label={t("loading")}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
+                  {secrets ? (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {/* Not truncated. A password clipped to fit is a password
+                          somebody transcribes wrongly, and this card exists for
+                          exactly the one reading where that matters. */}
+                      <code className="min-w-0 break-all font-mono text-[13px] font-medium">
+                        {row.value}
+                      </code>
+                      <CopyButton value={row.value ?? ""} />
+                    </span>
+                  ) : (
+                    <Loader2
+                      className="size-3.5 shrink-0 animate-spin text-muted-foreground"
+                      aria-label={t("loading")}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <p className="border-t pt-3 text-xs text-muted-foreground">{t("laterHint")}</p>
