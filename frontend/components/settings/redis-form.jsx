@@ -78,6 +78,10 @@ export function RedisForm({ redis, canManage, changedBy }) {
       ? formatBytes(redis.memory_used, format)
       : (localizeSizeText(redis?.memory_used_human, format) ?? null);
 
+  // Refused by the API; listed only when it is what the server runs now, and then flagged.
+  const unsafe = redis?.unsafe_policies ?? [];
+  const policies = REDIS_POLICIES.filter((policy) => !unsafe.includes(policy) || policy === defaults.maxmemory_policy);
+
   const form = useForm({
     resolver: zodResolver(redisFormSchema),
     mode: "onBlur",
@@ -106,6 +110,12 @@ export function RedisForm({ redis, canManage, changedBy }) {
   }
 
   async function onSubmit(values) {
+    // Said before sending: the 422 named a field the person never touched (QA, 24 Nov).
+    if (unsafe.includes(values.maxmemory_policy)) {
+      form.setError("maxmemory_policy", { type: "manual", message: t("redis.unsafePolicy") });
+      scrollToFirstError();
+      return;
+    }
     try {
       // An empty password field means "leave it alone", not "clear it" — the
       // API only touches the password when one is sent.
@@ -239,7 +249,11 @@ export function RedisForm({ redis, canManage, changedBy }) {
               control={form.control}
               name="maxmemory_policy"
               render={({ field }) => (
-                <Row label={t("redis.policy")} hint={t("redis.policyHint")}>
+                <Row
+                  label={t("redis.policy")}
+                  hint={t("redis.policyHint")}
+                  error={unsafe.includes(field.value) ? t("redis.unsafePolicy") : undefined}
+                >
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
@@ -253,7 +267,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
                     </FormControl>
                     {/* Plain words first; Redis's own name after, for anyone matching docs. */}
                     <SelectContent>
-                      {REDIS_POLICIES.map((policy) => (
+                      {policies.map((policy) => (
                         <SelectItem key={policy} value={policy}>
                           {t(`redis.policies.${policy}`)}
                           {/* Only in the open list: in the closed box it pushed the label onto two lines.

@@ -2292,7 +2292,8 @@
           "volatile-lfu": "Am seltensten genutzte Schlüssel mit Ablaufzeit entfernen",
           "volatile-random": "Zufällige Schlüssel mit Ablaufzeit entfernen",
           "volatile-ttl": "Schlüssel entfernen, die am frühesten ablaufen"
-        }
+        },
+        "unsafePolicy": "Diese Wahl kann die wartenden Aufträge des Panels löschen, wenn Redis voll ist, daher lässt sie sich nicht speichern. Wählen Sie eine andere."
       },
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "passwordNotManageable": "Bei dieser Installation lässt sich das Redis-Passwort nicht im Panel ändern. Es muss auf dem Server geändert werden."

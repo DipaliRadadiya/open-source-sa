@@ -124,6 +124,8 @@ export const rebootSchedulePresetsSchema = z.object({
 export const redisSettingsSchema = z.object({
   maxmemory: z.string(),
   maxmemory_policy: z.string(),
+  // Policies the API refuses (allkeys-* can evict the panel's queued jobs); not offered.
+  unsafe_policies: z.array(z.string()).optional().default([]),
   // `null` means the config could not be read, NOT "no password is set".
   // Must stay nullable or the whole settings response fails.
   has_password: z.boolean().nullable(),

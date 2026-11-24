@@ -2292,7 +2292,8 @@
           "volatile-lfu": "Remover as chaves com expiração menos usadas",
           "volatile-random": "Remover chaves aleatórias com expiração",
           "volatile-ttl": "Remover as chaves mais próximas de expirar"
-        }
+        },
+        "unsafePolicy": "Esta opção pode apagar as tarefas em fila do painel quando o Redis enche, por isso não pode ser guardada. Escolha outra."
       },
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "passwordNotManageable": "Nesta instalação, a senha do Redis não pode ser alterada no painel. Precisa ser alterada no servidor."

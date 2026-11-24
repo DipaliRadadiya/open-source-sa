@@ -2292,7 +2292,8 @@
           "volatile-lfu": "Remove least often used keys that expire",
           "volatile-random": "Remove random keys that expire",
           "volatile-ttl": "Remove the keys closest to expiring"
-        }
+        },
+        "unsafePolicy": "This choice can delete the panel's queued jobs when Redis is full, so it can't be saved. Pick another one."
       },
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
       "passwordNotManageable": "The Redis password can't be changed from the panel on this install. It has to be changed on the server."

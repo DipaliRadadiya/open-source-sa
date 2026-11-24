@@ -2292,7 +2292,8 @@
           "volatile-lfu": "Eliminar claves con caducidad menos usadas",
           "volatile-random": "Eliminar al azar claves con caducidad",
           "volatile-ttl": "Eliminar las claves más próximas a caducar"
-        }
+        },
+        "unsafePolicy": "Esta opción puede borrar las tareas en cola del panel cuando Redis se llena, así que no se puede guardar. Elige otra."
       },
       "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda.",
       "passwordNotManageable": "En esta instalación, la contraseña de Redis no se puede cambiar desde el panel. Hay que cambiarla en el servidor."

@@ -2292,7 +2292,8 @@
           "volatile-lfu": "Supprimer les clés avec expiration les moins utilisées",
           "volatile-random": "Supprimer au hasard des clés avec expiration",
           "volatile-ttl": "Supprimer les clés les plus proches de l’expiration"
-        }
+        },
+        "unsafePolicy": "Ce choix peut supprimer les tâches en attente du panneau quand Redis est plein, il ne peut donc pas être enregistré. Choisissez-en un autre."
       },
       "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "passwordNotManageable": "Sur cette installation, le mot de passe Redis ne peut pas être changé depuis le panneau. Il faut le changer sur le serveur."
