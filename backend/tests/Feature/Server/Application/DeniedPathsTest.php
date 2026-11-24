@@ -223,3 +223,49 @@ it('uses `http2 on;` on an nginx that has it, and the old listen flag on one tha
     'nginx 1.25.1' => ['1.25.1', true],
     'nginx 1.24 (Ubuntu 24.04)' => ['1.24.0', false],
 ]);
+
+/*
+ * 2026-11-24, Ubuntu 24.04 (nginx 1.24): `nginx -t` passed but printed
+ * "protocol options redefined" once per site, because sites listened with
+ * `ssl http2` while sites without a certificate and the catch-all listened
+ * with `ssl` only. Every server on port 443 must ask for the same protocol
+ * options — measured on the box: all `ssl http2` gave none.
+ */
+it('asks for the same protocol options on every port-443 listen it writes', function (string $version) {
+    Process::fake(fn ($process) => in_array('-v', $process->command, true)
+        ? Process::result(errorOutput: "nginx version: nginx/{$version} (Ubuntu)\n")
+        : Process::result(exitCode: 0));
+    config(['server.web_server' => 'nginx']);
+
+    $site = function (string $slug, bool $tls) {
+        $application = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id, 'name' => $slug, 'slug' => $slug, 'domain' => "{$slug}.example.com",
+            'site_type' => 'php', 'serving_profile' => 'php', 'php_version' => '8.4', 'web_root' => '/', 'status' => 'active',
+        ]);
+        $application->domains()->create(['domain' => "{$slug}.example.com", 'type' => DomainType::Primary]);
+        if ($tls) {
+            Certificate::create([
+                'application_id' => $application->id, 'type' => CertificateType::LetsEncrypt,
+                'status' => CertificateStatus::Active, 'domains' => ["{$slug}.example.com"],
+                'certificate_path' => "/etc/letsencrypt/live/{$slug}/fullchain.pem", 'private_key_path' => "/etc/letsencrypt/live/{$slug}/privkey.pem",
+            ]);
+        }
+
+        return app(NginxDriver::class)->renderConfig(
+            $application->fresh(['domains', 'certificate', 'systemUser']),
+            app(ApplicationProvisioner::class)->documentRoot($application),
+        );
+    };
+
+    $configs = [$site('withtls', true), $site('notls', false), ...array_values(app(NginxDriver::class)->catchAllConfig()['files'])];
+
+    // The protocol options of each `listen ... 443 ...`, without the
+    // per-server ones (default_server, ipv6only) nginx does not compare.
+    $options = collect($configs)
+        ->flatMap(fn (string $c) => preg_match_all('/^\s*listen\s+(?:\[::\]:)?443\b([^;]*);/m', $c, $m) ? $m[1] : [])
+        ->map(fn (string $o) => trim(preg_replace('/\b(default_server|ipv6only=\S+)\b/', '', $o)))
+        ->map(fn (string $o) => preg_replace('/\s+/', ' ', $o))
+        ->unique()->values()->all();
+
+    expect($options)->toBe([version_compare($version, '1.25.1', '>=') ? 'ssl' : 'ssl http2']);
+})->with(['nginx 1.24 (Ubuntu 24.04)' => ['1.24.0'], 'nginx 1.28 (Ubuntu 26.04)' => ['1.28.3']]);

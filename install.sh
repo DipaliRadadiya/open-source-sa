@@ -5912,6 +5912,38 @@ CONF
     ok "OpenLiteSpeed serving HTTPS for ${PANEL_HOST}"
 }
 
+# On nginx before 1.25.1 the panel's site templates ask for HTTP/2 in the
+# listen line (`listen 443 ssl http2`; NginxDriver::supportsHttp2Directive).
+# Every server on port 443 has to ask for the same protocol options, or
+# `nginx -t` prints "protocol options redefined" once per site — harmless,
+# and alarming on the screen that shows it (2026-11-24, Ubuntu 24.04). So the
+# panel's own 443 blocks follow the sites. A version that cannot be read
+# counts as old, as it does for the templates.
+nginx_listen_http2() {
+    local version
+    version="$(nginx -v 2>&1 | sed -n 's|.*nginx/\([0-9][0-9.]*\).*|\1|p')"
+    [[ -z "$version" ]] && return 0
+    [[ "$(printf '%s\n%s\n' "$version" 1.25.1 | sort -V | head -n1)" != "1.25.1" ]]
+}
+
+# Add `http2` to the `listen ... 443 ssl` lines certbot wrote into the
+# panel's site, when nginx_listen_http2 says the sites use it. Kept only if
+# nginx still accepts the config; never fatal.
+panel_listen_http2() {
+    local conf="$1"
+    nginx_listen_http2 || return 0
+    [[ -f "$conf" ]] || return 0
+    cp -a "$conf" "${conf}.pre-http2"
+    sed -i -E '/http2/! s/^([[:space:]]*listen[[:space:]]+(\[::\]:)?443[[:space:]]+ssl)([[:space:]]|;)/\1 http2\3/' "$conf"
+    if nginx -t >>"$LOG_FILE" 2>&1; then
+        rm -f "${conf}.pre-http2"
+        run systemctl reload nginx
+    else
+        warn "could not match the panel's HTTPS listen lines to the sites' (see $LOG_FILE); left as certbot wrote them"
+        mv -f "${conf}.pre-http2" "$conf"
+    fi
+}
+
 configure_tls() {
     step "Setting up HTTPS"
 
@@ -5958,6 +5990,7 @@ configure_tls() {
 
     if certbot_issue "${args[@]}"; then
         ok "Let's Encrypt certificate issued"
+        [[ "$WEB_SERVER" == "apache" ]] || panel_listen_http2 "/etc/nginx/sites-available/${PANEL_SLUG}.conf"
         TLS_STATE="letsencrypt"
         SCHEME="https"
         return
@@ -5995,14 +6028,17 @@ configure_tls() {
     local http_conf=/etc/nginx/sites-available/${PANEL_SLUG}.conf
     local api_locations=/etc/nginx/snippets/${PANEL_SLUG}-api.conf
     local panel_locations=/etc/nginx/snippets/${PANEL_SLUG}-web.conf
+    # Same options as the sites on port 443 (nginx_listen_http2).
+    local h2=""
+    nginx_listen_http2 && h2=" http2"
 
     if (( SINGLE_HOST )); then
         cat >"$tls_conf" <<NGINX
 # Self-signed fallback, written by the Control panel installer.
 # For a real certificate run: certbot --nginx -d ${PANEL_HOST}
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    listen 443 ssl${h2};
+    listen [::]:443 ssl${h2};
     server_name ${PANEL_HOST};
     root ${APP_DIR}/backend/public;
 
@@ -6019,8 +6055,8 @@ NGINX
 # Self-signed fallback, written by the Control panel installer.
 # For a real certificate run: certbot --nginx -d ${PANEL_HOST} -d ${API_HOST}
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    listen 443 ssl${h2};
+    listen [::]:443 ssl${h2};
     server_name ${API_HOST};
     root ${APP_DIR}/backend/public;
     index index.php;
@@ -6033,8 +6069,8 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    listen 443 ssl${h2};
+    listen [::]:443 ssl${h2};
     server_name ${PANEL_HOST};
     root ${APP_DIR}/frontend;
 

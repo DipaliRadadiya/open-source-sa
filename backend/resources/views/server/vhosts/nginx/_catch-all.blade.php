@@ -22,9 +22,13 @@ server {
 }
 @else
 server {
-    listen 443 ssl default_server;
+    {{-- Every server on port 443 has to ask for the same protocol options:
+         on nginx before 1.25.1 the sites need `listen ... http2`, and a
+         server that differs makes `nginx -t` print "protocol options
+         redefined" once per site (measured on Ubuntu 24.04, 2026-11-24). --}}
+    listen 443 ssl{{ $http2On ? '' : ' http2' }} default_server;
 @if ($ipv6)
-    listen [::]:443 ssl default_server;
+    listen [::]:443 ssl{{ $http2On ? '' : ' http2' }} default_server;
 @endif
     server_name _;
 

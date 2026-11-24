@@ -111,7 +111,7 @@ class NginxDriver extends AbstractWebServerDriver
      */
     protected function catchAllViewData(): array
     {
-        return parent::catchAllViewData() + ['rejectHandshake' => $this->rejectsHandshake(), 'ipv6' => $this->hasIpv6()];
+        return parent::catchAllViewData() + ['rejectHandshake' => $this->rejectsHandshake(), 'ipv6' => $this->hasIpv6(), 'http2On' => $this->supportsHttp2Directive()];
     }
 
     public function test(): ServerOpsResult

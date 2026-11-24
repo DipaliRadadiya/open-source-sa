@@ -113,7 +113,7 @@ it('still owns 443 in the main file on nginx 1.18, with the reserved pair instea
 
     expect($files["{$dir}/wpsite-le-ssl.conf"])->toBeNull()
         ->and($files["{$dir}/wpsite.conf"])->not->toContain('ssl_reject_handshake')
-        ->toContain('listen 443 ssl;', '/etc/ssl/sv-oss/.panel-tls-reject.crt', 'return 444;', 'listen 80;');
+        ->toContain('listen 443 ssl http2;', '/etc/ssl/sv-oss/.panel-tls-reject.crt', 'return 444;', 'listen 80;');
 });
 
 it('needs no reserved pair on nginx 1.18 once the site has a certificate', function () {

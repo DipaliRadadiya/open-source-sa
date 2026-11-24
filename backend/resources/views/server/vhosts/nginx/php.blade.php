@@ -61,9 +61,9 @@ server {
          only deprecated after it, but printed a warning per site on every
          `nginx -t` (36 on an 18-site Ubuntu 26.04 box). --}}
 @if ($http2On)
-    listen 443 ssl;
+    listen 443 ssl{{ $http2On ? '' : ' http2' }};
 @if ($ipv6)
-    listen [::]:443 ssl;
+    listen [::]:443 ssl{{ $http2On ? '' : ' http2' }};
 @endif
     http2 on;
 @else
@@ -94,9 +94,9 @@ server {
     {{-- Keep this hostname owned on 443 after SSL uninstall. Without an exact
          SNI match nginx serves the first SSL vhost on the box — another
          customer's application. --}}
-    listen 443 ssl;
+    listen 443 ssl{{ $http2On ? '' : ' http2' }};
 @if ($ipv6)
-    listen [::]:443 ssl;
+    listen [::]:443 ssl{{ $http2On ? '' : ' http2' }};
 @endif
 @if ($rejectHandshake)
     {{-- nginx 1.19.4+ refuses the handshake before presenting a certificate. --}}
@@ -317,9 +317,9 @@ server {
          looks like it needs no certificate, but a browser that has seen HSTS
          for `old` refuses the plaintext hop and never reaches the redirect. --}}
 @if ($http2On)
-    listen 443 ssl;
+    listen 443 ssl{{ $http2On ? '' : ' http2' }};
 @if ($ipv6)
-    listen [::]:443 ssl;
+    listen [::]:443 ssl{{ $http2On ? '' : ' http2' }};
 @endif
     http2 on;
 @else

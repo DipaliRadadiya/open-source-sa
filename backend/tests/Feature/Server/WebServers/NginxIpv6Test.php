@@ -63,13 +63,13 @@ it('listens on IPv4 only when the host has no IPv6', function (string $profile) 
     $config = app(NginxDriver::class)->renderConfig(ipv6Site($profile), '/home/siteowner/site/public_html');
 
     expect($config)->not->toContain('[::]')
-        ->toContain('listen 80;', 'listen 443 ssl;');
+        ->toContain('listen 80;', 'listen 443 ssl http2;');
 })->with(['php', 'static', 'node']);
 
 it('still listens on IPv6 too where the host has it', function (string $profile) {
     $config = app(NginxDriver::class)->renderConfig(ipv6Site($profile), '/home/siteowner/site/public_html');
 
-    expect($config)->toContain('listen 80;', 'listen [::]:80;', 'listen 443 ssl;', 'listen [::]:443 ssl;');
+    expect($config)->toContain('listen 80;', 'listen [::]:80;', 'listen 443 ssl http2;', 'listen [::]:443 ssl http2;');
 })->with(['php', 'static', 'node']);
 
 it('reads the kernel\'s own IPv6 list by default, the file install.sh asks', function () {
@@ -99,7 +99,7 @@ it('leaves IPv6 out of the catch-all too', function () {
     // Two files now, under v7's names: port 80 in `default`, 443 beside it.
     $catchAll = collect($written)->filter(fn (string $contents) => str_contains($contents, 'default_server'))->implode("\n");
 
-    expect($catchAll)->toContain('listen 80 default_server;', 'listen 443 ssl default_server;')
+    expect($catchAll)->toContain('listen 80 default_server;', 'listen 443 ssl http2 default_server;')
         ->not->toContain('[::]');
 });
 
@@ -203,7 +203,7 @@ it('keeps both catch-all listens where the host has IPv6, and drops only [::] wh
     withoutIpv6();
     $withoutIpv6 = $render();
 
-    expect($withIpv6)->toContain('listen [::]:80 default_server;', 'listen [::]:443 ssl default_server;')
+    expect($withIpv6)->toContain('listen [::]:80 default_server;', 'listen [::]:443 ssl http2 default_server;')
         ->and($withoutIpv6)->toBe(implode("\n", array_filter(
             explode("\n", $withIpv6),
             fn (string $line) => ! str_contains($line, '[::]'),
