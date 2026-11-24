@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  Check,
   CircleCheck,
   CircleSlash,
   Crosshair,
@@ -119,13 +120,20 @@ export function AddRuleDialog({
     form.reset(valuesFrom(rule, initial));
   }
 
+  // A service fills its usual protocol (DNS is UDP) until someone picks a protocol
+  // themselves; after that the shortcut keeps theirs, so the HTTPS chip with UDP chosen
+  // means UDP 443, as the Add rule button does (Krishna, 24 Nov).
+  const protocolChosen = form.getFieldState("protocol", form.formState).isDirty;
+  const presetProtocol = (preset) => (protocolChosen ? values.protocol : (preset.protocol ?? "tcp"));
+
   function choosePreset(key) {
     if (!key) return;
     form.setValue("preset", key);
     const next = presets.find((p) => p.key === key);
     if (next?.port != null) {
       form.setValue("ports", String(next.port), { shouldValidate: true });
-      if (next.protocol) form.setValue("protocol", next.protocol);
+      // Not dirtied: a service's protocol is not the user's choice.
+      if (!protocolChosen && next.protocol) form.setValue("protocol", next.protocol);
 
       const current = form.getValues("description")?.trim() ?? "";
       if (!current || current === autoName) {
@@ -188,17 +196,28 @@ export function AddRuleDialog({
     source: values.source_ip,
     riskyPorts,
   });
-  const duplicate =
-    parsed &&
-    rules.some(
+  // ufw keeps one rule per port, protocol and source, so the server refuses a second one
+  // whatever its action (RefusesDuplicateRules): the same action is a duplicate, the
+  // opposite one a conflict. Said here, before the request, rather than as a 422.
+  const clashWith = (from, to, protocol) =>
+    rules.find(
       (r) =>
         r.id !== rule?.id &&
-        Number(r.port_from) === parsed.from &&
-        Number(r.port_to ?? 0) === Number(parsed.to ?? 0) &&
-        (r.protocol ?? "tcp") === values.protocol &&
-        (r.action ?? "allow") === values.action &&
+        Number(r.port_from) === from &&
+        Number(r.port_to ?? 0) === Number(to ?? 0) &&
+        (r.protocol ?? "tcp") === protocol &&
         (r.source_ip ?? "") === (values.source_ip?.trim() ?? ""),
     );
+  const clashReason = (clash) =>
+    !clash ? null : (clash.action ?? "allow") === values.action ? t("add.duplicate") : t("add.conflict");
+  const blockReason = parsed ? clashReason(clashWith(parsed.from, parsed.to, values.protocol)) : null;
+
+  // The refusal is at the top of a dialog scrolled down to its button, so bring it into
+  // view (Krishna, 24 Nov: nothing seemed to happen on Add rule).
+  const serverErrorRef = useRef(null);
+  useEffect(() => {
+    if (serverError) serverErrorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [serverError]);
 
   return (
     <>
@@ -236,7 +255,8 @@ export function AddRuleDialog({
             >
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            {/* A rule that already exists is refused by the server, so it is not sent. */}
+            <Button type="submit" disabled={isSubmitting || Boolean(blockReason)} disabledReason={blockReason}>
               {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
               {editing ? t("edit.submit") : t("add.submit")}
             </Button>
@@ -247,6 +267,7 @@ export function AddRuleDialog({
           {/* What the server refused, kept on screen above the summary. */}
           {serverError ? (
             <p
+              ref={serverErrorRef}
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
             >
@@ -284,9 +305,9 @@ export function AddRuleDialog({
           {/* Said once above the locked fields; the name stays editable and the sentence says so. */}
           {ruleLocked ? <Caution>{t("add.protectedLocked")}</Caution> : null}
 
-          {duplicate ? (
+          {blockReason ? (
             <p className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-              {t("add.duplicate")}
+              {blockReason}
             </p>
           ) : null}
 
@@ -340,7 +361,7 @@ export function AddRuleDialog({
               <Label htmlFor="fw-protocol" hint={t("add.protocolHint")}>{t("add.protocol")}</Label>
               <Select
                 value={values.protocol}
-                onValueChange={(next) => form.setValue("protocol", next, { shouldValidate: form.formState.isSubmitted })}
+                onValueChange={(next) => form.setValue("protocol", next, { shouldDirty: true, shouldValidate: form.formState.isSubmitted })}
               >
                 <SelectTrigger id="fw-protocol" className="w-full" disabled={ruleLocked} aria-invalid={Boolean(protocolError)}>
                   <SelectValue />
@@ -371,11 +392,24 @@ export function AddRuleDialog({
                 size="sm"
                 className="flex-wrap justify-start gap-1.5"
               >
-                {services.map((p) => (
-                  <ToggleGroupItem key={p.key} value={p.key} className="px-2.5 text-xs">
-                    {p.label}
-                  </ToggleGroupItem>
-                ))}
+                {services.map((p) => {
+                  // Already a rule for this service with the chosen action and source: the
+                  // chip would only lead to "already exists" (Krishna, 24 Nov).
+                  const taken = clashReason(clashWith(Number(p.port), null, presetProtocol(p)));
+                  const item = (
+                    <ToggleGroupItem key={p.key} value={p.key} disabled={Boolean(taken)} className="gap-1 px-2.5 text-xs">
+                      {taken ? <Check className="size-3" aria-hidden /> : null}
+                      {p.label}
+                    </ToggleGroupItem>
+                  );
+                  return taken ? (
+                    <ReasonTooltip key={p.key} reason={taken}>
+                      {item}
+                    </ReasonTooltip>
+                  ) : (
+                    item
+                  );
+                })}
               </ToggleGroup>
             </div>
           ) : null}

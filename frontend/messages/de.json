@@ -2064,6 +2064,7 @@
       "noPortYet": "—",
       "riskyExposure": "{name} wäre von jeder Adresse im Internet erreichbar. Datenbanken werden normalerweise auf eine einzelne IP begrenzt — füllen Sie unten das Feld für die IP-Adresse aus.",
       "duplicate": "Eine genau solche Regel haben Sie bereits.",
+      "conflict": "Für diesen Port und diese Quelle gibt es bereits die gegenteilige Regel. Bearbeiten Sie stattdessen diese Regel.",
       "onlyMyIp": "Nur meine IP",
       "onlyMyIpSet": "Ihre IP",
       "wouldLockYouOut": "Das ist die Adresse, von der Sie verbunden sind. Sie zu blockieren würde Sie von diesem Server aussperren.",

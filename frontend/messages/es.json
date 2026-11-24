@@ -2064,6 +2064,7 @@
       "noPortYet": "—",
       "riskyExposure": "{name} sería accesible desde cualquier dirección de internet. Las bases de datos normalmente se limitan a una sola IP — rellena el campo de dirección IP.",
       "duplicate": "Ya tienes una regla exactamente igual.",
+      "conflict": "Ya tienes la regla contraria para este puerto y origen. Edita esa regla.",
       "onlyMyIp": "Solo mi IP",
       "onlyMyIpSet": "Tu IP",
       "wouldLockYouOut": "Esa es la dirección desde la que estás conectado. Bloquearla te dejaría fuera de este servidor.",

@@ -10,7 +10,9 @@ import { genericErrorMessage } from "@/lib/api/generic-error";
 export function handleValidationError(error, form, { formError = false, unrendered = [], fallback } = {}) {
   const errors = error.response?.data?.errors;
 
-  if (errors && form) {
+  // An empty `errors` object is no field errors at all: it used to return with nothing on
+  // screen, so the 422's message fell through to nowhere.
+  if (errors && Object.keys(errors).length > 0 && form) {
     let sent = {};
     try {
       // Axios keeps the serialised body; a non-JSON body (upload) yields nothing.

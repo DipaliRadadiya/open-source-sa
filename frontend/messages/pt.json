@@ -2064,6 +2064,7 @@
       "noPortYet": "—",
       "riskyExposure": "{name} ficaria alcançável a partir de qualquer endereço na internet. Bancos de dados normalmente são limitados a um único IP — preencha o campo de endereço IP abaixo.",
       "duplicate": "Você já tem uma regra exatamente igual a esta.",
+      "conflict": "Você já tem a regra oposta para esta porta e origem. Edite essa regra.",
       "onlyMyIp": "Apenas meu IP",
       "onlyMyIpSet": "Seu IP",
       "wouldLockYouOut": "Esse é o endereço de onde você está conectado. Bloqueá-lo trancaria você fora deste servidor.",
