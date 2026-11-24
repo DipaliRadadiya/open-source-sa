@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FACT_LABEL } from "@/lib/theme/facts";
+import { BreakableDomain } from "@/components/ui/breakable-domain";
 
 /** The endpoint is throttled at 120/min; every 2s sits well inside that. */
 const POLL_MS = 2000;
@@ -223,8 +224,8 @@ function Completed({ clone, sourceApplication, onAgain }) {
               </dt>
               <dd className="mt-1 truncate text-sm font-medium">{sourceName ?? "—"}</dd>
               {sourceHasSeparateDomain ? (
-                <dd className="mt-0.5 font-mono text-xs break-all text-muted-foreground">
-                  {sourceDomain}
+                <dd className="mt-0.5 font-mono text-xs break-words text-muted-foreground">
+                  <BreakableDomain domain={sourceDomain} />
                 </dd>
               ) : null}
             </div>
@@ -239,15 +240,17 @@ function Completed({ clone, sourceApplication, onAgain }) {
                 {t("destination")}
               </dt>
               <dd className="mt-1 flex min-w-0 items-center gap-1.5">
-                <span className="min-w-0 text-sm font-semibold break-all">{destinationName}</span>
+                <span className="min-w-0 text-sm font-semibold break-words">
+                  {destinationHasSeparateDomain ? destinationName : <BreakableDomain domain={destinationName} />}
+                </span>
                 {!destinationHasSeparateDomain ? (
                   <CopyButton value={clone.domain} label={t("copyDomain")} />
                 ) : null}
               </dd>
               {destinationHasSeparateDomain ? (
                 <dd className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                  <span className="min-w-0 font-mono text-xs break-all text-muted-foreground">
-                    {clone.domain}
+                  <span className="min-w-0 font-mono text-xs break-words text-muted-foreground">
+                    <BreakableDomain domain={clone.domain} />
                   </span>
                   <CopyButton value={clone.domain} label={t("copyDomain")} />
                 </dd>

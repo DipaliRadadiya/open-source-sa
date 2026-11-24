@@ -5648,7 +5648,7 @@
         "available": "{value} de {total} aún libres",
         "over": "Más de los {total} de este servidor",
         "legend": "{sites, plural, =0 {Ninguna otra aplicación usa memoria} one {Otra aplicación ha reservado {value}} other {# aplicaciones más han reservado {value}}}",
-        "equation": "{limit} × {workers} workers = {total} a plena carga",
+        "equation": "{limit} × {workers} procesos = {total} a plena carga",
         "overDetail": "Todas las aplicaciones juntas necesitan {required}, pero este servidor tiene {total}. Reduce el límite de memoria o el número de workers.",
         "overSelf": "En su límite, esta aplicación sola podría usar {required}, más que los {total} de este servidor. Baja el límite de memoria o el número de procesos.",
         "overShared": "En sus límites, todas las aplicaciones juntas podrían usar {required}, más que los {total} de este servidor. Rara vez llegan todas a la vez, así que es solo un aviso."
@@ -5756,15 +5756,17 @@
       },
       "state": {
         "on": "Fail2ban está activo",
-        "onBody": "fail2ban vigila el registro de acceso de esta aplicación y bloquea las direcciones que coinciden con el filtro de abajo.",
         "setup": "Configurando Fail2ban",
-        "setupBody": "Ambos archivos parten de los valores por defecto del panel. Nada vigila esta aplicación hasta que los guardes."
+        "setupBody": "Revisa las reglas de abajo y luego actívalo.",
+        "onNoRule": "No hay página de inicio de sesión, así que todavía no se bloquea a nadie. Añádela abajo.",
+        "onPath": "Bloquea las direcciones que fallan la contraseña en {path}.",
+        "onWordPress": "Bloquea las direcciones que fallan la contraseña de WordPress.",
+        "onCustom": "Bloquea las direcciones que coinciden con tu propio filtro."
       },
       "files": {
         "jail": "Jail",
         "filter": "Filtro",
-        "jailHint": "Cuándo bloquear: cuántos intentos, en cuánto tiempo y durante cuánto.",
-        "filterHint": "Qué cuenta como intento fallido: se compara con cada línea del registro."
+        "toggle": "Editar los archivos tú mismo"
       },
       "placeholderNote": "El nombre del jail, la ruta del log y el filtro se rellenan solos. Deja la línea del filtro como está.",
       "placeholderLost": "{count, plural, one {{tokens} ya no está en el archivo: el valor que representaba no se rellenará. Esto solo es correcto si lo has sustituido a propósito.} other {{tokens} ya no están en el archivo: los valores que representaban no se rellenarán. Esto solo es correcto si los has sustituido a propósito.}}",
@@ -5811,6 +5813,28 @@
         "unbanTitle": "¿Desbloquear {ip}?",
         "unbanBody": "Podrá acceder a esta aplicación de inmediato. Si sigue fallando inicios de sesión, la jaula la volverá a bloquear.",
         "cancel": "Cancelar"
+      },
+      "loginRule": {
+        "pathLabel": "Dirección de la página de inicio de sesión",
+        "pathHint": "Por ejemplo /login o /admin/login.",
+        "answerLabel": "Una contraseña incorrecta recibe",
+        "answers": {
+          "error": "Un error (401, 403 o 422)",
+          "page": "La página de inicio de sesión otra vez"
+        },
+        "answerHint": "Un acceso correcto nunca se cuenta.",
+        "errors": {
+          "required": "Primero introduce la dirección de la página de inicio de sesión.",
+          "invalid": "Empieza por / y usa solo letras, números y - _ . /"
+        }
+      },
+      "rules": {
+        "title": "Reglas de bloqueo",
+        "description": "Cuándo se bloquea una dirección en esta aplicación.",
+        "errors": {
+          "maxretry": "Usa un número entero del 1 al 100.",
+          "findtime": "Usa un número entero de segundos entre 30 y 86400 (un día)."
+        }
       }
     },
     "staging": {
@@ -7889,7 +7913,8 @@
       "stoppedScanHint": "Lo que encontró antes de detenerse aparece abajo. No se ha cambiado nada en tu servidor. Analiza de nuevo para ver la lista completa.",
       "stoppedAdopt": "La incorporación se detuvo antes de terminar",
       "stoppedAdoptHint": "Lo marcado como Añadido ya está en el panel. El resto no se añadió: analiza de nuevo para ver lo que falta.",
-      "handledSoFar": "{count, plural, =0 {Aún no se ha procesado nada} one {# elemento procesado hasta ahora} other {# elementos procesados hasta ahora}}"
+      "handledSoFar": "{count, plural, =0 {Aún no se ha procesado nada} one {# elemento procesado hasta ahora} other {# elementos procesados hasta ahora}}",
+      "previewAddable": "{count, plural, =0 {Nada nuevo que añadir} one {Se encontró # elemento para añadir} other {Se encontraron # elementos para añadir}}"
     },
     "results": {
       "searchPlaceholder": "Buscar por nombre",
@@ -8183,7 +8208,7 @@
         "unknown": "El registro rechazó la conexión sin indicar el motivo."
       },
       "confirm": {
-        "title": "¿Eliminar {name}?",
+        "title": "¿Quitar {name}?",
         "body": "La credencial se elimina de este servidor. Ninguna aplicación la está usando.",
         "bodyInUse": "{count, plural, one {# aplicación está configurada} other {# aplicaciones están configuradas}} para descargar con esta credencial. No se eliminan y siguen funcionando, pero su próxima descarga será anónima y fallará si la imagen es privada."
       },

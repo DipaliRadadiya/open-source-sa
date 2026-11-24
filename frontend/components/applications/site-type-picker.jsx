@@ -272,7 +272,12 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
         <Input
           ref={searchRef}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            // Typing searches every category: "glance" found nothing in Popular until
+            // "Search all categories" was clicked (Krishna, 24 Nov). A chip still narrows after.
+            if (!query.trim() && event.target.value.trim() && activeGroup !== "all") setActiveGroup("all");
+            setQuery(event.target.value);
+          }}
           placeholder={searchPlaceholder ?? t("form.typeSearch")}
           aria-label={searchPlaceholder ?? t("form.typeSearch")}
           className="ps-9 pe-9"

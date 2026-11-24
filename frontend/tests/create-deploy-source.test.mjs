@@ -205,12 +205,13 @@ test("no-match cross-link clears Compose mode and records search/query without c
   });
 });
 
-test("a match hidden by Popular offers All categories instead of a false Docker no-match", () => {
+// 24 Nov (Krishna): typing searches every category, so a recipe outside Popular shows at once.
+test("a match outside Popular shows as soon as you type, not a false Docker no-match", () => {
   const unpopular = { ...VAULTWARDEN, popular: false };
   renderPicker({ siteTypes: [DOCKER, GHOST, unpopular] });
   fireEvent.change(screen.getByRole("textbox", { name: "Search 1-Click Recipes" }), { target: { value: "vaultwarden" } });
   assert.equal(screen.queryByRole("button", { name: /Search in Container/ }), null);
-  fireEvent.click(screen.getByRole("button", { name: "Search all categories" }));
+  assert.equal(screen.queryByRole("button", { name: "Search all categories" }), null);
   assert.ok(screen.getByRole("button", { name: /Vaultwarden/ }));
 });
 

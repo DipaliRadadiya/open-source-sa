@@ -5756,15 +5756,17 @@
       },
       "state": {
         "on": "Fail2ban ist an",
-        "onBody": "fail2ban beobachtet das Zugriffsprotokoll dieser Anwendung und sperrt Adressen, die auf den Filter unten passen.",
         "setup": "Fail2ban wird eingerichtet",
-        "setupBody": "Beide Dateien unten beginnen mit den Standardwerten des Panels. Bis Sie sie speichern, beobachtet niemand diese Anwendung."
+        "setupBody": "Prüfen Sie die Regeln unten und schalten Sie es dann ein.",
+        "onNoRule": "Es ist keine Anmeldeseite eingetragen, daher wird noch niemand gesperrt. Tragen Sie sie unten ein.",
+        "onPath": "Sperrt Adressen, die bei {path} das falsche Passwort eingeben.",
+        "onWordPress": "Sperrt Adressen, die das falsche WordPress-Passwort eingeben.",
+        "onCustom": "Sperrt Adressen, auf die Ihr eigener Filter passt."
       },
       "files": {
         "jail": "Jail",
         "filter": "Filter",
-        "jailHint": "Wann gesperrt wird — wie viele Versuche, über welchen Zeitraum, wie lange.",
-        "filterHint": "Was als Fehlversuch zählt — verglichen mit jeder Protokollzeile."
+        "toggle": "Dateien selbst bearbeiten"
       },
       "placeholderNote": "Jail-Name, Protokollpfad und Filter werden für Sie ausgefüllt. Lassen Sie die Filterzeile, wie sie ist.",
       "placeholderLost": "{count, plural, one {{tokens} steht nicht mehr in der Datei — der Wert, für den es stand, wird nicht eingesetzt. Das ist nur richtig, wenn Sie es absichtlich ersetzt haben.} other {{tokens} stehen nicht mehr in der Datei — die Werte, für die sie standen, werden nicht eingesetzt. Das ist nur richtig, wenn Sie sie absichtlich ersetzt haben.}}",
@@ -5811,6 +5813,28 @@
         "unbanTitle": "{ip} entsperren?",
         "unbanBody": "Die Adresse erreicht diese Anwendung sofort wieder. Scheitern weitere Anmeldungen, sperrt der Jail sie erneut.",
         "cancel": "Abbrechen"
+      },
+      "loginRule": {
+        "pathLabel": "Adresse der Anmeldeseite",
+        "pathHint": "Zum Beispiel /login oder /admin/login.",
+        "answerLabel": "Ein falsches Passwort bekommt",
+        "answers": {
+          "error": "Einen Fehler (401, 403 oder 422)",
+          "page": "Wieder die Anmeldeseite"
+        },
+        "answerHint": "Eine richtige Anmeldung wird nie gezählt.",
+        "errors": {
+          "required": "Geben Sie zuerst die Adresse der Anmeldeseite ein.",
+          "invalid": "Mit / beginnen und nur Buchstaben, Ziffern und - _ . / verwenden"
+        }
+      },
+      "rules": {
+        "title": "Sperrregeln",
+        "description": "Wann eine Adresse für diese Anwendung gesperrt wird.",
+        "errors": {
+          "maxretry": "Geben Sie eine ganze Zahl von 1 bis 100 ein.",
+          "findtime": "Geben Sie eine ganze Zahl an Sekunden von 30 bis 86400 (ein Tag) ein."
+        }
       }
     },
     "staging": {
@@ -7889,7 +7913,8 @@
       "stoppedScanHint": "Was bis dahin gefunden wurde, steht unten. Auf Ihrem Server wurde nichts geändert. Durchsuchen Sie erneut, um die vollständige Liste zu erhalten.",
       "stoppedAdopt": "Das Hinzufügen wurde vor dem Ende abgebrochen",
       "stoppedAdoptHint": "Als „Hinzugefügt“ markierte Einträge sind im Panel. Der Rest wurde nicht hinzugefügt — durchsuchen Sie erneut, um zu sehen, was noch fehlt.",
-      "handledSoFar": "{count, plural, =0 {Noch nichts bearbeitet} one {# Eintrag bisher bearbeitet} other {# Einträge bisher bearbeitet}}"
+      "handledSoFar": "{count, plural, =0 {Noch nichts bearbeitet} one {# Eintrag bisher bearbeitet} other {# Einträge bisher bearbeitet}}",
+      "previewAddable": "{count, plural, =0 {Nichts Neues hinzuzufügen} one {# Fund zum Hinzufügen} other {# Funde zum Hinzufügen}}"
     },
     "results": {
       "searchPlaceholder": "Nach Namen suchen",
@@ -8183,7 +8208,7 @@
         "unknown": "Die Registry hat die Verbindung ohne Angabe eines Grundes abgelehnt."
       },
       "confirm": {
-        "title": "{name} löschen?",
+        "title": "{name} entfernen?",
         "body": "Die Anmeldedaten werden von diesem Server gelöscht. Keine Anwendung verwendet sie.",
         "bodyInUse": "{count, plural, one {# Anwendung lädt} other {# Anwendungen laden}} mit diesen Anmeldedaten. Sie werden nicht gelöscht und laufen weiter, ihr nächster Pull ist jedoch anonym und schlägt fehl, wenn das Image privat ist."
       },

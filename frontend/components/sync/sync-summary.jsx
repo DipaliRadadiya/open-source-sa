@@ -4,7 +4,9 @@ import { runTotals } from "@/lib/server/sync-selection";
 import { cn } from "@/lib/utils";
 
 // Preview and apply share this screen; the preview banner states nothing is written yet.
-export function SyncSummary({ run, loaded, running, actions = null }) {
+// `addable`: rows the scan can add. The panel itself is found and skipped on purpose, so
+// counting it said "Found 1 thing" with nothing to add (Krishna, 24 Nov).
+export function SyncSummary({ run, loaded, addable = null, running, actions = null }) {
   const t = useTranslations("sync");
   const totals = runTotals(run.totals);
   const preview = run.mode === "preview";
@@ -72,7 +74,9 @@ export function SyncSummary({ run, loaded, running, actions = null }) {
           </>
         ) : preview ? (
           <>
-            <p className="font-medium">{t("summary.previewTitle", { count: loaded })}</p>
+            <p className="font-medium">
+              {addable === null ? t("summary.previewTitle", { count: loaded }) : t("summary.previewAddable", { count: addable })}
+            </p>
             <p className="text-sm text-muted-foreground">{t("summary.previewNothingChanged")}</p>
           </>
         ) : (

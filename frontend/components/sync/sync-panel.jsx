@@ -247,6 +247,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
           run={run}
           // Dismissed rows stay in the list (with Undo) but are not counted.
           loaded={running ? items.length : items.filter((item) => !ignoredKeys.has(ignoreKey(item))).length}
+          addable={items.filter((item) => item.action === "found" && !ignoredKeys.has(ignoreKey(item))).length}
           running={running}
           actions={actions}
         />

@@ -5648,8 +5648,8 @@
         "available": "{value} sur {total} encore libre",
         "over": "Plus que les {total} de ce serveur",
         "legend": "{sites, plural, =0 {Aucune autre application n'utilise de mémoire} one {Une autre application a réclamé {value}} other {# autres applications ont réclamé {value}}}",
-        "equation": "{limit} × {workers} workers = {total} à pleine charge",
-        "overDetail": "Toutes les applications réunies ont besoin de {required}, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers.",
+        "equation": "{limit} × {workers} processus = {total} à pleine charge",
+        "overDetail": "Toutes les applications réunies ont besoin de {required}, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de processus.",
         "overSelf": "À sa limite, cette application seule pourrait utiliser {required}, plus que les {total} de ce serveur. Baissez la limite de mémoire ou le nombre de processus.",
         "overShared": "À leurs limites, toutes les applications ensemble pourraient utiliser {required}, plus que les {total} de ce serveur. Elles l'atteignent rarement en même temps : c'est seulement un avertissement."
       },
@@ -5756,15 +5756,17 @@
       },
       "state": {
         "on": "Fail2ban est activé",
-        "onBody": "fail2ban surveille le journal d'accès de cette application et bannit les adresses correspondant au filtre ci-dessous.",
         "setup": "Configuration de Fail2ban",
-        "setupBody": "Les deux fichiers ci-dessous partent des valeurs par défaut du panneau. Personne ne surveille cette application tant que vous ne les avez pas enregistrés."
+        "setupBody": "Vérifiez les règles ci-dessous, puis activez-le.",
+        "onNoRule": "Aucune page de connexion n'est indiquée, donc personne n'est encore banni. Ajoutez-la ci-dessous.",
+        "onPath": "Bannit les adresses qui se trompent de mot de passe sur {path}.",
+        "onWordPress": "Bannit les adresses qui se trompent de mot de passe WordPress.",
+        "onCustom": "Bannit les adresses qui correspondent à votre propre filtre."
       },
       "files": {
         "jail": "Jail",
         "filter": "Filtre",
-        "jailHint": "Quand bannir — combien de tentatives, sur quelle durée, pour combien de temps.",
-        "filterHint": "Ce qui compte comme mauvaise tentative — comparé à chaque ligne du journal."
+        "toggle": "Modifier les fichiers vous-même"
       },
       "placeholderNote": "Le nom de la jail, le chemin du journal et le filtre sont remplis pour vous. Laissez la ligne du filtre telle quelle.",
       "placeholderLost": "{count, plural, one {{tokens} n'est plus dans le fichier — la valeur qu'il remplaçait ne sera pas insérée. C'est correct uniquement si vous l'avez remplacé volontairement.} other {{tokens} ne sont plus dans le fichier — les valeurs qu'ils remplaçaient ne seront pas insérées. C'est correct uniquement si vous les avez remplacés volontairement.}}",
@@ -5811,6 +5813,28 @@
         "unbanTitle": "Débannir {ip} ?",
         "unbanBody": "Elle pourra de nouveau accéder à cette application immédiatement. Si les échecs de connexion continuent, la prison la bannira à nouveau.",
         "cancel": "Annuler"
+      },
+      "loginRule": {
+        "pathLabel": "Adresse de la page de connexion",
+        "pathHint": "Par exemple /login ou /admin/login.",
+        "answerLabel": "Un mauvais mot de passe reçoit",
+        "answers": {
+          "error": "Une erreur (401, 403 ou 422)",
+          "page": "De nouveau la page de connexion"
+        },
+        "answerHint": "Une connexion réussie n'est jamais comptée.",
+        "errors": {
+          "required": "Saisissez d'abord l'adresse de la page de connexion.",
+          "invalid": "Commencez par / et n'utilisez que des lettres, des chiffres et - _ . /"
+        }
+      },
+      "rules": {
+        "title": "Règles de bannissement",
+        "description": "Quand une adresse est bannie de cette application.",
+        "errors": {
+          "maxretry": "Saisissez un nombre entier de 1 à 100.",
+          "findtime": "Saisissez un nombre entier de secondes de 30 à 86400 (un jour)."
+        }
       }
     },
     "staging": {
@@ -7889,7 +7913,8 @@
       "stoppedScanHint": "Ce qu'elle a trouvé avant de s'arrêter est listé ci-dessous. Rien n'a été modifié sur votre serveur. Analysez à nouveau pour obtenir la liste complète.",
       "stoppedAdopt": "L'ajout s'est arrêté avant la fin",
       "stoppedAdoptHint": "Les éléments marqués Ajouté sont dans le panneau. Le reste n'a pas été ajouté — analysez à nouveau pour voir ce qui reste.",
-      "handledSoFar": "{count, plural, =0 {Rien de traité pour l'instant} one {# élément traité pour l'instant} other {# éléments traités pour l'instant}}"
+      "handledSoFar": "{count, plural, =0 {Rien de traité pour l'instant} one {# élément traité pour l'instant} other {# éléments traités pour l'instant}}",
+      "previewAddable": "{count, plural, =0 {Rien de nouveau à ajouter} one {# élément à ajouter} other {# éléments à ajouter}}"
     },
     "results": {
       "searchPlaceholder": "Rechercher par nom",
@@ -8183,7 +8208,7 @@
         "unknown": "Le registre a refusé la connexion sans dire pourquoi."
       },
       "confirm": {
-        "title": "Supprimer {name} ?",
+        "title": "Retirer {name} ?",
         "body": "L’identifiant est supprimé de ce serveur. Aucune application ne l’utilise.",
         "bodyInUse": "{count, plural, one {# application est configurée} other {# applications sont configurées}} pour récupérer les images avec cet identifiant. Elles ne sont pas supprimées et continuent de fonctionner, mais leur prochaine récupération sera anonyme et échouera si l’image est privée."
       },

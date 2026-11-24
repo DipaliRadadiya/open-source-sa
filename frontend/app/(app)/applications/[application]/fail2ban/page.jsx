@@ -66,7 +66,7 @@ export default async function ApplicationFail2banPage({ params }) {
             jailTemplate={status.jailTemplate}
             filterTemplate={status.filterTemplate}
             canManage={canManage}
-            filterNote={status.filterNote}
+            loginRuleOffered={status.loginRuleOffered}
           />
           {bans ? <BannedAddressesCard appId={id} bans={bans} jailName={status.config?.jail_name ?? null} canManage={canManage} /> : null}
         </div>

@@ -51,6 +51,7 @@ import { PermissionDenied } from "@/components/sections/permission-denied";
 import { firstAllowedScreen } from "@/lib/permissions/app-screens";
 import { firstDeployPending, isSettled } from "@/lib/applications/settled";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
+import { BreakableDomain } from "@/components/ui/breakable-domain";
 
 export const dynamic = "force-dynamic";
 
@@ -556,22 +557,3 @@ export default async function ApplicationDetailPage({ params }) {
   );
 }
 
-// A break opportunity after each dot; the last label stays joined to whatever
-// follows it (the external-link icon), so an icon never starts a line.
-function BreakableDomain({ domain, children }) {
-  const labels = String(domain ?? "").split(".");
-  const last = labels.pop();
-  return (
-    <>
-      {labels.map((label, i) => (
-        <span key={i}>
-          {label}.<wbr />
-        </span>
-      ))}
-      <span className="whitespace-nowrap">
-        {last}
-        {children}
-      </span>
-    </>
-  );
-}

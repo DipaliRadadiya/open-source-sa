@@ -94,7 +94,8 @@ export async function getApplicationFail2ban(id) {
     config: result.data?.fail2ban ?? null,
     jailTemplate: result.data?.jail_template ?? "",
     filterTemplate: result.data?.filter_template ?? "",
-    filterNote: result.data?.filter_scope === "wordpress_only" ? (result.data?.filter_note ?? null) : null,
+    // Not WordPress: the default rule bans nobody, so the panel offers a login-page rule.
+    loginRuleOffered: result.data?.filter_scope === "wordpress_only",
     failed: result.failed,
     status: result.status,
     failure: result.failure,

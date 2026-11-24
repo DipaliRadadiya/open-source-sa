@@ -104,7 +104,16 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
       const parsed = cleanResultSchema.safeParse(response.data);
       // What the disk actually freed; sizes are re-read first so the result never sits beside stale ones.
       await refreshAndWait();
-      if (parsed.success) setResult(parsed.data);
+      if (parsed.success) {
+        setResult(parsed.data);
+        // The note sits at the top of the list; a toast reaches someone scrolled below it.
+        toast.success(
+          t("clean.freed", {
+            size: localizeSizeText(parsed.data.freed_total_human ?? "0 B", format),
+            percent: parsed.data.disk?.percent ?? 0,
+          }),
+        );
+      }
       setConfirming(false);
       setSelected(new Set());
     } catch (err) {

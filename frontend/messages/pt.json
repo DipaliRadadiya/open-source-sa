@@ -5648,7 +5648,7 @@
         "available": "{value} de {total} ainda livres",
         "over": "Mais que o {total} deste servidor",
         "legend": "{sites, plural, =0 {Nenhuma outra aplicação está usando memória} one {Uma outra aplicação já reivindicou {value}} other {# outras aplicações já reivindicaram {value}}}",
-        "equation": "{limit} × {workers} workers = {total} em carga total",
+        "equation": "{limit} × {workers} processos = {total} em carga total",
         "overDetail": "Todas as aplicações juntas precisam de {required}, mas este servidor tem {total}. Diminua o limite de memória ou o número de workers.",
         "overSelf": "No limite, esta aplicação sozinha poderia usar {required}, mais do que os {total} deste servidor. Diminua o limite de memória ou o número de processos.",
         "overShared": "Nos limites, todas as aplicações juntas poderiam usar {required}, mais do que os {total} deste servidor. Raramente atingem o pico ao mesmo tempo, por isso é só um aviso."
@@ -5756,15 +5756,17 @@
       },
       "state": {
         "on": "Fail2ban ativado",
-        "onBody": "O fail2ban está vigiando o log de acesso desta aplicação e banindo endereços que casam com o filtro abaixo.",
         "setup": "Configurando Fail2ban",
-        "setupBody": "Os dois arquivos abaixo começam com os padrões do painel. Nada está vigiando esta aplicação até você salvá-los."
+        "setupBody": "Verifique as regras abaixo e depois ative-o.",
+        "onNoRule": "Não há página de início de sessão definida, por isso ainda ninguém é banido. Adicione-a abaixo.",
+        "onPath": "Bane os endereços que erram a palavra-passe em {path}.",
+        "onWordPress": "Bane os endereços que erram a palavra-passe do WordPress.",
+        "onCustom": "Bane os endereços que correspondem ao seu próprio filtro."
       },
       "files": {
         "jail": "Jail",
         "filter": "Filtro",
-        "jailHint": "Quando banir — quantas tentativas, em quanto tempo, por quanto tempo.",
-        "filterHint": "O que conta como tentativa ruim — comparado com cada linha do log."
+        "toggle": "Editar os ficheiros você mesmo"
       },
       "placeholderNote": "O nome da jail, o caminho do log e o filtro são preenchidos automaticamente. Deixe a linha do filtro como está.",
       "placeholderLost": "{count, plural, one {{tokens} não está mais no arquivo — o valor que ele representava não será preenchido. Isso só é correto se você o substituiu de propósito.} other {{tokens} não estão mais no arquivo — os valores que eles representavam não serão preenchidos. Isso só é correto se você os substituiu de propósito.}}",
@@ -5811,6 +5813,28 @@
         "unbanTitle": "Desbanir {ip}?",
         "unbanBody": "Ele poderá acessar esta aplicação imediatamente. Se continuar errando logins, a jail o banirá de novo.",
         "cancel": "Cancelar"
+      },
+      "loginRule": {
+        "pathLabel": "Endereço da página de início de sessão",
+        "pathHint": "Por exemplo /login ou /admin/login.",
+        "answerLabel": "Uma palavra-passe errada recebe",
+        "answers": {
+          "error": "Um erro (401, 403 ou 422)",
+          "page": "A página de início de sessão outra vez"
+        },
+        "answerHint": "Um início de sessão correto nunca é contado.",
+        "errors": {
+          "required": "Introduza primeiro o endereço da página de início de sessão.",
+          "invalid": "Comece por / e use só letras, números e - _ . /"
+        }
+      },
+      "rules": {
+        "title": "Regras de bloqueio",
+        "description": "Quando um endereço é banido desta aplicação.",
+        "errors": {
+          "maxretry": "Use um número inteiro de 1 a 100.",
+          "findtime": "Use um número inteiro de segundos de 30 a 86400 (um dia)."
+        }
       }
     },
     "staging": {
@@ -7889,7 +7913,8 @@
       "stoppedScanHint": "O que ela encontrou antes de parar está listado abaixo. Nada foi alterado no servidor. Examine novamente para ver a lista completa.",
       "stoppedAdopt": "A adição parou antes de terminar",
       "stoppedAdoptHint": "Os itens marcados como Adicionado estão no painel. O restante não foi adicionado — examine novamente para ver o que falta.",
-      "handledSoFar": "{count, plural, =0 {Nada processado até agora} one {# item processado até agora} other {# itens processados até agora}}"
+      "handledSoFar": "{count, plural, =0 {Nada processado até agora} one {# item processado até agora} other {# itens processados até agora}}",
+      "previewAddable": "{count, plural, =0 {Nada de novo para adicionar} one {# item para adicionar} other {# itens para adicionar}}"
     },
     "results": {
       "searchPlaceholder": "Buscar por nome",
@@ -8183,7 +8208,7 @@
         "unknown": "O registo recusou a ligação sem dizer porquê."
       },
       "confirm": {
-        "title": "Excluir {name}?",
+        "title": "Remover {name}?",
         "body": "A credencial é eliminada deste servidor. Nenhuma aplicação a está a usar.",
         "bodyInUse": "{count, plural, one {# aplicação está configurada} other {# aplicações estão configuradas}} para obter imagens com esta credencial. Não são eliminadas e continuam a funcionar, mas a próxima obtenção será anónima e falhará se a imagem for privada."
       },

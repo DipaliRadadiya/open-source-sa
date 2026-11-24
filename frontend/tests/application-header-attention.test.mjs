@@ -81,8 +81,11 @@ test("a git site's header shows its Git host, as the list does", () => {
 test("on a phone the domain wraps at its dots and the icons follow its last letter", () => {
   // Krishna, 8 Oct: break-all split "116" and the copy button floated beside the first line.
   assert.doesNotMatch(page, /<span className="break-all">\{application\.domain\}<\/span>/);
-  assert.match(page, /function BreakableDomain\(/);
-  assert.match(page, /\{label\}\.<wbr \/>/);
+  // Shared since 24 Nov (the Clone screen broke a domain mid-label too).
+  const breakable = read("components/ui/breakable-domain.jsx");
+  assert.match(page, /import \{ BreakableDomain \} from "@\/components\/ui\/breakable-domain";/);
+  assert.match(breakable, /export function BreakableDomain\(/);
+  assert.match(breakable, /\{label\}\.<wbr \/>/);
   assert.match(page, /\{"\\u2060"\}\s*<CopyButton value=\{application\.domain\} className="-my-1 ml-0\.5 inline-flex align-middle" \/>/);
 });
 

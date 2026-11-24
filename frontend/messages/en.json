@@ -5756,15 +5756,17 @@
       },
       "state": {
         "on": "Fail2ban is on",
-        "onBody": "fail2ban is watching this application's access log and banning addresses that match the filter below.",
         "setup": "Setting up Fail2ban",
-        "setupBody": "Both files below start from the panel's defaults. Nothing is watching this application until you save them."
+        "setupBody": "Check the rules below, then turn it on.",
+        "onNoRule": "No login page is set, so nobody is banned yet. Add it below.",
+        "onPath": "Banning addresses that get the password wrong at {path}.",
+        "onWordPress": "Banning addresses that get the WordPress password wrong.",
+        "onCustom": "Banning addresses that match your own filter."
       },
       "files": {
         "jail": "Jail",
         "filter": "Filter",
-        "jailHint": "When to ban — how many tries, over how long, for how long.",
-        "filterHint": "What counts as a bad try — matched against each log line."
+        "toggle": "Edit the files yourself"
       },
       "placeholderNote": "The jail name, log path and filter are filled in for you. Leave the filter line as it is.",
       "placeholderLost": "{count, plural, one {{tokens} is no longer in the file — the value it stood for will not be filled in. That is only correct if you replaced it on purpose.} other {{tokens} are no longer in the file — the values they stood for will not be filled in. That is only correct if you replaced them on purpose.}}",
@@ -5811,6 +5813,28 @@
         "unbanTitle": "Unban {ip}?",
         "unbanBody": "It can reach this application again straight away. If it keeps failing logins, the jail bans it again.",
         "cancel": "Cancel"
+      },
+      "loginRule": {
+        "pathLabel": "Login page address",
+        "pathHint": "For example /login or /admin/login.",
+        "answerLabel": "A wrong password gets",
+        "answers": {
+          "error": "An error (401, 403 or 422)",
+          "page": "The login page again"
+        },
+        "answerHint": "A correct sign-in is never counted.",
+        "errors": {
+          "required": "Enter the login page address first.",
+          "invalid": "Start with / and use only letters, numbers and - _ . /"
+        }
+      },
+      "rules": {
+        "title": "Ban rules",
+        "description": "When an address is banned from this application.",
+        "errors": {
+          "maxretry": "Use a whole number from 1 to 100.",
+          "findtime": "Use a whole number of seconds from 30 to 86400 (one day)."
+        }
       }
     },
     "staging": {
@@ -7889,7 +7913,8 @@
       "stoppedScanHint": "Anything it found before stopping is listed below. Nothing has been changed on your server. Scan again to get the full list.",
       "stoppedAdopt": "Adding stopped before it finished",
       "stoppedAdoptHint": "Items marked Added are in the panel. The rest were not added — scan again to see what is left.",
-      "handledSoFar": "{count, plural, =0 {Nothing handled yet} one {# handled so far} other {# handled so far}}"
+      "handledSoFar": "{count, plural, =0 {Nothing handled yet} one {# handled so far} other {# handled so far}}",
+      "previewAddable": "{count, plural, =0 {Nothing new to add} one {Found # thing to add} other {Found # things to add}}"
     },
     "results": {
       "searchPlaceholder": "Search by name",
@@ -8183,7 +8208,7 @@
         "unknown": "The registry refused the connection without saying why."
       },
       "confirm": {
-        "title": "Delete {name}?",
+        "title": "Remove {name}?",
         "body": "The credential is deleted from this server. No application is using it.",
         "bodyInUse": "{count, plural, one {# application is} other {# applications are}} set to pull with this credential. They are not deleted and keep running — but their next pull will be anonymous, and will fail if the image is private."
       },

@@ -28,10 +28,10 @@ test("Activity Log reads When, User, What happened, then Type", () => {
 test("an application's Fail2ban page says 'not set up' once", () => {
   const page = read("app/(app)/applications/[application]/fail2ban/page.jsx");
   assert.doesNotMatch(page, /<Caution/);
-  assert.match(page, /filterNote=\{status\.filterNote\}/);
-  // The note renders only past the not-set-up early return.
+  // 24 Nov: the "no login rule" note is the status card's own line, past the not-set-up early return.
   const panel = read("components/applications/fail2ban/fail2ban-panel.jsx");
-  assert.ok(panel.indexOf("if (!config && !editing)") < panel.indexOf("{filterNote ? ("));
+  const note = panel.indexOf('t("state.onNoRule")');
+  assert.ok(note > 0 && panel.indexOf("if (!config && !editing)") < note);
 });
 
 test("a backed-up application's summary does not repeat its schedule and storage", () => {
