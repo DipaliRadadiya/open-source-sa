@@ -13,6 +13,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\BackupStopCause;
 use App\Services\Server\Backups\StaleBackupReaper;
+use App\Support\WorkerProcess;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\TimeoutExceededException;
@@ -250,6 +251,59 @@ describe('POST /backups/{backup}/clear', function () {
 
         $this->postJson("/api/backups/{$stale->id}/clear")->assertForbidden();
     });
+});
+
+/*
+ * QA 2026-11-24: killing the worker mid-backup held the target for 65
+ * minutes, and Clear refused all that time. The run now records which worker
+ * process runs it; once that process is definitely gone, nothing can still be
+ * writing, so there is nothing to wait for.
+ */
+describe('a run whose worker is gone', function () {
+    // Above Linux's largest possible PID (pid_max ≤ 4194304): never a process.
+    $deadPid = 4194303;
+
+    it('can be cleared straight away', function () use ($deadPid) {
+        $run = stuckRun(BackupStatus::Running, 2);
+        $run->forceFill(['worker_pid' => $deadPid, 'worker_started' => '12345'])->save();
+
+        $this->postJson("/api/backups/{$run->id}/clear")
+            ->assertOk()
+            ->assertJsonPath('backup.status', 'failed');
+    });
+
+    it('is closed by the reaper on its own, and the site can be backed up again', function () use ($deadPid) {
+        $run = stuckRun(BackupStatus::Running, 2);
+        $run->forceFill(['worker_pid' => $deadPid])->save();
+
+        expect(app(StaleBackupReaper::class)->reap($this->backupTarget))->toBe(1)
+            ->and($run->fresh()->status)->toBe(BackupStatus::Failed);
+    });
+
+    it('counts a recycled PID as gone: same number, a different process', function () {
+        $run = stuckRun(BackupStatus::Running, 2);
+        // This process exists, but it is not the one that started at tick 1.
+        $run->forceFill(['worker_pid' => getmypid(), 'worker_started' => '1'])->save();
+
+        expect(app(StaleBackupReaper::class)->isStale($run->fresh()))->toBeTrue();
+    });
+
+    it('keeps waiting while the worker is alive', function () {
+        $run = stuckRun(BackupStatus::Running, 2);
+        $run->forceFill(['worker_pid' => getmypid(), 'worker_started' => WorkerProcess::startTime()])->save();
+
+        expect(app(StaleBackupReaper::class)->isStale($run->fresh()))->toBeFalse();
+        $this->postJson("/api/backups/{$run->id}/clear")->assertStatus(422);
+    });
+
+    it('keeps waiting for a process it may not signal — never calls an unknown dead', function () {
+        // PID 1 is root's: posix_kill says "not permitted", not "no such process".
+        $run = stuckRun(BackupStatus::Running, 2);
+        $run->forceFill(['worker_pid' => 1, 'worker_started' => null])->save();
+
+        expect(app(StaleBackupReaper::class)->isStale($run->fresh()))->toBeFalse();
+    })->skip(fn () => posix_geteuid() === 0, 'root may signal PID 1');
+
 });
 
 describe('while a restore of the same site is in progress', function () {

@@ -431,6 +431,10 @@ describe('a whole backup to this server', function () {
         expect($failed->status)->toBe(BackupStatus::Failed)
             ->and($failed->reason)->toBe('not_enough_space')
             ->and($failed->error_class)->toBe('local_no_space')
+            // Which process ran it (2026-11-24): lets a run whose worker died
+            // be cleared once it has, not after the 65-minute guess.
+            ->and($failed->fresh()->worker_pid)->toBe(getmypid())
+            ->and($failed->fresh()->worker_started)->not->toBeNull()
             // Refused at the first step: nothing was archived.
             ->and(collect($this->ran)->first(fn ($c) => $c[0] === 'tar'))->toBeNull();
     });

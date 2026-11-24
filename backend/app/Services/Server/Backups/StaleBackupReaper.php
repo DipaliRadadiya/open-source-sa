@@ -6,6 +6,7 @@ use App\Enums\BackupStatus;
 use App\Jobs\RunBackup;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Support\WorkerProcess;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
@@ -102,6 +103,14 @@ class StaleBackupReaper
     {
         if (! in_array($backup->status->value, self::IN_FLIGHT, true)) {
             return false;
+        }
+
+        // The worker that ran it is dead: nothing can still be writing, so
+        // there is nothing to wait for (QA, 2026-11-24 — a killed worker held
+        // its target for 65 minutes). Only a definite "gone" counts; anything
+        // uncertain falls through to the time-based rules below.
+        if ($backup->worker_pid !== null && WorkerProcess::gone($backup->worker_pid, $backup->worker_started)) {
+            return true;
         }
 
         // A run that is reporting bytes is alive, whatever its age. This is the

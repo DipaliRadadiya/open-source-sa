@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
-#[Fillable(['backup_target_id', 'application_id', 'database_id', 'subject_name', 'subject_engine', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'stopped_step', 'stopped_cause', 'error_class', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at'])]
+#[Fillable(['backup_target_id', 'application_id', 'database_id', 'subject_name', 'subject_engine', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'stopped_step', 'stopped_cause', 'error_class', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at', 'worker_pid', 'worker_started'])]
 class Backup extends Model
 {
     protected function casts(): array
@@ -22,6 +22,7 @@ class Backup extends Model
             'status' => BackupStatus::class,
             'manifest' => 'array',
             'size_bytes' => 'integer',
+            'worker_pid' => 'integer',
             'bytes_transferred' => 'integer',
             'bytes_total' => 'integer',
             'progress_at' => 'datetime',

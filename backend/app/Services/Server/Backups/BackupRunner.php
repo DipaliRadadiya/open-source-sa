@@ -10,6 +10,7 @@ use App\Exceptions\UploadStalled;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use App\Support\WorkerProcess;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -82,6 +83,10 @@ class BackupRunner
             'reference' => (string) Str::uuid(),
             'log_key' => $logKey,
             'started_at' => now(),
+            // So a run whose worker was killed can be cleared once it is
+            // dead, not after the 65-minute guess (StaleBackupReaper).
+            'worker_pid' => WorkerProcess::pid(),
+            'worker_started' => WorkerProcess::startTime(),
         ]);
 
         $workingDirectory = $this->workingDirectory($backup->id);
