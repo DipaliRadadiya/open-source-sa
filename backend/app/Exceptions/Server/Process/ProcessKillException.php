@@ -107,9 +107,19 @@ class ProcessKillException extends Exception
         return __($this->messageKey);
     }
 
+    /**
+     * A fixed code for a caller that has to tell the refusals apart without
+     * reading a translated sentence — Central (QA, 2026-11-24). From the
+     * message key: `errors/process.not_found` → `process_not_found`.
+     */
+    public function code(): string
+    {
+        return 'process_'.substr($this->messageKey, strlen('errors/process.'));
+    }
+
     public function render(Request $request): JsonResponse
     {
-        $payload = ['message' => $this->reason()];
+        $payload = ['message' => $this->reason(), 'code' => $this->code()];
 
         if ($this->reference !== null) {
             $payload['reference'] = $this->reference;

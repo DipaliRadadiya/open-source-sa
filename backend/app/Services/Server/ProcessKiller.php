@@ -118,6 +118,13 @@ class ProcessKiller
         );
 
         if ($result->failed()) {
+            // Gone between the look and the signal — it finished on its own
+            // while the user was clicking Stop. Not a failure to report with
+            // a reference: the same 404 as a PID that was never there.
+            if ($this->inspect($pid) === null) {
+                throw ProcessKillException::notFound();
+            }
+
             throw ProcessKillException::failed($result->reference);
         }
 

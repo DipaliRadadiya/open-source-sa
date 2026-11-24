@@ -137,7 +137,47 @@ it('reports a PID that is no longer running as not found', function () {
 
     // Not a quiet success: PIDs get recycled, so "already gone" and "killed
     // whatever now holds that number" must not look the same.
-    killPid(999_999)->assertNotFound();
+    killPid(999_999)->assertNotFound()
+        // A code Central can match without reading a translated sentence.
+        ->assertJsonPath('code', 'process_not_found');
+
+    // Never signalled: there was nothing there to signal.
+    Process::assertNotRan(fn ($p) => $p->command[0] === 'kill');
+});
+
+/*
+ * QA 2026-11-24: a process that finished between the look and the signal
+ * (the user clicked Stop on a list a moment old) made `kill` fail, and that
+ * was a 500 with a support reference. It is the same answer as never there.
+ */
+it('reports a process that exited just before the signal as not found, not as a failure', function () {
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+        $killed = collect($runs)->contains(fn ($c) => $c[0] === 'kill');
+
+        return match (true) {
+            $process->command[0] === 'kill' => Process::result(errorOutput: 'kill: (4321) - No such process', exitCode: 1),
+            $process->command[0] !== 'ps' => Process::result(exitCode: 0),
+            $killed => Process::result(output: '', exitCode: 1),
+            in_array('lstart=,stat=', $process->command, true) => Process::result(output: "Sun Oct  4 10:00:00 2026 S\n"),
+            default => Process::result(output: "sleep deploy 1000\n"),
+        };
+    });
+
+    killPid(4321)->assertNotFound()->assertJsonPath('code', 'process_not_found');
+});
+
+it('still reports a kill that failed on a process that is still there', function () {
+    Process::fake(fn ($process) => match (true) {
+        $process->command[0] === 'kill' => Process::result(errorOutput: 'kill: (4321) - Operation not permitted', exitCode: 1),
+        $process->command[0] !== 'ps' => Process::result(exitCode: 0),
+        in_array('lstart=,stat=', $process->command, true) => Process::result(output: "Sun Oct  4 10:00:00 2026 S\n"),
+        default => Process::result(output: "sleep deploy 1000\n"),
+    });
+
+    killPid(4321)->assertStatus(500)->assertJsonPath('code', 'process_kill_failed');
 });
 
 it('answers not found for a PID no process can have (bug #8)', function (string $pid) {
