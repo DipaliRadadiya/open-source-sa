@@ -232,7 +232,7 @@ class CreateApplication
         // reads the install run opened here (D3).
         app(ApplicationRuns::class)->open($application, ApplicationRun::INSTALL, Auth::id());
 
-        ProvisionApplication::dispatch($application->id, Auth::id());
+        ProvisionApplication::queueOrFail($application->id, Auth::id());
 
         return $application->fresh(['systemUser']);
     }

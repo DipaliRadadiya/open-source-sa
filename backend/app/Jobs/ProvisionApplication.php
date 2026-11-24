@@ -14,6 +14,8 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ApplicationRuns;
 use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\ProvisioningBudget;
+use Illuminate\Bus\UniqueLock;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -54,6 +56,39 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return 'application-provision-'.$this->applicationId;
+    }
+
+    /**
+     * Queue it, or record at once that it could not be queued.
+     *
+     * Not named `queue()`: Laravel's dispatcher calls a job's own `queue()`
+     * method, if it has one, to push it.
+     *
+     * The site row is saved before this runs. When the queue refused the job
+     * (Redis down for a moment, seen on a fresh OpenLiteSpeed server,
+     * 2026-11-24) the request answered 500 and the site stayed `pending` for
+     * ever — no worker would ever touch it, and Retry setup did nothing while
+     * it said provisioning. Marked failed instead, it shows why and Retry setup
+     * works once the queue is back.
+     */
+    public static function queueOrFail(int $applicationId, ?int $actorId = null): void
+    {
+        try {
+            static::dispatch($applicationId, $actorId);
+        } catch (Throwable $e) {
+            $job = new static($applicationId, $actorId);
+
+            // The one-at-a-time lock is taken before the push, so a refused
+            // push left it held: the next Retry setup was silently dropped as
+            // a duplicate and the site sat at "provisioning" instead.
+            try {
+                (new UniqueLock(app(Cache::class)))->release($job);
+            } catch (Throwable) {
+                // The lock store is down too; the lock expires on its own.
+            }
+
+            $job->failed($e);
+        }
     }
 
     public function handle(ApplicationProvisioner $provisioner, ActivityLogger $activityLogger): void
@@ -175,7 +210,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
         ]);
 
         $updated = Application::whereKey($this->applicationId)
-            ->where('status', ApplicationStatus::Provisioning->value)
+            // Pending too: a job that never started leaves the site there.
+            ->whereIn('status', [ApplicationStatus::Pending->value, ApplicationStatus::Provisioning->value])
             ->update([
                 'status' => ApplicationStatus::Failed->value,
                 'failed_step' => 'worker',

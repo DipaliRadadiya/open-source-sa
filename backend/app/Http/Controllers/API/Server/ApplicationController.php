@@ -173,7 +173,7 @@ class ApplicationController extends Controller
         // retry as waiting before a worker picks it up (D3).
         app(ApplicationRuns::class)->open($application, ApplicationRun::INSTALL, Auth::id());
 
-        ProvisionApplication::dispatch($application->id, Auth::id());
+        ProvisionApplication::queueOrFail($application->id, Auth::id());
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

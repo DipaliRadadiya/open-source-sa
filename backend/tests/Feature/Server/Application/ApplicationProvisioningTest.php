@@ -371,6 +371,53 @@ it('can retry a failed provision explicitly', function () {
         ->and($app->fresh()->failed_reason)->toBeNull();
 });
 
+/*
+ * 2026-11-24, on a fresh OpenLiteSpeed server: Redis refused one connection
+ * just as a site was created. The row was saved, the job never queued, the
+ * request answered 500 and the site sat at `pending` for ever. The queue here
+ * is a real Redis connection to a port nothing listens on — the same refusal.
+ */
+describe('when the queue refuses the setup job', function () {
+    beforeEach(function () {
+        config([
+            'queue.default' => 'redis',
+            'database.redis.default.host' => '127.0.0.1',
+            'database.redis.default.port' => 1,
+            'database.redis.options.prefix' => '',
+        ]);
+        app('redis')->purge();
+    });
+
+    it('marks a new site failed with a reason, instead of pending for ever', function () {
+        $this->withHeaders(provisionHeaders())->postJson('/api/applications', [
+            'site_type' => 'php',
+            'name' => 'Shop',
+            'domain' => 'shop.example.com',
+            'system_user_id' => $this->su->id,
+        ])->assertCreated()
+            ->assertJsonPath('application.status', 'failed')
+            ->assertJsonPath('application.failed_step', 'worker');
+
+        expect(Application::where('name', 'Shop')->value('reference'))->not->toBeNull();
+    });
+
+    it('marks a retried site failed again rather than provisioning for ever', function () {
+        $app = makeApp(['status' => 'failed', 'failed_step' => 'reload', 'reference' => 'abc']);
+
+        $this->withHeaders(provisionHeaders())
+            ->postJson("/api/applications/{$app->id}/provision")
+            ->assertStatus(202)
+            ->assertJsonPath('application.status', 'failed');
+
+        // And once the queue is back, Retry setup is offered and works.
+        Queue::fake();
+        $this->withHeaders(provisionHeaders())
+            ->postJson("/api/applications/{$app->id}/provision")
+            ->assertJsonPath('application.status', 'provisioning');
+        Queue::assertPushed(ProvisionApplication::class);
+    });
+});
+
 it('does not queue a second provision while one is already running', function () {
     Queue::fake();
     $app = makeApp(['status' => 'provisioning', 'steps' => ['create_directory']]);
