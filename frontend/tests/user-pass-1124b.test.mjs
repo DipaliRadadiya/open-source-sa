@@ -160,3 +160,11 @@ test("every new string exists in all 8 languages, with its placeholders", () => 
     if (locale !== "en") assert.doesNotMatch(m.applications.php.budget.equation, /\bworkers\b(?! *\})/i, locale);
   }
 });
+
+test("a short domain label is kept whole; only a label too long for a line may break", async () => {
+  const { BreakableDomain } = await loadComponent("components/ui/breakable-domain.jsx");
+  const { container } = render(createElement("p", null, createElement(BreakableDomain, { domain: "ux-clone-with-a-much-longer-subdomain-name-1124.23-172-120-111.nip.io" })));
+  const spans = [...container.querySelectorAll("p > span")];
+  assert.deepEqual(spans.map((s) => s.textContent), ["ux-clone-with-a-much-longer-subdomain-name-1124.", "23-172-120-111.", "nip.", "io"]);
+  assert.deepEqual(spans.map((s) => s.className), ["", "whitespace-nowrap", "whitespace-nowrap", "whitespace-nowrap"]);
+});
