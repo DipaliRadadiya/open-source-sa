@@ -14,6 +14,7 @@ import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { gitProviderFor } from "@/lib/applications/git-provider";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { shownSizeBytes } from "@/lib/applications/size-measurement";
 
 // Narrow-screen sites list; the badge shares the facts line so the name fits at 320px.
 export function ApplicationsCards({
@@ -101,9 +102,9 @@ export function ApplicationsCards({
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>
             {/* Same as the table's Size column; an unmeasured site is left out rather than
                 shown as a dash that reads like zero bytes. */}
-            {formatBytes(application.directory_size_bytes, format) ? (
+            {formatBytes(shownSizeBytes(application), format) ? (
               <span className="whitespace-nowrap tabular-nums">
-                {formatBytes(application.directory_size_bytes, format)}
+                {formatBytes(shownSizeBytes(application), format)}
               </span>
             ) : null}
             <span className="whitespace-nowrap">{application.created_at_human ?? "—"}</span>

@@ -4246,7 +4246,8 @@
       "removeDockerImages": "Supprimer aussi ses images Docker",
       "removeDockerImagesHint": "Seules les images qu'aucune autre application n'utilise sont supprimées. Elles sont retéléchargées si besoin.",
       "removeSystemUser": "Supprimer aussi l'utilisateur système {username}",
-      "removeSystemUserOn": "Il n'est supprimé que si aucune autre application ne l'utilise et que personne n'est connecté avec. Vous serez prévenu s'il est conservé."
+      "removeSystemUserOn": "Il n'est supprimé que si aucune autre application ne l'utilise et que personne n'est connecté avec. Vous serez prévenu s'il est conservé.",
+      "systemUserShared": "{username} est aussi utilisé par {count, plural, one {# autre application} other {# autres applications}}, il est donc conservé."
     },
     "systemUserMissing": {
       "title": "L'utilisateur système de cette application est introuvable",
@@ -5648,7 +5649,9 @@
         "over": "Plus que les {total} de ce serveur",
         "legend": "{sites, plural, =0 {Aucune autre application n'utilise de mémoire} one {Une autre application a réclamé {value}} other {# autres applications ont réclamé {value}}}",
         "equation": "{limit} × {workers} workers = {total} à pleine charge",
-        "overDetail": "Toutes les applications réunies ont besoin de {required}, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers."
+        "overDetail": "Toutes les applications réunies ont besoin de {required}, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers.",
+        "overSelf": "À sa limite, cette application seule pourrait utiliser {required}, plus que les {total} de ce serveur. Baissez la limite de mémoire ou le nombre de processus.",
+        "overShared": "À leurs limites, toutes les applications ensemble pourraient utiliser {required}, plus que les {total} de ce serveur. Elles l'atteignent rarement en même temps : c'est seulement un avertissement."
       },
       "custom": "Personnalisé",
       "seconds": "{count} s",

@@ -30,7 +30,7 @@ test("Docker's own size text reads like a file size", () => {
   assert.equal(formatDockerSize("1.618MB", format("en")), "1.6 MB");
   assert.equal(formatDockerSize("1.618MB", format("de")), "1,6 MB");
   assert.equal(formatDockerSize("0B", format("en")), "0 B");
-  assert.equal(formatDockerSize("12.3kB", format("fr")), "12,3 kB");
+  assert.equal(formatDockerSize("12.3kB", format("fr")), "12,3 KB");
   assert.equal(formatDockerSize("", format("en")), null);
 });
 

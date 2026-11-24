@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+// 24 Nov (Krishna): "KB", not "kB", like every other size in the panel; steps stay 1000.
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -18,7 +19,7 @@ test("a file reads the same as in Ubuntu's file manager", () => {
   // Bug #17: Ubuntu showed 243.6 MB, the upload dialog 232 MB, for one .tar.
   assert.equal(formatFileSize(243_616_768, en), "243.6 MB");
   assert.equal(formatBytes(243_616_768, en), "232 MB");
-  assert.equal(formatFileSize(3_900, en), "3.9 kB");
+  assert.equal(formatFileSize(3_900, en), "3.9 KB");
   assert.equal(formatFileSize(26_100_000, en), "26.1 MB");
   assert.equal(formatFileSize(1_000_000, en), "1.0 MB");
   assert.equal(formatFileSize(2_500_000_000, en), "2.5 GB");
@@ -27,10 +28,10 @@ test("a file reads the same as in Ubuntu's file manager", () => {
 test("unit boundaries step on the rounded figure", () => {
   assert.equal(formatFileSize(0, en), "0 B");
   assert.equal(formatFileSize(999, en), "999 B");
-  assert.equal(formatFileSize(999.6, en), "1.0 kB");
-  assert.equal(formatFileSize(1_000, en), "1.0 kB");
-  assert.equal(formatFileSize(1_024, en), "1.0 kB");
-  assert.equal(formatFileSize(999_949, en), "999.9 kB");
+  assert.equal(formatFileSize(999.6, en), "1.0 KB");
+  assert.equal(formatFileSize(1_000, en), "1.0 KB");
+  assert.equal(formatFileSize(1_024, en), "1.0 KB");
+  assert.equal(formatFileSize(999_949, en), "999.9 KB");
   assert.equal(formatFileSize(999_960, en), "1.0 MB");
   assert.equal(formatFileSize(5e15, en), "5,000.0 TB");
 });
@@ -39,12 +40,12 @@ test("not a byte count renders nothing, never 0 B or NaN", () => {
   for (const value of [null, undefined, "", "abc", -1, Number.NaN, Infinity]) {
     assert.equal(formatFileSize(value, en), null, String(value));
   }
-  assert.equal(formatFileSize("2048", en), "2.0 kB");
+  assert.equal(formatFileSize("2048", en), "2.0 KB");
 });
 
 test("the number follows the locale", () => {
   assert.equal(formatFileSize(243_616_768, format("de")), "243,6 MB");
-  assert.equal(formatFileSize(1_500, format("fr")), "1,5 kB");
+  assert.equal(formatFileSize(1_500, format("fr")), "1,5 KB");
 });
 
 test("every file-manager size is built from bytes, not the backend's 1024 label", () => {

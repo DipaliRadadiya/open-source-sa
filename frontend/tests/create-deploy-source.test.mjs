@@ -87,7 +87,7 @@ test("Docker server defaults to One-click recipes and offers no Docker container
   assert.ok(screen.getByRole("button", { name: /Ghost/ }));
   assert.ok(screen.getByRole("button", { name: /Vaultwarden/ }));
   assert.equal(screen.queryByRole("button", { name: /Docker container/ }), null);
-  assert.equal(screen.getAllByText("2 containers · Needs at least 1g RAM").length, 2);
+  assert.equal(screen.getAllByText("2 containers · Needs at least 1 GB RAM").length, 2);
 });
 
 test("empty recipe search cross-links into Docker and seeds the exact image query", async () => {

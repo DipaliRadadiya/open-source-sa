@@ -51,7 +51,8 @@ export function formatBytes(bytes, format) {
   })} ${units[i]}`;
 }
 
-const FILE_UNITS = ["B", "kB", "MB", "GB", "TB"];
+// "KB" like every other size in the panel (Krishna, 24 Nov: "19.9 kB" beside "5.0 KB" read as two systems).
+const FILE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 
 /**
  * File sizes for the file manager: steps of 1000 with one decimal, as Ubuntu's and
@@ -65,7 +66,7 @@ export function formatFileSize(bytes, format) {
   if (!Number.isFinite(n) || n < 0) return null;
   let value = n;
   let i = 0;
-  // Step on the rounded figure, so 999,960 bytes is "1.0 MB", never "1,000.0 kB".
+  // Step on the rounded figure, so 999,960 bytes is "1.0 MB", never "1,000.0 KB".
   const shown = () => (i === 0 ? Math.round(value) : Math.round(value * 10) / 10);
   while (shown() >= 1000 && i < FILE_UNITS.length - 1) {
     value /= 1000;

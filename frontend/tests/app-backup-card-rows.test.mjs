@@ -22,7 +22,8 @@ test("the newest run failing turns Last backup red", () => {
 
 test("not set up: what a backup would hold, and what is at risk", () => {
   const card = read("components/applications/backup-card.jsx");
-  assert.match(card, /formatBytes\(application\?\.directory_size_bytes, format\)/);
+  // A size taken during setup is not shown (24 Nov), so the card reads it through shownSizeBytes.
+  assert.match(card, /formatBytes\(shownSizeBytes\(application\), format\)/);
   // Unknown databases (no permission, failed read) show a dash, never "None attached".
   assert.match(card, /databases === null\s*\?\s*"—"/);
   assert.match(card, /t\("atRisk", \{ name: application\.name \}\)/);

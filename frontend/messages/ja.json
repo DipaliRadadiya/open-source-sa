@@ -4246,7 +4246,8 @@
       "removeDockerImages": "Docker イメージも削除する",
       "removeDockerImagesHint": "他のアプリケーションが使っていないイメージだけを削除します。必要になれば再ダウンロードされます。",
       "removeSystemUser": "システムユーザー {username} も削除する",
-      "removeSystemUserOn": "他のアプリケーションが使っておらず、誰もサインインしていない場合にのみ削除されます。残された場合はお知らせします。"
+      "removeSystemUserOn": "他のアプリケーションが使っておらず、誰もサインインしていない場合にのみ削除されます。残された場合はお知らせします。",
+      "systemUserShared": "{username} は他の {count, plural, other {# 個のアプリケーション}}でも使われているため、残ります。"
     },
     "systemUserMissing": {
       "title": "このアプリケーションのシステムユーザーが見つかりません",
@@ -5648,7 +5649,9 @@
         "over": "このサーバーの {total} を超えています",
         "legend": "{sites, plural, =0 {メモリを使用している他のアプリケーションはありません} one {他の 1 アプリケーションが {value} を確保しています} other {他の # アプリケーションが合わせて {value} を確保しています}}",
         "equation": "{limit} × {workers} workers = 最大 {total}",
-        "overDetail": "すべてのアプリケーションの合計で {required} 必要ですが、このサーバーは {total} です。メモリ上限またはワーカー数を減らしてください。"
+        "overDetail": "すべてのアプリケーションの合計で {required} 必要ですが、このサーバーは {total} です。メモリ上限またはワーカー数を減らしてください。",
+        "overSelf": "上限まで使うと、このアプリケーションだけで {required} を使用し、このサーバーの {total} を超えます。メモリ上限かワーカー数を下げてください。",
+        "overShared": "すべてのアプリケーションが上限まで使うと合計 {required} になり、このサーバーの {total} を超えます。全部が同時にピークになることはまれなので、これはお知らせです。"
       },
       "custom": "カスタム",
       "seconds": "{count} 秒",

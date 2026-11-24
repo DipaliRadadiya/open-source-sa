@@ -977,7 +977,15 @@ function ValueSelect({
   const tValidation = useTranslations("validation");
   const tCommon = useTranslations("common");
   const value = useWatch({ control: form.control, name });
-  const inList = options.some((option) => String(option) === String(value));
+  // The application's saved value is always a choice of its own: a default of 20 workers
+  // showed as "Custom" with a box, as if someone had typed it (Krishna, 24 Nov).
+  const saved = form.formState.defaultValues?.[name];
+  const sizeOf = (option) => (numeric ? Number(option) : phpSizeToBytes(String(option)));
+  const choices =
+    saved == null || saved === "" || options.some((option) => String(option) === String(saved))
+      ? options
+      : [...options, saved].sort((a, b) => sizeOf(a) - sizeOf(b));
+  const inList = choices.some((option) => String(option) === String(value));
   // Reset by the panel's remount on Discard and after a save.
   const [customPicked, setCustomPicked] = useState(false);
   const custom = !inList || customPicked;
@@ -1015,7 +1023,7 @@ function ValueSelect({
           </SelectTrigger>
         </FormControl>
         <SelectContent>
-          {options.map((option) => (
+          {choices.map((option) => (
             <SelectItem key={option} value={String(option)} className="tabular-nums">
               {render ? render(option) : option}
             </SelectItem>
@@ -1134,6 +1142,11 @@ function MemoryBudget({ budget, workers, limit }) {
 
   if (!budget.total) return null;
 
+  // Red only when this application alone could outgrow the server. All applications at their
+  // limits together is a worst case that rarely happens, and a new app's defaults already met
+  // it, so that is an amber heads-up (Krishna, 24 Nov).
+  const overSelf = budget.thisSite > budget.total;
+  const tone = overSelf ? "destructive" : budget.overCommitted ? "warning" : null;
   const pct = (bytes) => Math.min(100, Math.round((bytes / budget.total) * 100));
   const mine = pct(budget.thisSite);
   const others = Math.max(0, Math.min(100 - mine, pct(budget.others)));
@@ -1142,7 +1155,8 @@ function MemoryBudget({ budget, workers, limit }) {
     <div
       className={cn(
         "space-y-2 rounded-lg border p-3",
-        budget.overCommitted && "border-destructive/40 bg-destructive/5",
+        tone === "destructive" && "border-destructive/40 bg-destructive/5",
+        tone === "warning" && "border-warning/40 bg-warning/5",
       )}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1166,18 +1180,18 @@ function MemoryBudget({ budget, workers, limit }) {
 
       <div className="flex h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div
-          className={cn("h-full shrink-0", budget.overCommitted ? "bg-destructive" : "bg-primary")}
+          className={cn("h-full shrink-0", tone === "destructive" ? "bg-destructive" : tone === "warning" ? "bg-warning" : "bg-primary")}
           style={{ width: `${mine}%` }}
         />
         <div className="h-full shrink-0 bg-muted-foreground/30" style={{ width: `${others}%` }} />
       </div>
 
-      {budget.overCommitted ? (
-        <p className="flex items-start gap-2 text-xs font-medium text-destructive">
+      {tone ? (
+        <p className={cn("flex items-start gap-2 text-xs", tone === "destructive" ? "font-medium text-destructive" : "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning")}>
           <TriangleAlert className="mt-px size-3.5 shrink-0" />
           <span>
-            {t("overDetail", {
-              required: formatBytes(budget.committed),
+            {t(overSelf ? "overSelf" : "overShared", {
+              required: formatBytes(overSelf ? budget.thisSite : budget.committed),
               total: formatBytes(budget.total),
             })}
           </span>

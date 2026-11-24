@@ -22,6 +22,7 @@ import { rangeLabel } from "@/lib/runtime/version-range";
 import { acceptedEngines } from "@/lib/applications/database-readiness";
 import { blockersAreFixable } from "@/lib/applications/blockers";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { dockerMemoryText } from "@/lib/docker/memory-text";
 
 // Category glyph for a type with no logo; types with artwork use SiteTypeLogo.
 function TypeIcon({ type, className }) {
@@ -377,7 +378,7 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
                   {type.recipe ? (
                     <span className="mt-0.5 block text-xs text-muted-foreground">
                       {t("recipes.containers", { count: type.recipe.services.length })}
-                      {type.recipe.memory_floor ? <> · {t("recipes.memoryFloor", { memory: type.recipe.memory_floor })}</> : null}
+                      {type.recipe.memory_floor ? <> · {t("recipes.memoryFloor", { memory: dockerMemoryText(type.recipe.memory_floor) })}</> : null}
                     </span>
                   ) : null}
                 </span>

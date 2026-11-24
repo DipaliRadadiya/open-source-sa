@@ -112,7 +112,12 @@ test("PHP-E: the extra-directives example is one the server accepts", () => {
 });
 
 test("PHP-G: the over-commit sentence compares the total", () => {
-  assert.match(read("components/applications/php/php-panel.jsx"), /required: formatBytes\(budget\.committed\)/);
+  // 24 Nov (Krishna): red only when this application alone outgrows the server; all of
+  // them at their limits together is an amber heads-up.
+  const panel = read("components/applications/php/php-panel.jsx");
+  assert.match(panel, /required: formatBytes\(overSelf \? budget\.thisSite : budget\.committed\)/);
+  assert.match(panel, /const overSelf = budget\.thisSite > budget\.total;/);
+  assert.match(panel, /t\(overSelf \? "overSelf" : "overShared"/);
 });
 
 test("FS-C33: a failed upload names what the storage said (9 Oct)", () => {

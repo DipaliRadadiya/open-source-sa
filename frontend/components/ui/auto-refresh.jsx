@@ -7,7 +7,8 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Refreshes only while visible. After `stopAfterMs` it offers "Check again", so a stale "Installing…" never looks live.
-export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null }) {
+// `quiet`: a background freshness tick with nothing pending, so stopping says nothing.
+export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null, quiet = false }) {
   const router = useRouter();
   const t = useTranslations("common.autoRefresh");
   // Bumped by "Check again" to restart the effect.
@@ -44,7 +45,7 @@ export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null }) {
     setRound((n) => n + 1);
   }, [router]);
 
-  if (!stopped) return null;
+  if (!stopped || quiet) return null;
 
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">

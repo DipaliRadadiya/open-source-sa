@@ -4,6 +4,7 @@ import { ChevronDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FACT_LABEL } from "@/lib/theme/facts";
+import { dockerMemoryText } from "@/lib/docker/memory-text";
 
 // Explicit keys keep every first-run promise visible to check-i18n.
 function firstRunText(kind, t) {
@@ -53,7 +54,7 @@ export function RecipeSummary({ type }) {
             </>
           ) : null}
         </dl>
-        {recipe.memory_floor ? <p className="text-xs text-muted-foreground">{t("recipes.memoryFloor", { memory: recipe.memory_floor })}</p> : null}
+        {recipe.memory_floor ? <p className="text-xs text-muted-foreground">{t("recipes.memoryFloor", { memory: dockerMemoryText(recipe.memory_floor) })}</p> : null}
         {recipe.images.length ? (
           <Collapsible>
             <CollapsibleTrigger asChild>

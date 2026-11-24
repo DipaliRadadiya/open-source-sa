@@ -17,6 +17,8 @@ import {
 import { SiteTypeRelabelDialog } from "@/components/applications/site-type-relabel-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 import { formatBytes } from "@/lib/format/bytes";
+import { parseApiDate } from "@/lib/format/api-date";
+import { NEW_APP_MS, SETUP_WINDOW_MS, sizeMeasuredDuringSetup } from "@/lib/applications/size-measurement";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Button } from "@/components/ui/button";
@@ -51,7 +53,10 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
   const controls = (
     <>
       {/* Outlined, like every other button: as bare icons they read as decoration (7 Oct). */}
-      {copy ? <CopyButton value={String(copyValue)} label={extraCopy?.firstLabel} outlined className="border border-border/80 bg-card shadow-xs" /> : null}
+      {/* In the header strip on a touch screen the copy buttons were always shown, a row of
+          small icons beside every value (Krishna, 24 Nov); there the value is selectable
+          instead. Edit, menu and the password copy stay. */}
+      {copy ? <CopyButton value={String(copyValue)} label={extraCopy?.firstLabel} outlined className={`border border-border/80 bg-card shadow-xs ${strip ? "pointer-coarse:hidden" : ""}`} /> : null}
       {/* A second value behind the same fact (the owner's password beside its username); greyed
           with the reason when there is none to copy. */}
       {extraCopy?.value ? (
@@ -350,8 +355,35 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     }
   }
 
+  // A size taken while setup was still writing the files is not shown. That one, or a new
+  // application's missing first size, is measured quietly once setup is surely done, by
+  // whoever may measure, so the open page shows it without a reload.
+  const measuredDuringSetup = sizeMeasuredDuringSetup(application);
+  const createdAt = parseApiDate(application.created_at);
+  const needsFirstSize = measuredDuringSetup || application.directory_size_bytes == null;
+  useEffect(() => {
+    if (!needsFirstSize || !createdAt || !canManage || application.status !== "active") return undefined;
+    // Only a young application: an old one with no size waits for the sweep or a click.
+    if (!measuredDuringSetup && Date.now() - createdAt.getTime() > NEW_APP_MS) return undefined;
+    const wait = Math.max(0, createdAt.getTime() + SETUP_WINDOW_MS - Date.now());
+    const timer = setTimeout(async () => {
+      setMeasuring(true);
+      try {
+        await measureApplicationSize(application.id);
+        await refreshAndWait();
+      } catch {
+        // The nightly sweep measures it anyway.
+      } finally {
+        setMeasuring(false);
+      }
+    }, wait);
+    return () => clearTimeout(timer);
+    // Once per stored measurement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [application.id, application.directory_size_measured_at, application.status, canManage]);
+
   // Null when unmeasured: shown as "Not measured", never "0 B".
-  const size = formatBytes(application.directory_size_bytes, format);
+  const size = measuredDuringSetup ? null : formatBytes(application.directory_size_bytes, format);
 
   // What share of that is in Docker volumes, for a container site. The total on
   // its own is unexplainable: 284 MB against a document root the File Manager
@@ -483,7 +515,7 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     {
       icon: HardDrive,
       label: t("columns.size"),
-      value: size ?? t("size.notMeasured"),
+      value: size ?? (needsFirstSize && measuring ? t("size.measuring") : t("size.notMeasured")),
       // Only once there is a measurement to break down. A site nobody has
       // measured says "Not measured", and hanging "0 B in volumes" under that
       // would be describing a number that is not there.
@@ -537,9 +569,10 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     return (
       <>
         {/* One row up to six facts; seven or eight go four across, so none is left alone.
-            A container's row is sized by content: equal columns left "Docker Compose" with
-            empty room while Size's note wrapped (Krishna, 20 Oct). */}
-        <dl className={`-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 ${cells === 6 && facts.some((fact) => fact.wide) ? "xl:grid-cols-none xl:grid-flow-col xl:auto-cols-[minmax(0,auto)]" : facts.length > 6 ? "xl:grid-cols-4" : "xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]"} ${className ?? ""}`}>
+            The one row is sized by content: equal columns left "Docker Compose" with empty
+            room while Size's note wrapped (Krishna, 20 Oct), and cut a system user to
+            "ux-wp…" beside half-empty cells (24 Nov). */}
+        <dl className={`-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 ${(cells === 6 && facts.some((fact) => fact.wide)) || facts.length <= 6 ? "xl:grid-cols-none xl:grid-flow-col xl:auto-cols-[minmax(0,auto)]" : "xl:grid-cols-4"} ${className ?? ""}`}>
           {facts.map((fact) => (
             <Fact key={fact.label} editLabel={t("webRoot.title")} strip {...fact} />
           ))}

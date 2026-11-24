@@ -13,6 +13,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { getSystemUserDetail } from "@/lib/api/system-users";
 
 // The domain is what must be typed: it is what stops being served.
 // `remove_files` also destroys this site's backup archives in storage. Unticked, the backup rows
@@ -32,6 +33,11 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   // Off by default: one account often serves several applications (the API keeps it then).
   const [removeSystemUser, setRemoveSystemUser] = useState(false);
   const systemUsername = application?.system_user?.username ?? null;
+  const systemUserId = application?.system_user?.id ?? null;
+  // How many OTHER applications run as this account, read on open: the API keeps a shared
+  // account anyway, so offering to remove it (qa owns 10 apps) promised what it won't do.
+  // Null while unknown or unreadable: the checkbox is offered as before.
+  const [othersOnUser, setOthersOnUser] = useState(null);
   // On by default, like files and databases: a volume holding a container site's
   // database is as unrecoverable as the database a LEMP site had.
   const [removeDockerResources, setRemoveDockerResources] = useState(true);
@@ -47,6 +53,20 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     ...(application.volume_mounts ?? []).map((mount) => mount.volume),
     ...(application.docker_network ? [application.docker_network] : []),
   ].filter((name, index, all) => name && all.indexOf(name) === index);
+
+  useEffect(() => {
+    if (!open || !systemUserId || !canRemoveSystemUser) return undefined;
+    let active = true;
+    getSystemUserDetail(systemUserId)
+      .then((res) => {
+        const apps = res.data?.system_user?.applications;
+        if (active && Array.isArray(apps)) setOthersOnUser(apps.filter((app) => app.id !== application.id).length);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [open, systemUserId, canRemoveSystemUser, application?.id]);
 
   // Fetched on open, not mount (rendered per row). A failure hides the checkbox.
   useEffect(() => {
@@ -110,7 +130,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           canManageDocker && dockerResourceNames.length > 0 && removeDockerResources,
         // Sent both ways for a docker manager; omitted otherwise so the API keeps them.
         removeDockerImages: canManageDocker && isDocker ? removeDockerImages : null,
-        removeSystemUser: canRemoveSystemUser && Boolean(systemUsername) && removeSystemUser,
+        removeSystemUser: canRemoveSystemUser && Boolean(systemUsername) && !(othersOnUser > 0) && removeSystemUser,
       });
 
       // A 200 can still carry database failures: warn, naming what is left.
@@ -275,7 +295,11 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         ) : null}
 
         {/* Only with the grant the API checks; otherwise say the account stays. */}
-        {systemUsername && canRemoveSystemUser ? (
+        {systemUsername && canRemoveSystemUser && othersOnUser > 0 ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("systemUserShared", { username: systemUsername, count: othersOnUser })}
+          </p>
+        ) : systemUsername && canRemoveSystemUser ? (
           <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
             <Checkbox
               id="delete-app-system-user"
@@ -288,7 +312,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
                 {t("removeSystemUser", { username: systemUsername })}
               </Label>
               <p className="text-xs leading-5 text-muted-foreground">
-                {removeSystemUser ? t("removeSystemUserOn") : t("systemUserStays", { username: systemUsername })}
+                {/* One sentence for both states: unticked, "is not removed" under "Also remove"
+                    read as a contradiction (Krishna, 24 Nov). */}
+                {t("removeSystemUserOn")}
               </p>
             </div>
           </div>

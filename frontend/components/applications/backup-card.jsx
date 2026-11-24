@@ -30,6 +30,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { shownSizeBytes } from "@/lib/applications/size-measurement";
 
 // Same threshold the Backups screen uses before reporting a stalled queue.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
@@ -187,7 +188,7 @@ export function BackupCard({
             ) : (
               <>
                 <Row icon={Folder} label={t("filesSize")}>
-                  {formatBytes(application?.directory_size_bytes, format) ?? "—"}
+                  {formatBytes(shownSizeBytes(application), format) ?? "—"}
                 </Row>
                 <Row icon={Database} label={t("databaseRow")}>
                   {databases === null

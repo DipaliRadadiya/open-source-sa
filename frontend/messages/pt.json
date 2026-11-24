@@ -4246,7 +4246,8 @@
       "removeDockerImages": "Eliminar também as suas imagens Docker",
       "removeDockerImagesHint": "Só são eliminadas as imagens que nenhuma outra aplicação usa. São transferidas de novo se forem precisas.",
       "removeSystemUser": "Remover também o usuário do sistema {username}",
-      "removeSystemUserOn": "Ele só é removido se nenhuma outra aplicação o usar e ninguém estiver conectado com ele. Você será avisado se ele for mantido."
+      "removeSystemUserOn": "Ele só é removido se nenhuma outra aplicação o usar e ninguém estiver conectado com ele. Você será avisado se ele for mantido.",
+      "systemUserShared": "{username} também é usado por {count, plural, one {# outra aplicação} other {# outras aplicações}}, por isso é mantido."
     },
     "systemUserMissing": {
       "title": "O usuário do sistema desta aplicação está faltando",
@@ -5648,7 +5649,9 @@
         "over": "Mais que o {total} deste servidor",
         "legend": "{sites, plural, =0 {Nenhuma outra aplicação está usando memória} one {Uma outra aplicação já reivindicou {value}} other {# outras aplicações já reivindicaram {value}}}",
         "equation": "{limit} × {workers} workers = {total} em carga total",
-        "overDetail": "Todas as aplicações juntas precisam de {required}, mas este servidor tem {total}. Diminua o limite de memória ou o número de workers."
+        "overDetail": "Todas as aplicações juntas precisam de {required}, mas este servidor tem {total}. Diminua o limite de memória ou o número de workers.",
+        "overSelf": "No limite, esta aplicação sozinha poderia usar {required}, mais do que os {total} deste servidor. Diminua o limite de memória ou o número de processos.",
+        "overShared": "Nos limites, todas as aplicações juntas poderiam usar {required}, mais do que os {total} deste servidor. Raramente atingem o pico ao mesmo tempo, por isso é só um aviso."
       },
       "custom": "Personalizado",
       "seconds": "{count}s",

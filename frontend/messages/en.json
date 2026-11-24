@@ -4246,7 +4246,8 @@
       "removeDockerImages": "Also remove its Docker images",
       "removeDockerImagesHint": "Only images no other app uses are removed. They are downloaded again if needed.",
       "removeSystemUser": "Also remove the system user {username}",
-      "removeSystemUserOn": "It's removed only if no other application uses it and nobody is signed in as it. You'll be told if it was kept."
+      "removeSystemUserOn": "It's removed only if no other application uses it and nobody is signed in as it. You'll be told if it was kept.",
+      "systemUserShared": "{username} is also used by {count, plural, one {# other application} other {# other applications}}, so it stays."
     },
     "systemUserMissing": {
       "title": "This application's system user is missing",
@@ -5648,7 +5649,9 @@
         "over": "More than this server's {total}",
         "legend": "{sites, plural, =0 {No other applications are using memory} one {One other application has claimed {value}} other {# other applications have claimed {value}}}",
         "equation": "{limit} × {workers} workers = {total} at full load",
-        "overDetail": "All applications together need {required}, but this server has {total}. Lower the memory limit or the number of workers."
+        "overDetail": "All applications together need {required}, but this server has {total}. Lower the memory limit or the number of workers.",
+        "overSelf": "At its limit this application alone could use {required}, more than this server's {total}. Lower the memory limit or the number of workers.",
+        "overShared": "At their limits all applications together could use {required}, more than this server's {total}. They rarely all peak at once, so this is only a heads-up."
       },
       "custom": "Custom",
       "seconds": "{count}s",

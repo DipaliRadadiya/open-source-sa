@@ -4246,7 +4246,8 @@
       "removeDockerImages": "Eliminar también sus imágenes de Docker",
       "removeDockerImagesHint": "Solo se eliminan las imágenes que no usa ninguna otra aplicación. Se vuelven a descargar si hacen falta.",
       "removeSystemUser": "Eliminar también el usuario del sistema {username}",
-      "removeSystemUserOn": "Solo se elimina si ninguna otra aplicación lo usa y nadie tiene la sesión iniciada con él. Se te avisará si se conserva."
+      "removeSystemUserOn": "Solo se elimina si ninguna otra aplicación lo usa y nadie tiene la sesión iniciada con él. Se te avisará si se conserva.",
+      "systemUserShared": "{username} también lo usa {count, plural, one {# otra aplicación} other {# otras aplicaciones}}, así que se mantiene."
     },
     "systemUserMissing": {
       "title": "Falta el usuario del sistema de esta aplicación",
@@ -5648,7 +5649,9 @@
         "over": "Más de los {total} de este servidor",
         "legend": "{sites, plural, =0 {Ninguna otra aplicación usa memoria} one {Otra aplicación ha reservado {value}} other {# aplicaciones más han reservado {value}}}",
         "equation": "{limit} × {workers} workers = {total} a plena carga",
-        "overDetail": "Todas las aplicaciones juntas necesitan {required}, pero este servidor tiene {total}. Reduce el límite de memoria o el número de workers."
+        "overDetail": "Todas las aplicaciones juntas necesitan {required}, pero este servidor tiene {total}. Reduce el límite de memoria o el número de workers.",
+        "overSelf": "En su límite, esta aplicación sola podría usar {required}, más que los {total} de este servidor. Baja el límite de memoria o el número de procesos.",
+        "overShared": "En sus límites, todas las aplicaciones juntas podrían usar {required}, más que los {total} de este servidor. Rara vez llegan todas a la vez, así que es solo un aviso."
       },
       "custom": "Personalizado",
       "seconds": "{count}s",

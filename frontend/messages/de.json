@@ -4246,7 +4246,8 @@
       "removeDockerImages": "Auch die Docker-Images entfernen",
       "removeDockerImagesHint": "Es werden nur Images entfernt, die keine andere Anwendung verwendet. Bei Bedarf werden sie erneut heruntergeladen.",
       "removeSystemUser": "Auch den Systembenutzer {username} entfernen",
-      "removeSystemUserOn": "Er wird nur entfernt, wenn keine andere Anwendung ihn nutzt und niemand mit ihm angemeldet ist. Sie erfahren es, falls er behalten wird."
+      "removeSystemUserOn": "Er wird nur entfernt, wenn keine andere Anwendung ihn nutzt und niemand mit ihm angemeldet ist. Sie erfahren es, falls er behalten wird.",
+      "systemUserShared": "{username} wird auch von {count, plural, one {# anderen Anwendung} other {# anderen Anwendungen}} genutzt und bleibt daher erhalten."
     },
     "systemUserMissing": {
       "title": "Der Systembenutzer dieser Anwendung fehlt",
@@ -5648,7 +5649,9 @@
         "over": "Mehr als die {total} dieses Servers",
         "legend": "{sites, plural, =0 {Keine andere Anwendung nutzt Speicher} one {Eine andere Anwendung hat {value} beansprucht} other {# andere Anwendungen haben {value} beansprucht}}",
         "equation": "{limit} × {workers} Worker = {total} bei voller Last",
-        "overDetail": "Alle Anwendungen zusammen brauchen {required}, aber dieser Server hat {total}. Senken Sie das Speicherlimit oder die Zahl der Worker."
+        "overDetail": "Alle Anwendungen zusammen brauchen {required}, aber dieser Server hat {total}. Senken Sie das Speicherlimit oder die Zahl der Worker.",
+        "overSelf": "Am Limit könnte diese Anwendung allein {required} belegen – mehr als die {total} dieses Servers. Senken Sie das Speicherlimit oder die Anzahl der Worker.",
+        "overShared": "Am Limit könnten alle Anwendungen zusammen {required} belegen – mehr als die {total} dieses Servers. Selten erreichen alle gleichzeitig ihr Limit, das ist also nur ein Hinweis."
       },
       "custom": "Eigene",
       "seconds": "{count} s",

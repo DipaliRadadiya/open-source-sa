@@ -1,9 +1,11 @@
 import Link from "@/components/ui/app-link";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Eye, EyeOff } from "lucide-react";
 import { connectionAddress } from "@/lib/databases/connection-parts";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { HoverHint } from "@/components/ui/hover-hint";
 import { FormModal } from "@/components/ui/form-modal";
 import { ConnectionString } from "@/components/databases/connection-string";
 
@@ -74,8 +76,14 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
             {fields.map((field) => (
               <div key={field.key} className="flex min-h-11 items-center gap-3 py-1.5 pr-1.5 pl-3.5">
                 <span className="w-24 shrink-0 text-xs text-muted-foreground">{t(`created.${field.key}`)}</span>
-                {/* Wraps rather than truncating: a cut-off name still looks valid. */}
-                <span className="min-w-0 flex-1 font-mono text-sm break-all">{field.value}</span>
+                {/* Wraps rather than truncating: a cut-off name still looks valid. The password
+                    is masked like the connection string above it; Copy works while hidden
+                    (Krishna, 24 Nov). */}
+                {field.key === "password" ? (
+                  <MaskedValue value={field.value} />
+                ) : (
+                  <span className="min-w-0 flex-1 font-mono text-sm break-all">{field.value}</span>
+                )}
                 <CopyButton
                   value={field.value}
                   label={t("credentials.copyField", { field: t(`created.${field.key}`) })}
@@ -96,5 +104,27 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
         </p>
       )}
     </FormModal>
+  );
+}
+
+function MaskedValue({ value }) {
+  const tc = useTranslations("common");
+  const [shown, setShown] = useState(false);
+  const label = shown ? tc("hidePassword") : tc("showPassword");
+  return (
+    <>
+      <span className="min-w-0 flex-1 font-mono text-sm break-all">{shown ? value : "••••••••••••"}</span>
+      <HoverHint content={label}>
+        <button
+          type="button"
+          onClick={() => setShown((s) => !s)}
+          aria-label={label}
+          aria-pressed={shown}
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+        </button>
+      </HoverHint>
+    </>
   );
 }

@@ -183,7 +183,13 @@ export function BackupsPanel({
 
   return (
     <div className="space-y-6">
-      {busy || queued ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+      {/* Fast while something runs; otherwise once a minute, so "4 seconds ago" does not sit
+          on screen for minutes (Krishna, 24 Nov). Only while the tab is visible. */}
+      {busy || queued ? (
+        <AutoRefresh intervalMs={5000} stopAfterMs={600000} />
+      ) : (
+        <AutoRefresh intervalMs={60000} stopAfterMs={30 * 60 * 1000} quiet />
+      )}
 
       {/* First: a restore is rewriting this site's files and database now. */}
       {restore ? (

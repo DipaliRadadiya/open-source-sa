@@ -40,6 +40,7 @@ import {
 } from "@/components/applications/application-status-badge";
 import { applicationIconDataUri } from "@/lib/applications/application-icon";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { shownSizeBytes } from "@/lib/applications/size-measurement";
 
 
 /* Cells at module level: flexRender treats an inline cell as a new component type,
@@ -133,7 +134,7 @@ function SizeCell({ row }) {
   const format = useFormatter();
   const router = useRouter();
   const [measuring, setMeasuring] = useState(false);
-  const size = formatBytes(row.original.directory_size_bytes, format);
+  const size = formatBytes(shownSizeBytes(row.original), format);
 
   async function measure() {
     setMeasuring(true);

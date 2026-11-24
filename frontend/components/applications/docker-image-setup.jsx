@@ -283,6 +283,19 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     form.clearErrors("image");
   }
 
+  // A search result is a repository; the tag typed with it ("nginx:alpine") was dropped and the
+  // newest stable preselected instead (Krishna, 24 Nov). Kept when the result is that image.
+  function chooseOption(option) {
+    const { repository: typedRepo, tag: typedTag } = splitImageRef(typed);
+    const bare = (ref) => ref.replace(/^(docker\.io\/)?(library\/)?/, "");
+    const sameImage = bare(splitImageRef(option.image).repository) === bare(typedRepo);
+    if (!option.typed && typedTag && !splitImageRef(option.image).tag && sameImage) {
+      choose(joinImageRef(option.image, typedTag));
+      return;
+    }
+    choose(option.image);
+  }
+
   function chooseManualImage() {
     if (!looksLikeImageRef(typed) || typed.length > DOCKER_LIMITS.image) {
       form.setError("image", { type: "manual", message: tm("manualInvalid") });
@@ -337,7 +350,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
       // Unhighlighted, Enter means "the best match": not known until the search answers,
       // and the literal term is not a stand-in for it.
       const option = active >= 0 ? options[active] : searchState === "loading" ? null : options[0];
-      if (option) choose(option.image);
+      if (option) chooseOption(option);
     }
   }
 
@@ -502,7 +515,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                           role="option"
                           aria-selected={index === active}
                           onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => choose(option.image)}
+                          onClick={() => chooseOption(option)}
                           onMouseEnter={() => setActive(index)}
                           className={cn(
                             "flex cursor-pointer items-start gap-3 rounded-md px-2.5 py-2",
