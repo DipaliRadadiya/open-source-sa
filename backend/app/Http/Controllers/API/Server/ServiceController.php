@@ -51,8 +51,9 @@ class ServiceController extends Controller
      */
     public function update(ServiceActionRequest $request, string $service, RunServiceAction $action): JsonResponse
     {
-        return response()->json([
-            'service' => $action->execute($service, $request->validated('action')),
-        ]);
+        $result = $action->execute($service, $request->validated('action'));
+
+        // 202 when it runs after this answer: accepted, not yet done.
+        return response()->json(['service' => $result], isset($result['scheduled']) ? 202 : 200);
     }
 }

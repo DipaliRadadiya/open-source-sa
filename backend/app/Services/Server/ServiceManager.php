@@ -425,6 +425,16 @@ class ServiceManager
     }
 
     /**
+     * Whether this unit carries the panel's own requests: its web server or
+     * a PHP-FPM it runs on. Redis is protected too, but restarting it does not
+     * cut the connection a request arrived on.
+     */
+    public function servesPanel(string $unit): bool
+    {
+        return $unit !== 'redis-server' && $this->isProtected($unit);
+    }
+
+    /**
      * The panel's web server is determined by the recorded installation stack
      * (or brownfield capability detection), not by a static nginx assumption.
      *

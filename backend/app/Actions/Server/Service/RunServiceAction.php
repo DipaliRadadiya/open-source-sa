@@ -7,6 +7,8 @@ use App\Services\ActivityLogger;
 use App\Services\Server\ConfigTester;
 use App\Services\Server\ServiceManager;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class RunServiceAction
@@ -26,6 +28,12 @@ class RunServiceAction
      * to start it, and takes every site and the panel itself down with it.
      */
     private const TESTED_ACTIONS = ['start', 'restart', 'reload'];
+
+    /**
+     * Actions that take down, for a moment, the very process answering this
+     * request when the unit is the web server or PHP-FPM the panel runs on.
+     */
+    private const DEFERRED_ACTIONS = ['restart', 'reload'];
 
     public function __construct(
         private ServiceManager $services,
@@ -58,6 +66,17 @@ class RunServiceAction
             $this->refuseBrokenConfig($service);
         }
 
+        // The panel's own web server or PHP: restarting it inside the request
+        // killed the connection carrying the request, so the caller (Central
+        // above all) got an error for a restart that worked (QA, 2026-11-24).
+        // The config test above has already passed; the answer goes out
+        // first and the restart runs right after it is sent.
+        if (in_array($action, self::DEFERRED_ACTIONS, true) && $this->services->servesPanel($service['unit'])) {
+            App::terminating(fn () => $this->runAfterResponse($service, $action));
+
+            return [...$this->services->describe($service), 'scheduled' => $action];
+        }
+
         $result = $this->services->runService($service, $action);
 
         if ($result->failed()) {
@@ -72,6 +91,27 @@ class RunServiceAction
     /**
      * Services with no config test are not held back: there is nothing to ask.
      */
+    /**
+     * The deferred half: nobody is waiting for the answer any more, so a
+     * failure goes to the log with a reference rather than to a response.
+     *
+     * @param  array<string, mixed>  $service
+     */
+    private function runAfterResponse(array $service, string $action): void
+    {
+        $result = $this->services->runService($service, $action);
+
+        if ($result->failed()) {
+            Log::channel('server-ops')->error('deferred service action failed', [
+                'feature' => 'service', 'op' => $action, 'unit' => $service['unit'], 'reference' => $result->reference,
+            ]);
+
+            return;
+        }
+
+        $this->activityLogger->log('service.'.self::VERBS[$action], null, ['service' => $service['label']]);
+    }
+
     private function refuseBrokenConfig(array $service): void
     {
         $test = $this->tester->test($service['key']);

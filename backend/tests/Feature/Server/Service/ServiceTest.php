@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Server\Service\RunServiceAction;
+use App\Models\ActivityLog;
 use App\Models\ServerCapability;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -186,7 +188,8 @@ it('offers and runs reload when systemd says the service can reload', function (
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson('/api/services/nginx', ['action' => 'reload'])
-        ->assertOk();
+        // The panel's own web server: run after the answer (2026-11-24).
+        ->assertStatus(202);
 
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
 });
@@ -581,4 +584,56 @@ it('reports PostgreSQL\'s memory from its clusters, not the empty meta unit (bug
     expect($usage['memory_bytes'])->toBe(52355072)
         ->and($usage['memory_human'])->toBe('49.9 MB')
         ->and($usage['tasks'])->toBe(7);
+});
+
+/*
+ * QA 2026-11-24: restarting the web server or PHP-FPM the panel runs on,
+ * inside the request, cut the connection carrying that request, so Central
+ * got an error for a restart that worked. The answer now goes first and the
+ * restart runs once the response has been sent.
+ */
+describe('restarting what the panel itself runs on', function () {
+    it('answers before it restarts the panel\'s own web server', function (string $action) {
+        fakeServices(['nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'reload' => true]]);
+
+        $result = app(RunServiceAction::class)->execute('nginx', $action);
+
+        // The answer is ready and nothing has been restarted yet.
+        expect($result['scheduled'])->toBe($action);
+        Process::assertNotRan(fn ($p) => $p->command === ['systemctl', $action, 'nginx']);
+
+        // Runs once the response has gone out.
+        app()->terminate();
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', $action, 'nginx']);
+        expect(ActivityLog::query()->where('action', $action === 'restart' ? 'restarted' : 'reloaded')->exists())->toBeTrue();
+    })->with(['restart', 'reload']);
+
+    it('still restarts anything else inside the request, and says so with a 200', function () {
+        fakeServices(['mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/services/mariadb', ['action' => 'restart'])
+            ->assertOk()
+            ->assertJsonMissingPath('service.scheduled');
+
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'restart', 'mariadb']);
+    });
+
+    it('never schedules a restart over a configuration that fails its test', function () {
+        Process::fake(function ($process) {
+            if (($process->command[1] ?? null) === 'show') {
+                return Process::result(output: systemctlShowOutput($process->command, ['nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]));
+            }
+
+            return in_array('-t', $process->command, true)
+                ? Process::result(errorOutput: 'nginx: [emerg] unexpected end of file', exitCode: 1)
+                : Process::result(exitCode: 0);
+        });
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/services/nginx', ['action' => 'restart'])
+            ->assertUnprocessable();
+
+        Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'restart', 'nginx']);
+    });
 });

@@ -70,7 +70,9 @@ it('refuses to restart nginx when its configuration test fails', function (strin
 it('restarts nginx after its configuration test passes', function () {
     fakeGuardedServices();
 
-    $this->withHeaders(guardHeaders())->putJson('/api/services/nginx', ['action' => 'restart'])->assertOk();
+    // 202: the panel's own web server restarts after the answer is sent
+    // (2026-11-24); the test still comes first, inside the request.
+    $this->withHeaders(guardHeaders())->putJson('/api/services/nginx', ['action' => 'restart'])->assertStatus(202);
 
     $ran = collect($this->ran->getArrayCopy());
     $test = $ran->search('nginx -t');
