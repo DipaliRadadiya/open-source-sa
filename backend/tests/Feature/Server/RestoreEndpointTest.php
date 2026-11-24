@@ -9,6 +9,8 @@ use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 
 /*
@@ -139,6 +141,53 @@ it('refuses a second restore while one is running', function () {
         ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
         ->assertStatus(422)
         ->assertJsonValidationErrors('backup');
+});
+
+/*
+ * QA 2026-11-24: two restores sent together both passed the request's check,
+ * both created a pending row, and the queue dropped the second job (one per
+ * site). That row stayed pending for ever and blocked restores, deletion and
+ * scheduled backups. The other request is simulated by creating its row right
+ * after this request's check has run — the window the race lived in.
+ */
+it('refuses a second restore that arrives while the first is being created', function () {
+    $backup = endpointBackup();
+    $raced = false;
+
+    DB::listen(function ($query) use (&$raced, $backup) {
+        if ($raced || ! str_contains($query->sql, 'from "restores"')) {
+            return;
+        }
+
+        $raced = true;
+        Restore::create(['backup_id' => $backup->id, 'application_id' => $this->application->id, 'type' => 'full', 'status' => 'pending']);
+    });
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('backup');
+
+    expect($raced)->toBeTrue()
+        ->and(Restore::count())->toBe(1);
+    Queue::assertNothingPushed();
+});
+
+it('answers a restore started while another is starting as busy, not with a second row', function () {
+    $backup = endpointBackup();
+    $held = Cache::lock('restore-start:application-'.$this->application->id, 30);
+    $held->get();
+
+    try {
+        $this->actingAs($this->admin)
+            ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
+    } finally {
+        $held->release();
+    }
+
+    expect(Restore::count())->toBe(0);
 });
 
 it('refuses to restore a database from a files-only backup', function () {

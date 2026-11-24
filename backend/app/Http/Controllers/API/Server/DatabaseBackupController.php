@@ -114,18 +114,23 @@ class DatabaseBackupController extends Controller
             'disk_space',
         );
 
-        $restore = Restore::create([
-            'backup_id' => $backup->id,
-            'application_id' => null,
-            // The database from the URL — for an archived backup that is the
-            // one the user chose, and the only one it can be restored into.
-            'database_id' => $database->id,
-            'user_id' => $request->user()?->id,
-            'type' => BackupType::Database->value,
-            'safety_copy' => $request->safetyCopy(),
-            'status' => RestoreStatus::Pending,
-            'reference' => (string) Str::uuid(),
-        ]);
+        $restore = Restore::startExclusively(
+            'database-'.$database->id,
+            fn (): bool => Restore::inProgressForDatabase($database->id),
+            'backup.errors.restore_database_busy',
+            fn (): Restore => Restore::create([
+                'backup_id' => $backup->id,
+                'application_id' => null,
+                // The database from the URL — for an archived backup that is the
+                // one the user chose, and the only one it can be restored into.
+                'database_id' => $database->id,
+                'user_id' => $request->user()?->id,
+                'type' => BackupType::Database->value,
+                'safety_copy' => $request->safetyCopy(),
+                'status' => RestoreStatus::Pending,
+                'reference' => (string) Str::uuid(),
+            ]),
+        );
 
         RunRestore::dispatch($restore->id, 0, $database->id);
 

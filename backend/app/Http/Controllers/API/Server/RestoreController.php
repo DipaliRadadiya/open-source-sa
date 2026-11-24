@@ -44,18 +44,23 @@ class RestoreController extends Controller
             'disk_space',
         );
 
-        $restore = Restore::create([
-            'backup_id' => $backup->id,
-            // Taken from the backup, never from the request. A restore aimed
-            // at a different application would write one customer's database
-            // over another's — that is what the clone feature is for.
-            'application_id' => $backup->application_id,
-            'user_id' => $request->user()?->id,
-            'type' => $request->requestedType(),
-            'safety_copy' => $request->safetyCopy(),
-            'status' => RestoreStatus::Pending,
-            'reference' => (string) Str::uuid(),
-        ]);
+        $restore = Restore::startExclusively(
+            'application-'.$backup->application_id,
+            fn (): bool => Restore::inProgressFor((int) $backup->application_id),
+            'backup.errors.restore_already_running',
+            fn (): Restore => Restore::create([
+                'backup_id' => $backup->id,
+                // Taken from the backup, never from the request. A restore aimed
+                // at a different application would write one customer's database
+                // over another's — that is what the clone feature is for.
+                'application_id' => $backup->application_id,
+                'user_id' => $request->user()?->id,
+                'type' => $request->requestedType(),
+                'safety_copy' => $request->safetyCopy(),
+                'status' => RestoreStatus::Pending,
+                'reference' => (string) Str::uuid(),
+            ]),
+        );
 
         RunRestore::dispatch($restore->id, $backup->application_id);
 

@@ -19,6 +19,7 @@ use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Restores\RestoreRunner;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -257,6 +258,28 @@ describe('restoring', function () {
         $restore = Restore::latest('id')->first();
         expect($restore->database_id)->toBe($this->db->id)->and($restore->application_id)->toBeNull();
         Queue::assertPushed(RunRestore::class, fn (RunRestore $job) => $job->databaseId === $this->db->id);
+    });
+
+    // QA 2026-11-24: two restores sent together left one pending for ever.
+    it('refuses a restore that arrives while the first is being created', function () {
+        Queue::fake();
+        $backup = dbBackupRow();
+        $raced = false;
+
+        DB::listen(function ($query) use (&$raced, $backup) {
+            if ($raced || ! str_contains($query->sql, 'from "restores"')) {
+                return;
+            }
+
+            $raced = true;
+            Restore::create(['backup_id' => $backup->id, 'database_id' => $this->db->id, 'type' => 'database', 'status' => RestoreStatus::Pending, 'reference' => (string) Str::uuid()]);
+        });
+
+        $this->withHeaders(dbBackupHeaders())->postJson("/api/databases/{$this->db->id}/backups/{$backup->id}/restore", ['confirm' => 'ledger'])
+            ->assertStatus(422)->assertJsonValidationErrors('backup');
+
+        expect($raced)->toBeTrue()->and(Restore::count())->toBe(1);
+        Queue::assertNotPushed(RunRestore::class);
     });
 
     it('saves the database first, then replaces only that database — no site file, no process', function () {
