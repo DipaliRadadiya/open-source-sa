@@ -145,6 +145,23 @@ it('offers one version per major rather than every patch release', function () {
     expect(collect(nodeSettings()['installable'])->pluck('version')->all())->toBe(['22.11.0', '20.19.1', '18.20.4']);
 });
 
+/*
+ * QA 2026-11-24: Node lists its alphas and RCs next to real releases. Read by
+ * the leading number only, `v27.0.0-alpha.0.1.1` became `27.0.0` — a version
+ * that does not exist — at the top of the picker, and installing it failed.
+ */
+it('never offers a pre-release, or one rewritten as a release', function () {
+    Process::fake(fn ($process) => str_ends_with((string) $process->command[0], 'fnm') && in_array('list-remote', $process->command, true)
+        ? Process::result(output: "v26.13.1 (Lithium)\nv27.0.0-alpha.0.0.0\nv27.0.0-alpha.0.1.1\nv28.0.0-rc.1\nv24.11.0\n")
+        : Process::result(output: "/usr/local/bin/fnm\n"));
+
+    $runtime = app(NodeRuntime::class);
+
+    expect($runtime->installable())->toBe(['26.13.1', '24.11.0'])
+        ->and($runtime->releaseExists('27.0.0'))->toBeFalse()
+        ->and($runtime->releaseExists('26.13.1'))->toBeTrue();
+});
+
 describe('versions Node itself has stopped supporting', function () {
     /*
      * 🔴 The report this exists to stop happening again.

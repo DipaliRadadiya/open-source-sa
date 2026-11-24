@@ -713,9 +713,15 @@ class NodeRuntime implements Runtime
         }
     }
 
+    /**
+     * A release, never a pre-release. Node publishes alphas and RCs in the
+     * same list (`v27.0.0-alpha.0.1.1`, Nov 2026); reading only the leading
+     * number turned that into `27.0.0`, a version that does not exist, put it
+     * at the top of the picker, and every install of it failed (QA, 2026-11-24).
+     */
     private function parseVersion(string $line): ?string
     {
-        return preg_match('/v(\d+\.\d+\.\d+)/', $line, $matches) === 1 ? $matches[1] : null;
+        return preg_match('/v(\d+\.\d+\.\d+)(?=\s|$)/', $line, $matches) === 1 ? $matches[1] : null;
     }
 
     /**
