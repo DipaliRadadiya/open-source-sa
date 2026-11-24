@@ -411,7 +411,7 @@ it('owns 443 with the reserved pair on an nginx too old to reject a handshake (U
     // every new site on the box stopped at test_config. Still the hostname's
     // own 443 block, still no certbot path, HTTPS closed, port 80 serving.
     expect($config)->not->toContain('ssl_reject_handshake')
-        ->toContain('listen 443 ssl;', 'listen 80;')
+        ->toContain('listen 443 ssl http2;', 'listen 80;')
         ->toContain('ssl_certificate     /etc/ssl/sv-oss/.panel-tls-reject.crt;')
         ->toContain('ssl_certificate_key /etc/ssl/sv-oss/.panel-tls-reject.key;')
         ->toContain("if (\$scheme = https) {\n        return 444;\n    }")

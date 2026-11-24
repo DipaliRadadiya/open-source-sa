@@ -1295,7 +1295,9 @@ describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirect
         expect($run['code'])->toBe(0, $run['out'])
             ->and($run['out'])->toContain('TLS_STATE=self-signed')
             ->and(substr_count((string) $run['tls'], 'ssl_protocols TLSv1.2 TLSv1.3;'))
-            ->toBe(substr_count((string) $run['tls'], 'listen 443 ssl;'))
+            // `ssl` or `ssl http2`: the panel's 443 blocks follow the sites'
+            // options for this nginx (nginx_listen_http2, 2026-11-24).
+            ->toBe(preg_match_all('/listen 443 ssl( http2)?;/', (string) $run['tls']))
             ->toBe($singleHost ? 1 : 2);
     })->with(['one host' => [true], 'panel and API hosts' => [false]]);
 
