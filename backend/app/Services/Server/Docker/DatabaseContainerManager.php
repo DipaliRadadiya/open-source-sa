@@ -12,17 +12,13 @@ use Illuminate\Support\Facades\View;
 /**
  * Brings a containerised database up, and takes it down.
  *
- * The counterpart of {@see ContainerSupervisor}
- * for something that is not a site. It deliberately shares that class's rules and
- * none of its assumptions: same explicit `-f` and `-p`, same loopback publishing,
- * same named external volume — but no document root, no system user, no vhost and
- * no port allocated to be proxied to, because a database is reached directly.
+ * The counterpart of {@see ContainerSupervisor} for something that is not a site: same
+ * explicit `-f` and `-p`, loopback publishing and named external volume, but no document
+ * root, system user, vhost or proxied port (a database is reached directly).
  *
- * **Why the compose file lives outside any site's tree.** A database has no system
- * user to own it, and the file holds its password in plain text. So it sits in a
- * root-owned directory created on demand — on demand because install.sh runs once
- * and the updater ships code, never directories, so a path invented here would
- * exist on new boxes and be missing on every existing one.
+ * The compose file lives outside any site's tree, in a root-owned directory created on
+ * demand (the updater ships code, never directories), because it holds the password in plain
+ * text and a database has no system user to own it.
  */
 class DatabaseContainerManager
 {
@@ -46,10 +42,9 @@ class DatabaseContainerManager
     /**
      * Create the volume, write the file, bring it up.
      *
-     * The volume is created through {@see DockerResources} rather than left to
-     * Compose, for the reason the template declares it `external: true`: a volume
-     * the panel made is one the Docker page can list, attribute to this database,
-     * and refuse to delete while something is using it.
+     * The volume is created through {@see DockerResources} rather than left to Compose (the
+     * template declares it `external: true`) so the Docker page can list it, attribute it to
+     * this database, and refuse to delete it while in use.
      *
      * @throws DatabaseContainerFailedException
      */
@@ -61,9 +56,7 @@ class DatabaseContainerManager
 
         $directory = $this->directory($database);
 
-        // 0750 rather than 0700: root writes it and root reads it, and the panel
-        // runs elevated for both. Not world-readable, because the file has the
-        // password in it.
+        // Not world-readable: the compose file has the password in it.
         $this->serverOps->run(
             ['mkdir', '-m', '0750', '-p', $directory],
             $context + ['op' => 'db_dir'],
@@ -81,17 +74,9 @@ class DatabaseContainerManager
             throw new DatabaseContainerFailedException('container_start', $result->reference);
         }
 
-        // `up -d` returns as soon as the container is created, which for a database
-        // is well before it answers. Measured on a real box: the create endpoint
-        // replied 201 and a connection made immediately with the credentials it
-        // had just handed over was refused with "is the server running on that
-        // host" — Postgres was still initialising its data directory.
-        //
-        // So the call waits for the engine's own healthcheck. A database that has
-        // not become healthy in two minutes is not slow, it is broken — a bad
-        // volume permission, an OOM, an image that cannot initialise — and the
-        // caller rolls it back rather than leaving connection details that connect
-        // to nothing.
+        // `up -d` returns once the container is created, well before the database answers, so
+        // wait for the engine's own healthcheck. One not healthy in two minutes is broken, and
+        // the caller rolls it back rather than leave connection details that connect to nothing.
         if (! $this->waitUntilHealthy($database)) {
             throw new DatabaseContainerFailedException('not_ready', '');
         }
@@ -100,14 +85,12 @@ class DatabaseContainerManager
     /**
      * Wait for the engine to report itself healthy.
      *
-     * Every template defines a healthcheck that asks the ENGINE rather than the
-     * port — `pg_isready`, `mysqladmin ping`, `redis-cli ping` — because the port
-     * is open while the server is still replaying WAL and refusing connections.
+     * Every template's healthcheck asks the ENGINE rather than the port (`pg_isready`,
+     * `mysqladmin ping`, `redis-cli ping`), because the port is open while the server is still
+     * replaying WAL and refusing connections.
      *
-     * A container with no health status at all answers true immediately. That is
-     * not a loophole: it means the image defines no healthcheck and the panel's
-     * template did not add one, in which case there is nothing to wait for and
-     * blocking for two minutes would be a hang with no diagnosis.
+     * A container with no health status at all answers true at once: there is nothing to wait
+     * for, and blocking for two minutes would be a hang with no diagnosis.
      */
     private function waitUntilHealthy(DockerDatabase $database): bool
     {
@@ -123,20 +106,10 @@ class DatabaseContainerManager
 
             $status = trim($result->output());
 
-            // Only two statuses mean "not yet". Everything else — `healthy`,
-            // `none` for an image with no healthcheck, an unanswered inspect, a
-            // format Docker changes in some future release — means there is
-            // nothing to wait for.
-            //
-            // Written the other way round first (wait unless healthy) and it hung:
-            // an unreadable status is indistinguishable from "starting", so the
-            // whole timeout elapsed on every call. Same rule as the site
-            // crash-loop check, for the same reason — a check that cannot read the
-            // box must not be the thing that fails the operation.
-            //
-            // `unhealthy` IS transitional here: Docker marks it after the first
-            // failed probe, and a database initialising its data directory fails
-            // several before it starts answering.
+            // Only these two statuses mean "not yet"; anything else (`healthy`, `none`, an
+            // unreadable inspect) means nothing to wait for. Do not invert this (wait unless
+            // healthy): an unreadable status would then burn the whole timeout.
+            // `unhealthy` is transitional: a database initialising fails several probes first.
             if (! in_array($status, ['starting', 'unhealthy'], true)) {
                 return true;
             }
@@ -150,22 +123,14 @@ class DatabaseContainerManager
     /**
      * Stop it and remove its container.
      *
-     * `--volumes` only when asked. The volume is declared `external: true`, so
-     * Compose cannot remove it either way — the flag is passed for symmetry with
-     * the site path and because a future non-external volume would need it. The
-     * data is removed by the caller, through the same guarded path a site's
-     * volume goes through.
+     * The volume is `external: true`, so Compose never removes it; the caller removes the data
+     * through the same guarded path a site's volume goes through.
      *
-     * A failed `down` stops here while the container is still there. It used to
-     * be ignored: the directory went next, then the row, and the panel said
-     * "removed" over a container that was still running, now with no compose
-     * file to stop it with (live-reproduced 2026-11-06). Throwing keeps both,
-     * so a retry has what it needs.
+     * A failed `down` while the container is still there throws, keeping the directory and row
+     * so a retry still has a compose file to stop it with.
      *
-     * One repair is tried first: the compose file is written again from the row
-     * and `down` asked once more. A file that went missing or was edited by
-     * hand is the one cause of a failed `down` the panel can fix by itself, and
-     * without it that database could never be deleted from the panel at all.
+     * One repair is tried first: the compose file is rewritten from the row and `down` asked
+     * again, since a missing or hand-edited file is the one cause the panel can fix itself.
      *
      * @throws DatabaseContainerFailedException
      */
@@ -216,9 +181,8 @@ class DatabaseContainerManager
     /**
      * Does any container of this database's project still exist, running or not?
      *
-     * Asked after a failed `down`, which also fails when the container is
-     * already gone (the compose file was removed by hand, say). Only an answer
-     * of "none" counts as gone: Docker not answering is "still there".
+     * Asked after a failed `down`, which also fails when the container is already gone. Only
+     * an answer of "none" counts as gone: Docker not answering is "still there".
      */
     private function containerRemains(DockerDatabase $database): bool
     {
@@ -250,9 +214,7 @@ class DatabaseContainerManager
         $image = $database->image();
 
         if ($engine === null || $image === null) {
-            // Reachable: the catalog is config, so an operator can remove a
-            // version a row still names. Said as a failure with a step rather
-            // than a null the caller has to notice.
+            // Reachable: the catalog is config, so a version a row still names can be removed.
             throw new DatabaseContainerFailedException('unknown_engine', '');
         }
 
@@ -262,8 +224,7 @@ class DatabaseContainerManager
             'name' => $database->name,
             'port' => $database->port,
             'enginePort' => (int) $engine['port'],
-            // Asked of the ROW, not the engine: Postgres 18 keeps its data
-            // somewhere else and will not start if mounted at the engine default.
+            // Asked of the ROW, not the engine: Postgres 18 keeps its data elsewhere.
             'dataPath' => $database->dataPath(),
             'volume' => $database->volume(),
             'network' => $database->docker_network,
@@ -273,14 +234,11 @@ class DatabaseContainerManager
                 'root_password' => (string) $database->credential('root_password', ''),
                 'database' => (string) $database->credential('database', ''),
             ],
-            // The instance's own size first, then the server default. Before
-            // these columns existed every engine on the box shared one number, so
-            // a Redis cache and the primary Postgres were sized identically.
+            // The instance's own size first, then the server default.
             'memoryLimit' => (string) ($database->memory_limit
                 ?: config('server.docker.default_db_memory_limit', '512m')),
-            // No fallback, deliberately: null means no CPU quota, exactly as it
-            // does for a site. A default here would throttle every database
-            // already running on the box the next time it was recreated.
+            // No fallback: null means no CPU quota, as for a site. A default would throttle
+            // every existing database when it is next recreated.
             'cpuLimit' => $database->cpu_limit ?: null,
         ])->render();
     }
@@ -288,14 +246,11 @@ class DatabaseContainerManager
     /**
      * Every compose call for a database goes through here.
      *
-     * Run as root via the sudoers grant for the reason the site supervisor states:
-     * reaching the Docker socket needs membership of the `docker` group, and that
-     * membership is equivalent to root on this host.
+     * Run as root via the sudoers grant (Docker socket access is equivalent to root here).
      *
-     * `-f` with an explicit path and `-p` with an explicit project, never a bare
-     * `docker compose` relying on the working directory — two databases whose
-     * directories shared a basename would otherwise infer the same project and
-     * tear down each other's containers.
+     * Always an explicit `-f` and `-p`, never the working directory: databases whose
+     * directories share a basename would otherwise infer the same project and tear down each
+     * other's containers.
      *
      * @param  array<int, string>  $arguments
      */

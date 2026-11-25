@@ -9,29 +9,20 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Keeps a site's root directory from being renamed or replaced by the site's
- * own user.
+ * Keeps a site's root directory from being renamed or replaced by the site's own user.
  *
- * `{home}/{slug}` is owned by root, and so are `.panel` (the locked PHP config
- * lives there) and `logs` inside it. That ownership protected nothing on its
- * own: the directory sits in the user's HOME, which the user owns, and renaming
- * an entry needs write permission on the parent only. A site user — or any code
- * running as one, a compromised plugin included, since PHP's `rename()` and
- * `symlink()` are not disabled — could move the real directory aside and put
- * their own in its place. Reproduced on a real server (2026-09-23): the
- * substitute carried a symlink, an admin enabled Basic Auth, and the panel
- * wrote and chowned *the link's target* — a root-owned file became the site
- * user's. The same swap hands PHP a config without `disable_functions`.
+ * `{home}/{slug}` (and `.panel`, `logs` inside it) is owned by root, but it sits in the user's
+ * HOME and renaming an entry needs write permission on the parent only. So the site user, or
+ * any code running as it, could move the real directory aside and put a substitute (e.g. one
+ * carrying a symlink the panel would then write and chown through, or a PHP config without
+ * `disable_functions`) in its place.
  *
- * The immutable attribute (`chattr +i`) closes it at the filesystem: an
- * immutable directory cannot be renamed or removed, and no entry can be added
- * to or removed from it — by its owner, or by root, until the flag is lifted,
- * which needs CAP_LINUX_IMMUTABLE. Contents of the subdirectories are
- * unaffected, so the site keeps serving and PHP keeps writing its sessions.
+ * `chattr +i` closes that at the filesystem: an immutable directory cannot be renamed or
+ * removed, and no entry can be added or removed, even by root until the flag is lifted.
+ * Subdirectory contents are unaffected, so the site keeps serving.
  *
- * The flag has to be lifted for the few operations that change the top level
- * of the directory — {@see unlocked()} — and must never be applied to something
- * that is not the real site root, which is what {@see lock()} checks first.
+ * Lift the flag only for top-level changes ({@see unlocked()}), and never apply it to anything
+ * that is not the real site root, which {@see lock()} checks first.
  */
 class SiteRootLock
 {
@@ -61,16 +52,13 @@ class SiteRootLock
     /**
      * Make the site root immutable, after checking it is the real one.
      *
-     * The checks are the point. Locking a directory the site user substituted
-     * would pin their substitute in place and report the site as safe. So the
-     * root must be a real directory (`stat` does not follow a final symlink),
-     * owned by root, and not the user's home — rows from before slugs resolve
-     * to the home itself, and an immutable home is a user who can no longer
-     * create a file anywhere.
+     * The checks are the point: locking a substituted directory would pin it in place and
+     * report the site as safe. The root must be a real directory (`stat` does not follow a
+     * final symlink), owned by root, and not the user's home (an immutable home stops the user
+     * creating any file).
      *
-     * The inode is read before and after: a swap between the check and the
-     * `chattr` would otherwise lock the substitute. If it moved, the flag comes
-     * off whatever was locked and the site is reported, not trusted.
+     * The inode is read before and after so a swap between the check and the `chattr` is
+     * caught: the flag comes off and the site is reported, not trusted.
      */
     public function lock(Application $application, ?string $expectedInode = null): string
     {
@@ -86,8 +74,7 @@ class SiteRootLock
             return self::MISSING;
         }
 
-        // `adopt()` hands over the inode it checked, so a directory swapped in
-        // between its chown and this stat is refused rather than locked.
+        // `adopt()` hands over the inode it checked; a directory swapped in since is refused.
         if ($expectedInode !== null && $before['inode'] !== $expectedInode) {
             $this->warn($application, $path, 'site root changed before it could be locked', $before);
 
@@ -119,29 +106,18 @@ class SiteRootLock
     }
 
     /**
-     * Bring a site root the panel did not create into the panel's layout —
-     * owned by root — and lock it. The Lock button on a site that server sync
-     * adopted.
+     * Bring a site root the panel did not create (an adopted site) into the panel's layout,
+     * owned by root, and lock it. `lock()` refuses a user-owned root because it cannot tell an
+     * adopted site from a substitute; this is where the user vouches for it, with these checks:
      *
-     * Such a root belongs to the site's user, because somebody else set the
-     * site up, and `lock()` rightly refuses a directory that is not root's: it
-     * cannot tell an adopted site from a substitute. This is where the user
-     * vouches for it, and where the checks that make that safe live:
-     *
-     *  - only ownership changes, and with `chown -h`, which never follows a
-     *    symlink. No `chmod`: it has no such option, so a root swapped for a
-     *    link at the wrong moment would have root change the mode of whatever
-     *    the link points at;
-     *  - so the mode stays as it is, and must already work with root as the
-     *    owner: the user keeps access through the directory's group, and
-     *    neither the group nor everyone else may write to it, or entries at
-     *    the top (`.panel`, `logs`) could be replaced whenever the flag is
-     *    lifted for an operation;
-     *  - the inode is compared across the chown and handed to `lock()`, so a
-     *    directory swapped in part-way is never locked;
-     *  - if the lock itself cannot be set, ownership is handed back: a root
-     *    the user can no longer write to and that is not locked either is a
-     *    change with nothing to show for it.
+     *  - only ownership changes, with `chown -h` (never follows a symlink). No `chmod`: it has
+     *    no such option, so a root swapped for a link would have root chmod the link's target;
+     *  - the mode stays as is and must already work with root as owner: the user keeps access
+     *    through the group, and neither group nor others may write, or top-level entries
+     *    (`.panel`, `logs`) could be replaced while the flag is lifted;
+     *  - the inode is compared across the chown and handed to `lock()`, so a directory swapped
+     *    in part-way is never locked;
+     *  - if the lock cannot be set, ownership is handed back.
      *
      * Returns LOCKED or the reason it was left as it is.
      */
@@ -194,11 +170,8 @@ class SiteRootLock
         $after = $this->details($application, $path);
 
         if ($after === null || $after['inode'] !== $before['inode'] || $after['type'] !== 'directory') {
-            // Belt and braces: lock() compares the same inode and would refuse
-            // this too. Checked here so the refusal comes before anything else
-            // runs against the path. Not handed back: whatever is at the path
-            // now is not what was checked, and giving an unknown root-owned
-            // entry to the site user is the one outcome worse than leaving it.
+            // Not handed back: whatever is at the path now was never checked, and giving an
+            // unknown root-owned entry to the site user is worse than leaving it.
             $this->warn($application, $path, 'site root changed while it was being adopted', $after ?? []);
 
             return self::UNSAFE;
@@ -218,8 +191,7 @@ class SiteRootLock
     }
 
     /**
-     * Lift the flag for good — the site is being deleted, or its files are
-     * being left to the user.
+     * Lift the flag for good: the site is being deleted, or its files are left to the user.
      */
     public function unlock(Application $application): void
     {
@@ -233,13 +205,11 @@ class SiteRootLock
     }
 
     /**
-     * Run an operation that adds, removes or replaces an entry at the top of
-     * the site root, with the flag lifted for exactly as long as it takes.
+     * Run an operation that changes an entry at the top of the site root, with the flag lifted
+     * only while it runs.
      *
-     * Re-locked in `finally`, so an operation that throws does not leave the
-     * site open. Only re-locked if it was locked going in: a site the panel
-     * could not lock (unsupported filesystem, or flagged unsafe) is not
-     * silently locked by an unrelated edit.
+     * Re-locked in `finally` so a throwing operation does not leave the site open, and only if
+     * it was locked going in.
      *
      * @template T
      *
@@ -261,8 +231,7 @@ class SiteRootLock
                 try {
                     $this->lock($application);
                 } catch (Throwable $exception) {
-                    // Never let the re-lock replace the operation's own
-                    // exception — that one is the answer the caller needs.
+                    // The operation's own exception must not be replaced by the re-lock's.
                     Log::warning('site root could not be re-locked', [
                         'application' => $application->id,
                         'error' => $exception->getMessage(),
@@ -275,10 +244,8 @@ class SiteRootLock
     /**
      * Create a directory at the top of the site root if it is missing.
      *
-     * `mkdir -p` on a directory that already exists succeeds without touching
-     * the parent, so it is tried as-is first and the flag is lifted only when
-     * that fails — every vhost apply would otherwise open and close the lock
-     * for a directory that has been there for months.
+     * `mkdir -p` on an existing directory succeeds without touching the parent, so it is tried
+     * as-is first and the flag is lifted only when that fails.
      *
      * @param  array<string, mixed>  $context
      */
@@ -296,9 +263,7 @@ class SiteRootLock
         );
     }
 
-    /**
-     * Null when it cannot be told — no path, or `lsattr` could not answer.
-     */
+    /** Null when it cannot be told: no path, or `lsattr` could not answer. */
     public function isLocked(Application $application): ?bool
     {
         $path = $this->path($application);
@@ -318,10 +283,7 @@ class SiteRootLock
         return str_contains($flags, 'i');
     }
 
-    /**
-     * The site root, or null when there is none to lock — a row without a
-     * user, or one whose root resolves to the home directory itself.
-     */
+    /** The site root, or null when there is none to lock (no user, or the root is the home). */
     private function path(Application $application): ?string
     {
         $home = rtrim((string) $application->systemUser?->home_path, '/');
@@ -340,8 +302,8 @@ class SiteRootLock
     }
 
     /**
-     * `stat` without -L reports a symlink as a symlink, which is what makes
-     * "is this the real directory" answerable at all.
+     * `stat` without -L reports a symlink as a symlink, so "is this the real directory" is
+     * answerable.
      *
      * @return array{type: string, owner: string, inode: string}|null
      */
@@ -351,9 +313,7 @@ class SiteRootLock
             ['stat', '-c', '%F|%U|%i', $path],
             $this->context($application, 'inspect'),
             timeout: 15,
-            // A root that does not exist yet is the normal answer before a new
-            // site's first provision — `stat` exits 1 for it, and without this
-            // every site creation put an ERROR on the admin dashboard.
+            // A root that does not exist yet is normal before a new site's first provision.
             expectedExitCodes: [1],
         );
 
@@ -371,8 +331,7 @@ class SiteRootLock
     }
 
     /**
-     * `inspect()` plus the group and mode `adopt()` has to judge. A separate
-     * read so the format every other caller (and test) relies on stays put.
+     * `inspect()` plus the group and mode `adopt()` has to judge.
      *
      * @return array{type: string, owner: string, group: string, mode: int, inode: string}|null
      */
@@ -418,10 +377,7 @@ class SiteRootLock
         return $stat['type'] === 'directory' && $stat['owner'] === 'root';
     }
 
-    /**
-     * What chattr says on a filesystem without the attribute: ioctl refused
-     * outright, or the flag not supported. Anything else is a real failure.
-     */
+    /** What chattr says on a filesystem without the attribute; anything else is a real failure. */
     private function unsupported(string $stderr): bool
     {
         return str_contains($stderr, 'Operation not supported')

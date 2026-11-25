@@ -10,13 +10,10 @@ use App\Services\Server\ServerOps;
 /**
  * Picks the localhost port an application's process listens on.
  *
- * Two sources of truth, and both matter. The database knows what the panel has
- * handed out; the kernel knows what is actually bound — including everything
- * on the box the panel did not create. Consulting only our own records would
- * hand a site a port that a migrated app, a system daemon or a hand-started
- * process is already using, and the failure is nasty: the app cannot bind, but
- * the reverse proxy happily forwards that site's traffic to whatever *is*
- * listening there.
+ * Two sources of truth: the database knows what the panel handed out, the kernel knows what is
+ * bound, including things the panel did not create. Consulting only our records could hand a
+ * site a port already in use: the app cannot bind, but the reverse proxy forwards its traffic
+ * to whatever *is* listening there.
  */
 class PortAllocator
 {
@@ -25,9 +22,8 @@ class PortAllocator
     /**
      * The lowest free port in the configured range.
      *
-     * `$also` is ports this caller has picked and not yet saved — the second
-     * port of a site being created, which would otherwise be handed the very
-     * port its first one just got.
+     * `$also` is ports this caller has picked and not yet saved (e.g. the second port of a site
+     * being created).
      *
      * @param  list<int>  $also
      *
@@ -40,11 +36,8 @@ class PortAllocator
 
         $taken = [...$this->appPorts(), ...$also];
 
-        // Containerised databases draw from the same range. Asked here rather
-        // than trusted to `listening()`, which only sees what is bound right
-        // now: between a database row being created and its container starting,
-        // its port is claimed and nothing is listening on it — and a site
-        // allocated in that window would take it, then fail to bind.
+        // Containerised databases draw from the same range. Asked here because `listening()`
+        // misses a port claimed by a database row whose container has not started yet.
         $databases = DockerDatabase::query()->pluck('port')->all();
 
         $unavailable = [...$taken, ...$databases, ...$this->listening(), ...$this->registered()];
@@ -61,34 +54,23 @@ class PortAllocator
     /**
      * Why a port the user chose cannot be used, or null when it can.
      *
-     * Deliberately a **weaker** test than allocation. Skipping every name in
-     * /etc/services is right when the panel is choosing for itself, and wrong
-     * when the owner of the server is choosing: 8080 is `http-alt` in that
-     * file and is also the single most common port anyone runs a Node app on.
-     * Refusing it would be the panel overruling someone about their own
-     * machine.
-     *
-     * So only real conflicts are refused — another application the panel
-     * manages, or something listening right now. A registered name is not a
-     * conflict; it is a coincidence of naming.
+     * Deliberately **weaker** than allocation: skipping every name in /etc/services is right
+     * when the panel chooses, wrong when the server's owner does (8080 is `http-alt` and the
+     * most common Node port). Only real conflicts are refused: another managed application, or
+     * something listening right now.
      *
      * @return 'in_use_by_app'|'in_use'|null
      */
     public function conflict(int $port, ?Application $except = null): ?string
     {
-        // The port this application already has is not a conflict, whoever is
-        // listening on it — while the app runs, that is the app itself. `ss`
-        // cannot say which process holds a port, so asking it refused every
-        // save of a running Node site's settings that kept its port (found
-        // live on nodebb, 2026-09-29). Anything else on that port was already
-        // there before this save and is not something the save changes.
+        // The port this application already has is not a conflict, whoever is listening: while
+        // it runs, that is the app itself, and `ss` cannot say which process holds a port.
         if ($except?->exists && (int) $except->getOriginal('app_port') === $port) {
             return null;
         }
 
-        // Nor is the port its unit is running on right now. A port changed
-        // and not yet deployed made the old one look taken — by this same app
-        // — so going back to it was refused (frontend QA FS-C41).
+        // Nor is the port its unit is running on now (a changed, not yet deployed port would
+        // make the old one look taken by this same app).
         if ($except?->exists && $this->runningPort($except) === $port) {
             return null;
         }
@@ -113,12 +95,8 @@ class PortAllocator
     /**
      * Everything the screen needs to say about a port before it is submitted.
      *
-     * Three outcomes, not two. A conflict is a refusal; a port that merely has
-     * a name in /etc/services is a **warning** — the user may well mean it,
-     * since 8080 is `http-alt` there and is also where most Node applications
-     * listen. Telling them which service owns the name lets them decide;
-     * silently allowing it teaches them nothing, and refusing it would be
-     * wrong.
+     * Three outcomes: a conflict is a refusal; a port that merely has a name in /etc/services
+     * is a **warning** (the user may well mean it), naming the service so they can decide.
      *
      * @return array{port: int, available: bool, reason: ?string, service: ?string, suggested_port: ?int}
      */
@@ -133,16 +111,14 @@ class PortAllocator
             // `in_use_by_app` and `in_use` block; `registered` does not.
             'reason' => $conflict ?? ($service !== null ? 'registered' : null),
             'service' => $service,
-            // Only when the answer is no — offering an alternative to someone
-            // whose choice was fine would just be noise.
+            // Only when the answer is no.
             'suggested_port' => $conflict === null ? null : $this->suggest(),
         ];
     }
 
     /**
-     * Every port the panel has handed to a site: its `app_port`, and the
-     * second port a site like n8n listens on (FS-C22 #8). A stopped n8n binds
-     * neither, so asking only `listening()` would hand them out again.
+     * Every port the panel has handed to a site: its `app_port`, and the second port a site
+     * like n8n listens on. A stopped site binds neither, so `listening()` alone would reuse them.
      *
      * @return list<int>
      */
@@ -154,10 +130,7 @@ class PortAllocator
         ];
     }
 
-    /**
-     * A free port to offer, or null when the range is exhausted — a suggestion
-     * is a convenience, so failing to find one must not fail the check.
-     */
+    /** A free port to offer, or null when the range is exhausted (must not fail the check). */
     private function suggest(): ?int
     {
         try {
@@ -167,9 +140,7 @@ class PortAllocator
         }
     }
 
-    /**
-     * What `/etc/services` calls a port, if anything.
-     */
+    /** What `/etc/services` calls a port, if anything. */
     private function serviceName(int $port): ?string
     {
         $contents = @file_get_contents('/etc/services');
@@ -184,18 +155,12 @@ class PortAllocator
     }
 
     /**
-     * Ports `/etc/services` says belong to something, whether or not it is
-     * installed yet.
+     * Ports `/etc/services` says belong to something, installed yet or not.
      *
-     * Listening-only was not enough, and the gap is not theoretical: **3306 is
-     * MySQL** and sits inside the default range. On a box where MySQL has not
-     * been installed yet nothing is listening there, so an application would
-     * be given 3306 — and installing MySQL afterwards breaks one of the two,
-     * long after anyone would connect the two events.
-     *
-     * `/etc/services` rather than a list of our own: it is the machine's own
-     * record of what a port means, it covers services we have never heard of,
-     * and it is maintained by the distribution rather than by us.
+     * Listening-only is not enough: **3306 is MySQL** and sits in the default range, so an app
+     * could be given it before MySQL is installed, and installing MySQL later breaks one of
+     * the two. `/etc/services` is the distribution's own record and covers services we have
+     * never heard of.
      *
      * @return array<int, int>
      */
@@ -218,9 +183,8 @@ class PortAllocator
     /**
      * Ports with a listening TCP socket right now.
      *
-     * A failed read returns nothing rather than throwing: the unique index and
-     * the app's own bind will still catch a collision, and refusing to create
-     * an application because `ss` is missing would be the wrong trade.
+     * A failed read returns nothing rather than throwing: the unique index and the app's own
+     * bind still catch a collision, and a missing `ss` must not block creating an application.
      *
      * @return array<int, int>
      */
@@ -235,17 +199,15 @@ class PortAllocator
             return [];
         }
 
-        // "LISTEN 0 511 0.0.0.0:80 0.0.0.0:*" — the port is the tail of the
-        // fourth column, after an IPv4 address, an IPv6 address or a `*`.
+        // "LISTEN 0 511 0.0.0.0:80 0.0.0.0:*": the port is the tail of the fourth column.
         preg_match_all('/\s\S*:(\d+)\s/', $result->output(), $matches);
 
         return array_map('intval', array_unique($matches[1] ?? []));
     }
 
     /**
-     * The PORT the application's systemd unit was last written with, or null.
-     * Read from the unit file itself: it is what the running process got,
-     * whatever the row says now.
+     * The PORT the application's systemd unit was last written with, or null. Read from the unit
+     * file: it is what the running process got, whatever the row says now.
      */
     private function runningPort(Application $application): ?int
     {

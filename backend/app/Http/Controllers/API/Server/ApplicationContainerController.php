@@ -35,14 +35,11 @@ class ApplicationContainerController extends Controller
     /**
      * The credentials the panel generated when it installed this app.
      *
-     * Its own endpoint, and that is the point: these are live database passwords,
-     * so they are not on `ApplicationResource` where they would ride in every
-     * application payload, every list response and every browser cache between
-     * here and the page. A caller has to ask for them, and asking is recorded.
+     * Its own endpoint on purpose: these are live database passwords, so they stay off
+     * `ApplicationResource` (every payload, list and browser cache). Asking is recorded.
      *
-     * Read-only. Rotating one means rewriting the compose file AND the credential
-     * inside the running database, which is a different operation with a real
-     * chance of leaving the two disagreeing — it is not a side effect of looking.
+     * Read-only: rotating one means rewriting the compose file AND the credential inside the
+     * running database, which can leave the two disagreeing.
      */
     public function secrets(Application $application, ActivityLogger $log): JsonResponse
     {
@@ -52,8 +49,7 @@ class ApplicationContainerController extends Controller
             __('errors/application.not_a_container'),
         );
 
-        // Logged before returning, not after. A response that is never read still
-        // handed the values over.
+        // Logged before returning: a response that is never read still handed the values over.
         $log->log('application.container_secrets_viewed', $application, [
             'name' => $application->name,
             'keys' => array_keys((array) ($application->docker_secrets ?? [])),
@@ -68,16 +64,11 @@ class ApplicationContainerController extends Controller
     /**
      * Record that somebody has saved this site's generated credentials.
      *
-     * Its own endpoint rather than a side effect of `secrets()`, and that is the
-     * whole design. These values cannot be rotated from the panel — changing one
-     * means rewriting the compose file AND the credential inside the running
-     * database — so a card that vanished the moment it rendered would lose an
-     * unrecoverable password to a stray page refresh. Marking them seen has to be
-     * something a person did, not something a browser did.
+     * Its own endpoint, not a side effect of `secrets()`: these values cannot be rotated from
+     * the panel, so a card that vanished on render would lose an unrecoverable password to a
+     * stray refresh. Marking them seen must be something a person did.
      *
-     * Idempotent, and it keeps the FIRST acknowledgement: the interesting fact is
-     * when these stopped being unseen, and overwriting that on every later click
-     * would erase it.
+     * Idempotent, and it keeps the FIRST acknowledgement (when they stopped being unseen).
      */
     public function acknowledgeSecrets(Application $application, ActivityLogger $log): JsonResponse
     {
@@ -90,9 +81,7 @@ class ApplicationContainerController extends Controller
         if ($application->credentials_seen_at === null) {
             $application->forceFill(['credentials_seen_at' => now()])->save();
 
-            // Logged, because "nobody ever confirmed they had these" is a real
-            // answer to give somebody who has lost them, and it is not the same as
-            // the view that `secrets()` records — a page can be opened and closed.
+            // Not the same as the view `secrets()` records: a page can be opened and closed.
             $log->log('application.credentials_acknowledged', $application, [
                 'name' => $application->name,
             ]);
@@ -106,15 +95,12 @@ class ApplicationContainerController extends Controller
     /**
      * The compose file this site runs, for the editor.
      *
-     * A site created in Simple mode has no stored file — the panel renders one from
-     * its fields on every deploy — so this hands back what that render produces and
-     * says the file is `generated`. Editing then takes it over, which is one-way:
-     * the stored text wins from that point and the fields stop being the source.
-     * The UI says so before the first save rather than after it.
+     * A Simple-mode site has no stored file (the panel renders one from its fields on every
+     * deploy), so this returns that render and flags it `generated`. Editing takes it over
+     * one-way: the stored text wins and the fields stop being the source.
      *
-     * Read-only, deliberately: the pasted-file path in the supervisor records the
-     * published port as a side effect, and a GET that rewrote the server on the way
-     * past would be indefensible.
+     * Read-only: the supervisor's pasted-file path records the published port as a side
+     * effect, which a GET must not do.
      */
     public function compose(
         Application $application,
@@ -135,8 +121,7 @@ class ApplicationContainerController extends Controller
                 ? $containers->generated($application, $provisioner->documentRoot($application))
                 : $stored;
         } catch (ProvisioningFailedException $e) {
-            // No container port: there is no file to show, and the reason is
-            // the user's to fix rather than a server fault (DS-12).
+            // No container port: no file to show, and the user's to fix, not a server fault.
             return response()->json([
                 'message' => __('application.failure_reason.'.$e->reason),
                 'reason' => $e->reason,
@@ -145,21 +130,18 @@ class ApplicationContainerController extends Controller
 
         return response()->json([
             'compose' => $compose,
-            // Which of the two the user is looking at, so the editor can warn that
-            // saving takes the file over instead of quietly converting the site.
+            // So the editor can warn that saving takes the file over.
             'generated' => $generated,
         ]);
     }
 
     /**
-     * What the Command-line access card needs (RC-23, extended by RC-28).
+     * What the Command-line access card needs.
      *
-     * On the same permission as reading the compose file, because it says no more
-     * than the file does: the container names come out of it. The app's own
-     * system user — the way in since RC-28 — is part of that, as flags and
-     * counts only. The server's full list of system users is a separate grant,
-     * so `ssh_users` is filled only for a viewer who holds `system_user`, and
-     * never with a password or a key.
+     * Same permission as reading the compose file, since it says no more than the file does
+     * (container names; the app's own system user as flags and counts only). The server's full
+     * list of system users is a separate grant: `ssh_users` is filled only for a viewer who
+     * holds `system_user`, and never with a password or a key.
      */
     public function access(Request $request, Application $application): JsonResponse
     {
@@ -167,9 +149,8 @@ class ApplicationContainerController extends Controller
     }
 
     /**
-     * Turn container login on for this app's own system user (RC-28): its SSH
-     * login then opens this app's container, with no sudo and no docker group.
-     * Answers with the card's new state, so it can switch without a reload.
+     * Turn container login on for this app's own system user: its SSH login then opens this
+     * app's container, with no sudo and no docker group. Answers with the card's new state.
      */
     public function enableAccess(
         EnableContainerLoginRequest $request,
@@ -183,8 +164,7 @@ class ApplicationContainerController extends Controller
     }
 
     /**
-     * Turn it off: the user leaves the group, and its SSH (if still on) is an
-     * ordinary login on the server again.
+     * Turn it off: the user leaves the group, and its SSH (if on) is an ordinary login again.
      */
     public function disableAccess(
         Request $request,
@@ -199,10 +179,7 @@ class ApplicationContainerController extends Controller
         return $this->accessResponse($request, $application->refresh());
     }
 
-    /**
-     * The 404/422 the other container endpoints give a site that is not one: a
-     * site type without the compose screen does not have this card either.
-     */
+    /** The 404/422 the other container endpoints give a site that is not a container app. */
     private function assertContainerApp(Application $application): void
     {
         abort_unless($application->supports('app_compose'), 404);
@@ -224,8 +201,7 @@ class ApplicationContainerController extends Controller
         try {
             $list = app(ContainerAccess::class)->containers($application);
         } catch (ProvisioningFailedException $e) {
-            // Said the way the compose endpoint says it: a Simple-mode site with no
-            // container port has no file, so there is nothing to name yet.
+            // As in compose(): a Simple-mode site with no container port has nothing to name yet.
             return response()->json([
                 'message' => __('application.failure_reason.'.$e->reason),
                 'reason' => $e->reason,
@@ -237,15 +213,14 @@ class ApplicationContainerController extends Controller
                 'username' => $user->username,
                 'ssh_access' => (bool) $user->ssh_access,
                 'sudo' => (bool) $user->sudo,
-                // Whether the panel knows one, which is what `sudo` will ask for.
+                // Whether the panel knows one (what `sudo` asks for).
                 'has_password' => $user->password !== null,
             ])->all()
             : [];
 
         $security = app(SecuritySettings::class);
 
-        // A machine that cannot work out its public address is still reachable
-        // at the one this request came in on: that is the panel, on this box.
+        // Fall back to the host this request came in on.
         $host = app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? $request->getHost();
         $port = $security->port();
 
@@ -263,10 +238,9 @@ class ApplicationContainerController extends Controller
     /**
      * Replace the compose file and bring the site up on it.
      *
-     * Synchronous, like the two endpoints below, and for the same reason: the caller
-     * should get the real failure rather than a 202 and a site that quietly stayed
-     * as it was. A file that will not come up is rolled back by the action, so a
-     * 422 here means the site is still running what it was running before.
+     * Synchronous, like the two endpoints below, so the caller gets the real failure. A file
+     * that will not come up is rolled back by the action: a 422 means the site still runs what
+     * it ran before.
      */
     public function updateCompose(
         UpdateComposeRequest $request,
@@ -293,9 +267,7 @@ class ApplicationContainerController extends Controller
                 'step' => $e->step,
                 'reason' => $e->reason,
                 'reference' => $e->reference,
-                // The site is running the file it was running before this request.
-                // Said explicitly, because "it failed" leaves somebody wondering
-                // whether their site is down.
+                // The site is running the file it ran before this request.
                 'rolled_back' => true,
             ], 422);
         }
@@ -308,19 +280,13 @@ class ApplicationContainerController extends Controller
     /**
      * Fetch a newer image and recreate the container on it.
      *
-     * The update story for a container, and it needs to exist because nothing
-     * else does it: `compose up` reuses an image it already has, so a site on a
-     * floating tag never moves — which reads as an update button that does
-     * nothing. It is also the only way a private image can be updated at all,
-     * since a rebuild of the site is the alternative.
+     * `compose up` reuses an image it already has, so a site on a floating tag never moves;
+     * this is the update path (and the only one for a private image).
      *
-     * Queued (D5, 2026-11-04), unlike the settings and compose saves: a pull is
-     * a download of any size, and while it ran inside this request nothing
-     * recorded it — a reload mid-pull showed a site with nothing happening, and
-     * Background jobs stayed empty. 202 with the run; the pull's real failure
-     * (reason, step, reference) lands on that run and on the application,
-     * which the screen polls. Refusals that need no pull — not a container,
-     * not running, a redeploy already under way — still answer here.
+     * Queued, unlike the settings and compose saves: a pull is a download of any size and must
+     * be recorded as a run. 202 with the run; the pull's real failure (reason, step, reference)
+     * lands on that run and on the application, which the screen polls. Refusals that need no
+     * pull (not a container, not running, a redeploy under way) still answer here.
      */
     public function pull(Application $application, StartContainerRedeploy $action): JsonResponse
     {
@@ -341,13 +307,11 @@ class ApplicationContainerController extends Controller
     /**
      * Change what a container site runs as.
      *
-     * Refused for anything that is not a container: the fields have no meaning
-     * for a PHP or Node site, and accepting them would store values nothing
-     * ever reads — which looks exactly like a feature that works.
+     * Refused for anything that is not a container: the fields mean nothing for a PHP or Node
+     * site, and storing values nothing reads looks like a feature that works.
      *
-     * Synchronous, like the web-root endpoint: rewriting the compose file and
-     * recreating one container is seconds, and the caller gets a real failure
-     * instead of a 202 and a site that quietly never changed.
+     * Synchronous: rewriting the compose file and recreating one container is seconds, and the
+     * caller gets the real failure.
      */
     public function update(
         UpdateContainerRequest $request,
@@ -370,8 +334,6 @@ class ApplicationContainerController extends Controller
             );
         } catch (ProvisioningFailedException $e) {
             // The settings were saved; bringing the container up on them failed.
-            // Said as a 422 with the reason rather than a 500, and said the same way
-            // as the pull endpoint above so the UI has one shape to handle.
             return response()->json([
                 'message' => $e->reason !== null
                     ? __('application.failure_reason.'.$e->reason)
@@ -379,8 +341,7 @@ class ApplicationContainerController extends Controller
                 'step' => $e->step,
                 'reason' => $e->reason,
                 'reference' => $e->reference,
-                // Saved, even though the apply failed — so the form does not offer
-                // to "retry" a change it thinks was lost.
+                // So the form does not offer to "retry" a change it thinks was lost.
                 'saved' => true,
             ], 422);
         }
@@ -391,8 +352,8 @@ class ApplicationContainerController extends Controller
     }
 
     /**
-     * A settings or compose save runs its own `compose up`; while a Pull and
-     * redeploy is under way that would race the one in its job (D5).
+     * A settings or compose save runs its own `compose up`; during a Pull and redeploy that
+     * would race the one in its job.
      */
     private function refuseWhileRedeploying(Application $application): void
     {

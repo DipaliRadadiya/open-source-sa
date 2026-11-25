@@ -14,21 +14,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Per-application fail2ban — the commercial-style raw INI variant.
+ * Per-application fail2ban, stored as raw INI.
  *
- * The previous version stored structured fields (maxretry/findtime/bantime)
- * and rendered them into a server-managed drop-in on every sync. That
- * approach was easy to read in the database and impossible to support:
- * fail2ban's jail and filter files are arbitrary INI, and any feature
- * worth exposing (custom regex, additional action, multiple logpaths) needs
- * the raw form. This controller stores raw INI for both halves and writes
- * them as-is to /etc/fail2ban/{jail,filter}.d/<app-slug>.conf.
+ * Jail and filter files are arbitrary INI (custom regex, extra actions, multiple logpaths),
+ * so both halves are stored raw and written as-is to
+ * /etc/fail2ban/{jail,filter}.d/<app-slug>.conf.
  *
- * The auto-migrate block in show() is the bridge from the old schema: any
- * application that still has structured values, gets a one-time conversion
- * to equivalent INI on the next read, the structured columns are cleared,
- * and the next deploy drops the structured columns from the schema. New
- * applications never see the structured form.
+ * `show()` converts an application that still has the old structured values
+ * (maxretry/findtime/bantime) to INI once, on the next read, and clears them.
  */
 class ApplicationFail2banController extends Controller
 {
@@ -36,19 +29,8 @@ class ApplicationFail2banController extends Controller
     {
         $this->migrateFromStructured($application);
 
-        // Rendered, not raw.
-        //
-        // `defaultJailContent()` is a template with `{name}`, `{filter}` and
-        // `{logpath}` in it, and this handed those straight to the form — so
-        // the user was shown, and invited to save, a config full of literal
-        // placeholders. The write path substitutes them, so the file on disk
-        // was right while the screen was wrong, which is the confusing half of
-        // the pair: nothing the user reads matches what the server has.
-        //
-        // `renderConfigs()` was built as a pure transform for precisely this,
-        // and its docblock says so — "so the controller can show the user
-        // exactly what would be written before it actually is". It was simply
-        // never called here.
+        // Rendered, not raw: the default templates contain `{name}`, `{filter}` and `{logpath}`
+        // placeholders, which the write path substitutes, so the form must show the rendered text.
         $templates = $manager->renderConfigs(
             $application,
             $manager->defaultJailContent(),
@@ -56,10 +38,8 @@ class ApplicationFail2banController extends Controller
         );
 
         if ($application->fail2ban_jail_content === null) {
-            // Brand-new application, never configured: hand the caller the
-            // templates it can pre-fill the form with, and report a null
-            // "current config" so the UI can render "not yet configured"
-            // rather than echoing the template as a saved value.
+            // Never configured: hand over the templates to pre-fill the form, and a null
+            // "current config" so the UI shows "not yet configured".
             return response()->json([
                 'fail2ban' => null,
                 'jail_template' => $templates['jail'],
@@ -68,12 +48,8 @@ class ApplicationFail2banController extends Controller
             ]);
         }
 
-        // Saved content goes through the same transform. It normally contains
-        // no placeholders and passes through untouched; when it does contain
-        // one — a user who pasted the template back, or an older saved config
-        // — the form shows what the server will actually write rather than the
-        // token. Display only: what is stored stays exactly as submitted,
-        // because silently rewriting someone's config is not this screen's job.
+        // Saved content goes through the same transform, so a pasted-back placeholder shows as
+        // what the server will write. Display only: what is stored stays as submitted.
         $saved = $manager->renderConfigs(
             $application,
             (string) $application->fail2ban_jail_content,
@@ -86,9 +62,7 @@ class ApplicationFail2banController extends Controller
                 'jail_content' => $application->fail2ban_jail_content,
                 'filter_content' => $application->fail2ban_filter_content,
             ],
-            // Echo the saved content as the template, so the form renders the
-            // user's last submission until they edit it — with any placeholder
-            // resolved, so what is shown is what would be written.
+            // The saved content as the template, so the form shows the last submission.
             'jail_template' => $saved['jail'],
             'filter_template' => $saved['filter'],
             ...$this->filterScope($application),
@@ -96,14 +70,10 @@ class ApplicationFail2banController extends Controller
     }
 
     /**
-     * What the default filter protects (FB-wp).
-     *
-     * It catches failed WordPress logins and XML-RPC, and nothing else — on
-     * any other site type it is a jail that never bans. Said, rather than
-     * guessed at with a filter per type: a rule has to tell a failed login
-     * from a good one by what the access log records, which has not been
-     * measured per type — and a guessed rule bans the site's own users, as
-     * the old WordPress `wp-admin` rule did.
+     * What the default filter protects: failed WordPress logins and XML-RPC only, so on any
+     * other site type it is a jail that never bans. Said rather than guessed per type: a rule
+     * must tell a failed login from a good one by the access log, and a guessed rule bans the
+     * site's own users.
      *
      * @return array{filter_scope: string, filter_note: ?string}
      */
@@ -120,10 +90,8 @@ class ApplicationFail2banController extends Controller
     }
 
     /**
-     * Validate, test, save, write to disk, reload. The test is the gate:
-     * a config that does not parse against fail2ban-client never reaches the
-     * live daemon, so a bad submission is contained to a 500 with the
-     * fail2ban-client error rather than a taken-down service.
+     * Validate, test, save, write to disk, reload. The test is the gate: a config that does not
+     * parse against fail2ban-client never reaches the live daemon.
      */
     public function store(
         CustomFail2banRequest $request,
@@ -131,9 +99,7 @@ class ApplicationFail2banController extends Controller
         ApplicationFail2banManager $manager,
         ActivityLogger $log,
     ): JsonResponse {
-        // Before anything is staged: the config test copies /etc/fail2ban,
-        // which is not there, and that crashed as a 500 (QA, 2026-11-17). The
-        // same answer the server-level fail2ban screen gives.
+        // Before anything is staged: the config test copies /etc/fail2ban, which would not exist.
         if (! $manager->installed()) {
             throw Fail2banException::notInstalled();
         }
@@ -143,8 +109,7 @@ class ApplicationFail2banController extends Controller
 
         $test = $manager->testConfigs($application, $jailContent, $filterContent);
 
-        // 422, not 500: the daemon refusing the user's config is a validation
-        // answer about their input, and the output names the line to fix.
+        // 422: the daemon refusing the config is an answer about the input, and names the line.
         if (! $test['testOk']) {
             return response()->json([
                 'testOk' => false,
@@ -153,11 +118,8 @@ class ApplicationFail2banController extends Controller
             ], 422);
         }
 
-        // Applied first, recorded after. Saved before, a reload that failed
-        // left the database describing a config the server had rolled back.
-        // The test passes some configs the daemon then refuses on reload
-        // (bug #95); the old files are back by now, and the user gets
-        // fail2ban's message in the same shape as a failed test.
+        // Applied first, recorded after: the test passes some configs the daemon then refuses
+        // on reload, and saving first would leave the database describing a rolled-back config.
         try {
             $manager->enableForApp($application, $jailContent, $filterContent, $request->safetyCopy());
         } catch (Fail2banConfigRejectedException $e) {
@@ -189,8 +151,8 @@ class ApplicationFail2banController extends Controller
             ], 422);
         }
 
-        // Without fail2ban the jail's files still go — or reinstalling it would
-        // bring this jail back on — but there is no daemon to reload.
+        // Without fail2ban the jail's files still go (or a reinstall would bring the jail
+        // back), but there is no daemon to reload.
         $manager->disableForApp($application, $request->safetyCopy(), reload: $manager->installed());
 
         $application->fail2ban_jail_name = null;
@@ -208,17 +170,11 @@ class ApplicationFail2banController extends Controller
     /**
      * One-time migration from the old structured form.
      *
-     * Reads maxretry/findtime/bantime (and ignore_ips, dropped from the new
-     * model — ignoreips would otherwise have no place to land), renders
-     * them into the default INI templates, persists the new columns, and
-     * clears the old ones. Idempotent: every guard short-circuits the
-     * second call, so a row that has already migrated is a no-op.
+     * Reads maxretry/findtime/bantime (ignore_ips is dropped from the new model), renders them
+     * into INI, persists the new columns and clears the old ones. Idempotent.
      *
-     * The Schema::hasColumn guard matters because the migration that drops
-     * the old columns is in the same release as this code: on a fresh
-     * install, the columns were never created in the first place, and
-     * Eloquent would surface their absence as a confusing null rather
-     * than the correct "nothing to migrate".
+     * The Schema::hasColumn guard matters: on a fresh install the old columns were never
+     * created, and their absence would otherwise surface as a confusing null.
      */
     private function migrateFromStructured(Application $application): void
     {
@@ -234,11 +190,8 @@ class ApplicationFail2banController extends Controller
             return;
         }
 
-        // Read raw — the model fillable no longer lists these columns, so
-        // $application->fail2ban_maxretry would still resolve via Eloquent's
-        // attribute getter, but going through getAttributes() makes the
-        // "I'm reading from a soon-to-be-dropped column" intent explicit
-        // and removes any ambiguity about what value is being migrated.
+        // Read raw: the columns are no longer in the model's fillable, and getAttributes() makes
+        // it explicit they are being read from a soon-to-be-dropped column.
         $attributes = $application->getAttributes();
         $maxretry = $attributes['fail2ban_maxretry'] ?? null;
         $findtime = $attributes['fail2ban_findtime'] ?? null;
@@ -256,35 +209,23 @@ class ApplicationFail2banController extends Controller
             ."enabled  = true\n"
             ."port     = http,https\n"
             ."filter   = {$slug}\n"
-            // The placeholder, not a path. Every other jail in this feature
-            // carries `{logpath}` and lets the write path substitute the value
-            // `ApplicationFail2banManager::getLogPath()` gets from the active
-            // web-server driver — which is the only thing that knows nginx and
-            // Apache log under /var/log while OpenLiteSpeed logs inside the
-            // site's own directory. Baked in as nginx's path, a jail migrated
-            // on an OLS server watched a file that does not exist: enabled,
-            // reported enabled, banning nobody. It also froze the answer, so a
-            // server that later changed web server kept the old path.
+            // The placeholder, not a path: the write path substitutes the active web-server
+            // driver's log path (OpenLiteSpeed logs inside the site directory). A baked-in nginx
+            // path would watch a missing file on OLS and ban nobody.
             ."logpath  = {logpath}\n"
             .'maxretry = '.((int) ($maxretry ?: $defaults['maxretry']))."\n"
             .'bantime  = '.((int) ($bantime ?: $defaults['bantime']))."\n"
             .'findtime = '.((int) ($findtime ?: $defaults['findtime']))."\n";
 
-        // The current default, not a copy of an old one: this copy still had
-        // the `wp-admin` rule that banned logged-in admins, counted successful
-        // logins (bug #93), and was headed `[{slug}]` rather than
-        // `[Definition]`, so fail2ban found no failregex in it at all.
+        // The current default, not a copy of an old one: the old filter banned logged-in admins
+        // and lacked the `[Definition]` header, so fail2ban found no failregex in it.
         $filter = app(ApplicationFail2banManager::class)->defaultFilterContent();
 
         $application->fail2ban_jail_name = $slug;
         $application->fail2ban_jail_content = $jail;
         $application->fail2ban_filter_content = $filter;
 
-        // Clear the old values so a subsequent migration (or a future
-        // redeploy with the columns back) sees a clean row. forceFill
-        // because the columns are no longer in $fillable — they are being
-        // dropped, not assigned to, but save() must still see the change
-        // for the database update to be emitted.
+        // Clear the old values. forceFill because the columns are no longer in $fillable.
         $application->forceFill([
             'fail2ban_maxretry' => null,
             'fail2ban_findtime' => null,

@@ -5,13 +5,10 @@ namespace App\Contracts;
 use App\Services\Server\Databases\Imports\ImportSanitizer;
 
 /**
- * A database engine strategy. `SqlEngine` covers MySQL + MariaDB (shared
- * client + DDL); `MongoEngine` covers MongoDB. Each is built for one
- * configured admin connection and runs its operations locally via the client
- * binary (connection creds in a 0600 auth file, statements over stdin — never
- * a password on argv). Every mutating method throws a translated
- * DatabaseOperationException on failure. Identifiers are validated upstream by
- * the FormRequests (DDL can't be parameterised).
+ * A database engine strategy, built for one admin connection. Runs via the client binary with
+ * creds in a 0600 auth file and statements over stdin (never a password on argv). Mutating
+ * methods throw a translated DatabaseOperationException. Identifiers are validated upstream
+ * by the FormRequests (DDL can't be parameterised).
  */
 interface DatabaseEngine
 {
@@ -35,9 +32,8 @@ interface DatabaseEngine
     /**
      * Accounts that exist in the engine, with the databases each can reach.
      *
-     * Read-only, for adopting a migrated server. The password is deliberately
-     * absent: the engine holds a hash, and a hash cannot be turned back into
-     * one — see the nullable `database_users.password` column.
+     * Read-only, for adopting a migrated server. The password is absent on purpose: the engine
+     * holds only a hash (see the nullable `database_users.password` column).
      *
      * @return array<int, array{username: string, host: string, databases: array<int, string>}>
      */
@@ -46,17 +42,14 @@ interface DatabaseEngine
     /**
      * Whether a name is free for both a new database and its dedicated user.
      *
-     * This is a strict preflight: unlike discovery lists, an unavailable
-     * server must throw rather than look empty and falsely approve a name.
+     * Strict preflight: an unavailable server must throw, not look empty and approve a name.
      */
     public function identifierAvailable(string $name, string $host = 'localhost'): bool;
 
     /**
-     * Whether the account a new user would become already exists: the same
-     * name and host on MySQL/MariaDB, the role on PostgreSQL, the user in
-     * that database on MongoDB. Asked before creating one (bug #36), where
-     * the engine's own refusal could only surface as a 500. Throws when the
-     * server cannot answer, like identifierAvailable().
+     * Whether the account a new user would become already exists: the same name and host on
+     * MySQL/MariaDB, the role on PostgreSQL, the user in that database on MongoDB. Throws when
+     * the server cannot answer, like identifierAvailable().
      */
     public function userExists(string $username, string $host, string $database): bool;
 
@@ -67,42 +60,29 @@ interface DatabaseEngine
     /**
      * Remove a database and the users that exist only to reach it.
      *
-     * Teardown order and teardown *statements* are the engine's to decide, not
-     * the caller's, because the two are not separable. MySQL removes the
-     * database first so a failed drop cannot leave a live database with no way
-     * in; PostgreSQL keeps that same order and must then drop its roles
-     * *differently* from `dropUser()`, because that method's cleanup runs
-     * inside the database it was handed and the database is by then gone.
+     * Teardown order and statements are the engine's to decide. The database goes first so a
+     * failed drop cannot leave a live database with no way in; PostgreSQL then drops its roles
+     * differently from `dropUser()`, whose cleanup runs inside the now-gone database.
      *
-     * A user cleanup that fails deliberately leaves the panel record intact,
-     * so the same delete can be retried. Every engine's database drop is
-     * `IF EXISTS` for that reason — a retry has to finish the cleanup rather
-     * than fail on the database it already removed.
+     * A failed user cleanup deliberately leaves the panel record intact so the delete can be
+     * retried, which is why every database drop is `IF EXISTS`.
      *
      * @param  array<int, array{username: string, host: string}>  $users
      */
     public function teardownDatabase(string $name, array $users): void;
 
     /**
-     * Size in bytes; null when it could not be read (FS-C12). Never 0 for
-     * "unknown": the panel stored that 0 over the real size whenever a
-     * database was viewed while its engine was down, and showed it as empty.
+     * Size in bytes; null when it could not be read. Never 0 for "unknown": a stored 0 would
+     * overwrite the real size and show the database as empty.
      */
     public function databaseSize(string $name): ?int;
 
     /**
      * The character set and collation a database was created with.
      *
-     * For adoption. The panel records both when it creates a database and,
-     * until this existed, recorded neither when it adopted one — so every
-     * database brought over from another panel showed a blank charset forever,
-     * beside panel-created ones that showed theirs. The engine knows; it was
-     * simply never asked.
+     * For adoption, so adopted databases show their charset like panel-created ones.
      *
-     * Nulls where the concept does not apply or cannot be read, rather than a
-     * guessed default: a wrong charset displayed confidently is worse than an
-     * absent one, and nothing downstream reads this — it is only consumed when
-     * *creating* a database, which an adopted one has already been through.
+     * Nulls where the concept does not apply or cannot be read, rather than a guessed default.
      *
      * @return array{charset: ?string, collation: ?string}
      */
@@ -147,56 +127,37 @@ interface DatabaseEngine
     public function tables(string $database): array;
 
     /*
-     * There was an `optimize()` and a `repair()` here, removed 2026-09-08.
-     *
-     * Not because nothing implemented them — both engines did — but because
-     * what they implemented was not what they claimed. `REPAIR TABLE` is a
-     * MyISAM/ARCHIVE/CSV operation; on InnoDB, which is every table this panel
-     * has managed, MariaDB answers with a *note* and exits 0, so "Repaired
-     * database" was logged for an operation that could not run. And `OPTIMIZE
-     * TABLE` on InnoDB is a whole-table rebuild, which this interface's callers
-     * ran inside an HTTP request.
-     *
-     * The lesson worth keeping is about the interface, not the SQL: "no-op
-     * where unsupported" reads as harmless and is not. A method that silently
-     * does nothing on the only storage engine anybody uses is indistinguishable
-     * from one that works, and every layer above it will report success.
+     * No `optimize()`/`repair()` on purpose: `REPAIR TABLE` does nothing on InnoDB (MariaDB
+     * answers with a note and exits 0), and `OPTIMIZE TABLE` is a whole-table rebuild. A method
+     * that silently no-ops looks like one that works, so every layer above reports success.
      */
 
     /** Export the database to $path (mysqldump `--result-file` / mongodump `--archive`). Read-only. */
     public function dump(string $database, string $path): void;
 
     /**
-     * Import $path into an existing database. **Destructive** — the caller is
-     * expected to have dropped and recreated the schema first, so this is the
-     * inverse of dump() rather than a merge.
+     * Import $path into an existing database. **Destructive**: the caller drops and recreates
+     * the schema first, so this is the inverse of dump(), not a merge.
      */
     public function restore(string $database, string $path): void;
 
     /**
-     * Load a user-supplied file into an existing, freshly recreated database,
-     * connected **as that database's own user** — never as the panel's admin
-     * account. That is the whole containment: a dump that says `USE other_db`
-     * or `\connect other_db` reaches only what this user may reach, which is
-     * this database.
+     * Load a user-supplied file into a freshly recreated database, connected **as that
+     * database's own user**, never the panel's admin account. That is the containment: a dump
+     * saying `USE other_db` reaches only what this user may reach.
      *
-     * `$path` is already decompressed and cleaned for SQL engines
-     * ({@see ImportSanitizer}); for
-     * MongoDB it is the uploaded archive itself, gzip or not as `$gzip` says.
+     * `$path` is already decompressed and cleaned for SQL engines ({@see ImportSanitizer});
+     * for MongoDB it is the uploaded archive itself, gzip or not as `$gzip` says.
      * Throws DatabaseOperationException on failure.
      */
     public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void;
 
     /**
-     * Give a database that has just been dropped and created again back to
-     * the users the panel has recorded for it — before {@see restore()}, which
-     * may load its contents as them.
+     * Give a dropped-and-recreated database back its recorded users, before
+     * {@see restore()}, which may load its contents as them.
      *
-     * Only PostgreSQL has anything to do: a MySQL grant outlives the database
-     * it names (measured on MariaDB, 2026-10-04), and a MongoDB user is kept
-     * outside its database. A PostgreSQL database's owner and CONNECT grants
-     * go with it, so without this every user of a restored database was
-     * refused at connect.
+     * Only PostgreSQL has work to do: a MySQL grant outlives its database and a MongoDB user
+     * lives outside it, but a PostgreSQL owner and CONNECT grants go with the database.
      *
      * @param  array<int, string>  $usernames
      */
