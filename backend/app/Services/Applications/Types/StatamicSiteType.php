@@ -38,14 +38,9 @@ class StatamicSiteType extends AbstractSiteType
     }
 
     /**
-     * A floor and no ceiling. Statamic's requirements page says PHP 8.3 or
-     * above (statamic.dev/requirements, read 2026-09-08), and the installer
-     * runs `composer create-project statamic/statamic` unpinned — so a new
-     * site gets whatever is current, which today is Statamic 6.
-     *
-     * No ceiling because nothing upstream states one, and inventing one would
-     * refuse a version that works the day PHP ships it. The opposite direction
-     * from PrestaShop, and the reason this is a range rather than a list.
+     * A floor and no ceiling: Statamic requires PHP 8.3+ and the installer runs
+     * `composer create-project statamic/statamic` unpinned. Nothing upstream states a ceiling,
+     * and inventing one would refuse a version that works the day PHP ships it.
      */
     public function supportedPhpRange(): ?array
     {
@@ -61,8 +56,7 @@ class StatamicSiteType extends AbstractSiteType
     }
 
     /**
-     * A Laravel application: the source sits beside a small public directory,
-     * and serving the root instead would publish `.env`.
+     * A Laravel application: serving the root instead of `/public` would publish `.env`.
      */
     public function defaultWebRoot(): string
     {
@@ -70,10 +64,9 @@ class StatamicSiteType extends AbstractSiteType
     }
 
     /**
-     * And the only one it can be served from. `StatamicInstaller` builds the
-     * project above the web root, so anything else points the vhost at a
-     * directory Statamic never creates — or, at `/`, at the whole application:
-     * `.env`, `vendor/`, and `storage/` with every page's content in it.
+     * The only web root it can be served from. `StatamicInstaller` builds the project above it, so
+     * anything else points the vhost at a missing directory or, at `/`, exposes `.env`, `vendor/`
+     * and `storage/`.
      */
     public function fixedWebRoot(): ?string
     {
@@ -97,12 +90,8 @@ class StatamicSiteType extends AbstractSiteType
     }
 
     /**
-     * Statamic is Laravel underneath, so it has a `.env` like any Laravel
-     * application even though it arrives as a one-click install.
-     */
-    /**
-     * Laravel's encryption key: a new one signs everybody out and leaves
-     * anything the application encrypted with the old one unreadable.
+     * Laravel's encryption key: a new one signs everybody out and leaves anything encrypted with
+     * the old one unreadable.
      */
     public function lockedEnvironmentKeys(): array
     {
@@ -111,8 +100,7 @@ class StatamicSiteType extends AbstractSiteType
 
     public function features(): array
     {
-        // And Laravel's queue with it — being installed in one click does not
-        // mean the application has no background work.
+        // Statamic is Laravel underneath, so it has a queue worker too.
         return [...parent::features(), 'app_environment', 'app_worker'];
     }
 }

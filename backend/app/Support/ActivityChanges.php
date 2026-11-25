@@ -5,19 +5,17 @@ namespace App\Support;
 use App\Http\Resources\ActivityLogResource;
 
 /**
- * What a save actually changed, for the activity log (support list,
- * 2026-10-28): "Changed the SSH port from 22 to 2222" rather than "Updated
- * security settings".
+ * What a save actually changed, for the activity log: "Changed the SSH port from 22 to
+ * 2222" rather than "Updated security settings".
  *
- * Built from the values before and after the save, never from the request:
- * a field sent with the value it already had is not a change, and a value
- * the system normalised ("UTC " → "UTC") is recorded as it really is.
+ * Built from the values before and after the save, never from the request: a field sent
+ * with its existing value is not a change, and a normalised value ("UTC " → "UTC") is
+ * recorded as it really is.
  *
  * Stored on the row as `properties.changes`, a list of
- * `['field' => 'port', 'from' => 22, 'to' => 2222]`. A secret is recorded
- * only as having changed — `['field' => 'password', 'secret' => true]` —
- * never its value, in either direction. The activity screen words it in the
- * reader's language ({@see ActivityLogResource}).
+ * `['field' => 'port', 'from' => 22, 'to' => 2222]`. A secret is recorded only as having
+ * changed (`['field' => 'password', 'secret' => true]`), never its value. The activity
+ * screen words it in the reader's language ({@see ActivityLogResource}).
  */
 final class ActivityChanges
 {
@@ -56,9 +54,8 @@ final class ActivityChanges
     }
 
     /**
-     * Scalars kept as they are (a port stays a number, a switch a boolean),
-     * so "8" and 8 are one value; arrays as JSON, so a list compares by
-     * content; empty strings as null, so "" → null is not a change.
+     * Scalars keep their type, so "8" and 8 are one value; arrays become JSON, so a list
+     * compares by content; empty strings become null, so "" → null is not a change.
      */
     private static function normal(mixed $value): mixed
     {

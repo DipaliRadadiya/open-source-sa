@@ -10,22 +10,17 @@ use Illuminate\Support\Str;
 /**
  * The machine account the central panel's token belongs to.
  *
- * Why a separate account rather than hanging the token off the admin who
- * pressed the button: that admin can be deleted or demoted, which would kill
- * the integration for reasons nobody would connect to it — and every action
- * the central panel took would appear in the activity log under a person's
- * name. A distinct identity makes the log attribute those rows to the
- * integration, which is the part that matters when someone asks what the
- * vendor did on their server.
+ * Separate from the admin who connected it: that admin can be deleted or demoted, which would
+ * silently kill the integration, and the central panel's actions would be logged under a
+ * person's name instead of the integration's.
  */
 class CentralUser
 {
     public const USERNAME = 'central';
 
     /**
-     * Find or create the account. Idempotent — connecting, disconnecting and
-     * reconnecting reuses the same identity, so the activity log stays
-     * attributable across the whole history.
+     * Find or create the account. Idempotent: reconnecting reuses the same identity, so the
+     * activity log stays attributable.
      */
     public function ensure(): User
     {
@@ -37,14 +32,12 @@ class CentralUser
 
         $user = User::create([
             'name' => $this->name(),
-            // A human may already hold the obvious username. Taking it over
-            // would mint a full-access token on a real person's account, so
-            // the machine account steps aside instead.
+            // A human may already hold the username; taking it over would mint a full-access token
+            // on a real person's account, so the machine account steps aside.
             'username' => $this->availableUsername(),
             'is_admin' => true,
             'is_system' => true,
-            // Never used: the login path rejects system accounts outright.
-            // Random rather than empty so no hash can ever be guessed at.
+            // Never used (login rejects system accounts); random so no hash can be guessed.
             'password' => Hash::make(Str::random(64)),
         ]);
 
@@ -56,15 +49,8 @@ class CentralUser
     /**
      * What the activity log calls this account.
      *
-     * Derived from the one branding value rather than read from a second
-     * config key. `BRANDING_CENTRAL_NAME` existed so a control plane could be
-     * named differently from the panel it manages; nothing ever set it — not
-     * `.env`, not `.env.example`, not install.sh — and an unset knob is a
-     * second source of truth waiting to disagree with the first.
-     *
-     * The branding name and nothing else — no suffix, no decoration. What
-     * distinguishes this account from a person is the `central` username and
-     * its `is_system` flag, not a word glued onto its display name.
+     * The branding name and nothing else: what distinguishes this account from a person is the
+     * `central` username and its `is_system` flag, not a suffix on its display name.
      */
     private function name(): string
     {

@@ -5,10 +5,8 @@ namespace App\Services\Applications\Types;
 /**
  * Node-RED — flow-based automation.
  *
- * The credentials are required rather than optional, and that is deliberate:
- * Node-RED ships with no authentication, and a flow can run arbitrary code as
- * the site user. An unauthenticated Node-RED on a public domain is a remote
- * shell, so the panel will not create one.
+ * The credentials are required on purpose: Node-RED ships with no authentication and a flow runs
+ * arbitrary code as the site user, so an unauthenticated one on a public domain is a remote shell.
  */
 class NodeRedSiteType extends AbstractSiteType
 {
@@ -43,17 +41,9 @@ class NodeRedSiteType extends AbstractSiteType
     }
 
     /**
-     * The editor authenticates with `Authorization: Bearer <token>`, obtained
-     * from /auth/token and sent on every admin API call.
-     *
-     * Verified against a live site with the panel's password protection on:
-     *
-     *   Authorization: Basic  -> nginx passes, Node-RED answers 401 Bearer
-     *   Authorization: Bearer -> nginx answers 401 Basic
-     *
-     * and the token cannot travel any other way -- ?access_token= and a cookie
-     * were both refused. So /settings, /flows and /nodes are unreachable while
-     * Basic Auth is in front, which makes the editor unusable.
+     * The editor authenticates with `Authorization: Bearer <token>` (from /auth/token) on every
+     * admin API call, and the token cannot travel any other way. Panel Basic Auth in front would
+     * make nginx and Node-RED each reject the other's header, so the editor would be unusable.
      */
     public function authorizationHeaderAuth(): bool
     {
@@ -61,15 +51,9 @@ class NodeRedSiteType extends AbstractSiteType
     }
 
     /**
-     * Bug #16: the type declared no range, so every installed Node was
-     * offered, however old.
-     *
-     * For the release the installer pins — major 4 (`server.installers.
-     * nodered.version`), whose `engines.node` is `>=18.5` (4.1.15, read from
-     * the npm registry 2026-10-04). Not the catalog: the registry's
-     * single-version endpoint does not resolve a bare major ("version not
-     * found: 4"), so a refresh would store nothing. Node-RED 5 needs 22.9 —
-     * moving the pin means moving this, and a test says so.
+     * For the release the installer pins: major 4 (`server.installers.nodered.version`), whose
+     * `engines.node` is `>=18.5`. Not read from the catalog: the registry does not resolve a bare
+     * major. Node-RED 5 needs 22.9, so moving the pin means moving this (a test checks).
      */
     public function supportedNodeRange(): ?array
     {

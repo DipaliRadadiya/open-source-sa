@@ -5,16 +5,10 @@ namespace App\Services\Applications;
 /**
  * What the panel believes is installed in a directory, and how sure it is.
  *
- * Confidence is not decoration — it is the field that decides whether the
- * panel says anything to the user at all. A `wp-config.php` means WordPress
- * and little else; "there are PHP files here" means almost nothing, and a
- * screen that offers to relabel a site on that basis is worse than one that
- * stays quiet.
+ * Confidence decides whether the panel says anything to the user at all: a `wp-config.php`
+ * means WordPress, "there are PHP files here" means almost nothing and should stay quiet.
  *
- * `matched` is the file the verdict rests on. It is carried because a
- * suggestion the user cannot check is a suggestion the user has to take on
- * faith: "this looks like WordPress" invites an argument, "this looks like
- * WordPress because wp-config.php is in your web root" ends one.
+ * `matched` is the file the verdict rests on, so the user can check the suggestion.
  */
 readonly class SiteTypeVerdict
 {
@@ -24,8 +18,8 @@ readonly class SiteTypeVerdict
         public int $confidence,
         public ?string $matched = null,
         /**
-         * The directory the match was found in — not always the document
-         * root. See SiteTypeDetector::detect().
+         * The directory the match was found in, not always the document root.
+         * See SiteTypeDetector::detect().
          */
         public ?string $root = null,
     ) {}
@@ -33,10 +27,8 @@ readonly class SiteTypeVerdict
     /**
      * Nothing recognisable here.
      *
-     * `php` rather than `static`, because serving a PHP application as a
-     * directory of files publishes its source, and the reverse mistake only
-     * costs a redundant handler. Inherited from the sync discoverer this was
-     * extracted from, deliberately unchanged.
+     * `php` rather than `static`: serving a PHP application as plain files publishes its
+     * source, while the reverse mistake only costs a redundant handler.
      */
     public static function unknown(): self
     {
@@ -44,9 +36,8 @@ readonly class SiteTypeVerdict
     }
 
     /**
-     * The shape the sync discoverer stores on a sync item and an adopted
-     * application. Kept as a method here so that the two callers cannot drift
-     * about what the keys are called.
+     * The shape the sync discoverer stores on a sync item and an adopted application, kept
+     * here so the two callers cannot drift on the key names.
      *
      * @return array{site_type: string, serving_profile: string, confidence: int, matched: string|null}
      */

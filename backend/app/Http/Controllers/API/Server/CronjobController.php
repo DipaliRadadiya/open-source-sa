@@ -26,9 +26,8 @@ class CronjobController extends Controller
 {
     public function index(Request $request, CrontabManager $crontab, CronjobHistory $history): JsonResponse
     {
-        // `id` breaks ties: created_at has one-second resolution, and jobs
-        // made in the same second (a Sync adopting many at once) otherwise
-        // come back in any order — one could appear on two pages or on none.
+        // `id` breaks ties: created_at has one-second resolution, so jobs made in the same second
+        // would otherwise come back in any order and could land on two pages or on none.
         $query = Cronjob::query()->with('systemUser:id,username', 'application:id,php_version')->latest()->orderByDesc('id');
 
         if ($systemUserId = $request->input('filter.system_user_id')) {
@@ -51,7 +50,6 @@ class CronjobController extends Controller
         $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 10;
         $paginator = $query->paginate($perPage);
 
-        // One read for the page, not one per job.
         $latest = $history->latest($paginator->items());
 
         foreach ($paginator->items() as $cronjob) {
@@ -65,20 +63,15 @@ class CronjobController extends Controller
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
-                // Every account a job runs as, across all pages, so the
-                // "Runs as" filter can offer accounts whose jobs are on
-                // another page (root, www-data, …), not only System Users.
+                // Every account a job runs as, across all pages, for the "Runs as" filter.
                 'usernames' => Cronjob::query()->distinct()->orderBy('username')->pluck('username')->filter()->values(),
-                // False when the cron daemon is stopped — then no job runs,
-                // whatever the list says. Null when it could not be told.
+                // False when the cron daemon is stopped (no job runs); null when unknown.
                 'cron_running' => $crontab->serviceRunning(),
             ],
         ]);
     }
 
-    /**
-     * Schedule presets for the frontend dropdown (single source of truth).
-     */
+    /** Schedule presets for the frontend dropdown. */
     public function schedulePresets(): JsonResponse
     {
         return response()->json([
@@ -94,11 +87,9 @@ class CronjobController extends Controller
     {
         return response()->json([
             'presets' => CronCommandPresets::all(),
-            // The token in preset commands the frontend must substitute with the
-            // target application's absolute directory before submitting.
+            // Token the frontend substitutes with the application's absolute directory.
             'placeholder' => CronCommandPresets::PLACEHOLDER,
-            // …and the one to substitute with that application's `php_binary`
-            // (plain `php` when no application is chosen).
+            // …and this one with its `php_binary` (plain `php` when no application is chosen).
             'php_placeholder' => CronCommandPresets::PHP_PLACEHOLDER,
         ]);
     }
@@ -122,9 +113,8 @@ class CronjobController extends Controller
     }
 
     /**
-     * Point the cron jobs the user ticked at another PHP version (#5). Only
-     * the jobs named, only their interpreter; the request has already checked
-     * each is this site's and has a PHP the panel can swap.
+     * Point the cron jobs the user ticked at another PHP version: only the jobs named, only their
+     * interpreter. The request has already checked each is this site's and swappable.
      */
     public function switchPhp(SwitchCronjobsPhpRequest $request, Application $application, SwitchCronjobsPhp $action): JsonResponse
     {
@@ -139,9 +129,7 @@ class CronjobController extends Controller
         ]);
     }
 
-    /**
-     * The job's latest runs, newest first, each with what it printed.
-     */
+    /** The job's latest runs, newest first, each with what it printed. */
     public function runs(Cronjob $cronjob, CronjobHistory $history): JsonResponse
     {
         return response()->json([
@@ -151,8 +139,7 @@ class CronjobController extends Controller
     }
 
     /**
-     * Run the job once now, in the background. 202: it has started, not
-     * finished — its result appears in `runs`.
+     * Run the job once now, in the background. 202: started, not finished; see `runs`.
      */
     public function run(Cronjob $cronjob, RunCronjobNow $action): JsonResponse
     {

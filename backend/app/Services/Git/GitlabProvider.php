@@ -35,15 +35,12 @@ class GitlabProvider extends AbstractGitProvider
     }
 
     /**
-     * GitLab is the only provider that will tell us when a token expires:
-     * `/personal_access_tokens/self` reports `expires_at`, `active` and
-     * `revoked`.
+     * GitLab is the only provider that reports token expiry: `/personal_access_tokens/self`
+     * returns `expires_at`, `active` and `revoked`.
      *
-     * That endpoint needs the `api`/`read_api` scope though, so a token
-     * created with only `read_repository` is refused there — which says
-     * nothing about the token's health. On that refusal we fall back to
-     * `/user`: if it answers, the token is fine and we simply do not know
-     * its expiry.
+     * That endpoint needs the `api`/`read_api` scope, so a `read_repository`-only token is
+     * refused there, which says nothing about its health. On refusal we fall back to
+     * `/user`: if it answers, the token is fine and its expiry is unknown.
      */
     public function status(GitAccount $account): array
     {
@@ -83,9 +80,8 @@ class GitlabProvider extends AbstractGitProvider
 
         $items = (array) $response->json();
 
-        // A project scheduled for deletion is still returned for the days
-        // GitLab keeps it (bug #44); deploying one is building on something
-        // about to vanish. GitLab names the field differently across versions.
+        // A project scheduled for deletion is still returned for days; skip it, as deploying
+        // it builds on something about to vanish. The field name differs across versions.
         $live = array_filter($items, fn (array $project): bool => empty($project['marked_for_deletion_on'])
             && empty($project['marked_for_deletion_at']));
 
@@ -147,10 +143,9 @@ class GitlabProvider extends AbstractGitProvider
     }
 
     /**
-     * The secret goes in `token`, which GitLab sends back as the plain
-     * `X-Gitlab-Token` header. Its signing token cannot be set through the
-     * API (GitLab mints it), so a site using one is registered by hand — see
-     * WebhookRegistrar.
+     * The secret goes in `token`, which GitLab sends back as the plain `X-Gitlab-Token`
+     * header. Its signing token cannot be set through the API (GitLab mints it), so a site
+     * using one is registered by hand — see WebhookRegistrar.
      *
      * @return array<string, mixed>
      */

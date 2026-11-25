@@ -11,15 +11,10 @@ use App\Services\Server\Databases\DatabaseManager;
 /**
  * Accounts that can reach a database the panel now tracks.
  *
- * Databases were already adoptable; their users were not, so an adopted
- * database showed an empty user list — which reads as "nobody can connect to
- * this", while four applications were connecting to it perfectly well.
- *
- * The password is the thing this cannot recover. Engines store a hash, and a
- * hash is not a password. So the row is created with a null one and the API
- * says `password_known: false` rather than handing out a connection string
- * that looks right and does not work. Setting a new password is a deliberate
- * act, because it breaks every application still using the old one.
+ * The password cannot be recovered: engines store a hash. The row is created with a null
+ * password and the API says `password_known: false` instead of handing out a connection string
+ * that does not work. Setting a new password is deliberate, because it breaks every application
+ * still using the old one.
  */
 class DatabaseUserDiscoverer implements Discoverable
 {
@@ -32,11 +27,8 @@ class DatabaseUserDiscoverer implements Discoverable
 
     public function dependsOn(): array
     {
-        // A user is scoped to a database in this panel's model, so there has
-        // to be one to attach it to. Databases have their own adopt endpoint
-        // rather than a discoverer, so this depends on nothing — but the
-        // database rows must already exist, which the check below enforces
-        // by simply finding nothing to do.
+        // A user is scoped to a database, which has its own adopt endpoint rather than a
+        // discoverer; so nothing is declared here and untracked databases simply yield nothing.
         return [];
     }
 
@@ -51,9 +43,7 @@ class DatabaseUserDiscoverer implements Discoverable
                 continue;
             }
 
-            // Only databases the panel already tracks. A user on an unadopted
-            // database has nothing to hang off, and adopting the database is
-            // the step that should come first.
+            // Only databases the panel already tracks; adopting the database comes first.
             $tracked = Database::query()
                 ->where('engine', $engineName)
                 ->pluck('id', 'name');
@@ -83,8 +73,7 @@ class DatabaseUserDiscoverer implements Discoverable
                     $found[] = [
                         'key' => $engineName.':'.$user['username'].'@'.$user['host'].':'.$databaseName,
                         'label' => $user['username'].'@'.$user['host'],
-                        // The account and its grant are facts read from the
-                        // engine. Nothing here is inferred.
+                        // Read from the engine, not inferred.
                         'confidence' => 100,
                         'evidence' => [
                             'engine' => $engineName,
@@ -118,8 +107,7 @@ class DatabaseUserDiscoverer implements Discoverable
                 'host' => $attributes['host'],
             ],
             [
-                // Null, not an empty string. The column is nullable precisely
-                // so this can be honest — see the migration.
+                // Null, not an empty string: the column is nullable for exactly this.
                 'password' => null,
                 'connection_preference' => $this->preferenceFor($attributes['host']),
             ],
@@ -129,10 +117,8 @@ class DatabaseUserDiscoverer implements Discoverable
     /**
      * What the stored host means in the panel's own vocabulary.
      *
-     * Read from the grant rather than assumed: a user granted from `%` can
-     * connect from anywhere, and recording that as `localhost` would describe
-     * the account as narrower than it is — the wrong direction for anything
-     * anyone might later audit.
+     * Read from the grant: a user granted from `%` can connect from anywhere, and recording it as
+     * `localhost` would understate its reach.
      */
     private function preferenceFor(string $host): string
     {

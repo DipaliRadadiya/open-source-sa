@@ -6,9 +6,8 @@ use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 /**
- * An addon command that did not produce an answer, mapped to the status
- * Central branches on. Every body carries a machine `code`; the message is
- * translated for whoever reads it.
+ * An addon command that did not produce an answer, mapped to the status Central branches on.
+ * Every body carries a machine `code`; the message is translated.
  *
  *   addon_not_installed      404  the binary is not on this server
  *   addon_licence_required   403  the addon says this server has not bought it
@@ -16,9 +15,8 @@ use RuntimeException;
  *   addon_command_failed     422  the addon ran and refused (its own message)
  *   addon_bad_output         502  it answered something that is not its JSON
  *   addon_timed_out          504  it did not answer in time
- *   object_cache_redis_unavailable 409  this server's Redis cannot give a site
- *                                       an isolated account (not running,
- *                                       older than 6, or no password)
+ *   object_cache_redis_unavailable 409  Redis cannot give a site an isolated account (not
+ *                                       running, older than 6, or no password)
  *
  * Installing and removing an addon (AddonInstaller):
  *
@@ -48,7 +46,7 @@ class AddonException extends RuntimeException
         'addon_checksum_mismatch' => 422,
         'addon_signature_invalid' => 422,
         'addon_not_executable' => 422,
-        // Central's own code for it (UNSUPPORTED in its AddonInstallations).
+        // Central's own code for it.
         'no_build_for_architecture' => 422,
         'addon_disk_low' => 422,
         'addon_install_failed' => 500,

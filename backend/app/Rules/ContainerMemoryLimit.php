@@ -8,30 +8,19 @@ use Illuminate\Contracts\Validation\ValidationRule;
 /**
  * A memory ceiling in the shorthand Docker itself accepts.
  *
- * A rule rather than the bare regex this used to be inline, for two reasons the
- * regex could not cover. The first is the message: `regex` fails with "format is
- * invalid", and the mistake people make here is the unit — `512` meaning megabytes
- * (Docker reads a bare number as BYTES, and 512 bytes is below the 6m floor Docker
- * refuses outright) or `512MB`, which is not a suffix Docker knows. Saying so is
- * the difference between a field somebody fixes and one they guess at.
+ * A rule rather than a bare regex so the message can name the usual mistake, the unit: `512`
+ * (Docker reads a bare number as BYTES) or `512MB` (not a suffix Docker knows). It is shared by
+ * container sites and containerised databases so the format cannot drift between forms.
  *
- * The second is that the value now has two callers — container sites and
- * containerised databases — and a limit format duplicated across two forms is a
- * format that drifts.
- *
- * **Not bounded against the machine's RAM, deliberately**, unlike its CPU
- * counterpart. Over-committing memory is normal and useful: ten containers with a
- * 1g ceiling each on a 4GB box is a sane configuration, because a ceiling is what
- * a container may use rather than what it reserves. CPU has no equivalent reading
- * — a quota above the core count is simply untrue — which is why only that one has
- * a host-size rule.
+ * **Not bounded against the machine's RAM, deliberately**, unlike its CPU counterpart:
+ * over-committing memory is normal because a ceiling is what a container may use, not what it
+ * reserves, while a CPU quota above the core count is simply untrue.
  */
 class ContainerMemoryLimit implements ValidationRule
 {
     /**
-     * Docker's own floor. Below this `docker run` refuses with "Minimum memory
-     * limit allowed is 6MB", so accepting it here would mean a form that saved
-     * and a container that would not start.
+     * Docker's own floor ("Minimum memory limit allowed is 6MB"); below it the form would save
+     * and the container would not start.
      */
     private const MINIMUM_BYTES = 6 * 1024 * 1024;
 
@@ -47,15 +36,9 @@ class ContainerMemoryLimit implements ValidationRule
 
         $unit = strtolower($matches[2] ?? '');
 
-        // A bare number is a UNIT mistake, and it has to be told as one. Docker
-        // reads `512` as 512 bytes, so it fails the size check below as well —
-        // and answering "less than 6m of memory" to somebody who meant 512
-        // megabytes describes the consequence while hiding the cause. Measured on
-        // the box: that was the message `512` got, and it is the most common thing
-        // anybody will type here.
-        //
-        // `512b` is left to the size check. Spelling the unit out is a claim about
-        // bytes rather than a value with the unit missing.
+        // A bare number is a unit mistake and gets the format message: Docker reads `512` as bytes,
+        // and "less than 6m" would hide the cause. `512b` names its unit, so the size check below
+        // handles it.
         if ($unit === '') {
             $fail(__('validation.custom.memory_limit.format'));
 

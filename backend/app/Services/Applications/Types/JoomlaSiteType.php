@@ -50,21 +50,9 @@ class JoomlaSiteType extends AbstractSiteType
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
             $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
-            // Generated per site when left blank, as Joomla's own installer
-            // does, so tables stay apart if the database is ever shared.
-            // `jml_`, an operator decision (2026-09-03): a prefix someone can
-            // recognise in phpMyAdmin beats one they cannot.
-            //
-            // Objection recorded, because the code it overrides is deliberate.
-            // JoomlaInstaller::tablePrefix() generates a random per-site prefix
-            // when this arrives empty — "as Joomla's own installer generates" —
-            // and a predictable prefix is what a blind SQL injection needs in
-            // order to name a table. Shipping a default means that branch is
-            // only reached by someone who clears the box on purpose.
-            //
-            // The trade is defensible: it is the same bet every other control
-            // panel makes, the random branch still exists, and the help text
-            // below says what clearing the field gets you.
+            // Default `jml_` is easy to recognise in phpMyAdmin. Clearing the field makes
+            // JoomlaInstaller::tablePrefix() generate a random per-site prefix instead; a
+            // predictable prefix helps a blind SQL injection name a table.
             $this->field('table_prefix', 'text', advanced: true, extra: [
                 'default' => 'jml_',
                 'help' => __('application.help.table_prefix_random'),
@@ -81,21 +69,15 @@ class JoomlaSiteType extends AbstractSiteType
             'admin_email' => ['required', 'email', 'max:255'],
             // Joomla's own minimum is 12.
             'admin_password' => ['required', 'string', 'min:12'],
-            // Starting with a letter, as Joomla's own installer requires — `1abc`
-            // was accepted here and the install failed inside Joomla (bug #13).
+            // Must start with a letter, as Joomla's own installer requires.
             'table_prefix' => ['nullable', 'string', 'max:15', 'regex:/^[A-Za-z][A-Za-z0-9_]*$/'],
         ];
     }
 
     /**
-     * Joomla 6.1.3, measured 2026-09-18.
+     * Joomla's `composer.json` declares `"php": "^8.3.0"`.
      *
-     * `composer.json` in the release declares `"php": "^8.3.0"`. The panel
-     * installs whatever `joomla/joomla-cms` tags as latest, so this tracks the
-     * 6.x line.
-     *
-     * No ceiling: `^8.3.0` admits every 8.x, and Joomla states none. Inventing
-     * one would refuse a version Joomla supports the day PHP ships it.
+     * No ceiling: Joomla states none, and inventing one would refuse a supported PHP version.
      */
     public function supportedPhpRange(): ?array
     {

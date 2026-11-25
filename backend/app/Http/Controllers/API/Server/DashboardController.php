@@ -23,17 +23,15 @@ class DashboardController extends Controller
      */
     public function facts(ServerMetrics $metrics): JsonResponse
     {
-        // FS-C46: hostname, OS, CPU, runtimes… are a dozen commands, 0.5–0.8 s.
-        // Uptime and the reboot flag are read fresh: they are why the
-        // dashboard is reloaded.
+        // Hostname, OS, CPU, runtimes… are a dozen commands (0.5–0.8 s), so cached.
+        // Uptime and the reboot flag are read fresh.
         $facts = ProbeCache::remember('server-facts', fn (): array => $metrics->facts());
 
         return response()->json(['facts' => array_merge($facts, $metrics->volatileFacts())]);
     }
 
     /**
-     * Live metrics — each resource as total/used/free/percent (+ human) for the
-     * gauges, plus the network rate for the live stream chart. Poll this.
+     * Live metrics: each resource as total/used/free/percent (+ human), plus the network rate.
      */
     public function live(ServerMetrics $metrics): JsonResponse
     {
@@ -43,10 +41,7 @@ class DashboardController extends Controller
     /**
      * Top server processes (server process table).
      *
-     * `meta.total` is how many processes the box is running; the list itself
-     * is the top `meta.limit` by CPU. Both are sent because the row count is
-     * the limit and says nothing about the server — the panel had no other
-     * number to show, so the count never moved when a process was stopped.
+     * `meta.total` is how many processes the box runs; the list is the top `meta.limit` by CPU.
      */
     public function processes(ServerMetrics $metrics): JsonResponse
     {
@@ -64,9 +59,8 @@ class DashboardController extends Controller
     /**
      * Stop a process (manage).
      *
-     * The guards live in ProcessKiller — see there for what is refused and
-     * why. Logged to the activity trail with what was actually killed, read
-     * at kill time rather than taken from the request.
+     * The guards live in ProcessKiller. Logged with what was actually killed, read at kill time,
+     * not taken from the request.
      */
     public function killProcess(KillProcessRequest $request, string $pid, ProcessKiller $killer, ActivityLogger $log): JsonResponse
     {
@@ -95,10 +89,8 @@ class DashboardController extends Controller
     }
 
     /**
-     * Per-application dashboard issues — all health signals in one call.
-     *
-     * Read-only. Each issue type is independently null-safe (a site with no
-     * workers returns no worker issue, not an error).
+     * Per-application dashboard issues: all health signals in one call. Read-only; each issue type
+     * is independently null-safe (a site with no workers returns no worker issue, not an error).
      */
     public function issues(Application $application, AppIssueDetector $detector): JsonResponse
     {
@@ -106,8 +98,7 @@ class DashboardController extends Controller
 
         $issues = $detector->issues($application);
 
-        // `healthy` means zero critical and zero warning. Info-level issues
-        // do not affect the healthy flag.
+        // `healthy` means zero critical and zero warning; info-level issues do not count.
         $hasCritical = $issues->contains(fn (array $issue) => $issue['severity'] === 'critical');
         $hasWarning = $issues->contains(fn (array $issue) => $issue['severity'] === 'warning');
 

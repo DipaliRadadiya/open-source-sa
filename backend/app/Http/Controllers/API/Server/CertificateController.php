@@ -24,8 +24,7 @@ use Illuminate\Validation\ValidationException;
 class CertificateController extends Controller
 {
     /**
-     * `null` rather than a 404 when there is no certificate: "this site has no
-     * certificate" is a normal state the screen has to render, not an error.
+     * `null` rather than a 404 when there is no certificate: that is a normal state, not an error.
      */
     public function show(Application $application, CertificateOptions $options): JsonResponse
     {
@@ -35,27 +34,24 @@ class CertificateController extends Controller
             'certificate' => $certificate === null
                 ? null
                 : CertificateResource::make($certificate)->resolve(),
-            // What this site can actually be given, so the screen offers the
-            // option that works instead of the one that will fail. A test or
-            // internal domain has always been able to take a self-signed
-            // certificate; nothing said so.
+            // What this site can actually be given, so the screen offers only options that
+            // work (a test or internal domain can always take a self-signed certificate).
             'available_types' => $options->for($application),
         ]);
     }
 
     /**
-     * Issuing is queued and returns 202; uploading is synchronous and returns
-     * 201. The difference is real rather than cosmetic — ACME involves a round
-     * trip back to this box and routinely outlasts the request, while writing
-     * two files does not.
+     * Issuing is queued and returns 202; uploading is synchronous and returns 201. ACME
+     * needs a round trip back to this box and outlasts the request; writing two files
+     * does not.
      */
     public function store(Application $application, StoreCertificateRequest $request, RequestCertificate $issue, UploadCertificate $upload, CertificateLock $certificates): JsonResponse
     {
         $type = CertificateType::from($request->validated('type'));
 
         if ($type === CertificateType::Custom) {
-            // Takes turns with an issuance in progress (CertificateLock): the
-            // upload revokes the site's Let's Encrypt lineage.
+            // Takes turns with an issuance in progress (CertificateLock): the upload revokes
+            // the site's Let's Encrypt lineage.
             $lock = $certificates->forChange($application);
 
             try {
@@ -77,9 +73,8 @@ class CertificateController extends Controller
     }
 
     /**
-     * Rehearse an issuance. 202 and a queued job, like `store()` and for the
-     * same reason: the second half of a dry run is a round trip to Let's
-     * Encrypt's staging server, which outlasts the request.
+     * Rehearse an issuance. 202 and a queued job, like `store()`: the second half is a
+     * round trip to Let's Encrypt's staging server.
      *
      * @throws ValidationException
      */
@@ -91,9 +86,8 @@ class CertificateController extends Controller
     }
 
     /**
-     * Polled while the run is in flight. `null` rather than a 404 when there
-     * has never been one: "this site has not been checked" is a normal state
-     * the dialog has to render, not an error.
+     * Polled while the run is in flight. `null` rather than a 404 when there has never
+     * been one: that is a normal state, not an error.
      */
     public function dryRunStatus(Application $application, CertificateDryRunStore $store): JsonResponse
     {
@@ -130,8 +124,8 @@ class CertificateController extends Controller
 
     public function destroy(Application $application, RemoveCertificate $action, CertificateLock $certificates): JsonResponse
     {
-        // Same turn-taking as the upload; the certificate is read only once
-        // the lock is held, so an issuance that just finished is the one removed.
+        // Same lock as the upload; read the certificate only once it is held, so an issuance
+        // that just finished is the one removed.
         $lock = $certificates->forChange($application);
 
         try {

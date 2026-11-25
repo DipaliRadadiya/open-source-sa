@@ -41,38 +41,20 @@ class ToggleFirewall
     }
 
     /**
-     * Ensure a default `allow` rule exists (and is applied) for SSH plus the
-     * configured panel/web ports. Idempotent — an existing rule for a port is
-     * left as-is (a user rule keeps its `user` origin).
+     * Ensure a default `allow` rule exists (and is applied) for SSH plus the panel/web ports.
+     * Idempotent: an existing rule is left as-is. The port list lives in {@see RecordDefaultRules},
+     * so the installer and this action cannot disagree about which port SSH is on.
      *
-     * Which ports, and the rows themselves, belong to
-     * {@see RecordDefaultRules}: the installer records the same set without
-     * applying anything, and two copies of that list would eventually
-     * disagree about which port SSH is on.
-     *
-     * **A rule the panel records as off is not applied.** This used to apply
-     * every default rule regardless of its `enabled` flag, which is how the
-     * table and the box came to disagree: {@see ProtectedRuleGuard} lets a
-     * seeded rule be switched off while the firewall is not enforcing, and
-     * turning the firewall back on then re-opened the port while the rule
-     * stayed off on screen — and, because the guard locks it again the moment
-     * the firewall is enforcing, left it stuck in a state that was also a lie.
-     * The panel showing a closed port that is open is the 2026-09-08 bug over
-     * again, one direction reversed.
-     *
-     * SSH is the exception, and has to be: the port is the way back in, and a
-     * box whose only door is recorded shut is one `ufw enable` from being
-     * unreachable. That rule is switched back on and applied, and the change
-     * is written to the activity trail rather than made silently.
+     * A rule the panel records as off is not applied, or the table and the box would disagree
+     * (see {@see ProtectedRuleGuard}). SSH is the exception: it is switched back on, applied and
+     * logged, because a box whose only door is recorded shut is one `ufw enable` from unreachable.
      */
     private function seedDefaults(): void
     {
         $sshPort = SshPort::current();
 
         foreach ($this->recordDefaults->execute() as $rule) {
-            // Single-port `allow` on the port SSH actually listens on — the
-            // same resolution `RecordDefaultRules` seeds by, so the two cannot
-            // disagree about which rule is the recovery rule.
+            // Single-port `allow` on the port SSH listens on: the recovery rule.
             $isRecovery = (int) $rule->port_from === $sshPort && $rule->port_to === null;
 
             if (! $rule->enabled) {

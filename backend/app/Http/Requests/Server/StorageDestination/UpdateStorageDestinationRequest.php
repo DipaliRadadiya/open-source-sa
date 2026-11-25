@@ -25,33 +25,28 @@ class UpdateStorageDestinationRequest extends FormRequest
         $destination = $this->destination();
 
         return array_merge([
-            // Everything is partial-update. A missing field keeps what is
-            // there now. Credential fields keep the old value when omitted so
-            // a simple rename doesn't lose them.
+            // Partial update: a missing field keeps its current value, so a rename does not
+            // lose credentials.
             'name' => [
                 'sometimes', 'string', 'max:100',
                 Rule::unique('storage_destinations', 'name')->ignore($destination),
                 new SingleLine,
             ],
 
-            // `..` walks out of the bucket or folder the destination names (bug
-            // #36) — refused as the SFTP/FTP root already is.
+            // `..` walks out of the bucket or folder the destination names; refused as the
+            // SFTP/FTP root already is.
             'prefix' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#', 'not_regex:#(^|/)\.\.(/|$)#'],
 
-            // Immutable. The `config` blob's *shape* is defined by the
-            // provider, so changing the provider would reinterpret a stored
-            // bucket and secret key as a hostname and a password. Refused
-            // outright rather than ignored: a request that asked to change it
-            // and got a 200 would reasonably believe it had.
+            // Immutable: the `config` shape is defined by the provider, so a change would
+            // reinterpret a stored bucket and secret key as a hostname and password. Refused
+            // rather than ignored, so a 200 never suggests it changed.
             'provider' => ['prohibited'],
         ], $this->providerRules());
     }
 
     /**
-     * On update the driver's secrets stop being required — that is the whole
-     * "omission means keep" contract. Everything else it asks for still
-     * applies, because a bucket name that was valid on create is not allowed
-     * to become invalid on rename.
+     * On update the driver's secrets stop being required ("omission means keep"); every other
+     * rule still applies.
      *
      * @return array<string, mixed>
      */
@@ -67,10 +62,8 @@ class UpdateStorageDestinationRequest extends FormRequest
             ->for($destination)
             ->rules(requireSecrets: false);
 
-        // Every config key becomes optional on a partial update: the caller
-        // may be sending only `config.host`. `sometimes` short-circuits the
-        // rest of the chain when the key is absent, so a `required` left in
-        // place would otherwise reject a rename for not resending a bucket.
+        // Every config key becomes optional on a partial update. `sometimes` skips the rest of
+        // the chain when the key is absent, so a leftover `required` would reject a rename.
         return array_map(
             fn (array $rule): array => $this->optional($rule),
             $rules,

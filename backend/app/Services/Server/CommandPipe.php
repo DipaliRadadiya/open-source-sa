@@ -5,18 +5,11 @@ namespace App\Services\Server;
 /**
  * Starts a command and hands back its stdout and stderr as streams.
  *
- * This exists as its own class for one reason: `proc_open` is invisible to
- * `Process::fake()`. {@see ServerOps::stream()} used to drive Symfony's
- * `Process`, which the facade can intercept, and moving to `proc_open` — for
- * the memory reasons that method documents — took every download test with it.
- * They did not fail; they started running `sudo runuser … cat` against the
- * machine running the suite, which is worse.
+ * Its own class because `proc_open` is invisible to `Process::fake()`: without this seam, tests
+ * of {@see ServerOps::stream()} would run real `sudo runuser … cat` commands on the test machine.
  *
- * So the spawn is a seam and the *reading* is not. `ServerOps::stream()` keeps
- * the part that was actually wrong (the select loop, the bounded reads, the
- * backpressure) and that part is exercised against real commands in
- * `StreamDownloadTest`. A fake here replaces only "what did this command
- * print", which is the one thing a test legitimately wants to decide.
+ * Only the spawn is faked; the reading (select loop, bounded reads, backpressure) stays in
+ * `ServerOps::stream()` and is tested against real commands in `StreamDownloadTest`.
  */
 class CommandPipe
 {

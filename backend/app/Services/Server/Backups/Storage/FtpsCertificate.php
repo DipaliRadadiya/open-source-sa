@@ -6,21 +6,17 @@ use Closure;
 use Throwable;
 
 /**
- * The fingerprint of the certificate an FTPS server presents (FTP-01).
+ * The fingerprint of the certificate an FTPS server presents.
  *
- * FTPS destinations verified nothing: PHP's `ftp_ssl_connect` performs no
- * certificate or hostname check, so anyone between the panel and the backup
- * server could answer instead and receive the FTP password and every archive.
- * SFTP pins the host key on first use; this gives FTPS the same — recorded
- * the first time, compared before every connection after.
+ * PHP's `ftp_ssl_connect` checks no certificate or hostname, so anyone between the panel
+ * and the backup server could answer instead and receive the FTP password and every
+ * archive. Like SFTP's host key, the fingerprint is recorded on first use and compared
+ * before every later connection.
  *
- * Read on a connection of its own, because the ftp extension never exposes
- * the certificate of the connection it makes: open the control channel, ask
- * `AUTH TLS`, complete the handshake with the certificate captured, hang up.
- * That stops an impostor who is in the way all the time — the realistic case
- * — but not one who switches in the moment between this check and the real
- * connection; closing that needs a transport that exposes its certificate,
- * which the ftp extension does not.
+ * Read on a connection of its own, because the ftp extension never exposes the
+ * certificate of its connection: open the control channel, send `AUTH TLS`, complete the
+ * handshake with the certificate captured, hang up. This stops a standing impostor but
+ * not one who switches in between this check and the real connection.
  */
 class FtpsCertificate
 {
@@ -38,8 +34,7 @@ class FtpsCertificate
     }
 
     /**
-     * `sha256:<hex>`, or null when the server could not be reached or would
-     * not complete TLS.
+     * `sha256:<hex>`, or null when the server is unreachable or won't complete TLS.
      */
     public function fingerprint(string $host, int $port, int $timeout = 10): ?string
     {
@@ -53,8 +48,7 @@ class FtpsCertificate
     private function handshake(string $host, int $port, int $timeout): ?string
     {
         $context = stream_context_create(['ssl' => [
-            // Not verified here on purpose: a self-signed certificate is the
-            // common case on a backup box, and the pin is what is checked.
+            // Not verified on purpose: self-signed is common on a backup box; the pin is checked.
             'verify_peer' => false,
             'verify_peer_name' => false,
             'capture_peer_cert' => true,

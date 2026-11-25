@@ -7,14 +7,10 @@ use Illuminate\Support\Facades\Date;
 /**
  * The one "keep" choice a clean runs with, shared by every category.
  *
- * `0` deletes everything the category covers; `N` keeps whatever is newer
- * than N days. `null` is not a choice the user makes — it is a request or a
- * schedule saved before the choice existed, and each category answers it with
- * exactly what it did then, so no existing server changes behaviour until
- * somebody picks a value.
+ * `0` deletes everything the category covers; `N` keeps whatever is newer than N days. `null` is
+ * a request or schedule saved before the choice existed: each category answers it as it did then.
  *
- * A fixed list rather than any integer: the preview prices every choice up
- * front, and an open number would make that list unbounded.
+ * A fixed list rather than any integer: the preview prices every choice up front.
  */
 final class KeepDays
 {
@@ -30,9 +26,8 @@ final class KeepDays
     public const UNCHOSEN = 'default';
 
     /**
-     * The choice in words, in the current locale. Takes what the activity log
-     * stored — a choice, {@see UNCHOSEN}, or nothing at all on rows written
-     * before the choice existed.
+     * The choice in words, in the current locale. Takes what the activity log stored: a choice,
+     * {@see UNCHOSEN}, or nothing on older rows.
      */
     public static function label(int|string|null $keepDays): string
     {
@@ -44,8 +39,8 @@ final class KeepDays
     }
 
     /**
-     * The newest modification time (unix seconds) a file may have and still be
-     * removed under this choice. Delete all has no cutoff.
+     * The newest modification time (unix seconds) a file may have and still be removed.
+     * Delete all has no cutoff.
      */
     public static function cutoff(int $days): ?int
     {
@@ -53,9 +48,8 @@ final class KeepDays
     }
 
     /**
-     * `find` arguments selecting files last changed more than `$days` ago.
-     * Minutes, not `-mtime`: `-mtime +7` rounds down to whole days and means
-     * "8 days or more", which is not what "keep 7 days" says.
+     * `find` arguments selecting files last changed more than `$days` ago. Minutes, not `-mtime`:
+     * `-mtime +7` means "8 days or more", not "keep 7 days".
      *
      * @return array<int, string>
      */

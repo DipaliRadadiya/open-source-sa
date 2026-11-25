@@ -16,33 +16,23 @@ class ApplicationSiteTypeController extends Controller
     /**
      * Read the disk and say what is installed here.
      *
-     * Button-triggered, not automatic. A site's files arrive *after* it is
-     * created — the user makes a Custom PHP site and then uploads WordPress
-     * into it — so detecting when the screen is opened would run against an
-     * empty directory and cache "nothing found" at the one moment the answer
-     * is guaranteed to be wrong. The user clicks Detect when they are ready.
+     * Button-triggered, not automatic: a site's files arrive after it is created, so detecting
+     * on screen open would cache "nothing found" against an empty directory.
      *
-     * A probe, and it records its result, which is why it is a POST: it
-     * mirrors `POST /applications/{application}/domains/{domain}/verify`, the
-     * panel's existing shape for exactly this.
+     * A POST because it records its result, like
+     * `POST /applications/{application}/domains/{domain}/verify`.
      */
     public function detect(
         Application $application,
         SiteTypeDetector $detector,
         SiteTypeSuggestion $suggestion,
     ): JsonResponse {
-        // Authorized by `permission:application,manage` on the route, the way
-        // every other application endpoint here is — this panel has no
-        // policies. `manage` rather than the read permission because it writes
-        // the verdict, and because its only purpose is to enable a change.
+        // Authorized by `permission:application,manage` on the route (this panel has no
+        // policies); `manage` because it writes the verdict.
 
-        // A git site is not probed at all. Its type can never be changed (see
-        // UpdateSiteTypeRequest), so every verdict the probe could return is
-        // one nothing may act on — and a git-deployed WordPress repository
-        // matches `wp-config.php` at 95, so what would be stored is a finding
-        // that reads like an offer. Suppressing the suggestion downstream
-        // would be enough for the screen and would still leave that verdict
-        // recorded against the site for the next person to read as one.
+        // A git site is not probed: its type can never be changed (see UpdateSiteTypeRequest),
+        // and a git-deployed WordPress repository would record a verdict that reads like an
+        // offer.
         if ((string) $application->site_type === 'git') {
             return response()->json([
                 'site_type_detection' => $suggestion->describe($application),
@@ -71,9 +61,8 @@ class ApplicationSiteTypeController extends Controller
     /**
      * Apply a new site type.
      *
-     * Synchronous: the write and the vhost republish take well under a second,
-     * and the caller gets a real pass or a real failure rather than a 202 and
-     * a label that quietly never changed.
+     * Synchronous: the write and the vhost republish take well under a second, so the caller
+     * gets a real pass or failure rather than a 202.
      */
     public function update(
         UpdateSiteTypeRequest $request,

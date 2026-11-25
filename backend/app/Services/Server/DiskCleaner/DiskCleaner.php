@@ -7,10 +7,8 @@ use App\Services\Server\ServerOps;
 use App\Support\Bytes;
 
 /**
- * Disk-cleaner orchestrator. Resolves the configured cleanup targets, builds
- * the preview (disk usage + per-category estimate/paths/method), and looks up
- * a target by key. No DB — everything is detected live (detect-don't-trust),
- * the same posture as the Services feature.
+ * Disk-cleaner orchestrator: resolves the cleanup targets, builds the preview and looks up a
+ * target by key. No DB; everything is detected live.
  */
 class DiskCleaner
 {
@@ -41,8 +39,7 @@ class DiskCleaner
     }
 
     /**
-     * Preview: disk usage + the available categories with reclaimable
-     * estimates and the exact paths each will touch.
+     * Preview: disk usage + the available categories with reclaimable estimates and paths.
      *
      * @return array<string, mixed>
      */
@@ -74,7 +71,6 @@ class DiskCleaner
             'key' => $target->key(),
             'label' => __("disk-cleaner.{$target->key()}.label"),
             'description' => __("disk-cleaner.{$target->key()}.description"),
-            // Plain-language note: what happens + what's kept when this runs.
             'note' => __("disk-cleaner.{$target->key()}.note"),
             'group' => $target->group(),
             'method' => $target->method(),
@@ -83,12 +79,9 @@ class DiskCleaner
             'available' => true,
             'reclaimable' => $reclaimable,
             'reclaimable_human' => Bytes::human($reclaimable),
-            // False only where there is no age to keep by (unused packages):
-            // the choice is ignored and the category always removes all.
+            // False where there is no age to keep by (unused packages): the choice is ignored.
             'keeps_days' => $target->keepsDays(),
-            // What each keep choice would free, so the screen can show it
-            // before anything runs. `reclaimable` above is the clean without
-            // a choice — what this category did before the choice existed.
+            // What each keep choice would free; `reclaimable` above is the clean without a choice.
             'reclaimable_by_keep_days' => array_map(
                 fn (int $days) => [
                     'keep_days' => $days,

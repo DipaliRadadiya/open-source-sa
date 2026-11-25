@@ -8,10 +8,8 @@ use App\Models\Worker;
 /**
  * Starting points for a new worker, chosen by what the site actually is.
  *
- * The empty state of this screen is the whole feature for most people: nobody
- * should have to remember `--sleep=3 --tries=3` to get a queue running. So the
- * presets carry the flags, and a custom command is one click further away
- * rather than the only option.
+ * The presets carry the flags (`--sleep=3 --tries=3`) so nobody has to remember them; a custom
+ * command stays one click away.
  */
 class WorkerPresets
 {
@@ -37,9 +35,8 @@ class WorkerPresets
                 "{$php} artisan queue:work --sleep=3 --tries=3 --max-time=3600",
             );
 
-            // Offered alongside the queue worker, not instead of it: Horizon
-            // is the right answer for some applications and absent from most.
-            // The two are mutually exclusive and the request layer says so.
+            // Alongside the queue worker, not instead of it: most apps do not have Horizon.
+            // The two are mutually exclusive; the request layer enforces it.
             $presets[] = $this->preset('horizon', Worker::KIND_HORIZON, "{$php} artisan horizon");
         }
 
@@ -68,12 +65,9 @@ class WorkerPresets
 
         $checks = [];
 
-        // The find that justifies this whole check list. `queue:restart` works
-        // by leaving a flag in the cache for running workers to read; on the
-        // `array` driver that cache does not survive the process that wrote
-        // it, so the command succeeds, prints nothing, and no worker ever
-        // restarts. Deploys then run new code on the site and week-old code in
-        // the queue, with no error anywhere to connect the two.
+        // `queue:restart` leaves a flag in the cache for workers to read; the `array` driver
+        // loses it with the process, so the command succeeds but no worker ever restarts and
+        // the queue keeps running old code after a deploy.
         $cache = $this->cacheDriver($application);
 
         if ($cache === 'array') {
@@ -100,8 +94,7 @@ class WorkerPresets
             $values[$variable['key']] = $variable['value'];
         }
 
-        // CACHE_STORE is the Laravel 11+ name; CACHE_DRIVER is what older
-        // applications still use, and plenty of deployed sites are older.
+        // CACHE_STORE is the Laravel 11+ name; older applications still use CACHE_DRIVER.
         $driver = $values['CACHE_STORE'] ?? $values['CACHE_DRIVER'] ?? null;
 
         return $driver === null ? null : strtolower(trim($driver));

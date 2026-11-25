@@ -15,9 +15,7 @@ use RuntimeException;
  * Read-only export (dump) of a database to a managed exports dir. Non-
  * destructive — the source database is never touched.
  *
- * Runs inside a queued job rather than a request. A dump of any real database
- * outlives nginx's read timeout, so the request that started it was being told
- * the work had failed while it was still running perfectly well.
+ * Runs inside a queued job because a dump of a real database outlives nginx's read timeout.
  */
 class ExportDatabase
 {
@@ -53,9 +51,8 @@ class ExportDatabase
             'finished_at' => now(),
         ]);
 
-        // Logged on completion rather than when it was asked for, so the entry
-        // describes something that actually happened. The actor comes off the
-        // row because a queue worker has no session to read one from.
+        // Logged on completion so the entry describes something that happened. The actor comes
+        // off the row because a queue worker has no session.
         $this->activityLogger->log(
             'database.exported',
             $database,
@@ -67,13 +64,10 @@ class ExportDatabase
     }
 
     /**
-     * A user's SQL export is handed over gzipped (Dipali, 2026-10-26):
-     * typically 5–10× smaller, and the import takes `.sql.gz` as it is.
+     * A user's SQL export is gzipped (typically 5–10× smaller; the import takes `.sql.gz`).
      *
-     * Not an import's safety copy. That one is loaded straight back with the
-     * engine's `restore()`, which reads plain SQL — compressed, the very copy
-     * meant to undo a failed import could not be put back. Mongo's archive is
-     * already gzipped by mongodump.
+     * Not an import's safety copy: that is loaded back with the engine's `restore()`, which
+     * reads plain SQL. Mongo's archive is already gzipped by mongodump.
      */
     private function compresses(DatabaseExport $export, string $extension): bool
     {
@@ -84,8 +78,7 @@ class ExportDatabase
      * Gzip the dump beside itself and drop the plain one, streamed so a dump
      * larger than PHP's memory limit costs one buffer.
      *
-     * A compression that fails keeps the plain dump: it is a complete export,
-     * and failing the whole export over its packaging would throw it away.
+     * A failed compression keeps the plain dump, which is a complete export.
      *
      * @return array{0: string, 1: string} the file name and path to record
      */

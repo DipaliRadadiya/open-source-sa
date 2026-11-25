@@ -5,15 +5,12 @@ namespace App\Contracts;
 /**
  * A language runtime the server can hold several versions of at once.
  *
- * The shape exists because Node and PHP pose the same question — which
- * versions are here, which is the default, install another — and answering it
- * twice in two different ways would give the panel two screens for one idea.
+ * Node and PHP pose the same question (which versions are here, which is the default, install
+ * another), so they share one shape and one screen.
  *
- * The load-bearing method is `versions()['path']`. A systemd unit's
- * `ExecStart=` needs an absolute binary path: it has no shell and does not
- * source a profile, so a version manager that works by mutating `PATH` per
- * shell cannot be used to run a site. Every implementation must be able to
- * say where a given version's binary actually is.
+ * The load-bearing method is `versions()['path']`: a systemd unit's `ExecStart=` needs an
+ * absolute binary path (no shell, no profile), so a version manager that mutates `PATH` per
+ * shell cannot run a site.
  */
 interface Runtime
 {

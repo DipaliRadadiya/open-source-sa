@@ -19,8 +19,7 @@ class Fail2banException extends Exception
     }
 
     /**
-     * fail2ban isn't on the server yet. Not an error so much as a state the
-     * screen should offer to fix, so it says so plainly.
+     * fail2ban isn't on the server yet: a state the screen should offer to fix.
      */
     public static function notInstalled(): self
     {
@@ -30,11 +29,9 @@ class Fail2banException extends Exception
     /**
      * `jail.local` exists and the panel did not write it.
      *
-     * Refused rather than overwritten: a server migrated from another panel,
-     * or an administrator who configured fail2ban by hand, owns that file, and
-     * this class replaces it wholesale. 409 rather than 422 — nothing the user
-     * typed is wrong; the server is in a state that conflicts with the request,
-     * and the fix is a decision about a file rather than a corrected field.
+     * Refused rather than overwritten: a migrated server or a hand-configured administrator owns
+     * that file, and the panel replaces it wholesale. 409, not 422: nothing the user typed is
+     * wrong; the server state conflicts with the request.
      */
     public static function foreignJailLocal(string $path): self
     {
@@ -52,9 +49,8 @@ class Fail2banException extends Exception
     }
 
     /**
-     * Unbanning an address that isn't banned. Reported rather than silently
-     * accepted: the user is looking at a list they believe is current, and
-     * agreeing with them when it isn't is how stale UIs persist.
+     * Unbanning an address that isn't banned. Reported rather than silently accepted: the
+     * user's list is out of date.
      */
     public static function notBanned(): self
     {
@@ -77,8 +73,7 @@ class Fail2banException extends Exception
     }
 
     /**
-     * Removing an entry the list does not have — 404 like an unban of an
-     * address that is not banned: the screen showing it is out of date.
+     * Removing an entry the list does not have: 404, like {@see self::notBanned()}.
      */
     public static function ignoreIpMissing(): self
     {
@@ -99,9 +94,8 @@ class Fail2banException extends Exception
     {
         $payload = [
             'message' => __($this->messageKey, $this->replace),
-            // RC-22: a stable code beside the sentence — the ignore-list route
-            // alone answers four different 422s, which the screen could tell
-            // apart only by guessing from what it had just tried.
+            // A stable code beside the sentence: the ignore-list route alone answers four
+            // different 422s.
             'reason' => substr($this->messageKey, strrpos($this->messageKey, '.') + 1),
         ];
 

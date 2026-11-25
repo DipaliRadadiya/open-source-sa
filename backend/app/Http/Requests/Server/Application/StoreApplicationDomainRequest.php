@@ -22,18 +22,15 @@ class StoreApplicationDomainRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Unique across every application, not just this one: two sites
-            // claiming one hostname is decided by whichever vhost the web
-            // server reads first, which is not a thing to leave to chance.
+            // Unique across every application: with two sites on one hostname the web server
+            // serves whichever vhost it reads first.
             //
-            // The charset is deliberately strict — this value ends up in a
-            // config filename and inside server_name, so anything that could
-            // introduce a path separator or a directive break is refused here
-            // rather than escaped later.
+            // The charset is strict because this value ends up in a config filename and inside
+            // server_name; a path separator or directive break is refused here, not escaped later.
             'domain' => [
                 'required', 'string', 'max:253',
-                // Each label, and a real top-level domain — never an IP
-                // (bug #54). Shared with create, staging and clone (bug #9).
+                // Each label, and a real top-level domain, never an IP. Shared with create,
+                // staging and clone.
                 new Hostname,
                 Rule::unique('application_domains', 'domain'),
                 new NotPanelHost,
@@ -49,15 +46,10 @@ class StoreApplicationDomainRequest extends FormRequest
     /**
      * Name the application already holding it.
      *
-     * The rule is unique across the whole server, so the default message —
-     * "The domain has already been taken" — is true and useless: it gives no
-     * way to find the site holding the name, and the user's next move is
-     * either to detach it there or to pick a different name. Neither is
-     * possible without knowing where it is.
+     * The default "already been taken" message does not say which site holds the name.
      *
-     * No leak: `app_domain` is a server-wide permission and applications are
-     * not scoped per user, so anyone who can reach this endpoint can already
-     * see every application in the list.
+     * No leak: `app_domain` is a server-wide permission and applications are not scoped per
+     * user, so anyone reaching this endpoint can already list every application.
      *
      * @return array<string, string>
      */
@@ -70,9 +62,7 @@ class StoreApplicationDomainRequest extends FormRequest
 
         return [
             'redirect_to.regex' => __('errors/application.redirect_target_invalid'),
-            // Falls back to the plain message when the holder cannot be found
-            // — a row deleted between the check and this call, say. Better a
-            // vaguer sentence than one naming an application that is gone.
+            // Plain message when the holder is gone (row deleted since the check).
             'domain.unique' => $holder === null
                 ? __('errors/application.domain_taken')
                 : __('errors/application.domain_taken_by', ['application' => $holder->name]),
@@ -81,8 +71,7 @@ class StoreApplicationDomainRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // No trailing slash: every vhost appends the request path, which
-        // brings its own (DOM-01).
+        // No trailing slash: every vhost appends the request path, which has its own.
         if (is_string($this->input('redirect_to'))) {
             $this->merge(['redirect_to' => rtrim(trim($this->input('redirect_to')), '/')]);
         }

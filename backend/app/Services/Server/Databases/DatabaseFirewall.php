@@ -9,19 +9,12 @@ use App\Models\FirewallRule;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Opens the engine port in the firewall when a DB user is given remote access
- * (reuses the Firewall feature), and closes it again when the last user that
- * needed it is gone.
+ * Opens the engine port in the firewall when a DB user is given remote access (reuses the Firewall
+ * feature), and closes it again when the last user that needed it is gone.
  *
- * It used to be open-only, and the rule it opened was seeded as `default` —
- * the origin of the panel's own SSH/HTTP rules, which cannot be removed while
- * the firewall is on. So deleting the remote user (or its database) left
- * 3306 open to that address with no way to close it short of switching the
- * whole firewall off (found on the nginx test box, 2026-09-26). The rules now
- * carry their own origin, `db_user` — the value the rule list's origin filter
- * already offered — which the user may delete, and release() closes one once
- * no remaining user needs it. "Needs" is counted across
- * engines that share a port — MySQL and MariaDB are both 3306.
+ * Rules carry the `db_user` origin, which the user may delete; `default` rules cannot be removed
+ * while the firewall is on. "Needed" is counted across engines that share a port (MySQL and
+ * MariaDB are both 3306).
  */
 class DatabaseFirewall
 {
@@ -49,9 +42,8 @@ class DatabaseFirewall
         $result = $this->firewall->apply($rule);
 
         if ($result->failed()) {
-            // A row this call made for a rule ufw refused is a rule that
-            // exists nowhere but the Firewall screen — and, since ufw refuses
-            // to delete what it never had, one nobody could remove (MY-01).
+            // A row for a rule ufw refused would exist only on the Firewall screen, and ufw
+            // cannot delete what it never had, so nobody could remove it.
             if ($rule->wasRecentlyCreated) {
                 $rule->delete();
             }
@@ -61,14 +53,12 @@ class DatabaseFirewall
     }
 
     /**
-     * Close the rule a user with this access had, unless another user still
-     * needs it. Call after the user row is gone or changed.
+     * Close the rule a user with this access had, unless another user still needs it. Call after
+     * the user row is gone or changed.
      *
-     * Only rules this class opened (`db_user` origin) are touched: a rule the
-     * administrator wrote for the same port and address is theirs to keep.
-     * Never fatal — a user delete that already happened on the engine must not
-     * be reported as failed because ufw could not be told; the rule is left in
-     * place, still listed and still removable.
+     * Only rules this class opened (`db_user` origin) are touched: an administrator's own rule
+     * for the same port and address is theirs to keep. Never fatal: the user delete already
+     * happened on the engine; the rule stays listed and removable.
      */
     public function release(string $engine, string $preference, ?string $host): void
     {

@@ -10,21 +10,17 @@ use Illuminate\Validation\Validator;
 /**
  * The two rules a database and an application must meet to be paired.
  *
- * Shared by attaching an existing database and creating one for an
- * application (FS-C13): only attaching checked them, so `POST /databases`
- * gave a site a second database the attach screen would have refused.
+ * Shared by attaching an existing database and creating one for an application, so both paths
+ * refuse the same pairings.
  */
 trait ChecksApplicationPairing
 {
     /**
      * One database per application, for now.
      *
-     * Backups dump every attached database, but staging and cloning both take
-     * `Database::where('application_id', …)->first()` — with two attached, the
-     * one they copy is insertion order. Refusing here is the difference between
-     * that ambiguity being unreachable and being one click away; widening this
-     * means teaching those strategies to say which database they mean, not
-     * deleting this check.
+     * Staging and cloning take `Database::where('application_id', …)->first()`, so with two
+     * attached the one they copy is insertion order. Widening this means teaching those
+     * strategies which database they mean, not deleting this check.
      */
     private function refuseSecondDatabase(Validator $validator, Application $application, ?int $except = null): void
     {
@@ -44,20 +40,12 @@ trait ChecksApplicationPairing
     /**
      * An application can only use an engine it can speak.
      *
-     * Same source of truth provisioning uses when it creates the database in
-     * the first place (`InstallerManager::provisionDatabase()` passes
-     * `acceptedEngines()`), so attaching cannot produce a pairing that creating
-     * would have refused. A type that needs no database — `custom`, static,
-     * a reverse proxy — declares nothing and accepts anything: the link is
-     * bookkeeping there, and the panel does not know better than the user what
-     * their own code connects to.
+     * Same source as provisioning (`InstallerManager::provisionDatabase()` passes
+     * `acceptedEngines()`). A type that needs no database (`custom`, static, a reverse proxy)
+     * declares nothing and accepts anything: the link is bookkeeping there.
      *
-     * 📌 Deliberately checks the engine and not `minimumEngineVersions()`.
-     * That gate exists because an application dies inside its own installer
-     * when the engine is too old, and attaching runs no installer — the
-     * database is already there, possibly already in use. Refusing the link
-     * would withhold bookkeeping over a version that only matters at install
-     * time.
+     * 📌 Deliberately not `minimumEngineVersions()`: that gate protects an installer, and
+     * attaching runs none; the database already exists.
      */
     private function refuseUnusableEngine(Validator $validator, Application $application, string $engine): void
     {

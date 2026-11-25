@@ -11,13 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One application's environment file, in the three shapes a screen needs: the
- * raw text for the editor, the parsed pairs for anything that wants a value,
- * and the checks that judge it.
+ * One application's environment file, in the three shapes a screen needs: the raw text for the
+ * editor, the parsed pairs, and the checks that judge it.
  *
- * All three come from a single read. The alternative — a raw endpoint plus a
- * parsed endpoint plus a checks endpoint — reads the same file three times and
- * can return three different answers if someone saves in between.
+ * All three come from a single read, so they cannot disagree if someone saves in between.
  *
  * @property Application $resource
  */
@@ -38,14 +35,10 @@ class ApplicationEnvironmentResource extends JsonResource
         $raw = $exists ? $files->read($application) : '';
         $path = $files->path($application);
 
-        // The file is where the framework reads it, and that happens to be
-        // inside a directory the web server hands out by path. Reported rather
-        // than quietly relocated: moving it would break the application.
-        //
-        // Not when any part of the path below the web root is a dotfile or
-        // dot-directory: every vhost refuses those (nginx and Apache at any
-        // depth, OLS since its rule stopped being anchored), so Akaunting's
-        // and Mautic's `.env` answered 403 while this said "exposed".
+        // The file sits where the framework reads it, inside a directory the web server serves
+        // by path. Reported, not relocated: moving it would break the application.
+        // Not exposed when any path part below the web root is a dotfile or dot-directory:
+        // every vhost refuses those.
         $root = $application->documentRoot().'/';
         $exposed = $exists
             && $application->servesFiles()
@@ -61,18 +54,12 @@ class ApplicationEnvironmentResource extends JsonResource
             'framework' => $framework,
             'framework_title' => __('environment.frameworks.'.$framework),
 
-            // The two ways a save can appear to do nothing. Both are answered
-            // here so the button can say what it will actually do rather than
-            // the user discovering it afterwards.
+            // The two ways a save can appear to do nothing, so the button can say what it will do.
             'requires_restart' => app(ProcessSupervisor::class)->runs($application),
             'requires_apply' => $detector->requiresApply($application, $framework),
 
-            // The whole file only for someone who may edit it. It went to
-            // anyone with `app_environment` view, secrets and all, while
-            // `variables` beside it carefully nulled the same values — a
-            // view-only role read APP_KEY from here (found live 2026-09-29;
-            // the DB-01 class). `variables` and `checks` still describe the
-            // file without a single secret value in either.
+            // The whole file only for someone who may edit it: a view-only role must not read
+            // secrets like APP_KEY. `variables` and `checks` carry no secret values.
             'raw' => $request->user()?->canManage('app_environment') ? $raw : null,
             'variables' => $inspector->variables($raw),
             'checks' => $exists ? $inspector->checks($raw, $framework, $exposed) : [],

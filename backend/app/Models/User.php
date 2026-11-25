@@ -32,9 +32,8 @@ class User extends Authenticatable
     }
 
     /**
-     * A machine account (the central-panel integration) rather than a person.
-     * It owns API tokens but never logs in and is not managed from the admin
-     * area — see resolveRouteBinding().
+     * A machine account (the central-panel integration) rather than a person: it owns API tokens,
+     * never logs in and is not managed from the admin area — see resolveRouteBinding().
      */
     public function isSystem(): bool
     {
@@ -44,11 +43,8 @@ class User extends Authenticatable
     /**
      * Only people are addressable as `/admin/users/{user}`.
      *
-     * Enforced here rather than in each controller because "which routes take
-     * a user?" grows over time — edit, delete, reset password, set roles,
-     * impersonate — and a guard added per-route is a guard forgotten on the
-     * next one. A machine account is not a panel user, so the honest answer
-     * for all of them is 404.
+     * Enforced here, not per controller, so no user route can forget the guard: a machine account
+     * is not a panel user, so every one of them answers 404.
      */
     public function resolveRouteBinding($value, $field = null): ?self
     {
@@ -58,9 +54,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Coarse gate — whether the user can reach the admin area
-     * (`access-admin`). Distinct from the granular permission system,
-     * which resolves purely from the user's assigned Roles + direct grants.
+     * Coarse gate: whether the user can reach the admin area (`access-admin`). Distinct from the
+     * granular permission system, which resolves from assigned Roles + direct grants.
      */
     public function isAdmin(): bool
     {
@@ -68,8 +63,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Named Roles assigned to this user (many-to-many). Effective
-     * permissions are the deduped OR-union across all assigned roles.
+     * Named Roles assigned to this user. Effective permissions are the union across all of them.
      */
     public function roles(): BelongsToMany
     {
@@ -87,9 +81,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Pure role-based resolution (no admin bypass): the ability is granted if
-     * ANY assigned role grants it. `manage` implies `view` is enforced upstream
-     * when grants are written.
+     * Pure role-based resolution (no admin bypass): granted if ANY assigned role grants it.
+     * `manage` implying `view` is enforced upstream when grants are written.
      */
     private function hasAbility(string $permissionName, string $ability): bool
     {

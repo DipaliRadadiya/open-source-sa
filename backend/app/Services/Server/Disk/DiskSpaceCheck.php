@@ -9,18 +9,14 @@ use Illuminate\Support\Number;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Asked before an action that writes a lot to this server's disk is accepted
- * (2026-10-29, Dipali): a restore, a backup, a staging copy, a clone, a zip or
- * an unzip. If it would not fit, the request is refused there and then with
- * the numbers, and nothing is queued — rather than the user waiting for a job
- * that fills the disk, takes every site with it for a moment, and fails.
+ * Asked before an action that writes a lot to this server's disk is accepted (restore, backup,
+ * staging copy, clone, zip, unzip). If it would not fit, the request is refused with the numbers
+ * and nothing is queued.
  *
- * The same rule as backups ({@see LocalSpaceGuard}): what is left afterwards
- * must be at least 10% of the disk or 2 GB, whichever is more. The jobs keep
- * their own checks too, because the disk can fill up between the two.
+ * The same rule as backups ({@see LocalSpaceGuard}): what is left afterwards must be at least 10%
+ * of the disk or 2 GB, whichever is more. The jobs keep their own checks; the disk can fill between.
  *
- * Fails open: an unknown size (0) or a disk that cannot be measured is let
- * through, as everywhere else — "we could not tell" is not "it is full".
+ * Fails open: an unknown size (0) or a disk that cannot be measured is let through.
  */
 class DiskSpaceCheck
 {
@@ -31,8 +27,7 @@ class DiskSpaceCheck
     ) {}
 
     /**
-     * Room for a backup of this target, which is built in the panel's working
-     * folder whatever its destination.
+     * Room for a backup of this target, built in the panel's working folder whatever its destination.
      *
      * @throws ValidationException
      */
@@ -86,8 +81,7 @@ class DiskSpaceCheck
     }
 
     /**
-     * The nearest directory that exists, so a target not created yet is
-     * measured on the disk it will be created on.
+     * The nearest directory that exists, so a target not created yet is measured on its future disk.
      */
     private function existing(string $path): string
     {

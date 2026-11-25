@@ -78,9 +78,7 @@ class RestoreContext
     }
 
     /**
-     * A container site's volumes. Mirrors `BackupContext::wantsVolumes()` — the
-     * two have to agree, or a restore reads for something the backup never
-     * wrote.
+     * A container site's volumes. Mirrors `BackupContext::wantsVolumes()`; the two must agree.
      */
     public function wantsVolumes(): bool
     {
@@ -88,9 +86,8 @@ class RestoreContext
     }
 
     /**
-     * Its compose files and `.env`. They live in the document root, so
-     * `SwapFiles` is what moves them into place — the same rename it does for a
-     * hosted site's files. This is the question it asks for a container site.
+     * A container site's compose files and `.env`: they live in the document root, so `SwapFiles`
+     * moves them into place like a hosted site's files.
      */
     public function wantsConfig(): bool
     {

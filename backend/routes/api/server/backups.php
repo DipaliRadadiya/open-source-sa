@@ -7,22 +7,13 @@ use App\Http\Controllers\API\Server\RestoreController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Backups — two entry points, two permissions, on purpose.
-|
-| `app_backup` covers configuring and triggering backups for one application:
-| it belongs to whoever manages that site.
-|
-| `backup` covers the cross-application history you restore from. Restore
-| overwrites live data, so that list is one screen with one set of guardrails
-| rather than a copy inside every application.
+| Backups: two permissions on purpose.
+| `app_backup` configures and triggers backups for one application (whoever manages that site).
+| `backup` covers the cross-application history you restore from; restore overwrites live data,
+| so it sits behind one set of guardrails.
 */
 
-/*
-| The overview: every application and whether it is backed up at all.
-|
-| `backup`, not `app_backup` — this is the cross-application view, same as the
-| restore list below. Per-site configuration stays under `app_backup`.
-*/
+// The overview: every application and whether it is backed up at all (cross-application, so `backup`).
 Route::get('/backup-targets', [BackupController::class, 'indexTargets'])
     ->middleware('permission:backup');
 
@@ -30,36 +21,24 @@ Route::get('/backup-targets', [BackupController::class, 'indexTargets'])
 Route::get('/backups', [BackupController::class, 'index'])
     ->middleware('permission:backup');
 
-// Polled while a backup runs — a large site's archive and upload take minutes.
+// Polled while a backup runs (archive and upload take minutes).
 Route::get('/backups/{backup}', [BackupController::class, 'show'])
     ->withoutMiddleware('throttle:api')
     ->middleware(['permission:backup', 'throttle:progress']);
 
 /*
-| Download — a link to the archive itself.
-|
-| `manage`, the same tier as restore, not the `backup` read tier: this hands
-| over every file on the site plus a full database dump in one URL. Someone
-| trusted to see that backups happened is not automatically trusted to walk
-| away with what is inside them.
-|
-| Throttled: each call signs a live credential, and there is no reason to
-| press it repeatedly.
+| Download: a link to the archive itself.
+| `manage` (same tier as restore), not the `backup` read tier: one URL hands over every file on
+| the site plus a full database dump. Throttled because each call signs a live credential.
 */
 Route::get('/backups/{backup}/download', [BackupController::class, 'download'])
     ->middleware(['permission:backup,manage', 'throttle:6,1']);
 
 /*
-| Download for SFTP and FTP — prepare, then download.
-|
-| Those providers have no link to hand over, so the download above answers
-| 409 `prepare_required` and the archive is copied to the panel first. Same
-| `manage` tier as the download, for the same reason: the end of this road is
-| every file on the site plus its database.
-|
-| The status is polled, so it gets the progress limiter rather than the
-| general one. The file itself is signed as well as authenticated: the link
-| names one copy, and stops working when that copy is removed.
+| Download for SFTP and FTP: prepare, then download.
+| These providers have no link, so the download above answers 409 `prepare_required` and the
+| archive is copied to the panel first. Same `manage` tier. The status is polled (progress
+| limiter); the file is signed, so the link names one copy and dies when that copy is removed.
 */
 Route::post('/backups/{backup}/download/prepare', [BackupDownloadController::class, 'store'])
     ->middleware(['permission:backup,manage', 'throttle:6,1']);
@@ -72,24 +51,16 @@ Route::get('/backups/{backup}/download/file', [BackupDownloadController::class, 
     ->middleware(['permission:backup,manage', 'signed:relative', 'throttle:20,1'])
     ->name('backups.download.file');
 
-/*
-| Download for "This server" destinations (#14): the file is read where it
-| is. Handed out by the download endpoint above, so it carries the same
-| `manage` tier — and a signature, because the key is in the query string.
-*/
+// Download for "This server" destinations: handed out by the download endpoint above, so same
+// `manage` tier, plus a signature because the key is in the query string.
 Route::get('/storage-destinations/{storageDestination}/local-file', [LocalBackupDownloadController::class, 'show'])
     ->middleware(['permission:backup,manage', 'signed:relative', 'throttle:20,1'])
     ->name('storage.local.download');
 
 /*
-| Restore — the destructive half.
-|
-| `manage` on `backup`, not `app_backup`: overwriting a live site is a
-| different decision from configuring its backups, and someone trusted to set
-| a schedule is not automatically trusted to replace the site with last
-| Tuesday. Throttled to 2/min — there is no honest reason to press this
-| repeatedly, and a double-submit would queue a second restore behind the
-| first.
+| Restore, the destructive half.
+| `manage` on `backup`, not `app_backup`: overwriting a live site is a different decision from
+| configuring its backups. Throttled to 2/min so a double-submit cannot queue a second restore.
 */
 Route::post('/backups/{backup}/restore', [RestoreController::class, 'store'])
     ->middleware(['permission:backup,manage', 'throttle:2,1']);
@@ -99,64 +70,45 @@ Route::get('/restores', [RestoreController::class, 'index'])
 
 /*
 | Delete a backup, archive and all.
-|
-| `manage` on `backup`, the same tier as restore and download rather than the
-| per-site `app_backup`: this destroys the copy that exists specifically to
-| survive somebody's mistake, and whoever can configure a schedule is not
-| automatically trusted to remove what it produced.
-|
-| Throttled for the same reason restore is — there is no honest reason to press
-| this repeatedly, and a double-submit would race the artefact delete.
+| `manage` on `backup` (same tier as restore and download), not `app_backup`: this destroys the
+| copy that exists to survive somebody's mistake. Throttled so a double-submit cannot race the
+| artefact delete.
 */
 Route::delete('/backups/{backup}', [BackupController::class, 'destroy'])
     ->middleware(['permission:backup,manage', 'throttle:12,1']);
 
 /*
-| Bulk delete. Declared before the single route would not matter — the paths
-| differ — but it exists because looping the single one from a browser hits
-| that 12/minute throttle on the thirteenth row, which is well inside what
-| somebody clearing a month of backups will select.
-|
-| A lower rate than the single form, not a higher one: each request can carry a
-| hundred backups, so six a minute is six hundred deletions. The ceiling that
-| matters is the one on the request body.
+| Bulk delete: looping the single route would hit its 12/min throttle on the thirteenth row.
+| The rate is lower than the single form because one request can carry a hundred backups;
+| the ceiling that matters is the one on the request body.
 */
 Route::delete('/backups', [BackupController::class, 'destroyMany'])
     ->middleware(['permission:backup,manage', 'throttle:6,1']);
 
-// Retry a failed backup — re-runs with the same configuration.
+// Retry a failed backup with the same configuration.
 Route::post('/backups/{backup}/retry', [BackupController::class, 'retry'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
 
 /*
-| Close out a run stuck in flight after its worker died. Not a cancel: a job
-| that could still be executing is refused, because nothing here can stop it
-| and freeing the guard would let a second backup start alongside the first.
-|
-| On `app_backup,manage` — the same tier as running one. This unblocks a site's
-| backups rather than destroying anything, so it does not belong with delete.
+| Close out a run stuck in flight after its worker died. Not a cancel: a job that could still
+| be executing is refused, because freeing the guard would let a second backup start alongside it.
+| `app_backup,manage` (same tier as running one): it unblocks backups, it destroys nothing.
 */
 Route::post('/backups/{backup}/clear', [BackupController::class, 'clear'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
 
-// Polled every couple of seconds while the bar moves. The 120/min it used to
-// declare never applied: a per-route throttle stacks with the global one rather
-// than replacing it, so the lower of the two won and this was bounded at — and
-// spending — the same budget as the rest of the panel.
+// Polled every couple of seconds. A per-route throttle stacks with the global one rather than
+// replacing it, hence `withoutMiddleware('throttle:api')` plus the progress limiter.
 Route::get('/restores/{restore}', [RestoreController::class, 'show'])
     ->withoutMiddleware('throttle:api')
     ->middleware(['permission:backup', 'throttle:progress']);
 
-// What the settings form offers: frequencies, types, retention limits. The
-// same permission as reading one application's settings, since it is that
-// form's dropdowns. Declared before nothing it could shadow: there is no
-// /backup-targets/{id}.
+// What the settings form offers: frequencies, types, retention limits.
 Route::get('/backup-targets/options', [BackupController::class, 'options'])
     ->middleware('permission:app_backup');
 
-// Per-application settings and manual runs.
-// BK-K: an application's own backups under its own permission. The list
-// above is server-wide and needs `backup`, which shows every site.
+// Per-application settings and manual runs, under `app_backup`. The list above is server-wide
+// and needs `backup`, which shows every site.
 Route::get('/applications/{application}/backups', [BackupController::class, 'indexForApplication'])
     ->middleware('permission:app_backup');
 
@@ -168,15 +120,11 @@ Route::put('/applications/{application}/backup-target', [BackupController::class
 
 /*
 | Stop backing this application up.
-|
-| `backup,manage` rather than `app_backup,manage`, matching the single delete
-| above: removing the schedule is a per-site decision, but this can take every
-| archive with it, and that is the same power as deleting them one by one.
+| `backup,manage`, matching the single delete above: this can take every archive with it.
 */
 Route::delete('/applications/{application}/backup-target', [BackupController::class, 'destroyTarget'])
     ->middleware(['permission:backup,manage', 'throttle:12,1']);
 
-// Throttled hard: each call dumps a database and writes a multi-gigabyte
-// archive. This is not a button to lean on.
+// Throttled hard: each call dumps a database and writes a multi-gigabyte archive.
 Route::post('/applications/{application}/backups', [BackupController::class, 'run'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);

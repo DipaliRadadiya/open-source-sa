@@ -10,10 +10,8 @@ use Illuminate\Validation\Validator;
 /**
  * The two raw INI blobs the panel writes to /etc/fail2ban/{jail,filter}.d/.
  *
- * Both are required: a save with one half empty would leave fail2ban loading
- * a half-configured jail and rejecting reloads for reasons unrelated to what
- * the user actually changed. The 65535-byte cap matches what MySQL's TEXT
- * column accepts and is well above the size of any sane INI file.
+ * Both are required: one empty half would leave fail2ban with a half-configured jail. The
+ * 65535-byte cap matches MySQL's TEXT column and is far above any sane INI file.
  */
 class CustomFail2banRequest extends FormRequest
 {
@@ -30,8 +28,7 @@ class CustomFail2banRequest extends FormRequest
         return [
             'jail_config_content' => ['required', 'string', 'max:65535'],
             'filter_config_content' => ['required', 'string', 'max:65535'],
-            // Keep the files this replaces until the reload has held. The
-            // user's choice since 2026-10-29; on unless they turn it off.
+            // Keep the files this replaces until the reload has held; on unless turned off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
@@ -39,13 +36,10 @@ class CustomFail2banRequest extends FormRequest
     /**
      * The jail may only be this site's own.
      *
-     * The file names are the panel's, but the content is the user's, and a
-     * jail file can name any jail: `[sshd]` in it replaces the server's SSH
-     * jail, `[DEFAULT]` changes every jail on the server, and `filter = sshd`
-     * points this site's jail at — and teaches nothing to — fail2ban's own
-     * SSH filter. `fail2ban-client -t` accepts all three; they are valid
-     * config, just not this site's. So every section must be `{name}` or the
-     * site's jail name, and every `filter =` must be `{filter}` or the same.
+     * The content is the user's and a jail file can name any jail: `[sshd]` replaces the server's
+     * SSH jail, `[DEFAULT]` changes every jail, `filter = sshd` borrows fail2ban's own filter.
+     * `fail2ban-client -t` accepts all three, so every section must be `{name}` or the site's jail
+     * name, and every `filter =` must be `{filter}` or the same.
      *
      * @return array<int, callable>
      */
@@ -74,8 +68,7 @@ class CustomFail2banRequest extends FormRequest
                     }
                 }
 
-                // An allowlist of settings, checked first: a site's jail tunes
-                // when to ban, never what a ban does — that stays the server's.
+                // Allowlist checked first: a site's jail tunes when to ban, never what a ban does.
                 $disallowed = app(ApplicationFail2banManager::class)->disallowedJailKeys($jail);
 
                 if ($disallowed !== []) {

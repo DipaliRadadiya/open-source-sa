@@ -5,36 +5,22 @@ namespace App\Services\Server\Settings;
 use App\Models\ActivityLog;
 
 /**
- * Who last changed each settings group, for the "last changed by" line on each
- * section.
+ * Who last changed each settings group, for the "last changed by" line on each section.
  *
- * Read from the activity log rather than stored on the group: writes already
- * record `setting.updated` with the group in their properties, so a second
- * record of the same fact could only ever drift from the first.
- *
- * This is deliberately NOT folded into `SettingGroup::read()`. That method is
- * defined as live OS state — it is what `PUT` echoes back, and it is what makes
- * the groups detect-don't-trust. Who touched a form is neither, so it travels
- * beside the settings rather than inside them.
+ * Read from the activity log, not stored on the group, so there is no second record to drift.
+ * Kept out of `SettingGroup::read()`, which is defined as live OS state (what `PUT` echoes back).
  */
 class SettingChangeLog
 {
     /**
      * Groups whose writes log a verb of their own instead of `setting.updated`.
-     *
-     * The reboot schedule arranges for the machine to restart by itself, which
-     * earned it a distinct verb — and that verb carries no `group` property, so
-     * looking for one would report "never changed" forever.
+     * That verb carries no `group` property, so looking for one would report "never changed".
      */
     private const OWN_VERB = ['reboot_schedule' => 'reboot_schedule_updated'];
 
     /**
-     * Last change per group, keyed by group. Groups never changed are absent
-     * rather than null — "we have no record" is not a value.
-     *
-     * One small indexed query per group. The count is fixed by the number of
-     * setting groups, not by how much data exists, so it cannot grow into an
-     * N+1.
+     * Last change per group, keyed by group. Groups never changed are absent, not null.
+     * One small indexed query per group; the count is fixed by the number of groups.
      *
      * @param  array<int, string>  $groups
      * @return array<string, array<string, mixed>>
@@ -76,8 +62,7 @@ class SettingChangeLog
         }
 
         return [
-            // Null when the actor has since been deleted — the change still
-            // happened, and dropping the whole entry would hide it.
+            // Null when the actor has since been deleted; the change still happened.
             'user' => $entry->user === null ? null : [
                 'id' => $entry->user->id,
                 'username' => $entry->user->username,

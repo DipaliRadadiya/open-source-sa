@@ -9,12 +9,9 @@ use App\Services\Server\ServerOps;
 /**
  * wp-cli, the one binary every WordPress operation in the panel goes through.
  *
- * Not part of a base system and not installed by `install.sh`: the first
- * WordPress install fetches it. Until then the health check reports it
- * missing and points at the setup page — which had no way to install it
- * (bug #4). v7 offers it as a setup step; so does this, through the same
- * download the WordPress installer uses, so the two cannot disagree on where
- * it comes from or where it lands.
+ * Not installed by `install.sh`: the first WordPress install fetches it, and the setup page
+ * offers it through the same download, so the two cannot disagree on where it comes from or
+ * where it lands.
  */
 class WpCli
 {
@@ -29,12 +26,8 @@ class WpCli
      * wp-cli for one site, run by that site's own PHP: `/usr/bin/php7.4
      * /usr/local/bin/wp`, or the LiteSpeed binary on OpenLiteSpeed.
      *
-     * The phar's `#!/usr/bin/env php` shebang picks the server default, which
-     * need not be the version the site was given (measured 2026-10-28: a site
-     * on 7.4 had staging, clone and magic login run on 8.4). The installer
-     * already ran it this way; this is the same rule for everything else.
-     * A site with no version set keeps the shebang — the server default is
-     * what it runs on anyway.
+     * The phar's `#!/usr/bin/env php` shebang picks the server default, which need not be the
+     * site's PHP version. A site with no version set keeps the shebang.
      *
      * @return list<string>
      */

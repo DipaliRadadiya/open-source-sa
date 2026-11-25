@@ -34,15 +34,12 @@ class Restore extends Model
     }
 
     /**
-     * Create a restore row only if nothing for the same site or database is
-     * already queued or running — checked and created under one lock.
+     * Create a restore row only if nothing for the same site or database is already queued or
+     * running, checked and created under one lock.
      *
-     * The request's own check ran before this and was not enough: two
-     * requests arriving together both passed it, both created a pending row,
-     * and the queue dropped the second job (RunRestore is unique per site or
-     * database). That row stayed `pending` for ever, and everything that asks
-     * "is a restore in flight" — restore, delete, scheduled backups — refused
-     * for ever too (QA, 2026-11-24).
+     * The request's own check is not enough: two simultaneous requests both pass it, and the queue
+     * drops the second job (RunRestore is unique per scope), leaving a `pending` row forever that
+     * blocks restore, delete and scheduled backups.
      *
      * @param  string  $scope  `application-{id}` or `database-{id}`, as RunRestore::uniqueId()
      * @param  Closure(): bool  $busy
@@ -61,8 +58,7 @@ class Restore extends Model
                 return $create();
             });
         } catch (LockTimeoutException) {
-            // Another request for the same site or database is starting one
-            // right now: the same answer as one already running.
+            // Another request for the same scope is starting one right now.
             throw $refuse();
         }
     }
@@ -70,12 +66,9 @@ class Restore extends Model
     /**
      * Whether this application has a restore queued or running.
      *
-     * A backup taken while a restore is extracting, loading the database or
-     * swapping files captures a half-restored site, is marked verified, and
-     * then lets retention prune an older good backup to make room for it
-     * (found in code review 2026-09-29). Every way a backup is started asks
-     * this first; the restore's own safety backup runs the runner directly
-     * and is not affected.
+     * A backup taken mid-restore captures a half-restored site, is marked verified, and lets
+     * retention prune an older good backup. Every way a backup starts asks this first; the
+     * restore's own safety backup runs the runner directly and is not affected.
      */
     public static function inProgressFor(int $applicationId): bool
     {
@@ -86,9 +79,8 @@ class Restore extends Model
     }
 
     /**
-     * Whether this database (on its own, not through a site) has a restore
-     * queued or running. The same guard as {@see self::inProgressFor()}, for
-     * the same reason: a backup or an import taken mid-restore captures, or
+     * Whether this database (on its own, not through a site) has a restore queued or running.
+     * Same guard as {@see self::inProgressFor()}: a backup or import mid-restore captures, or
      * replaces, a half-restored database.
      */
     public static function inProgressForDatabase(int $databaseId): bool

@@ -13,26 +13,18 @@ use App\Services\Server\Disk\SizeEstimate;
 /**
  * Before a backup writes anything: will it fit on this server's disk?
  *
- * Every backup, whatever its destination (2026-10-29, Dipali). The archive is
- * always built in the panel's working folder first, so a backup to S3 or
- * Google Drive fills this server's disk exactly as a local one does — it only
- * gives the space back after the upload. A full disk takes every site on the
- * server down with it, so the backup is what gives way.
+ * Applies to every backup, whatever its destination: the archive is always built in the panel's
+ * working folder first, so a backup to S3 or Google Drive fills this disk like a local one until
+ * the upload. A full disk takes every site down, so the backup is what gives way.
  *
- * A backup has no fixed size, so this is an estimate: the last finished backup
- * of the same target, or — for a target that has never finished one — the
- * current size of what it captures. That second figure is uncompressed and so
- * errs high, which is the safe side; before 2026-10-29 a first backup had no
- * estimate at all and could fill the disk while the archive was still being
- * built.
+ * The size is an estimate: the last finished backup of the same target, or for a first backup
+ * the current (uncompressed, so high) size of what it captures.
  *
- * A backup to this server's own disk (#14) is also asked whether its folder is
- * still there, and — when that folder is on another disk than the working
- * folder — whether that disk has room too. The real archive size is checked
- * again before it is stored, by the local driver.
+ * A backup to this server's own disk is also checked for its folder still being there and, when
+ * that is another disk than the working folder, for room there too. The local driver checks the
+ * real archive size again before storing it.
  *
- * First in the list on purpose: a refusal here costs nothing, while one after
- * the archive is built has already spent the time.
+ * First in the list on purpose: a refusal here costs nothing.
  */
 class CheckLocalSpace implements BackupStep
 {
@@ -58,8 +50,7 @@ class CheckLocalSpace implements BackupStep
         $local = $destination?->provider === StorageProvider::Local;
         $path = $local ? (string) $destination->configValue('path') : null;
 
-        // Missing or not the panel's: a disk that is no longer mounted, most
-        // likely. Said now, not after an hour of archiving.
+        // Missing or not the panel's (likely an unmounted disk): fail now, not after archiving.
         if ($path !== null && ($problem = $this->folder->problem($path)) !== null) {
             throw new LocalBackupFolderException($problem);
         }
@@ -72,8 +63,7 @@ class CheckLocalSpace implements BackupStep
 
         $context->manifest['space_estimate_bytes'] = $estimate;
 
-        // Where the archive is built. On the backup disk that is the same space
-        // the stored archive takes — storing it is a move — so one check covers
+        // Where the archive is built. Storing it is a move, so on the backup disk one check covers
         // both; on another disk the backup disk receives all of it as well.
         $this->space->ensureRoomFor($context->workingDirectory, $estimate);
 

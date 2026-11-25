@@ -15,18 +15,16 @@ use Illuminate\Validation\Rules\Password;
 class StoreSystemUserRequest extends FormRequest
 {
     /**
-     * Names the panel refuses to create — and, read from the sync discoverer,
-     * names it refuses to adopt. Shared rather than copied so the two lists
-     * cannot drift into disagreeing about what counts as a system account.
+     * Names the panel refuses to create and, read from the sync discoverer, refuses to adopt.
+     * Shared so the two lists cannot drift.
      */
     public const RESERVED = [
         'root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail',
         'news', 'uucp', 'proxy', 'www-data', 'backup', 'list', 'irc', 'gnats',
         'nobody', 'systemd-network', 'mysql', 'postgres', 'mongodb', 'redis',
         'ubuntu', 'admin', 'sshd',
-        // Groups useradd would collide with, and the panel's own accounts
-        // and groups (RC-27). The server check catches these too; listed so
-        // the sync discoverer never adopts them either.
+        // Groups useradd would collide with, and the panel's own accounts and groups. The server
+        // check catches these too; listed so the sync discoverer never adopts them either.
         'sudo', 'adm', 'docker', 'lxd', 'staff', 'users', 'nogroup', 'syslog',
         'systemd-journal', 'ssh-users', 'sv-app-shell', 'panel',
     ];
@@ -54,9 +52,7 @@ class StoreSystemUserRequest extends FormRequest
                 'nullable', 'string',
                 new SshPublicKey,
             ],
-            // All optional, defaulting to the same values CreateSystemUser
-            // already used before these existed — the fast path (username
-            // only) stays exactly as fast.
+            // All optional, defaulting to what CreateSystemUser already did (username only).
             'shell' => ['sometimes', 'string', new InstalledShell],
             'sudo' => ['sometimes', 'boolean'],
             'ssh_access' => ['sometimes', 'boolean'],
@@ -65,11 +61,9 @@ class StoreSystemUserRequest extends FormRequest
     }
 
     /**
-     * A user given SSH access but a shell that refuses login authenticates
-     * successfully and is then disconnected — the panel would report access
-     * the server does not grant. Refused rather than silently corrected: the
-     * two fields are set on the same form, so the person can see which one
-     * they meant.
+     * A user given SSH access but a shell that refuses login authenticates and is then
+     * disconnected, so the panel would report access the server does not grant. Refused rather
+     * than silently corrected: the person can see which of the two fields they meant.
      */
     public function withValidator(Validator $validator): void
     {
@@ -85,10 +79,9 @@ class StoreSystemUserRequest extends FormRequest
             }
         });
 
-        // Last, and only for an otherwise valid request, so a refused form runs
-        // nothing on the server: a name that is already a user or group there
-        // (`docker`, `lxd`, an account made by hand) is a 422 now, as on the
-        // application form, rather than useradd's failure (RC-27).
+        // Last, and only for an otherwise valid request, so a refused form runs nothing on the
+        // server: a name already used as a user or group there (`docker`, a hand-made account)
+        // is a 422, not useradd's failure.
         $validator->after(function (Validator $validator) {
             if ($validator->errors()->isEmpty() && ! app(SystemUsernameGenerator::class)->available((string) $this->input('username'))) {
                 $validator->errors()->add('username', __('errors/system-user.username_taken_on_server'));

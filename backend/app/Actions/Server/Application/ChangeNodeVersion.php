@@ -11,30 +11,19 @@ use App\Services\Server\Applications\ProcessSupervisor;
 use Throwable;
 
 /**
- * Move a site to another installed Node version (junior re-test #12).
+ * Move a site to another installed Node version.
  *
- * There was no way to do this at all: `node_version` was set at creation and
- * a PUT carrying it was silently ignored, so a Node version any site used
- * could never be removed.
+ * **No rebuild, on purpose.** The compiled parts of the one-click Node applications load
+ * unchanged across Node versions (Node-API or per-version prebuilds), and `npm rebuild` fails
+ * anyway because the panel's installs leave their `.bin` scripts 0644.
  *
- * **No rebuild, on purpose — measured, not assumed.** On the nginx test server
- * (2026-10-05) every compiled part of the four one-click Node applications
- * loads on Node 22, 24 and 26 unchanged: Uptime Kuma's sqlite, Node-RED's
- * bcrypt, NodeBB's cbor-extract and sharp, n8n's 108 `.node` files. They are
- * built against Node-API, which is stable across versions, or ship a prebuild
- * per version and pick at load time. n8n and Uptime Kuma were started on the
- * other versions and answered. And `npm rebuild` was not an option anyway:
- * the panel's installs leave their `.bin` scripts 0644, so it fails at once.
+ * So the switch is only the unit, which makes the way back safe: rewrite the unit, restart, and
+ * ask the application for a page. If it does not answer, the previous unit is written back and
+ * restarted; no application file was touched.
  *
- * So the switch is the unit and nothing else, and that is what makes the way
- * back safe: rewrite the unit, restart, and ask the application for a page.
- * If it does not answer, the previous unit is written back and restarted — no
- * file of the application was touched, so there is nothing else to undo.
- *
- * A site whose process is stopped, or that is disabled, gets the new unit
- * without a start: starting it would be a side effect nobody asked for. A
- * site with no process (a static or client-rendered git site) only changes
- * the version its next build uses.
+ * A stopped or disabled site gets the new unit without a start (starting it would be an
+ * unrequested side effect). A site with no process (static or client-rendered git site) only
+ * changes the version its next build uses.
  */
 class ChangeNodeVersion
 {
@@ -59,8 +48,7 @@ class ChangeNodeVersion
 
         $root = $this->provisioner->documentRoot($application);
 
-        // Read before anything changes: whether to start it is the user's
-        // state, not this action's.
+        // Read before anything changes: whether to start it is the user's state.
         $running = $application->disabled_at === null && $this->processes->active($application);
 
         $application->node_version = $target;

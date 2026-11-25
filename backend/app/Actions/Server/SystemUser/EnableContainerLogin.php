@@ -16,16 +16,13 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Turn container login on for a Docker app's owner (RC-28).
+ * Turn container login on for a Docker app's owner.
  *
- * After this, the user's SSH login opens their app's container: no sudo grant,
- * no docker group, one password prompt or none with a key. It reuses the
- * System Users actions for everything they already do — the key, the password,
- * the shell, the SSH toggle — so this switch and that screen cannot disagree
- * about what "SSH access on" means.
+ * After this, the user's SSH login opens their app's container: no sudo grant, no docker group.
+ * It reuses the System Users actions (key, password, shell, SSH toggle) so this switch and that
+ * screen cannot disagree about what "SSH access on" means.
  *
- * Order matters, and is chosen so that no step leaves the user with more
- * access than they should have:
+ * Order matters: no step may leave the user with more access than they should have:
  *
  *  1. key / password / shell, which grant nothing on their own;
  *  2. the server pieces and the map, so the first login already finds them;
@@ -68,9 +65,8 @@ class EnableContainerLogin
             $this->setPassword->execute($systemUser, (string) $data['password']);
         }
 
-        // sshd runs the forced command through the user's own shell, and
-        // nologin refuses to run anything. The forced command decides what
-        // happens either way, so a real shell gives them nothing more.
+        // sshd runs the forced command through the user's own shell, and nologin refuses to run
+        // anything. The forced command decides what happens, so a real shell grants nothing more.
         if (in_array($systemUser->shell, [LoginShell::NoLogin->value, LoginShell::FalseShell->value, '/usr/bin/false', '/sbin/nologin'], true)) {
             $this->changeShell->execute($systemUser, LoginShell::Bash->value);
         }

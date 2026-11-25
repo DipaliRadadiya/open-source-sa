@@ -11,12 +11,8 @@ use Illuminate\Validation\ValidationException;
  * Refuses the one firewall edit that cannot be undone from the panel: removing
  * the last rule letting SSH in while the firewall is enforcing deny-incoming.
  *
- * `FirewallRule::isProtected()` already blocks deleting a *seeded* rule, but it
- * asks who created the rule rather than whether a way in survives — and
- * `ToggleFirewall::seedDefaults()` uses `firstOrCreate`, so a hand-made port-22
- * rule keeps its `user` origin and that guard never fires for it. This asks the
- * question that actually matters, which also covers range rules (`20:30`) that
- * an origin check cannot see.
+ * Asks whether a way in survives, not who created the rule: `FirewallRule::isProtected()`
+ * only covers seeded rules, so it misses a hand-made port-22 rule and range rules (`20:30`).
  */
 class SshLockoutGuard
 {
@@ -61,12 +57,6 @@ class SshLockoutGuard
     }
 
     /**
-     * Whether this rule lets SSH through on `$port`.
-     *
-     * A source-restricted rule counts: it is still a way in, and refusing to
-     * let someone tighten their own last rule would be its own kind of trap.
-     */
-    /**
      * Whether the SSH port is reachable through the firewall right now: the
      * firewall is off, or an enabled allow rule covers the port. For warning
      * that a key just added cannot be used yet, not for refusing anything.
@@ -83,6 +73,10 @@ class SshLockoutGuard
             ->contains(fn (FirewallRule $rule) => $this->covers($rule, $port));
     }
 
+    /**
+     * Whether this rule lets SSH through on `$port`. A source-restricted rule counts: it is still
+     * a way in, and refusing to let someone tighten their own last rule would be a trap.
+     */
     private function covers(FirewallRule $rule, int $port): bool
     {
         if ($rule->action !== 'allow' || ! $rule->enabled) {

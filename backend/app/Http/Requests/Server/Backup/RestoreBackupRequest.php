@@ -14,9 +14,8 @@ class RestoreBackupRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // The route already carries `permission:backup,manage`; this is the
-        // second half of the rule, kept here so a route added later without
-        // the middleware still cannot restore.
+        // The route also carries `permission:backup,manage`; kept here so a route added later
+        // without the middleware still cannot restore.
         return $this->user()?->canManage('backup') ?? false;
     }
 
@@ -27,13 +26,9 @@ class RestoreBackupRequest extends FormRequest
     {
         return [
             'type' => ['sometimes', Rule::in(['filesystem', 'database', 'full'])],
-            // Typed, not clicked. Everything else in this feature is a guard
-            // against the system going wrong; this is the guard against the
-            // person going wrong, and it is the more common failure.
+            // Typed, not clicked: the guard against the person going wrong.
             'confirm' => ['required', 'string'],
-            // Take a copy of the application first, so the restore can be
-            // undone. The user's choice (support list, 2026-10-29); on unless
-            // they turn it off.
+            // Copy the application first so the restore can be undone; on unless turned off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }
@@ -45,18 +40,15 @@ class RestoreBackupRequest extends FormRequest
             $backup = $this->route('backup');
 
             if ($backup->status !== BackupStatus::Verified) {
-                // An unverified backup is one we could not prove arrived
-                // intact. Restoring from it would overwrite a working site
-                // with something we already know we cannot vouch for.
+                // An unverified backup could not be proven intact; restoring it could overwrite a
+                // working site with a bad copy.
                 $validator->errors()->add('backup', __('backup.errors.restore_unverified'));
 
                 return;
             }
 
             if ($backup->isDatabaseBackup()) {
-                // A database's own backup is restored from the database's
-                // page, under the database's permission, into a database the
-                // user names — archived ones included. See
+                // A database's own backup is restored from the database's page; see
                 // RestoreDatabaseBackupRequest.
                 $validator->errors()->add('backup', __('backup.errors.restore_database_backup_here'));
 
@@ -64,8 +56,7 @@ class RestoreBackupRequest extends FormRequest
             }
 
             if ($backup->isArchived()) {
-                // A deleted site's backup: there is no site to put it back
-                // into. Downloading it is the way to its files and dump.
+                // A deleted site's backup: there is no site to restore into; it can be downloaded.
                 $validator->errors()->add('backup', __('backup.errors.restore_archived_site'));
 
                 return;
@@ -90,15 +81,14 @@ class RestoreBackupRequest extends FormRequest
                 $validator->errors()->add('backup', __('backup.errors.restore_already_running'));
             }
 
-            // What was asked for must be a subset of what the archive holds.
-            // `full` from a database-only backup would otherwise swap an empty
-            // directory over a working site.
+            // What was asked for must be a subset of what the archive holds; `full` from a
+            // database-only backup would swap an empty directory over a working site.
             $requested = $this->requestedType();
             $wantsFiles = in_array($requested, ['filesystem', 'full'], true);
             $wantsDatabase = in_array($requested, ['database', 'full'], true);
             $hasFiles = in_array($backup->type->value, ['filesystem', 'full'], true);
-            // What the archive holds, not what the type says: a site with no
-            // database has a `full` backup with no dump in it.
+            // What the archive holds, not the type: a site with no database has a `full` backup
+            // with no dump.
             $hasDatabase = $backup->holdsDatabase();
 
             if ($wantsDatabase && ! $hasDatabase) {
@@ -111,11 +101,6 @@ class RestoreBackupRequest extends FormRequest
         });
     }
 
-    /**
-     * Defaults to whatever the backup holds. Asking for `full` from a
-     * database-only backup would restore an empty site directory over a
-     * working one.
-     */
     public function safetyCopy(): bool
     {
         return $this->boolean('safety_copy', true);
@@ -132,8 +117,7 @@ class RestoreBackupRequest extends FormRequest
             return $asked;
         }
 
-        // Not asked: what it holds. A `full` backup of a site with no database
-        // is its files, so restoring it means restoring the files.
+        // Not asked: default to what the backup holds (`full` with no database is just files).
         return $backup->type->value === 'full' && ! $backup->holdsDatabase()
             ? 'filesystem'
             : $backup->type->value;

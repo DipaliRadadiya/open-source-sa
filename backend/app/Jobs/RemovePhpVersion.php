@@ -19,14 +19,10 @@ use Throwable;
 /**
  * `apt purge` of a PHP version — minutes, not milliseconds.
  *
- * Queued for the same reason installing is, which it was not before: removal
- * ran inside the HTTP request, and nginx cuts a request off at
- * fastcgi_read_timeout. The browser got a timeout while apt carried on, so the
- * screen never refreshed, the version disappeared a minute later on its own,
- * and pressing Remove again answered 404 for a version that had already gone.
+ * Queued, like installing: inside the HTTP request nginx would cut it off at fastcgi_read_timeout
+ * while apt carried on.
  *
- * Unique per version, because apt takes a lock: a second purge would sit
- * waiting on the first and then repeat its work.
+ * Unique per version, because apt takes a lock: a second purge would wait and repeat the work.
  */
 class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
 {
@@ -37,12 +33,9 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * The work itself, plus apt's wait for a lock another package manager
-     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
-     * does. A fresh server's installer now finishes while Ubuntu's first-boot
-     * updates may still hold the lock, so a job started straight away waits
-     * for it — and must not be killed by the worker mid-wait, which reads as
-     * "stopped unexpectedly" instead of "another install is running".
+     * The work itself, plus apt's wait for a lock another package manager holds
+     * ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine does. The worker must not
+     * kill the job mid-wait: that reads as "stopped unexpectedly", not "another install is running".
      */
     public int $timeout;
 
@@ -68,9 +61,8 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
                 }
             });
         } catch (SettingOperationException $e) {
-            // Flushed first: apt's last words are the only thing that explains
-            // a purge that would not complete. Keep its reference too: the
-            // API never exposes apt output, so this is the support trail.
+            // Flushed first: apt's last output explains a failed purge. Keep the reference too:
+            // the API never exposes apt output, so it is the support trail.
             $progress?->persist();
             $installs->fail('php', $this->version, null, 'remove_failed', $e->reference);
             $log->log('php.uninstall_failed', null, ['version' => $this->version], actor: $this->actor());
@@ -84,21 +76,17 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
             throw $e;
         }
 
-        // The version is off the disk now, so the row has nothing left to say
-        // — the same rule an install finishing follows.
         $installs->succeed('php', $this->version);
 
-        // The mirror of the refresh after an install. Removing the last PHP
-        // version left the recorded capability still claiming PHP, so the
-        // create screen kept offering PHP applications that could not run.
+        // Mirror of the refresh after an install: without it, removing the last PHP version leaves
+        // the recorded capability claiming PHP and the create screen offers apps that cannot run.
         $capabilities->refresh();
 
         $log->log('php.uninstalled', null, ['version' => $this->version], actor: $this->actor());
     }
 
     /**
-     * Timeout, or the worker was killed. Without this the row sits at
-     * `removing` forever and the card spins on something that stopped running.
+     * Timeout, or the worker was killed. Without this the row sits at `removing` forever.
      */
     public function failed(?Throwable $e): void
     {
