@@ -21,7 +21,6 @@ class BackupTargetResource extends JsonResource
         return [
             'id' => $this->id,
             'application_id' => $this->application_id,
-            // Added 2026-10-16: a target of a database on its own.
             'database_id' => $this->database_id,
             'storage_destination_id' => $this->storage_destination_id,
             'storage_destination_name' => $this->whenLoaded(
@@ -35,36 +34,23 @@ class BackupTargetResource extends JsonResource
             'frequency_title' => __('backup.frequency.'.$this->frequency),
             'schedule_time' => $this->schedule_time,
             'enabled' => $this->enabled,
-            // Objects, not lists, would be wrong here: these genuinely are
-            // ordered collections of patterns. `[]` is the right empty value.
             'file_excludes' => $this->file_excludes ?? [],
             'database_excludes' => $this->database_excludes ?? [],
             'last_run_at' => $this->last_run_at?->format('d-m-Y H:i:s'),
             'last_run_at_human' => $this->last_run_at?->diffForHumans(),
-            // The newest good backup still kept, null once every one is
-            // deleted (BK-A). `last_run_at` above is the scheduler's own
-            // record and deliberately outlives the backups.
+            // The newest good backup still kept, null once all are deleted; `last_run_at` is the
+            // scheduler's own record and outlives them.
             'last_backup_at' => $this->latestKeptBackup?->finished_at?->format('d-m-Y H:i:s'),
             'last_backup_at_human' => $this->latestKeptBackup?->finished_at?->diffForHumans(),
-            // Computed, never a cron string: the schedule is one constant in
-            // the model and stays there. Null when the target is manual or
-            // disabled — there is no next run to promise.
+            // Computed, never a cron string. Null when the target is manual or disabled.
             'next_run_at' => $nextRun?->format('d-m-Y H:i:s'),
             'next_run_at_human' => $nextRun?->diffForHumans(),
-            // Which clock `schedule_time` and `next_run_at` are in. Sent
-            // because without it they are a bare number, and a bare number
-            // reads as local time to everyone who is not on this one — a user
-            // on IST who asks for 02:00 gets it at 07:30 and has no way to
-            // tell from this response. Same field name and same IANA format as
-            // CronjobResource, so one meaning spans all three schedule
-            // screens. Note the *value* differs from a cron job's on purpose:
-            // see BackupTarget::scheduleTimezone().
+            // The clock `schedule_time` and `next_run_at` are in, so they are not read as local
+            // time. Same name and IANA format as CronjobResource, but the *value* differs on
+            // purpose: see BackupTarget::scheduleTimezone().
             'timezone' => $this->scheduleTimezone(),
-            // A run the scheduler will pick up on its next tick, within a
-            // minute. True for a target that has never run — the first backup
-            // is taken immediately rather than at tonight's slot, so a UI
-            // showing only `next_run_at` would name tomorrow at exactly the
-            // moment the user is watching the first one happen.
+            // The scheduler picks it up on its next tick. True for a target that has never run
+            // (the first backup is immediate, not at the next slot).
             'is_due' => $this->isDue(now()),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at?->format('d-m-Y H:i:s'),

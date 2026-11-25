@@ -7,15 +7,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * How long the activity log is kept, and the daily clean-up that enforces it
- * (2026-10-29, Dipali: the log grew forever).
+ * How long the activity log is kept, and the daily clean-up that enforces it.
  *
- * The choice is months, from a fixed list, or null for "keep everything" —
- * the default, so an update deletes nothing until someone chooses. It also
- * applies to the panel's own finished task runs (Disk Cleaner, security
- * updates, staging push/pull, add-ons), which grow the same way. Not to sync
- * runs, whose items point at them, nor to backups, restores, exports or
- * imports: those rows belong to real files and keep their own rules.
+ * The choice is months, from a fixed list, or null for "keep everything" (the default, so an
+ * update deletes nothing until someone chooses). It also applies to the panel's own finished
+ * task runs (Disk Cleaner, security updates, staging push/pull, add-ons). Not to sync runs,
+ * whose items point at them, nor to backups, restores, exports or imports: those rows belong
+ * to real files and keep their own rules.
  *
  * Nothing from the last 30 days is ever removed, whatever is chosen.
  */
@@ -94,8 +92,7 @@ class ActivityRetention
 
         $activity = 0;
 
-        // In chunks: years of log on a small server is a lot of rows, and one
-        // DELETE that long holds SQLite's write lock against the whole panel.
+        // In chunks: one long DELETE holds SQLite's write lock against the whole panel.
         do {
             $ids = ActivityLog::query()->where('created_at', '<', $cutoff)->orderBy('id')->limit(1000)->pluck('id');
             $activity += $ids->isEmpty() ? 0 : ActivityLog::query()->whereIn('id', $ids)->delete();

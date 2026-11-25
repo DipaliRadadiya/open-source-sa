@@ -9,19 +9,14 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Change what an attached name *does* — never what it is called.
+ * Change what an attached name *does*, never what it is called.
  *
- * `domain` is deliberately absent. Renaming would leave the old name on any
- * Let's Encrypt certificate covering it, and `certbot renew` re-validates
- * every name in a lineage and fails the whole renewal if one of them cannot be
- * validated — so a rename would quietly stop the certificate covering the
- * site's *remaining, perfectly good* names from ever renewing, and the first
- * anyone would hear of it is a browser warning up to ninety days later.
- * {@see Certificate::staleDomains()}. Removing and re-adding is
- * the honest way to do that, because it is visibly two decisions.
+ * `domain` is deliberately absent: a rename would leave the old name on any Let's Encrypt
+ * certificate, `certbot renew` would fail the whole lineage, and the certificate's remaining
+ * names would stop renewing. {@see Certificate::staleDomains()}. Remove and re-add instead.
  *
- * `primary` is absent for a different reason: promoting a name renames the
- * vhost file and both log files, which is what `makePrimary()` exists for.
+ * `primary` is absent too: promoting a name renames the vhost and log files, which
+ * `makePrimary()` handles.
  */
 class UpdateApplicationDomainRequest extends FormRequest
 {
@@ -37,12 +32,8 @@ class UpdateApplicationDomainRequest extends FormRequest
     {
         return [
             'type' => ['sometimes', Rule::in([DomainType::Alias->value, DomainType::Redirect->value])],
-            // `required_if` alone is not enough here. On a create the absent
-            // type defaults to alias, so there is nothing to require against;
-            // on an update the row may *already* be a redirect and the request
-            // may change only the target, leaving `type` out entirely. The
-            // effective type is therefore resolved against the stored row in
-            // the controller's action rather than guessed from this payload.
+            // No `required_if`: the row may already be a redirect and the request may change only
+            // the target, so the effective type is resolved against the stored row in the action.
             'redirect_to' => ['nullable', 'string', 'max:2048', 'url', 'regex:'.ApplicationDomain::REDIRECT_TARGET_PATTERN],
             'redirect_status' => ['sometimes', Rule::in([301, 302, 307, 308])],
         ];
@@ -60,8 +51,7 @@ class UpdateApplicationDomainRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // No trailing slash: every vhost appends the request path, which
-        // brings its own (DOM-01).
+        // No trailing slash: every vhost appends the request path, which brings its own.
         if (is_string($this->input('redirect_to'))) {
             $this->merge(['redirect_to' => rtrim(trim($this->input('redirect_to')), '/')]);
         }

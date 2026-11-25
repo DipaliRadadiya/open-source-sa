@@ -15,10 +15,8 @@ use Throwable;
 /**
  * Takes TLS off a site.
  *
- * Order matters and is not obvious: force-HTTPS is cleared *before* the vhost
- * is rewritten. Rewriting first would leave HTTP redirecting into the TLS
- * rejection vhost — the site would not merely lose HTTPS, it would stop
- * answering usable requests at all.
+ * Order matters: force-HTTPS is cleared *before* the vhost is rewritten, or HTTP would
+ * redirect into the TLS rejection vhost and the site would stop answering at all.
  */
 class RemoveCertificate
 {
@@ -37,11 +35,9 @@ class RemoveCertificate
         $previousStatus = $certificate->status;
         $previousUrl = $application->fresh(['certificate'])->url();
 
-        // The pair only. An uploaded certificate's chain is bundled into its
-        // `.crt`, so `chain_path` names nothing the panel wrote — and on a
-        // site that had Let's Encrypt first it still pointed into
-        // /etc/letsencrypt, which the directory guard rightly refused, after
-        // HTTPS was already off. Checked here, before anything changes.
+        // The pair only: an uploaded chain is bundled into the `.crt`, and a stale
+        // `chain_path` can point into /etc/letsencrypt, which the directory guard refuses.
+        // Checked here, before anything changes.
         $files = $type === CertificateType::LetsEncrypt
             ? []
             : $this->files->managedFiles([
@@ -52,18 +48,14 @@ class RemoveCertificate
             ], $application->slug);
 
         try {
-            // Change the application's own canonical URL first. `syncUrl()` is
-            // not necessarily one operation: WordPress updates two options,
-            // while file-backed installers can write successfully and then
-            // fail clearing a cache or restarting a process. Its own failure
-            // therefore needs the same best-effort rollback as the vhost.
+            // Change the application's own canonical URL first. `syncUrl()` can half-succeed
+            // (write, then fail on a cache or restart), so it needs the same rollback as the vhost.
             $this->installers->syncUrl(
                 $application->fresh(['systemUser', 'certificate']),
                 'http://'.$application->domain,
             );
 
-            // Make the relation non-servable while rendering, but keep the row
-            // so the transition and physical cleanup remain retryable.
+            // Non-servable while rendering, but keep the row so cleanup stays retryable.
             $certificate->update(['status' => CertificateStatus::Pending]);
 
             $this->vhost->execute($application->fresh(['domains', 'certificate']));
@@ -81,10 +73,8 @@ class RemoveCertificate
             throw $exception;
         }
 
-        // Cleanup is deliberately after the HTTP vhost is live. From this
-        // point onward rollback to HTTPS is unsafe: a deletion command can
-        // remove only part of a key pair or lineage before failing. Retaining
-        // the pending row gives the same endpoint enough state to retry.
+        // Cleanup runs after the HTTP vhost is live. Rolling back to HTTPS is unsafe from
+        // here (a delete can remove only part of a key pair), so the pending row stays for a retry.
         $cleanup = match ($type) {
             CertificateType::LetsEncrypt => ($lineage = $certificate->lineageName()) === null
                 ? null

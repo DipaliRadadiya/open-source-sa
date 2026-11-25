@@ -19,13 +19,11 @@ use Throwable;
 /**
  * Runs one site clone off the queue.
  *
- * Not retried. A clone that fails mid-way has already created an application
- * record and possibly touched the filesystem — a transparent retry would start
- * from a half-changed state rather than from scratch. The next attempt has to
- * be a deliberate decision.
+ * Not retried: a clone that fails mid-way has already created an application record and possibly
+ * touched the filesystem, so a retry would start from a half-changed state.
  *
- * Unique per source application: two clones of the same site at once would
- * both allocate the same system user and write to the same rsync destination.
+ * Unique per source application: two clones of the same site at once would both allocate the
+ * same system user and write to the same rsync destination.
  */
 class RunClone implements ShouldBeUnique, ShouldQueue
 {
@@ -35,9 +33,8 @@ class RunClone implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * Above the copy's own limit (server.clone.rsync_timeout, 900 s) plus the
-     * database copy and setup around it. At 600 s a large site was killed in
-     * the middle of the rsync the job itself allowed 900 s for (CL-B4).
+     * Above the copy's own limit (server.clone.rsync_timeout, 900 s) plus the database copy and
+     * setup around it.
      */
     public int $timeout = 1800;
 
@@ -48,8 +45,6 @@ class RunClone implements ShouldBeUnique, ShouldQueue
 
     public function uniqueId(): string
     {
-        // Unique per source application: two clones of the same site at once would
-        // both allocate the same system user and write to the same rsync destination.
         return 'clone-source-'.$this->sourceApplicationId;
     }
 
@@ -75,11 +70,8 @@ class RunClone implements ShouldBeUnique, ShouldQueue
                 'finished_at' => now(),
             ]);
 
-            // Logged here rather than in the controller: the 202 only means
-            // the clone was accepted, and an activity entry written then would
-            // claim a site exists before anything had been copied. The actor
-            // is passed explicitly because a queued job has no authenticated
-            // user to fall back on.
+            // Logged here, not in the controller: the 202 only means the clone was accepted. The
+            // actor is passed explicitly because a queued job has no authenticated user.
             $activity->log('application.cloned', $clone->sourceApplication, [
                 'name' => $clone->sourceApplication?->name,
                 'domain' => $clone->domain,
@@ -95,10 +87,8 @@ class RunClone implements ShouldBeUnique, ShouldQueue
                 'detail' => $e->getMessage(),
             ]);
 
-            // A reason *code* and a reference, never the exception text: it
-            // reached the screen as raw SQL with the database file's path
-            // (CL-B2). The text stays in the log line above, under the same
-            // reference.
+            // A reason *code* and a reference, never the exception text: it can contain raw SQL
+            // and file paths. The text stays in the log.
             [$reason, $reference] = self::classify($e);
 
             Log::channel('server-ops')->error('clone failed: reference', [

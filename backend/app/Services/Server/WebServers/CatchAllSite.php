@@ -5,20 +5,15 @@ namespace App\Services\Server\WebServers;
 use App\Services\Server\Certificates\CertificateFiles;
 
 /**
- * What a visitor gets for a domain no site on this server claims (bug #55).
+ * What a visitor gets for a domain no site on this server claims.
  *
- * Left to the web server, nginx and Apache handed it to the first site they
- * loaded — a customer's site, pages and certificate, under any name somebody
- * pointed at the box — and OpenLiteSpeed showed the panel's certificate. v7
- * has a neutral default; this is the panel's.
+ * Without it, nginx and Apache serve the first site they loaded (a customer's pages and
+ * certificate) and OpenLiteSpeed shows the panel's certificate.
  *
- * Run by `sites:resync`, so new installs, updates and the manual deploy
- * runbook all get it. Idempotent: nothing is written or reloaded when it is
- * already in place. Never takes the web server down: the config is tested
+ * Run by `sites:resync`. Idempotent. Never takes the web server down: the config is tested
  * before the reload and put back as it was when the test fails.
  *
- * Under v7's file names (Dipali, 2026-11-11). A server moved from v7 has its
- * own default in those files, and it is left to serve, as on v7.
+ * Uses v7's file names; a server moved from v7 keeps its own default in those files.
  */
 class CatchAllSite
 {
@@ -59,10 +54,8 @@ class CatchAllSite
             return ['status' => 'skipped', 'reference' => null];
         }
 
-        // v7's names are files a server from v7 — or its owner — already has.
-        // Written only over nothing, the package's untouched original or the
-        // panel's own; anything else is the server's own default, and it stays
-        // (with the panel's earlier copy, so unknown names are still answered).
+        // Written only over nothing, the package's untouched original or the panel's own;
+        // anything else is the server's own default and stays.
         foreach (array_keys($config['files']) as $path) {
             if ($this->shared->ownership($path, $config['package'], $context) === 'foreign') {
                 return ['status' => 'skipped', 'reference' => null];

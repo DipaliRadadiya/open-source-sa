@@ -22,9 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DatabaseImport extends Model
 {
     /**
-     * Mirrors the column default, so a row made in code before it is saved and
-     * re-read says what the database will: an import takes its safety copy
-     * unless told not to.
+     * Mirrors the column default: an import takes its safety copy unless told not to.
      *
      * @var array<string, mixed>
      */
@@ -83,12 +81,10 @@ class DatabaseImport extends Model
     }
 
     /**
-     * Queued or running past the job's own lock: the worker that held it is
-     * gone (killed outright reaches neither the action nor `failed()`), and
-     * without this the database could never be imported into again.
+     * Queued or running past the job's own lock: the worker is gone (a killed one reaches neither
+     * the action nor `failed()`), and the database could never be imported into again.
      *
-     * An upload is stale after a day without a chunk — long enough for any
-     * resumed upload, short enough that an abandoned one does not hold disk.
+     * An upload is stale after a day without a chunk, so an abandoned one does not hold disk.
      */
     public function isStale(): bool
     {
@@ -107,8 +103,7 @@ class DatabaseImport extends Model
     }
 
     /**
-     * The sentence for a failure, in the viewer's locale; a stored code rather
-     * than a finished string, as for exports.
+     * The sentence for a failure, in the viewer's locale (a stored code, as for exports).
      */
     public function message(): ?string
     {
@@ -121,13 +116,11 @@ class DatabaseImport extends Model
             ? __('database.import_failed.unknown')
             : __($key, ['line' => $this->line]);
 
-        // Said on every failure, because it is the first thing anyone wants to
-        // know: is my data still there? Nothing is dropped before `importing`.
+        // Said on every failure: is my data still there? Nothing is dropped before `importing`.
         $outcome = match (true) {
             $this->restored => 'restored',
             in_array($this->step, [null, 'checking', 'backing_up'], true) => 'untouched',
-            // The user chose to skip the copy: there was nothing to put back,
-            // and pointing them at an export that does not exist would be worse.
+            // The user skipped the copy: there is no export to point them at.
             ! $this->safety_copy => 'no_copy',
             default => 'not_restored',
         };

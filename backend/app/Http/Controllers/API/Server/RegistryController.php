@@ -17,13 +17,11 @@ use Illuminate\Http\JsonResponse;
 /**
  * The registry credentials this server can pull with.
  *
- * Server-level like the networks and volumes beside it, and for the same reason:
- * the object outlives any one container and is chosen by many.
+ * Server-level like the networks and volumes: it outlives any one container and is
+ * chosen by many.
  *
- * Thin by design — validation is in the FormRequests, the work is in the Actions,
- * and the response shape is the Resource's. The only judgement here is what an
- * unwritable credential file means to an HTTP caller, which neither of the other
- * two layers is in a position to decide.
+ * Thin by design; the only judgement here is what an unwritable credential file means
+ * to an HTTP caller.
  */
 class RegistryController extends Controller
 {
@@ -31,9 +29,7 @@ class RegistryController extends Controller
     {
         return response()->json([
             'registries' => RegistryResource::collection(
-                // Counted, not loaded: the delete confirmation needs the number
-                // of sites, and loading the sites themselves to count them would
-                // be every application row on the box for a picker.
+                // Counted, not loaded: the delete confirmation needs only the number of sites.
                 Registry::withCount('applications')->orderBy('name')->get(),
             ),
         ]);
@@ -70,13 +66,9 @@ class RegistryController extends Controller
     /**
      * Ask the registry whether the stored credential works.
      *
-     * A refused credential is **200 with a failed verdict**, not a 4xx: the
-     * request itself succeeded, the panel now knows something it did not, and it
-     * persisted that. A 422 here would make a working endpoint look broken to
-     * every client that treats non-2xx as an error.
-     *
-     * Only the file-write failure is a 500, because that one means the panel
-     * could not even ask.
+     * A refused credential is **200 with a failed verdict**, not a 4xx: the request
+     * itself succeeded and the verdict is persisted. Only the file-write failure is
+     * a 500, because then the panel could not even ask.
      */
     public function test(Registry $registry, TestRegistry $action): JsonResponse
     {

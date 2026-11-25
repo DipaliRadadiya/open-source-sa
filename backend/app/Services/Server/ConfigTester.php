@@ -9,12 +9,10 @@ use App\Services\Server\WebServers\OlsConfigCheck;
 /**
  * Validates a service's configuration without applying it.
  *
- * Which command proves a config is valid depends entirely on the service, so
- * it's a lookup rather than anything clever. Services with no meaningful test
- * simply aren't testable, and the API says so instead of inventing one.
+ * Which command proves a config valid depends on the service, so it is a lookup. Services
+ * with no meaningful test are not testable, and the API says so.
  *
- * Testing never reloads. Checking whether a change is safe is precisely the
- * thing you do *before* deciding to apply it.
+ * Testing never reloads: it is what you do *before* deciding to apply a change.
  */
 class ConfigTester
 {
@@ -42,9 +40,8 @@ class ConfigTester
 
         $context = ['feature' => 'service', 'op' => 'config_test', 'service' => $key];
 
-        // OpenLiteSpeed's raw test exits 0 on any config when /tmp/lshttpd is
-        // missing, and 1 on a mere warning. A restart is now refused on a
-        // failed test, so this one has to be the version that means something.
+        // OpenLiteSpeed's raw test exits 0 on any config when /tmp/lshttpd is missing, and 1 on a
+        // mere warning, so use the wrapper that means something (restarts are refused on failure).
         $result = $key === 'openlitespeed'
             ? $this->olsCheck->run($context)
             : $this->serverOps->run($command, $context);
@@ -56,9 +53,8 @@ class ConfigTester
 
         return [
             'ok' => $result->ok,
-            // A config test's output is the whole point — it names the file and
-            // line that is wrong. It describes the user's own configuration,
-            // not our internals, so it is safe and useful to return.
+            // The output names the file and line that is wrong; it describes the user's own
+            // configuration, so it is safe to return.
             'output' => trim($result->output().' '.($result->result?->errorOutput() ?? '')),
         ];
     }
@@ -68,9 +64,8 @@ class ConfigTester
      */
     private function command(string $key): ?array
     {
-        // php8.4-fpm, php8.3-fpm … each version validates itself.
-        // Which PHP version this unit is, according to the stack that named
-        // it — the unit pattern differs between FPM and LSPHP.
+        // php8.4-fpm, php8.3-fpm … each version validates itself. The stack resolves the version
+        // because the unit pattern differs between FPM and LSPHP.
         if (($version = $this->stack->versionForService($key)) !== null) {
             return $this->stack->configTestCommand($version);
         }

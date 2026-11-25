@@ -15,16 +15,12 @@ use Throwable;
 /**
  * Reads the whole server into the panel, off the queue.
  *
- * Queued rather than inline because a box with two hundred sites is not an
- * HTTP request: the caller gets a run id back immediately and polls it.
+ * Queued because a large box is not an HTTP request: the caller gets a run id and polls it.
  *
- * Not retried. A preview is cheap to run again by hand, and a half-finished
- * apply should be looked at before it is repeated — the second attempt would
- * start from a database that already holds some of the first attempt's rows.
- * That is safe (adoption is idempotent) but it should still be a decision.
+ * Not retried: a half-finished apply should be looked at before it is repeated (a retry
+ * is safe, adoption is idempotent, but it should be a decision).
  *
- * Unique, because two syncs at once would race to adopt the same username and
- * one of them would lose to a unique constraint for no useful reason.
+ * Unique, because two syncs at once would race to adopt the same username.
  */
 class RunServerSync implements ShouldBeUnique, ShouldQueue
 {
@@ -34,13 +30,10 @@ class RunServerSync implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * Reading /etc/passwd and a few files is fast; the ceiling is here for the
-     * later phases that walk every vhost on a large server. Comfortably under
-     * the queue's own reservation window — see QueueTimeoutTest.
+     * Ceiling for the phases that walk every vhost on a large server; under the queue's
+     * reservation window (see QueueTimeoutTest).
      *
-     * A constant because `SyncRun` measures staleness against it: a run still
-     * unfinished long after the job could possibly have been running is a run
-     * nothing is going to finish.
+     * A constant because `SyncRun` measures staleness against it.
      */
     public const TIMEOUT = 900;
 

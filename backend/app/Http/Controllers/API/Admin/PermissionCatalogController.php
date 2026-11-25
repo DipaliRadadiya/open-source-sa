@@ -13,10 +13,8 @@ use Illuminate\Http\JsonResponse;
 class PermissionCatalogController extends Controller
 {
     /**
-     * The full permission catalog (every permission, ordered) — feeds the
-     * role create/edit form's checkbox list. Unlike GET /permissions (the
-     * caller's own effective grants), this is the complete menu of what can
-     * be granted, independent of the admin's own permissions.
+     * The full permission catalog (every permission, ordered) for the role form's checkbox list.
+     * Unlike GET /permissions (the caller's own grants), it is everything that can be granted.
      */
     public function index(): JsonResponse
     {
@@ -24,10 +22,8 @@ class PermissionCatalogController extends Controller
     }
 
     /**
-     * Re-sync the permission catalog from code (the seeder) and re-sync the
-     * protected Administrator role — idempotent. A UI shortcut for what the
-     * deploy runbook does, useful after new permissions are added. Returns
-     * the refreshed catalog.
+     * Re-sync the permission catalog from code and the protected Administrator role (idempotent).
+     * Returns the refreshed catalog.
      */
     public function sync(PermissionCatalog $catalog, ActivityLogger $activityLogger): JsonResponse
     {
@@ -43,11 +39,8 @@ class PermissionCatalogController extends Controller
     /**
      * The catalog in the three shapes the role form needs at once.
      *
-     * `permissions` is the flat ordered list, unchanged. `groups` is the same
-     * rows already bucketed by level and sub-level, because the form renders
-     * section headers and a select-all per section — grouping it here means
-     * one implementation instead of one per frontend, and the section titles
-     * come back localized rather than being invented client-side.
+     * `permissions` is the flat ordered list. `groups` is the same rows bucketed by level and
+     * sub-level, with localized section titles, for the form's section headers.
      * `access_levels` names the three states a grant can hold.
      *
      * @return array{permissions: array<int, mixed>, groups: array<int, mixed>, access_levels: array<int, mixed>}
@@ -58,9 +51,7 @@ class PermissionCatalogController extends Controller
         $resolved = PermissionResource::collection($permissions)->resolve();
 
         $groups = collect($resolved)
-            // Keyed by both: `logs` exists at server and application level as
-            // two different permissions, and merging them into one section
-            // would offer a single control over two unrelated grants.
+            // Keyed by both: `logs` exists at server and application level as two permissions.
             ->groupBy(fn (array $permission): string => $permission['level'].'|'.$permission['sub_level'])
             ->map(fn ($items, string $key): array => [
                 'level' => explode('|', $key)[0],

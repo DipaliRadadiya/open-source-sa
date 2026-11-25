@@ -8,13 +8,9 @@ use App\Models\GitAccount;
  * Bitbucket, via a scoped Access Token (workspace, project, or repository
  * level) — the modern replacement for App Passwords.
  *
- * These tokens authenticate as the *token*, not as a user, so `/2.0/user`
- * answers 401 for them. Identity and verification therefore go through the
- * workspace's repository listing, which is also exactly what a repository-
- * scoped token can see: a token scoped to one repository verifies fine and
- * lists that one repository. That is intentional — the user picks the access
- * breadth when they mint the token, and the panel reflects it rather than
- * demanding workspace-wide access.
+ * These tokens authenticate as the *token*, not as a user, so `/2.0/user` answers 401. Identity
+ * and verification go through the workspace's repository listing instead; a repository-scoped
+ * token verifies fine and lists just that repository, which is intended.
  */
 class BitbucketProvider extends AbstractGitProvider
 {
@@ -45,10 +41,8 @@ class BitbucketProvider extends AbstractGitProvider
     }
 
     /**
-     * Bitbucket Access Tokens have no expiry and no introspection endpoint —
-     * they live until revoked. So the only honest answer is reachable or not;
-     * `expires_at` is always null here, and the UI should say "no expiry"
-     * rather than imply we failed to look it up.
+     * Access Tokens have no expiry and no introspection endpoint, so the only answer is reachable
+     * or not; `expires_at` is always null ("no expiry" in the UI).
      */
     public function status(GitAccount $account): array
     {
@@ -68,8 +62,7 @@ class BitbucketProvider extends AbstractGitProvider
         ];
 
         if ($search !== null && $search !== '') {
-            // Bitbucket's filter language; the value is quoted, and the
-            // request builder encodes it.
+            // Bitbucket's filter language; the value is quoted, the request builder encodes it.
             $query['q'] = 'name~"'.str_replace('"', '', $search).'"';
         }
 

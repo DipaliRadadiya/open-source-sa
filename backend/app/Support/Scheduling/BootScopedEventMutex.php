@@ -8,21 +8,15 @@ use Illuminate\Console\Scheduling\Event;
 /**
  * The scheduler's "not twice at once" lock, named for the current boot.
  *
- * `withoutOverlapping()` stores a lock while a scheduled command runs and
- * removes it when the command ends. A server that goes down mid-run never
- * removes it — and the cache is Redis, which saves to disk, so the lock comes
- * back with the server and blocks that command until it expires: 24 hours by
- * default. Found on all three test servers on 2026-09-30, with nothing
- * running: scheduled backups had stopped on one, the hourly disk cleaner on
- * another, each for most of a day after an outage.
+ * A server that goes down mid-run never removes the `withoutOverlapping()` lock, and the Redis
+ * cache saves to disk, so the lock returns with the server and blocks that command until it
+ * expires (24 hours by default).
  *
- * Nothing can be running from before a reboot, so a lock from before one is
- * always stale. Putting the kernel's boot ID in the name makes those locks
- * simply not match any more; they expire on their own. No boot hook, and so
- * nothing for install.sh, the updater or the runbook to remember.
+ * Nothing can be running from before a reboot, so such a lock is always stale. Putting the
+ * kernel's boot ID in the name makes it stop matching; no boot hook is needed.
  *
- * A crash without a reboot (the PHP process killed) is covered separately, by
- * the per-command expiry in routes/console.php.
+ * A crash without a reboot (PHP process killed) is covered by the per-command expiry in
+ * routes/console.php.
  */
 class BootScopedEventMutex extends CacheEventMutex
 {
@@ -42,8 +36,7 @@ class BootScopedEventMutex extends CacheEventMutex
     }
 
     /**
-     * Run a parent method with the event's lock name suffixed by the boot ID,
-     * then put the event's own resolver back.
+     * Run a parent method with the lock name suffixed by the boot ID, then restore the resolver.
      */
     private function scoped(Event $event, callable $operation): mixed
     {

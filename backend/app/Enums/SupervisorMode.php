@@ -7,34 +7,27 @@ use App\Services\Server\Applications\LegacyPm2Driver;
 /**
  * What is keeping an application's process alive.
  *
- * Two answers, and the second one only exists because of migration. A server
- * adopted from the old panel already has its applications running under a
- * per-user PM2 daemon, and taking them over cannot mean restarting them — so
- * the panel has to be able to manage an application whose unit it does not
- * own, for as long as the customer leaves it there.
+ * `Pm2` exists for migration: a server adopted from the old panel runs its applications under a
+ * per-user PM2 daemon, and taking them over cannot mean restarting them.
  *
- * `Pm2` is therefore a supported destination, not a waiting room. An adopted
- * application works indefinitely without anyone converting anything; what it
- * gives up is listed on {@see LegacyPm2Driver}.
+ * It is a supported destination, not a waiting room: an adopted application works indefinitely
+ * without conversion; what it gives up is listed on {@see LegacyPm2Driver}.
  */
 enum SupervisorMode: string
 {
     /**
      * The panel's own systemd unit.
      *
-     * `ExecStart` is `node` directly, or `pm2-runtime` when the application
-     * asked for more than one process. Either way systemd owns the boot hook,
-     * the cgroup and the memory ceiling. The default for everything the panel
-     * creates itself.
+     * `ExecStart` is `node` directly, or `pm2-runtime` for more than one process; systemd owns
+     * the boot hook, the cgroup and the memory ceiling. The default for new applications.
      */
     case Systemd = 'systemd';
 
     /**
      * The old panel's per-user PM2 daemon, adopted in place.
      *
-     * There is no unit. The panel drives `pm2` as the site user and the dump
-     * file is what brings the application back at boot — which means every
-     * state change has to be saved, deliberately, rather than sometimes.
+     * There is no unit. The panel drives `pm2` as the site user and the dump file brings the
+     * application back at boot, so every state change has to be saved.
      */
     case Pm2 = 'pm2';
 

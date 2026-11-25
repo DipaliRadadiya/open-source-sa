@@ -19,14 +19,12 @@ use Throwable;
 /**
  * Copies a backup off SFTP or FTP onto the panel, so the browser can have it.
  *
- * The same fetch a restore uses ({@see ArtifactFetcher}): straight to disk,
- * never through the adapters' `php://temp` buffer. The copy is kept for
- * `download_ttl_seconds` once ready.
+ * The same fetch a restore uses ({@see ArtifactFetcher}): straight to disk, never through the
+ * adapters' `php://temp` buffer. The copy is kept for `download_ttl_seconds` once ready.
  *
- * Not retried. A second attempt against a server that just refused the login
- * is one more failed login towards its fail2ban, and the user's next click
- * starts a fresh copy anyway. Dispatched to `default`, the queue the
- * installer's worker drains.
+ * Not retried: a second attempt against a server that just refused the login is one more
+ * failed login towards its fail2ban. Dispatched to `default`, the queue the installer's worker
+ * drains.
  */
 class FetchBackupForDownload implements ShouldQueue
 {
@@ -51,8 +49,7 @@ class FetchBackupForDownload implements ShouldQueue
     {
         $preparation = BackupDownloadPreparation::with('backup')->find($this->preparationId);
 
-        // Removed (the backup was deleted) or already settled between being
-        // queued and being picked up: nothing to do.
+        // Backup deleted, or already settled since it was queued: nothing to do.
         if ($preparation === null || $preparation->status !== BackupDownloadPreparation::PREPARING || $preparation->backup === null) {
             return;
         }
@@ -76,9 +73,8 @@ class FetchBackupForDownload implements ShouldQueue
                 return;
             }
 
-            // The real size, now that the storage server can be asked: the
-            // row's `size_bytes` is null on a failed run kept for forensics,
-            // and that is exactly when the request could not check the disk.
+            // The real size, now that the storage server can be asked: the row's `size_bytes` is
+            // null on a failed run kept for forensics.
             $remoteSize = $this->remoteSize($disk, $key);
             $expected = $remoteSize ?? $backup->size_bytes;
 
@@ -96,10 +92,8 @@ class FetchBackupForDownload implements ShouldQueue
             clearstatcache(true, $path);
             $size = (int) @filesize($path);
 
-            // A short copy is a broken download that would open as a corrupt
-            // archive on someone's laptop. Said here, where it can be retried.
-            // Compared with what the server reported, never with the row:
-            // the row's figure is not always the object's own size.
+            // A short copy would open as a corrupt archive. Compared with what the server
+            // reported, never with the row's figure, which is not always the object's own size.
             if ($remoteSize !== null && $size !== $remoteSize) {
                 $this->markFailed($preparation, 'incomplete', $downloads);
 
@@ -158,9 +152,8 @@ class FetchBackupForDownload implements ShouldQueue
     }
 
     /**
-     * The driver's own category for what went wrong — `unreachable`,
-     * `invalid_credentials`, `host_key_mismatch`… — the same names the
-     * destination's Test button reports, so the two never disagree.
+     * The driver's own category for what went wrong (`unreachable`, `invalid_credentials`,
+     * `host_key_mismatch`…), the same names the destination's Test button reports.
      */
     private function classify(StorageDriverFactory $drivers, StorageDestination $destination, Throwable $e): string
     {

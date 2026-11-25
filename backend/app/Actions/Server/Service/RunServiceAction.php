@@ -23,9 +23,8 @@ class RunServiceAction
     ];
 
     /**
-     * Actions that load the configuration from disk. Restarting nginx over a
-     * broken config does not keep the old one running — it stops nginx, fails
-     * to start it, and takes every site and the panel itself down with it.
+     * Actions that load the configuration from disk. Restarting nginx over a broken config stops
+     * nginx, fails to start it, and takes every site and the panel down.
      */
     private const TESTED_ACTIONS = ['start', 'restart', 'reload'];
 
@@ -66,11 +65,9 @@ class RunServiceAction
             $this->refuseBrokenConfig($service);
         }
 
-        // The panel's own web server or PHP: restarting it inside the request
-        // killed the connection carrying the request, so the caller (Central
-        // above all) got an error for a restart that worked (QA, 2026-11-24).
-        // The config test above has already passed; the answer goes out
-        // first and the restart runs right after it is sent.
+        // The panel's own web server or PHP: restarting it inside the request would kill the
+        // connection carrying it, so the caller would get an error for a restart that worked.
+        // The answer goes out first and the restart runs right after it is sent.
         if (in_array($action, self::DEFERRED_ACTIONS, true) && $this->services->servesPanel($service['unit'])) {
             App::terminating(fn () => $this->runAfterResponse($service, $action));
 
@@ -89,11 +86,8 @@ class RunServiceAction
     }
 
     /**
-     * Services with no config test are not held back: there is nothing to ask.
-     */
-    /**
-     * The deferred half: nobody is waiting for the answer any more, so a
-     * failure goes to the log with a reference rather than to a response.
+     * The deferred half: nobody is waiting for the answer any more, so a failure goes to the log
+     * with a reference rather than to a response.
      *
      * @param  array<string, mixed>  $service
      */
@@ -112,6 +106,7 @@ class RunServiceAction
         $this->activityLogger->log('service.'.self::VERBS[$action], null, ['service' => $service['label']]);
     }
 
+    /** Services with no config test are not held back: there is nothing to ask. */
     private function refuseBrokenConfig(array $service): void
     {
         $test = $this->tester->test($service['key']);

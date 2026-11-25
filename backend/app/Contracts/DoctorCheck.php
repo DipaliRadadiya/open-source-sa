@@ -5,17 +5,13 @@ namespace App\Contracts;
 /**
  * One self-check against the real server (strategy).
  *
- * These exist because the test suite fakes the Process facade, which means it
- * can pass in full while the panel cannot run a single privileged command —
- * exactly what happened before sudo escalation was added. A check here does
- * the real thing: it shells out, reads the actual filesystem, calls the live
- * endpoint. It is the only class of test that can catch a missing sudoers
- * grant, a service named differently by the installer, or a directory that
- * root created and the panel account cannot write.
+ * The test suite fakes the Process facade, so it can pass while the panel cannot run a single
+ * privileged command. A check here does the real thing (shell out, read the filesystem, call
+ * the live endpoint), so it catches a missing sudoers grant, a differently named service, or
+ * a root-created directory the panel cannot write.
  *
- * Every check must be READ-ONLY and cheap. It runs on a production panel, on
- * demand, from an admin screen — it must never change the server to find out
- * whether the server works.
+ * Every check must be READ-ONLY and cheap: it runs on a production panel, on demand, and must
+ * never change the server to find out whether the server works.
  */
 interface DoctorCheck
 {

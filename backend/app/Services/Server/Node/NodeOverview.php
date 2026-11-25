@@ -11,9 +11,8 @@ use App\Services\Server\Runtimes\NodeRuntime;
 /**
  * What the Node screen shows.
  *
- * Mirrors PhpOverview deliberately: same field names, same meanings, so the
- * frontend renders one component for both runtimes and the differences are in
- * the data rather than in the contract.
+ * Mirrors PhpOverview (same field names and meanings) so the frontend renders one
+ * component for both runtimes.
  */
 class NodeOverview
 {
@@ -39,17 +38,11 @@ class NodeOverview
 
                 return [
                     ...$version,
-                    // Which npm this version carries — the "Update npm" button
-                    // is otherwise a leap of faith.
                     'npm_version' => $npm = $this->node->npmVersion($version['version']),
-                    // And what it could carry. Per row, not per registry: npm
-                    // 12 cannot run on Node 20, so publishing the registry's
-                    // `latest` everywhere would leave the button lit forever
-                    // on every version that can never reach it.
+                    // Per row, not per registry: npm 12 cannot run on Node 20, so one
+                    // global `latest` would leave "Update npm" lit forever there.
                     'npm_latest' => $this->npm->latestFor($version['version']),
-                    // The question the button actually asks. Answered here
-                    // because it is a semver comparison, and a client doing
-                    // it as strings reads '9.8.1' as newer than '10.2.4'.
+                    // Semver comparison done here: clients comparing strings read '9.8.1' > '10.2.4'.
                     'npm_update_available' => $this->npm->updateAvailable($version['version'], $npm),
                     'in_use_by' => $pinned['count'] ?? 0,
                     'sites' => $pinned['names'] ?? [],
@@ -69,13 +62,11 @@ class NodeOverview
             'versions' => $progress['versions'],
             'system' => $this->node->system(),
             'installable' => $progress['installable'],
-            // `unreachable` when the version list could not be fetched — say
-            // "could not reach nodejs.org", not "nothing to install" (FS-C20).
+            // `unreachable` when the version list could not be fetched: show "could not
+            // reach nodejs.org", not "nothing to install".
             'installable_error' => $this->node->installableError(),
-            // So the frontend knows the difference between "this version has
-            // no lifecycle data" and "we have no lifecycle data at all" — the
-            // second is a box with no egress, and the badges should stay off
-            // rather than implying every version is unknown-and-therefore-odd.
+            // Tells "this version has no lifecycle data" from "no lifecycle data at all"
+            // (no egress); in the second case the badges stay off.
             'lifecycle_available' => ! $this->lifecycle->isStale(),
         ];
     }

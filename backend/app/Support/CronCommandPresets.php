@@ -3,29 +3,24 @@
 namespace App\Support;
 
 /**
- * Framework command presets for the cron "command" field — one click fills the
- * command (and a recommended schedule). `{path}` is a placeholder the frontend
- * swaps for the selected application's directory, and `{php}` for its
- * PHP binary. Grounded in our supported
- * site types, plus Laravel (hosted under the custom-PHP type). `custom` has
- * null command/expression — the UI shows raw fields.
+ * Framework command presets for the cron "command" field: one click fills the command and a
+ * recommended schedule. `{path}` and `{php}` are placeholders the frontend swaps for the
+ * selected application's directory and PHP binary. `custom` has null command/expression, so
+ * the UI shows raw fields.
  *
- * When the Application/SiteTypes registry is built, these move onto each
- * SiteType (single source of truth); this map is the interim source.
+ * Interim source: these should move onto each SiteType.
  */
 class CronCommandPresets
 {
     /**
-     * The token in preset commands the frontend must replace with the target
-     * application's absolute directory before submitting.
+     * The token the frontend replaces with the application's absolute directory.
      */
     public const PLACEHOLDER = '{path}';
 
     /**
-     * The token the frontend replaces with the chosen application's own PHP
-     * binary (`php_binary` on the application), so a site on 8.3 gets a job
-     * on 8.3 rather than on the server default (support list, 2026-10-28).
-     * With no application chosen it becomes plain `php`, the server default.
+     * The token the frontend replaces with the chosen application's own PHP binary
+     * (`php_binary`), so a site on 8.3 gets a job on 8.3. With no application chosen it
+     * becomes plain `php`, the server default.
      */
     public const PHP_PLACEHOLDER = '{php}';
 

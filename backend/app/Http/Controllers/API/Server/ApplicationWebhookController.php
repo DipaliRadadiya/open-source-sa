@@ -32,11 +32,9 @@ class ApplicationWebhookController extends Controller
 
         return response()->json([
             'application' => ApplicationResource::make($application->load('systemUser'))->resolve(),
-            // Whether the panel added the webhook to the repository itself, and
-            // if not, why — so the screen can say "done" or show the URL and
-            // secret to paste. Null when deploy-on-push was switched off —
-            // unless the provider refused to remove the hook, which the user
-            // then has to delete by hand (`status: removal_refused`).
+            // Whether the panel added the webhook itself, and if not, why (the screen then shows the
+            // URL and secret to paste). Null when deploy-on-push was switched off, unless the
+            // provider refused to remove the hook (`status: removal_refused`).
             'webhook_registration' => $configure->registration === null ? null : [
                 ...$configure->registration,
                 'message' => $configure->registration['reason'] === null
@@ -47,14 +45,11 @@ class ApplicationWebhookController extends Controller
     }
 
     /**
-     * The provider calling in. **Unauthenticated by design** — the signature
-     * over the body is the credential, and no session or token exists on a
-     * request from GitHub.
+     * The provider calling in. **Unauthenticated by design**: the signature over the body is
+     * the credential.
      *
-     * Every authentic delivery answers 2xx, including the ones that deploy
-     * nothing. Providers disable a hook that keeps failing (GitLab after four
-     * consecutive failures), so "understood, nothing to do" must not look like
-     * a fault. Only an unauthentic delivery gets a 401.
+     * Every authentic delivery answers 2xx, even one that deploys nothing: providers disable a
+     * hook that keeps failing. Only an unauthentic delivery gets a 401.
      */
     public function receive(
         Request $request,
@@ -65,14 +60,9 @@ class ApplicationWebhookController extends Controller
             ->where('webhook_identifier', $identifier)
             ->firstOrFail();
 
-        // Deploy-on-push switched off in the panel while the hook still sits
-        // in the repository. A stranger — no valid signature — gets the same
-        // 404 as an identifier that never existed, so this cannot be used to
-        // learn which sites exist. The provider itself is told plainly, so
-        // its delivery log says why nothing deployed instead of "not found".
-        // 410 rather than a 2xx: the provider should count it as failing
-        // (GitLab disables a hook after a few failures), which is right for
-        // a hook nobody wants any more.
+        // Deploy-on-push is off but the hook is still in the repository. Without a valid signature
+        // answer the same 404 as an unknown identifier (no probing for sites). The provider gets
+        // 410, not 2xx, so it counts the hook as failing, right for a hook nobody wants.
         if (! $application->webhook_enabled) {
             abort_unless($receive->authentic($request, $application), 404, __('errors/http.not_found'));
 

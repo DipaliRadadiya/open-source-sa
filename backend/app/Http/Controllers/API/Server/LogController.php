@@ -31,9 +31,8 @@ class LogController extends Controller
     {
         $source = $logs->find($key);
 
-        // `describe()` answers existence per kind — a privileged source is
-        // never `is_file` to this process, and the journal is not a file at
-        // all, so checking that here would 404 both of them.
+        // `describe()` answers existence per kind: a privileged source is never `is_file` to this
+        // process and the journal is not a file, so an `is_file` check would 404 both.
         if (! $source || $logs->describe($source) === null) {
             abort(404, __('errors/log.not_found'));
         }
@@ -71,14 +70,11 @@ class LogController extends Controller
     /**
      * Empty one log. `logs` **manage**.
      *
-     * Truncated rather than deleted — see LogManager::clear(), where the reason
-     * lives. A source the registry does not mark `clearable` answers 404, the
-     * same as a key that does not exist: auth.log and the rest are not offered,
-     * and a 403 would advertise a capability the panel does not intend to have.
+     * Truncated rather than deleted (see LogManager::clear()). A source the registry does not
+     * mark `clearable` answers 404, same as an unknown key: a 403 would advertise a capability
+     * the panel does not have.
      *
-     * Logged to the activity feed with the source named. Destroying a record
-     * without recording that it was destroyed is the one version of this a
-     * support conversation cannot recover from.
+     * Logged to the activity feed with the source named.
      */
     public function destroy(string $key, LogManager $logs, ActivityLogger $activity): JsonResponse
     {

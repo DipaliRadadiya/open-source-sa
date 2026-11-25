@@ -12,25 +12,20 @@ use Symfony\Component\Console\Input\StreamableInputInterface;
 use Throwable;
 
 /**
- * Create the panel's first administrator at install time (2026-10-17).
+ * Create the panel's first administrator at install time.
  *
- * A server set up by Central has a public address before its owner ever opens
- * it, and until a first user exists anyone who opens it can register — and the
- * first registration is the administrator. So when Central hands the installer
- * a username and password, this creates that account before the panel is
- * reachable, and registration is closed from the start.
+ * Until a first user exists anyone who opens the panel can register, and the first
+ * registration is the administrator. Creating the account before the panel is reachable
+ * closes registration from the start.
  *
- * Through RegisterFirstAdmin, the same code as the sign-up screen: one lock,
- * one transaction, the permission catalog synced, the Administrator role. Two
- * ways to make the first admin would drift.
+ * Goes through RegisterFirstAdmin, the same code as the sign-up screen, so the two ways
+ * of making the first admin cannot drift.
  *
- * The password comes on standard input, never as an argument: an argument is
- * readable by every account through `ps`, and the installer's run() writes a
- * failing command line into its log.
+ * The password comes on standard input, never as an argument: arguments are readable by
+ * every account through `ps`, and the installer's run() logs a failing command line.
  *
- * Safe to run again. The same username already there is "done"; a different
- * administrator is left alone — this never adds a second one or overwrites a
- * password. Both exit 0, with what happened in the output.
+ * Safe to run again: the same username already there is "done", a different administrator
+ * is left alone (never a second one, never a password overwrite). Both exit 0.
  */
 class PanelCreateAdmin extends Command
 {
@@ -42,8 +37,7 @@ class PanelCreateAdmin extends Command
     {
         $username = (string) $this->option('username');
 
-        // Only the line ending a herestring adds: spaces are a legal part of a
-        // password, and trimming them would store a different one.
+        // Strip only the herestring's line ending: spaces are part of the password.
         $password = rtrim($this->rawInput(), "\r\n");
 
         $validator = Validator::make(
@@ -55,7 +49,7 @@ class PanelCreateAdmin extends Command
         );
 
         if ($validator->fails()) {
-            // Field names and rules only — this output goes to the install log.
+            // Field names and rules only: this output goes to the install log.
             $this->error('Cannot create the administrator: '.implode(' ', $validator->errors()->all()));
 
             return self::FAILURE;

@@ -25,8 +25,8 @@ abstract class AbstractCleanupTarget implements CleanupTarget
     }
 
     /**
-     * One estimate per choice. Targets that can price every choice from a
-     * single listing override this; the default simply asks each time.
+     * One estimate per choice. Targets that can price all choices from a single
+     * listing override this.
      */
     public function estimates(array $choices): array
     {

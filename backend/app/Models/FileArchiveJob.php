@@ -56,17 +56,11 @@ class FileArchiveJob extends Model
     /**
      * Whether this row is old enough that nothing can still be working on it.
      *
-     * `RunFileArchive::failed()` closes a dying job out, but a worker killed
-     * outright — OOM, `systemctl kill`, a reboot — never reaches it, and the
-     * row is stranded in flight. Because the unique lock refuses a second job
-     * for the same target, a stranded row would otherwise mean that path could
-     * never be compressed again.
+     * A worker killed outright (OOM, reboot) never reaches `RunFileArchive::failed()`, and the
+     * unique lock would then refuse any new job for that target forever.
      *
-     * The bound is the job's own timeout plus the grace {@see ExpiresUniqueLock}
-     * uses, so the lock and the row cannot disagree about whether work is
-     * alive. Measured from `started_at` when there is one and `created_at`
-     * otherwise — a job dispatched while the queue was down never starts at
-     * all, and that is one of the ways a row gets stranded.
+     * The bound is the job's timeout plus the grace {@see ExpiresUniqueLock} uses, so lock and
+     * row agree. Measured from `started_at`, else `created_at` (a job may never have started).
      */
     public function isStale(): bool
     {
@@ -81,10 +75,8 @@ class FileArchiveJob extends Model
     }
 
     /**
-     * The localized sentence for a failure, in the *viewer's* locale rather
-     * than the locale of whoever started the work — the same rule the activity
-     * log, runtime installs and database exports all follow, and the reason
-     * `reason` is a stored code instead of a finished string.
+     * The localized sentence for a failure, in the *viewer's* locale (hence `reason` is a
+     * stored code, not a finished string).
      */
     public function message(): ?string
     {
