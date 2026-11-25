@@ -10,12 +10,9 @@ use Exception;
  * the server-ops log reference, so the user is told which part failed and can
  * quote the reference — without the raw stderr reaching the API.
  *
- * It also carries an optional `reason` code. The reference is enough for
- * someone with access to the server-ops log and useless to everyone else, and
- * there is one failure where the log has nothing to offer either: a process
- * killed by the kernel writes no stderr at all. `fromResult()` reads the exit
- * status and names that case, so "the build failed, here is a reference to an
- * empty log" becomes "the server ran out of memory during the build".
+ * It also carries an optional `reason` code. A process killed by the kernel writes no stderr, so
+ * `fromResult()` reads the exit status and names that case ("the server ran out of memory during
+ * the build") instead of pointing at an empty log.
  */
 class ProvisioningFailedException extends Exception
 {
@@ -37,15 +34,12 @@ class ProvisioningFailedException extends Exception
     /**
      * Build from a failed operation, classifying what the exit status says.
      *
-     * Deliberately narrow: it names the one failure mode that is otherwise
-     * undiagnosable and leaves everything else unclassified rather than
-     * guessing. A wrong reason is worse than none — it sends the user to fix
-     * something that was never broken.
+     * Deliberately narrow: it names failure modes that are otherwise undiagnosable and leaves the
+     * rest unclassified. A wrong reason is worse than none: it sends the user to fix something
+     * that was never broken.
      *
-     * @param  array<int, string>  $command  what was run, for the callers that know it. A bare
-     *                                       exit status means nothing without the tool that
-     *                                       returned it — 22 is an HTTP error from curl and
-     *                                       nothing in particular from anything else.
+     * @param  array<int, string>  $command  what was run; an exit status means nothing without
+     *                                       its tool (22 is a curl HTTP error)
      */
     public static function fromResult(string $step, ServerOpsResult $result, array $command = []): self
     {
@@ -61,20 +55,16 @@ class ProvisioningFailedException extends Exception
      */
     private static function classify(string $step, ServerOpsResult $result, array $command = []): ?string
     {
-        // The user's deploy script ran a git command against the remote —
-        // nearly always the `git pull` the default script carried until
-        // 2026-10-01 — and the remote asked for a login. The panel's own fetch
-        // has the account's credential; the script never does, so on a private
-        // repository it can only fail. Measured on GitHub 2026-10-01:
+        // The user's deploy script ran a git command against a private remote and it asked for a
+        // login. The panel's own fetch has the account's credential; the script never does.
+        // git's wording is the same for every host:
         //   fatal: could not read Username for 'https://github.com': No such device or address
-        // That is git's own wording, the same for every host.
         if ($step === 'script' && preg_match("/could not read (Username|Password) for 'https?:/", $result->output()."\n".$result->errorOutput()) === 1) {
             return 'script_git_auth';
         }
 
-        // The panel's own fetch: the repository or the branch is not there, or
-        // the account cannot read it (FS-C22). Measured with git 2.43 on a
-        // test server, 2026-10-23:
+        // The panel's own fetch: the repository or the branch is not there, or the account cannot
+        // read it. git's wording:
         //   fatal: couldn't find remote ref <branch>
         //   fatal: could not read Username for 'https://github.com': … (no
         //     account, and the repository is missing or private)
@@ -93,54 +83,35 @@ class ProvisioningFailedException extends Exception
         }
 
         // A native addon needed compiling and this server has no compiler.
-        //
-        // Checked before the exit status because npm exits 1, which says
-        // nothing on its own. node-gyp's wording is the unambiguous part:
-        // "not found: make" is emitted only by its own `which` lookup for the
-        // build tool, so there is no honest way to read it as anything else.
-        //
-        // Worth naming rather than leaving to the log, because the log is the
-        // problem. npm writes thousands of peer-dependency warnings around
-        // this one line, which is how a missing build-essential presented as
-        // a dependency-resolution failure for two attempts on a real server.
+        // Checked before the exit status because npm exits 1, which says nothing on its own;
+        // node-gyp's "not found: make" is unambiguous. Worth naming because npm buries that line
+        // under thousands of peer-dependency warnings.
         if (self::mentionsMissingBuildTool($result)) {
             return 'no_build_tools';
         }
 
-        // Composer refused to resolve against the PHP it was run under.
-        //
-        // Same reasoning as the build tools above and the same risk: composer
-        // prints its whole dependency tree around the one line that matters,
-        // and "Your requirements could not be resolved" on its own sends the
-        // reader to look for a broken package when the answer is the site's
-        // PHP version.
+        // Composer refused to resolve against the PHP it was run under. Composer prints its whole
+        // dependency tree around the one line that matters, which sends the reader looking for a
+        // broken package when the answer is the site's PHP version.
         if (self::mentionsPlatformRequirement($result)) {
             return 'composer_platform';
         }
 
-        // The container could not bind its published host port, because something
-        // on the server already holds it. Measured on a real box (Docker QA,
-        // 2026-10-30), a pasted file publishing 80 with nginx on 0.0.0.0:80:
-        //   failed to set up container networking: driver failed programming
-        //   external connectivity on endpoint …: failed to bind host port
-        //   127.0.0.1:80/tcp: address already in use
-        // and Docker's wording when another container holds it:
+        // The container could not bind its published host port because something on the server
+        // already holds it. Docker's wording:
+        //   failed to bind host port 127.0.0.1:80/tcp: address already in use
         //   Bind for 127.0.0.1:20001 failed: port is already allocated
-        // The form now refuses a port that is listened on; this names the race
-        // and anything that reached the server some other way. Only for the step
-        // that publishes ports — "address already in use" from a deploy script is
-        // somebody else's process and not this diagnosis.
+        // The form refuses a port that is listened on; this names the race and anything that got
+        // there another way. Only for the step that publishes ports ("address already in use" from
+        // a deploy script is somebody else's process).
         if ($step === 'container_start' && preg_match('/(bind host port \S+: address already in use|Bind for \S+ failed: port is already allocated)/i', $result->output()."\n".$result->errorOutput()) === 1) {
             return 'container_port_in_use';
         }
 
-        // FS-B3: a download or unpack the installer ran itself. Named from
-        // curl's documented exit status (`man curl`, EXIT CODES) and not from
-        // its wording, because the wording varies by version and by locale and
-        // — the reason this exists — a download killed at its timeout has no
-        // wording at all: no process result, no stderr, only `timedOut`.
-        // Left unnamed, every one of these read as "failed at download" plus a
-        // reference to a log that says nothing the user can act on.
+        // A download or unpack the installer ran itself. Named from curl's documented exit status
+        // (`man curl`, EXIT CODES), not its wording, which varies by version and locale; a download
+        // killed at its timeout has no wording at all (no process result, no stderr, only
+        // `timedOut`).
         $tool = self::toolOf($command);
 
         if ($tool === 'curl') {
@@ -155,27 +126,16 @@ class ProvisioningFailedException extends Exception
             return 'archive_invalid';
         }
 
-        // A registry refused to serve the image.
-        //
-        // Named here for the same reason as the two above: the failure is
-        // actionable and the log does not read as an action. `docker compose up`
-        // reports it as one line among the pull progress — "Error pull access
-        // denied" — inside output whose next line is a bare `denied`, and a
-        // reader who does not already know Docker's wording sees a broken step
-        // rather than a credential they need to supply.
-        // Checked BEFORE the no-credential case, and the order is load-bearing.
-        // Docker Hub answers a rejected credential with "authentication
-        // required - incorrect username or password", and a self-hosted registry
-        // v2 with a 401 — neither of which contains the other's needles, but a
-        // future needle added loosely to either set could overlap. The more
-        // specific diagnosis goes first.
-        // FS-B3: the download never happened — a mirror or release host that
-        // did not resolve or answer. Saved with no reason it read as a broken
-        // installer; it is the network, and retrying later is the fix.
+        // The download never happened: a mirror or release host that did not resolve or answer.
+        // It is the network, and retrying later is the fix.
         if (preg_match('/(Could not resolve host|Temporary failure in name resolution|unable to resolve host address|Failed to connect to|Connection timed out|Connection refused|Operation timed out|Network is unreachable)/i', $result->output()."\n".$result->errorOutput()) === 1) {
             return 'download_unreachable';
         }
 
+        // A registry refused to serve the image. `docker compose up` reports it as one line among
+        // the pull progress, which reads as a broken step rather than a credential to supply.
+        // Rejected credentials are checked BEFORE the no-credential case, and the order is
+        // load-bearing: the more specific diagnosis goes first.
         if (self::mentionsRejectedCredentials($result)) {
             return 'registry_credentials_rejected';
         }
@@ -190,15 +150,9 @@ class ProvisioningFailedException extends Exception
             return null;
         }
 
-        // A killed process may still have written something before it died,
-        // and if it did that is the better explanation. Only claim
-        // out-of-memory for the silent case this exists to describe.
-        //
-        // npm's peer-dependency warnings do not count as saying something:
-        // npm prints hundreds of them before it does any work, so an npm
-        // install the OOM killer stopped was never silent and was never
-        // named. On the Apache test box `npm install n8n` was killed at
-        // 3.8 GB and the panel reported the step with no reason at all.
+        // A killed process may still have written something before it died, and that is the better
+        // explanation: only claim out-of-memory for the silent case. npm's peer-dependency
+        // warnings do not count as saying something (npm prints hundreds before doing any work).
         if (self::explainedItself($result->output()) || self::explainedItself($result->errorOutput())) {
             return null;
         }
@@ -226,23 +180,16 @@ class ProvisioningFailedException extends Exception
     /**
      * What a failed curl download was, by its exit status.
      *
-     * Exit codes are from curl's manual and stable across versions: 5/6/7 the
-     * proxy or host did not resolve or accept the connection, 28 the
-     * operation timed out, 22 the host answered with an HTTP error (the
-     * installers pass `--fail`, so a 404 or 503 is an exit rather than an
-     * error page written over the archive), 18/52/55/56 the connection died
-     * part-way, and the TLS family (35, 51, 58, 59, 60, 77, 83, 90, 91) a
-     * secure connection that could not be trusted or set up.
-     *
-     * Anything else — a write failure, a refused protocol, a status this list
-     * does not know — stays unnamed, which is this class's own rule: a wrong
-     * reason is worse than none.
+     * 5/6/7 the proxy or host did not resolve or accept the connection, 28 timed out, 22 the host
+     * answered with an HTTP error (the installers pass `--fail`), 18/52/55/56 the connection died
+     * part-way, and the TLS family (35, 51, 58, 59, 60, 77, 83, 90, 91) a secure connection that
+     * could not be trusted or set up. Anything else stays unnamed.
      */
     private static function curlFailure(ServerOpsResult $result): ?string
     {
-        // Killed at the ceiling: there is no process result to read. The
-        // ceiling and curl's own `--max-time` are the same number, and the
-        // ceiling starts first, so this is how a stalled download usually ends.
+        // Killed at the ceiling: there is no process result to read. The ceiling and curl's own
+        // `--max-time` are the same number and the ceiling starts first, so this is how a stalled
+        // download usually ends.
         if ($result->timedOut) {
             return 'download_timeout';
         }
@@ -260,12 +207,8 @@ class ProvisioningFailedException extends Exception
     /**
      * Did tar or unzip refuse the file as not being the archive it should be?
      *
-     * Wording measured 2026-11-05 with GNU tar 1.35 and UnZip 6.00 against an
-     * HTML page saved as `.tar.gz`, an empty file, a truncated and a corrupted
-     * gzip, a truncated plain tar and a truncated or empty zip. Matched on
-     * these and not on the exit status, because tar exits 2 for a corrupt
-     * archive and also for a full disk or a permission refusal — different
-     * problems with different fixes.
+     * Matched on the tools' wording, not the exit status: tar exits 2 for a corrupt archive and
+     * also for a full disk or a permission refusal. Needles are from GNU tar 1.35 and UnZip 6.00.
      */
     private static function mentionsBrokenArchive(ServerOpsResult $result): bool
     {
@@ -308,26 +251,17 @@ class ProvisioningFailedException extends Exception
      * Did composer fail on a platform requirement — a PHP version or a PHP
      * extension the interpreter it ran under does not provide?
      *
-     * Measured against composer 2.10 on 2026-09-17 rather than remembered.
-     * Both failures exit 2 and say, in the body of a much longer report:
+     * Both failures exit 2 and say, inside a much longer report:
      *
      *   - Root composer.json requires php ^9.0 but your php version (8.4.23)
      *     does not satisfy that requirement.
      *   - Root composer.json requires PHP extension ext-foo * but it is
      *     missing from your system. Install or enable PHP's foo extension.
      *
-     * Matched on the distinctive tail of each rather than on "requirements
-     * could not be resolved", which composer also prints for an ordinary
-     * version conflict between two packages — a different problem, with a
-     * different fix, and this class's own rule is that a wrong reason sends
-     * someone to fix something that was never broken.
-     *
-     * That distinction was measured too, not assumed: an ordinary conflict
-     * (`monolog/monolog ^3` against `psr/log ^1`) reports "found psr/log[…]
-     * but it conflicts with your root composer.json require" and contains
-     * none of these needles, while a *dependency* needing a newer PHP ends in
-     * the same "does not satisfy that requirement" as a root one. So the
-     * phrase separates platform from package, which is exactly the cut.
+     * Matched on the distinctive tail of each, not on "requirements could not be resolved", which
+     * composer also prints for an ordinary conflict between two packages. A *dependency* needing a
+     * newer PHP ends in the same "does not satisfy that requirement", so the phrase separates
+     * platform from package.
      */
     private static function mentionsPlatformRequirement(ServerOpsResult $result): bool
     {
@@ -352,9 +286,7 @@ class ProvisioningFailedException extends Exception
     /**
      * Did the pull fail because the registry would not authorise it?
      *
-     * Measured against Docker 29.8.1 and Compose 5.5.1 on 2026-09-29 rather
-     * than remembered, because each registry words this differently and only
-     * one of the four phrasings is the one people quote:
+     * Each registry words this differently:
      *
      *   - Docker Hub: `pull access denied for <repo>, repository does not
      *     exist or may require 'docker login'`
@@ -363,31 +295,19 @@ class ProvisioningFailedException extends Exception
      *     require authorization: authorization failed: no basic auth
      *     credentials`
      *   - registry v2 (GitLab, Harbor, self-hosted): `unauthorized:
-     *     authentication required` — this one is from the registry v2 spec and
-     *     is the ONE needle here that was not observed on a real box. Kept
-     *     because it costs nothing and the spec mandates the wording; named as
-     *     unverified rather than quietly listed beside four measurements.
+     *     authentication required` — from the registry v2 spec, the one needle here not observed
+     *     on a real box.
      *
-     * `from registry: denied` rather than a bare `denied`, which appears in
-     * unrelated daemon errors and on its own line in the very output above.
+     * `from registry: denied` rather than a bare `denied`, which appears in unrelated daemon
+     * errors.
      *
-     * **The reason deliberately does not claim the image is private.** Docker
-     * Hub answers "does not exist" and "exists but is yours" with the same
-     * sentence — it says so in the sentence — so a typo in a public image name
-     * lands here too. The wording this maps to names both, which is the honest
-     * answer and still the useful one: either way the next step is to check the
-     * name, and registry credentials are not something the panel can store yet.
+     * **The reason deliberately does not claim the image is private.** Docker Hub answers "does
+     * not exist" and "exists but is yours" with the same sentence, so a typo in a public image name
+     * lands here too; the wording this maps to names both.
      *
-     * Two failures that reach the same step are deliberately left
-     * unclassified, both verified on the same box:
-     *
-     *   - a tag that does not exist on a repository that does, which reports
-     *     `not found` with no mention of access;
-     *   - a registry that cannot be reached, which reports `dial tcp: lookup
-     *     … no such host`.
-     *
-     * Neither is fixed by a credential, and claiming otherwise is this class's
-     * own stated failure mode.
+     * Left unclassified because no credential fixes them: a tag that does not exist on a
+     * repository that does (`not found`), and an unreachable registry (`dial tcp: lookup … no
+     * such host`).
      */
     private static function mentionsRegistryAuth(ServerOpsResult $result): bool
     {
@@ -410,29 +330,22 @@ class ProvisioningFailedException extends Exception
     /**
      * Did the registry reject the credential the panel sent?
      *
-     * A different failure from {@see self::mentionsRegistryAuth()} with a
-     * different fix, which is the only reason it is worth a reason code of its
-     * own: "you have not configured a credential for this registry" sends
-     * somebody to the Docker page, and "the credential you configured was
-     * refused" sends them to rotate a token. Reporting the first for the second
-     * is how someone ends up re-entering a registry they already added.
+     * A different failure from {@see self::mentionsRegistryAuth()} with a different fix: "no
+     * credential configured" sends somebody to the Docker page, "the credential was refused" sends
+     * them to rotate a token.
      *
-     * Both needles measured on 2026-09-29 against a real private repository:
+     * Needles:
      *
      *   - Docker Hub: `authentication required - incorrect username or
      *     password`
      *   - self-hosted registry v2: `unexpected status from HEAD request to
      *     http://…/v2/…/manifests/1: 401 Unauthorized`
      *
-     * `401 Unauthorized` is narrow enough here despite looking generic: this
-     * output is a container pull, and a 401 in it is the registry declining the
-     * credentials in play. The alternative — matching the whole HEAD sentence —
-     * would break on the next Docker release that rewords its own transport
-     * errors, which is not the part worth pinning.
+     * `401 Unauthorized` is narrow enough here: in a container pull it is the registry declining
+     * the credentials in play. The whole HEAD sentence is not matched, as Docker may reword it.
      *
-     * The token itself is never in this text. Docker echoes the USERNAME back in
-     * the Hub variant and nothing else, which is why the raw output still must
-     * not reach the API — only this reason code does.
+     * The token itself is never in this text (Docker echoes only the USERNAME back in the Hub
+     * variant), but the raw output must still not reach the API: only the reason code does.
      */
     private static function mentionsRejectedCredentials(ServerOpsResult $result): bool
     {
@@ -453,14 +366,9 @@ class ProvisioningFailedException extends Exception
     /**
      * Did node-gyp fail to find a build tool?
      *
-     * Matched against both streams: npm puts its own summary on stderr and the
-     * gyp transcript can land on either depending on how the install was run.
-     *
-     * `make` and `g++` by name rather than a looser "gyp ERR" match, because
-     * gyp reports compile errors with the same prefix -- and a source file
-     * that will not compile is a different problem with a different fix. This
-     * is the class's own rule: a wrong reason sends someone to fix something
-     * that was never broken.
+     * Matched against both streams: the gyp transcript can land on either. `make` and `g++` by
+     * name rather than a looser "gyp ERR", which gyp also prints for compile errors, a different
+     * problem with a different fix.
      */
     private static function mentionsMissingBuildTool(ServerOpsResult $result): bool
     {

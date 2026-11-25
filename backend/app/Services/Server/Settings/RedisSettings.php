@@ -19,53 +19,23 @@ use Throwable;
  * Redis memory + auth settings via redis-cli CONFIG SET/REWRITE. Detect-gated
  * (only surfaces when redis-cli is present).
  *
- * **The password is returned** — operator decision, 2026-08-31, so the panel
- * can show and copy it the way it already shows a system user's. The objection
- * is recorded here because it is not the same secret as a system user's, and
- * whoever reads this next should know what was traded:
+ * **The password is returned**, so the panel can show and copy it. It is more sensitive than a
+ * system user's: Redis backs the panel's sessions, cache and queue (queue payloads carry database
+ * credentials, git tokens and storage keys), and every hosted site's PHP user can reach
+ * 127.0.0.1:6379. So it is returned only to a caller who could change it anyway (`setting`
+ * **manage**, not view); a read-only role gets `has_password` and no value.
  *
- * Redis backs this panel's sessions, cache and queue. Its queue payloads carry
- * database credentials, git tokens and storage keys while jobs are pending, and
- * its session store is what authenticates every logged-in admin. Every hosted
- * site runs PHP as its own user on the same machine and can open 127.0.0.1:6379
- * — so this password is the only thing between a compromised WordPress install
- * and the panel's own sessions. A system user's password unlocks one customer's
- * account; this one unlocks the panel.
+ * Setting the password must:
+ * - update the panel's own `REDIS_PASSWORD`, or the panel takes itself down with NOAUTH;
+ * - run `CONFIG SET requirepass` and `CONFIG REWRITE` over one authenticated connection each, or
+ *   the password is never persisted to redis.conf;
+ * - never pass the password as an argument (`ps` is world readable): `-x` takes it on stdin and
+ *   `REDISCLI_AUTH` authenticates from the environment.
  *
- * It is therefore returned only to a caller who could change it anyway
- * (`setting` **manage**, not view). A read-only role still gets `has_password`
- * and no value: nothing it can act on is hidden from it, and the credential
- * does not travel to someone who has no use for it.
- *
- * Setting the password is the delicate part, and it used to be wrong in three
- * ways.
- *
- * It changed Redis and never touched the panel's own `REDIS_PASSWORD`, so the
- * moment cache, session or queue moved to Redis, saving this form took the
- * whole panel down with NOAUTH — and the screen you would use to undo it was
- * behind the same broken connection.
- *
- * It ran `CONFIG SET requirepass` and `CONFIG REWRITE` as two separate
- * redis-cli processes. Each is its own connection, and the second one arrives
- * after auth is required, so the rewrite failed and the password was never
- * persisted to redis.conf — it vanished on the next Redis restart.
- *
- * And it passed the password as a command argument, where `ps` is world
- * readable. redis-cli offers two ways out and both are used here: `-x` to
- * take the value on stdin, and `REDISCLI_AUTH` to authenticate from the
- * environment rather than argv.
- *
- * The change itself is applied **after the response has been sent**. The
- * request that changes the credential cannot survive it: the throttle
- * middleware writes its rate-limit headers to the cache *after* the
- * controller returns but *before* the response is flushed, and by then Redis
- * wants a password this process does not have. Re-pointing the running
- * process does not help either — RedisManager captures its config when it is
- * constructed, and the middleware is already holding a resolved store. So the
- * work is deferred to a terminating callback, the client gets its 202 first,
- * and the next request boots with a matching .env and Redis. Verified the
- * hard way: an earlier version returned a 500 with a NOAUTH trace even though
- * the change had succeeded.
+ * The change is applied **after the response is sent**. The throttle middleware writes its
+ * rate-limit headers to the cache after the controller returns, by which time Redis wants a
+ * password this process does not have, and the running process cannot be re-pointed. So the work
+ * is deferred to a terminating callback and the client gets its 202 first.
  */
 class RedisSettings implements SettingGroup
 {
@@ -103,19 +73,9 @@ class RedisSettings implements SettingGroup
      */
     public function read(): array
     {
-        // Read from the panel's own configuration, not from `CONFIG GET`.
-        //
-        // install.sh generates this password, writes it to redis.conf and to
-        // the panel's .env, and proves it works before pointing the panel at
-        // Redis at all -- so .env is the record of what the panel uses. Asking
-        // Redis for it required authenticating with this very value first, so
-        // a successful answer only ever echoed it back; a failed one left the
-        // field blank in exactly the situation someone opens the screen to
-        // investigate. `CONFIG GET` can also be renamed or disabled on a
-        // hardened Redis, where AUTH and PING still work.
-        //
-        // Whether it is still *true* is a separate question, answered by
-        // `password_out_of_sync` below.
+        // Read from the panel's own .env, not `CONFIG GET`: asking Redis needs this very password,
+        // and `CONFIG GET` can be renamed or disabled on a hardened Redis. Whether the value is
+        // still true is `password_out_of_sync` below.
         $stored = (string) config('database.redis.default.password');
 
         return [
@@ -124,15 +84,10 @@ class RedisSettings implements SettingGroup
             // Policies apply() will refuse, so the form can disable them
             // rather than offer them and answer 422.
             'unsafe_policies' => self::unsafePolicies(),
-            // Whether the panel is configured with one. No longer nullable:
-            // "could not ask Redis" is now reported by `password_out_of_sync`,
-            // which is a different question and deserved its own field.
             'has_password' => $stored !== '',
             // The value itself, when the caller could change it anyway.
             'password' => $this->readablePassword($stored === '' ? null : $stored),
-            // Whether changing the password is even possible. If the panel
-            // cannot record the new one, the control should be disabled rather
-            // than offered and then refused.
+            // False when the panel cannot record a new password, so the control is disabled.
             'password_manageable' => $this->env->writable(),
             ...$this->liveState(),
         ];
@@ -141,12 +96,9 @@ class RedisSettings implements SettingGroup
     /**
      * Eviction policies that could delete the panel's own pending jobs.
      *
-     * install.sh puts the panel's queue on this Redis. A queued job is a list
-     * entry with no TTL: `volatile-*` never touches it, but `allkeys-*` picks
-     * victims from every key once `maxmemory` is reached — so a pending
-     * install or certificate simply vanishes, with no failure recorded
-     * anywhere. `noeviction` fails the write loudly instead, which is the
-     * right way for a full Redis to behave under a job queue.
+     * A queued job is a list entry with no TTL: `volatile-*` never touches it, but `allkeys-*`
+     * evicts from every key once `maxmemory` is reached, so a pending job silently vanishes.
+     * `noeviction` fails the write loudly instead.
      *
      * @return list<string>
      */
@@ -167,13 +119,11 @@ class RedisSettings implements SettingGroup
     /**
      * Move the eviction policy install.sh used to write to one the panel
      * accepts: its own `maxmemory-policy allkeys-lru`, directly under its
-     * marker, becomes volatile-lru in redis.conf and then live. The Redis
-     * screen refuses every allkeys-* policy while the queue is on Redis
-     * ({@see unsafePolicies()}), so it could not be saved on a fresh install.
+     * marker, becomes volatile-lru in redis.conf and then live
+     * ({@see unsafePolicies()}).
      *
      * Only that exact line, and only while it is the policy Redis reads (the
-     * last one in the file). A policy the operator set — anywhere else, or by
-     * editing that line — is theirs and is left alone.
+     * last one in the file). A policy the operator set is left alone.
      *
      * @return 'changed'|'unchanged'|'unavailable'
      *
@@ -222,11 +172,8 @@ class RedisSettings implements SettingGroup
     }
 
     /**
-     * The password, when the caller is one who could change it anyway.
-     *
-     * `setting` **manage**, not view: a read-only role can already see that a
-     * password exists, and handing it the panel's own Redis credential gives
-     * it nothing it can act on. See the class note for what this secret opens.
+     * The password, when the caller is one who could change it anyway
+     * (`setting` **manage**, not view). See the class note for what it opens.
      */
     private function readablePassword(?string $current): ?string
     {
@@ -268,9 +215,7 @@ class RedisSettings implements SettingGroup
      */
     private function setPassword(string $password): void
     {
-        // Refuse up front. Setting a password we cannot write down is exactly
-        // how the panel locks itself out, so this is checked before Redis is
-        // touched at all rather than after.
+        // Refuse up front: a password we cannot write down locks the panel out.
         if (! $this->env->writable()) {
             throw ValidationException::withMessages([
                 'password' => [__('errors/setting.env_not_writable')],
@@ -279,18 +224,9 @@ class RedisSettings implements SettingGroup
 
         $previous = $this->currentPassword();
 
-        // Refuse here, for the same reason the writability check above does:
-        // everything past this point runs *after* the response, where the only
-        // way to report a failure is a log line nobody reads.
-        //
-        // A null `$previous` means the panel's own credential does not open a
-        // connection to this Redis, so the `CONFIG SET` below is already known
-        // to be about to fail with NOAUTH. Queueing it anyway answered 202 and
-        // "the Redis password is being applied", and then changed nothing —
-        // which is exactly the report this came in as.
-        //
-        // A 422 naming the cause is worth more than a success message that is
-        // not true.
+        // Everything past this point runs after the response, where a failure can only be logged.
+        // A null `$previous` means the panel's credential does not open Redis, so the `CONFIG SET`
+        // is already known to fail with NOAUTH: answer 422 now rather than a false 202.
         if ($previous === null) {
             throw ValidationException::withMessages([
                 'password' => [__('errors/setting.redis_credential_unusable')],
@@ -322,14 +258,8 @@ class RedisSettings implements SettingGroup
 
         $this->passwordApplied = true;
 
-        // -x takes the value on stdin, so it never appears in `ps`. An empty
-        // password clears auth.
-        //
-        // Authenticated with the password that is live *now*: replacing an
-        // existing password needs the old one, and without it Redis answers
-        // NOAUTH. An earlier version left this unauthenticated, so the first
-        // password could be set and no later change ever applied — it failed
-        // silently, which is why the log line below is not optional.
+        // -x takes the value on stdin, so it never appears in `ps`. An empty password clears auth.
+        // Authenticated with the password that is live now: replacing one needs the old one.
         $set = $this->serverOps->run(
             [$this->binary(), '-x', 'config', 'set', 'requirepass'],
             ['feature' => 'setting', 'group' => 'redis', 'op' => 'set_password'],
@@ -369,26 +299,11 @@ class RedisSettings implements SettingGroup
             return;
         }
 
-        // Writing `.env` is not applying it. `install.sh` runs
-        // `config:cache`, so the old password is compiled into
-        // `bootstrap/cache/config.php` and that is the file the panel reads;
-        // and `queue:work` loaded its configuration once, when it started.
-        //
-        // The installer points sessions, the cache and the queue at Redis
-        // together, so without this the panel keeps offering the old password
-        // to all of them and Redis answers NOAUTH to every one — a successful
-        // password change that takes the panel down.
-        //
-        // Last, and only on the path where the new credential has already been
-        // proven to work: nothing here should run for a change that did not
-        // stick.
-        // Failures are logged, not returned: this runs after the response, so
-        // there is no caller left to tell. They are not invisible either — the
-        // next `read()` authenticates with whatever the config cache now holds,
-        // so a refresh that did not happen makes `has_password` come back
-        // `null`, which is precisely "the panel cannot reach Redis with the
-        // credential it has". The failure reports itself through the field
-        // that already exists to say so.
+        // Writing `.env` is not applying it: the old password is compiled into the config cache
+        // and the queue worker loaded its config at start. Without this refresh, sessions, cache
+        // and queue all get NOAUTH. Last, and only once the new credential is proven.
+        // Failures are logged, not returned: no caller is left. A missed refresh shows up as
+        // `has_password` null on the next `read()`.
         $this->refresh->apply();
     }
 
@@ -419,44 +334,24 @@ class RedisSettings implements SettingGroup
      * determined** — read from a connection authorised by the panel's own
      * stored credential.
      *
-     * The null is the whole point. This used to return `''` for both "Redis
-     * requires no password" and "the command failed", which are opposite
-     * facts, and the failure is the likely one exactly when it matters: if
-     * `.env`'s REDIS_PASSWORD has drifted from the running server — a password
-     * set outside the panel, a restored redis.conf, an adopted server — then
-     * `CONFIG GET` answers NOAUTH, the output is empty, and `''` came back
-     * meaning "no password is set".
-     *
-     * Two things followed from that. `read()` reported `has_password: false`
-     * about a Redis that very much does require one; and `setPassword()` used
-     * `''` as the credential to authenticate the change, so the change was
-     * rejected — after the response had already told the user it was applied.
-     *
-     * Same shape as the storage-destination probe's nullable
-     * `last_test_success`: never-asked, asked-and-failed, and asked-and-true
-     * are three states, and collapsing any two of them tells the user
-     * something false.
+     * Null is distinct from `''` ("Redis requires no password"): when `.env`'s REDIS_PASSWORD has
+     * drifted from the running server, `CONFIG GET` answers NOAUTH with empty output, and mistaking
+     * that for "no password" misreports `has_password` and breaks the change's authentication.
      */
     private function currentPassword(): ?string
     {
         $result = $this->authenticated(['config', 'get', 'requirepass'], (string) config('database.redis.default.password'));
 
-        // A rejected credential answers `NOAUTH …` with exit 0. The name check
-        // below already refuses that reply; this says why, up front.
+        // A rejected credential answers `NOAUTH …` with exit 0.
         if ($this->refused($result)) {
             return null;
         }
 
         $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
 
-        // `CONFIG GET` answers with the name and then the value. A server with
-        // no password answers with an *empty* value, and trimming the output
-        // eats that trailing blank line — so one line back is the real
-        // "no password" answer, not a short read.
-        //
-        // What tells the two apart is the name: a reply that does not begin
-        // with `requirepass` is not an answer to this question at all, and
-        // reading a password out of it would be a guess.
+        // `CONFIG GET` answers with the name, then the value. A server with no password answers an
+        // empty value that trimming eats, so one line back is a real "no password". A reply that
+        // does not begin with `requirepass` is not an answer at all.
         if (($lines[0] ?? '') !== 'requirepass') {
             return null;
         }
@@ -467,17 +362,9 @@ class RedisSettings implements SettingGroup
     /**
      * Whether Redis is actually up, and how much memory it is using.
      *
-     * `available()` only says redis-cli is installed, so "installed but not
-     * running" is a state this group can be in and should report rather than
-     * render as an empty form.
-     *
-     * PING rather than `systemctl is-active`: a NOAUTH reply still proves a
-     * server answered, and it asks the process itself instead of asking systemd
-     * about a unit that may not be the one serving this socket.
-     *
-     * Usage is reported next to the limit because a limit on its own tells the
-     * reader nothing — 512 MB is either roomy or nearly full, and only the pair
-     * says which.
+     * `available()` only says redis-cli is installed. PING rather than `systemctl is-active`: a
+     * NOAUTH reply still proves a server answered. Usage is reported next to the limit because
+     * the limit alone says nothing.
      *
      * @return array<string, mixed>
      */
@@ -502,20 +389,15 @@ class RedisSettings implements SettingGroup
             ];
         }
 
-        // Redis is up and the panel's stored credential did not open it. That
-        // is the state nothing used to report: someone changed `requirepass`
-        // on the server, the panel's copy is stale, and every session, cache
-        // read and queued job is failing behind this same rejection.
-        // Not `! $ping->ok`: redis-cli exits 0 on an error reply, so a wrong
-        // password came back "ok" and this never once said out of sync
-        // (measured on redis-cli 7.0.15, 2026-10-23). In sync means PONG.
+        // Redis is up but the stored credential did not open it: someone changed `requirepass`
+        // outside the panel. Not `! $ping->ok`: redis-cli exits 0 on an error reply. In sync
+        // means PONG.
         $outOfSync = $this->refused($ping) || ! str_contains(strtoupper($ping->output()), 'PONG');
 
         $info = $this->cli(['info', 'memory']);
 
-        // used_memory is the byte count; used_memory_human is Redis's own
-        // formatting of the same number, taken rather than reimplemented so the
-        // panel and redis-cli never disagree by a rounding step.
+        // used_memory is the byte count; used_memory_human is Redis's own formatting of it, taken
+        // rather than reimplemented so the panel and redis-cli never disagree.
         $used = null;
         $human = null;
 
@@ -574,8 +456,7 @@ class RedisSettings implements SettingGroup
      */
     private function authEnv(string $password): array
     {
-        // redis-cli's own documented alternative to `-a`, which it warns about
-        // precisely because arguments are visible to every user on the box.
+        // `REDISCLI_AUTH` instead of `-a`: arguments are visible to every user on the box.
         return $password === '' || $password === 'null' ? [] : ['REDISCLI_AUTH' => $password];
     }
 
@@ -594,10 +475,9 @@ class RedisSettings implements SettingGroup
     /**
      * Did the command fail, or did Redis refuse it?
      *
-     * redis-cli exits 0 when Redis answers with an error: a wrong password
-     * prints `NOAUTH Authentication required.` and exits 0, so `failed()`
-     * alone took a rejected CONFIG SET for a saved setting (2026-10-23). An
-     * error reply is one upper-case code word at the start of the answer.
+     * redis-cli exits 0 when Redis answers with an error (e.g. `NOAUTH Authentication required.`),
+     * so `failed()` alone takes a rejected CONFIG SET for a saved setting. An error reply is one
+     * upper-case code word at the start of the answer.
      */
     private function refused(ServerOpsResult $result): bool
     {

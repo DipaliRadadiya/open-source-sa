@@ -17,17 +17,13 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Shared machinery for marketplace installers: fetching an archive, writing a
- * config file, and running the application's own CLI as the site's user.
+ * Shared machinery for marketplace installers: fetching an archive, writing a config file, and
+ * running the application's own CLI as the site's user.
  *
  * Two rules every installer inherits:
- *  - **Secrets go over stdin, never on the command line.** Admin passwords and
- *    database credentials would otherwise be visible in `ps` to every user on
- *    the box.
- *  - **The application's own commands run as the site user**, never as the
- *    panel. WordPress and friends are large bodies of third-party code; giving
- *    them root because the panel happens to have it would make
- *    `application:manage` equivalent to root.
+ *  - **Secrets go over stdin, never on the command line**: they would show in `ps` to every user.
+ *  - **The application's own commands run as the site user**, never as the panel: handing large
+ *    bodies of third-party code root would make `application:manage` equivalent to root.
  */
 abstract class AbstractSiteInstaller implements SiteInstaller
 {
@@ -43,10 +39,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * Which database engines this application can actually use.
      *
-     * Most of the marketplace speaks MySQL, and MariaDB is a drop-in for it.
-     * Anything else says so — NodeBB cannot use either, and handing it a MySQL
-     * database would fail at its own setup with an error about a driver, long
-     * after the point where the panel could have said something useful.
+     * Most of the marketplace speaks MySQL, and MariaDB is a drop-in. An application that cannot
+     * (NodeBB) says so here, so the panel can refuse early instead of failing at the app's own setup
+     * with a driver error.
      *
      * @return array<int, string>
      */
@@ -67,29 +62,20 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
-     * The port the application has to be told about, or null when telling it
-     * would say nothing it does not already assume.
+     * The port the application has to be told about, or null when telling it would say nothing it
+     * does not already assume.
      *
-     * 🔴 The panel's database connection is editable — `PUT
-     * /databases/connections/{engine}` sets host, port and socket — so a panel
-     * pointed at a managed MySQL on 25060 hands every new site a config
-     * naming 3306. The site provisions, reports Active, and cannot reach its
-     * own database.
+     * The panel's database connection is editable (`PUT /databases/connections/{engine}`), so a panel
+     * pointed at a managed MySQL on 25060 would otherwise hand every new site a config naming 3306.
      *
-     * The comparison is against what the *application* assumes when told
-     * nothing, deliberately NOT against
-     * `config("server.databases.engines.{$engine}.default_port")`: that value
-     * is the panel's and is env-overridable (`SERVER_POSTGRES_PORT`). Move
-     * PostgreSQL to 5433 and the panel's default becomes 5433, while the
-     * application still assumes 5432 — so the one case that most needs the
-     * port written is exactly the case comparing against the panel's own
-     * default would stay silent about.
+     * Compared against what the *application* assumes when told nothing, not against
+     * `config("server.databases.engines.{$engine}.default_port")`: that value is the panel's and is
+     * env-overridable, so moving PostgreSQL to 5433 would silence exactly the case that needs the
+     * port.
      *
-     * Null rather than the number when they match, because both Joomla and
-     * PrestaShop document the port as the thing you add *when it differs*,
-     * and Joomla treats `host` and `host:3306` as two distinct connections
-     * even though they address the same server. Saying nothing is what every
-     * site the panel has already made says.
+     * Null rather than the number when they match: Joomla and PrestaShop document the port as
+     * something you add *when it differs*, and Joomla treats `host` and `host:3306` as two
+     * connections.
      *
      * @param  array<string, mixed>  $context
      */
@@ -104,8 +90,8 @@ abstract class AbstractSiteInstaller implements SiteInstaller
 
         $port = (int) ($context['db_port'] ?? 0);
 
-        // An engine we have no assumption for: write whatever we were given,
-        // since silence would be a guess about software we know nothing about.
+        // An engine we have no assumption for: write whatever we were given, since silence would be a
+        // guess.
         if ($port <= 0 || $port === $assumed) {
             return null;
         }
@@ -114,14 +100,11 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
-     * The database host with the port appended, for the applications whose
-     * only channel for a port is the host field.
+     * The database host with the port appended, for the applications whose only channel for a port is
+     * the host field.
      *
-     * Joomla's CLI has no `--db-port` at all and PrestaShop's has no
-     * `--db_port`; both document `host:port` as the way — "if your MySQL
-     * server is configured on a different port than 3306, please specify it
-     * in the db_server argument". WordPress parses the same shape in
-     * `DB_HOST`.
+     * Joomla's CLI has no `--db-port` and PrestaShop's no `--db_port`; both document `host:port`.
+     * WordPress parses the same shape in `DB_HOST`.
      *
      * @param  array<string, mixed>  $context
      */
@@ -145,12 +128,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * Set one `KEY=value` line in a dotenv-style file, replacing or appending.
      *
-     * Appending when the key is absent, rather than failing: a framework may
-     * drop a key from its own example file between releases, and a site whose
-     * URL silently stayed at `localhost` is the failure this exists to stop.
-     *
-     * Returns whether anything changed, so a caller can skip the cache clear
-     * that usually follows.
+     * Appends when the key is absent (a framework may drop a key from its example file between
+     * releases), so a site's URL cannot silently stay at `localhost`. Returns whether anything
+     * changed, so a caller can skip the cache clear that usually follows.
      */
     protected function setEnvValue(Application $application, string $path, string $key, string $value): bool
     {
@@ -169,10 +149,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * How many leading path components to strip when unpacking.
      *
-     * Most applications ship inside a single wrapping directory, so the
-     * default drops it. Joomla's full package does not — its entries start at
-     * `administrator/` — and stripping there would discard the top-level
-     * directories and scatter their contents across the web root.
+     * Most applications ship in a single wrapping directory, so the default drops it. Joomla's full
+     * package starts at `administrator/`; stripping there would scatter the top-level directories'
+     * contents across the web root.
      */
     protected function stripComponents(): int
     {
@@ -182,10 +161,8 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * How this application's archive is packed.
      *
-     * Applications ship in whatever they ship in: tarballs mostly, but Mautic
-     * and Nextcloud publish zip. `unzip` has no equivalent of tar's
-     * `--strip-components`, so a zip that wraps its contents in a directory
-     * names it in {@see archiveRoot()} instead.
+     * Mostly tarballs, but Mautic and Nextcloud publish zip. `unzip` has no `--strip-components`,
+     * so a zip that wraps its contents names the directory in {@see archiveRoot()} instead.
      */
     protected function archiveFormat(): string
     {
@@ -193,14 +170,11 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
-     * The directory inside the archive holding the application, for zips that
-     * wrap their contents — null when the entries are already at the top.
+     * The directory inside the archive holding the application, for zips that wrap their contents —
+     * null when the entries are already at the top.
      *
-     * This is `stripComponents()`'s job for tarballs, done by tar itself. A
-     * zip has no such flag, so the wrapper is stepped over when copying out
-     * instead. Named explicitly rather than detected: "the single top-level
-     * directory" is a guess that silently copies the wrong tree the first time
-     * an archive ships a stray `__MACOSX` or a readme beside the folder.
+     * Named explicitly rather than detected: "the single top-level directory" silently copies the
+     * wrong tree once an archive ships a stray `__MACOSX` or a readme beside the folder.
      */
     protected function archiveRoot(): ?string
     {
@@ -210,9 +184,8 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * Where to fetch this application from.
      *
-     * Overridable because not every project publishes a stable "latest" URL;
-     * some have to be asked which version is current before anything can be
-     * downloaded.
+     * Overridable: some projects publish no stable "latest" URL and must be asked which version is
+     * current.
      */
     protected function downloadUrl(): string
     {
@@ -222,11 +195,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * How long this application's steps may take.
      *
-     * Per-installer because the applications differ by an order of magnitude:
-     * WordPress is a 25 MB archive, Nextcloud a 280 MB one, and a timeout
-     * sized for the first turns the second into a guaranteed failure on any
-     * ordinary connection. {@see ProvisioningBudget}
-     * sizes the queued job from this, so the two cannot disagree.
+     * Per-installer because applications differ by an order of magnitude (WordPress is a 25 MB
+     * archive, Nextcloud 280 MB). {@see ProvisioningBudget} sizes the queued job from this, so the
+     * two cannot disagree.
      */
     protected function timeout(): int
     {
@@ -264,13 +235,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         ], $application);
 
         $this->run('extract', ['mkdir', '-p', "{$work}/src"], $application);
-        // `-xf` rather than `-xzf`: applications ship in whatever they ship
-        // in, so tar detects the compression from the file itself and the
-        // installer does not have to know or care. Note this makes tar shell
-        // out to a decompressor the panel never declared — Nextcloud's bzip2
-        // tarball failed here on a server with no `bzip2`, reporting a
-        // missing `lbzip2` that appears nowhere in this codebase. That is why
-        // Nextcloud takes the zip: `unzip` is already a required binary.
+        // `-xf` rather than `-xzf`: tar detects the compression itself. It then shells out to a
+        // decompressor the panel never declared (Nextcloud's bzip2 tarball failed on a server with no
+        // `bzip2`), which is why Nextcloud takes the zip: `unzip` is already a required binary.
         $this->run('extract', $this->archiveFormat() === 'zip'
             // -q so a 90 MB listing doesn't end up in the ops log.
             ? ['unzip', '-q', $archive, '-d', "{$work}/src"]
@@ -279,48 +246,24 @@ abstract class AbstractSiteInstaller implements SiteInstaller
                 $this->stripComponents() > 0 ? '--strip-components='.$this->stripComponents() : null,
             ]), $application);
 
-        // Copy contents (not the directory) into the web root, overwriting so
-        // a retry converges instead of nesting.
-        //
-        // Trailing `/.` on the source, not `-T` on the destination. `-T` was
-        // tried first and reverted: it requires the destination to actually
-        // *be* a directory rather than merely resolve to one, and when
-        // web_root is empty $documentRoot IS the `current` symlink itself
-        // (ReleaseManager points it at releases/<timestamp>) — cp -T sees
-        // "not a directory" instead of following it. Resolving the symlink
-        // in PHP first doesn't work either: this runs unprivileged as the
-        // panel queue worker, which has no access into a site owned by its
-        // own system user, so realpath() silently failed and fell back to
-        // the same broken path. `src/.` sidesteps the whole problem — cp's
-        // normal (non -T) directory-destination handling follows a symlink
-        // to a directory exactly like a real one, and it runs elevated via
-        // ServerOps regardless, so permissions were never actually the
-        // blocker for the copy itself.
-        // Past the wrapping directory for a zip that has one — tar already
-        // dropped it via --strip-components, so this is null everywhere else.
+        // Copy contents (not the directory) into the web root, overwriting so a retry converges
+        // instead of nesting. Trailing `/.` on the source, not `-T` on the destination: when
+        // web_root is empty $documentRoot IS the `current` symlink, which `cp -T` rejects and which
+        // realpath() cannot resolve as the unprivileged queue worker. Past the wrapping directory
+        // for a zip that has one; tar already dropped it via --strip-components, so this is null
+        // everywhere else.
         $root = $this->archiveRoot();
         $source = $root === null ? "{$work}/src" : "{$work}/src/".trim($root, '/');
 
         $this->copyIntoSite($application, $source, $documentRoot, $work);
 
-        // The copy above runs elevated, so everything it just wrote is owned
-        // by root. Provisioning's `set_ownership` step cannot help: it runs
-        // *before* the download, so it chowns an empty directory and never
-        // sees these files.
+        // The copy above runs elevated, so everything it wrote is root-owned, and provisioning's
+        // `set_ownership` ran before the download. The installer's own commands run as the site
+        // user and a root-owned tree stops them (Mautic's cache directory). Done here so no
+        // installer has to remember its own `chown -R`.
         //
-        // Whatever the installer does next runs as the site's own user, and a
-        // root-owned tree stops it dead — Mautic's `mautic:install` failed
-        // with "Unable to create the cache directory
-        // (.../var/cache/prod)" for exactly this reason. Six installers had
-        // each grown their own `chown -R` afterwards to compensate; doing it
-        // here instead means the next one added does not have to remember,
-        // and does not get a bug report first.
-        //
-        // Trailing `/.` for the same reason the `cp` above uses it: when
-        // web_root is empty, $documentRoot IS the `current` symlink, and a
-        // plain `chown -R` on a symlink argument changes the link itself
-        // rather than descending into the release it points at — which would
-        // leave every file exactly as root-owned as before.
+        // Trailing `/.` as for the `cp` above: when web_root is empty, $documentRoot IS the `current`
+        // symlink, and a plain `chown -R` would change the link itself, not the release it points at.
         $owner = $application->systemUser->username;
         $this->run('extract', ['chown', '-R', "{$owner}:{$owner}", "{$documentRoot}/."], $application);
 
@@ -330,25 +273,15 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * Build an application into its project root with Composer.
      *
-     * The counterpart to {@see downloadAndExtract()} for the projects that
-     * publish no archive. Two things it has to get right, and both were wrong
-     * when Craft and Statamic each did this inline:
+     * The counterpart to {@see downloadAndExtract()} for projects that publish no archive. Two
+     * things it has to get right:
      *
-     *  - **`composer create-project` refuses a directory that is not empty**,
-     *    and the project root never is by the time an installer runs. Both of
-     *    these applications serve from a subdirectory (`web/`, `public/`), so
-     *    the provisioner has already created that subdirectory *inside* the
-     *    project root and written a placeholder into it. Composer stopped with
-     *    "Project directory ... is not empty" before it fetched a single
-     *    package, which made one-click Craft and Statamic fail every time.
-     *    Building into a temporary directory and copying the contents in
-     *    sidesteps it, and is also what makes a retry after a failure converge
-     *    rather than half-build.
-     *  - **Composer runs as the site user**, like every other application's own
-     *    tooling here. Run as the panel it writes a root-owned tree and runs
-     *    the project's own post-install scripts as root — Statamic's
-     *    `create-project` runs several — which is exactly the privilege the
-     *    rest of this class is careful not to hand third-party code.
+     *  - **`composer create-project` refuses a directory that is not empty**, and the project root
+     *    never is by now (the provisioner already put a placeholder in `web/` or `public/`). So it
+     *    builds into a temporary directory and copies the contents in, which also makes a retry
+     *    converge rather than half-build.
+     *  - **Composer runs as the site user**: as the panel it would write a root-owned tree and run
+     *    the project's own post-install scripts as root.
      *
      * @param  array<int, string>  $flags  passed to create-project verbatim
      *
@@ -374,25 +307,14 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // as the site user and has to be able to write into it.
         $this->run('download', ['chown', "{$owner}:{$owner}", $work], $application);
 
-        // Run *in* the work directory rather than wherever the queue worker
-        // happens to be: that is the panel's own application root, and Composer
-        // reads configuration from its working directory. An empty directory is
-        // fine as a create-project target — only a non-empty one is refused.
+        // Run *in* the work directory: the queue worker's own cwd is the panel's application root,
+        // and Composer reads configuration from its working directory. An empty directory is fine
+        // as a create-project target.
         //
-        // 🔴 **Under the site's PHP, not the server's.** Composer is a PHAR
-        // whose shebang is `#!/usr/bin/env php`, so it starts under whatever
-        // `php` is first on PATH — the server default — no matter which
-        // version the site was created with. Composer then resolves the
-        // package against *that* interpreter, and for Craft it does not fail:
-        // it **resolves backwards** and installs Craft 4 on a site the panel
-        // reports as Craft 5, with no error anywhere. Statamic is the same
-        // shape.
-        //
-        // The other nine PHP installers were never exposed to this because
-        // they name an interpreter explicitly through `phpCommand()`. This is
-        // the one path where a program chooses its own PHP, so it is the one
-        // path that needs the shim — the same shim `GitDeployer` uses, for the
-        // same reason, extracted rather than copied.
+        // Under the site's PHP, not the server's: Composer's shebang is `#!/usr/bin/env php`, so it
+        // starts under the server default and resolves packages against that interpreter. For Craft
+        // that silently resolves *backwards* (Craft 4 on a site reported as Craft 5). The shim is
+        // the same one `GitDeployer` uses.
         $this->runAsSiteUser('download', $application, array_merge(
             $this->shim->envPrefixFor($application),
             [
@@ -402,11 +324,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
             $flags,
         ), null, $work);
 
-        // The placeholder lives in the document root, which is a directory
-        // inside what is about to be copied over. Both of these projects ship
-        // their own front controller there and would overwrite it anyway, but
-        // relying on that would make the next Composer application's behaviour
-        // depend on whether it happens to ship an `index.php`.
+        // The placeholder lives in the document root, inside what is about to be copied over. These
+        // projects ship their own front controller there, but relying on that would make the next
+        // Composer application depend on whether it happens to ship an `index.php`.
         $this->run('extract', ['rm', '-f', "{$documentRoot}/index.php", "{$documentRoot}/index.html"], $application);
 
         // Contents, not the directory — `{$work}/.` for the same reason
@@ -433,11 +353,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // RuntimeOwnership::secretFileMode().
         $mode ??= $this->ownership->secretFileMode($application);
 
-        // Written and narrowed as the site user: every path here is inside a
-        // tree that user already owns (extract() chowns it), and root's `tee`
-        // and `chown` followed a link planted at the path — the class of bug
-        // found in `.panel` on 2026-09-29. As the user, a link reaches only
-        // what they could already write.
+        // Written and narrowed as the site user: every path here is in a tree that user already
+        // owns, and root's `tee` and `chown` would follow a link planted at the path. As the user,
+        // a link reaches only what they could already write.
         $this->runAsSiteUser('configure', $application, ['tee', $path], input: $contents);
         $this->runAsSiteUser('configure', $application, ['chmod', $mode, $path]);
 
@@ -452,45 +370,25 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
-     * Owner and group for a secret file: the site user, and whoever actually
-     * executes PHP for this site.
+     * Owner and group for a secret file: the site user, and whoever actually executes PHP for this
+     * site.
      *
-     * Two accounts need this file and they are not always the same one.
-     * Isolation gives a site its own PHP-FPM pool running as its own user;
-     * without it PHP runs under the shared, server-wide pool as the web
-     * server's own account. A 0640 file owned by the site user is unreadable
-     * by that pool — confirmed in production as phpMyAdmin's "Existing
-     * configuration file ... is not readable" on a non-isolated site.
+     * Isolation gives a site its own PHP-FPM pool running as its own user; without it PHP runs
+     * under the shared pool as the web server's account, and a 0640 file owned by the site user is
+     * unreadable by it (phpMyAdmin's "configuration file is not readable"). Handing the whole file
+     * to `www-data` instead breaks the application's own CLI, which runs **as the site user** right
+     * afterwards.
      *
-     * Handing the whole file to `www-data` fixed that and broke the other
-     * side: the application's own CLI runs **as the site user** immediately
-     * afterwards, and `wp core install`, `craft install`, `mautic:install` and
-     * Moodle's installer all read the file this method just made unreadable to
-     * them. Nobody saw it on nginx, because `ApplicationProvisioner` creates a
-     * pool before installing and PHP-FPM is the only stack `PoolManager` calls
-     * supported() for — so on OpenLiteSpeed, where no pool is ever made, every
-     * one of those installs failed and only there.
-     *
-     * So: **owner is always the site user, group is whoever runs PHP.** At
-     * 0640 that satisfies both, and it stops being a choice between them.
+     * So: **owner is always the site user, group is whoever runs PHP.** At 0640 that satisfies both.
      */
     private function runtimePhpOwner(Application $application): string
     {
-        // Only a *PHP* site's secrets are read by php-fpm. A node site has no
-        // pool at all — its systemd unit runs as the site's own user — and
-        // `isolated_at` is never set for one, because that flag is written by
-        // the create_php_pool step which only runs for serving_profile=php.
-        //
-        // So the www-data branch was being taken for every node site, handing
-        // its `.env` to a user that has nothing to do with running it. systemd
-        // reads EnvironmentFile as root and so still started the app, which is
-        // what made this quiet: the site came up, and only the things running
-        // *as the site* — the file manager, the app's own tooling — found a
-        // file they could neither read nor write.
-        // Through RuntimeOwnership: `isolated_at` records an FPM pool, and on
-        // OpenLiteSpeed it is null for every site — so this handed the group
-        // to www-data there, an account that does not run PHP on that stack,
-        // breaking the very rule this docblock states.
+        // Only a *PHP* site's secrets are read by php-fpm: a node site has no pool, and
+        // `isolated_at` is only set for serving_profile=php, so the www-data branch wrongly handed
+        // a node site's `.env` to an unrelated user (systemd still read it as root, which hid the
+        // bug). Through RuntimeOwnership: `isolated_at` records an FPM pool and is null for every
+        // site on OpenLiteSpeed, which would have handed the group to an account that does not run
+        // PHP there.
         return $application->systemUser->username.':'.$this->ownership->secretFileGroup($application);
     }
 
@@ -502,24 +400,17 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     /**
      * Copy a prepared tree into the site — as the site's own user.
      *
-     * The destination is not always new. "Retry setup" copies into a document
-     * root the site user has had all along, and `cp` run as root writes
-     * *through* a symlink it finds at a destination path: a link planted at
-     * `license.txt`, or a directory link where the archive has a folder,
-     * redirected root's copy to a file of the user's choosing — the class of
-     * bug found in `.panel` on 2026-09-29. As the user, a planted link reaches
-     * only what the user could already write.
+     * The destination is not always new ("Retry setup" copies into a document root the user has had
+     * all along), and `cp` run as root writes *through* a symlink at a destination path, so a
+     * planted link could redirect root's copy to a file of the user's choosing. As the user, a link
+     * reaches only what the user could already write.
      *
-     * The staging tree is handed to the user first so they can read it; it is
-     * the panel's own temporary directory, under a name nobody could guess.
-     *
-     * So is the destination directory itself, and only that: where the web
-     * root is a subfolder (Statamic, Craft serve `public_html/public`) the
-     * provisioner leaves `public_html` root-owned, and the user's `cp` was
-     * refused on every file — every Composer install failed at `extract`
-     * (found live 2026-09-29). Root copying used to hide it, and the
-     * `chown -R` afterwards is what made it the user's. `-h`, so a link at
-     * that path is the one thing changed, never what it points to.
+     * The staging tree is handed to the user first so they can read it (it is the panel's own
+     * temporary directory, under a name nobody could guess). So is the destination directory
+     * itself, and only that: where the web root is a subfolder (Statamic, Craft serve
+     * `public_html/public`) the provisioner leaves `public_html` root-owned and the user's `cp`
+     * would be refused. `-h`, so a link at that path is the one thing changed, never what it points
+     * to.
      *
      * @param  string  $work  the staging directory to hand over (the source or its parent)
      */
@@ -562,11 +453,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
                 'feature' => 'application',
                 'op' => "installer.{$step}",
                 'application' => $application->id,
-                // Third-party installers report what they did on stdout and
-                // are not reliable about exit codes — PrestaShop's returned 0
-                // having installed nothing. These commands are quiet when they
-                // work, so keeping their output costs little and is the only
-                // way to answer why one did nothing.
+                // Third-party installers report on stdout and are unreliable about exit codes
+                // (PrestaShop returned 0 having installed nothing). They are quiet when they work,
+                // so keeping the output is cheap and the only way to answer why one did nothing.
                 'log_output' => true,
             ],
             timeout: $this->timeout(),
@@ -575,25 +464,19 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         );
 
         if ($result->failed()) {
-            // Classified here rather than at any one call site, because the
-            // failure this names is not specific to a command: any step can be
-            // chosen by the OOM killer on a small server, and every one of
-            // them reaches this line. Classifying in `NodeBbInstaller` — where
-            // the problem was found — would have fixed the build and left
-            // `npm install`, `composer create-project` and the rest reporting
-            // a reference to an empty log.
+            // Classified here, not at one call site: any step can be chosen by the OOM killer on a
+            // small server, and every one reaches this line. Classifying in one installer would
+            // leave `npm install`, `composer create-project` and the rest reporting a reference to
+            // an empty log.
             throw ProvisioningFailedException::fromResult($step, $result, $command);
         }
 
-        // Every command an installer runs arrives here, so this one line is
-        // what gives all of them live progress — no installer needs to keep a
-        // list, and none can forget to. Recorded after success: a step the user
-        // is shown as done has to actually be done.
+        // Every installer command arrives here, so this one line gives all of them live progress.
+        // Recorded after success: a step shown as done has to actually be done.
         $this->progress->record($step);
 
-        // Returned so a caller that has to *verify* the command's effect can
-        // report the failure against the command's own log entry, rather than
-        // against whatever probe discovered the problem afterwards.
+        // Returned so a caller that has to *verify* the command's effect can report the failure
+        // against the command's own log entry.
         return $result;
     }
 }

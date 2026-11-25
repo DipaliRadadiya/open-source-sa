@@ -13,20 +13,11 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Per-application fail2ban.
+ * Per-application fail2ban: raw INI for one jail + one filter, scoped to the site's own access log.
  *
- * Stores raw INI for one jail + one filter, scoped to the application's own
- * access log. A different shape from the server-level feature: this watches
- * one site's log, not system auth logs, and the jail name and file paths are
- * derived from the application slug so a rename moves the file rather than
- * orphaning it under the old name.
- *
- * Writes the jail to /etc/fail2ban/jail.d/ and the filter to
- * /etc/fail2ban/filter.d/ — both named with the application's unique safe
- * slug — and reloads the daemon so the new
- * config is live by the time the response returns. Reload, not restart, for
- * the same reason the server-level manager uses reload: a restart forgets
- * every active ban, and the whole point of fail2ban is the bans it remembers.
+ * The jail goes to /etc/fail2ban/jail.d/ and the filter to filter.d/, named from the application's
+ * slug (so a rename moves the files), and the daemon is reloaded so the config is live on return.
+ * Reload, not restart: a restart forgets every active ban.
  */
 class ApplicationFail2banManager
 {
@@ -34,14 +25,9 @@ class ApplicationFail2banManager
     private ?bool $installed = null;
 
     /**
-     * Every name this feature writes — jail, filter, both files — starts
-     * here. They used to be the bare site slug, so a site called `sshd`,
-     * `recidive` or `nginx-http-auth` overwrote fail2ban's own filter of that
-     * name and replaced the server's jail: SSH protection gone, the panel
-     * saying "configured successfully". A list of reserved names would be
-     * out of date with the next fail2ban release; nothing fail2ban ships
-     * starts with `panel-`, and the panel's own shipped filters are
-     * `panel-app-*`, so this cannot collide with either.
+     * Prefix of every name this feature writes (jail, filter, files). With bare slugs a site called
+     * `sshd` or `recidive` overwrote fail2ban's own filter and jail. Nothing fail2ban ships starts
+     * with `panel-`, and the panel's own filters are `panel-app-*`, so this cannot collide.
      */
     public const NAME_PREFIX = 'panel-site-';
 
@@ -51,14 +37,12 @@ class ApplicationFail2banManager
     ) {}
 
     /**
-     * Whether fail2ban is installed and the daemon is reachable.
-     * Cached for the lifetime of the request — multiple calls per page load.
+     * Whether fail2ban is installed and the daemon is reachable (cached per instance).
      */
     public function installed(): bool
     {
-        // Per instance, not a function `static`: that one lives as long as the
-        // process, so a queue worker that once saw fail2ban missing went on
-        // saying so after it was installed (found 2026-11-18).
+        // Per instance, not a function `static`: a static outlives the request in a queue worker and
+        // would keep saying "missing" after fail2ban was installed.
         if ($this->installed !== null) {
             return $this->installed;
         }
@@ -73,9 +57,8 @@ class ApplicationFail2banManager
     }
 
     /**
-     * The fail2ban jail name for one application. Always derived from the
-     * slug so the file written by enable() can be addressed by the same name
-     * by disable() and by any future reload.
+     * The fail2ban jail name for one application, derived from the slug so enable() and disable()
+     * address the same file.
      */
     public function jailName(Application $application): string
     {
@@ -97,9 +80,8 @@ class ApplicationFail2banManager
     }
 
     /**
-     * The path the jail file is written to, given the application's slug.
-     * Public so the controller can echo the absolute path in test responses
-     * without re-implementing the convention.
+     * The path the jail file is written to. Public so the controller can echo it without
+     * re-implementing the convention.
      */
     public function getJailPath(Application $application): string
     {
@@ -122,27 +104,15 @@ class ApplicationFail2banManager
     }
 
     /**
-     * The access log path for this site's web server. Falls back to the site's
-     * own log directory so an unprovisioned application still has something to
-     * point at — enable() writes the file before the log exists, and fail2ban
-     * reads the path lazily anyway.
-     *
-     * The fallback used to be `/var/log/nginx/{slug}.access.log`, which is not
-     * where any of the three drivers has put a log since they moved into the
-     * site's own directory. It was unreachable — every driver returns an
-     * `access` key — but "unreachable" was luck rather than construction, and
-     * this is the same shape as the jail body that shipped with nginx's path
-     * baked into it and watched a file that does not exist on OpenLiteSpeed.
-     * A default that names one web server is a bug waiting for a fourth driver
-     * that forgets the key.
+     * The access log path for this site's web server. Falls back to the site's own log directory,
+     * so an unprovisioned application still has a path (enable() writes before the log exists).
+     * A default naming one web server's path is a bug waiting for a new driver that forgets the key.
      */
     public function getLogPath(Application $application): string
     {
         $paths = $this->webServers->driver()->logPaths($application);
 
-        // Both access logs, HTTP and HTTPS, the way v7's jail reads them: with
-        // HTTPS forced every real request is in `access-ssl.log`, and a jail
-        // watching only `access.log` would never see a login attempt.
+        // Watch both HTTP and HTTPS logs: with HTTPS forced, every real request is in access-ssl.log.
         if (isset($paths['access'], $paths['access_ssl'])) {
             return dirname($paths['access']).'/access*log';
         }
@@ -151,11 +121,8 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Render the jail INI by replacing the four template placeholders with
-     * values from this application. The caller supplies the content they
-     * want rendered — the function is a deterministic string transform with
-     * no I/O — so the controller can show the user exactly what would be
-     * written before it actually is.
+     * Render the jail and filter INI by replacing the template placeholders with this application's
+     * values. A pure string transform (no I/O), so the controller can show what would be written.
      *
      * @return array<string, string>
      */
@@ -173,15 +140,12 @@ class ApplicationFail2banManager
         ];
 
         return [
-            // The ban itself is the panel's, never the jail author's: for this
-            // site only, in its own web-server config. The server's default
-            // action banned at the firewall on 80/443, which took the address
-            // off every site and off the panel (frontend QA FB-K). `action`
-            // is not an allowed jail key, so this is the only one.
+            // The ban is the panel's, never the jail author's: this site only, in its own web-server
+            // config. The server's default action banned at the firewall on 80/443, which cut the
+            // address off every site and the panel. `action` is not an allowed jail key.
             'jail' => $withBanAction && $this->legacyName($application) === null
                 ? rtrim(strtr($jailContent, $replace))."\n".'action   = '.self::BAN_ACTION.'[slug="'.basename($application->siteRulesPath()).'"]'."\n"
-                // What the form shows and saves: without the panel's own
-                // line, which the form may not set.
+                // What the form shows and saves: without the panel's own line.
                 : strtr($jailContent, $replace),
             'filter' => strtr($filterContent, $replace),
         ];
@@ -191,9 +155,8 @@ class ApplicationFail2banManager
     public const BAN_ACTION = 'panel-site-ban';
 
     /**
-     * Write the ban action and the script it calls, when either differs from
-     * what the panel would write. Both are the server's, shared by every site
-     * jail, and rendered for the web server this server runs.
+     * Write the ban action and the script it calls when either differs from what the panel would
+     * write. Both are server-wide, shared by every site jail, and rendered for this web server.
      */
     public function ensureBanTools(): void
     {
@@ -228,34 +191,17 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Default jail INI for new applications. Matches the convention the
-     * commercial API exposes — WordPress-friendly logpath and the
-     * slug-based filter reference.
-     *
-     * **`backend = auto` is stated, not inherited.** A jail that names a
-     * `logpath` and takes its backend from `[DEFAULT]` is one edit away from
-     * reading the journal instead, at which point it matches nothing and bans
-     * nobody while the panel reports it enabled. That is exactly what happened
-     * — `jail.local` carried `backend = systemd` in `[DEFAULT]`, so every jail
-     * generated here watched a file fail2ban never opened. Removing that line
-     * fixed it; saying `auto` here means a future `[DEFAULT]` cannot break it
-     * again. This is the second time this file has shipped a jail that looked
-     * enabled and banned nobody; see `defaultFilterContent()` for the first.
-     */
-    /**
-     * The only settings a site's own jail may set. Tuning and scope — what to
-     * watch, how many failures, for how long — and nothing that chooses what
-     * fail2ban *does* about a ban: that stays the server's default action.
-     * Everything in defaultJailContent() is here.
+     * The only settings a site's own jail may set: tuning and scope (what to watch, how many
+     * failures, for how long), never what fail2ban does about a ban. Everything in
+     * defaultJailContent() is here.
      */
     public const ALLOWED_JAIL_KEYS = [
         'enabled', 'port', 'filter', 'logpath', 'maxretry', 'findtime', 'bantime', 'ignoreip', 'backend',
     ];
 
     /**
-     * Settings in a jail that are not in ALLOWED_JAIL_KEYS, lowercased, in
-     * order of appearance. Continuation lines (indented) belong to the key
-     * above them and are not keys of their own.
+     * Settings in a jail that are not in ALLOWED_JAIL_KEYS, lowercased, in order of appearance.
+     * Indented continuation lines belong to the key above them.
      *
      * @return array<int, string>
      */
@@ -282,6 +228,12 @@ class ApplicationFail2banManager
         return array_values(array_unique($found));
     }
 
+    /**
+     * Default jail INI for new applications (WordPress-friendly logpath, slug-based filter).
+     *
+     * `backend = auto` is stated, not inherited: a jail that takes its backend from `[DEFAULT]` can
+     * end up reading the journal instead of its logpath, matching nothing while shown as enabled.
+     */
     public function defaultJailContent(): string
     {
         return <<<'INI'
@@ -299,31 +251,15 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Default filter INI for new applications. Two rules — WordPress's login
-     * and XML-RPC endpoints — and an empty ignore list.
+     * Default filter INI for new applications: WordPress's login and XML-RPC endpoints, and an
+     * empty ignore list.
      *
-     * 🔴 **There used to be a third, `POST .*wp-admin.*`, and it banned the
-     * site's own administrators.** Everything a logged-in user does in the
-     * dashboard is a POST under `/wp-admin/`: the Heartbeat API calls
-     * `admin-ajax.php` every 15–60 seconds while a screen is open, saving a
-     * post is `post.php`, saving settings is `options.php`. Three in ten
-     * minutes (the jail's `maxretry`/`findtime`) is a normal minute of
-     * editing, so the owner was locked out of their own site shortly after
-     * turning protection on (measured with `fail2ban-regex` on the Apache
-     * test box, 2026-09-28). A brute force needs the login form or XML-RPC —
-     * `wp-admin` itself requires the session it would be trying to get — so
-     * the rule protected nothing the other two did not. The filter the
-     * repository ships for WordPress, `panel-app-wplogin.conf`, never had it.
+     * 🔴 No `POST .*wp-admin.*` rule: everything a logged-in admin does in the dashboard is a POST
+     * under /wp-admin/ (Heartbeat's admin-ajax.php, post.php, options.php), so it banned the site's
+     * own administrators. A brute force needs the login form or XML-RPC.
      *
-     * **`[Definition]`, not `[{name}]`.** A fail2ban *filter* names its
-     * section `Definition`; only a *jail* is named after itself. This emitted
-     * the jail name, so the file had no `Definition` section, fail2ban found
-     * no `failregex` in it, and the jail banned nobody — while the panel
-     * reported it enabled.
-     *
-     * The two filters this repository already ships,
-     * `resources/fail2ban/panel-app-generic.conf` and `panel-app-wplogin.conf`,
-     * both get this right; only the default generated here did not.
+     * The section must be `[Definition]`, not `[{name}]` (only a jail is named after itself);
+     * otherwise fail2ban finds no `failregex` and the jail bans nobody while shown as enabled.
      */
     public function defaultFilterContent(): string
     {
@@ -337,15 +273,10 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Earlier defaults, replaced when a site still has one word for word.
-     *
-     * Until 2026-09-28 it had a `wp-admin` rule that banned logged-in
-     * administrators. Until 2026-10-02 it counted every login POST, and a
-     * successful login is one too: an admin who signed in three times in ten
-     * minutes was banned for an hour (bug #93). WordPress answers a wrong
-     * password with 200 and a right one with a 302 redirect (measured on the
-     * nginx test server), so only 200 counts now — as in v7. XML-RPC answers
-     * 200 either way, so every XML-RPC POST still counts, also as in v7.
+     * Earlier defaults, replaced when a site still has one word for word: one with a `wp-admin`
+     * rule that banned logged-in administrators, and one that counted every login POST, so a
+     * successful login counted too. WordPress answers a wrong password with 200 and a right one
+     * with a 302, so only 200 counts now; XML-RPC answers 200 either way, so every POST counts.
      */
     private const LEGACY_DEFAULT_FILTERS = [
         <<<'INI'
@@ -364,14 +295,11 @@ class ApplicationFail2banManager
     ];
 
     /**
-     * Replace a site's filter with the current default when it is still, word
-     * for word, the old one.
+     * Replace a site's filter with the current default when it is still, word for word, an old one.
      *
-     * Only then: a filter the user edited is theirs, and a rule they chose to
-     * keep is not the panel's to remove. Whitespace is compared loosely —
-     * the form round-trips the text and may re-indent it — but every rule
-     * must match. Written through `enableForApp()`, so a reload that fails
-     * restores the previous file.
+     * A filter the user edited is theirs and is left alone. Whitespace is compared loosely (the form
+     * may re-indent it), but every rule must match. Written through `enableForApp()`, so a failed
+     * reload restores the previous file.
      *
      * @throws Fail2banOperationException
      */
@@ -399,20 +327,10 @@ class ApplicationFail2banManager
     /**
      * Test the rendered config the way fail2ban will actually load it.
      *
-     * 🔴 This staged the two files in a temp directory and then ran a bare
-     * `fail2ban-client -t` — which tests `/etc/fail2ban`, not the stage. The
-     * live config was valid, so *every* submission passed: `[broken` was
-     * accepted, written over the live jail and filter, and only the reload
-     * after it failed. Reproduced on a real server (2026-09-23). And once the
-     * live files were broken, every later save failed the "test" — including
-     * the correct one that would have fixed them.
-     *
-     * Now the whole config tree is copied, the site's two files replaced in
-     * the copy, and fail2ban pointed at it with `-c`. Measured on the same
-     * server: a broken jail exits 255, the real one 0, and a jail whose log
-     * file does not exist fails too — while the live tree is never touched.
-     * Root copies it (the tree is root's), and the copy is removed however
-     * the test ends.
+     * Copies the whole config tree, replaces the site's two files in the copy and points
+     * `fail2ban-client -t` at it with `-c`; the live tree is never touched. A bare `-t` tests
+     * /etc/fail2ban, not the stage, so every submission passed and broken config reached the live
+     * files. Root copies the tree (it is root's); the copy is removed however the test ends.
      *
      * @return array{testOk: bool, output: string}
      */
@@ -455,8 +373,7 @@ class ApplicationFail2banManager
 
             return [
                 'testOk' => $result->ok,
-                // The stage is an implementation detail; the user should read
-                // the paths their config will really live at.
+                // The stage is an implementation detail; show the paths the config will really live at.
                 'output' => str_replace($stage, $root, trim($result->output()."\n".$result->errorOutput())),
             ];
         } finally {
@@ -465,19 +382,17 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Write the rendered jail + filter to their final paths and reload
-     * fail2ban. Called only after testConfigs() passed.
+     * Write the rendered jail + filter to their final paths and reload fail2ban. Called only after
+     * testConfigs() passed.
      *
-     * The previous files are kept until the reload has succeeded, and put
-     * back — with a second reload — if it does not: a jail file fail2ban
-     * cannot load is one restart away from fail2ban not starting at all,
-     * and with it the sshd jail every other site relies on.
+     * The previous files are kept until the reload succeeds and put back (with a second reload) if
+     * it does not: a jail file fail2ban cannot load is one restart from fail2ban not starting, and
+     * with it the sshd jail.
      */
     public function enableForApp(Application $application, string $jailContent, string $filterContent, bool $keepCopy = true): void
     {
-        // Every path that writes a site jail comes through here, including
-        // re-enabling one saved before the allowlist existed — refused with
-        // the same message the form gives.
+        // Every write of a site jail passes here, including re-enabling one saved before the
+        // allowlist existed; refused with the same message the form gives.
         $disallowed = $this->disallowedJailKeys($jailContent);
 
         if ($disallowed !== []) {
@@ -530,20 +445,11 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Remove the site's jail and filter, and reload so the change is visible
-     * immediately.
+     * Remove the site's jail and filter, and reload so the change is live at once.
      *
-     * The filter goes too. It used to stay, because under the bare slug there
-     * was no telling whether another jail shared it — and a filter left behind
-     * under a name like `sshd` was what made a collision permanent. Under the
-     * prefix it belongs to this site alone.
+     * A site still on its old, unprefixed name (not yet moved by `fail2ban:resync`) loses those
+     * files too, with the same care `migrateLegacy()` takes over a filter the fail2ban package owns.
      *
-     * A site that still has files under its old, unprefixed name (enabled
-     * before the prefix, not yet moved by `fail2ban:resync`) loses those as
-     * well, with the same care `migrateLegacy()` takes over a filter the
-     * fail2ban package owns.
-     */
-    /**
      * @param  bool  $reload  false when fail2ban is not installed: the files go,
      *                        and there is no daemon to tell.
      */
@@ -577,8 +483,8 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Kept for callers of the previous namespace migration API. Existing v7
-     * jails now remain in place; this method deliberately performs no I/O.
+     * Kept for callers of the previous namespace migration API. Existing v7 jails stay in place;
+     * this method performs no I/O.
      *
      * @return array{moved: bool, damaged_filter: string|null}
      */
@@ -615,10 +521,6 @@ class ApplicationFail2banManager
         $this->must($this->client(['reload']));
     }
 
-    /**
-     * The unprefixed name this site's files were written under, when it has
-     * any. Null for a site with no jail or one already on the prefix.
-     */
     /**
      * A stored bare name is not authority to overwrite a system or foreign
      * file. Require package-negative, root-owned regular files matching the
@@ -697,21 +599,23 @@ class ApplicationFail2banManager
         ])]);
     }
 
+    /**
+     * The unprefixed name this site's files were written under; null for no jail or one already
+     * on the prefix.
+     */
     private function legacyName(Application $application): ?string
     {
         $stored = $application->fail2ban_jail_name;
 
-        // Exact, not a prefix test: a v7 site whose own slug starts with
-        // `panel-site-` stored that bare slug, which is not the generated
-        // `panel-site-{slug}` and must still prove its ownership.
+        // Exact, not a prefix test: a v7 site whose slug starts with `panel-site-` stored that bare
+        // slug, which is not the generated `panel-site-{slug}` and must still prove its ownership.
         return $stored === $this->slug($application) ? $stored : null;
     }
 
     /**
-     * Whether a fragment defines a section called $name. Errs toward yes:
-     * Python's ConfigParser takes everything up to the last `]` as the
-     * header and ignores what follows, and fail2ban strips `#`/`;` inline
-     * comments, so `[shop] # note` and `[ shop ]` both count.
+     * Whether a fragment defines a section called $name. Errs toward yes: ConfigParser takes
+     * everything up to the last `]` as the header and fail2ban strips `#`/`;` inline comments, so
+     * `[shop] # note` and `[ shop ]` both count.
      */
     private function definesSection(string $content, string $name): int
     {
@@ -736,11 +640,9 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Whether a file under /etc/fail2ban came from the fail2ban package.
-     * Asked of dpkg rather than a list: a list is out of date with the next
-     * release. When dpkg cannot answer, the file is treated as owned — the
-     * cost of keeping a stray file is nothing, the cost of deleting a real
-     * one is fail2ban not starting.
+     * Whether a file under /etc/fail2ban came from the fail2ban package, asked of dpkg rather than a
+     * list (a list goes stale). When dpkg cannot answer the file is treated as owned: keeping a
+     * stray file costs nothing, deleting a real one stops fail2ban from starting.
      *
      * @param  array<string, mixed>  $context
      */
@@ -752,10 +654,9 @@ class ApplicationFail2banManager
             return true;
         }
 
-        // "Not owned" is exit 1 *with* a line on stderr — measured on Ubuntu
-        // 26.04 — so the generic `answered` (exit 1 and silent) never sees it,
-        // and reading that as "could not find out" made every file look
-        // package-owned. Anything else, sudo refusing included, stays unknown.
+        // "Not owned" is exit 1 *with* a line on stderr, so the generic `answered` (exit 1 and
+        // silent) never sees it, and reading that as "unknown" made every file look package-owned.
+        // Anything else, sudo refusing included, stays unknown.
         return ! ($result->exitCode() === 1
             && str_contains($result->errorOutput(), 'no path found matching pattern'));
     }
@@ -775,12 +676,11 @@ class ApplicationFail2banManager
     /**
      * Copy a file aside before it is overwritten; null when there was none.
      *
-     * `.panel-bak` because fail2ban only reads `*.conf` and `*.local`, so the
-     * copy sitting beside the original is never loaded as a second jail.
+     * `.panel-bak` because fail2ban only reads `*.conf` and `*.local`, so the copy beside the
+     * original is never loaded as a second jail.
      *
-     * `$keepCopy` false (2026-10-29, the user's choice): no file is written.
-     * The old text is held here for the reload and written back from memory
-     * if fail2ban refuses the new one.
+     * With `$keepCopy` false no file is written: the old text is held in memory for the reload and
+     * written back if fail2ban refuses the new one.
      *
      * @param  array<string, mixed>  $context
      * @return array{file?: string, content?: string}|null
@@ -849,8 +749,7 @@ class ApplicationFail2banManager
     }
 
     /**
-     * fail2ban's log lines without the timestamp and process prefix, which
-     * say nothing to the person who wrote the jail.
+     * fail2ban's log lines without the timestamp and process prefix.
      */
     private function readable(string $output): string
     {

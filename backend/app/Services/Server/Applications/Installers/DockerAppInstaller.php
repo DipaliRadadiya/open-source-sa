@@ -22,28 +22,20 @@ use Throwable;
 /**
  * Turns a one-click Docker app into a compose file this site can run.
  *
- * One installer for every Docker app, not one per app: the differences between
- * the apps are entirely in their recipes — template, port, volumes,
- * secrets — and a class per app would be five methods of delegation each.
- * Contrast the PHP one-clicks, where each app genuinely runs different commands.
+ * One installer for every Docker app: the differences are entirely in their recipes (template,
+ * port, volumes, secrets). It implements {@see SiteInstaller} directly rather than extending
+ * `AbstractSiteInstaller`, whose constructor wants a process supervisor, a PHP shim and runtime
+ * ownership that a container does not use.
  *
- * It implements {@see SiteInstaller} directly rather than extending
- * `AbstractSiteInstaller`, whose constructor wants a process supervisor, a PHP
- * shim and runtime ownership. A container needs none of those, and inheriting
- * them to leave them unused would suggest this participates in the host runtime.
+ * It renders the app's compose into `$application->compose` and records the volumes on
+ * `volume_mounts`. It does not create the volumes or start anything:
+ * `DockerResources::ensureFor()` and `ContainerSupervisor::apply()` do that on the provisioning
+ * path right after this.
  *
- * **What it writes, and what it deliberately does not do.** It renders the
- * app's compose into `$application->compose` and records the volumes on
- * `volume_mounts`. It does not create the volumes and does not start anything:
- * `DockerResources::ensureFor()` creates them and `ContainerSupervisor::apply()`
- * brings the site up, both already on the provisioning path immediately after
- * this. Reaching for them here would be a second place that starts containers.
- *
- * **Why the rendered file is stored per site.** Ordinary container deploys use
- * the site's stored compose rather than silently re-rendering current defaults.
- * URL-aware recipes are re-rendered by `syncUrl()` on domain changes and during
- * `sites:resync`, including panel upgrades. A recipe template or image-default
- * change can therefore reach those existing sites and must preserve compatibility.
+ * The rendered file is stored per site: ordinary container deploys use the stored compose rather
+ * than silently re-rendering current defaults. URL-aware recipes are re-rendered by `syncUrl()` on
+ * domain changes and during `sites:resync`, so a recipe template or image-default change can reach
+ * existing sites and must preserve compatibility.
  */
 class DockerAppInstaller implements SiteInstaller
 {
@@ -56,11 +48,8 @@ class DockerAppInstaller implements SiteInstaller
     ) {}
 
     /**
-     * Every Docker app, so the registry maps them all here.
-     *
-     * The interface names ONE type because the PHP installers are one-to-one.
-     * This is the type the registry asked for, resolved per application in
-     * `install()`, and the value here is only ever read for logging.
+     * Every Docker app, so the registry maps them all here. The type is resolved per application
+     * in `install()`; this value is only read for logging.
      */
     public function siteType(): string
     {
@@ -68,9 +57,8 @@ class DockerAppInstaller implements SiteInstaller
     }
 
     /**
-     * No. A container brings its own database — that is the premise of the
-     * stack, and why a Docker server manages no engine for the panel to create
-     * one in.
+     * No. A container brings its own database, so a Docker server manages no engine for the panel
+     * to create one in.
      */
     public function needsDatabase(): bool
     {
@@ -102,43 +90,28 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * Rewrite the URL the app was told about, when its domain changes.
      *
-     * Ghost builds every link and redirect from `url`, so a primary-domain
-     * change leaves a site serving pages whose assets and login point at the old
-     * host — which reads as a broken theme, not a stale setting. The compose file
-     * holds that value, so reconciling it means re-rendering and bringing the
-     * container up again.
+     * Ghost builds every link and redirect from `url`, so a primary-domain change leaves assets
+     * and login pointing at the old host. The compose file holds that value, so reconciling it
+     * means re-rendering and bringing the container up again.
      */
     public function syncUrl(Application $application, string $url): void
     {
         $type = $this->typeFor($application);
 
-        // Nothing to reconcile for an app that is never told its URL — Metabase
-        // and Wiki.js ask for theirs in their own setup wizard and keep it in the
-        // database, so a re-render would rewrite the file to say the same thing
-        // and restart a container for no reason.
+        // Nothing to reconcile for an app that is never told its URL (Metabase, Wiki.js keep it in
+        // their database), so a re-render would restart a container for no reason.
         if ($type === null || $type->urlEnvKey() === null) {
             return;
         }
 
-        // No `str_contains($compose, 'url:')` guard. That was the first version
-        // and it was wrong for the second app added: Ghost's key is `url` and
-        // Strapi's is `URL`, so the check silently skipped Strapi and a renamed
-        // site kept pointing its admin panel at the old host. Re-rendering
-        // unconditionally is also simply correct — the file is derived entirely
-        // from the record, so rendering it again cannot lose anything.
+        // No `str_contains($compose, 'url:')` guard: the key differs per app (`url` vs `URL`), and
+        // re-rendering unconditionally is correct since the file derives entirely from the record.
         $secrets = $this->storedSecrets($application);
 
-        // Two different situations, and only one of them is a reason to stop.
-        //
-        // An app that HAS secrets and has none stored predates the column, or was
-        // not installed by this installer: re-rendering would generate fresh ones
-        // and rotate half a working pair, so the URL is left visibly wrong rather
-        // than the database broken invisibly.
-        //
-        // An app that declares no secrets at all — every Group A app — is
-        // legitimately empty forever. Treating that as the case above meant Gitea
-        // and Forgejo could never have their `ROOT_URL` corrected, so a renamed
-        // site kept producing clone commands for the old host. The tests caught it.
+        // An app that HAS secrets and has none stored predates the column or was not installed by
+        // this installer: re-rendering would generate fresh ones and rotate half a working pair,
+        // so the URL is left visibly wrong rather than the database broken invisibly. An app that
+        // declares no secrets is legitimately empty forever and must still be re-rendered.
         if ($type->generatedSecrets() !== [] && $secrets === []) {
             return;
         }
@@ -170,8 +143,8 @@ class DockerAppInstaller implements SiteInstaller
 
         $published = $disk->output();
 
-        // A previous version changed only the DB. Compare the actual file as
-        // well, so upgrades repair that drift without recreating healthy sites.
+        // Compare the actual file as well as the DB, so upgrades repair drift between them
+        // without recreating healthy sites.
         if ($rendered === $previous && $rendered === $published) {
             return;
         }
@@ -203,27 +176,13 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * Claim the first-run setup endpoint, for the apps that have one.
      *
-     * This was a documented no-op, on the reasoning that "no container one-click
-     * has that shape: each generates its admin credential during install and the
-     * compose file passes it in before the app has ever run". Chatwoot is the
-     * app that reasoning did not survive — its production seeds create no user at
-     * all, only a flag that opens a setup page to whoever asks first.
+     * Some apps (Chatwoot, n8n, Uptime Kuma) create no admin at install, only a setup page open
+     * to whoever asks first, so an install that stopped at "started" would hand the site to the
+     * first stranger. Which app needs it is declared by the type's `firstRunClaim()`; everything
+     * else returns null and this is a no-op.
      *
-     * `AbstractSiteInstaller` carries an empty default, but this class implements
-     * `SiteInstaller` directly (it shares nothing with the host installers: no
-     * archive to unpack, no PHP to configure, no web root to populate), so a method
-     * added to the interface lands here as a fatal rather than as an inherited
-     * no-op. That is exactly what happened when `afterStart()` arrived on main
-     * while this file only existed on this branch: git merged both sides cleanly
-     * and the result would not load — every test touching the site-type catalog
-     * died with no output at all.
-     *
-     * The hook exists for apps whose first administrator is created by whoever
-     * opens the site first — n8n and Uptime Kuma among the host installers — so
-     * an install that stopped at "started" handed the site to the first stranger
-     * to find the URL. Which app needs it is declared by the type, in
-     * `firstRunClaim()`; everything else still returns null and this is still a
-     * no-op for them.
+     * This class implements `SiteInstaller` directly, so a method added to the interface lands
+     * here as a fatal rather than as an inherited no-op.
      */
     public function afterStart(Application $application, string $documentRoot): void
     {
@@ -241,14 +200,10 @@ class DockerAppInstaller implements SiteInstaller
             return;
         }
 
-        // **The body goes on stdin, never in argv.** It carries the generated
-        // administrator password, and an argument is world-readable through `ps`
-        // for as long as the request runs — and is recorded verbatim in the
-        // server-ops log, because `CommandRedactor` matches `--flags` and URL
-        // query parameters, neither of which `user[password]=` is. Five of them
-        // were sitting in cleartext on a test box before this was found.
-        //
-        // `N8nInstaller` already posts its owner credentials this way.
+        // **The body goes on stdin, never in argv.** It carries the generated administrator
+        // password: an argument is world-readable through `ps` and recorded verbatim in the
+        // server-ops log (`CommandRedactor` matches `--flags` and URL query parameters, not
+        // `user[password]=`).
         $body = http_build_query($claim['fields'], '', '&', PHP_QUERY_RFC1738);
 
         $command = [
@@ -258,12 +213,8 @@ class DockerAppInstaller implements SiteInstaller
             $url,
         ];
 
-        // `$this->serverOps->run()`, not `$this->run()`. The host installers have
-        // that helper from `AbstractSiteInstaller`; this class implements
-        // `SiteInstaller` directly and shares nothing with them — which its own
-        // docblock says, and which I still copied the call shape from N8nInstaller
-        // without checking. It cost a provision: the poll found the endpoint open
-        // and then died on an undefined method, leaving the instance unclaimed.
+        // `$this->serverOps->run()`, not `$this->run()`: that helper belongs to
+        // `AbstractSiteInstaller`, which this class does not extend.
         $posted = $this->serverOps->run(
             $command,
             ['feature' => 'application', 'op' => 'installer.create_admin', 'application' => $application->id],
@@ -275,22 +226,13 @@ class DockerAppInstaller implements SiteInstaller
             throw new ProvisioningFailedException('create_admin', $posted->reference);
         }
 
-        // The endpoint closes itself when it succeeds, so asking again is the
-        // only honest confirmation that an owner exists. A 2xx from a Rails form
-        // post is not one: the controller answers a redirect either way and
-        // reports its failures through a flash message.
+        // The endpoint closes itself when it succeeds, so asking again is the only honest
+        // confirmation that an owner exists: a Rails form post answers a redirect either way.
         if ($this->claimEndpointOpen($application, $url)) {
-            // `claim_refused`, not `owner_not_created`: the post was ACCEPTED and no
-            // owner exists, which is the app rejecting the credentials rather than
-            // anything going wrong in transit. Chatwoot answers the same redirect
-            // either way and puts its reason in a flash its own SPA never renders,
-            // so there is nothing to read and nothing in its log — "check the
-            // application log" would send somebody to an empty room.
-            //
-            // Measured: `test@test.com` raises
-            // `CustomExceptions::Account::InvalidEmail: We do not allow disposable
-            // emails`, and the identical request with a real address succeeds. So
-            // the message names that cause instead of describing the symptom.
+            // `claim_refused`, not `owner_not_created`: the post was ACCEPTED and no owner exists,
+            // so the app rejected the credentials (e.g. Chatwoot refuses disposable email
+            // addresses) and says so only in a flash its SPA never renders, with nothing in its
+            // log. The message names that cause instead of describing the symptom.
             throw new ProvisioningFailedException('create_admin', $posted->reference, 'claim_refused');
         }
     }
@@ -298,11 +240,9 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * Whether the first-run endpoint is still open, once the app can answer.
      *
-     * Open is 200 — the setup page. Closed is a redirect, which is what the
-     * controller serves once an owner exists. Anything else means "not yet":
-     * on its way up the container refuses the connection, and Chatwoot in
-     * particular migrates its database on first boot, so this can be a minute or
-     * more of 502s before a real answer.
+     * Open is 200 (the setup page); closed is a redirect, served once an owner exists. Anything
+     * else means "not yet": the container refuses connections on its way up, and Chatwoot migrates
+     * its database on first boot, so this can be a minute or more of 502s.
      *
      * @throws ProvisioningFailedException
      */
@@ -358,24 +298,16 @@ class DockerAppInstaller implements SiteInstaller
             $mounts[] = ['volume' => $name, 'path' => $path];
         }
 
-        // Existing secrets first, and only the missing ones generated. `install()`
-        // runs again on every Retry Setup and on a re-provision, and generating
-        // afresh each time rotates the credential in the compose file while the
-        // database keeps the one it was initialised with — `POSTGRES_PASSWORD`
-        // and `MYSQL_*` apply to an EMPTY data directory and are ignored after
-        // that. Measured: two apps crash-looping on "password authentication
-        // failed for user" after a re-provision, with a correct-looking file.
-        // `$stored + $fresh`, in that order. PHP's `+` keeps the LEFT operand
-        // wherever a key exists in both, so stored secrets win and any key the app
-        // has gained since it was installed still gets generated. Written the
-        // other way round it rotates everything — which is the bug this fixes, and
-        // which I wrote here first and caught only by running the union.
+        // Existing secrets first, and only the missing ones generated: `install()` runs again on
+        // every Retry Setup and re-provision, and fresh secrets would rotate the credential in
+        // the compose file while the database keeps the one it was initialised with
+        // (`POSTGRES_PASSWORD` and `MYSQL_*` apply to an EMPTY data directory only).
+        // `$stored + $fresh`, in that order: PHP's `+` keeps the LEFT operand on a shared key.
         $secrets = $this->storedSecrets($application) + $this->generate($type);
 
-        // Files the app cannot start without, written into the site's own directory
-        // and bind-mounted in. Written before the compose file, so a failure here
-        // stops provisioning rather than producing a container that crash-loops on
-        // a missing config — which is what Glance did.
+        // Files the app cannot start without, bind-mounted into the site's directory. Written
+        // before the compose file, so a failure stops provisioning rather than producing a
+        // container that crash-loops on a missing config.
         $this->writeStarterFiles($type, $application, $documentRoot);
 
         $application->forceFill([
@@ -397,10 +329,8 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * One value per declared key, per site.
      *
-     * 32 URL-safe characters from `Str::random`, which is
-     * `random_bytes`-backed. Long enough that it is not worth attacking and
-     * short enough to paste; no punctuation, because these land in a YAML scalar
-     * and in a dotenv line, and quoting rules differ between them.
+     * 32 URL-safe characters from `Str::random` (`random_bytes`-backed). No punctuation, because
+     * these land in a YAML scalar and a dotenv line, whose quoting rules differ.
      *
      * @return array<string, string>
      */
@@ -422,15 +352,10 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * A password that satisfies a policy, not merely a random one.
      *
-     * `Str::random(32)` is 32 alphanumeric characters — ample entropy, and
-     * rejected by an app that requires a symbol. Built from one character of each
-     * class plus random filler and shuffled, so the guarantee is structural
-     * rather than probabilistic: drawing 32 random alphanumerics and hoping for an
-     * upper-case letter is a test that passes almost always, which is the worst
-     * kind.
-     *
-     * Symbols restricted to ones that survive a URL-encoded form post, a YAML
-     * scalar and a shell argument without quoting games.
+     * `Str::random(32)` is alphanumeric only and rejected by an app that requires a symbol. Built
+     * from one character of each class plus random filler and shuffled, so the guarantee is
+     * structural, not probabilistic. Symbols are restricted to ones that survive a URL-encoded
+     * form post, a YAML scalar and a shell argument.
      */
     private function complexSecret(): string
     {
@@ -447,13 +372,10 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * The secrets this site was installed with.
      *
-     * Read from the application, never recovered from the rendered file. Scanning
-     * the compose file for the key name is the obvious approach and it is
-     * silently wrong: Ghost's template writes `GHOST_DB_PASSWORD` into a key
-     * called `database__connection__password`, so the scan finds nothing, decides
-     * the secret is absent, and generates a new one — rotating the password in
-     * the app's half of the file and not in MySQL's. The site comes back up
-     * unable to reach its own database and nothing says why.
+     * Read from the application, never recovered by scanning the rendered file: a template can
+     * write one secret under a different key (Ghost's `GHOST_DB_PASSWORD` lands in
+     * `database__connection__password`), so a scan would decide it is absent and generate a new
+     * one, rotating the app's half of the pair and not the database's.
      *
      * @return array<string, string>
      */
@@ -521,15 +443,13 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * Write the starter files the recipe's compose template bind-mounts.
      *
-     * Inside the site's document root, so `ComposeValidator` accepts the bind and
-     * the File Manager can edit the result. Directories rather than single files:
-     * Docker creates a missing bind source as a DIRECTORY owned by root, so
-     * mounting a file that does not exist yet gives the container a directory
-     * where it wanted a config and an error that mentions neither.
+     * Inside the site's document root, so `ComposeValidator` accepts the bind and the File Manager
+     * can edit the result. Directories rather than single files: Docker creates a missing bind
+     * source as a root-owned DIRECTORY, so mounting a not-yet-existing file hands the container a
+     * directory where it wanted a config.
      *
-     * Never overwrites. A reinstall or a Retry Setup must not replace a
-     * configuration somebody has edited — which is the same rule as the secrets,
-     * for the same reason.
+     * Never overwrites: a reinstall or Retry Setup must not replace a configuration somebody has
+     * edited.
      */
     private function writeStarterFiles(
         RecipeSiteType $type,
@@ -545,21 +465,14 @@ class DockerAppInstaller implements SiteInstaller
             $file = $host.'/'.basename($containerPath);
             $context = ['feature' => 'application', 'op' => 'docker_app_starter', 'application' => $application->id];
 
-            // `get()` rather than an `exists()` that ManagedFile does not have:
-            // a successful read IS the existence check, and it goes through the
-            // same elevated path as the write instead of asking PHP about a file
-            // in a directory PHP cannot see.
+            // `get()`, not an `exists()` ManagedFile does not have: a successful read IS the
+            // existence check, through the same elevated path as the write.
             if (! $this->files->get($file, $context)->failed()) {
                 continue;
             }
 
-            // **The directory first.** `ManagedFile::put()` is `tee <path>` and
-            // nothing more, so writing into a directory that does not exist fails
-            // — which is exactly what happened on a real site: the bind mount was
-            // correct, the config was never written, and Glance crash-looped for
-            // sixteen hours on the same missing-file error the starter exists to
-            // prevent. I had even written a comment about the directory mattering
-            // and then not created one.
+            // **The directory first.** `ManagedFile::put()` is `tee <path>` and nothing more, so
+            // writing into a missing directory fails.
             $made = $this->serverOps->run(
                 ['mkdir', '-p', $host],
                 $context + ['op' => 'docker_app_starter_dir'],
@@ -570,20 +483,16 @@ class DockerAppInstaller implements SiteInstaller
                 throw new ProvisioningFailedException('docker_app_starter', $made->reference);
             }
 
-            // The result is READ. Ignoring it is what made the missing directory
-            // silent: provisioning reported success and the container had no
-            // config.
+            // The result is READ: ignoring it would report success with no config on disk.
             $written = $this->files->put($file, $this->dedent($contents), $context);
 
             if ($written->failed()) {
                 throw new ProvisioningFailedException('docker_app_starter', $written->reference);
             }
 
-            // **After** the write, not before. `tee` runs elevated, so the file it
-            // creates is root's — a chown of the directory beforehand leaves the
-            // file root-owned and the File Manager unable to edit the very file the
-            // panel tells you to edit. Measured: `-rw-r--r-- 1 root root
-            // glance.yml` after a repair that otherwise worked.
+            // **After** the write, not before: `tee` runs elevated, so the file it creates is
+            // root's, and a chown of the directory beforehand would leave the file root-owned and
+            // uneditable in the File Manager.
             $user = (string) ($application->systemUser?->username ?? '');
 
             if ($user !== '') {
@@ -599,11 +508,9 @@ class DockerAppInstaller implements SiteInstaller
     /**
      * Strip the indentation a heredoc inside a class body carries.
      *
-     * PHP 7.3+ removes the closing marker's indentation from a `<<<'YAML'` body,
-     * so a starter file declared inside a method is already flush — but only if
-     * the closing marker is indented to match. This is belt and braces for a
-     * template somebody adds with the marker at column zero, where YAML would
-     * arrive with eight leading spaces and parse as one long string.
+     * PHP 7.3+ already removes the closing marker's indentation; this is a safety net for a
+     * template added with the marker at column zero, where YAML would arrive indented and parse as
+     * one long string.
      */
     private function dedent(string $contents): string
     {
@@ -625,9 +532,8 @@ class DockerAppInstaller implements SiteInstaller
     }
 
     /**
-     * HTTPS, always — every app here builds links from it, and a site created
-     * over http that later gets a certificate would keep serving mixed content
-     * from a value nothing revisits.
+     * HTTPS, always: every app builds links from it, and a site created over http that later gets
+     * a certificate would keep serving mixed content.
      */
     private function url(Application $application): string
     {

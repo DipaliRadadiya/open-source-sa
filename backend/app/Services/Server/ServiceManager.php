@@ -9,11 +9,10 @@ use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Support\ProbeCache;
 
 /**
- * Manages system services via systemctl. No DB — state is read live from
- * systemd (detect-don't-trust). The catalog is our supported type sets
- * (config) plus php-fpm units detected from `php_dir`; only installed units
- * surface. Protected units (panel's own web server + php-fpm) can't be
- * stopped/disabled. All ops go through ServerOps (array args, no injection).
+ * Manages system services via systemctl. State is read live from systemd (no DB); the catalog is the
+ * configured service sets plus detected php-fpm units, and only installed units surface. Protected
+ * units (the panel's web server, php-fpm) cannot be stopped or disabled. All ops go through
+ * ServerOps (array args, no injection).
  */
 class ServiceManager
 {
@@ -42,8 +41,7 @@ class ServiceManager
         $rows = [];
         $unitIndexes = [];
 
-        // One systemctl call for the whole catalog — see inspectMany(). The
-        // states come back in catalog order, so they are consumed in it.
+        // One systemctl call for the whole catalog (see inspectMany()); states come back in catalog order.
         $catalog = $this->catalog();
         $states = $this->inspectMany(array_column($catalog, 'unit'));
         // One dpkg-query for every row's version, cached until dpkg changes.
@@ -60,10 +58,8 @@ class ServiceManager
                 continue;
             }
 
-            // Packages may expose compatibility aliases. MariaDB, for example,
-            // makes mysql.service an alias of mariadb.service, so both probes
-            // return loaded even though there is only one daemon. Systemd's Id
-            // is the canonical unit and is identical through every alias.
+            // Package aliases (mysql.service -> mariadb.service) probe as loaded twice; systemd's Id is
+            // the canonical unit, so key rows by it.
             $unitId = $state['installed'] ? $state['id'] : null;
 
             if ($unitId === null || ! isset($unitIndexes[$unitId])) {
@@ -76,10 +72,8 @@ class ServiceManager
                 continue;
             }
 
-            // Prefer the catalog entry that names the canonical unit. This is
-            // what turns mysql.service -> mariadb.service into one MariaDB row
-            // regardless of catalog order. If no configured entry is canonical,
-            // keeping the first alias is deterministic and still avoids duplicates.
+            // Prefer the entry naming the canonical unit, so mysql -> mariadb gives one MariaDB row
+            // whatever the catalog order; if none is canonical, the first alias wins.
             if ($this->systemdId($service['unit']) === $unitId) {
                 $rows[$unitIndexes[$unitId]] = $row;
             }
@@ -105,8 +99,7 @@ class ServiceManager
     }
 
     /**
-     * The display shape for one catalog entry, or null when it isn't installed
-     * — or when it is only an alias of a unit another entry owns.
+     * The display shape for one catalog entry, or null when it is not installed or only an alias.
      *
      * @param  array{key: string, unit: string, label: string}  $service
      * @return array<string, mixed>|null
@@ -123,8 +116,8 @@ class ServiceManager
     }
 
     /**
-     * The dpkg packages whose version a row shows (see `packages` in the
-     * services catalog). PHP-FPM rows are generated, so theirs is derived.
+     * The dpkg packages whose version a row shows (`packages` in the services catalog); PHP-FPM
+     * rows are generated, so theirs is derived from the unit name.
      *
      * @param  array<string, mixed>  $service
      * @return array<int, string>
@@ -149,10 +142,7 @@ class ServiceManager
     private function describeState(array $service, array $state, ?array $installed = null): ?array
     {
         if (! $state['installed']) {
-            // Not on the box — but it may be on its way, or have tried and
-            // failed. Either is something the user asked for and should be able
-            // to see here; only a service nobody has ever asked for stays
-            // absent.
+            // Not installed: show it if an install is pending or failed, otherwise leave it out.
             return $this->describePendingInstall($service);
         }
 
@@ -162,10 +152,7 @@ class ServiceManager
             'key' => $service['key'],
             'label' => $service['label'],
             'unit' => $service['unit'],
-            // Always `installed` here: the unit exists, whatever it is doing.
-            // A single field for the frontend to switch on, rather than
-            // inferring the difference from a status string that means
-            // something else.
+            // Always `installed` here: one field for the frontend to switch on, separate from status.
             'state' => 'installed',
             'install_reason' => null,
             'install_message' => null,
@@ -174,19 +161,14 @@ class ServiceManager
             'enabled' => $state['enabled'],
             'protected' => $this->isProtected($service['unit']),
             'actions' => $this->allowedActions($service, $state['can_reload']),
-            // Whether this service can validate its own configuration, so the
-            // UI only offers the button where it means something.
+            // Only services that can validate their own config get the test button.
             'testable' => $this->tester->testable($service['key']),
             // A stopped unit has no resources to report — see ServiceUsage.
             'usage' => $state['status'] === 'active' ? $this->usage->build($service['unit'], $this->usageProperties($service, $state['properties'])) : null,
-            // This service's log files, as keys into the existing Logs feature
-            // rather than a second way to read a log. Only sources that exist
-            // on the box appear, so the button is never a dead end.
+            // Keys into the Logs feature; only sources that exist on the box.
             'log_keys' => $this->logKeys($service['key']),
-            // The installed package's version — `version` for display
-            // (`1.24.0`), `package_version` as dpkg has it
-            // (`1.24.0-2ubuntu7.5`). Null when the service has no package to
-            // ask about or it is not installed from one.
+            // `version` for display (`1.24.0`), `package_version` as dpkg has it (`1.24.0-2ubuntu7.5`);
+            // null when the service has no package.
             ...$this->versionOf($service, $installed),
         ];
     }
@@ -205,21 +187,11 @@ class ServiceManager
     }
 
     /**
-     * A row for a service whose unit is absent but whose install is in progress
-     * or has failed — or null when nobody has ever tried to install it.
+     * A row for a service whose unit is absent but whose install is in progress or failed; null when
+     * nobody tried to install it.
      *
-     * Without this the service simply vanishes from the list, which reads as
-     * "the panel forgot" rather than "the install is still going" or "the
-     * install failed". A failed engine is the case that matters: it is silent
-     * everywhere the user is likely to look next.
-     *
-     * **Reads the same `runtime_installs` rows the setup page and
-     * `GET /databases/engines` read.** Three readers of one source, not three
-     * copies of one fact — the copies are what would let two screens disagree.
-     *
-     * The row is deliberately inert: no actions, no usage, not testable, no
-     * logs. There is no unit to act on, and offering a Restart button for
-     * something that does not exist is worse than offering nothing.
+     * Reads the same `runtime_installs` rows as the setup page and `GET /databases/engines`, so the
+     * screens cannot disagree. The row is inert: no actions, usage, config test or logs.
      *
      * @param  array{key: string, unit: string, label: string, install?: array{0: string, 1: string}}  $service
      * @return array<string, mixed>|null
@@ -234,9 +206,7 @@ class ServiceManager
 
         $install = app(InstallTracker::class)->current($runtime, $version);
 
-        // No row at all, or one left at `ready` — a finished install deletes
-        // its row, so `ready` here would be a leftover rather than a state
-        // worth showing.
+        // No row, or a leftover `ready` one (a finished install deletes its row): nothing to show.
         if ($install === null || $install->status === InstallStatus::Ready) {
             return null;
         }
@@ -249,33 +219,14 @@ class ServiceManager
             'unit' => $service['unit'],
             'state' => $failed ? 'install_failed' : 'installing',
             'install_reason' => $install->reason,
-            // The model's own sentence, so this row and the setup card cannot
-            // word the same failure differently.
+            // The model's own sentence, so this row and the setup card word a failure the same way.
             'install_message' => $install->message(),
             'retryable' => $failed,
             /*
-             * Systemd's vocabulary, not a new one — and the division of labour
-             * that makes every row manageable the same way:
-             *
-             *   `status` is how this row is doing, in the three words the
-             *           status badge already renders: active, inactive, failed.
-             *   `state`  is what kind of row it is.
-             *
-             * A failed install is `failed` because that is what it is to the
-             * person looking at it: broken, and red. An install in progress is
-             * `inactive` because nothing is running yet. Returning
-             * `install_failed` here instead put an unrecognised word through
-             * the badge's deliberate fallback — a grey question mark printing
-             * the raw string — which is the one presentation that says nothing.
-             *
-             * Nothing is lost by reusing the words: `state` carries the
-             * distinction for anyone who needs it, so a client can tell a
-             * service that crashed from one that never installed while both
-             * still read as broken.
-             *
-             * Never null, either. The client types `status` as a string, and a
-             * null would fail its parse and drop the whole response rather than
-             * this one row.
+             * Systemd's vocabulary, so every row is manageable the same way: `status` is
+             * active|inactive|failed (what the badge renders), `state` is the kind of row. An unknown
+             * word would hit the badge's fallback and print the raw string. Never null: the client
+             * types it as a string and a null would drop the whole response.
              */
             'status' => $failed ? 'failed' : 'inactive',
             'enabled' => false,
@@ -284,19 +235,16 @@ class ServiceManager
             'testable' => false,
             'usage' => null,
             'log_keys' => [],
-            // Nothing installed yet, so no version — the same keys as an
-            // installed row, so the frontend reads one shape.
+            // Nothing installed yet; same keys as an installed row.
             'version' => null,
             'package_version' => null,
         ];
     }
 
     /**
-     * The log sources belonging to a service, as `logs` registry keys.
+     * The log sources of a service, as `logs` registry keys.
      *
-     * Returned so the frontend can open the log viewer straight from a service
-     * row. Reading them still goes through the Logs feature and its own
-     * permission — this exposes the association, not the content.
+     * Exposes the association only; reading still goes through the Logs feature and its permission.
      *
      * @return array<int, string>
      */
@@ -305,9 +253,7 @@ class ServiceManager
         // php8.4-fpm → php8.4_fpm, the key LogManager derives per version.
         $candidates = match (true) {
             ($version = $this->stack->versionForService($key)) !== null => ["php{$version}_fpm"],
-            // One log per cluster, named after its version (`postgresql_18_main`),
-            // so no fixed entry in `service_logs` can hold it. The Logs screen
-            // listed it while this row offered no log at all.
+            // One log per cluster (`postgresql_18_main`), so no fixed `service_logs` entry can hold it.
             $key === 'postgresql' => $this->logs->postgresKeys(),
             default => (array) config("server.service_logs.{$key}", []),
         };
@@ -320,21 +266,17 @@ class ServiceManager
     }
 
     /**
-     * Run an action on a catalog service, including the units that really
-     * start at boot for it.
+     * Run an action on a catalog service, including the units that really start at boot for it.
      *
-     * Bug #12: PostgreSQL boots through its clusters (`postgresql@18-main`),
-     * each enabled on its own; `postgresql` is a meta unit. Switching "Start
-     * on boot" off disabled the meta unit only, and the cluster started after
-     * the next reboot anyway. Start/stop/restart need no such help — the
-     * clusters are `PartOf=postgresql.service`.
+     * PostgreSQL boots through its clusters (`postgresql@18-main`), each enabled on its own, and
+     * `postgresql` is a meta unit: enable/disable must reach the clusters too. Start/stop/restart
+     * need no help (the clusters are `PartOf=postgresql.service`).
      *
      * @param  array{unit: string, instances?: string}  $service
      */
     public function runService(array $service, string $action): ServerOpsResult
     {
-        // Starting or stopping an engine changes what the Databases screen
-        // says is running (FS-C46).
+        // Starting or stopping an engine changes what the Databases screen says is running.
         ProbeCache::flush();
 
         $result = $this->run($service['unit'], $action);
@@ -357,10 +299,8 @@ class ServiceManager
     /**
      * The resource figures a service's row should show.
      *
-     * Bug #13: `postgresql` is a meta unit with no process of its own, so its
-     * MemoryCurrent is "[not set]" and the row showed "—" forever, while the
-     * database ran as `postgresql@18-main`. A service whose catalog entry
-     * names its instances reports their sum instead.
+     * `postgresql` is a meta unit with no process of its own (MemoryCurrent is "[not set]"), so a
+     * service whose catalog entry names its instances reports their sum.
      *
      * @param  array{unit: string, instances?: string}  $service
      * @param  array<string, string|null>  $properties
@@ -425,9 +365,8 @@ class ServiceManager
     }
 
     /**
-     * Whether this unit carries the panel's own requests: its web server or
-     * a PHP-FPM it runs on. Redis is protected too, but restarting it does not
-     * cut the connection a request arrived on.
+     * Whether this unit carries the panel's own requests (its web server or PHP-FPM). Redis is
+     * protected too, but restarting it does not cut the request's connection.
      */
     public function servesPanel(string $unit): bool
     {
@@ -435,15 +374,13 @@ class ServiceManager
     }
 
     /**
-     * The panel's web server is determined by the recorded installation stack
-     * (or brownfield capability detection), not by a static nginx assumption.
+     * The panel's own units; the web server comes from the recorded stack, not an nginx assumption.
      *
      * @return array<int, string>
      */
     public function protectedUnits(): array
     {
-        // Redis backs the panel's queues and cache. It may be optional for a
-        // user app, but it is not optional for the panel itself.
+        // Redis backs the panel's queues and cache, so it is protected too.
         $units = [...(array) config('server.protected_services', []), 'redis-server'];
         $webServer = $this->capabilities->webServer();
 
@@ -462,14 +399,12 @@ class ServiceManager
      */
     public function allowedActions(array $service, bool $canReload): array
     {
-        // Protected units keep restart/reload/enable but can't be stopped or
-        // disabled (that would take the panel offline).
+        // Protected units cannot be stopped or disabled (that would take the panel offline).
         $actions = $this->isProtected($service['unit'])
             ? ['restart', 'reload', 'enable']
             : self::ACTIONS;
 
-        // systemd knows whether the unit implements reload. Do not offer a
-        // button that can only fail, regardless of what kind of service it is.
+        // Only offer reload if the unit implements it.
         if (! $canReload) {
             $actions = array_values(array_diff($actions, ['reload']));
         }
@@ -488,21 +423,11 @@ class ServiceManager
     }
 
     /**
-     * PHP-FPM rows: one per installed version, plus one per version the panel
-     * is installing or failed to install.
+     * PHP-FPM rows: one per installed version, plus one per version being installed or failed.
      *
-     * The second half is why this is not just a loop over installed versions.
-     * These entries are generated rather than configured, so the `install` key
-     * that gives every other service its in-progress row cannot be written into
-     * the catalog for them — a version that never finished installing has no
-     * unit and no config entry, and so could not appear at all however well
-     * describe() handled it. It was the one kind of service that stayed
-     * invisible exactly when the user most wanted to see it.
-     *
-     * `versions()` on the tracker filters out extension rows, so installing a
-     * PHP *extension* cannot conjure a service row for the version it belongs
-     * to. That is the tracker's own design doing the work rather than this
-     * method remembering to.
+     * The entries are generated, so the catalog `install` key cannot be written for them; without the
+     * pending half, a version that never finished installing would not appear at all. The tracker's
+     * `versions()` skips extension rows, so a PHP extension install adds no row for its version.
      *
      * @return array<int, array{key: string, unit: string, label: string, install: array{0: string, 1: string}}>
      */
@@ -514,9 +439,8 @@ class ServiceManager
             ->keys()
             ->all();
 
-        // Installed first: an installed version whose stale tracker row somehow
-        // survived should be described by its unit, and array_unique keeps the
-        // first occurrence.
+        // Installed first: array_unique keeps the first occurrence, so an installed version is
+        // described by its unit.
         $versions = array_unique([...$this->stack->versions(), ...$pending]);
 
         $services = [];
@@ -524,11 +448,8 @@ class ServiceManager
         foreach ($versions as $version) {
             $unit = $this->stack->serviceName($version);
 
-            // LSPHP has no per-version unit — its processes belong to the web
-            // server. A stack with nothing to start or stop contributes no
-            // rows rather than rows that cannot be acted on. That holds for a
-            // version being installed too: there would be nothing for the row
-            // to become once it finished.
+            // LSPHP has no per-version unit (its processes belong to the web server), so such a stack
+            // contributes no rows, pending installs included.
             if ($unit === null) {
                 continue;
             }
@@ -545,34 +466,13 @@ class ServiceManager
     }
 
     /**
-     * State + usage counters in ONE systemctl call. The usage properties come
-     * from systemd's own cgroup accounting, which is why the whole service
-     * tree (a php-fpm master and all its workers) is counted correctly, and
-     * why adding them costs nothing — the call was already being made.
-     *
-     * @return array{installed: bool, id: ?string, status: string, enabled: bool, can_reload: bool, properties: array<string, string|null>}
-     */
-    /**
      * Replace systemd's verdict where systemd cannot give one.
      *
-     * Only for services carrying a `health` command in the catalog, which today
-     * is PostgreSQL alone. Its `postgresql.service` is a meta unit —
-     * `Type=oneshot`, `ExecStart=/bin/true`, `RemainAfterExit=on` — so
-     * `ActiveState` reports `active` because /bin/true succeeded, and
-     * `postgresql@.service` prefixes its ExecStart with `-`, so systemd ignores
-     * a cluster that failed to start. Neither can say the database is down.
-     *
-     * Without this the Services screen would show "Running" at the same moment
-     * the Databases screen, which asks `pg_isready`, says it is not — two
-     * screens with opposite answers, and the reassuring one wrong.
-     *
-     * The exit code is the whole answer, which is why the probe runs
-     * `--quiet`: `pg_isready` returns 0 only when the server is accepting
-     * connections.
-     *
-     * Deliberately narrow. `installed`, `enabled`, `id` and the resource
-     * figures still come from systemd, which answers those correctly — this
-     * overrides the one field it cannot.
+     * Only for services with a `health` command in the catalog (PostgreSQL). Its meta unit is
+     * `Type=oneshot` + `RemainAfterExit`, so ActiveState says `active` even when no cluster runs;
+     * without this, the Services screen would say "Running" while the Databases screen says down.
+     * The exit code is the answer (`pg_isready --quiet` returns 0 only when accepting connections).
+     * Only `status` is overridden; `installed`, `enabled`, `id` and usage still come from systemd.
      *
      * @param  array<string, mixed>  $service
      * @param  array<string, mixed>  $state
@@ -596,8 +496,7 @@ class ServiceManager
     }
 
     /**
-     * The properties one `systemctl show` is asked for. One list, so the batch
-     * and the single-unit call cannot drift into answering different questions.
+     * The properties one `systemctl show` asks for; one list, so batch and single calls stay in sync.
      *
      * @var string
      */
@@ -609,27 +508,14 @@ class ServiceManager
     }
 
     /**
-     * Inspect every unit in ONE systemctl call.
+     * Inspect every unit in ONE systemctl call (one blank-line separated block per unit).
      *
-     * `systemctl show` accepts any number of units and answers with one block
-     * per unit, blank-line separated. Rendering the services page asked ten
-     * times for what systemd answers once: measured on a live Ubuntu 26.04 box,
-     * **174 ms as ten calls against 43 ms as one**, for identical information,
-     * on a route the frontend polls every three seconds.
+     * One call replaces one per unit, which matters on a route the frontend polls every few seconds.
      *
-     * 🔴 **Blocks are matched to units by position, not by `Id`.** Id is the
-     * canonical unit, and an alias reports its target's — ask for `mysql` and
-     * `mariadb` on a MariaDB box and *both* blocks say `Id=mariadb.service`.
-     * Keying by it would collapse two rows into one and hand a service the
-     * wrong state, which is the same alias confusion that let
-     * `PUT /services/mysql` restart MariaDB. Position is the only thing that
-     * distinguishes them, and a test pins it.
-     *
-     * Safe to map positionally because systemd emits a block for every unit it
-     * was asked about, in order, including ones that do not exist (`LoadState=
-     * not-found`) — verified on the box, awkward order, alias and missing unit
-     * interleaved with real ones. The exit code stays 0 in that case, so no
-     * error path changes.
+     * Blocks are matched to units by position, not by `Id`: an alias reports its target's Id (ask for
+     * `mysql` and `mariadb` and both say `Id=mariadb.service`), so keying by it would merge rows and
+     * hand a service the wrong state. systemd emits a block for every requested unit, in order,
+     * including missing ones (`LoadState=not-found`), so positions are safe.
      *
      * @param  array<int, string>  $units
      * @return array<int, array{installed: bool, id: ?string, status: string, enabled: bool, can_reload: bool, properties: array<string, string|null>}>
@@ -648,9 +534,7 @@ class ServiceManager
         $blocks = preg_split('/\R{2,}/', trim($output)) ?: [];
 
         return array_map(
-            // A unit with no block of its own is read as absent rather than as
-            // another unit's state: a short reply must not shift every later
-            // unit onto the wrong block.
+            // A unit with no block is read as absent, so a short reply cannot shift later units.
             fn (int $index): array => $this->parseState($blocks[$index] ?? ''),
             array_keys($units),
         );
@@ -667,8 +551,8 @@ class ServiceManager
             'status' => $this->property($output, 'ActiveState') ?: 'inactive',
             'enabled' => $this->property($output, 'UnitFileState') === 'enabled',
             'can_reload' => $this->property($output, 'CanReload') === 'yes',
-            // Filled here rather than in ServiceUsage::build() so a service
-            // summed from its instances (postgresql@*) gets the fallback too.
+            // Filled here, not in ServiceUsage::build(), so a service summed from its instances
+            // (postgresql@*) gets the fallback too.
             'properties' => $this->usage->withCgroupFallback([
                 'MemoryCurrent' => $this->property($output, 'MemoryCurrent'),
                 'CPUUsageNSec' => $this->property($output, 'CPUUsageNSec'),
@@ -681,38 +565,19 @@ class ServiceManager
     /**
      * Is this entry only an alias of a unit another catalog entry owns?
      *
-     * Packages expose compatibility aliases: MariaDB ships `mysql.service` as
-     * an alias of `mariadb.service`, so probing `mysql` on a box with no MySQL
-     * at all reports a loaded, active unit. {@see list()} has always folded
-     * that away — one daemon, one row — but the single-entry path did not, and
-     * the two paths disagreeing is the whole bug:
+     * MariaDB ships `mysql.service` as an alias of `mariadb.service`, so probing `mysql` on a box
+     * without MySQL reports a loaded unit. {@see list()} folds that into one row; the single-entry
+     * path must agree, or `PUT /services/mysql` would restart MariaDB.
      *
-     *   PUT /services/mysql {"action":"restart"}  ->  200, restarts MariaDB
-     *
-     * on a server whose own service list contains no `mysql` row, and whose
-     * activity log then reads "Restarted the MySQL service". Confirmed live on
-     * Ubuntu 26.04: MariaDB's ActiveEnterTimestamp moved, and `mysql-server`
-     * was never installed. Stop would have been the same call.
-     *
-     * Ownership is decided on unit names alone — no extra systemctl call — so
-     * this costs nothing on a path that already inspected the unit.
-     *
-     * Only an entry that another entry *names canonically* is refused. Where no
-     * configured entry owns the resolved unit there is nobody better to answer,
-     * and refusing would remove a service the panel legitimately manages; that
-     * matches list(), which keeps the first alias in the same situation.
+     * Decided on unit names alone (no extra systemctl call). Only an entry that another entry names
+     * canonically is refused; if none owns the unit, nobody better can answer (as in list()).
      *
      * @param  array{key: string, unit: string, label: string}  $service
      */
     private function isAliasOfAnotherEntry(array $service, ?string $unitId): bool
     {
-        // Self-canonical: the unit resolved to itself, so it is not an alias.
-        //
-        // A short-circuit, not a rule — removing it leaves every test green,
-        // because the loop below reaches the same answer for every catalog we
-        // ship. It is kept for the cost (no catalog scan on the common path)
-        // and because it is the only thing standing between a catalog that
-        // named one unit twice and both entries refusing each other.
+        // Self-canonical: the unit resolved to itself, so it is not an alias. Also stops a catalog
+        // naming one unit twice from making both entries refuse each other.
         if ($unitId === null || $this->systemdId($service['unit']) === $unitId) {
             return false;
         }

@@ -23,30 +23,15 @@ use Throwable;
 /**
  * Runs an application's background workers, as supervisord programs.
  *
- * A sibling of ProcessSupervisor rather than an extension of it: that one
- * supervises *the* application process, exactly one, whose command lives on
- * the application row, and it stays on systemd. A worker is one of many, has
- * its own row, and can be asked for in multiples.
+ * A sibling of ProcessSupervisor, not an extension: that one supervises *the* application process
+ * (exactly one, its command on the application row, on systemd); a worker is one of many, has its
+ * own row, and can be asked for in multiples.
  *
- * ## Why supervisord and not systemd
- *
- * This ran on systemd template units (`sv-worker-shop-queue@1`, `@2`, …) until
- * 2026-09-07. supervisord is what the commercial panel has always
- * used, so anyone arriving from it finds the same fields and the same
- * `[program:…]` blocks on the box — and it is what every Laravel queue
- * tutorial teaches, which is what a migrated server is already running.
- *
- * That last point is the one that pays for itself. `WorkerDiscoverer` already
- * *reads* `/etc/supervisor/conf.d` to adopt a migrated box's workers. Writing
- * the same format makes adopt-then-manage one format instead of a translation
- * between two, and an adopted worker can now be edited rather than only
- * recorded.
- *
- * supervisor also owns the copies itself, via `numprocs`. The panel stores the
- * number it asked for and nothing else — "3 of 4 running" stays a question
- * supervisord answers rather than one the panel caches. Lowering the count is
- * `update`'s job, which is simpler than the old template's surplus-instance
- * sweep: there is no instance number to strand.
+ * supervisord rather than systemd: it is what the commercial panel and every Laravel queue tutorial
+ * use, so a migrated server's workers are already in that format. `WorkerDiscoverer` reads
+ * `/etc/supervisor/conf.d` to adopt them, and writing the same format keeps adopt-then-manage to one
+ * format and lets an adopted worker be edited. supervisor also owns the copies (`numprocs`): the panel
+ * stores only the number it asked for, and "3 of 4 running" is answered by supervisord.
  */
 class WorkerSupervisor
 {
@@ -60,19 +45,15 @@ class WorkerSupervisor
     /** `sv-worker-shop-queue` — the program name. */
     public function program(Worker $worker): string
     {
-        // The slug rather than the id, so the name says what it is when read
-        // on the box — and the slug rather than the *name*, so renaming a
-        // worker relabels it without stopping and recreating a running
-        // process.
+        // The slug, not the id (readable on the box) and not the name (renaming relabels without
+        // restarting a running process).
         return $worker->hasProgram() ? (string) $worker->program : 'sv-worker-'.$worker->slug;
     }
 
     /**
-     * `sv-worker-shop-queue:*` — every process of the program.
-     *
-     * supervisorctl treats a `numprocs` program as a group, and the bare name
-     * addresses nothing: `supervisorctl restart sv-worker-x` on a program with
-     * copies answers "no such process". The `:*` is not decoration.
+     * `sv-worker-shop-queue:*` — every process of the program. supervisorctl treats a `numprocs`
+     * program as a group and the bare name addresses nothing ("no such process"), so the `:*` is
+     * needed.
      */
     public function group(Worker $worker): string
     {
@@ -89,27 +70,14 @@ class WorkerSupervisor
     /**
      * Is supervisord actually on this box?
      *
-     * It is not a given. Workers moved from systemd template units to
-     * supervisord programs on 2026-09-07, and `install.sh` gained the package
-     * in the same commit — which reaches **new installs only**. A panel
-     * installed before that date has no supervisor and no `conf.d`, and the
-     * updater never runs apt, so nothing gives it one. Writing straight into
-     * that directory answered `tee: /etc/supervisor/conf.d/…: No such file or
-     * directory` from a "Server operation failed" toast: a real cause, buried.
+     * Not a given: panels installed before workers moved to supervisord have no supervisor and no
+     * `conf.d`, and the updater never runs apt. Writing into the missing directory surfaced as a buried
+     * `tee: ... No such file or directory`; say so in plain words instead (see
+     * {@see Fail2banManager::installed()}).
      *
-     * Same shape as {@see Fail2banManager::installed()}, and the same reason —
-     * a feature that depends on a package somebody may not have needs to say
-     * so in its own words rather than through whatever the shell prints.
-     *
-     * **A refused probe is not an answer, and must not be read as "no".** sudo
-     * exits non-zero before running `which` at all when the grant does not
-     * cover it, which is indistinguishable from "supervisorctl is not on this
-     * box" if only `ok` is consulted — the trap {@see ServerOpsResult::$answered}
-     * exists to describe. Reading it that way costs more than a wrong message:
-     * the create endpoint answers a missing probe by installing the package,
-     * so a server with a stale grant would be sent to apt, install a supervisor
-     * it already had, and fail the next create in exactly the same place.
-     * Raised here, once, rather than left to each of the two callers.
+     * A refused probe is not "no": sudo exits non-zero before running `which` when the grant does not
+     * cover it (see {@see ServerOpsResult::$answered}). Read as "no", the create endpoint would send a
+     * server with a stale grant to apt for a supervisor it already has. Raised here, once, for both callers.
      *
      * @throws WorkerControlException when sudo refuses the probe
      */
@@ -128,12 +96,9 @@ class WorkerSupervisor
     }
 
     /**
-     * Refuse early if this server cannot run workers at all.
-     *
-     * Called before the row is created as well as before the program is
-     * written. A worker the panel lists but never started is the thing
-     * discovered when the queue is already hours behind, and creating one on a
-     * box with no supervisord guarantees exactly that.
+     * Refuse early if this server cannot run workers at all. Called before the row is created as well
+     * as before the program is written: a worker listed but never started is found when the queue is
+     * already hours behind.
      *
      * @throws SupervisorMissingException
      */
@@ -147,20 +112,15 @@ class WorkerSupervisor
     /**
      * Write the program and bring the requested number of copies up.
      *
-     * Verified with `status` afterwards, for the reason the application
-     * supervisor documents: starting succeeds for a program that starts and
-     * dies immediately, which is exactly what a mistyped command does. A panel
-     * that reported such a worker as running would be worse than one that
-     * refused it.
+     * Verified with `status` afterwards: starting succeeds for a program that starts and dies at once
+     * (a mistyped command), and reporting that as running would be worse than refusing it.
      *
      * @throws ProvisioningFailedException
      */
     public function apply(Worker $worker): void
     {
-        // Before the write, not after it fails. A missing package is a fact
-        // about the server that the person can act on; `tee: No such file or
-        // directory` is the same fact with the answer removed. Every caller is
-        // covered here, not just the one that also checks before creating.
+        // Before the write, not after it fails: a missing package is something the person can act on,
+        // `tee: No such file or directory` is not. Covers every caller.
         $this->assertAvailable();
 
         $context = $this->context($worker, 'worker_write');
@@ -171,10 +131,8 @@ class WorkerSupervisor
             throw new ProvisioningFailedException('write_unit', $written->reference);
         }
 
-        // `reread` parses the files, `update` applies the difference — adding
-        // the program, and retiring copies when `numprocs` went down. Both,
-        // and in that order: `update` alone acts on a config supervisord has
-        // not re-read, so a saved change appears to do nothing.
+        // `reread` parses the files, `update` applies the difference (adds the program, retires copies
+        // when `numprocs` dropped). Both, in that order: `update` alone acts on a config not yet re-read.
         $this->reload($worker);
 
         if (! $worker->enabled) {
@@ -358,12 +316,10 @@ class WorkerSupervisor
     }
 
     /**
-     * supervisord has nothing loaded under this name, so there is nothing to
-     * stop. `status name:*` answers "no such group" when the program was never
-     * loaded at all (a new worker that died before its first reload) and "no
-     * such process" for a group without that member; both exit 4 (measured on
-     * supervisor 4.2, 2026-10-23). Accepting only the second left a new
-     * worker's row behind with a 500, and then made it undeletable.
+     * supervisord has nothing loaded under this name, so there is nothing to stop. `status name:*`
+     * answers "no such group" when the program was never loaded (a new worker that died before its
+     * first reload) and "no such process" for a group without that member; both exit 4. Accepting only
+     * the second left a new worker's row behind and made it undeletable.
      */
     private function notLoaded(ServerOpsResult $state): bool
     {
@@ -401,10 +357,9 @@ class WorkerSupervisor
     }
 
     /**
-     * Rewrite a switched-off worker's program when it is out of date, so it
-     * stays off after the next reboot (bug #73: they were written with
-     * autostart=true). Only switched-off workers: one that is running is never
-     * touched. True when it rewrote something.
+     * Rewrite a switched-off worker's program when it is out of date, so it stays off after the next
+     * reboot (older files were written with autostart=true). A running worker is never touched. True
+     * when it rewrote something.
      */
     public function refreshDisabled(Worker $worker): bool
     {
@@ -431,19 +386,15 @@ class WorkerSupervisor
     }
 
     /**
-     * Why an adopted worker's own program file no longer proves that it is
-     * this worker's alone — or null when it still does. Read-only.
+     * Why an adopted worker's own program file no longer proves that it is this worker's alone, or
+     * null when it still does. Read-only.
      *
-     * Null straight away for the panel's own workers (`sv-worker-{slug}`):
-     * nothing but the panel writes that name. `program` is set only by
-     * Server Sync, for a file holding exactly one program named after the
-     * file, inside this site ({@see WorkerDiscoverer::adopt()}).
-     * That was true when it was adopted; this checks it is still true before
-     * the file is deleted, because a file edited since into a shared one
-     * would take somebody else's programs with it.
-     *
-     * A file that is gone proves nothing is left to delete, and the program
-     * is still stopped by its recorded name.
+     * Null straight away for the panel's own workers (`sv-worker-{slug}`): only the panel writes that
+     * name. `program` is set only by Server Sync, for a file holding exactly one program named after
+     * the file, inside this site ({@see WorkerDiscoverer::adopt()}). This checks that still holds
+     * before the file is deleted, because a file since edited into a shared one would take somebody
+     * else's programs with it. A file that is gone proves nothing is left to delete; the program is
+     * still stopped by its recorded name.
      */
     public function unprovableProgram(Worker $worker): ?string
     {
@@ -462,10 +413,8 @@ class WorkerSupervisor
 
         $context = $this->context($worker, 'worker_verify_adopted');
 
-        // `-P` and a listing of the directory rather than of the file: a
-        // symlink is reported as one instead of followed, and "not there"
-        // is an empty answer rather than an error that a refused grant
-        // would look exactly like.
+        // `-P` and a listing of the directory, not the file: a symlink is reported, not followed, and
+        // "not there" is an empty answer rather than an error a refused grant would look like.
         $listing = $this->serverOps->run(
             ['find', '-P', $directory, '-mindepth', '1', '-maxdepth', '1', '-name', $program.'.conf', '-printf', '%y\n'],
             $context,
@@ -586,12 +535,9 @@ class WorkerSupervisor
     /**
      * Restart, in the way this kind of worker is meant to be restarted.
      *
-     * A Laravel queue worker is told to finish its current job and exit
-     * (`queue:restart`); supervisor then starts it again with the new code,
-     * because `autorestart` treats a clean exit as something to replace. That
-     * is gentler than restarting the program, which can kill a job mid-flight.
-     * Horizon has its own equivalent. Anything else has no such protocol, so
-     * the program is restarted directly.
+     * A Laravel queue worker is told to finish its current job and exit (`queue:restart`) and supervisor
+     * starts it again with the new code, which is gentler than restarting the program (that can kill a
+     * job mid-flight). Horizon has its own equivalent; anything else is restarted directly.
      */
     public function restart(Worker $worker): void
     {
@@ -609,20 +555,15 @@ class WorkerSupervisor
     }
 
     /**
-     * How many copies are actually up, right now.
-     *
-     * Reported as "running of requested" rather than a single boolean: a
-     * worker pool with three of four processes alive is a real state, it is
-     * easy to miss, and a green dot would hide it.
+     * How many copies are actually up, right now. Reported as "running of requested", not a boolean:
+     * three of four processes alive is a real state a green dot would hide.
      *
      * @return array{running: int, requested: int, state: string}
      */
     public function status(Worker $worker): array
     {
-        // Exit 3 is supervisorctl's "some processes are not running", which is
-        // the answer this method exists to report rather than a failure to ask
-        // — treating it as an error would make every stopped worker an entry
-        // on the admin error dashboard.
+        // Exit 3 is supervisorctl's "some processes are not running": the answer this method reports, not
+        // a failure (an error would put every stopped worker on the admin error dashboard).
         $result = $this->serverOps->run(
             ['supervisorctl', 'status', $this->group($worker)],
             $this->context($worker, 'worker_status'),
@@ -634,10 +575,7 @@ class WorkerSupervisor
 
         foreach (preg_split('/\R/', trim($result->output())) ?: [] as $line) {
             // `sv-worker-shop-queue:sv-worker-shop-queue_00   RUNNING   pid 123, uptime 0:04:11`
-            // Matched on the word rather than split by whitespace: the state
-            // is the second column, and a program name containing a space
-            // could not exist, but a missing line could — and `RUNNING` is
-            // unambiguous either way.
+            // Matched on the word, not split by whitespace: `RUNNING` is unambiguous either way.
             if (preg_match('/^\S+\s+RUNNING\b/', trim($line)) === 1) {
                 $running++;
             }
@@ -665,12 +603,8 @@ class WorkerSupervisor
         $application = $worker->application;
         $root = $this->directory($worker);
 
-        // Resolved, not bare. This is run directly rather than through
-        // supervisor, so the bare `php8.4` it used to build relied on PATH
-        // holding a versioned name — which no stack provides on OpenLiteSpeed,
-        // where PATH has `php` and nothing else. So "restart to pick up new
-        // code" failed there for a second, separate reason from the program
-        // command itself.
+        // Resolved, not bare: this runs directly rather than through supervisor, and no stack provides a
+        // versioned `php8.4` on PATH on OpenLiteSpeed (only `php`).
         $php = $this->phpBinary('php'.($application->php_version ?: ''), $worker);
 
         if (! in_array($worker->kind, [Worker::KIND_QUEUE, Worker::KIND_HORIZON], true)) {
@@ -684,14 +618,10 @@ class WorkerSupervisor
             return null;
         }
 
-        // As the account the worker's processes run as — the same one the
-        // program block names (render()). This ran as the panel's own account,
-        // which can read a site's code but not write its `storage/`: Laravel
-        // failed to open its own log and exited 1, and every "graceful"
-        // restart — the Restart button and every restart-on-deploy — fell
-        // back to `supervisorctl restart`, killing whatever job was running
-        // (found live 2026-09-29, Statamic on nginx). As root instead it would
-        // have left root-owned cache files the site then cannot write.
+        // As the account the worker's processes run as (the one render() names). As the panel's account
+        // it can read a site's code but not write `storage/`, so Laravel exited 1 and every "graceful"
+        // restart fell back to `supervisorctl restart`, killing the running job. As root it would leave
+        // root-owned cache files the site cannot write.
         /** @var SystemUser $owner */
         $owner = $application->systemUser;
         $user = $worker->user ?: $owner->username;
@@ -716,13 +646,11 @@ class WorkerSupervisor
             'command' => $this->command($worker),
             'directory' => $directory,
             'processes' => $worker->processes,
-            // The site's own account unless an adopted block named another.
-            // Rewriting someone else's choice silently would change who owns
-            // the files a running job writes.
+            // The site's own account unless an adopted block named another; rewriting that silently
+            // would change who owns the files a running job writes.
             'user' => $worker->user ?: $owner->username,
-            // Off as well while the worker is disabled: apply() stops it, but a
-            // config still saying autostart=true brought it back the next time
-            // supervisord started — every reboot (bug #73).
+            // Off while the worker is disabled too: apply() stops it, but autostart=true would bring it
+            // back whenever supervisord next starts (every reboot).
             'autoStart' => $worker->auto_start && $worker->enabled,
             'autoRestart' => $worker->auto_restart,
             'stopWaitSeconds' => $worker->stop_wait_seconds,
@@ -734,20 +662,10 @@ class WorkerSupervisor
     }
 
     /**
-     * The file this worker's output actually lands in.
+     * The worker's last words, for a start that failed.
      *
-     * Public and used by the Logs screen as well as the template, because the
-     * two must agree: under systemd the output went to journald and the log
-     * source read `journalctl -t sv-worker-{slug}`, and moving to supervisor
-     * turned that into a file without moving the reader. A second copy of this
-     * expression is exactly how they drifted the first time.
-     */
-    /**
-     * The worker's last words, for a start that failed (APP-1/FS-C44).
-     *
-     * stderr goes to the same file (`redirect_stderr`), so a command that
-     * dies at once leaves its reason here — `php -v` printing and exiting, a
-     * missing file. Null when there is nothing to quote.
+     * stderr goes to the same file (`redirect_stderr`), so a command that dies at once leaves its
+     * reason here (`php -v` printing and exiting, a missing file). Null when there is nothing to quote.
      */
     public function lastOutput(Worker $worker): ?string
     {
@@ -763,6 +681,10 @@ class WorkerSupervisor
         return $lines === [] ? null : mb_strimwidth((string) end($lines), 0, 300, '…');
     }
 
+    /**
+     * The file this worker's output lands in. Public: the Logs screen and the template must agree, so
+     * one expression serves both.
+     */
     public function logFile(Worker $worker): string
     {
         return $worker->log_file
@@ -777,23 +699,12 @@ class WorkerSupervisor
     /**
      * The command, with a bare `php` resolved to a path.
      *
-     * supervisor does run its command through a shell-like split rather than
-     * exec'ing directly, so a bare `php` would in fact be found via PATH — but
-     * it would be *whichever* php is first on it, and a site pinned to 8.3
-     * whose worker silently ran on 8.4 is the kind of difference that only
-     * shows up as a serialisation error weeks later. Resolved for the same
-     * reason the systemd unit had to.
+     * A bare `php` is found via PATH, but as *whichever* php is first on it: a site pinned to 8.3 whose
+     * worker silently ran on 8.4 shows up as a serialisation error weeks later.
      *
-     * 🔴 **Resolved by the stack, not by writing `/usr/bin/`**, which is what
-     * this did until 2026-09-18 and which is only true on the FPM stacks. An
-     * OpenLiteSpeed box has no ondrej PHP at all — `install.sh` says so, and
-     * creates `/usr/local/bin/php` precisely because nothing else puts a `php`
-     * on PATH there. PHP lives at `/usr/local/lsws/lsphpXX/bin/php`. So every
-     * PHP worker on an OLS server was written pointing at a file that does not
-     * exist, supervisord could not start the program, and the panel offered
-     * the screen anyway. `PhpStack::binaryPath()` already knew the answer for
-     * both stacks; this simply asks it. Same root cause as the deploy script
-     * having no PHP pinned (`15af6678`), one feature over.
+     * 🔴 Resolved by the stack, not by writing `/usr/bin/`: that is only true on the FPM stacks. An
+     * OpenLiteSpeed box has no ondrej PHP (it lives at `/usr/local/lsws/lsphpXX/bin/php`), so the program
+     * pointed at a file that does not exist. `PhpStack::binaryPath()` knows the answer for both stacks.
      */
     private function command(Worker $worker): string
     {
@@ -810,16 +721,11 @@ class WorkerSupervisor
     /**
      * A typed `php` / `php8.2` resolved to this stack's real binary.
      *
-     * The version comes from what the user typed when they typed one: somebody
-     * who wrote `php8.2` on a site set to 8.4 meant 8.2, and the old
-     * `/usr/bin/`.$binary honoured that. A bare `php` falls back to the site's
-     * own version, which is the question they were actually answering.
+     * A typed version wins (`php8.2` on an 8.4 site meant 8.2); a bare `php` uses the site's version.
      *
-     * **Never fatal.** Anything unresolvable — a version that is not `X.Y`, an
-     * empty answer, or the bare `php` an operator gets from a blank
-     * `SERVER_PHP_BINARY_PATTERN` — leaves the name exactly as typed and lets
-     * PATH decide, which is what happens today. A failure to resolve must not
-     * turn a worker that runs into one that does not.
+     * Never fatal: anything unresolvable (a non-`X.Y` version, an empty answer, the bare `php` from a
+     * blank `SERVER_PHP_BINARY_PATTERN`) leaves the name as typed and lets PATH decide, so a failure to
+     * resolve cannot turn a worker that runs into one that does not.
      */
     private function phpBinary(string $typed, Worker $worker): string
     {
@@ -839,11 +745,8 @@ class WorkerSupervisor
     }
 
     /**
-     * Re-read the configs and apply the difference.
-     *
-     * Not fatal on its own: a `reread` that fails leaves the file on disk and
-     * the previous program running, which is a state someone can act on. The
-     * caller checks whether the worker actually came up.
+     * Re-read the configs and apply the difference. Not fatal on its own: a failed `reread` leaves the
+     * file on disk and the previous program running; the caller checks whether the worker came up.
      */
     private function reload(Worker $worker): void
     {
@@ -862,14 +765,9 @@ class WorkerSupervisor
             timeout: 120,
         );
 
-        // Every supervisorctl call, not just the fatal ones. `reload()` is
-        // deliberately non-fatal — a failed `update` leaves the file on disk
-        // and the old program running, which someone can act on — but that
-        // tolerance is for supervisord disagreeing with a config. A refused
-        // grant is not a state to carry on from: nothing ran, nothing will,
-        // and continuing only moves the report to the next command, which is
-        // how this surfaced as a failure to *start* a worker whose config had
-        // in fact never been applied.
+        // Every supervisorctl call, not just the fatal ones. reload() tolerates supervisord disagreeing
+        // with a config, but a refused grant is not a state to carry on from: nothing ran, and continuing
+        // only moves the report to a later command.
         if ($result->denied) {
             throw new WorkerControlException($result->reference, denied: true);
         }

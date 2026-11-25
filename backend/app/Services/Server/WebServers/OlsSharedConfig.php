@@ -12,30 +12,26 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * The two entries every OpenLiteSpeed site needs in the *shared*
- * httpd_config.conf, and the only thing allowed to edit that file.
+ * The two entries every OpenLiteSpeed site needs in the *shared* httpd_config.conf, and the only
+ * thing allowed to edit that file.
  *
- * nginx and Apache read a directory, so adding a site is dropping a file in.
- * OLS does not: a site is a per-site `vhconf.conf` **plus** a `virtualHost`
- * block at the top level of the shared config **plus** a `map` line inside a
- * `listener` block. Two of those three live in a file every other site on the
- * box depends on, which makes editing it the dangerous part of OLS support —
- * a mistake here is not one broken site, it is all of them.
+ * nginx and Apache read a directory, so adding a site is dropping a file in. OLS needs a per-site
+ * `vhconf.conf` **plus** a `virtualHost` block at the top level of the shared config **plus** a `map`
+ * line inside a `listener` block. Two of those live in a file every other site depends on, so a
+ * mistake here breaks all sites, not one.
  *
  * Three rules make that survivable:
  *
- *  - **The panel owns a marked region and nothing else.** Everything it writes
- *    lives between BEGIN/END markers; anything outside them is copied through
- *    untouched. Users migrate real servers into this panel with hand-written
- *    config in that file, and losing it would be unforgivable.
- *  - **The region is rebuilt, never appended to.** Add, replace and remove are
- *    the same operation — parse the region into entries, change one, render it
- *    back — so re-provisioning a site cannot duplicate its block.
+ *  - **The panel owns a marked region and nothing else.** Everything it writes lives between
+ *    BEGIN/END markers; anything outside is copied through untouched (migrated servers carry
+ *    hand-written config in that file).
+ *  - **The region is rebuilt, never appended to.** Add, replace and remove are the same operation
+ *    (parse the region into entries, change one, render it back), so re-provisioning cannot
+ *    duplicate a block.
  *  - **Back up, write, test, and restore the whole file if the test fails.**
  *
- * Community reports say the WebAdmin console does not reliably sync with these
- * files, deletions especially. The panel therefore owns them outright rather
- * than trying to cooperate.
+ * The WebAdmin console does not reliably sync with these files (deletions especially), so the panel
+ * owns them outright rather than cooperating.
  */
 class OlsSharedConfig
 {
@@ -50,10 +46,8 @@ class OlsSharedConfig
     /**
      * The same maps again, inside the SSL listener.
      *
-     * OpenLiteSpeed binds certificates to a *listener*, not to a vhost — a site
-     * only answers on 443 if it is mapped there as well. Its own marked region
-     * because the two listeners are separate blocks in the file, and a single
-     * region cannot span both.
+     * OpenLiteSpeed binds certificates to a *listener*, not a vhost: a site answers on 443 only if it
+     * is mapped there too. Its own region because the two listeners are separate blocks.
      */
     private const BEGIN_SSL_MAPS = '  ### BEGIN panel-managed SSL maps — do not edit between these markers';
 
@@ -82,8 +76,7 @@ class OlsSharedConfig
             fn (array $sites) => [...$sites, $name => ['domains' => $domains, 'root' => $vhRoot]],
             $name,
             'ols_register',
-            // Adding a site is the moment a secure listener might be needed;
-            // removing one never is. Creating a listener on the way out would
+            // Adding a site is when a secure listener might be needed; creating one on removal would
             // change what the server binds as a side effect of a deletion.
             secureListener: true,
         );
@@ -101,10 +94,8 @@ class OlsSharedConfig
     /**
      * Sites the panel currently has registered, name => domains.
      *
-     * Read back out of the file rather than from the database: the file is the
-     * thing OpenLiteSpeed actually reads, so it is the state that matters. A
-     * rebuild driven from our own records would happily "fix" a file that
-     * somebody had legitimately changed underneath us.
+     * Read back out of the file, not the database: the file is what OpenLiteSpeed actually reads, and
+     * a rebuild from our own records would "fix" a file somebody had legitimately changed.
      *
      * @return array<string, array<int, string>>
      */
@@ -122,9 +113,8 @@ class OlsSharedConfig
             }
         }
 
-        // …and each site's root from its own virtualHost block, so a rebuild
-        // preserves it. Reading only the maps would mean regenerating every
-        // other site's vhRoot from a default and silently moving it.
+        // …and each site's root from its own virtualHost block, so a rebuild preserves it instead of
+        // regenerating every other site's vhRoot from a default.
         $vhosts = $this->region($contents, self::BEGIN_VHOSTS, self::END_VHOSTS);
 
         preg_match_all('/virtualHost\s+(\S+)\s*\{[^}]*?vhRoot\s+(\S+)/s', $vhosts, $found, PREG_SET_ORDER);
@@ -139,14 +129,12 @@ class OlsSharedConfig
     }
 
     /**
-     * Whether the shared config still refers to a site — anywhere in the file,
-     * not just inside the managed region.
+     * Whether the shared config still refers to a site, anywhere in the file, not just the managed
+     * region.
      *
-     * The whole file on purpose. Checking only the region would answer "did we
-     * remove our entry", when the question before deleting a site's files is
-     * "does OpenLiteSpeed still expect them". Those differ exactly when the
-     * entries have escaped the markers — which is what the WebAdmin console
-     * leaves behind, since the markers are comments and it strips them.
+     * The question before deleting a site's files is "does OpenLiteSpeed still expect them", not "did
+     * we remove our entry". They differ when entries have escaped the markers, which the WebAdmin
+     * console does (the markers are comments and it strips them).
      */
     public function references(string $name): bool
     {
@@ -156,8 +144,8 @@ class OlsSharedConfig
         );
 
         if (! $read->ok) {
-            // Unreadable is not "absent". Treat it as still referenced so the
-            // caller does not delete on the strength of a failed read.
+            // Unreadable is not "absent": treat it as still referenced so a failed read never leads
+            // to a delete.
             return true;
         }
 
@@ -167,26 +155,20 @@ class OlsSharedConfig
     }
 
     /**
-     * Whether `$name` is already a vhost that is not a site — the panel's own
-     * `panel` / `panel-api`, or OpenLiteSpeed's `Example`.
+     * Whether `$name` is already a vhost that is not a site: the panel's own `panel` / `panel-api`,
+     * or OpenLiteSpeed's `Example`.
      *
-     * {@see absorbUnmanaged()} takes over an entry outside the markers so a
-     * server migrated from the old panel does not end up with two definitions
-     * of one site. It cannot tell a site from the panel itself by name, and on
-     * 2026-09-29 a site created as `panel` took over the panel's own vhost:
-     * the UI 404'd, and its `vhconf.conf` had already been overwritten by the
-     * time the shared file was touched. So the driver asks this **before
-     * writing anything**.
+     * {@see absorbUnmanaged()} takes over an entry outside the markers so a migrated server does
+     * not end up with two definitions of one site, but it cannot tell a site from the panel itself
+     * by name (a site created as `panel` took over the panel's own vhost). So the driver asks this
+     * **before writing anything**.
      *
-     * Told apart by `vhRoot`, which is where a site's files are and never
-     * where the server's config is: a site's is its own folder (v7's template
-     * is `vhRoot {{ $applicationPath }}`, ours {@see OlsDriver::vhRoot()}),
-     * while install.sh roots the panel's vhosts in the config directory and
-     * OpenLiteSpeed ships `Example` with a relative `Example/`.
+     * Told apart by `vhRoot`: a site's is its own folder (v7's template is `vhRoot {{
+     * $applicationPath }}`, ours {@see OlsDriver::vhRoot()}), while install.sh roots the panel's
+     * vhosts in the config directory and OpenLiteSpeed ships `Example` with a relative `Example/`.
      *
-     * An unreadable file answers false: the write that follows reads the same
-     * file and fails on its own, and inventing a conflict would refuse every
-     * site on a box whose config merely could not be read this once.
+     * An unreadable file answers false: the write that follows fails on its own, and inventing a
+     * conflict would refuse every site on a box whose config could not be read once.
      */
     public function ownedByServer(string $name): bool
     {
@@ -212,9 +194,8 @@ class OlsSharedConfig
     }
 
     /**
-     * The `vhRoot` of the `virtualHost <name>` block outside the markers, or
-     * null when there is no such block. Same line walk as absorbUnmanaged(),
-     * so the two cannot disagree about which block is "outside".
+     * The `vhRoot` of the `virtualHost <name>` block outside the markers, or null when there is none.
+     * Same line walk as absorbUnmanaged(), so the two cannot disagree about which block is "outside".
      */
     private function unmanagedRoot(string $contents, string $name): ?string
     {
@@ -250,8 +231,8 @@ class OlsSharedConfig
             $depth += substr_count($line, '{') - substr_count($line, '}');
 
             if ($depth <= 0) {
-                // A block with no vhRoot says nothing about where it lives;
-                // treat it like the relative case — not a site of ours.
+                // A block with no vhRoot says nothing about where it lives; treat it like the
+                // relative case: not a site of ours.
                 return '';
             }
         }
@@ -260,20 +241,14 @@ class OlsSharedConfig
     }
 
     /**
-     * The account lsws drops its workers to — the top-level `user` directive.
+     * The account lsws drops its workers to: the top-level `user` directive.
      *
-     * Here rather than in the driver because this class owns the file: it
-     * already knows the path, already reads it, and is the only place that
-     * should know its shape. A second reader elsewhere is a second thing to
-     * update the day the format moves.
+     * Here because this class owns the file and is the only place that should know its shape.
      *
-     * Anchored to column zero deliberately. A vhost's `extUser` is the
-     * *site's* account, not the server's, and matching it would hand back an
-     * answer that looks right and is not. Measured on a live box: the real
-     * file has exactly one `^user` line, unindented, and no `extUser` at all.
+     * Anchored to column zero deliberately: a vhost's `extUser` is the *site's* account, not the
+     * server's, and matching it would give an answer that looks right and is not.
      *
-     * Null when the file cannot be read or names no user — the caller decides
-     * what to do without one, and the honest answer is "we were not told".
+     * Null when the file cannot be read or names no user: the caller decides what to do without one.
      */
     public function serverUser(): ?string
     {
@@ -281,9 +256,8 @@ class OlsSharedConfig
             return $this->serverUser;
         }
 
-        // Memoised including the failures: `ensure()` runs per site on a
-        // resync, and a box whose config is unreadable should not be asked
-        // once per site to say so again.
+        // Memoised including failures: `ensure()` runs per site on a resync, and an unreadable config
+        // should not be reported once per site.
         $this->serverUserRead = true;
 
         $read = $this->serverOps->run(
@@ -307,11 +281,9 @@ class OlsSharedConfig
      */
     private function rewrite(callable $change, string $name, string $op, bool $secureListener = false): ServerOpsResult
     {
-        // Read-modify-write on a file shared by every site, from a queue that
-        // runs more than one worker. Without this, two sites provisioning at
-        // once means the second read misses the first's entry and writes it
-        // back out — the site reports Active with a vhost the server has never
-        // heard of.
+        // Read-modify-write on a file shared by every site, from a queue with more than one worker.
+        // Without the lock the second site's read misses the first's entry and writes it back out, so
+        // the site reports Active with a vhost the server has never heard of.
         return Cache::lock('ols-shared-config', 30)->block(20, fn () => $this->rewriteLocked($change, $name, $op, $secureListener));
     }
 
@@ -332,14 +304,11 @@ class OlsSharedConfig
         $original = $read->output();
         $sites = $change($this->sites($original));
 
-        // A site with no known directory is refused, not written. It is a
-        // map line inside the markers with no virtualHost block beside it, so
-        // this file does not say where the site lives, and the block used to
-        // be rendered with an empty root: `vhRoot /`, the whole filesystem.
-        // OpenLiteSpeed accepts that until the site's own config names a log
-        // under $VH_ROOT, so the test below passed and the entry stayed, and
-        // the next change to that site failed its test instead (seen on a real
-        // server, 2026-09-24). Nothing is changed and the reference says why.
+        // A site with no known directory is refused, not written: it is a map line with no
+        // virtualHost block beside it, and rendering it gave `vhRoot /` (the whole filesystem).
+        // OpenLiteSpeed accepts that until the site's own config names a log under $VH_ROOT, so the
+        // test passed and the next change to that site failed. Nothing is changed and the reference
+        // says why.
         $unknown = array_keys(array_filter($sites, fn (array $site): bool => trim((string) ($site['root'] ?? ''), '/') === ''));
 
         if ($unknown !== []) {
@@ -354,12 +323,12 @@ class OlsSharedConfig
             return new ServerOpsResult(false, $reference);
         }
 
-        // Never take over a vhost that is not a site: see ownedByServer().
-        // The driver asks first; this catches every other way in (resync,
-        // a rename) and is the last line before the file every site shares.
+        // Never take over a vhost that is not a site: see ownedByServer(). The driver asks first;
+        // this catches every other way in (resync, a rename) and is the last line before the shared
+        // file.
         //
-        // Only the site being written. Asking of every site would let one odd
-        // entry elsewhere in the file stop every site on the box from saving.
+        // Only the site being written: asking of every site would let one odd entry elsewhere stop
+        // every site on the box from saving.
         if (array_key_exists($name, $sites) && $this->serverOwned($original, $name)) {
             $reference = (string) Str::uuid();
 
@@ -392,9 +361,8 @@ class OlsSharedConfig
 
         $written = $this->files->put($path, $updated, $context);
 
-        // `tee` truncates before it writes, so a failure here — no disk space,
-        // a killed worker, a timeout — leaves the file empty or half written.
-        // Restoring is not optional: this is every site on the box.
+        // `tee` truncates before it writes, so a failure here (no disk space, a killed worker, a
+        // timeout) leaves the file empty or half written. Restoring is not optional.
         if ($written->failed()) {
             $this->serverOps->run(['cp', '-f', $backup, $path], $context);
 
@@ -404,9 +372,8 @@ class OlsSharedConfig
         $test = $this->test();
 
         if ($test->failed()) {
-            // The whole file back, not just our region: a config that fails its
-            // own test must never survive to the next reload, and this one is
-            // shared with every site on the box.
+            // The whole file back, not just our region: a config that fails its own test must never
+            // survive to the next reload.
             $this->serverOps->run(['cp', '-f', $backup, $path], $context);
 
             return $test;
@@ -420,13 +387,9 @@ class OlsSharedConfig
     /**
      * The shared TLS-reject key pair, but only if it is really on disk.
      *
-     * `OlsDriver::apply()` creates it before it gets here, so the usual answer
-     * is yes. Asked anyway, because the cost of being wrong is not symmetric:
-     * a secure listener naming files that do not exist stops OpenLiteSpeed
-     * starting — every site on the server, not one — and the config test that
-     * would normally catch that has been seen passing a config it should have
-     * rejected. Null means the listener is simply not created, which leaves
-     * the server exactly as it was.
+     * `OlsDriver::apply()` creates it first, but ask anyway: a secure listener naming missing files
+     * stops OpenLiteSpeed starting for every site, and the config test has been seen passing a config
+     * it should have rejected. Null means the listener is simply not created.
      *
      * @param  array<string, mixed>  $context
      * @return array{certificate: string, private_key: string}|null
@@ -445,21 +408,17 @@ class OlsSharedConfig
 
     /**
      * @param  array<string, array<int, string>>  $sites
-     * @param  array{certificate: string, private_key: string}|null  $tlsFallback
-     *                                                                             the key pair a newly created secure listener presents, or null
-     *                                                                             when it could not be confirmed on disk
+     * @param  array{certificate: string, private_key: string}|null  $tlsFallback  null when the key pair is not on disk
      */
     /**
-     * Remove a site's `virtualHost` block and `map` line from the text outside
-     * the managed markers, so the managed region can own them.
+     * Remove a site's `virtualHost` block and `map` line from the text outside the managed markers,
+     * so the managed region can own them.
      *
-     * Brace-counted rather than regex-matched: a `virtualHost` block is
-     * delimited by braces and a pattern that stops at the first `}` would cut
-     * one in half, leaving a config that fails to parse — which on this file
-     * means the whole server, not one site.
+     * Brace-counted rather than regex-matched: a pattern that stops at the first `}` would cut a
+     * block in half and leave a config that fails to parse, which here means the whole server.
      *
-     * Only ever called for a name the panel is about to write, and only
-     * outside the markers; everything else is copied through.
+     * Only ever called for a name the panel is about to write, and only outside the markers;
+     * everything else is copied through.
      */
     private function absorbUnmanaged(string $contents, string $name): string
     {
@@ -521,22 +480,14 @@ class OlsSharedConfig
 
         ksort($sites);
 
-        // Take over any entry for these sites that is sitting outside the
-        // markers, rather than writing a second one beside it.
+        // Take over any entry for these sites that sits outside the markers, rather than writing a
+        // second one beside it. `sites()` reads the managed regions only, which is wrong for a file
+        // inherited from the old panel (it already has `virtualHost <name>` and `map <name>` for
+        // every site): two definitions of one site would break every site, not one.
         //
-        // `sites()` reads the managed regions only, which is correct for a file
-        // this panel wrote and wrong for one it inherited: a server migrated
-        // from the old panel already has `virtualHost <name>` and `map <name>`
-        // for every site, written before these markers existed. Adding ours
-        // without removing theirs leaves OpenLiteSpeed with two definitions of
-        // one site — in the file whose mistakes are not one broken site but all
-        // of them.
-        //
-        // Scoped to exactly the names being written, so config for anything
-        // else — hand-written or from the WebAdmin console — is still copied
-        // through untouched, which is the rule this file exists to keep. And it
-        // rides the write that already backs the file up, tests it, and rolls
-        // back if the test fails.
+        // Scoped to exactly the names being written, so anything else (hand-written, or from the
+        // WebAdmin console) is still copied through untouched. It rides the write that already backs
+        // up, tests and rolls back.
         foreach (array_keys($sites) as $name) {
             $contents = $this->absorbUnmanaged($contents, (string) $name);
         }
@@ -565,10 +516,9 @@ class OlsSharedConfig
             append: false,
         );
 
-        // Skipped rather than fatal when the box has no SSL listener. A server
-        // that has never had a certificate legitimately does not have one, and
-        // refusing to register a plain HTTP site because of that would break
-        // provisioning on every OLS box until somebody set up TLS by hand.
+        // Skipped rather than fatal when the box has no SSL listener: a server that never had a
+        // certificate legitimately has none, and refusing a plain HTTP site would break
+        // provisioning on every OLS box until TLS was set up by hand.
         try {
             return $this->replaceRegion(
                 $contents,
@@ -588,13 +538,9 @@ class OlsSharedConfig
      */
     private function vhostBlock(string $name, string $vhRoot): string
     {
-        // From the layout, not from config, and this is the half that was
-        // missed: `OlsDriver::configPath()` learned where a migrated server
-        // keeps its vhosts, and this — the block telling OpenLiteSpeed which
-        // file to read — did not. The panel would then write config to
-        // `/etc/<brand>-ols/<site>/main.conf` and point the server at
-        // `<configured root>/<site>/vhconf.conf`. Two paths, one site, and
-        // every file involved looking correct on its own.
+        // From the layout, not from config: `OlsDriver::configPath()` learned where a migrated
+        // server keeps its vhosts, and this block (which tells OpenLiteSpeed which file to read)
+        // must agree, or the panel writes config to one path and points the server at another.
         $layout = app(OlsVhostLayout::class);
         $conf = $layout->root();
         $file = $layout->filename();
@@ -602,10 +548,9 @@ class OlsSharedConfig
 
         return implode("\n", [
             "virtualHost {$name} {",
-            // vhRoot is the *site* directory. It used to be the config
-            // directory, which with `restrained 1` — access confined to
-            // vhRoot — put the document root outside the only tree the vhost
-            // was allowed to read. Every request would have been refused.
+            // vhRoot is the *site* directory, not the config directory: with `restrained 1` (access
+            // confined to vhRoot) a config-directory root would put the document root outside the
+            // only tree the vhost may read, and every request would be refused.
             "  vhRoot                  {$vhRoot}/",
             "  configFile              {$conf}/{$name}/{$file}",
             '  allowSymbolLink         1',
@@ -630,12 +575,9 @@ class OlsSharedConfig
 
         $pattern = '/'.preg_quote($begin, '/').'.*?'.preg_quote($end, '/').'/s';
 
-        // Spliced by offset rather than with preg_replace. A replacement string
-        // has its own semantics — `$1` and `\1` are backreferences — so any
-        // path or name containing them would be silently eaten. Nothing does
-        // today, but the input includes operator-set config paths, and this is
-        // the file every site on the box depends on. Substr has no semantics
-        // to get wrong.
+        // Spliced by offset, not preg_replace: a replacement string has its own semantics (`$1`,
+        // `\1`) that would silently eat such sequences in operator-set config paths, in the file
+        // every site depends on. Substr has none.
         if (preg_match($pattern, $contents, $matches, PREG_OFFSET_CAPTURE) === 1) {
             [$matched, $offset] = $matches[0];
 
@@ -650,34 +592,20 @@ class OlsSharedConfig
     /**
      * The secure listener, created when the server has none.
      *
-     * OpenLiteSpeed binds certificates to a **listener**, not to a vhost: a
-     * site answers on 443 only if a secure listener exists *and* the site is
-     * mapped into it. A fresh OLS install ships one listener, `Default` on
-     * *:8088, and no secure one at all — install.sh moves that to :80 and
-     * creates `Defaultssl`, but **only when the panel itself gets TLS**.
+     * OpenLiteSpeed binds certificates to a **listener**: a site answers on 443 only if a secure
+     * listener exists *and* the site is mapped into it. A fresh OLS install ships no secure one;
+     * install.sh creates `Defaultssl`, but **only when the panel itself gets TLS**. Without this,
+     * issuing a certificate succeeded, `vhssl` named the real key pair, the panel reported HTTPS, and
+     * nothing listened on 443.
      *
-     * Until now the SSL maps region simply gave up when the listener was
-     * absent, and the caller swallowed the exception. On a panel left on HTTP
-     * that produced the quietest failure in the OLS support: issuing a
-     * certificate for a site succeeded, `vhssl` was written into its vhost
-     * naming the real key pair, the panel reported HTTPS — and nothing on the
-     * box was listening on 443, with no error anywhere to say so.
+     * Inventing this listener is safe, unlike the plain one: there is exactly one right answer for
+     * TLS (`*:443`), the other web servers already listen there, and install.sh writes this very
+     * block, which this mirrors.
      *
-     * Inventing this listener is not the guess that inventing the *plain* one
-     * would be. There is exactly one right answer for TLS (`*:443`), the other
-     * two web servers already listen there for every site — nginx's template
-     * emits `listen 443 ssl` whether or not a certificate exists — and
-     * install.sh writes this very block, which this deliberately mirrors.
-     *
-     * The key pair is the shared TLS-reject pair, the same one the vhost
-     * templates name when a site has no certificate of its own. A listener
-     * certificate is only the SNI fallback; each site overrides it in `vhssl`.
-     *
-     * Caller-supplied and only when confirmed present on disk: a listener
-     * naming a key pair that is not there does not break one site, it stops
-     * OpenLiteSpeed starting — and `openlitespeed -t` has been observed
-     * reporting success on a config it should have rejected, so this cannot
-     * be left for the test to catch.
+     * The key pair is the shared TLS-reject pair that vhosts without a certificate use; it is only
+     * the SNI fallback and each site overrides it in `vhssl`. It is caller-supplied and only used
+     * when confirmed present: a listener naming missing files stops OpenLiteSpeed starting, and
+     * `openlitespeed -t` has been seen passing a config it should have rejected.
      *
      * @param  array{certificate: string, private_key: string}  $tlsFallback
      */
@@ -685,9 +613,8 @@ class OlsSharedConfig
     {
         $listener = (string) config('server.web_server_drivers.openlitespeed.ssl_listener', 'Defaultssl');
 
-        // A box that already has one has it for a reason — an operator's own
-        // certificate, a non-standard port, a listener the panel did not make.
-        // Same rule as install.sh: create only when absent, never rewrite.
+        // A box that already has one has it for a reason (an operator's own certificate, a
+        // non-standard port). Same rule as install.sh: create only when absent, never rewrite.
         if (preg_match('/^listener\s+'.preg_quote($listener, '/').'\s*\{/m', $contents) === 1) {
             return $contents;
         }
@@ -700,13 +627,11 @@ class OlsSharedConfig
             "  keyFile                 {$tlsFallback['private_key']}",
             "  certFile                {$tlsFallback['certificate']}",
             '  certChain               1',
-            // TLS 1.2 as the floor, spelled as OLS spells it. Matches the
-            // vhost templates and install.sh rather than being a third
-            // opinion about which protocols this server offers.
+            // TLS 1.2 as the floor, spelled as OLS spells it; matches the vhost templates and
+            // install.sh.
             '  sslProtocol             24',
-            // Empty, and that is the point: the maps region below is written
-            // by the same pass, and it needs the markers to already be inside
-            // a listener to find them.
+            // Empty on purpose: the maps region below is written by the same pass and needs the
+            // markers already inside a listener to find them.
             self::BEGIN_SSL_MAPS,
             self::END_SSL_MAPS,
             '}',
@@ -718,9 +643,8 @@ class OlsSharedConfig
     /**
      * Put a new region just before the listener block's closing brace.
      *
-     * If there is no listener block there is nothing sane to do: a `map` is
-     * only legal inside one, and inventing a listener would mean guessing which
-     * address and port this server is supposed to answer on.
+     * With no listener block there is nothing sane to do: a `map` is only legal inside one, and
+     * inventing one would mean guessing which address and port to answer on.
      */
     private function insertInListener(string $contents, string $region, ?string $listener = null): string
     {
@@ -743,11 +667,9 @@ class OlsSharedConfig
     /**
      * The offset of the brace closing the one at `$open`.
      *
-     * Counted rather than found by looking for a line starting with `}`. A
-     * hand-written config that indents its closing brace would send that
-     * search past the end of the listener and splice the maps region into
-     * whatever block came next — where `map` is illegal, so every later
-     * registration would fail its config test.
+     * Counted rather than found by looking for a line starting with `}`: a hand-written config that
+     * indents its closing brace would send that search past the listener and splice the maps into the
+     * next block, where `map` is illegal.
      */
     private function matchingBrace(string $contents, int $open): ?int
     {
@@ -776,27 +698,15 @@ class OlsSharedConfig
     }
 
     /**
-     * Through `OlsConfigCheck`, and this is the caller that made it a class.
+     * Stop the secure listener presenting the panel's own certificate to names no site claims.
      *
-     * The rollback above is the panel's last defence for the file every site
-     * on the box shares — and this used to run `openlitespeed -t` itself, a
-     * command that exits 0 on any configuration unless a directory OLS does
-     * not create in test mode happens to exist. A rollback wired to a check
-     * that could not fail.
-     */
-    /**
-     * Stop the secure listener presenting the panel's own certificate to
-     * names no site claims (bug #55).
+     * The TLS handshake uses the listener's certificate before OLS answers an unmapped name with its
+     * 404, and install.sh set that to the panel's, so any domain pointed at the server showed the
+     * panel's hostname. The panel's vhosts carry the same pair in their own `vhssl`, so the listener
+     * gets the reserved self-signed pair instead (the one sites without a certificate use).
      *
-     * OpenLiteSpeed answers an unmapped name with its own 404 already, but the
-     * TLS handshake comes first and uses the listener's certificate — which
-     * install.sh set to the panel's. So any domain pointed at the server showed
-     * the panel's hostname. The panel's vhosts carry the same pair in their own
-     * `vhssl`, so the listener does not need it: it gets the reserved
-     * self-signed pair instead, the one sites without a certificate use.
-     *
-     * Only when the listener's certificate is exactly the one on the panel's
-     * own vhost. Anything else was set by somebody on purpose and is left.
+     * Only when the listener's certificate is exactly the one on the panel's own vhost; anything else
+     * was set on purpose and is left.
      *
      * @param  array<int, string>  $panelHosts
      * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
@@ -881,19 +791,16 @@ class OlsSharedConfig
     }
 
     /**
-     * Use the visitor's address from X-Forwarded-For, but only on a request
-     * that comes from one of `$ranges` — see CloudflareRealIp. OpenLiteSpeed's
-     * "Trusted IP Only" (2): its docs advise against "Yes" (1), v7's setting,
-     * because then any visitor can choose the address the server logs and
-     * bans. The trusted addresses are the server's Allowed List entries that
-     * end in `T`.
+     * Use the visitor's address from X-Forwarded-For, but only on a request from one of `$ranges`
+     * (see CloudflareRealIp). OpenLiteSpeed's "Trusted IP Only" (2): its docs advise against "Yes"
+     * (1), v7's setting, because then any visitor can choose the address the server logs and bans.
+     * The trusted addresses are the server's Allowed List entries that end in `T`.
      *
-     * Left alone: a server whose owner chose another mode (every server moved
-     * from v7 has 1), and one whose Allowed List is not open to ALL — adding
-     * Cloudflare there would let it in.
+     * Left alone: a server whose owner chose another mode (every server moved from v7 has 1), and one
+     * whose Allowed List is not open to ALL (adding Cloudflare there would let it in).
      *
-     * Applied only by a cold restart (OlsColdRestart): after a graceful one
-     * OpenLiteSpeed kept the old trusted list.
+     * Applied only by a cold restart (OlsColdRestart): after a graceful one OpenLiteSpeed kept the
+     * old trusted list.
      *
      * @param  array<int, string>  $ranges
      * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
@@ -961,9 +868,8 @@ class OlsSharedConfig
         $block = preg_replace('/^\s*allow\s+.*$/m', str_replace(['\\', '$'], ['\\\\', '\\$'], $line), $block, 1);
         $updated = substr($contents, 0, $open).$block.substr($contents, $close);
 
-        // At the end of the file, where v7 has it. Measured on OpenLiteSpeed
-        // 1.9.4 (2026-11-11): the same line just above `accessControl` was
-        // ignored, at either value.
+        // At the end of the file, where v7 has it: the same line above `accessControl` is ignored by
+        // OpenLiteSpeed 1.9.4, at either value.
         if (! $hasMode) {
             $updated = rtrim($updated, "\n")."\nuseIpInProxyHeader       2\n";
         }
@@ -990,9 +896,8 @@ class OlsSharedConfig
     }
 
     /**
-     * The copy has done its job once the new file passed its test (2026-10-29,
-     * Dipali: no copy stays on the user's server unasked). Kept only while
-     * the change is in flight; a failure to remove it fails nothing.
+     * The copy has done its job once the new file passed its test: no copy stays on the user's server
+     * unasked. Kept only while the change is in flight; a failure to remove it fails nothing.
      *
      * @param  array<string, mixed>  $context
      */
@@ -1039,6 +944,11 @@ class OlsSharedConfig
         return preg_match('/^\s*'.$name.'\s+(\S+)/m', $block, $m) === 1 ? $m[1] : null;
     }
 
+    /**
+     * Runs the config check through `OlsConfigCheck`: `openlitespeed -t` exits 0 on any configuration
+     * unless a directory OLS does not create in test mode exists, so a rollback wired to it directly
+     * could never fire.
+     */
     public function test(): ServerOpsResult
     {
         return $this->configCheck->run();

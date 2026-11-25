@@ -14,28 +14,17 @@ use Illuminate\Support\Str;
 /**
  * Server log files: read, and — for the sources that opt in — empty.
  *
- * This was read-only. `clearable` is opt-in per source and now covers every
- * file-based source, including the ones that record what happened to the machine
- * — auth.log, ufw.log, fail2ban.log, syslog, kern.log, mail.log and the Let's
- * Encrypt log. Those carry `sensitive` as well, which the screen turns into a
- * confirmation that names what is being destroyed: they are the files an
- * investigation needs and the first ones an intruder would erase, so the answer
- * is informed consent rather than a silent button. Operator's decision, taken
- * after the alternative was argued.
+ * `clearable` is opt-in per source. System logs (auth, ufw, fail2ban, syslog, kern, mail, Let's
+ * Encrypt) are also `sensitive`: the screen then asks for a confirmation that names what is being
+ * destroyed. The journal is never clearable because it is not a file.
  *
- * The journal is the one thing still refused, and for a reason that is not
- * policy: it is not a file, so there is nothing to truncate.
+ * The catalog is the configured source registry plus one log per PHP version, PostgreSQL cluster,
+ * cron job (the only part that reads the DB) and worker. Everything is filtered at read time to
+ * files that actually exist.
  *
- * The catalog is the configured source
- * registry, plus one log per PHP version the stack reports, plus one
- * source per cron job (the only part that reads the DB — a cron log's label
- * is its job's name, which only the DB knows). Everything is filtered at read
- * time to files that actually exist (detect-don't-trust).
- *
- * Callers reference a source by its `key`; this class resolves the real path
- * from the registry — a client-supplied path is never read (no traversal).
- * Reads are native filesystem operations (efficient tail / byte-range / grep),
- * not shelled commands, so there is no injection surface.
+ * Callers reference a source by its `key`; the real path comes from the registry, so a
+ * client-supplied path is never read (no traversal). Reads are native filesystem operations, not
+ * shelled commands, so there is no injection surface.
  */
 class LogManager
 {
@@ -43,8 +32,7 @@ class LogManager
 
     public const MAX_LINES = 5000;
 
-    // An incremental poll can be arbitrarily far behind. Cap its byte window
-    // before reading so a busy log cannot exhaust an FPM worker's memory.
+    // Caps an incremental poll's byte window so a busy log cannot exhaust an FPM worker's memory.
     public const MAX_INCREMENTAL_BYTES = 1048576;
 
     /** Lines pulled through a privileged read before filtering in PHP. */
@@ -55,21 +43,16 @@ class LogManager
     private const ABSENT = 'absent';
 
     /**
-     * Asked, and not answered.
+     * Asked, and not answered (a refusal or a timeout, never "no").
      *
-     * A refusal or a timeout, never "no". Kept apart from ABSENT because the
-     * two lead the reader to opposite conclusions: one says this server has no
-     * such log, the other says this panel could not look — and only the first
-     * is a reason to hide the source.
+     * Kept apart from ABSENT: only ABSENT is a reason to hide the source.
      */
     private const UNKNOWN = 'unknown';
 
     public function __construct(
         private PhpStack $stack,
         private ServerOps $serverOps,
-        // For the worker log path only. Its own dependencies are ServerOps,
-        // ManagedFile and FrameworkDetector — none of which reach back here,
-        // so this cannot close a container cycle.
+        // For the worker log path only. Nothing it depends on reaches back here (no container cycle).
         private WorkerSupervisor $workers,
     ) {}
 
@@ -111,18 +94,12 @@ class LogManager
     /**
      * Empty one log, when the source allows it.
      *
-     * **Truncated, never deleted.** An open log that is unlinked keeps its disk
-     * space until the writer restarts and breaks its own handle — `rm` would
-     * free nothing and leave nginx, MySQL or the cron wrapper appending to a
-     * file no screen can read. `truncate -s 0` reclaims the space with the
-     * writer attached and keeps the inode's owner and mode, which the service
-     * will not restore on its own. Same mechanism, and the same reason, as the
-     * Disk Cleaner's ServiceLogsTarget.
+     * Truncated, never deleted: an unlinked open log frees no space and leaves the writer appending
+     * to a file nobody can read. `truncate -s 0` keeps the inode, owner and mode (as the Disk
+     * Cleaner's ServiceLogsTarget does).
      *
-     * Two refusals, both 404-shaped to the caller rather than 403: a source
-     * that is not `clearable`, and the journal, which is not a file at all —
-     * emptying that means `journalctl --vacuum` against the host's whole
-     * journal, which is a different operation with a different blast radius.
+     * Returns false (404-shaped, not 403) for a source that is not `clearable` and for the journal,
+     * which is not a file: emptying it means `journalctl --vacuum` on the host's whole journal.
      *
      * @throws LogOperationException
      */
@@ -154,10 +131,8 @@ class LogManager
         $kind = $source['kind'] ?? 'file';
         $presence = $this->presence($source);
 
-        // Absent is the only reason to hide a source. "I could not find out"
-        // is not the same answer, and dropping it silently is how a server
-        // with an out-of-date sudo grant shows an empty Logs screen and lets
-        // the user conclude their cron jobs never wrote anything.
+        // Only ABSENT hides a source. Hiding an "unknown" one would show an empty Logs screen on a
+        // server with an out-of-date sudo grant.
         if ($presence === self::ABSENT) {
             return null;
         }
@@ -171,43 +146,27 @@ class LogManager
             'label' => $source['label'],
             'group' => $source['group'],
             'kind' => $kind,
-            // Whether the panel will empty this one. Opt-in per source; false
-            // for the journal, which is not a file and so has nothing to
-            // truncate — emptying that means `journalctl --vacuum` against the
-            // host's whole journal, a different operation.
+            // Whether the panel will empty this one; never the journal, which has nothing to truncate.
             'clearable' => ($source['clearable'] ?? false) === true && $kind !== 'journal',
-            // Clearable, but it is the record of what happened to the machine:
-            // auth.log, ufw.log, fail2ban.log, syslog, kern.log, mail.log, the
-            // Let's Encrypt log. Reported so the confirmation can name what is
-            // being destroyed rather than offering the same sentence it uses for
-            // an access log. The screen must not infer this from the key — the
-            // registry decides, and a second client would get the list wrong.
+            // Clearable, but a record of what happened to the machine (auth.log, ufw.log, ...). Lets
+            // the confirmation name what is destroyed. The registry decides, not the screen.
             'clear_sensitive' => ($source['sensitive'] ?? false) === true,
             'size' => $stat['size'],
             'modified' => $stat['modified'] === null ? null : date('d-m-Y H:i:s', $stat['modified']),
-            // A privileged source is read through sudo, so "can the panel
-            // account open it" is the wrong question — it never can, and it
-            // does not need to.
-            // For a privileged source the question is not whether this process
-            // can open the file — it never can — but whether sudo will run the
-            // reader. Hardcoding `true` here told the screen a source was
-            // readable right up until opening it returned a 500.
+            // A privileged source is read through sudo, so the question is whether sudo will run the
+            // reader, not whether this process can open the file (it never can).
             'readable' => match (true) {
-                // Asked and not answered: the screen should show the source
-                // greyed with a reason, not offer something that fails on
-                // click and not pretend it does not exist.
+                // Asked and not answered: show the source greyed with a reason.
                 $presence === self::UNKNOWN => false,
                 $kind === 'file' => is_readable($source['path']),
                 $kind === 'journal' => true,
                 default => $this->permitted('tail'),
             },
-            // Following by byte offset needs bytes and a stable file. The
-            // journal has neither, and re-reading a privileged file through
-            // sudo on every poll costs more than it saves — those re-tail.
+            // Following by byte offset needs bytes and a stable file; the journal and privileged files
+            // re-tail instead.
             'follow' => $kind === 'file',
-            // Nothing to stream: there is no handle the panel can open, and
-            // piping it through sudo would hold a worker for the whole
-            // transfer.
+            // Nothing to stream: there is no handle to open, and sudo would hold a worker for the
+            // whole transfer.
             'downloadable' => $kind === 'file',
         ];
     }
@@ -226,26 +185,22 @@ class LogManager
         }
 
         $result = $kind === 'journal'
-            // Asking journalctl for one line is the cheapest way to learn both
-            // that it is installed and that the panel may read it.
+            // One journalctl line is the cheapest check that it is installed and readable.
             ? $this->serverOps->probe(
                 $this->journalCommand($source, 1),
                 ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
                 timeout: 15,
             )
-            // `probe`, not `run`: exit 1 here means "no such log", which is an
-            // ordinary answer for a job that has not run yet — not a failed
-            // server operation worth an error in the admin log.
+            // `probe`, not `run`: exit 1 means "no such log", an ordinary answer, not a failed
+            // operation.
             : $this->serverOps->probe(
                 ['test', '-f', $source['path']],
                 ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
                 timeout: 15,
             );
 
-        // A journal source for one program exists as soon as journalctl does;
-        // "has this program ever logged" is the question that decides whether
-        // there is anything to show. journalctl answers an empty match with
-        // exit 0 and `-- No entries --`.
+        // journalctl answers an empty match with exit 0 and `-- No entries --`, so a per-program
+        // journal source exists only once the program has logged.
         if ($kind === 'journal' && ($source['hide_when_empty'] ?? false) === true && $result->ok) {
             $output = trim($result->output());
 
@@ -254,8 +209,7 @@ class LogManager
 
         return match (true) {
             $result->ok => self::PRESENT,
-            // The command ran and said no. Anything else — a refusal, a
-            // timeout — never asked the question.
+            // Ran and said no. A refusal or timeout never asked the question.
             $result->answered => self::ABSENT,
             default => self::UNKNOWN,
         };
@@ -268,12 +222,10 @@ class LogManager
      * @return array{size: int|null, modified: int|null}
      */
     /**
-     * May the panel run this binary at all?
+     * May the panel run this binary at all? Memoised per binary.
      *
-     * Memoised: `list()` describes every source in one request, and asking
-     * sudo the same question per cron job would be a process each. Only ever
-     * reached on a failure or when describing a privileged source, so a
-     * healthy server pays for it once.
+     * `list()` describes every source in one request; asking sudo per cron job would cost a
+     * process each.
      *
      * @var array<string, bool>
      */
@@ -291,9 +243,8 @@ class LogManager
     /**
      * `journalctl` for a source, narrowed to its identifier when it has one.
      *
-     * The System Journal source has none and keeps its existing behaviour —
-     * the whole box, which is what that source is for. A worker has one, and
-     * without `-t` its "logs" would be every unit's output interleaved.
+     * The System Journal source has none and reads the whole box; without `-t` a worker's log
+     * would be every unit's output interleaved.
      *
      * @param  array<string, mixed>  $source
      * @return array<int, string>
@@ -305,9 +256,7 @@ class LogManager
         $identifier = $source['identifier'] ?? null;
 
         if (is_string($identifier) && $identifier !== '') {
-            // Passed as its own argv element, never interpolated — the value
-            // is ours (`sv-worker-{slug}`), and keeping it an argument means it
-            // stays ours even if that ever stops being true.
+            // Its own argv element, never interpolated.
             $command[] = '-t';
             $command[] = $identifier;
         }
@@ -318,9 +267,7 @@ class LogManager
     private function remoteStat(array $source): array
     {
         if (($source['kind'] ?? 'file') === 'journal') {
-            // The journal is not a file and has no single size or mtime. Null
-            // rather than a plausible-looking zero, which would read as an
-            // empty log that was last written in 1970.
+            // The journal has no single size or mtime. Null, not a zero that reads as an empty log.
             return ['size' => null, 'modified' => null];
         }
 
@@ -392,17 +339,10 @@ class LogManager
     }
 
     /**
-     * A source the panel cannot open itself: read a bounded window through
-     * ServerOps and filter it here.
+     * A source the panel cannot open itself: read a bounded window through ServerOps, filter here.
      *
-     * The window is pulled first and searched second, rather than asking `grep`
-     * to do it. ServerOps passes an argv array with no shell, so a needle
-     * containing a metacharacter is data either way — but `grep -m` counts
-     * matches from the *start* of the file and a log viewer wants the last
-     * ones, and an unbounded grep over a large log returns everything it finds.
-     * Reading a fixed number of lines and filtering them is the same thing
-     * ApplicationLogManager does, and it is bounded by construction.
-     *
+     * Filtered here rather than by `grep`: `grep -m` counts matches from the start of the file while
+     * a log viewer wants the last ones, and an unbounded grep returns everything it finds.
      * `cursor` is null: there are no byte offsets to come back with.
      *
      * @param  array<string, mixed>  $source
@@ -411,10 +351,7 @@ class LogManager
     private function readPrivileged(array $source, int $lines, ?string $filter): ?array
     {
         $lines = max(1, min($lines, self::MAX_LINES));
-        // One line more than asked for: it is the only way to know there was
-        // more above. Reading exactly $lines made `truncated` always false
-        // here, while the sources the panel reads itself said true (QA,
-        // 2026-11-19).
+        // One line more than asked for: the only way to know there was more above (`truncated`).
         $window = $filter !== null && $filter !== '' ? self::PRIVILEGED_WINDOW : $lines + 1;
 
         $command = ($source['kind'] ?? 'file') === 'journal'
@@ -428,27 +365,21 @@ class LogManager
         );
 
         if ($result->failed()) {
-            // Refused and broken are different answers, and only one of them
-            // is worth a support reference. A grant that predates the binary
-            // this needs is a known state with a known remedy, and answering
-            // it with a 500 turns one unreadable source into a page that looks
-            // crashed. Asked of sudo rather than by matching its refusal
-            // prose, which differs per refusal kind and is translated.
+            // Refused and broken are different answers: a grant that predates this binary is a known
+            // state, and a 500 would make one unreadable source look like a crashed page. Ask sudo
+            // rather than match its (translated) refusal text.
             if (! $this->permitted($command[0])) {
                 throw LogOperationException::refused();
             }
 
-            // Same rule as everywhere else here: a read that did not happen is
-            // not an empty log.
+            // A read that did not happen is not an empty log.
             throw new LogOperationException($result->reference);
         }
 
         $all = $this->split($result->output());
         $filtering = $filter !== null && $filter !== '';
-        // OLD-15: a search here covers the last PRIVILEGED_WINDOW lines only.
-        // A full window means there was more log above it, which the search
-        // never saw — "no results" is then "not in the last N lines", and the
-        // screen has to be able to say so. Same field the app logs carry.
+        // A search covers only the last PRIVILEGED_WINDOW lines. A full window means "no results" is
+        // "not in the last N lines", so the screen must be able to say so (same field as app logs).
         $capped = $filtering && count($all) >= $window;
 
         if ($filtering) {
@@ -485,12 +416,10 @@ class LogManager
     }
 
     /**
-     * Read through sudo what the panel cannot read itself, as v7 does.
+     * Read through sudo what the panel cannot read itself.
      *
-     * Bug #21: /var/log/mongodb is mongodb:mongodb 0750, so the MongoDB log
-     * was listed and answered "no permission". Inside a directory the panel
-     * cannot enter, the file cannot even be seen to exist, so that counts as
-     * unreadable too. A source with an explicit kind is left as it is.
+     * Also covers a file inside a directory the panel cannot enter (e.g. /var/log/mongodb, 0750),
+     * where the file cannot even be seen to exist. A source with an explicit kind is left as it is.
      *
      * @param  array<string, mixed>  $source
      * @return array<string, mixed>
@@ -504,8 +433,8 @@ class LogManager
         }
 
         $dir = dirname($path);
-        // A directory that exists but cannot be entered hides whether the
-        // file is there; one that does not exist means nothing is installed.
+        // A directory that exists but cannot be entered hides whether the file is there; a missing
+        // one means nothing is installed.
         $unreadable = file_exists($path)
             ? ! is_readable($path)
             : is_dir($dir) && ! is_executable($dir);
@@ -516,9 +445,8 @@ class LogManager
     /**
      * One source per cron job that has captured output.
      *
-     * Sourced from the cronjobs table rather than by globbing the log
-     * directory, so a source always maps to a job that exists — and the label
-     * is the job's name, not a filename the user has to decode.
+     * Built from the cronjobs table, not a glob, so every source maps to a job that exists and the
+     * label is the job's name.
      *
      * @return array<int, array{key: string, label: string, group: string, path: string}>
      */
@@ -535,23 +463,11 @@ class LogManager
                 'label' => "Cron — {$cronjob->name}",
                 'group' => 'cronjob',
                 'path' => "{$dir}/{$cronjob->slug}.log",
-                // One job's own output. Emptying it loses nothing the machine
-                // is the record of.
+                // One job's own output; emptying it loses nothing the machine is the record of.
                 'clearable' => true,
-                // Read through sudo, unlike every other source here.
-                //
-                // install.sh puts the panel account in `adm`, which is what
-                // makes the system logs readable: they are root:adm 0640. A
-                // cron log is 0640 too, but `chown {username}` leaves the group
-                // as that user's own — deliberately, because `nobody`'s group
-                // is `nogroup` and naming one would fail for it. So `adm` does
-                // not help here, the panel is neither owner nor group, and the
-                // file it offers on the Logs screen is the one file there it
-                // cannot open.
-                //
-                // Privileged rather than widening the mode: a job's output can
-                // contain anything it printed, and 0640 was chosen to keep that
-                // off other accounts.
+                // Read through sudo, unlike every other source here: the log is chowned to the job's
+                // user and its own group, so neither the panel nor its `adm` group can open it. The
+                // mode stays 0640 (job output can contain anything) rather than being widened.
                 'kind' => 'privileged',
             ])
             ->all();
@@ -560,36 +476,20 @@ class LogManager
     /**
      * One source per worker, read from the file supervisord writes.
      *
-     * 🔴 **This was `kind: journal` and had to change with the worker itself.**
-     * A systemd unit sent stdout and stderr to journald under
-     * `sv-worker-{slug}`, so the source read `journalctl -t` that identifier.
-     * Supervisor does not use journald at all — the program block sets
-     * `stdout_logfile` (with `redirect_stderr`) and everything goes to a file.
-     * Migrating the writer without migrating the reader left every worker's
-     * log source permanently empty: `journalctl -t sv-worker-…` on a box where
-     * nothing writes under that identifier is not an error, it is zero lines.
+     * Not journald: Supervisor sets `stdout_logfile`, so `journalctl -t sv-worker-...` returns zero
+     * lines rather than an error. The path comes from `WorkerSupervisor::logFile()` so the reader
+     * and the writer cannot disagree.
      *
-     * The path comes from `WorkerSupervisor::logFile()` rather than being
-     * rebuilt here, because the reader and the writer disagreeing is the bug
-     * this comment exists about.
-     *
-     * `privileged`, like a cron log and unlike the rest of this catalog: the
-     * file sits in `{appRoot}/logs`, which `ApplicationLogDirectory` makes
-     * `root:{site user} 0750` on purpose, and the panel account is neither. So
-     * it is read through sudo `tail`. That costs `follow` and `downloadable`,
-     * which a journal source did not have either.
-     *
-     * Built from the table for the same reason cron jobs are: a source then
-     * always maps to a worker that exists, and the label is the worker's name
-     * rather than an identifier to decode.
+     * `privileged`, like a cron log: `{appRoot}/logs` is `root:{site user} 0750`, so it is read
+     * through sudo `tail` (no `follow` or `downloadable`).
      *
      * @return array<int, array{key: string, label: string, group: string, path: string, kind: string}>
      */
     private function workerLogs(): array
     {
         return ListSort::caseInsensitive(
-            // `application.systemUser` because the log path is built from the
-            // site's own directory, which is named for its account.
+            // `application.systemUser`: the log path is built from the site's directory, which is
+            // named for its account.
             Worker::query()->with('application.systemUser'),
             'name',
         )->get()
@@ -620,12 +520,8 @@ class LogManager
     /**
      * One log per PostgreSQL cluster.
      *
-     * Debian names the file after the version and cluster —
-     * `postgresql-18-main.log` — so no fixed registry path can hold it, and
-     * the Logs screen had MariaDB, Redis and PHP-FPM but no PostgreSQL at all
-     * on a server running it (found on the nginx test box). The files are
-     * `postgres:adm 0640`, and the panel's account is in `adm`, so they are
-     * read like every other system log.
+     * Debian names the file after version and cluster (`postgresql-18-main.log`), so no fixed
+     * registry path fits. The files are `postgres:adm 0640` and the panel is in `adm`.
      *
      * @return array<int, array{key: string, label: string, group: string, path: string, clearable: bool}>
      */
@@ -669,12 +565,9 @@ class LogManager
                 'key' => "php{$version}_fpm",
                 'label' => "PHP {$version} FPM",
                 'group' => 'php',
-                // php-fpm creates its log root:root 0600 — its own open() mode,
-                // and logrotate hands the same file back weekly — so the adm
-                // group that opens every other log here opens nothing. The
-                // screen listed it and answered 403 on click. Such a file is
-                // read through sudo `tail` like the Let's Encrypt log; one the
-                // panel can open stays a plain file, keeping follow/download.
+                // php-fpm creates its log root:root 0600 (logrotate keeps it so), so the `adm` group
+                // opens nothing. Such a file is read through sudo `tail`; one the panel can open stays
+                // a plain file, keeping follow/download.
                 'kind' => file_exists($path) && ! is_readable($path) ? 'privileged' : 'file',
                 'path' => $path,
                 'clearable' => true,
@@ -697,12 +590,8 @@ class LogManager
         $position = (int) (filesize($path) ?: 0);
         $buffer = '';
 
-        // Stop at the same byte ceiling the incremental path uses. The newline
-        // count alone is not a bound: a log with few line breaks — a cron job
-        // that printed one large blob, a stack trace on a single line — never
-        // satisfies it, and the buffer grows until it holds the whole file and
-        // the worker dies. `range()` was given this cap already; this is the
-        // path every first page load takes.
+        // Also stop at the incremental path's byte ceiling: a log with few line breaks (one large
+        // blob) never satisfies the newline count, and the buffer would grow to the whole file.
         $floor = max(0, $position - self::MAX_INCREMENTAL_BYTES);
 
         while ($position > $floor && substr_count($buffer, "\n") <= $lines) {
@@ -717,8 +606,7 @@ class LogManager
         $all = $this->split($buffer);
         $truncated = $position > 0;
 
-        // The window may begin halfway through a line, and half a line read as
-        // a whole one is a log entry the panel invented.
+        // The window may begin mid-line; half a line would read as an invented entry.
         if ($position > 0 && $position === $floor && count($all) > 1) {
             array_shift($all);
         }
@@ -794,12 +682,8 @@ class LogManager
     /**
      * Open a log for reading, or say that it could not be opened.
      *
-     * The three readers used to answer an unopenable file with an empty list,
-     * which renders as a log with nothing in it — the opposite of the truth, on
-     * the screen someone opens to find out what went wrong. The controller
-     * checks existence and readability first, but a log is a moving target:
-     * logrotate renames it mid-request, permissions change, the process runs
-     * out of file handles.
+     * An unopenable file must not read as an empty log. A log is a moving target: logrotate renames
+     * it mid-request, modes change, file handles run out.
      *
      * @return resource
      */
@@ -815,8 +699,7 @@ class LogManager
                 'op' => 'open',
                 'path' => $path,
                 'reference' => $reference,
-                // Almost always a file rotated away between the check and the
-                // read, or one whose mode changed under us.
+                // Usually a file rotated away between the check and the read, or whose mode changed.
                 'detail' => error_get_last()['message'] ?? 'fopen returned false',
             ]);
 

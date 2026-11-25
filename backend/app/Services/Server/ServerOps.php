@@ -11,30 +11,24 @@ use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\RuntimeException as SymfonyProcessException;
 
 /**
- * Runs a local server command via the Process facade (array args — no shell
- * interpolation, so no injection) and records a structured entry to the
- * `server-ops` log channel for every execution. Never throws — the caller
- * inspects the result and raises its own translated, feature-namespaced
- * exception on failure. Secrets must never be passed in the command array.
+ * Runs a local server command via the Process facade (array args, no shell interpolation) and
+ * logs every execution to the `server-ops` channel. Never throws: the caller inspects the result
+ * and raises its own translated exception. Secrets must never be passed in the command array.
  */
 class ServerOps
 {
     /**
      * How much of a stream to hold at once.
      *
-     * The whole point of the rewrite: this number, not the file size, is the
-     * memory cost of a download. 1 MB is large enough that the syscall count
-     * is irrelevant next to the network, and small enough that a hundred
-     * concurrent downloads are still 100 MB.
+     * This number, not the file size, is the memory cost of a download (1 MB x 100 downloads = 100
+     * MB).
      */
     private const STREAM_CHUNK_BYTES = 1048576;
 
     /**
      * How much of a streamed command's stderr to keep for the log.
      *
-     * Bounded because this is a diagnostic. A command that prints megabytes of
-     * warnings must not reintroduce, on the error path, the unbounded growth
-     * this method exists to remove.
+     * Bounded: a command that prints megabytes of warnings must not bring back unbounded growth.
      */
     private const STREAM_STDERR_BYTES = 8192;
 
@@ -47,53 +41,21 @@ class ServerOps
     /**
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
-     * @param  mixed  $input  Data piped to the command's stdin (e.g. for
-     *                        `chpasswd`). Never logged — keep secrets here,
-     *                        not in the command array.
-     *
-     *                        A **stream resource** is also accepted, and is how
-     *                        anything file-sized must be passed: Symfony reads
-     *                        it incrementally, so memory stays at the pipe
-     *                        buffer instead of the whole payload. Passing a
-     *                        string means holding every byte in PHP memory —
-     *                        fine for a password, fatal for an upload. There is
-     *                        no `resource` type declaration in PHP, hence
-     *                        `mixed`.
-     * @param  string|null  $cwd  Working directory. Some tools refuse to run
-     *                            from anywhere else — Nextcloud's `occ install`
-     *                            fails outright unless it is run from its own
-     *                            root — and there is no shell here to `cd` in.
-     * @param  array<string, string>  $env  Extra environment. apt will not run
-     *                                      unattended without
-     *                                      DEBIAN_FRONTEND, and a prompt with
-     *                                      nobody to answer it hangs until the
-     *                                      timeout. Note this is visible only
-     *                                      to the process owner, unlike a
-     *                                      command line — but it is still not
-     *                                      the place for secrets, since a
-     *                                      child process inherits it.
-     */
-    /**
-     * @param  callable|null  $onOutput  Called with each chunk as it arrives,
-     *                                   for a command slow enough that someone
-     *                                   is watching it — an apt install runs
-     *                                   for minutes and says nothing useful
-     *                                   until it is over.
-     *
-     *                                   Deliberately here rather than in
-     *                                   `stream()`: this keeps the transient
-     *                                   retry, the failure classification and
-     *                                   the ops-log entry, all of which
-     *                                   streaming gives up. An apt install
-     *                                   losing its lock retry to gain a
-     *                                   progress bar would be a poor trade.
-     *
-     *                                   Called once per chunk *per attempt*;
-     *                                   a retry replays from the start, so a
-     *                                   consumer that accumulates should
-     *                                   expect to see the beginning twice.
-     * @param  array<int, int>  $expectedExitCodes  Exit codes that answer an
-     *                                              expected negative probe.
+     * @param  mixed  $input  Data piped to the command's stdin (e.g. `chpasswd`). Never logged; keep
+     *                        secrets here, not in the command array. A **stream resource** is also
+     *                        accepted and is how anything file-sized must be passed (a string holds
+     *                        every byte in PHP memory). PHP has no `resource` type, hence `mixed`.
+     * @param  string|null  $cwd  Working directory. Some tools (Nextcloud's `occ install`) refuse to
+     *                            run from anywhere else, and there is no shell to `cd` in.
+     * @param  array<string, string>  $env  Extra environment (e.g. DEBIAN_FRONTEND, without which apt
+     *                                      prompts and hangs until the timeout). Child processes
+     *                                      inherit it, so it is not for secrets.
+     * @param  callable|null  $onOutput  Called with each chunk as it arrives, for slow commands someone
+     *                                   is watching (an apt install). Kept here rather than in
+     *                                   `stream()` so the transient retry, failure classification and
+     *                                   ops-log entry stay. Called once per chunk *per attempt*: a
+     *                                   retry replays from the start.
+     * @param  array<int, int>  $expectedExitCodes  Exit codes that answer an expected negative probe.
      */
     public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null, array $expectedExitCodes = [], ?int $retryAttempts = null, ?int $retryDelayMs = null, ?callable $onRetry = null): ServerOpsResult
     {
@@ -112,11 +74,8 @@ class ServerOps
         $maxAttempts = max(1, $retryAttempts ?? (int) config('server.transient.attempts', 1));
         $retryDelayMs = max(0, $retryDelayMs ?? (int) config('server.transient.delay_ms', 1500));
 
-        // A lock failure means the command refused before doing anything, so
-        // trying again is safe and usually works: the holder is normally
-        // unattended-upgrades or an install that is seconds from finishing.
-        // Without this the operator gets a hard error for something that
-        // would have succeeded on its own.
+        // A lock failure means the command refused before doing anything, so retrying is safe (the
+        // holder is usually unattended-upgrades or an install about to finish).
         while ($attempts < $maxAttempts) {
             $attempts++;
             $ok = false;
@@ -129,11 +88,8 @@ class ServerOps
             try {
                 $pending = Process::timeout($timeout);
                 if ($input !== null) {
-                    // A stream is consumed by the attempt that reads it, so a
-                    // retry would pipe nothing and "succeed" at writing an
-                    // empty file. Rewind first; if the stream is not seekable
-                    // there is nothing to replay, so refuse to retry rather
-                    // than silently truncate.
+                    // A stream is consumed by the attempt that reads it: rewind before a retry, and if
+                    // it is not seekable stop retrying rather than silently write an empty file.
                     if (is_resource($input) && $attempts > 1) {
                         if (! @rewind($input)) {
                             break;
@@ -157,39 +113,17 @@ class ServerOps
                 $stdout = $result->output();
             } catch (ProcessTimedOutException) {
                 $stderr = 'process timed out';
-                // Carried out to the caller rather than left only in stderr.
-                // The string was already written here; nothing read it, so
-                // every timed-out file operation reached the user as the
-                // generic "the operation failed" and reached the log as an
-                // empty message. A command killed at its ceiling and a command
-                // that refused are different problems with different answers.
+                // Carried out to the caller, not left only in stderr: a command killed at its ceiling
+                // and one that refused are different problems with different answers.
                 $timedOut = true;
 
-                // ORDER MATTERS, and it is not stylistic: Laravel's
-                // ProcessTimedOutException extends Symfony's RuntimeException, so
-                // this catch shadows the one above if the two are swapped. Put it
-                // first and a timed-out command is reported as a failed spawn,
-                // `timedOut` is never set, and every operation that hits its
-                // ceiling loses the one fact worth having. The file-manager test
-                // that exists for that flag caught it.
+                // ORDER MATTERS: Laravel's ProcessTimedOutException extends Symfony's
+                // RuntimeException, so with the catches swapped a timed-out command is reported as
+                // a failed spawn and `timedOut` is never set.
             } catch (SymfonyProcessException $e) {
-                // The class docblock says "Never throws" and every caller
-                // relies on it — they read `failed()` and raise their own
-                // translated exception. This escaped: a command whose working
-                // directory the panel user cannot enter fails inside
-                // `posix_spawn`, before the process exists, and the raw
-                // Symfony exception went past every caller's handling to the
-                // user as a stack trace.
-                //
-                // Found with `docker compose config` and a cwd of
-                // /home/ubuntu, which is 0750 and not the panel's to enter.
-                // Nothing about it is Docker-specific.
-                //
-                // The component's own RuntimeException rather than
-                // ProcessStartFailedException alone: an unreadable directory
-                // and a nonexistent one throw different subclasses, and the
-                // first version of this caught only the first. Scoped to the
-                // Process component, so it cannot swallow anything else.
+                // "Never throws" is relied on by every caller. A cwd the panel user cannot enter fails
+                // inside `posix_spawn`, before the process exists. Catch the Process component's
+                // RuntimeException (an unreadable and a missing directory throw different subclasses).
                 $stderr = 'could not start the process: '.$e->getMessage();
             }
 
@@ -197,9 +131,7 @@ class ServerOps
                 break;
             }
 
-            // Logged at each attempt: a command that eventually succeeded
-            // after waiting is worth seeing, and a server where this happens
-            // constantly has a problem of its own.
+            // Logged at each attempt: a command that only succeeded after waiting is worth seeing.
             Log::channel('server-ops')->warning('server operation busy, retrying', array_merge($context, [
                 'reference' => $reference,
                 'command' => $this->loggableCommand($command),
@@ -215,50 +147,29 @@ class ServerOps
             usleep($retryDelayMs * 1000);
         }
 
-        // Some commands answer a question rather than perform an operation:
-        // `test -f` uses exit 1 for "no", which is useful state rather than a
-        // failed server command. Keep the unsuccessful result for the caller,
-        // but do not put an expected answer on the admin error dashboard.
+        // Some commands answer a question: `test -f` uses exit 1 for "no". Keep the unsuccessful
+        // result for the caller, but keep an expected answer off the admin error dashboard.
         //
-        // Never a refused sudo, which exits 1 as well: that is the panel
-        // unable to ask at all, and the dashboard is where it gets noticed.
+        // Never a refused sudo, which exits 1 as well: the panel could not ask at all, and the
+        // dashboard is where that should be noticed.
         $denied = ! $ok && $this->isSudoDenied($command, $stderr);
         $expectedExit = ! $ok && ! $denied && $exitCode !== null && in_array($exitCode, $expectedExitCodes, true);
 
         Log::channel('server-ops')->{$ok || $expectedExit ? 'info' : 'error'}('server operation', array_merge($context, [
-            // Named here rather than left to the reader. The admin error
-            // dashboard falls back to "Server operation failed." for an entry
-            // with no message, which is what a stale sudo grant looked like
-            // for every feature it broke: a command, an exit code, and prose
-            // from sudo that only says a password would be needed. The one
-            // fact worth having — the panel may not run this binary, and one
-            // command repairs that — was nowhere on the screen.
+            // Without a message the dashboard falls back to "Server operation failed." for a stale
+            // sudo grant, hiding the one useful fact: the panel may not run this binary.
             ...($denied ? ['message' => __('errors/server.sudo_denied')] : []),
             'reference' => $reference,
             'command' => $this->loggableCommand($command),
             'exit_code' => $exitCode,
             'expected_exit' => $expectedExit,
             'timed_out' => $timedOut,
-            // Redacted like stdout (bug #22): a failed CREATE USER repeats
-            // its IDENTIFIED BY '<password>' here.
+            // Redacted like stdout: a failed CREATE USER repeats its IDENTIFIED BY '<password>'.
             'stderr' => CommandRedactor::line($stderr),
-            // Only on failure, and only the tail. Plenty of the tools the
-            // panel drives report their errors on stdout and leave stderr
-            // empty — `artisan` does, and so do wp-cli and composer — so a
-            // failed operation was logged as `"stderr":""` beside a non-zero
-            // exit: proof that something broke, and nothing about what. That
-            // is the same blind spot the size-measurement job had.
-            //
-            // The tail rather than the head, because a command that printed
-            // progress before dying puts the reason last. Bounded because the
-            // successful path of some of these is a 90 MB file listing, and a
-            // log nobody can open is its own kind of missing.
-            // Kept on success too when the caller asks. A command that exits 0
-            // having done nothing is not hypothetical: PrestaShop's installer
-            // returned success in half a second, wrote no configuration, and
-            // the only record of why was on a stdout nobody kept. Failure-only
-            // capture answers "what went wrong" and cannot answer "why did
-            // nothing happen".
+            // Only on failure, and only the tail (the reason comes last): many tools (artisan,
+            // wp-cli, composer) report errors on stdout and leave stderr empty. Bounded because
+            // some successful outputs are huge listings. Also kept on success when the caller asks
+            // (`log_output`): a command can exit 0 having done nothing.
             'stdout' => $ok && ! ($context['log_output'] ?? false)
                 ? null
                 : $this->loggableOutput($stdout),
@@ -272,14 +183,13 @@ class ServerOps
             $reference,
             $result,
             busy: ! $ok && $this->isTransient($stderr),
-            // Distinguished only after every retry is spent: the same message
-            // means "wait" while someone holds the lock and "this is broken"
-            // once nobody does.
+            // Set only after every retry is spent: the same message means "wait" while someone holds
+            // the lock and "this is broken" once nobody does.
             staleLock: ! $ok && $this->isStaleLock($stderr),
             denied: $denied,
             timedOut: $timedOut,
-            // Computed here, once, because every caller that worked it out for
-            // itself got it wrong the same way. See ServerOpsResult::$answered.
+            // Computed once here: callers that worked it out themselves got it wrong. See
+            // ServerOpsResult::$answered.
             answered: $ok || ($expectedExit && trim($stderr) === ''),
         );
     }
@@ -287,37 +197,20 @@ class ServerOps
     /**
      * sudo's default secure_path on Debian and Ubuntu.
      *
-     * The panel account's own PATH is the wrong thing to search, and searching
-     * it produced a false report the first time it was tried: `useradd`,
-     * `userdel`, `usermod` and `chpasswd` live in /usr/sbin, which is not on an
-     * unprivileged user's PATH, so they looked missing on a box where they were
-     * present and working. sudo resolves binaries through secure_path, so that
-     * is the path to ask about.
+     * The panel account's own PATH lacks /usr/sbin (useradd, chpasswd, ...), so searching it reports
+     * installed binaries as missing. sudo resolves binaries through secure_path.
      */
     private const SEARCH_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
 
     /**
      * Is this binary installed? Asked **without** sudo, deliberately.
      *
-     * `run()` puts `sudo -n` in front of every allowlisted binary, and sudo
-     * matches its NOPASSWD rules against the *resolved absolute path*. When the
-     * binary does not exist there is nothing to resolve, so no rule matches, and
-     * sudo's answer is not "command not found" — it is
+     * sudo matches NOPASSWD rules against the resolved absolute path, so for a missing binary its
+     * answer is "a password is required", indistinguishable from a stale grant. A failed elevated call
+     * therefore says something about privileges, not presence. Ask presence here first.
      *
-     *     sudo: a password is required
-     *
-     * which is indistinguishable from a stale sudo grant. So an absent binary
-     * and an ungranted one arrive as the same string, and `$denied` is true for
-     * both. Every caller that infers "installed?" from a failed elevated call is
-     * therefore reading privileges, not presence.
-     *
-     * That is not hypothetical: it is how `panel:doctor` ended every lemp, lamp,
-     * mern and ols install with a red "docker is installed but the daemon did
-     * not answer" on servers with no Docker on them at all. Ask presence here
-     * first, and the elevated call only has to explain a real refusal.
-     *
-     * `command -v` rather than `is_executable()` on a guessed path, so this
-     * resolves the binary the same way the real call will.
+     * `command -v` rather than `is_executable()` on a guessed path, so the binary resolves the way
+     * the real call will resolve it.
      */
     public function binaryExists(string $binary): bool
     {
@@ -343,41 +236,15 @@ class ServerOps
     /**
      * An apt command, with a wait long enough for the holder apt actually has.
      *
-     * `run()` already retries a held lock — `could not get lock` is one of the
-     * transient patterns — but on the budget a *passwd* lock needs: three
-     * attempts, 1.5s apart, because the thing holding that one is a competing
-     * `useradd` that finishes in seconds.
+     * `run()` retries a held lock on the short budget a passwd lock needs (3 x 1.5s). apt's contender
+     * is `unattended-upgrades`, which holds the lock for minutes, so apt gets its own budget; raising
+     * the generic one would make every busy account operation hang. No lock probe first: a check
+     * followed by a command races, while apt takes the lock atomically.
      *
-     * apt's contender is different in kind. A server that booted minutes ago is
-     * running `unattended-upgrades`, which holds the lock for **minutes**. Four
-     * and a half seconds of retries expire long before it lets go, and the user
-     * gets a hard failure for something that would have worked on its own —
-     * which is exactly what happened: install MongoDB on a fresh box, fail,
-     * retry ten minutes later, succeed.
-     *
-     * So the budget is apt's own, not the generic one. Raising the generic
-     * numbers instead would make every busy account operation hang for minutes,
-     * where failing fast is right.
-     *
-     * Deliberately *not* a lock probe before the command. install.sh uses one
-     * because it also wants to explain the delay, but a probe is a check
-     * followed by a command, and anything can take the lock in between. apt
-     * takes it atomically, so letting apt contend and retrying is the version
-     * with no race in it.
-     *
-     * 🔴 **`DPkg::Lock::Timeout=0`, said out loud.** The loop above only works
-     * if apt *refuses* a held lock, and on a panel server it does not:
-     * install.sh writes `/etc/apt/apt.conf.d/99<slug>-lock-wait` with
-     * `DPkg::Lock::Timeout "900"` for its own run and leaves it there. So the
-     * panel's `apt-get` printed "Waiting for cache lock: … held by process
-     * 15959 (unattended-upgr)" for 900 s — exactly the engine install
-     * timeout — was killed at the ceiling, and the install failed as
-     * `unknown` with nothing retried (CF-06, ref d2c1e572; reproduced on a
-     * fresh 26.04 box with that drop-in). The command line beats the drop-in,
-     * which other apt users (certbot, add-apt-repository) keep. Telling apt
-     * not to wait gives the loop back its job, so the wait is bounded by
-     * `lock_attempts × lock_delay_ms`, and a lock still held at the end fails
-     * as "Could not get lock" — classified `apt_lock`, not `unknown`.
+     * `DPkg::Lock::Timeout=0` is passed on purpose: install.sh leaves a drop-in with
+     * `DPkg::Lock::Timeout "900"`, so apt would wait the full 900 s (the install timeout) and the
+     * retry loop never runs. The command line beats the drop-in. The wait is then bounded by
+     * `lock_attempts × lock_delay_ms`, and a lock still held fails as `apt_lock`, not `unknown`.
      *
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
@@ -385,9 +252,8 @@ class ServerOps
      */
     public function apt(array $command, array $context = [], int $timeout = 900, array $env = [], ?callable $onOutput = null, ?callable $onWait = null): ServerOpsResult
     {
-        // Last rather than first: apt reads options anywhere on the line, and
-        // the verb staying at [1] keeps every reader of the command — the ops
-        // log, the sudo grant check — seeing `apt-get install …` as before.
+        // Last, not first: apt reads options anywhere, and keeping the verb at [1] keeps the ops log
+        // and the sudo grant check seeing `apt-get install ...`.
         if (($command[0] ?? null) === 'apt-get') {
             $command = [...$command, '-o', 'DPkg::Lock::Timeout=0'];
         }
@@ -407,9 +273,7 @@ class ServerOps
     /**
      * How long {@see apt()} waits out a held lock before failing, in seconds.
      *
-     * A job that runs apt has to outlast this as well as the install itself,
-     * or the worker kills it mid-wait and the user gets "stopped unexpectedly"
-     * for what is really "another install is running".
+     * A job that runs apt must outlast this plus the install itself, or the worker kills it mid-wait.
      */
     public static function aptLockBudgetSeconds(): int
     {
@@ -420,49 +284,20 @@ class ServerOps
     }
 
     /**
-     * Whether stderr describes a "busy, nothing happened" failure.
-     *
-     * Only conditions where the command refused *before* changing anything
-     * qualify — the account tools and apt both take their lock first, so a
-     * lock failure guarantees no partial work to worry about. A failure that
-     * might have half-completed must never be retried.
-     */
-    /**
      * Runs a command and yields its stdout in chunks as it arrives.
      *
-     * `run()` waits for the command to finish and hands back the whole of its
-     * output as a string, which is right for the commands that produce a line
-     * or two and wrong for `cat` on a 4 GB archive: peak memory is the size of
-     * the output.
+     * `run()` returns the whole output as a string, so peak memory is the output size: wrong for `cat`
+     * on a 4 GB archive. Symfony's `Process` buffers the pipe, and a fast `cat` outruns a slow client
+     * until PHP's memory limit is gone, after the headers are sent (the browser shows
+     * ERR_INVALID_RESPONSE). `proc_open` with bounded reads leaves backpressure to the kernel: stop
+     * reading and the pipe fills and `cat` blocks.
      *
-     * **This used to say that nothing accumulates here either, and it was
-     * wrong.** It drove Symfony's `Process` and read with `latestOutput()`,
-     * and Symfony buffers the pipe on our behalf. `cat` reads a local disk at
-     * roughly 1 GB/s while a browser takes the bytes at network speed, so the
-     * gap between them accumulated until PHP's limit was gone:
+     * No retry loop, unlike `run()`: a replay would corrupt a download whose earlier chunks were
+     * already sent.
      *
-     *     PHP Fatal error: Allowed memory size of 268435456 bytes exhausted
-     *       in vendor/symfony/process/Pipes/UnixPipes.php
-     *
-     * The download had already sent its headers, so the client got a 200
-     * carrying a `Content-Length` it would never receive — which a browser
-     * reports as ERR_INVALID_RESPONSE. Measured on a 6.48 GB file: it died at
-     * 1.27 GB, 3.17 GB and 1.41 GB on three consecutive attempts, because
-     * where it dies depends on how fast the client drains.
-     *
-     * `proc_open` with bounded reads gives the backpressure job to the kernel
-     * instead: stop reading and the pipe fills and `cat` blocks. Same file,
-     * deliberately throttled to imitate a slow client: **4.0 MB peak**.
-     *
-     * No retry loop, unlike `run()`. A transient-lock retry replays the whole
-     * command, and the caller has already sent the earlier chunks to the
-     * client — replaying would corrupt the download rather than recover it.
-     *
-     * @param  int  $idleSeconds  how long to wait for the *next* byte, not for
-     *                            the whole transfer. A wall-clock limit is the
-     *                            wrong shape here: it cuts a legitimate 100 GB
-     *                            download on a slow link, and never fires for
-     *                            a client that has gone away mid-stream.
+     * @param  int  $idleSeconds  how long to wait for the *next* byte, not for the whole transfer (a
+     *                            wall-clock limit cuts a legitimate slow download and never fires for
+     *                            a client that went away mid-stream).
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
      * @return \Generator<int, string>
@@ -491,19 +326,13 @@ class ServerOps
             return;
         }
 
-        // stderr never blocks the transfer. A command that writes a lot there
-        // while we are busy shipping stdout would otherwise fill its own pipe
-        // and deadlock — both sides waiting for the other to read.
+        // stderr never blocks the transfer: a command writing a lot there while we ship stdout would
+        // fill its own pipe and deadlock.
         stream_set_blocking($stderrPipe, false);
 
-        // Non-blocking plus `stream_select` rather than `stream_set_timeout`:
-        // that function has no effect on a pipe from `proc_open` (it is a
-        // socket-level option), so an idle producer hung for the whole of its
-        // own runtime instead. Proven by the test that waits on `sleep`.
-        //
-        // Backpressure is unaffected — it comes from *not calling* `fread`,
-        // not from the handle's blocking mode. The kernel pipe fills while we
-        // are busy writing to the client, and `cat` blocks on its own write.
+        // Non-blocking plus `stream_select`, not `stream_set_timeout`, which has no effect on a
+        // `proc_open` pipe. Backpressure still works: it comes from not calling `fread`, not from
+        // the handle's blocking mode.
         stream_set_blocking($stdout, false);
 
         $stderr = '';
@@ -520,9 +349,8 @@ class ServerOps
                 break;
             }
 
-            // Nothing arrived within the idle window. The producer is not
-            // slow, it has stopped — a wall-clock limit cannot tell those
-            // apart, which is why this one is per-byte rather than per-request.
+            // Nothing arrived within the idle window: the producer has stopped, not just slowed. A
+            // wall-clock limit cannot tell those apart, hence per-byte rather than per-request.
             if ($ready === 0) {
                 $timedOut = true;
 
@@ -532,9 +360,8 @@ class ServerOps
             $chunk = fread($stdout, self::STREAM_CHUNK_BYTES);
 
             if ($chunk === false || $chunk === '') {
-                // Readable and empty means the writer closed: the command is
-                // done. Readable-but-nothing-yet is a spurious wakeup, and
-                // looping is correct for it.
+                // Readable and empty means the writer closed. Readable with nothing yet is a spurious
+                // wakeup: loop.
                 if (feof($stdout)) {
                     break;
                 }
@@ -544,9 +371,8 @@ class ServerOps
 
             $bytes += strlen($chunk);
 
-            // Drained as we go, and bounded: this is a diagnostic, and a
-            // command that prints megabytes of warnings should not turn a
-            // download into a memory problem of a different shape.
+            // Drained as we go and bounded: a command printing megabytes of warnings must not become a
+            // memory problem of another shape.
             if (strlen($stderr) < self::STREAM_STDERR_BYTES) {
                 $stderr .= (string) fread($stderrPipe, 8192);
             }
@@ -556,11 +382,8 @@ class ServerOps
 
         $stderr .= (string) stream_get_contents($stderrPipe, self::STREAM_STDERR_BYTES);
 
-        // Killed before closing, not after. `proc_close` *waits* for the
-        // child, so a stream abandoned early — an idle producer, or a client
-        // that closed the tab — held the request for the rest of the command's
-        // natural life. The idle bound fired correctly and then blocked for
-        // another 28 seconds on `sleep 30`, which is how this was found.
+        // Kill before closing: `proc_close` waits for the child, so an abandoned stream (idle
+        // producer, closed tab) would hold the request for the command's natural life.
         if ($timedOut) {
             $this->pipe->terminate($process);
         }
@@ -571,10 +394,8 @@ class ServerOps
         $exitCode = $this->pipe->close($process);
         $ok = $exitCode === 0 && ! $timedOut;
 
-        // Logged after the fact, and the failure cannot be turned into an
-        // error response: the headers went out with the first chunk. The log
-        // is the only place a truncated download is recorded, which is exactly
-        // why it records the byte count.
+        // Logged after the fact: the headers went out with the first chunk, so the log is the only
+        // record of a truncated download (hence the byte count).
         Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation stream', array_merge($context, [
             'reference' => $reference,
             'command' => $this->loggableCommand($command),
@@ -601,9 +422,8 @@ class ServerOps
     /**
      * The tail of a failed command's stdout, bounded.
      *
-     * Redacted through the same rules the command line is: an installer that
-     * echoes back what it was given would otherwise put a password in the log
-     * that the argv redaction was written to keep out of it.
+     * Redacted like the command line: an installer that echoes what it was given would otherwise
+     * put a password in the log.
      */
     private function loggableOutput(string $output): ?string
     {
@@ -622,6 +442,13 @@ class ServerOps
         return CommandRedactor::line($output);
     }
 
+    /**
+     * Whether stderr describes a "busy, nothing happened" failure.
+     *
+     * Only conditions where the command refused *before* changing anything qualify (the account
+     * tools and apt take their lock first). A failure that might have half-completed must never be
+     * retried.
+     */
     private function isTransient(string $stderr): bool
     {
         if ($stderr === '') {
@@ -642,11 +469,8 @@ class ServerOps
     /**
      * Whether the failure is a lock that outlived its holder.
      *
-     * A lock file left by an interrupted useradd blocks every account
-     * operation permanently — `useradd` links `<file>.<pid>` to `<file>.lock`
-     * and refuses while the link exists, and nothing ever cleans it up. It
-     * looks exactly like "busy", so it survives the retries and then needs
-     * saying differently: waiting is useless, the file must be removed.
+     * A lock file left by an interrupted `useradd` (`<file>.lock` link) blocks every account
+     * operation until removed. It looks like "busy" and survives the retries, but waiting is useless.
      */
     private function isStaleLock(string $stderr): bool
     {
@@ -668,35 +492,18 @@ class ServerOps
     /**
      * Did sudo refuse the command before the binary ever ran?
      *
-     * This is a different kind of failure from every other one here and it has
-     * been misread as several of them. The command did not fail — it did not
-     * happen. The server is fine, the feature is not broken, and retrying will
-     * never help: the panel's grant in /etc/sudoers.d does not cover this
-     * binary, and one command as root repairs every feature at once.
+     * The command did not fail, it did not happen: the grant in /etc/sudoers.d does not cover this
+     * binary, retrying never helps, and one command as root repairs every feature. The grant goes
+     * stale by design (rewritten only by install.sh and the update's non-fatal `sync_privileges`
+     * step), so every binary added since fails with prose about a password.
      *
-     * It is worth naming because the grant goes stale by design. The list of
-     * binaries lives in `server.privilege.binaries`, and the file is only
-     * rewritten by install.sh and by the update's `sync_privileges` step —
-     * which is deliberately non-fatal. A server that missed that step keeps
-     * running happily on a grant from the day it was installed, and then every
-     * binary added since fails with prose about a password on a feature that
-     * looks configured. `touch`, `certbot` and `mysqldump` each did this in one
-     * week; `supervisorctl` did it to worker creation on 2026-09-08, which is
-     * why this exists.
+     * Anchored to sudo's own output: only consulted for a command this class elevated, and the
+     * phrases must be on a line prefixed `sudo:`, otherwise a tool that merely prints "a password is
+     * required" would be reported as a privilege fault. The "not allowed to execute" and "not in the
+     * sudoers file" refusals carry no prefix and are matched on their own shape.
      *
-     * **Anchored to sudo's own output, not matched loosely.** Only consulted
-     * for a command this class actually elevated, and the phrases must be on a
-     * line sudo prefixed with its own name — otherwise a tool that merely
-     * prints the words "a password is required" (a log tail, a failing mysql
-     * client) would be reported as a privilege fault, sending the operator to
-     * rewrite a sudoers file that was never the problem. The "not allowed to
-     * execute" and "not in the sudoers file" forms are sudo's other two
-     * refusals and carry no prefix, so they are matched on their own shape.
-     *
-     * Kept in code rather than in `server.transient.*` config alongside its
-     * neighbours: those patterns are a retry knob an operator may want to tune
-     * for their own tooling, while this is sudo's fixed vocabulary. There is
-     * nothing here to tune, and a mistuned copy would misreport privileges.
+     * Kept in code, not `server.transient.*` config: this is sudo's fixed vocabulary, not a tuning
+     * knob.
      *
      * @param  array<int, string>  $command  Already elevated.
      */
@@ -727,46 +534,17 @@ class ServerOps
     }
 
     /**
-     * Put `sudo -n` in front of commands that cannot work as the panel user.
+     * Put `sudo -n` in front of commands the panel may elevate.
      *
-     * This is the whole reason the sudoers file install.sh writes has any
-     * effect: php-fpm runs unprivileged, so without this every useradd,
-     * systemctl, ufw and apt-get call fails with "Permission denied" — the
-     * panel installs cleanly and then cannot do its job.
+     * php-fpm runs unprivileged, so without this every useradd, systemctl, ufw and apt-get call fails
+     * with "Permission denied". `-n` is deliberate: a missing grant must fail at once instead of
+     * waiting for a password on a terminal that does not exist. Skipped when already root.
      *
-     * `-n` is deliberate. A missing grant must fail immediately and visibly;
-     * without it sudo waits for a password on a terminal that does not exist
-     * and the operation hangs until the timeout, reported as something else
-     * entirely.
-     *
-     * Escalation is skipped when already root (an operator running artisan
-     * by hand, or a container that runs as root) — sudo would work, but
-     * requiring it to be installed to run as root is a gratuitous dependency.
-     *
-     * @param  array<int, string>  $command
-     * @return array<int, string>
-     */
-    /**
-     * Prefix with sudo when the binary is one the panel may elevate.
-     *
-     * `$env` is threaded through because **sudo resets the environment**.
-     * `env_reset` is the default, so variables set on the Process object are
-     * gone by the time the real binary starts, and nothing says so — the
-     * command runs, it just runs without them.
-     *
-     * That stayed invisible because the two things relying on it degrade
-     * quietly: `DEBIAN_FRONTEND=noninteractive` only matters when a package
-     * actually prompts, and the `PATH` pinned for npm only matters when `node`
-     * is not already on the default path. PostgreSQL is where it finally bit —
-     * libpq reads its password file from `PGPASSFILE` and nowhere else, so
-     * every query failed with `fe_sendauth: no password supplied` against a
-     * role that had been created perfectly well.
-     *
-     * `sudo -n env VAR=value <command>` rather than `sudo -E`: it carries
-     * exactly the variables asked for instead of the caller's whole
-     * environment, and `env` is already in the privilege allowlist, so no
-     * sudoers change is needed. Each assignment is its own argv entry, so a
-     * space in a value cannot become a second argument.
+     * `$env` is threaded through because sudo resets the environment (`env_reset`), silently dropping
+     * variables set on the Process (PostgreSQL's `PGPASSFILE` was the one that bit). It is carried as
+     * `sudo -n env VAR=value <command>` rather than `sudo -E`: exactly the variables asked for, `env`
+     * is already in the allowlist, and each assignment is its own argv entry so a space in a value
+     * cannot become a second argument.
      *
      * @param  array<int, string>  $command
      * @param  array<string, string>  $env
@@ -782,16 +560,12 @@ class ServerOps
             return $command;
         }
 
-        // Match on the binary name only. Callers pass bare names ('useradd'),
-        // sudo resolves them through secure_path, and the sudoers rule matches
-        // the resolved absolute path — so both spellings land on the same rule.
+        // Match on the binary name only: sudo resolves bare names through secure_path and the sudoers
+        // rule matches the resolved absolute path, so both spellings land on the same rule.
         $binary = basename($command[0]);
 
-        // php-fpm{version} (PoolManager's `php-fpm8.4 -t` config test) is a
-        // whole family of binaries, one per installed PHP version, which an
-        // exact-match list can't cover without editing code every time a
-        // version is added or removed. install.sh's own sudoers grant uses a
-        // /usr/sbin/php-fpm* wildcard for the same reason — this mirrors it.
+        // php-fpm{version} is a family of binaries (one per PHP version) that an exact-match list
+        // cannot cover; install.sh's sudoers grant uses a /usr/sbin/php-fpm* wildcard too.
         $privileged = in_array($binary, (array) config('server.privilege.binaries', []), true)
             || str_starts_with($binary, 'php-fpm');
 

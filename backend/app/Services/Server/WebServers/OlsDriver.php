@@ -19,25 +19,19 @@ use Illuminate\Support\Str;
 /**
  * OpenLiteSpeed.
  *
- * Two things make it unlike the other two drivers, and both are handled here
- * rather than leaking into the provisioner:
+ * Two things make it unlike the other two drivers, handled here rather than in the provisioner:
  *
- *  - **A site is a directory, not a file.** The config lives at
- *    `conf/vhosts/<name>/vhconf.conf`, so the directory has to exist first.
- *  - **A site is also two entries in the shared httpd_config.conf**, which is
- *    what `OlsSharedConfig` exists for.
+ *  - **A site is a directory, not a file.** The config lives at `conf/vhosts/<name>/vhconf.conf`, so
+ *    the directory has to exist first.
+ *  - **A site is also two entries in the shared httpd_config.conf** (see `OlsSharedConfig`).
  *
- * The site name is the application slug — see AbstractWebServerDriver. It has
- * to be the same string in three places (the config directory, the vhost name
- * in httpd_config.conf, and the `map` entry), which is why it comes from one
- * `fileName()` rather than being spelled out at each call site.
+ * The site name is the application slug (see AbstractWebServerDriver). It must be the same string in
+ * three places (config directory, vhost name in httpd_config.conf, `map` entry), so it comes from one
+ * `fileName()`.
  *
- * ⚠️ **Unverified against a real OpenLiteSpeed server.** Every path, command
- * and directive here comes from LiteSpeed's documentation and OLS's own
- * shipped config, not from observation — there was no OLS box available when
- * this was written. That is why every path is in `config/server.php`: a wrong
- * one is a config change, not a code change. Treat the first run on a real box
- * as the actual test.
+ * ⚠️ Unverified against a real OpenLiteSpeed server: paths, commands and directives come from
+ * LiteSpeed's documentation and OLS's shipped config. Every path is in `config/server.php`, so a
+ * wrong one is a config change, not a code change.
  */
 class OlsDriver extends AbstractWebServerDriver
 {
@@ -56,29 +50,14 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * The template needs the interpreter itself, not a socket path.
-     *
-     * nginx and Apache hand PHP to a pool that is already running and already
-     * knows which binary it is. OLS starts the process, so the vhost has to
-     * name the binary and the user — and `lsphp84`, not `lsphp8.4`.
-     *
-     * @return array<string, mixed>
-     */
-    /**
      * How long the slug may be before the socket path stops being bindable.
      *
-     * A unix socket path is capped by `sun_path`, 108 bytes including the
-     * terminator. Measured on a real server rather than taken from the header:
-     * 99 characters bound, 109 failed with EINVAL "AF_UNIX path too long".
+     * A unix socket path is capped by `sun_path` (108 bytes including the terminator). The prefix
+     * `/tmp/lshttpd/lsphp84-` and `.sock` spend 26, a site name may be 255 characters, and 40 leaves
+     * room for a three-digit LSPHP version.
      *
-     * `/tmp/lshttpd/lsphp84-` and `.sock` spend 26 of it, so ~81 remain, and a
-     * site name may be 255 characters. 40 leaves room for a three-digit LSPHP
-     * version and still fits with margin.
-     *
-     * Truncation alone would reintroduce the collision this change exists to
-     * remove -- two long slugs sharing a prefix would share a socket -- so the
-     * hash of the full slug goes on the end. It is for uniqueness, not
-     * secrecy; the socket is only reachable by the two users who own it.
+     * Truncation alone would make two long slugs with a shared prefix share a socket, so a hash of the
+     * full slug goes on the end (for uniqueness, not secrecy).
      */
     private const SOCKET_NAME_LIMIT = 40;
 
@@ -96,6 +75,12 @@ class OlsDriver extends AbstractWebServerDriver
         return substr($name, 0, self::SOCKET_NAME_LIMIT - 9).'-'.substr(md5($name), 0, 8);
     }
 
+    /**
+     * The template needs the interpreter itself, not a socket path: OLS starts the process, so the
+     * vhost names the binary and the user (`lsphp84`, not `lsphp8.4`).
+     *
+     * @return array<string, mixed>
+     */
     protected function viewData(Application $application, string $documentRoot): array
     {
         $data = parent::viewData($application, $documentRoot);
@@ -108,44 +93,29 @@ class OlsDriver extends AbstractWebServerDriver
             // The 8G conditions for the categories this site has on; the
             // exceptions and custom rules are already in `$data['waf']`.
             'wafRules' => $data['waf'] === null ? [] : app(OlsWafRuleset::class)->for($data['waf']['categories']),
-            // Site types whose cache or rewrite integration goes through
-            // .htaccess. WordPress is the one that matters: LiteSpeed Cache
-            // talks to the OLS cache module through that file and nothing else.
+            // Site types whose cache or rewrite integration goes through .htaccess (WordPress: LiteSpeed
+            // Cache talks to the OLS cache module through that file only).
             'readsHtaccess' => in_array(
                 $application->site_type,
                 (array) config('server.web_server_drivers.openlitespeed.htaccess_site_types', ['wordpress']),
                 true,
             ),
             'lsphpVersion' => str_replace('.', '', $version),
-            // The LSAPI socket's identity. Slug, never domain.
-            //
-            // This was `{domain}`, which the schema says is "mutable and not
-            // unique" in the same breath as explaining why the vhost file is
-            // not named that way. Two applications on one domain shared the
-            // socket their isolation depends on, an app with no domain named
-            // it `lsphp84-.sock`, and renaming a domain orphaned the old one.
-            // Every other per-site artifact -- the app directory, the vhost
-            // file, the logs -- is keyed by slug already; the socket is the
-            // one that wandered off.
+            // The LSAPI socket's identity: slug, never domain. A domain is mutable and not unique, so two
+            // applications on one domain shared a socket, one with no domain got `lsphp84-.sock`, and a
+            // domain rename orphaned it. Every other per-site artifact is keyed by slug.
             'socketName' => $this->socketName($application),
-            // The processor's name, which must be this site's alone.
-            //
-            // It was `lsphp84` in every vhost. OpenLiteSpeed keeps one external
-            // app per name (it logs it as `lsphp84.655340`, the name plus the
-            // vhost's suEXEC uid, which is `nobody` for every vhost), so the
-            // first vhost it loaded supplied the extUser and socket for all of
-            // them. Measured on a real server, 2026-09-24: three sites' PHP ran
-            // as a fourth site's user, which could read their files, and any
-            // site whose wp-config.php that user could not read answered 500.
+            // The processor's name, which must be this site's alone. OLS keeps one external app per name
+            // (logged as the name plus the vhost's suEXEC uid, `nobody` for every vhost), so with a shared
+            // `lsphp84` the first vhost loaded supplied extUser and socket for all: sites' PHP ran as
+            // another site's user, which could read their files.
             'processorName' => 'lsphp'.str_replace('.', '', $version).'-'.$this->socketName($application),
             // The LSAPI binary, not the CLI — this is what OLS spawns.
             'lsphpBinary' => $this->stack->handlerPath($version),
-            // Where this site's own php settings live. Written by `apply()`
-            // below, in the same pass that renders this template, so the file
-            // and the `env` line naming it cannot drift apart.
+            // Where this site's own php settings live; written by `apply()` in the same pass as this
+            // template, so the file and the `env` line naming it cannot drift apart.
             'phpIniScanDir' => $this->phpIni->scanDir($application),
-            // One value, two directives -- see the config note. Floored at 1
-            // because `maxConns 0` is a vhost that accepts no PHP at all.
+            // One value, two directives. Floored at 1 because `maxConns 0` accepts no PHP at all.
             'lsapiChildren' => max(1, (int) config($driver.'.lsapi_children', 10)),
             'lsapiMaxRequests' => max(1, (int) config($driver.'.lsapi_max_requests', 5000)),
         ];
@@ -154,18 +124,10 @@ class OlsDriver extends AbstractWebServerDriver
     /**
      * Refuse to write a vhost that would run as nobody.
      *
-     * `extUser` is the isolation boundary on this stack. Omit it and
-     * OpenLiteSpeed runs the site's PHP as the server's own user -- `nobody`
-     * -- which every other site also falls back to. One identity for the whole
-     * box: each site can read every other site's `.env`, its database
-     * credentials and its uploads. Nothing looks wrong; the vhost is valid and
-     * the site serves.
-     *
-     * php-fpm cannot reach that state. A pool with no `user =` is refused by
-     * the master at startup, so the mistake is impossible there. This template
-     * has no equivalent backstop, so it is here -- first thing in apply(),
-     * ahead of every write, rather than left to surface as a TypeError halfway
-     * through rendering.
+     * `extUser` is the isolation boundary on this stack. Without it OpenLiteSpeed runs the site's PHP
+     * as the server's own user (`nobody`), shared by every site, so each site could read every other
+     * site's `.env`, database credentials and uploads while the vhost looks valid. php-fpm refuses a
+     * pool with no `user =`; this is the equivalent backstop, first thing in apply(), ahead of every write.
      */
     private function assertHasSystemUser(Application $application): void
     {
@@ -179,10 +141,9 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * The 8G rules are rendered as rewrite directives inside each site's
-     * `vhconf.conf` (never `.htaccess`, which OLS only reads after a restart),
-     * from the same file the Apache version uses — see OlsWafRuleset. v7 had
-     * 8G on OpenLiteSpeed; this closes that gap (2026-09-30).
+     * The 8G rules are rendered as rewrite directives inside each site's `vhconf.conf` (never
+     * `.htaccess`, which OLS only reads after a restart), from the same file the Apache version uses;
+     * see OlsWafRuleset.
      */
     public function supportsWaf(): bool
     {
@@ -191,12 +152,9 @@ class OlsDriver extends AbstractWebServerDriver
 
     /**
      * An exception or custom rule for an *unquoted* OLS `RewriteCond`.
-     *
-     * `preg_quote` makes it literal and also covers what a condition pattern
-     * would otherwise read as an operator at its start (`!`, `<`, `>`, `=`,
-     * `-`). Whitespace would end the pattern and a quote could start a quoted
-     * one, so those are written as hex escapes, which PCRE reads as the same
-     * characters.
+     * `preg_quote` makes it literal and also covers what a condition pattern would otherwise read as
+     * an operator at its start (`!`, `<`, `>`, `=`, `-`). Whitespace would end the pattern and a quote
+     * could start a quoted one, so those are hex escapes, which PCRE reads as the same characters.
      */
     public function wafPattern(string $value): string
     {
@@ -220,33 +178,24 @@ class OlsDriver extends AbstractWebServerDriver
     /**
      * Per-site directory, unlike the single file the other drivers write.
      *
-     * Both halves come from the server rather than from config, because a
-     * server migrated from the old panel has neither: its vhosts live under
-     * `/etc/<brand>-ols/` and are called `main.conf`. Writing this panel's path
-     * on such a box would put the config somewhere the shared `httpd_config`
-     * does not point, which is a site that serves nothing while every file
-     * involved looks correct.
-     *
-     * Writing where the server already points is also what makes taking one
-     * over cheap: the `virtualHost` blocks are already right, so adoption does
-     * not have to edit the one file whose mistakes break every site at once.
+     * Both halves come from the server, not config: a server migrated from the old panel has vhosts
+     * under `/etc/<brand>-ols/` called `main.conf`, and writing this panel's path there would put the
+     * config where the shared `httpd_config` does not point (a site that serves nothing). Writing where
+     * the server already points also makes adoption cheap: the `virtualHost` blocks are already right.
      */
     public function configPath(Application $application): string
     {
         $layout = app(OlsVhostLayout::class);
 
-        // Keyed by the application, same as the other drivers — see
-        // AbstractWebServerDriver::configPath(). `vhRoot()` deliberately does
-        // not follow: that is the document root, which is where the site's
-        // files actually live, and it is addressed by domain everywhere else.
+        // Keyed by the application, as in AbstractWebServerDriver::configPath(); not by `vhRoot()`,
+        // which is where the site's files live.
         return $layout->root()."/{$this->fileName($application)}/".$layout->filename();
     }
 
     /**
-     * On a server laid out by v7, the site is also its wrapper: v7's
-     * `httpd_config.conf` loads `/etc/<brand>-ols/*.conf`, and each of those
-     * is a `virtualhost` block that includes `<name>/main.conf`. Written here,
-     * so `sites:resync` keeps both files in step like every other pair.
+     * On a server laid out by v7 the site is also its wrapper: v7's `httpd_config.conf` loads
+     * `/etc/<brand>-ols/*.conf`, each a `virtualhost` block that includes `<name>/main.conf`. Written
+     * here so `sites:resync` keeps both files in step.
      *
      * @return array<string, string|null>
      */
@@ -274,17 +223,13 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * v7's wrapper, now this panel's: one definition of the site, on v7's own
-     * listeners, loading the vhost from `main.conf`.
+     * v7's wrapper, now this panel's: one definition of the site, on v7's own listeners, loading the
+     * vhost from `main.conf`.
      *
-     * The domains and the certificate are in `main.conf` rather than here as
-     * in v7. Either works; keeping them there means one template for both
-     * layouts, and the wrapper never has to change when a domain does. What
-     * must not happen is the site being defined twice, which is what writing
-     * this panel's own `virtualHost` region beside v7's wrapper did (seen on a
-     * real v7 server, 2026-11-08). So on this layout the shared regions are
-     * never written for a site, and the server's existing listeners
-     * (`Default`, `DefaultHttps` on v7) are the ones it is attached to.
+     * Domains and certificate stay in `main.conf` (one template for both layouts; the wrapper never
+     * changes when a domain does). The site must not be defined twice, which writing this panel's own
+     * `virtualHost` region beside v7's wrapper did, so on this layout the shared regions are never
+     * written and the site attaches to the server's existing listeners (`Default`, `DefaultHttps`).
      */
     public function renderLegacyWrapper(Application $application): string
     {
@@ -308,13 +253,11 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Directory, then vhost file, then the shared entries — in that order.
+     * Directory, then vhost file, then the shared entries, in that order.
      *
-     * The shared file goes last on purpose. It is the one that can take every
-     * site on the box down, so it is only touched once the per-site config it
-     * points at is actually on disk; a `virtualHost` block naming a file that
-     * does not exist fails the config test and would strand the whole server
-     * rather than just this site.
+     * The shared file goes last: it can take every site on the box down, so it is touched only once the
+     * per-site config it points at is on disk (a `virtualHost` naming a missing file fails the config
+     * test for the whole server).
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
@@ -325,10 +268,9 @@ class OlsDriver extends AbstractWebServerDriver
         // The layout decides where every file below goes; see SiteConfigResyncer.
         app(OlsVhostLayout::class)->detect();
 
-        // Before anything is written. A site whose name is already one of the
-        // server's own vhosts would overwrite that vhost's `vhconf.conf` two
-        // steps below, long before the shared config refuses it — which is
-        // how a site named `panel` took the panel's UI down (2026-09-29).
+        // Before anything is written: a site named like one of the server's own vhosts would overwrite
+        // that vhost's `vhconf.conf` two steps below, before the shared config refuses it (a site named
+        // `panel` took the panel's UI down).
         if ($this->shared->ownedByServer($this->fileName($application))) {
             $reference = (string) Str::uuid();
 
@@ -346,27 +288,15 @@ class OlsDriver extends AbstractWebServerDriver
             return $fallback;
         }
 
-        // Through the shared method, so this driver cannot drift from the
-        // base class's list — and so `sites:resync`, which writes a vhost
-        // without going through apply(), gets the same preparation.
-        //
-        // It matters more here than anywhere else: OpenLiteSpeed resolves a
-        // context's `location` when the configuration is loaded, not per
-        // request, so the ACME context every template declares points at a
-        // directory that must already exist. install.sh learned this for the
-        // panel's own vhost; sites had been left out.
+        // Through the shared method, so this driver cannot drift from the base class's list and
+        // `sites:resync` (which writes a vhost without apply()) gets the same preparation. It matters
+        // here: OLS resolves a context's `location` at load time, so the ACME context's directory must
+        // already exist.
         $this->ensureDirectories($application);
 
-        // The site's own PHP settings, before the vhost that points LSPHP at
-        // them. On php-fpm these ride in the pool file, which is written by
-        // `PoolManager` from the provisioner — a step that does not exist
-        // here, because there is no pool. That is precisely why every setting
-        // on the PHP screen used to save with a 200 and change nothing on an
-        // OpenLiteSpeed server.
-        //
-        // Deliberately not fatal. A site that cannot be given its overrides
-        // still serves on the stack's defaults; refusing to write the vhost
-        // over it would turn a settings problem into a site that is down.
+        // The site's own PHP settings, before the vhost that points LSPHP at them. On php-fpm they ride
+        // in the pool file; there is no pool here, so every setting on the PHP screen saved and changed
+        // nothing. Not fatal: a site without its overrides still serves on the stack's defaults.
         if ($application->serving_profile === 'php') {
             $this->phpIni->apply($application);
         }
@@ -418,10 +348,8 @@ class OlsDriver extends AbstractWebServerDriver
                 : $wrapped;
         }
 
-        // The vhost NAME in the shared config, which must agree with the
-        // directory `configPath()` writes into — both are the application, not
-        // one of its domains. The domains it answers to are the second
-        // argument, and those stay domains.
+        // The vhost NAME in the shared config must agree with the directory `configPath()` writes into
+        // (the application, not a domain); the domains it answers to are the second argument.
         return $this->shared->register(
             $this->fileName($application),
             $this->domains($application),
@@ -435,20 +363,16 @@ class OlsDriver extends AbstractWebServerDriver
      */
     private function vhRoot(Application $application): string
     {
-        // Slug, not domain. `restrained 1` confines the vhost to this
-        // directory, and the document root is `{root}/public_html/…` — so a
-        // domain-named root put the document root *outside* the restraint,
-        // and moved the site's logs every time a domain changed.
+        // Slug, not domain: `restrained 1` confines the vhost to this directory and the document root is
+        // `{root}/public_html/…`, so a domain-named root put the document root outside the restraint and
+        // moved the logs whenever a domain changed.
         return $application->rootPath();
     }
 
     /**
-     * Shared entries first this time, then the files.
-     *
-     * The mirror image of `apply()`, for the same reason: stop OLS referring to
-     * the site before removing what it refers to. The other order leaves a
-     * `virtualHost` pointing at a deleted file, which fails the config test and
-     * blocks every later reload.
+     * Shared entries first this time, then the files: the mirror image of `apply()`. Stop OLS referring
+     * to the site before removing what it refers to, or a `virtualHost` points at a deleted file, which
+     * fails the config test and blocks every later reload.
      */
     public function remove(Application $application): ServerOpsResult
     {
@@ -460,12 +384,9 @@ class OlsDriver extends AbstractWebServerDriver
             return $unregistered;
         }
 
-        // Verify it actually went, rather than trusting a success that can be
-        // vacuous: `unregister()` reports ok when nothing changed, and nothing
-        // changes if the entries sit outside the managed markers — which is
-        // what the WebAdmin console leaves behind, since the markers are
-        // comments. Deleting the vhost file while the shared config still
-        // names it breaks the config test for every site on the box.
+        // Verify it actually went: `unregister()` reports ok when nothing changed, which happens when the
+        // entries sit outside the managed markers (as the WebAdmin console leaves them). Deleting the
+        // vhost file while the shared config still names it breaks the config test for every site.
         if ($this->shared->references($this->fileName($application))) {
             return $this->shared->test();
         }
@@ -483,19 +404,14 @@ class OlsDriver extends AbstractWebServerDriver
 
         $directory = dirname($this->configPath($application));
 
-        // The same root `configPath()` just used. Reading the configured one
-        // here instead made the guard below compare two different layouts on a
-        // migrated server: the directory under `/etc/<brand>-ols/` can never
-        // sit beneath the configured root, so every delete aborted. It failed
-        // closed, which is the right direction to be wrong in, but the effect
-        // was that a site on such a box could not be removed at all.
+        // The same root `configPath()` just used: the configured one made the guard below compare two
+        // layouts on a migrated server (the directory under `/etc/<brand>-ols/` is never beneath it),
+        // so every delete aborted.
         $root = rtrim(app(OlsVhostLayout::class)->root(), '/');
 
-        // `rm -rf` on a path built from a record is the most destructive
-        // command in the panel. The slug is a slug by construction, but a
-        // blank one would make this the
-        // vhost root itself — deleting the configuration of every site on the
-        // server. Refuse rather than rely on validation upstream staying put.
+        // `rm -rf` on a path built from a record is the most destructive command in the panel. A blank
+        // slug would make this the vhost root itself, deleting every site's configuration: refuse
+        // rather than rely on upstream validation.
         abort_unless($directory !== $root && str_starts_with($directory, $root.'/'), 500);
 
         return $this->serverOps->run(['rm', '-rf', $directory], $context);
@@ -524,9 +440,8 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Through `OlsConfigCheck`, which is where the reasons live: on this stack
-     * the raw command cannot fail unless the panel prepares for it first, and
-     * the same preparation is needed by `OlsSharedConfig`.
+     * Through `OlsConfigCheck`, which owns the reasons and the preparation the raw command needs
+     * (shared with `OlsSharedConfig`).
      */
     public function test(): ServerOpsResult
     {
@@ -537,12 +452,9 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * A restart, not a reload.
-     *
-     * `lswsctrl restart` is graceful — it starts new workers and lets the old
-     * ones finish what they are serving. There is no cheaper option that picks
-     * up a new virtual host, and on OLS a `.htaccess` or PHP configuration
-     * change needs this too.
+     * A restart, not a reload: `lswsctrl restart` is graceful (new workers start, old ones finish what
+     * they serve). There is no cheaper way to pick up a new virtual host, and a `.htaccess` or PHP
+     * configuration change needs it too.
      *
      * @return array<int, string>
      */
@@ -552,16 +464,10 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * OpenLiteSpeed already kept a site's logs inside the site's own directory
-     * (`$VH_ROOT/logs` in the vhost template) rather than under /var/log —
-     * this is the layout nginx and Apache have now been moved to, so all three
-     * agree and `{@see Application::logsPath()}` is the only definition of it.
-     *
-     * The comment that used to sit here said these were "owned by the site's
-     * system user, not root". That was true and is no longer: the directory is
-     * root-owned with the site's group, so its owner can read the logs but not
-     * replace a file a root process is appending to.
-     * {@see ApplicationLogDirectory}
+     * A site's logs live inside the site's own directory (`$VH_ROOT/logs` in the vhost template), as
+     * on nginx and Apache, so {@see Application::logsPath()} is the only definition. The directory is
+     * root-owned with the site's group: the owner can read the logs but not replace a file a root
+     * process is appending to. {@see ApplicationLogDirectory}
      *
      * @return array<string, string>
      */
@@ -576,33 +482,23 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * OpenLiteSpeed's workers open the vhost's own access and error logs, so
-     * the account they run as has to be able to reach the directory.
-     *
-     * Asked of `httpd_config.conf` rather than taken from
-     * `server.web_server_user`, and the difference is not pedantry: that
-     * setting defaults to `www-data`, install.sh never writes it, and lsws
-     * runs as `nobody` -- so the config value is wrong on every OpenLiteSpeed
-     * server, and granting the account it names would grant nothing useful
-     * while looking like it had worked. The file is the thing that decides,
-     * so the file is what gets asked.
-     *
-     * The reading itself belongs to {@see OlsSharedConfig}, which owns that
-     * file. Only the fallback is decided here, because only this driver knows
-     * what a missing answer should mean for a grant: `nobody` is what every
-     * stock OpenLiteSpeed install runs as, and admitting it to one site's log
-     * group is no wider than the grant this method exists to make.
-     */
-    /**
-     * The account OpenLiteSpeed's workers run as — the same one they write the
-     * vhost logs as, read from httpd_config.conf rather than assumed
-     * (`nobody` on a stock install, never `www-data`).
+     * The account OpenLiteSpeed's workers run as (they write the vhost logs as it), read from
+     * httpd_config.conf rather than assumed: `nobody` on a stock install, never `www-data`.
      */
     public function siteReaderUser(): ?string
     {
         return $this->logWriterUser();
     }
 
+    /**
+     * OpenLiteSpeed's workers open the vhost's own access and error logs, so the account they run as
+     * has to be able to reach the directory.
+     *
+     * Asked of `httpd_config.conf`, not `server.web_server_user`: that defaults to `www-data`, install.sh
+     * never writes it and lsws runs as `nobody`, so granting the configured account would grant nothing
+     * useful while looking like it worked. Reading belongs to {@see OlsSharedConfig}; only the fallback
+     * is decided here (`nobody`, what a stock install runs as, is no wider than the grant being made).
+     */
     public function logWriterUser(): ?string
     {
         return $this->shared->serverUser()

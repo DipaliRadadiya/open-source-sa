@@ -19,16 +19,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 /**
- * Puts an application on the server: directory, ownership, site config, and a
- * tested reload.
+ * Puts an application on the server: directory, ownership, site config, and a tested reload.
  *
- * Every step is idempotent (`mkdir -p`, overwrite the config, `rm -f`), so a
- * re-run after a partial failure converges rather than compounding.
+ * Every step is idempotent (`mkdir -p`, overwrite the config, `rm -f`), so a re-run after a partial
+ * failure converges rather than compounding.
  *
- * The rule that matters: **the config is tested before anything is reloaded**,
- * and a failed test removes the config we just wrote. A broken vhost that
- * reaches a reload takes every other site on the box down with it — one user's
- * typo must never cost the whole server.
+ * The rule that matters: **the config is tested before anything is reloaded**, and a failed test
+ * removes the config we just wrote. A broken vhost that reaches a reload takes every other site on
+ * the box down with it.
  */
 class ApplicationProvisioner
 {
@@ -51,20 +49,15 @@ class ApplicationProvisioner
     /**
      * The web root served by nginx/PHP.
      *
-     * Uses the app slug as the directory name (not the domain), because slugs are
-     * unique, stable, and survive a domain change without the filesystem path
-     * breaking. The old panel uses the same convention.
-     *
-     * public_html is ALWAYS the fixed base. User's web_root (if set)
-     * is appended inside public_html/.
+     * Uses the app slug as the directory name (not the domain): slugs are unique and stable, and
+     * survive a domain change. `public_html` is ALWAYS the fixed base; the user's web_root (if set)
+     * is appended inside it.
      */
     public function documentRoot(Application $application): string
     {
-        // The arithmetic itself lives on the model, so that a resource or a
-        // form request can ask an application where it is served from without
-        // resolving this service — which pulls in half the provisioning stack
-        // to answer a question about two strings. The traversal guard stays
-        // here, on the path that hands a directory to a shell command.
+        // The arithmetic lives on the model so a resource or form request can ask where an
+        // application is served from without resolving this service. The traversal guard stays
+        // here, on the path that is handed to a shell command.
         $path = $application->documentRoot();
 
         abort_if(
@@ -76,14 +69,10 @@ class ApplicationProvisioner
     }
 
     /**
-     * The application's own root — where its code lives, which is not always
-     * where it is served from.
+     * The application's own root: where its code lives, which is not always where it is served from.
      *
-     * Here, beside `documentRoot()`, for exactly the reason that one is: the
-     * arithmetic belongs on the model, and the traversal guard belongs on the
-     * path that is about to be handed to a shell command. Site Clone rsyncs
-     * this directory, so it needs the same guard the served path has always
-     * had.
+     * Beside `documentRoot()` for the same reason: the arithmetic is on the model, and the traversal
+     * guard belongs on the path handed to a shell command (Site Clone rsyncs this directory).
      */
     public function codePath(Application $application): string
     {
@@ -100,21 +89,15 @@ class ApplicationProvisioner
     /**
      * The directory that *is* the application: `{home}/{slug}/public_html`.
      *
-     * The third of these three, and the difference matters exactly once — when
-     * a site is served from a subdirectory of itself. `documentRoot()` answers
-     * "what does the web server hand out", `codePath()` answers "where do this
-     * application's own commands run", and neither answers "what are this
-     * site's files", which is the question a backup asks. For a Laravel or
-     * Craft site both of the others point *inside* the application, so anything
-     * copying them copies the public folder and calls it the site.
+     * `documentRoot()` is what the web server hands out and `codePath()` is where the application's
+     * own commands run; neither is "what are this site's files", which is what a backup asks. For a
+     * Laravel or Craft site both point *inside* the application, so copying them copies the public
+     * folder and calls it the site.
      *
-     * `web_root` selects what is served inside this directory; it does not move
-     * the directory, so this is unconditional. `.panel` — trash, file backups,
-     * the htpasswd file — is a sibling rather than a child, so it stays out of
-     * anything that copies this without needing an exclude somebody remembers.
+     * `web_root` selects what is served inside this directory without moving it. `.panel` (trash,
+     * file backups, the htpasswd file) is a sibling, so it stays out of anything that copies this.
      *
-     * Same traversal guard as the two above, for the same reason: this hands a
-     * directory to a shell command.
+     * Same traversal guard as the two above: this hands a directory to a shell command.
      */
     public function applicationRoot(Application $application): string
     {
@@ -129,34 +112,24 @@ class ApplicationProvisioner
     }
 
     /**
-     * Steps are recorded on the application as each one completes, not
-     * collected and written at the end — the user is watching this happen, and
-     * a failure halfway should leave behind how far it got.
+     * Steps are recorded on the application as each one completes, not collected and written at the
+     * end: the user is watching, and a failure halfway should leave behind how far it got.
      *
-     * @param  bool  $skipInstaller  True for Site Clone: the vhost is written
-     *                               and tested here same as any new site, but
-     *                               the marketplace installer and starting
-     *                               the process both need real files first —
-     *                               a clone's files arrive afterward, via
-     *                               `CloneManager`'s own rsync, not a fresh
-     *                               install. Running either here would fight
-     *                               that rsync or start a process against an
-     *                               empty directory, the same failure mode
-     *                               `startProcess()` already avoids for a
-     *                               brand-new git application.
+     * @param  bool  $skipInstaller  True for Site Clone: the vhost is written and tested as for any new
+     *                               site, but the marketplace installer and starting the process need
+     *                               real files first, and a clone's files arrive afterward via
+     *                               `CloneManager`'s rsync. Running either here would fight that rsync
+     *                               or start a process against an empty directory.
      * @return array<int, string> the steps completed, in order
      *
      * @throws ProvisioningFailedException
      */
     public function provision(Application $application, bool $skipInstaller = false): array
     {
-        // Provisioning is the one job that builds the top level of the site
-        // root — public_html, .panel, logs, the .env, an installer's data
-        // directory — so the immutable flag is off for all of it: a Retry Setup
-        // on a site that was locked would otherwise fail its first mkdir.
-        // Locked again whatever happens, success or failure, so a setup that
-        // dies halfway does not leave the site root renamable by its user.
-        // {@see SiteRootLock}
+        // Provisioning builds the top level of the site root (public_html, .panel, logs, the .env, an
+        // installer's data directory), so the immutable flag is off for all of it: a Retry Setup on a
+        // locked site would otherwise fail its first mkdir. Locked again whatever happens, so a setup
+        // that dies halfway does not leave the site root renamable by its user. {@see SiteRootLock}
         $this->rootLock->unlock($application);
 
         try {
@@ -186,34 +159,16 @@ class ApplicationProvisioner
 
         $this->progress->open($application);
 
-        // Before anything is created, because everything that follows assumes
-        // this account exists: the directory is chowned to it, the vhost names
-        // it, the installer runs as it.
+        // Before anything is created, because everything that follows assumes this account exists:
+        // the directory is chowned to it, the vhost names it, the installer runs as it.
         //
-        // The `system_users` row is not proof — it records what the panel
-        // created, and a server rebuilt under a surviving database, an adopted
-        // box, or a `useradd` that failed somewhere the row outlived all leave
-        // a username with no passwd entry. {@see PoolManager} learned this and
-        // asked `getent` before writing a pool, and {@see CrontabManager}
-        // before writing a cron file — but the check lived *inside* the pool
-        // builder, and `PoolManager::supported()` is true for the FPM stack
-        // only. On OpenLiteSpeed the pool step never runs, so nothing asked,
-        // and `chown` exited 1 several steps later with a reference number in
-        // place of "that account does not exist on this server".
-        // Creates it when it is not there, rather than only reporting that it
-        // is not. The three states the paragraph above describes — an adopted
-        // box, a server rebuilt under a surviving database, a `useradd` that
-        // failed somewhere the row outlived — all end with a row naming an
-        // account that does not exist, and all three are repaired by making it.
-        //
-        // It is also where an account the panel generated for this site comes
-        // into being at all: `CreateApplication` records the owner in the same
-        // transaction as the application and writes nothing to the server, so
-        // the site and its user are one fact and the account is created here,
-        // beside the directory and the vhost that need it.
-        //
-        // Idempotent: an account that already exists — which is every site
-        // whose user the operator picked — is left exactly as it is.
+        // The `system_users` row is not proof: a rebuilt server under a surviving database, an
+        // adopted box, or a failed `useradd` all leave a username with no passwd entry.
+        // {@see PoolManager} and {@see CrontabManager} check with `getent`, but the pool step runs for
+        // the FPM stack only, so on OpenLiteSpeed nothing asked and `chown` exited 1 several steps
+        // later. This creates the account when it is missing (it is also where an account the panel
+        // generated for the site comes into being: `CreateApplication` writes nothing to the
+        // server). Idempotent: an existing account is left exactly as it is.
         $this->step('ensure_account', fn (): ServerOpsResult => $user === null
             ? $this->serverOps->run(
                 ['getent', 'passwd', ''],
@@ -222,38 +177,23 @@ class ApplicationProvisioner
             )
             : $this->createSystemUser->ensureOnServer($user));
 
-        // One directory, for every site type there is. `documentRoot()` resolves
-        // to the same flat `{root}/public_html/{web_root}` shape for all of
-        // them.
-        //
-        // A git site used to be sent down a branch of its own here, which built
-        // `releases/<timestamp>/public` and a `current` symlink instead. That
-        // was the layout before `4059aa0` ("flat path for all apps, remove
-        // current symlink") — and the refactor left this behind, so a git site
-        // got a release structure nothing serves and never got the directory
-        // everything actually uses. The next step chowned a path that did not
-        // exist, `chown` exited 1, and **provisioning failed at
-        // `set_ownership` for every git application** before a single git
-        // command ran. The suite could not see it: `Process` is faked, so the
-        // chown against a missing directory returned success.
+        // One directory for every site type: `documentRoot()` resolves to the same flat
+        // `{root}/public_html/{web_root}` shape for all of them. A git site used to be sent down a
+        // branch that built `releases/<timestamp>/public` and a `current` symlink, which nothing
+        // serves any more, so `set_ownership` chowned a path that did not exist and failed for
+        // every git application. The suite could not see it: `Process` is faked, so the chown
+        // returned success.
         $this->step('create_directory', function () use ($application, $documentRoot, $user) {
             $result = $this->serverOps->run(
                 ['mkdir', '-p', $documentRoot],
                 ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
             );
 
-            // Git sites need it because their code reads it. A container needs
-            // it because the compose file the panel generates declares
-            // `env_file` unconditionally — and Compose treats a missing one as
-            // fatal, so this guard being `=== 'git'` meant no container site
-            // built from the image/port fields could start at all. It failed at
-            // `container_start` with a reference number, several steps after the
-            // step that did not create the file.
-            //
-            // Not visible in the suite: `Process` is faked, so `docker compose
-            // up` succeeded against a file that was never there. And not
-            // visible on the test box either, because the only container site on
-            // it used a PASTED compose file, which has no `env_file` line.
+            // Git sites need it because their code reads it. A container needs it because the
+            // generated compose file declares `env_file` unconditionally and Compose treats a
+            // missing one as fatal, so no container site built from the image/port fields could
+            // start. (The suite fakes `Process`, and the only container site on the test box used a
+            // PASTED compose file, which has no `env_file`.)
             $needsEnv = $application->site_type === 'git'
                 || $application->serving_profile === 'docker';
 
@@ -261,21 +201,13 @@ class ApplicationProvisioner
                 return $result;
             }
 
-            // The shared `.env`, beside the application's own code and outside
-            // the served directory — it holds the application's secrets, and
-            // anything under the document root is a URL.
+            // The shared `.env`, beside the application's own code and outside the served
+            // directory: it holds secrets, and anything under the document root is a URL. Asked of
+            // `Application` rather than spelled out again, so two strings cannot drift apart.
             //
-            // Asked of `Application` rather than spelled out again. The comment
-            // here used to say "`ApplicationEnvironment::path()` reads the same
-            // location", which was true only for as long as two separate
-            // strings happened to agree — and the WAF detect log, which had the
-            // same arrangement, had already drifted into the panel opening a
-            // file nothing wrote.
-            //
-            // Owned here rather than by `set_ownership` below, which only
-            // descends the document root: `touch` runs elevated, and a
-            // root-owned `.env` is one the site's own process cannot write and
-            // the File Manager cannot edit.
+            // Owned here rather than by `set_ownership` below, which only descends the document
+            // root: `touch` runs elevated, and a root-owned `.env` is one the site's own process
+            // cannot write and the File Manager cannot edit.
             $env = $application->envPath();
 
             $result = $this->serverOps->run(
@@ -287,10 +219,9 @@ class ApplicationProvisioner
                 return $result;
             }
 
-            // `-h`: where the site has a web root, `.env` sits in a folder the
-            // site user owns, and a plain chown follows a link planted there —
-            // handing its target to the user (the `.panel` class of bug,
-            // 2026-09-29). With -h a link is changed itself, never followed.
+            // `-h`: where the site has a web root, `.env` sits in a folder the site user owns, and
+            // a plain chown follows a link planted there, handing its target to the user. With -h a
+            // link is changed itself, never followed.
             return $this->serverOps->run(
                 ['chown', '-h', "{$user->username}:{$user->username}", $env],
                 ['feature' => 'application', 'op' => 'chown_env', 'application' => $application->id],
@@ -302,13 +233,9 @@ class ApplicationProvisioner
             ['feature' => 'application', 'op' => 'chown', 'application' => $application->id],
         ));
 
-        // Written *as the site user*, after ownership is set. It was written
-        // by root before the chown, so that the chown would hand it over —
-        // but this runs on every provision, "Retry setup" included, into a
-        // document root the user already controls, and root's `tee` follows
-        // a link planted at `index.php` (the `.panel` class of bug,
-        // 2026-09-29). As the user the file is theirs by construction, which
-        // is what writing it first was for.
+        // Written *as the site user*, after ownership is set: this runs on every provision ("Retry
+        // setup" too) into a document root the user already controls, and root's `tee` follows a link
+        // planted at `index.php`. As the user the file is theirs by construction.
         if ($this->wantsPlaceholder($application, $skipInstaller)) {
             $this->step('placeholder', fn () => $this->serverOps->run(
                 ['runuser', '-u', $user->username, '--', 'tee', $this->placeholderPath($application, $documentRoot)],
@@ -317,83 +244,57 @@ class ApplicationProvisioner
             ));
         }
 
-        // Every PHP site gets its own pool from the start, not as an opt-in
-        // afterthought. Before this, a freshly provisioned site ran on the
-        // shared, server-wide pool as the web server's own account — which is
-        // exactly what let a phpMyAdmin install's own config file (owned by
-        // its site user, 0640) come back "not readable" in production. Doing
-        // this *before* write_config, not after, means the vhost picks up
-        // the isolated socket on its first render instead of needing a
-        // second write+reload the way the manual isolate() action does.
-        // Every PHP site starts with the strict list disabled.
+        // Every PHP site gets its own pool from the start: on the shared server-wide pool a site
+        // ran as the web server's account, so a phpMyAdmin config file owned by its site user
+        // (0640) came back "not readable". Doing this *before* write_config means the vhost picks
+        // up the isolated socket on its first render instead of needing a second write+reload.
         //
-        // The default was `null`, so a freshly created site could call exec,
-        // shell_exec, system, passthru, proc_open and popen — which is what a
-        // web shell needs and what almost no application does. The two lists
-        // and the UI presets for them already existed; nothing applied either
-        // one unless somebody went looking for the setting.
+        // Every PHP site starts with the strict `disable_functions` list: exec, shell_exec, system,
+        // passthru, proc_open and popen are what a web shell needs and almost no application does.
         //
-        // PERSISTED HERE, NOT CHANGED IN defaults().
+        // PERSISTED HERE, NOT CHANGED IN defaults(): `defaults()` fills every value a site has not
+        // set, so moving the list there would silently apply it to existing sites on whatever
+        // unrelated event next re-rendered their configuration. Writing a row at creation confines
+        // it to new sites and leaves the row visible and editable.
         //
-        // `defaults()` fills every value a site has not set, so moving the
-        // list there would apply it to sites that already exist, silently, on
-        // whatever unrelated event next re-rendered their configuration — a
-        // resync, a domain change, a certificate. A working site would start
-        // refusing calls it made yesterday and nothing would connect the two.
-        // Writing a row at creation confines it to new sites, which is the
-        // whole request, and leaves the row visible and editable afterwards.
-        //
-        // Before create_php_pool and before write_config, deliberately: FPM
-        // renders these into the pool and OpenLiteSpeed into the site's ini,
-        // and both of those happen below. Written after them, the first render
-        // of a new site would ship without the list and only pick it up on the
-        // next unrelated change.
+        // Before create_php_pool and write_config, deliberately: FPM renders these into the pool
+        // and OpenLiteSpeed into the site's ini, so written after them the first render would ship
+        // without the list.
         if ($application->serving_profile === 'php') {
             $this->step('harden_php', function () use ($application) {
                 $settings = ApplicationPhpSettings::firstOrNew(
                     ['application_id' => $application->id],
                 );
 
-                // A DEFAULT, NOT AN OVERRIDE.
+                // A DEFAULT, NOT AN OVERRIDE. A clone arrives with its source's settings already
+                // copied onto it, and provisioning must not undo that (a site whose owner relaxed
+                // the list to make a plugin work would come back strict).
                 //
-                // A clone arrives here with its source's settings already
-                // copied onto it, and provisioning must not undo that. This
-                // used to `updateOrCreate` the list unconditionally, which
-                // would have reset a cloned site to strict — including one
-                // whose owner had deliberately relaxed it to make a plugin
-                // work. They clone a working site and get a broken one, with
-                // nothing on the screen explaining why.
-                //
-                // `=== null` rather than `empty()` or `blank()`: an empty
-                // string is a real answer here — "this site disables nothing",
-                // set by somebody who meant it. Treating that as unset would
-                // re-harden the one site whose owner had explicitly said no.
+                // `=== null` rather than `empty()` or `blank()`: an empty string is a real answer
+                // ("this site disables nothing"), and treating it as unset would re-harden the one
+                // site whose owner had said no.
                 if ($settings->disable_functions === null) {
                     $settings->disable_functions = ApplicationPhpSettings::strictDisabledFunctionsFor((string) $application->site_type);
 
-                    // What the site was given, kept apart from what it has now
-                    // so "changed" (RC-3) is judged against this and not against
-                    // a preset that a later release may have moved. Written only
-                    // alongside the list it describes: a clone arrives with its
-                    // source's pair and keeps it.
+                    // What the site was given, kept apart from what it has now so "changed" is
+                    // judged against this and not a preset a later release may have moved. Written
+                    // only alongside the list it describes: a clone arrives with its source's pair
+                    // and keeps it.
                     $settings->provisioned_disable_functions = $settings->disable_functions;
                 }
 
-                // open_basedir on for a site the panel creates, as v7 does
-                // (operator, 2026-10-07). Here and not as a column default:
-                // the column says off for every existing row, and a clone
-                // arrives with its source's row already saved — `exists` is
-                // what tells the two apart.
+                // open_basedir on for a site the panel creates, as v7 does. Here and not as a column
+                // default: the column says off for every existing row, and a clone arrives with its
+                // source's row already saved, so `exists` tells the two apart.
                 if (! $settings->exists) {
                     $settings->open_basedir_enabled = true;
                 }
 
                 $settings->save();
 
-                // The relation was loaded before the row existed; the pool
-                // step below reads it, and a stale null there would write a
-                // pool without the list and leave the database disagreeing
-                // with the file.
+                // The relation was loaded before the row existed; the pool step below reads it, and
+                // a stale null would write a pool without the list and leave the database
+                // disagreeing with the file.
                 $application->unsetRelation('phpSettings');
 
                 return new ServerOpsResult(true, '', null);
@@ -423,28 +324,23 @@ class ApplicationProvisioner
         $this->step('reload', fn () => $driver->reload());
 
         if (! $skipInstaller) {
-            // Marketplace apps install once the site is actually being served
-            // — WordPress writes its own URL into the database during setup,
-            // so it needs the vhost live first. Site types with no installer
-            // (git, blank PHP, static) record nothing here.
+            // Marketplace apps install once the site is actually being served: WordPress writes its
+            // own URL into the database during setup, so it needs the vhost live first. Site types
+            // with no installer (git, blank PHP, static) record nothing here.
             $this->installers->install($application, $documentRoot);
 
-            // The process last, because until the installer has run there is
-            // nothing to start. Starting first was wrong in both directions: a
-            // one-click Node app would be launched against an empty directory,
-            // and a git application has no code at all until its first deploy —
-            // `systemctl start` succeeds, the process dies immediately, and
-            // provisioning fails on a site that is otherwise fine.
+            // The process last, because until the installer has run there is nothing to start: a
+            // one-click Node app would be launched against an empty directory, and a git
+            // application has no code until its first deploy, so the process would die immediately
+            // and fail an otherwise fine site.
             $allocatedPort = $application->app_port;
 
             $this->startProcess($application, $documentRoot);
 
-            // A pasted compose file publishes its own port, and starting it moves
-            // `app_port` there — after write_config proxied to the allocated one.
-            // Measured 2026-10-07: nginx on 3014, the container on 3992, the site
-            // `active` + `running` and a 502 for good when the domain was not
-            // pointed here yet (the certificate step, which would have rewritten
-            // the vhost, declined). Same reconcile as UpdateContainerCompose.
+            // A pasted compose file publishes its own port, and starting it moves `app_port` there,
+            // after write_config proxied to the allocated one: a 502 for good when the domain is
+            // not pointed here yet (the certificate step, which would rewrite the vhost, declines).
+            // Same reconcile as UpdateContainerCompose.
             $port = $application->fresh()?->app_port;
 
             if ($port !== $allocatedPort) {
@@ -455,27 +351,21 @@ class ApplicationProvisioner
                 $this->step('reload', fn () => $driver->reload());
             }
 
-            // After everything that may write a `.env` — installers and the
-            // first-start step alike. Several leave it 0644.
+            // After everything that may write a `.env` (installers and the first-start step alike).
+            // Several leave it 0644.
             $this->secretPrivacy->narrow($application);
         }
 
-        // Last, and unable to fail the provision. The site is created, serving
-        // and correct by this point; a DNS timeout must not turn that into a
-        // failed application over a certificate nobody asked for. Declines
-        // silently when the domain is not pointed here yet, which for a new
-        // domain is most of the time — writing a failed certificate there
-        // would make every new site look broken on its first screen.
+        // Last, and unable to fail the provision: the site is created and serving, and a DNS
+        // timeout must not turn that into a failed application. Declines silently when the domain
+        // is not pointed here yet, which for a new domain is most of the time; a failed certificate
+        // would make every new site look broken.
         $this->autoCertificate->attempt($application->fresh(['domains', 'certificate']));
 
-        // Count what was just installed. Nothing else will: a size is written
-        // by a git deploy and by the file browser, so a one-click site nobody
-        // has deployed or browsed had never been measured at all and read as
-        // "Not measured" in the sites list for as long as it existed —
-        // Nextcloud's several hundred MB included. Queued and debounced by the
-        // job itself, so a `du` over a fresh WordPress does not sit inside
-        // provisioning, and it cannot fail the site: {@see MeasureApplicationSize}
-        // logs and gives up rather than throwing.
+        // Count what was just installed: a size is written only by a git deploy and the file
+        // browser, so a one-click site nobody deployed or browsed stayed "Not measured". Queued and
+        // debounced by the job, so a `du` over a fresh install does not sit inside provisioning,
+        // and it cannot fail the site: {@see MeasureApplicationSize}
         MeasureApplicationSize::dispatch($application->id)
             ->delay(now()->addSeconds(MeasureApplicationSize::DEBOUNCE_SECONDS));
 
@@ -485,11 +375,9 @@ class ApplicationProvisioner
     /**
      * Write the site's config and test the server's, before anything reloads.
      *
-     * On a failure — the test, or a write that stopped after the first file
-     * was already linked — the site's config comes back out, so the next
-     * reload (ours or anyone else's) and the next site's test are not
-     * poisoned by it: left enabled, one broken site failed `test_config` for
-     * every site created after it. The error stays on this site.
+     * On a failure (the test, or a write that stopped after the first file was already linked) the
+     * site's config comes back out: left enabled, one broken site failed `test_config` for every site
+     * created after it. The error stays on this site.
      *
      * @throws ProvisioningFailedException
      */
@@ -513,14 +401,11 @@ class ApplicationProvisioner
     }
 
     /**
-     * The driver's own removal, not `rm -f`: on a web server whose site lives
-     * partly in a shared file, deleting the per-site file would leave the
-     * shared one pointing at something gone — a config that is still broken,
-     * and now broken in a harder way.
+     * The driver's own removal, not `rm -f`: on a web server whose site lives partly in a shared
+     * file, deleting the per-site file would leave the shared one pointing at something gone.
      *
-     * Then the test again, so a removal that did not take, or a config that
-     * was broken before this site, is in the log rather than discovered by
-     * the next site to fail.
+     * Then the test again, so a removal that did not take, or a config that was broken before this
+     * site, is in the log rather than discovered by the next site to fail.
      */
     private function removeFailedConfig(WebServerDriver $driver, Application $application): void
     {
@@ -537,55 +422,43 @@ class ApplicationProvisioner
     }
 
     /**
-     * Start the application's process, if there is one and there is anything
-     * for it to run yet.
+     * Start the application's process, if there is one and there is anything for it to run yet.
      *
-     * A one-click application's start command is written here rather than
-     * asked for: the installer knows the one right answer, and it needs the
-     * document root to say it.
+     * A one-click application's start command is written here rather than asked for: the installer
+     * knows the one right answer, and it needs the document root to say it.
      *
-     * A git application reaches this with a start command and an empty
-     * directory. Its unit is written and enabled — so the port, the limits and
-     * the boot behaviour are all in place — but it is not started, because the
-     * code arrives with the first deploy, which starts it.
+     * A git application reaches this with a start command and an empty directory. Its unit is
+     * written and enabled (port, limits and boot behaviour in place) but not started: the code
+     * arrives with the first deploy, which starts it.
      *
      * @throws ProvisioningFailedException
      */
     private function startProcess(Application $application, string $documentRoot): void
     {
-        // A container is supervised by compose, not by systemd, and this is
-        // the fork that was missing: `ContainerSupervisor` existed, was
-        // tested, and was never called from here — so a Docker application
-        // provisioned to "active" with no container anywhere and nginx
-        // proxying to a port nothing listened on. Every test drove the
-        // supervisor directly, which proved it worked and nothing about
-        // whether it was reachable.
+        // A container is supervised by compose, not by systemd. `ContainerSupervisor` existed and
+        // was tested but never called from here, so a Docker application reached "active" with no
+        // container and nginx proxying to a port nothing listened on.
         if ($application->serving_profile === 'docker') {
-            // The network and the volumes BEFORE the container, because the
-            // compose file declares them `external: true` — which means Compose
-            // looks them up and refuses rather than creating them. A site created
-            // with "make a new network" has nothing on the box yet at this point.
+            // The network and the volumes BEFORE the container: the compose file declares them
+            // `external: true`, so Compose looks them up and refuses rather than creating them.
             app(DockerResources::class)->ensureFor($application);
 
-            // The env vars the site was created with, into the file compose
-            // reads, before the container first reads it (DS-03).
+            // The env vars the site was created with, into the file compose reads, before the
+            // container first reads it.
             $this->writeContainerEnv($application);
 
-            // The first pull of every image happens in this `up` (RC-20).
+            // The first pull of every image happens in this `up`.
             $this->containers->apply($application, $documentRoot, install: true);
             $this->progress->record('start_app');
 
-            // The post-start hook, which this early return used to skip — so the
-            // branch above fixed "the supervisor was never called from here" and
-            // then reproduced it one method along. A no-op for every app that
-            // passes its admin credential in as an environment variable, which is
-            // all of them but Chatwoot: its production seeds create no user, only
-            // a flag opening a setup page to whoever asks first.
+            // The post-start hook, which this early return used to skip. A no-op for every app that
+            // passes its admin credential as an environment variable, which is all of them but
+            // Chatwoot (its production seeds create no user, only a flag opening a setup page to
+            // whoever asks first).
             //
-            // Not preceded by `readiness->verify()` the way the systemd path is.
-            // That check has its own timeout and 19 container apps currently reach
-            // Active without it; `afterStart()` does its own waiting, for as long
-            // as a first-boot migration takes.
+            // Not preceded by `readiness->verify()` as on the systemd path: that check has its own
+            // timeout and container apps reach Active without it; `afterStart()` does its own
+            // waiting, for as long as a first-boot migration takes.
             $this->installers->afterStart($application, $documentRoot);
 
             return;
@@ -609,26 +482,21 @@ class ApplicationProvisioner
 
         $this->progress->record($ready ? 'start_app' : 'write_unit');
 
-        // Started is not the same as working, and the difference is the whole
-        // reason this exists: a NodeBB whose assets never compiled runs, stays
-        // up and satisfies every check above, while answering `500 Failed to
-        // lookup view!` on every request. The panel called that site Active.
+        // Started is not the same as working: a NodeBB whose assets never compiled runs and passes
+        // every check above while answering `500 Failed to lookup view!` on every request.
         //
-        // Only for an application actually started here. A git checkout has no
-        // code yet and is deliberately not running, so asking it for a page
-        // would fail every time and mark a correct provision as broken.
-        // Not via `step()`: that helper takes a callable returning a
-        // `ServerOpsResult` and reads `failed()` on it. This check retries,
-        // so it owns its own result and throws — recording the step after it
-        // returns, which is the same rule `step()` follows.
+        // Only for an application actually started here: a git checkout has no code yet and is
+        // deliberately not running, so asking it for a page would mark a correct provision as
+        // broken. Not via `step()`, which expects a `ServerOpsResult`: this check retries, so it
+        // owns its result and throws, recording the step after it returns (the same rule `step()`
+        // follows).
         if ($ready) {
             $this->readiness->verify($application);
 
             $this->progress->record('verify_serving');
 
-            // After the site answers and before it is reported ready: an
-            // application whose admin is created by the first visitor must
-            // not be Active for a moment while a stranger can still do that.
+            // After the site answers and before it is reported ready: an application whose admin is
+            // created by the first visitor must not be Active while a stranger can still do that.
             $this->installers->afterStart($application, $documentRoot);
         }
     }
@@ -636,10 +504,9 @@ class ApplicationProvisioner
     /**
      * Write a container site's create-time env vars to its env file, once.
      *
-     * The same file the Environment screen edits, so what was typed on the
-     * create form is there to change afterwards. Removed from the encrypted
-     * column as soon as it is on disk: a Retry after a failed start must not
-     * overwrite whatever the user has since fixed on that screen.
+     * The same file the Environment screen edits. Removed from the encrypted column as soon as it
+     * is on disk, so a Retry after a failed start does not overwrite what the user has since fixed
+     * there.
      *
      * @throws ProvisioningFailedException
      */
@@ -700,22 +567,19 @@ class ApplicationProvisioner
         bool $removeFiles = false,
         bool $removeDockerVolumes = false,
     ): void {
-        // Off for good, whether the files go or stay: `rm -rf` cannot remove an
-        // immutable directory, and files left to the user must be the user's
-        // to tidy up — an immutable directory in their home that nothing
-        // manages any more is one they could never delete.
+        // Off for good, whether the files go or stay: `rm -rf` cannot remove an immutable
+        // directory, and one left in the user's home that nothing manages would be one they could
+        // never delete.
         $this->rootLock->unlock($application);
 
-        // The process first: a unit left running holds its port and keeps
-        // serving traffic for a site the panel has stopped listing. A
-        // container does exactly the same, so both are asked — `remove()` on
-        // either is a no-op when there was nothing of that kind.
+        // The process first: a unit left running holds its port and keeps serving traffic for a
+        // site the panel has stopped listing. A container does the same, so both are asked;
+        // `remove()` on either is a no-op when there was nothing of that kind.
         $this->supervisor->remove($application);
 
         if ($application->serving_profile === 'docker') {
-            // The volumes flag rides along here rather than being a second pass,
-            // because `compose down` is the only thing that knows which volumes a
-            // PASTED file declared — the panel never recorded those.
+            // The volumes flag rides along here: `compose down` is the only thing that knows which
+            // volumes a PASTED file declared.
             $this->containers->remove(
                 $application,
                 $this->documentRoot($application),
@@ -723,22 +587,17 @@ class ApplicationProvisioner
             );
         }
 
-        // Then everything else the panel wrote outside the site's own
-        // directory — the PHP-FPM pool, worker units, the fail2ban jail, the
-        // certificate's renewal. Each of them outlives the application
-        // otherwise, and each then points at something that is not there.
-        // {@see ApplicationArtifacts} for what each one does when it does.
+        // Then everything else the panel wrote outside the site's own directory (the PHP-FPM pool,
+        // worker units, the fail2ban jail, the certificate's renewal), each of which would
+        // otherwise outlive the application. {@see ApplicationArtifacts}
         //
-        // `$removeFiles` is passed through because one of them — the site's
-        // backups — is not a leftover but the copy that survives a mistake.
-        // Those follow the same flag the files do, so a plain delete leaves
-        // them recoverable and only an explicit "destroy this data" removes
-        // them.
+        // `$removeFiles` is passed through because the site's backups are the copy that survives a
+        // mistake: a plain delete leaves them recoverable and only an explicit "destroy this data"
+        // removes them.
         $this->artifacts->remove($application, $removeFiles);
 
-        // Every unit that lived in the application's slice is gone by now —
-        // its own above, its workers with the artifacts — so the slice itself
-        // can go. systemd will not reclaim it on its own.
+        // Every unit that lived in the application's slice is gone by now (its own above, its workers
+        // with the artifacts), so the slice can go. systemd will not reclaim it on its own.
         $this->supervisor->releaseSlice($application);
 
         $driver = $this->webServers->driver();
@@ -763,16 +622,13 @@ class ApplicationProvisioner
     }
 
     /**
-     * Takes a site offline without deleting it: swaps its vhost to a small
-     * built-in "unavailable" page, reversible via `enable()`. Nothing else —
-     * files, database, a supervised process — is touched. This is a
-     * web-facing pause, not a deprovision.
+     * Takes a site offline without deleting it: swaps its vhost to a small built-in "unavailable"
+     * page, reversible via `enable()`. Files, database and a supervised process are not touched;
+     * this is a web-facing pause, not a deprovision.
      *
-     * Reuses the site's own *static* vhost template rather than writing a
-     * fourth one per web server: `serving_profile` is temporarily set to
-     * `static` in memory only (never persisted) for the duration of the
-     * render, so the existing template's SSL, ACME-challenge and redirect
-     * handling keep working for free instead of being reimplemented.
+     * Reuses the site's own *static* vhost template rather than writing a fourth one per web server:
+     * `serving_profile` is set to `static` in memory only (never persisted) for the render, so the
+     * template's SSL, ACME-challenge and redirect handling keep working.
      */
     public function disable(Application $application): void
     {
@@ -809,10 +665,9 @@ class ApplicationProvisioner
 
         $application->save();
 
-        // A Node app went on running behind the unavailable page — listening,
-        // using memory, and on Uptime Kuma reachable on its port past the
-        // vhost. Stopped — and kept stopped across a reboot — once the page is
-        // live; started again by enable().
+        // A Node app went on running behind the unavailable page, reachable on its port past the
+        // vhost. Stopped, and kept stopped across a reboot, once the page is live; started again by
+        // enable().
         if ($this->supervisor->runs($application)) {
             $stopped = $this->supervisor->suspend($application);
 
@@ -836,8 +691,8 @@ class ApplicationProvisioner
             try {
                 $this->containers->apply($application, $documentRoot);
             } catch (ProvisioningFailedException $exception) {
-                // The reason travels too (F3): "the container keeps restarting"
-                // is something the user can act on; a bare reference is not.
+                // The reason travels too: "the container keeps restarting" is something the user
+                // can act on; a bare reference is not.
                 throw new ApplicationAvailabilityException($exception->reference, $exception->reason);
             }
         }
@@ -899,17 +754,12 @@ class ApplicationProvisioner
     /**
      * The page a disabled site serves.
      *
-     * The same markup as the placeholder and deliberately different words,
-     * because the reader is different: a placeholder is read by the operator
-     * who just made the site, this is read by that site's visitors, who did
-     * not choose to be here and cannot do anything about it. So there are no
-     * next steps — instructions aimed at somebody who cannot follow them are
-     * noise — and nothing that says *why*, which is the site owner's business
-     * and not a stranger's.
+     * The same markup as the placeholder and deliberately different words, because the reader is
+     * different: visitors who did not choose to be here and cannot do anything about it. So there
+     * are no next steps and nothing that says *why*, which is the site owner's business.
      *
-     * Rewritten on every disable rather than only when missing, which is what
-     * lets a change to this page reach servers that already have one. That was
-     * already true of the write and is worth keeping true.
+     * Rewritten on every disable rather than only when missing, so a change to this page reaches
+     * servers that already have one.
      */
     private function disabledPageContents(): string
     {
@@ -926,16 +776,12 @@ class ApplicationProvisioner
     }
 
     /**
-     * A placeholder is a courtesy for a site with nothing in it yet. Two kinds
-     * of site must not get one:
+     * A placeholder is a courtesy for a site with nothing in it yet. Two kinds of site must not get
+     * one:
      *
-     *  - a git site, whose content arrives from the repository. `git clone`
-     *    refuses a non-empty destination outright, so a placeholder here does
-     *    not merely sit there looking untidy — it breaks the first deploy of
-     *    every git application, which is the only deploy that matters for a
-     *    site nobody has used yet.
-     *  - a clone target, which is about to have another site's files rsynced
-     *    over it.
+     *  - a git site, whose content arrives from the repository: `git clone` refuses a non-empty
+     *    destination, so a placeholder would break the first deploy of every git application.
+     *  - a clone target, which is about to have another site's files rsynced over it.
      */
     private function wantsPlaceholder(Application $application, bool $skipInstaller): bool
     {
@@ -950,19 +796,13 @@ class ApplicationProvisioner
     /**
      * The page a brand-new site serves until its owner puts something there.
      *
-     * It used to be an unstyled `<h1>` and one sentence, which answered the
-     * question ("is it up?") and looked like a broken site while doing it.
+     * **For a PHP site it also proves PHP is running**, by printing a value only PHP could produce:
+     * a static file served from a misconfigured pool looks exactly like a working site until the
+     * first real request. Static profiles get the same page without that line.
      *
-     * **For a PHP site it also proves PHP is running**, by printing a value
-     * only PHP could produce. That is the actual question behind "is my site
-     * working": a static file served from a misconfigured pool looks exactly
-     * like a working one until the first real request. Static profiles get the
-     * same page without that line, because for them there is nothing to prove.
-     *
-     * The PHP fragment is passed in rather than written in the template. Blade
-     * *executes* a `<?php` block it finds in a view; it does not emit one. And
-     * it uses `date()` alone — no Laravel helpers, because this file runs on
-     * the customer's site with no framework under it.
+     * The PHP fragment is passed in rather than written in the template, because Blade *executes* a
+     * `<?php` block it finds in a view. It uses `date()` alone: this file runs on the customer's site
+     * with no framework under it.
      */
     private function placeholderContents(Application $application): string
     {
@@ -990,9 +830,8 @@ class ApplicationProvisioner
             'foot' => __('application.placeholder_page.foot'),
         ])->render();
 
-        // The comment is for whoever opens the file next, and it has to be the
-        // first thing in it: a PHP site's placeholder is `index.php`, and a
-        // byte before `<?php` is output the browser receives.
+        // The comment is for whoever opens the file next, and has to be first: a PHP site's
+        // placeholder is `index.php`, and a byte before `<?php` is output the browser receives.
         return $isPhp
             ? "<?php // Placeholder written by the panel — replace it with your application.\n?>\n".$body."\n"
             : $body."\n";

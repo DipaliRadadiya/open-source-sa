@@ -17,21 +17,15 @@ use Illuminate\Support\Facades\Log;
 /**
  * Node.js versions, managed with fnm.
  *
- * fnm rather than nvm for one reason: nvm works by rewriting `PATH` in an
- * interactive shell, and a systemd unit has neither. A site pinned to Node 18
- * needs `/absolute/path/to/v18/bin/node` written into its `ExecStart=`, and
- * fnm keeps every version at a fixed, readable path. This is the failure other
- * panels ship — nvm works when you SSH in, then the service quietly runs on
- * whatever `node` the system had.
+ * fnm rather than nvm: nvm rewrites `PATH` in an interactive shell, which a systemd unit lacks. A
+ * site pinned to Node 18 needs `/absolute/path/to/v18/bin/node` in its `ExecStart=`, and fnm keeps
+ * every version at a fixed, readable path.
  *
- * fnm is installed system-wide rather than per user: one copy, and every site
- * user can see the versions. Per-user installs multiply the copies and bring
- * back the shell-profile problem for anything not launched from a login shell.
+ * fnm is installed system-wide, not per user: one copy, visible to every site user.
  *
- * A Node that was already on the box — the distro package, NodeSource, however
- * it got there — is reported as `system` and never touched. That is the normal
- * state of a server being migrated in, not an edge case, and clobbering it
- * would break whatever already depends on it.
+ * A Node that was already on the box (distro package, NodeSource) is reported as `system` and
+ * never touched: it is the normal state of a server being migrated in, and clobbering it would
+ * break whatever depends on it.
  */
 class NodeRuntime implements Runtime
 {
@@ -130,10 +124,9 @@ class NodeRuntime implements Runtime
     /**
      * Is this a Node release that exists?
      *
-     * Asked before an install (bug #31): the version was only checked for its
-     * shape, so `99.0.0` was accepted, queued, failed in fnm, and left an
-     * entry behind. The whole release list, not just the newest per major the
-     * picker shows: an older patch is a real version someone may need.
+     * Asked before an install: a version checked only for its shape (`99.0.0`) would be queued,
+     * fail in fnm and leave an entry behind. The whole release list, not just the newest per major
+     * the picker shows: an older patch is a real version someone may need.
      *
      * Null when the list cannot be read (no fnm, no network), so an install
      * is never refused for want of an answer — fnm will say so itself.
@@ -156,31 +149,6 @@ class NodeRuntime implements Runtime
     }
 
     /**
-     * Versions offered in the picker: the supported lines, not the hundreds
-     * of patch releases fnm would otherwise list, and not the dead ones.
-     *
-     * 🔴 Dead lines were offered until 2026-09-15, and offering one is a trap
-     * rather than a choice. A user picked Node 21 — end of life since June
-     * 2024 — for a one-click n8n site, and the install died compiling
-     * `isolated-vm`: native modules ship prebuilt binaries per Node ABI, and
-     * nobody builds them for a release the project has buried. The version
-     * carried an EOL badge in the list it was offered from, which was not
-     * enough. A version nobody should install does not belong in the list of
-     * versions to install.
-     *
-     * "Dead" is read from {@see LifecycleCatalog} — Node's own
-     * `Release/schedule.json` — never inferred from an odd major number. That
-     * is the rule the catalog's own docblock states, and it is right: the
-     * convention is a convention, and a panel that hard-codes it would be
-     * confidently wrong the day it changed.
-     *
-     * Unknown means kept, not hidden. A box with no egress has never refreshed
-     * the catalog, and answering "no versions to install" there would turn an
-     * absent badge into an empty screen.
-     *
-     * @return array<int, string>
-     */
-    /**
      * Why the last installable() came back empty when it was not asked a
      * question it could answer — `unreachable` — or null.
      */
@@ -189,6 +157,20 @@ class NodeRuntime implements Runtime
         return $this->installableError;
     }
 
+    /**
+     * Versions offered in the picker: the supported lines, not the hundreds
+     * of patch releases fnm would otherwise list, and not the dead ones.
+     *
+     * End-of-life lines are not offered: native modules ship prebuilt binaries per Node ABI and
+     * nobody builds them for a buried release (an n8n install on Node 21 died compiling
+     * `isolated-vm`). "Dead" is read from {@see LifecycleCatalog} (Node's own
+     * `Release/schedule.json`), never inferred from an odd major number.
+     *
+     * Unknown means kept, not hidden: a box with no egress has never refreshed the catalog, and
+     * hiding everything would turn an absent badge into an empty screen.
+     *
+     * @return array<int, string>
+     */
     public function installable(): array
     {
         $this->installableError = null;
@@ -199,9 +181,8 @@ class NodeRuntime implements Runtime
 
         $listed = $this->fnm(['list-remote']);
 
-        // FS-C20: a catalogue that could not be fetched (nodejs.org blocked,
-        // no egress) answered `[]` — the same as "there is nothing to
-        // install" — and the screen could only guess which.
+        // A catalogue that could not be fetched (nodejs.org blocked, no egress) must not answer
+        // `[]`, the same as "there is nothing to install".
         if ($listed->failed() || trim($listed->output()) === '') {
             $this->installableError = 'unreachable';
 
@@ -222,9 +203,7 @@ class NodeRuntime implements Runtime
         return $remote
             ->groupBy(fn (string $version) => $this->line($version))
             ->map(fn ($group) => $group->sortByDesc(fn (string $v) => $this->sortKey($v))->first())
-            // Before the take, not after: dropping three dead lines out of a
-            // list of six would otherwise leave three, and the picker would
-            // get shorter every time a Node release died.
+            // Before the take, not after: otherwise dropping dead lines would shrink the picker.
             ->reject(fn (string $version) => ! $offerEol && $this->isEndOfLife($version, $lifecycle))
             ->sortByDesc(fn (string $v) => $this->sortKey($v))
             ->take((int) config('server.runtimes.node.installable_majors', 6))
@@ -235,8 +214,8 @@ class NodeRuntime implements Runtime
     /**
      * Has Node stopped supporting this line?
      *
-     * False for anything the catalog has no answer about, which is the honest
-     * reading: "we have not been told" is not "it is dead".
+     * False for anything the catalog has no answer about: "we have not been told" is not "it is
+     * dead".
      *
      * @param  array<string, array<string, mixed>>  $lifecycle
      */
@@ -248,13 +227,9 @@ class NodeRuntime implements Runtime
             return $lifecycle[$line]['status'] === 'eol';
         }
 
-        // Unknown, but older than a line the catalog says is dead: dead too.
-        // Node never revives an old line, and the schedule does not list the
-        // odd pre-1.0 development lines (0.7, 0.9, 0.11) at all — keyed only
-        // by what the catalog names, they came back as "unknown" and were
-        // offered (seen 2026-09-23). A line NEWER than everything dead — a
-        // release the catalog has not caught up with — is still kept, which
-        // is what "unknown is not dead" was protecting.
+        // Unknown, but older than a line the catalog says is dead: dead too. The schedule does not
+        // list the pre-1.0 development lines (0.7, 0.9, 0.11) at all. A line NEWER than everything
+        // dead (not yet in the catalog) is still kept.
         foreach ($lifecycle as $known => $entry) {
             if (($entry['status'] ?? null) === 'eol' && version_compare($line, (string) $known, '<')) {
                 return true;
@@ -267,11 +242,8 @@ class NodeRuntime implements Runtime
     /**
      * The release line a version belongs to, as Node's own schedule names it.
      *
-     * The major for 4 onwards, but `0.12`, `0.10`, `0.8` before that — Node's
-     * schedule (and so the lifecycle catalog) files the pre-1.0 lines by
-     * minor. Keyed by the major alone, `0.12.18` looked up `0`, found no
-     * entry, read "unknown" as "keep", and a release dead since 2016 was
-     * offered for install (seen 2026-09-23).
+     * The major for 4 onwards, but `0.12`, `0.10`, `0.8` before that: the schedule files the
+     * pre-1.0 lines by minor, so a lookup by major alone (`0`) finds nothing and reads "keep".
      */
     private function line(string $version): string
     {
@@ -294,18 +266,10 @@ class NodeRuntime implements Runtime
     }
 
     /**
-     * The absolute path to a version's binary directory.
-     *
-     * fnm lays versions out predictably, which is the whole reason it was
-     * chosen — this path is what ends up in a systemd unit.
-     */
-    /**
      * The fnm version the panel's own frontend runs on, or null.
      *
-     * install.sh writes that binary's absolute path into the unit's
-     * `ExecStart=`, so it is read from there rather than assumed to be the
-     * default: removing it while it was not the default stopped the panel's
-     * screens with nothing pointing at why (bug #30).
+     * install.sh writes that binary's absolute path into the unit's `ExecStart=`, so it is read
+     * from there rather than assumed to be the default: removing it would stop the panel's screens.
      */
     public function panelVersion(): ?string
     {
@@ -317,6 +281,12 @@ class NodeRuntime implements Runtime
         return preg_match('#/node-versions/v(\d+\.\d+\.\d+)/#', $result->output(), $match) === 1 ? $match[1] : null;
     }
 
+    /**
+     * The absolute path to a version's binary directory.
+     *
+     * fnm lays versions out predictably, which is the whole reason it was
+     * chosen — this path is what ends up in a systemd unit.
+     */
     public function binaryPath(string $version): string
     {
         $dir = rtrim((string) config('server.runtimes.node.dir', '/opt/fnm'), '/');
@@ -327,11 +297,9 @@ class NodeRuntime implements Runtime
     /**
      * The absolute path to a version's `pm2-runtime`.
      *
-     * Beside that version's `node`, because PM2 is installed *into* a version
-     * rather than once for the machine. The old panel ran a single global
-     * `npm install pm2@latest -g`, which works when there is one Node on the
-     * box; here every application can pin its own, and a global install would
-     * be tied to whichever version happened to own `/usr/local/bin`.
+     * Beside that version's `node`, because PM2 is installed *into* a version rather than once
+     * for the machine: every application can pin its own Node, and a global install would be tied
+     * to whichever version owns `/usr/local/bin`.
      */
     public function pm2RuntimePath(string $version): string
     {
@@ -349,10 +317,8 @@ class NodeRuntime implements Runtime
     /**
      * Install PM2 into one Node version.
      *
-     * Pinned, not `@latest`. Two servers provisioned a week apart would
-     * otherwise get different majors, and re-running this on an existing
-     * server would silently upgrade PM2 underneath applications that are
-     * running — which is what the old panel did.
+     * Pinned, not `@latest`, so servers provisioned apart get the same major and a re-run never
+     * silently upgrades PM2 under running applications.
      *
      * Idempotent: a version that already has it is left alone, so this can be
      * called on every switch to a version without paying for a reinstall.
@@ -375,11 +341,9 @@ class NodeRuntime implements Runtime
             onOutput: $onOutput,
         ));
 
-        // `npm -g` for an fnm version writes into that version's own prefix, so
-        // the binary should now be beside its node. Verified rather than
-        // assumed: a unit whose ExecStart points at a missing `pm2-runtime`
-        // fails at start time with an error that names the path and not the
-        // install that never happened.
+        // `npm -g` writes into that version's own prefix, so the binary should now be beside its
+        // node. Verified, because a unit pointing at a missing `pm2-runtime` fails at start with an
+        // error that names the path and not the install that never happened.
         $this->must($this->serverOps->run(
             ['test', '-x', $this->pm2RuntimePath($version)],
             ['feature' => 'runtime', 'op' => 'pm2_verify', 'version' => $version],
@@ -412,17 +376,12 @@ class NodeRuntime implements Runtime
     /**
      * Give a version's files to whoever owns the fnm directory.
      *
-     * install.sh hands /opt/fnm to the panel account on purpose — "the panel's
-     * runtime manager executes Node as the panel account". But `fnm` itself
-     * runs elevated, so every version the panel installed afterwards came out
-     * root-owned, and {@see updateNpm()}, which runs as the panel account,
-     * failed with EACCES on exactly those versions: the one install.sh put
-     * down updated fine, every one added from the Node screen did not
-     * (reproduced 2026-09-23).
+     * install.sh hands /opt/fnm to the panel account, but `fnm` itself runs elevated, so versions
+     * installed later come out root-owned and {@see updateNpm()}, which runs as the panel account,
+     * fails with EACCES on them.
      *
-     * The owner is read off the fnm directory rather than configured, so this
-     * follows whatever the installer decided instead of restating it. A root
-     * owned fnm directory means there is nothing to hand over.
+     * The owner is read off the fnm directory rather than configured. A root-owned fnm directory
+     * means there is nothing to hand over.
      */
     public function adoptOwnership(string $version): void
     {
@@ -447,11 +406,9 @@ class NodeRuntime implements Runtime
     /**
      * Make bare `node`/`npm`/`npx` point at the default version, if it is set.
      *
-     * The Node screen's "set default" did this; install.sh only set fnm's own
-     * alias, so a freshly installed server had a default version and no
-     * `node` on anyone's PATH — the SSH user, cron, and any installer run
-     * without a pinned version. Idempotent: `ln -sfn` over a correct link
-     * changes nothing.
+     * install.sh only sets fnm's own alias, so a fresh server would have a default version and no
+     * `node` on anyone's PATH (SSH user, cron, installers run without a pinned version).
+     * Idempotent: `ln -sfn` over a correct link changes nothing.
      *
      * @throws SettingOperationException
      */
@@ -463,13 +420,11 @@ class NodeRuntime implements Runtime
             return null;
         }
 
-        // Not in front of a Node the server already had. A server that comes
-        // from v7 runs its sites on v7's Node (nodesource, /usr/bin/node), and
-        // /usr/local/bin comes first on PATH: a link here moves every one of
-        // them to this version without a word (operator, 2026-10-07). Links
-        // this panel made before are taken back; anything else in
-        // /usr/local/bin is left alone. Choosing a default on the Node screen
-        // ({@see setDefault()}) still links — that is the user deciding.
+        // Not in front of a Node the server already had: /usr/local/bin comes first on PATH, so a
+        // link would silently move every site running on the existing Node (e.g. a v7 migration's
+        // /usr/bin/node) to this version. Links this panel made before are taken back; anything
+        // else in /usr/local/bin is left alone. Choosing a default on the Node screen
+        // ({@see setDefault()}) still links, because that is the user deciding.
         if ($this->systemNodePresent()) {
             $this->unlinkOwnLinks();
 
@@ -592,11 +547,7 @@ class NodeRuntime implements Runtime
     }
 
     /**
-     * @throws SettingOperationException
-     */
-    /**
-     * @throws NodeRemovalException with fnm's own reason (FS-C21) — this
-     *                              used to say "the settings change failed"
+     * @throws NodeRemovalException with fnm's own reason
      */
     public function uninstall(string $version): void
     {
@@ -619,21 +570,14 @@ class NodeRuntime implements Runtime
      * global one, which would belong to whichever version happens to be
      * default and update the wrong thing.
      *
-     * Installs the newest npm *this* Node version can run, which the caller
-     * resolves and passes in. npm declares `engines.node` and its newest
-     * release routinely excludes Node lines the panel still installs — npm 12
-     * needs `^22.22.2 || ^24.15.0 || >=26.0.0`, so `@latest` on a Node 20 box
-     * replaces a working npm with one that cannot start.
+     * Installs the newest npm *this* Node version can run, which the caller resolves and passes in:
+     * npm's newest release routinely excludes Node lines the panel still installs, so `@latest` on
+     * an older Node replaces a working npm with one that cannot start.
      *
-     * The version is a **required argument, and `npm@latest` is gone**. This
-     * used to fall back to it whenever the catalog could not answer, on the
-     * grounds that a box with no egress was then no worse off than before the
-     * catalog existed — but an empty catalog is not a rare offline box, it is
-     * the ordinary state of every server whose catalog has never been filled,
-     * and on those the fallback is the whole bug: the button that exists to
-     * keep npm current was the one breaking it. Resolving the target is now
-     * {@see NpmCatalog::resolveTarget()}'s job, and not knowing is that
-     * caller's cue to refuse rather than this one's cue to guess.
+     * The version is a **required argument, and there is no `npm@latest` fallback**: an empty
+     * catalog is the ordinary state of a server whose catalog was never filled. Resolving the
+     * target is {@see NpmCatalog::resolveTarget()}'s job, and not knowing is that caller's cue to
+     * refuse, not to guess.
      *
      * @throws SettingOperationException
      */
@@ -641,16 +585,9 @@ class NodeRuntime implements Runtime
     {
         $spec = "npm@{$target}";
 
-        // PATH pinned for the same reason {@see npmVersion()} pins it, and it
-        // was missing here: npm is a Node script (`#!/usr/bin/env node`), so it
-        // needs `node` on PATH even when run by absolute path. Without it this
-        // died in three milliseconds with "/usr/bin/env: 'node': No such file
-        // or directory" — an error about node, from a command about npm, on a
-        // box where both are installed.
-        //
-        // This version's own bin dir, not a default: the point of the method is
-        // to update npm inside one version, and borrowing another version's
-        // node to do it is how the wrong thing gets updated.
+        // PATH pinned as in {@see npmVersion()}: npm is a Node script (`#!/usr/bin/env node`) and
+        // needs `node` on PATH even when run by absolute path. This version's own bin dir, not a
+        // default: borrowing another version's node is how the wrong thing gets updated.
         $binDir = dirname($this->binaryPath($version));
 
         $this->must($this->serverOps->run(
@@ -714,10 +651,9 @@ class NodeRuntime implements Runtime
     }
 
     /**
-     * A release, never a pre-release. Node publishes alphas and RCs in the
-     * same list (`v27.0.0-alpha.0.1.1`, Nov 2026); reading only the leading
-     * number turned that into `27.0.0`, a version that does not exist, put it
-     * at the top of the picker, and every install of it failed (QA, 2026-11-24).
+     * A release, never a pre-release. Node publishes alphas and RCs in the same list
+     * (`v27.0.0-alpha.0.1.1`); reading only the leading number would turn that into `27.0.0`, a
+     * version that does not exist.
      */
     private function parseVersion(string $line): ?string
     {

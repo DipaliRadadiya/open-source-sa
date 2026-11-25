@@ -34,14 +34,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     ) {}
 
     /**
-     * The site's files in sites-available, each symlinked from sites-enabled —
-     * the same layout install.sh itself uses for the panel's own vhost. A
-     * driver whose configuration is not files in such a pair (OpenLiteSpeed)
-     * overrides this.
+     * The site's files in sites-available, each symlinked from sites-enabled (the layout install.sh
+     * uses for the panel's own vhost). A driver whose configuration is not such a pair
+     * (OpenLiteSpeed) overrides this.
      *
-     * Two files on nginx and Apache, as v7 writes them ({@see configFiles()}):
-     * a file that should not exist is removed, link first, so the web server
-     * never reads a link to nothing.
+     * Two files on nginx and Apache, as v7 writes them ({@see configFiles()}). A file that should not
+     * exist is removed, link first, so the web server never reads a link to nothing.
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
@@ -91,19 +89,14 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * Every config file this site has, by path in sites-available, with what it
-     * should hold — or null for a file that must not exist.
+     * Every config file this site has, by path in sites-available, with what it should hold — or null
+     * for a file that must not exist.
      *
-     * **v7's layout (v8 follows it, step B1).** v7 writes a site as
-     * `{name}.conf` for plain HTTP and a second file for HTTPS:
-     * `{name}-le-ssl.conf` with a Let's Encrypt certificate, `{name}-ssl.conf`
-     * with any other. A server moved from v7 already has those files, and v8
-     * writing everything into `{name}.conf` left v7's SSL file beside it: two
-     * server blocks for the same name on 443. Writing the same two files under
-     * the same names replaces v7's in place.
-     *
-     * A driver that does not split (OpenLiteSpeed, whose layout already is
-     * v7's) has one file.
+     * v7's layout: `{name}.conf` for plain HTTP and a second file for HTTPS (`{name}-le-ssl.conf`
+     * with a Let's Encrypt certificate, `{name}-ssl.conf` with any other). Writing the same two
+     * names replaces v7's in place; one file for everything would leave v7's SSL file beside it,
+     * two server blocks for one name on 443. A driver that does not split (OpenLiteSpeed) has one
+     * file.
      *
      * @return array<string, ?string>
      */
@@ -125,12 +118,10 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * The site's bot blocker, 8G firewall and (Apache) force HTTPS, each in
-     * v7's own file in the site's conf folder (Dipali, 2026-11-11: v7's
-     * places), which the vhost includes as v7's does. Null for one that is
-     * off: the panel's own copy is then removed — v7's or the owner's never
-     * ({@see self::writeSiteConf()}; {@see V7Leftovers} moves v7's aside
-     * when the owner changes that setting).
+     * The site's bot blocker, 8G firewall and (Apache) force HTTPS, each in v7's own file in the
+     * site's conf folder, which the vhost includes as v7's does. Null for one that is off: the
+     * panel's own copy is then removed, v7's or the owner's never ({@see self::writeSiteConf()};
+     * {@see V7Leftovers} moves v7's aside when the owner changes that setting).
      *
      * @return array<string, ?string>
      */
@@ -193,9 +184,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * Write or remove one of the site's conf-folder files — never one the
-     * panel did not write. Those names are v7's, so on a site from v7 the file
-     * is v7's own (or its owner's) and it stays as it is.
+     * Write or remove one of the site's conf-folder files, never one the panel did not write. Those
+     * names are v7's, so on a site from v7 the file is v7's own (or its owner's) and stays as it is.
      *
      * @param  array<string, mixed>  $context
      */
@@ -220,8 +210,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * Both names the HTTPS file can have — v7's — so the one that is not in
-     * use can be removed when the certificate changes type.
+     * Both names the HTTPS file can have (v7's), so the one not in use can be removed when the
+     * certificate changes type.
      *
      * @return array{0: string, 1: string} [Let's Encrypt, any other]
      */
@@ -285,12 +275,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * A no-certificate site must still own its hostname on port 443. Browsers
-     * retain HSTS and HTTPS-first state after uninstall; without a reject
-     * vhost, that request falls through to another application's first/default
-     * TLS vhost. Apache and OpenLiteSpeed need a harmless shared key pair to
-     * reject it without serving another tenant; so does an nginx too old to
-     * refuse the handshake ({@see NginxDriver::ensureTlsFallback()}).
+     * A no-certificate site must still own its hostname on port 443. Browsers retain HSTS and
+     * HTTPS-first state after uninstall; without a reject vhost the request falls through to another
+     * application's default TLS vhost. Apache and OpenLiteSpeed need a harmless shared key pair to
+     * reject it, and so does an nginx too old to refuse the handshake
+     * ({@see NginxDriver::ensureTlsFallback()}).
      */
     protected function ensureTlsFallback(Application $application): ServerOpsResult
     {
@@ -304,25 +293,14 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     /**
      * The shared ACME webroot, before a vhost that names it goes on disk.
      *
-     * Every template declares a context/location for
-     * `{challenge_root}/.well-known/acme-challenge`, and until now the only
-     * thing that created that directory was `IssueCertificate` — so on a
-     * server where no certificate had ever been requested, every site's config
-     * pointed at a directory that was not there.
+     * Every template declares a location for `{challenge_root}/.well-known/acme-challenge`, which
+     * only `IssueCertificate` used to create. nginx and Apache resolve a location per request, but
+     * **OpenLiteSpeed resolves a context's location when the configuration is loaded**, so a
+     * missing directory fails the config (install.sh's `ensure_ols_context_paths()` does the same).
      *
-     * nginx and Apache resolve a location per request, so the cost was a
-     * missing directory nobody noticed until issuance failed. **OpenLiteSpeed
-     * resolves a context's location when the configuration is loaded**, which
-     * is a different class of problem: install.sh hit exactly this and its
-     * `ensure_ols_context_paths()` says so — *"neither does the acme-challenge
-     * directory certbot has not yet had a reason to create"* — creating the
-     * panel's own before writing the panel's vhost. Sites never got the same
-     * treatment.
-     *
-     * Cheap and idempotent (`install -d`), and deliberately unchecked: this
-     * must not be able to stop a site being written. A challenge root that
-     * cannot be created is certbot's problem to report at issuance, where the
-     * user is asking for a certificate, not here.
+     * Cheap and idempotent (`install -d`), and deliberately unchecked: this must not be able to
+     * stop a site being written. A challenge root that cannot be created is certbot's problem to
+     * report at issuance.
      */
     protected function ensureChallengeRoot(): void
     {
@@ -332,19 +310,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     /**
      * Every directory the rendered config is about to name.
      *
-     * Public, and called by anything that writes a vhost — not only
-     * `apply()`. `sites:resync` renders and writes the same file directly, so
-     * that it can skip a site whose config has not changed, and it used to
-     * write configs without any of this. On OpenLiteSpeed a context's
-     * `location` is resolved when the config loads rather than per request, so
-     * a resync that rewrote a vhost naming a challenge root nothing had
-     * created failed the config test and rolled that site back — and the
-     * advice "deploy, then resync" quietly did not repair the thing it was
-     * given for.
+     * Public, and called by anything that writes a vhost, not only `apply()`: `sites:resync` writes
+     * the same file directly to skip unchanged sites. On OpenLiteSpeed a context's `location` is
+     * resolved when the config loads, so a resync naming a challenge root nothing had created
+     * failed the config test and rolled that site back.
      *
-     * All three are best-effort in the same way `apply()` always treated
-     * them: a directory that cannot be created is reported by whatever needs
-     * it, not by refusing to write a site's configuration.
+     * All best-effort, as `apply()` always treated them: a directory that cannot be created is
+     * reported by whatever needs it, not by refusing to write a site's configuration.
      */
     public function ensureDirectories(Application $application): bool
     {
@@ -353,31 +325,20 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         $this->ensureSiteRules($application);
         app(SiteConfFolder::class)->ensure($application, $this->name());
 
-        // The vhost names `logs/access.log`, and a web server refuses to start
-        // when a log file's directory does not exist. A missing directory here
-        // would fail `nginx -t` on every site and read as a bad template
-        // rather than as an absent folder.
+        // The vhost names `logs/access.log`, and a web server refuses to start when a log file's
+        // directory does not exist, which would fail `nginx -t` on every site and read as a bad
+        // template.
         //
-        // The only step here whose effect a running web server cannot see
-        // until it restarts, so it is the only one that answers. The two
-        // above create directories, which every later config test reads fresh.
+        // The only step here whose effect a running web server cannot see until it restarts, so the
+        // only one that answers; the two above create directories that every later config test
+        // reads fresh.
         return $this->logDirectory->ensure($application);
     }
 
     /**
-     * Nothing, by default: nginx and Apache open a site's access log in the
-     * root master process and hand the descriptor to a worker, so no
-     * unprivileged account ever needs to reach the log directory.
-     *
-     * Stated here rather than left to each driver so that adding a fourth web
-     * server inherits the answer that grants nothing, and has to say so
-     * deliberately if its workers open their own logs.
-     */
-    /**
-     * nginx and Apache workers run as the account PHP-FPM pool sockets are
-     * already handed to ({@see PoolManager}) —
-     * `www-data` on the Debian packages install.sh uses. The same setting, so
-     * the two cannot name different accounts.
+     * nginx and Apache workers run as the account PHP-FPM pool sockets are already handed to
+     * ({@see PoolManager}): `www-data` on the Debian packages install.sh uses. The same setting, so the
+     * two cannot name different accounts.
      */
     public function siteReaderUser(): ?string
     {
@@ -386,6 +347,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return $user === '' ? null : $user;
     }
 
+    /**
+     * Nothing, by default: nginx and Apache open a site's access log in the root master process and
+     * hand the descriptor to a worker, so no unprivileged account ever needs the log directory.
+     * Stated here so a future web server inherits the answer that grants nothing.
+     */
     public function logWriterUser(): ?string
     {
         return null;
@@ -432,43 +398,36 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * The rendered config can name files inside `.panel/` — the WAF detect
-     * log, the Basic Auth credential — and nginx refuses to start when a log
-     * directory does not exist. Nothing created this at provision time, so
-     * turning WAF detect mode on for a site that had never had its web root
-     * moved wrote a config that could not pass `nginx -t`, and the failure
-     * looked like a bad ruleset rather than a missing directory.
+     * The rendered config can name files inside `.panel/` (the WAF detect log, the Basic Auth
+     * credential), and nginx refuses to start when a log directory does not exist. Without this,
+     * turning WAF detect mode on for a site that never had its web root moved wrote a config that
+     * could not pass `nginx -t`.
      */
     protected function ensurePanelDirectory(Application $application): void
     {
-        // `.panel` is an entry of the site root, which is immutable once the
-        // site is set up ({@see SiteRootLock}); creating it on a site that
-        // never had one needs the flag lifted, an existing one needs nothing.
-        // Resolved here rather than injected so every driver's constructor
-        // does not have to learn about it.
+        // `.panel` is an entry of the site root, which is immutable once the site is set up
+        // ({@see SiteRootLock}): creating it on a site that never had one needs the flag lifted. Resolved
+        // here rather than injected so every driver's constructor does not have to learn of it.
         app(SiteRootLock::class)->ensureDirectory(
             $application,
             $application->panelPath(),
             ['feature' => 'application', 'op' => 'ensure_panel_dir', 'application' => $application->id],
         );
 
-        // And root's again, with anything planted in it removed. Here because
-        // `sites:resync` comes through this method on every deploy: that is
-        // how the servers where `.panel` had been handed to the site user
-        // repair themselves. See PanelDirectory::secure().
+        // And root's again, with anything planted in it removed. `sites:resync` comes through here on
+        // every deploy, which is how servers where `.panel` was handed to the site user repair
+        // themselves. See PanelDirectory::secure().
         app(PanelDirectory::class)->secure($application);
     }
 
     /**
      * The site's extra-rules directory, which its vhost includes.
      *
-     * Created before the vhost is written because the include must not point
-     * at nothing on OpenLiteSpeed. Root's, 0755, and never emptied here — the
-     * files inside are an addon's, and re-rendering the vhost must leave them
-     * exactly as they were. Removed with the site by ApplicationArtifacts,
-     * never by `remove()`: that also runs for a resync's legacy-config cleanup
-     * (on a copy with the slug blanked) and its rollback, and neither may take
-     * a site's rules with it. {@see config('server.site_rules_root')}
+     * Created before the vhost is written because the include must not point at nothing on
+     * OpenLiteSpeed. Root's, 0755, and never emptied here: the files inside are an addon's. Removed
+     * with the site by ApplicationArtifacts, never by `remove()`, which also runs for a resync's
+     * legacy-config cleanup and its rollback, neither of which may take a site's rules with it.
+     * {@see config('server.site_rules_root')}
      */
     protected function ensureSiteRules(Application $application): void
     {
@@ -479,10 +438,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * Removes both the sites-enabled symlink and the sites-available file it
-     * pointed to, so a re-provision starts from nothing rather than an
-     * available file nothing links to. Both calls are idempotent (`rm -f`),
-     * so this runs unconditionally rather than stopping at the first failure.
+     * Removes both the sites-enabled symlink and the sites-available file it pointed to, so a
+     * re-provision starts from nothing. Both calls are idempotent (`rm -f`), so this runs
+     * unconditionally rather than stopping at the first failure.
      */
     public function remove(Application $application): ServerOpsResult
     {
@@ -511,12 +469,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     {
         $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_available_dir"), '/');
 
-        // Named after the application, not its domain. A domain is mutable and
-        // was never unique, so two sites could claim one and silently overwrite
-        // each other's vhost, and changing a domain orphaned the old file under
-        // a name nothing could address any more. The slug is unique, is a
-        // filename by construction, and belongs to the site rather than to one
-        // of its names.
+        // Named after the application, not its domain: a domain is mutable and was never unique, so
+        // two sites could overwrite each other's vhost and a domain change orphaned the old file.
+        // The slug is unique and a filename by construction.
         return "{$directory}/{$this->fileName($application)}.conf";
     }
 
@@ -545,17 +500,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     /**
      * Serving profiles that share a vhost, and which one they share.
      *
-     * A container and a Node application are the same thing to a web server:
-     * something listening on a loopback port that nginx reverse-proxies to,
-     * WebSocket upgrade included. The `node` template is already entirely
-     * runtime-agnostic — it proxies to `127.0.0.1:{{ $appPort }}` and never
-     * asks what is behind it.
-     *
-     * A map rather than a `docker.blade.php` that includes the other, because
-     * the duplicate would be a second file to keep in step and the whole point
-     * is that there is nothing different to say. The template is selected by
-     * profile NAME, though, so without this a container aborts with a bare 500
-     * from `View::exists` — which is how this was found.
+     * A container and a Node application are the same thing to a web server: something on a
+     * loopback port that nginx reverse-proxies to (WebSocket upgrade included), and the `node`
+     * template never asks what is behind it. A map rather than a second template that includes the
+     * other, which would be a second file to keep in step. Templates are selected by profile NAME,
+     * so without this a container aborts with a bare 500 from `View::exists`.
      *
      * @var array<string, string>
      */
@@ -594,17 +543,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     /**
      * The site's `post_max_size` in bytes, as the web server should enforce it.
      *
-     * Reads the site's own settings where it has them and the shared defaults
-     * where it does not — the same `effective()` the pool file is rendered
-     * from, so the two numbers come from one source and a site cannot end up
-     * with a web server and a PHP that disagree.
+     * Reads the site's own settings where it has them and the shared defaults where it does not: the
+     * same `effective()` the pool file is rendered from, so web server and PHP cannot disagree.
      *
-     * A floor of 1 MB, because `post_max_size = 0` is legal PHP and means
-     * "no limit": handing 0 to nginx means the same thing there, but handing it
-     * to Apache's `LimitRequestBody` also means unlimited while OpenLiteSpeed
-     * reads 0 as *reject every body*. One value that means three things is how
-     * a site ends up rejecting all uploads on one web server and none on
-     * another, so a real number goes to all three.
+     * A floor of 1 MB: `post_max_size = 0` is legal PHP and means "no limit", but while nginx and
+     * Apache's `LimitRequestBody` read 0 as unlimited, OpenLiteSpeed reads it as *reject every
+     * body*. A real number goes to all three.
      */
     protected function maxBodySizeBytes(Application $application): int
     {
@@ -629,45 +573,33 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'application' => $application,
             'domain' => $application->domain,
             'canonicalUrl' => $application->url(),
-            // Log filenames, not server_name: named after the app the same
-            // way the vhost and pool files already are (see fileName()) so
-            // all three agree on one identifier, and a domain change doesn't
-            // orphan the log history under a name nothing points to anymore.
+            // Log filenames, not server_name: named after the app like the vhost and pool files (see
+            // fileName()), so a domain change doesn't orphan the log history.
             'logName' => $this->fileName($application),
-            // Where those files go. Handed to the template rather than built
-            // inside it, so the vhost and `logPaths()` cannot drift — they did
-            // not, but only because two separate places happened to spell the
-            // same string, and a driver whose template disagreed with its own
-            // `logPaths()` would point fail2ban and the Logs screen at a file
-            // nothing writes. {@see Application::logsPath()}
+            // Handed to the template rather than built inside it, so the vhost and `logPaths()`
+            // cannot drift (fail2ban and the Logs screen would point at a file nothing writes).
+            // {@see Application::logsPath()}
             'logDir' => $application->logsPath(),
-            // Every name the site answers to, primary first. Templates used to
-            // hardcode `www.{domain}` alongside the primary; that guess is now
-            // a row in application_domains, backfilled for existing sites so
-            // what they serve is unchanged.
+            // Every name the site answers to, primary first (a row in application_domains,
+            // backfilled for existing sites; templates used to hardcode `www.{domain}`).
             'serverNames' => $application->serverNames(),
-            // Redirects get their own server block — they serve nothing, they
-            // send a 301 somewhere else, and mixing them into the main block
-            // would serve the same content under both names instead.
+            // Redirects get their own server block: they serve nothing, and mixing them into the main
+            // block would serve the same content under both names.
             'redirects' => $application->domains
                 ->filter(fn ($domain) => $domain->type === DomainType::Redirect)
                 ->values(),
-            // Only a certificate with files behind it. A pending or failed one
-            // is deliberately hidden from the template: pointing a server block
-            // at a path that is not there fails the config test and takes a
-            // working site down over a certificate it never had.
+            // Only a certificate with files behind it: a path that is not there fails the config test
+            // and takes a working site down over a certificate it never had.
             'certificate' => $application->certificate?->servable() ? $application->certificate : null,
-            // Never borrow a real site's certificate when a no-certificate
-            // hostname reaches 443. Apache/OLS require a key pair before they
-            // can reject the request; this reserved-name pair identifies no
-            // user application and is generated lazily on brownfield boxes.
+            // Never borrow a real site's certificate when a no-certificate hostname reaches 443.
+            // Apache and OLS need a key pair to reject the request; this reserved-name pair
+            // identifies no user application and is generated lazily on brownfield boxes.
             'tlsFallback' => $this->certificateFiles->fallbackPaths(),
-            // Paths the site type ships `.htaccess` deny rules for. Apache
-            // reads those itself; nginx and OpenLiteSpeed render these.
-            // A disabled site: its vhost serves the shared "unavailable" page,
-            // and serves it as 503 — a 200 told monitors and crawlers the site
-            // was up.
+            // A disabled site's vhost serves the shared "unavailable" page as 503 (a 200 told
+            // monitors and crawlers the site was up).
             'disabled' => $application->disabled_at !== null,
+            // Paths the site type ships `.htaccess` deny rules for: Apache reads those itself,
+            // nginx and OpenLiteSpeed render these.
             'deniedPaths' => $siteType?->deniedPaths() ?? [],
             // Directories with their own front controller, which Apache gets
             // from the application's own `.htaccess`.
@@ -676,97 +608,70 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // own .htaccess — Nextcloud's CalDAV/CardDAV discovery and .mjs.
             'wellKnown' => $siteType?->wellKnownRoutes() ?? ['redirects' => [], 'fallback' => null],
             'mimeTypes' => $siteType?->mimeTypes() ?? [],
-            // Password protection forces it too (junior re-test #9): with the
-            // redirect off, plain http asked for the site password and took it
-            // in clear. Nothing to redirect to without a certificate, so an
-            // http-only site keeps working, and the API says it is unencrypted
+            // Password protection forces it too: with the redirect off, plain http asked for the
+            // site password and took it in clear. Nothing to redirect to without a certificate, so
+            // an http-only site keeps working, and the API says it is unencrypted
             // (`basic_auth_unencrypted`).
             'forceHttps' => $forceHttps = $application->scheme() === 'https'
                 && ($application->certificate?->force_https || $application->basic_auth_enabled),
-            // Names the certificate does not cover, while HTTPS is forced.
-            // Sending one to https://<that name> lands the visitor on a
-            // certificate error, so they go to the primary instead — which a
-            // forced-HTTPS certificate always covers, since forcing needs the
-            // site's own scheme to be https. Every covered name keeps its own
-            // host, as on v7 (Apache too since 2026-11-11: www stays www).
+            // Names the certificate does not cover, while HTTPS is forced: https://<that name>
+            // would land the visitor on a certificate error, so they go to the primary instead
+            // (always covered when forcing). Every covered name keeps its own host, as on v7.
             'uncoveredNames' => $forceHttps
                 ? array_values(array_filter(
                     $application->serverNames(),
                     fn (string $name): bool => ! $application->certificate->covers($name),
                 ))
                 : [],
-            // The shared ACME webroot, aliased into every profile. Per-site
-            // document roots cannot work for node and proxy sites — they serve
-            // nothing from disk, so there is nowhere for certbot to drop the
-            // challenge token.
+            // The shared ACME webroot, aliased into every profile: node and proxy sites serve
+            // nothing from disk, so a per-site root has nowhere for certbot to drop the challenge
+            // token.
             'challengeRoot' => rtrim((string) config('server.certificates.challenge_root'), '/'),
             'documentRoot' => $documentRoot,
             // Included by the vhost, never rendered into it — see ensureSiteRules().
             'siteRules' => $application->siteRulesPath(),
             // v7's per-site folder, loaded where v7 loaded it ({@see SiteConfFolder}).
             'siteConf' => $application->siteConfPath(),
-            // The largest request body this site accepts, in bytes.
+            // The largest request body this site accepts, in bytes. Every web server has its own
+            // default (nginx: 1 MB), so a site whose PHP said `upload_max_filesize = 64M` still got
+            // "413 Request Entity Too Large": nginx rejects before PHP is reached.
             //
-            // Every web server has its own default for this and nothing here
-            // used to set any of them, which on nginx means 1 MB — its
-            // built-in default — no matter what the site's PHP said. So the
-            // panel wrote `upload_max_filesize = 64M` into the pool, the PHP
-            // Settings screen showed 64 MB, and WordPress answered "413
-            // Request Entity Too Large" at one megabyte. Raising the PHP
-            // values changed nothing, because nginx rejects the request before
-            // PHP is reached: reported on 2026-09-08 by a user who had already
-            // set both to 512M.
-            //
-            // Derived from `post_max_size` rather than `upload_max_filesize`,
-            // because that is the same measurement the web servers make — the
-            // whole request body, including the multipart boundaries and the
-            // other fields, not the one file inside it.
-            //
-            // Resolved here so all three templates read one number and cannot
-            // disagree. Apache and OpenLiteSpeed were never broken by this
-            // (their defaults are effectively unlimited), but a limit that
-            // exists on one server and not the others is the same site
-            // behaving differently on different boxes.
+            // Derived from `post_max_size`, not `upload_max_filesize`: that is the web servers' own
+            // measurement (the whole body, multipart boundaries and other fields included).
+            // Resolved here so all three templates read one number.
             'maxBodySize' => $this->maxBodySizeBytes($application),
             // v7 gave PHP 300 s at the web server; longer when the site's own
             // max_execution_time is longer, so nginx never cuts PHP off first.
             'fastcgiReadTimeout' => max(300, (int) (($application->phpSettings ?? new ApplicationPhpSettings)->effective()['max_execution_time'] ?? 0) + 30),
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
-            // Where PHP actually is for this site. An isolated site has its own
-            // pool running as its own user; everything else still shares the
-            // server-wide pool, which is what every site did before pools
-            // existed. Resolved here so no template has to know the rule.
+            // Where PHP actually is for this site: an isolated site has its own pool running as its
+            // own user, everything else shares the server-wide pool. Resolved here so no template
+            // has to know the rule.
             'phpSocket' => app(PoolManager::class)->socketFor($application),
-            // The OS account the site runs as. nginx and Apache reach PHP
-            // through a pool that already knows this; OLS spawns the process
-            // itself and has to be told.
+            // The OS account the site runs as. nginx and Apache reach PHP through a pool that already
+            // knows this; OLS spawns the process itself and has to be told.
             'user' => $application->systemUser?->username,
-            // Where a reverse proxy sends traffic, and a name for the backend
-            // that is unique per application — OpenLiteSpeed declares external
-            // applications by name, and two sites sharing one would have the
-            // second quietly overwrite the first.
+            // Where a reverse proxy sends traffic, and a backend name unique per application
+            // (OpenLiteSpeed declares external applications by name, and two sites sharing one would
+            // overwrite each other).
             'appPort' => $application->app_port,
             'appName' => 'sv-app-'.$application->id,
-            // Null when off, so every template gates the whole block behind
-            // one `@if` instead of re-checking `basic_auth_enabled` itself.
-            // The path comes from the model rather than being rebuilt here:
-            // this copy and BasicAuthManager's had to agree, and when the
-            // file moved above the webroot only one of them would have.
+            // Null when off, so every template gates the whole block behind one `@if`. The path
+            // comes from the model so this copy and BasicAuthManager's cannot disagree.
             'basicAuth' => $application->basic_auth_enabled ? [
                 'realm' => 'sv-app-'.$application->id,
                 'htpasswdPath' => $application->basicAuthPath(),
-                // Paths the application requests from itself (WordPress's
-                // wp-cron.php, bug #75), let through without a password only
-                // from the server's own addresses; null when the type has none.
+                // Paths the application requests from itself (WordPress's wp-cron.php), let through
+                // without a password only from the server's own addresses; null when the type has
+                // none.
                 'serverOnly' => ($serverOnly = $siteType?->serverOnlyPaths() ?? []) === [] ? null : [
                     'paths' => $serverOnly,
                     'addresses' => app(ServerAddresses::class)->local(),
                 ],
             ] : null,
-            // A single regex-ready, alternation-joined string — already
-            // escaped — or null when the policy blocks nothing. Resolved
-            // here, once, so no template re-implements "which bots does this
-            // policy block" against `config/ai_bots.php` itself.
+            // A single escaped, alternation-joined regex string, or null when the policy blocks
+            // nothing. Resolved here so no template re-implements the policy against
+            // `config/ai_bots.php`.
             'botBlock' => $this->botBlockPattern($application),
             'waf' => $this->wafViewData($application, $documentRoot),
         ];
@@ -775,13 +680,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     /**
      * Whether this driver can actually enforce the 8G Firewall.
      *
-     * Asked rather than assumed, because the alternative is what shipped: the
-     * shared ruleset writer matched nginx and apache and fell through to a
-     * silent `return` for anything else, and no OpenLiteSpeed vhost template
-     * references the rules at all. The API answered 200, the record said
-     * `waf_enabled: true`, and not one request was inspected — a panel
-     * claiming protection it is not providing, which is worse than one that
-     * says no.
+     * Asked rather than assumed: the shared ruleset writer used to fall through silently for anything
+     * but nginx and apache, and no OpenLiteSpeed template referenced the rules, so the API said
+     * `waf_enabled: true` while no request was inspected.
      */
     public function supportsWaf(): bool
     {
@@ -803,10 +704,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * Null unless the firewall is on and actually has something to check —
-     * zero categories and zero custom rules means nothing would ever be
-     * blocked, so the template renders no block at all rather than an
-     * `<RequireAny>`/`if` chain with nothing inside it.
+     * Null unless the firewall is on and actually has something to check: with zero categories and
+     * zero custom rules nothing would be blocked, so the template renders no block rather than an
+     * empty `<RequireAny>`/`if` chain.
      *
      * @return array{mode: string, categories: array<int, string>, exceptions: array<int, string>, customRules: array<int, string>, detectLogPath: string, logFormat: string}|null
      */
@@ -817,10 +717,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         }
 
         $categories = $application->wafActiveCategories();
-        // `wafRules` lazy-loads from the database if not already set on the
-        // model — which also means a caller can pre-set it in memory (see
-        // Waf8GManager::apply()) to render against not-yet-saved rules
-        // without a second query silently overwriting them.
+        // `wafRules` lazy-loads from the database if not already set, so a caller can pre-set it in
+        // memory (see Waf8GManager::apply()) to render not-yet-saved rules without a second query
+        // overwriting them.
         $customRules = $application->wafRules->where('type', 'block')->pluck('value')->all();
 
         if ($categories === [] && $customRules === []) {
@@ -836,10 +735,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return [
             'mode' => $application->waf_mode instanceof WafMode ? $application->waf_mode->value : (string) $application->waf_mode,
             'categories' => $categories,
-            // Escaped here, for this web server's config syntax, and printed
-            // raw by the templates. They went through Blade's `{{ }}`, which
-            // HTML-encodes: `page=1&x` became `page=1&amp;x` in the config and
-            // never matched (found live, 2026-09-30).
+            // Escaped here, for this web server's config syntax, and printed raw by the templates:
+            // Blade's `{{ }}` HTML-encodes (`page=1&x` became `page=1&amp;x` and never matched).
             'exceptions' => array_map(fn (string $value): string => $this->wafPattern($value), $exceptions),
             'customRules' => array_map(fn (string $value): string => $this->wafPattern($value), $customRules),
             'detectLogPath' => $application->wafDetectLogPath(),
@@ -850,17 +747,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
-     * The policy's built-in list, plus this site's own additions, minus its
-     * own exemptions.
+     * The policy's built-in list, plus this site's own additions, minus its own exemptions.
      *
-     * Exemptions are subtracted last and case-insensitively, so "allow this
-     * one" wins over both the built-in list and a contradictory custom block
-     * — a rule that says allow and a rule that says block can only have one
-     * safe resolution, and the one that keeps traffic flowing is it.
+     * Exemptions are subtracted last and case-insensitively, so "allow this one" wins over both the
+     * built-in list and a contradictory custom block.
      *
-     * `botRules` lazy-loads if not already set, which also lets a caller
-     * pre-set it in memory (see BotBlockerManager::apply()) to render against
-     * not-yet-saved rules without a second query overwriting them.
+     * `botRules` lazy-loads if not already set, so a caller can pre-set it in memory (see
+     * BotBlockerManager::apply()) to render not-yet-saved rules.
      */
     private function botBlockPattern(Application $application): ?string
     {
@@ -885,19 +778,18 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             return null;
         }
 
-        // A space is written as \x20: OpenLiteSpeed's RewriteCond takes the
-        // pattern unquoted, so a literal space ends it and the config test
-        // fails. v8's own names have none; 23 of v7's do ("Hugging Face").
+        // A space is written as \x20: OpenLiteSpeed's RewriteCond takes the pattern unquoted, so a
+        // literal space ends it and the config test fails (23 of v7's names have one, e.g. "Hugging
+        // Face").
         $pattern = implode('|', array_map(fn (string $bot) => str_replace(' ', '\x20', preg_quote($bot, '/')), $bots));
 
         if ($application->ai_bot_policy !== AiBotPolicy::LegacyV7) {
             return $pattern;
         }
 
-        // v7's list has short tokens that sit inside other names ("GPT" is in
-        // "GPTBot"), so leaving an allowed name out of the list does not let it
-        // through. On legacy_v7 an allowed name exempts the whole user-agent,
-        // the way YandexBot always has. Allowed names cannot hold a space.
+        // v7's list has short tokens that sit inside other names ("GPT" is in "GPTBot"), so leaving
+        // an allowed name out does not let it through. On legacy_v7 an allowed name exempts the
+        // whole user-agent, as YandexBot always has. Allowed names cannot hold a space.
         $exempt = implode('|', ['YandexBot', ...array_map(fn (string $bot) => preg_quote($bot, '/'), $allowed)]);
 
         // Anchor the exemption to the whole user-agent: an unanchored negative
@@ -924,11 +816,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     /**
      * The reload command as something else can run.
      *
-     * Exposed for certbot's post-renewal hook, which is a shell script run by
-     * certbot's own timer rather than by the panel. Without it renewal
-     * half-works: a new certificate lands on disk and the web server keeps
-     * serving the old one from memory until something unrelated reloads it,
-     * which surfaces weeks later as an expired certificate on a healthy site.
+     * Exposed for certbot's post-renewal hook, a shell script run by certbot's own timer. Without
+     * it a renewed certificate lands on disk while the web server keeps serving the old one from
+     * memory.
      *
      * @return array<int, string>
      */

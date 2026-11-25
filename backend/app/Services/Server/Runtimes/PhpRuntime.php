@@ -21,19 +21,13 @@ use Throwable;
 /**
  * PHP versions, managed with apt.
  *
- * Where Node needed a version manager bolted on, PHP already has one: the
- * distribution — with Ondřej Surý's archive on Ubuntu — packages every version
- * side by side, at predictable paths, with a systemd unit each. So there is no
- * fnm equivalent here and no invented layout; the panel installs a package and
- * reads what apt put on disk.
+ * The distribution (with Ondřej Surý's archive on Ubuntu) packages every version side by side, at
+ * predictable paths, with a systemd unit each, so there is no fnm equivalent: the panel installs a
+ * package and reads what apt put on disk.
  *
- * The default is `update-alternatives`, which Debian provides for exactly this
- * and which other packages already respect. Managing `/usr/bin/php` by hand
- * instead would fight the package manager on its own ground.
- *
- * Detection deliberately reuses PhpVersionManager — the same source the
- * Services screen and the ini editor read — so the three can never disagree
- * about which versions exist.
+ * The default is `update-alternatives`; managing `/usr/bin/php` by hand would fight the package
+ * manager. Detection reuses PhpVersionManager (also read by the Services screen and the ini
+ * editor), so they cannot disagree about which versions exist.
  */
 class PhpRuntime implements Runtime
 {
@@ -70,9 +64,7 @@ class PhpRuntime implements Runtime
             'path' => $this->binaryPath($version),
             'is_default' => $version === $default,
             'source' => 'apt',
-            // The version the panel itself is running on. Removing it would
-            // take the panel down, which is not a thing the panel should be
-            // able to do to itself.
+            // The version the panel itself runs on; removing it would take the panel down.
             'in_use_by_panel' => $version === $this->panelVersion(),
         ], $this->versions->versions());
     }
@@ -80,22 +72,15 @@ class PhpRuntime implements Runtime
     /**
      * What bare `php` resolves to: the PATH link, else update-alternatives.
      *
-     * The path is matched against the stack's own `binaryPath()` per installed
-     * version rather than having a version read out of it by pattern. The
-     * pattern here was `\S*php(\d+\.\d+)` — true of `/usr/bin/php8.4` and false
-     * of every LSPHP path, because LiteSpeed names its tree `lsphp85` with no
-     * dot and ends the path in a bare `php`. So an OLS box reported "no
-     * default" whatever was actually selected, and only the stack knows what
-     * its own paths look like.
+     * The path is matched against the stack's own `binaryPath()` per installed version rather than
+     * parsed by pattern: `php(\d+\.\d+)` fits `/usr/bin/php8.4` but not LSPHP paths (`lsphp85`, no
+     * dot, ending in a bare `php`), so an OLS box reported no default.
      */
     public function default(): ?string
     {
-        // `/usr/local/bin/php` first: where it exists it precedes /usr/bin on
-        // PATH, so it — not the alternative — is what `php` runs. install.sh
-        // creates it on OpenLiteSpeed and registers no alternative at all, so
-        // reading only the group left every fresh OLS server with no default
-        // on the PHP screen until someone pressed "make default". Only trusted
-        // when it names a version listed here; anything else falls through.
+        // `/usr/local/bin/php` first: where it exists it precedes /usr/bin on PATH, so it, not the
+        // alternative, is what `php` runs. install.sh creates it on OpenLiteSpeed and registers no
+        // alternative. Trusted only when it names a version listed here; else fall through.
         $link = (string) config('server.php_path_link', '/usr/local/bin/php');
 
         if ($link !== '' && is_link($link) && ($target = readlink($link)) !== false
@@ -112,10 +97,8 @@ class PhpRuntime implements Runtime
             return null;
         }
 
-        // A selected path the panel does not recognise — a hand-built symlink,
-        // or a version removed while it was still the default. Null says "this
-        // is not one of the versions listed above", which is the truth; naming
-        // one of them anyway would mark the wrong row as default.
+        // A selected path the panel does not recognise (a hand-built symlink, or a removed version that
+        // was still the default) is null: naming another version would mark the wrong row as default.
         return $this->versionAt($matches[1]);
     }
 
@@ -143,11 +126,9 @@ class PhpRuntime implements Runtime
     }
 
     /**
-     * Versions apt could install that are not installed already.
-     *
-     * Read from the package index rather than hardcoded, so a server with the
-     * Ondřej archive sees the full range and one without sees only what its
-     * distribution ships — which is the truth in both cases.
+     * Versions apt could install that are not installed already, read from the package index rather
+     * than hardcoded: a server with the Ondřej archive sees the full range, one without sees what its
+     * distribution ships.
      *
      * @return array<int, string>
      */
@@ -165,9 +146,8 @@ class PhpRuntime implements Runtime
         return collect($this->stack->installableVersions($this->withoutPrereleases($output)))
             ->unique()
             ->reject(fn (string $version) => in_array($version, $installed, true))
-            // Offered for install from `min_offered` up only. An older one
-            // already on the server is not in this list at all — it is
-            // installed — so it keeps showing and working as before.
+            // Offered from `min_offered` up only; an older one already installed is not in this list
+            // at all, so it keeps showing and working.
             ->reject(fn (string $version) => version_compare($version, $floor, '<'))
             ->sortByDesc(fn (string $version) => (float) $version)
             ->values()
@@ -185,13 +165,9 @@ class PhpRuntime implements Runtime
     /**
      * The search output without the packages whose candidate is a pre-release.
      *
-     * The package *name* says nothing about it: `php8.6-fpm` looked exactly
-     * like `php8.5-fpm` in the list, while apt's candidate was
-     * `8.6.0~beta3-1+0~20260923…` — so a site could be put on a beta PHP
-     * with nothing on the screen saying so (measured on a real server). The
-     * `~` is Debian's own marker for "sorts before the release"; alpha, beta,
-     * RC and dev builds all carry it. `SERVER_PHP_OFFER_PRERELEASE` shows
-     * them anyway, for someone testing one on purpose.
+     * The package name does not show it (`php8.6-fpm` looked like `php8.5-fpm` while apt's candidate
+     * was `8.6.0~beta3-...`), so a site could be put on a beta PHP unknowingly. `~` is Debian's marker
+     * for "sorts before the release" (alpha, beta, RC, dev). `SERVER_PHP_OFFER_PRERELEASE` shows them.
      */
     private function withoutPrereleases(string $output): string
     {
@@ -237,23 +213,12 @@ class PhpRuntime implements Runtime
     /**
      * Base packages this version is meant to have and does not.
      *
-     * 🔴 "Installed" and "usable" are not the same question, and the panel was
-     * only ever asking the first. Found on a real OpenLiteSpeed server: the
-     * `openlitespeed` package pulls in `lsphp83` as its **own dependency**, so
-     * a version nobody asked for appears in the list as a bare interpreter —
-     * no curl, no sqlite3, no redis, no intl, no pgsql. Offered in the version
-     * picker it looks identical to a healthy one, and a site put on it fails
-     * later with "curl is not installed", which is exactly the report this
-     * whole sequence started from.
+     * "Installed" is not "usable": the `openlitespeed` package pulls in `lsphp83` as a dependency, so
+     * a version nobody asked for shows as a bare interpreter (no curl, sqlite3, redis, intl, pgsql)
+     * and looks healthy in the picker. A hand-installed `php8.1-fpm` is the same on the FPM stacks.
      *
-     * The same shape exists on the FPM stacks: a hand-installed `php8.1-fpm`
-     * has the interpreter and none of the set.
-     *
-     * Only packages the index actually has are reported. Several base names do
-     * not exist on LSPHP because LiteSpeed compiles them in — listing
-     * `lsphp83-mbstring` as "missing" would be alarming and false, and the
-     * order of the conditions below keeps `apt-cache` off the common path
-     * where nothing is missing at all.
+     * Only packages the index actually has are reported: several base names do not exist on LSPHP
+     * (LiteSpeed compiles them in). The order of the conditions keeps `apt-cache` off the common path.
      *
      * @return array<int, string>
      */
@@ -265,8 +230,7 @@ class PhpRuntime implements Runtime
 
         $packages = $this->stack->versionPackages($version);
 
-        // The interpreter itself is what `installed()` means, so its presence
-        // is already established and its absence is a different state.
+        // The interpreter itself is what installed() means; its absence is a different state.
         array_shift($packages);
 
         $present = $this->installedPackages($packages);
@@ -281,13 +245,9 @@ class PhpRuntime implements Runtime
     /**
      * Which of these packages dpkg reports as installed.
      *
-     * One call for the whole set rather than one per package, for the reason
-     * `PhpExtensionManager::packageModules()` gives about rendering a screen
-     * with eighty subprocesses.
-     *
-     * dpkg-query exits non-zero when *any* name is unknown, which is the
-     * ordinary case here — that is the question being asked, not a failure, so
-     * those codes are expected and the output is read either way.
+     * One call for the whole set, not one per package (see `PhpExtensionManager::packageModules()`).
+     * dpkg-query exits non-zero when any name is unknown, which is the ordinary case here, so those
+     * codes are expected and the output is read either way.
      *
      * @param  array<int, string>  $packages
      * @return array<int, string>
@@ -325,27 +285,14 @@ class PhpRuntime implements Runtime
     /**
      * The base set, minus anything this server's package index does not have.
      *
-     * The same principle `installable()` states for versions — read the index
-     * rather than hardcode, because that is the truth in both cases — applied
-     * to the packages themselves. It was not, and the difference cost two
-     * separate failures:
+     * Like `installable()` for versions: read the index rather than hardcode. apt fails the WHOLE
+     * transaction on one unknown name (`E: Unable to locate package lsphp85-opcache`), so a single
+     * missing extension took mysql, pgsql and curl with it and "install PHP 8.5" installed nothing.
+     * A static list cannot be right: LiteSpeed's package set differs between versions (8.2-8.4 ship
+     * 26 packages, 8.5 ships 25).
      *
-     *   E: Unable to locate package lsphp84-mbstring   (the FPM names)
-     *   E: Unable to locate package lsphp85-opcache    (a per-version gap)
-     *
-     * apt fails the WHOLE transaction on one unknown name, so a single missing
-     * extension took mysql, pgsql and curl down with it and "install PHP 8.5"
-     * installed nothing at all.
-     *
-     * A static list cannot be right here. LiteSpeed's package set differs
-     * between versions — 8.2, 8.3 and 8.4 ship 26 packages and 8.5 ships 25 —
-     * so any list correct for one version is wrong for another, and correcting
-     * it for 8.5 today would break on 8.6.
-     *
-     * **The interpreter itself is never filtered.** Dropping `lsphp85` because
-     * the index does not have it would turn "this version is unavailable" into
-     * a successful install of nothing. Extensions are degradable; the thing
-     * being installed is not.
+     * The interpreter itself is never filtered: dropping it would turn "this version is unavailable"
+     * into a successful install of nothing.
      *
      * @return array<int, string>
      */
@@ -361,22 +308,10 @@ class PhpRuntime implements Runtime
 
         $missing = array_values(array_diff($packages, $available));
 
-        // 🔴 Everything was dropped, which is not what this filter is for.
-        //
-        // The filter exists so that one genuinely absent extension cannot take
-        // the whole transaction down with it. Losing *all* of them is a
-        // different event with a different cause: the index did not have the
-        // repository at all, so `apt-cache policy` answered "no" to every
-        // question. What gets installed then is a bare interpreter with no
-        // mysql and no curl, reported as a successful install — and the first
-        // anyone hears of it is an application failing on a missing extension
-        // some time later, which is how this was found on a real OpenLiteSpeed
-        // server: PHP 8.3 installed, Nextcloud refused with curl missing.
-        //
-        // Still not fatal, because refusing here would make an unreadable
-        // index mean "this version cannot be installed", which is worse and
-        // also wrong. Logged at warning so that it is separable from the
-        // ordinary case above.
+        // 🔴 Everything was dropped: not what this filter is for. It exists so one absent extension
+        // cannot take the transaction down; losing all of them means the index lacks the repository, and
+        // a bare interpreter would be reported as a successful install. Still not fatal (an unreadable
+        // index must not mean "cannot be installed"); logged at warning to tell it from the ordinary case.
         if ($missing !== [] && $available === []) {
             Log::channel('server-ops')->warning('php.packages_index_empty', [
                 'feature' => 'runtime',
@@ -387,9 +322,7 @@ class PhpRuntime implements Runtime
         }
 
         if ($missing !== []) {
-            // Recorded, not swallowed. A site missing an extension it expected
-            // is a real difference in what it can run, and "the panel quietly
-            // decided not to install opcache" must be answerable afterwards.
+            // Recorded, not swallowed: "the panel quietly skipped opcache" must be answerable afterwards.
             Log::channel('server-ops')->info('php.packages_unavailable', [
                 'feature' => 'runtime',
                 'op' => 'php_install',
@@ -404,18 +337,14 @@ class PhpRuntime implements Runtime
     /**
      * Does the index have something installable under this name?
      *
-     * `apt-cache policy` rather than `show` or an exit code, and both halves
-     * of that are learned from a real failure:
+     * `apt-cache policy`, not `show` or an exit code:
      *
-     *   - `apt-cache policy <unknown>` prints nothing and exits **0**, so the
-     *     exit status answers nothing.
-     *   - `apt-cache show lsphp84-gd` **succeeds** for a package apt then
-     *     refuses with "has no installation candidate" — a name the index
-     *     knows and cannot install. It looks real in a search and still kills
-     *     the transaction.
+     *   - `apt-cache policy <unknown>` prints nothing and exits **0**, so the exit status answers
+     *     nothing.
+     *   - `apt-cache show lsphp84-gd` **succeeds** for a package apt then refuses with "has no
+     *     installation candidate".
      *
-     * A `Candidate:` line that is not `(none)` is the only thing that
-     * distinguishes all three cases.
+     * A `Candidate:` line that is not `(none)` is the only thing that distinguishes all three cases.
      */
     private function packageExists(string $package): bool
     {
@@ -425,18 +354,10 @@ class PhpRuntime implements Runtime
             timeout: 30,
         );
 
-        // DEGRADE TO THE OLD BEHAVIOUR, NOT TO A WORSE ONE.
-        //
-        // If the check itself could not run -- apt lock, a broken index, no
-        // apt-cache at all -- this must not read "cannot confirm" as "not
-        // there". Stripping every extension on a failed lookup would install
-        // a bare interpreter and report success, which is the same silent
-        // half-install this filter exists to prevent, wearing a new hat.
-        //
-        // Passing the name through instead puts us exactly where we were
-        // before this method existed: apt decides, and if the package really
-        // is missing it says so loudly. A filter that cannot see is a filter
-        // that should not filter.
+        // Degrade to the old behaviour, not a worse one: if the check itself cannot run (apt lock,
+        // broken index, no apt-cache), do not read "cannot confirm" as "not there". Stripping every
+        // extension would install a bare interpreter and report success; passing the name through lets
+        // apt decide and fail loudly.
         if ($result->failed()) {
             return true;
         }
@@ -449,11 +370,8 @@ class PhpRuntime implements Runtime
     }
 
     /**
-     * Install a version, with the extensions a site is unusable without.
-     *
-     * A bare `phpX.Y-fpm` has no mysql, no curl, no mbstring — every
-     * application in the marketplace would fail on it. The base set is
-     * configurable rather than assumed, but it is not empty.
+     * Install a version, with the extensions a site is unusable without (mysql, curl, mbstring...).
+     * The base set is configurable, but not empty.
      *
      * @throws RuntimeInstallException
      */
@@ -462,27 +380,15 @@ class PhpRuntime implements Runtime
         // Read before apt runs: see keepDefault().
         $previousDefault = $this->default();
 
-        // 🔴 Before the existence checks, not after, and this is the whole
-        // point of it being here.
+        // 🔴 Before the existence checks, not after. `installablePackages()` asks `apt-cache policy`,
+        // which reads the local index, not the repository. On a server whose index was never refreshed
+        // since the LiteSpeed (or ondrej) list was added, every `lsphp83-*` answers "no", every extension
+        // is skipped, and the install "succeeds" with a bare interpreter ("the list on disk is not the
+        // index", as in MongoDbInstaller).
         //
-        // `installablePackages()` asks `apt-cache policy` whether each
-        // extension exists, and that reads the **local index**, not the
-        // repository. On a server whose index has never been refreshed since
-        // the LiteSpeed (or ondrej) list was added, every `lsphp83-*` answers
-        // "no", every extension is silently skipped, and the install succeeds
-        // with a bare interpreter. Found on a real OpenLiteSpeed box: PHP 8.3
-        // installed cleanly, then Nextcloud refused to install because curl
-        // was missing — a package that exists upstream and was never asked
-        // for.
-        //
-        // The same reasoning `MongoDbInstaller` states after writing its
-        // repository list: "The list on disk is not the index."
-        //
-        // **Deliberately not fatal.** `apt-get update` exits non-zero when
-        // *any* configured source fails, including one that has nothing to do
-        // with PHP, and a server that could still install perfectly well must
-        // not be refused over an unrelated 404. A stale index after this is
-        // the pre-existing behaviour, now with a warning naming it.
+        // Deliberately not fatal: `apt-get update` exits non-zero when any source fails, even one
+        // unrelated to PHP, and that must not refuse the install. A stale index then behaves as before,
+        // with a warning.
         $refreshed = $this->serverOps->apt(
             ['apt-get', 'update'],
             ['feature' => 'runtime', 'op' => 'php_index_refresh', 'version' => $version],
@@ -505,10 +411,8 @@ class PhpRuntime implements Runtime
             // apt refuses to run unattended without this, and a prompt with
             // nobody to answer it hangs until the timeout.
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
-            // Passed through so the caller can report progress while this runs.
-            // Nothing here interprets it: what apt's output *means* is
-            // InstallProgress's job, and this method should not grow a second
-            // one.
+            // Passed through so the caller can report progress; what apt's output means is
+            // InstallProgress's job.
             onOutput: $onOutput,
         );
 
@@ -537,15 +441,11 @@ class PhpRuntime implements Runtime
     /**
      * Put the server default back if installing another version moved it.
      *
-     * Debian keeps the `php` group in auto mode, where the highest priority
-     * wins — and a newer PHP has a higher one. So installing 8.5 on a server
-     * defaulting to 8.4 silently made 8.5 the default (found on the nginx test
-     * server): every user's cron and shell `php`, and every site created
-     * afterwards, moved to a version nobody chose. Setting it back also pins
-     * the group to manual mode, so the next install cannot do it again.
+     * Debian keeps the `php` group in auto mode (highest priority wins) and a newer PHP has a higher
+     * one, so installing 8.5 on a server defaulting to 8.4 silently made 8.5 the default for every
+     * cron, shell `php` and new site. Setting it back also pins the group to manual mode.
      *
-     * Never fatal: the install itself succeeded, and failing it over the
-     * default would report the opposite of what happened.
+     * Never fatal: the install itself succeeded, and failing it would report the opposite.
      */
     private function keepDefault(?string $previous, string $installed): void
     {
@@ -588,10 +488,8 @@ class PhpRuntime implements Runtime
                 continue;
             }
 
-            // A secondary group the stack would like to move but can live
-            // without. Recorded rather than raised: the interpreter did change,
-            // and reporting that as a failure would tell the user the opposite
-            // of what happened.
+            // A secondary group the stack would like to move but can live without: recorded, not
+            // raised (the interpreter did change).
             if ($result->failed()) {
                 Log::warning('A secondary PHP alternative could not be moved.', [
                     'feature' => 'runtime',
@@ -620,17 +518,10 @@ class PhpRuntime implements Runtime
             onOutput: $onOutput,
         ));
 
-        // Only after the purge succeeded, and only for a version that was
-        // detected on disk to begin with — the caller checks that, which is
-        // what keeps a client string out of this path.
-        //
-        // The purge cannot do this itself: the panel writes a pool file per
-        // site into <version>/fpm/pool.d, dpkg does not own them, and a
-        // directory still holding unknown files survives. The version then
-        // went on being listed after it was removed, because detection reads
-        // exactly these directories — and the stale pools sat there waiting
-        // for the next install of that version to pick them up, referring to
-        // sites that may no longer exist.
+        // Only after the purge succeeded, and only for a version detected on disk (the caller checks,
+        // which keeps a client string out of this path). The purge cannot do it: the panel writes a
+        // pool file per site into <version>/fpm/pool.d, dpkg does not own them, and a directory holding
+        // unknown files survives, so the version stayed listed and the stale pools waited for a reinstall.
         $residual = $this->stack->residualDir($version);
 
         if ($residual !== null) {
@@ -640,20 +531,15 @@ class PhpRuntime implements Runtime
             );
         }
 
-        // The panel's ionCube loader and ini, which dpkg never owned and so
-        // outlive the purge. On OpenLiteSpeed the ini sits in the version's
-        // scan dir: left there, reinstalling this version would load ionCube
-        // again with nothing on screen saying so. An ionCube that came from
-        // LiteSpeed's package went with the purge (`lsphpNN-*`), and v7's
-        // php.ini line with the FPM version's directory.
+        // The panel's ionCube loader and ini, which dpkg never owned and so outlive the purge. On OLS the
+        // ini sits in the version's scan dir: left there, a reinstall would load ionCube again unnoticed.
+        // An ionCube from LiteSpeed's package went with the purge, and v7's php.ini line with the FPM dir.
         foreach ($ionCube as $path) {
             $this->files->delete($path, ['feature' => 'runtime', 'op' => 'php_uninstall_ioncube', 'version' => $version]);
         }
 
-        // On OpenLiteSpeed dpkg kept the folders those two files were in, so
-        // the version's tree outlived it as a skeleton of empty folders.
-        // Empty folders only: `find -empty` never removes a file, nor a
-        // folder that still holds one.
+        // On OpenLiteSpeed dpkg kept the folders those two files were in, so the version's tree outlived
+        // it as empty folders. Empty folders only: `find -empty` never removes a file or a non-empty one.
         $tree = $ionCube !== [] ? $this->stack->emptyFoldersDir($version) : null;
 
         if ($tree !== null) {

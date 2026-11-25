@@ -18,12 +18,10 @@ use Illuminate\Support\Facades\Cache;
  * Reads server facts + live metrics cheaply from `/proc` (+ df / small probes).
  * Everything is world-readable, so this works without root (detect-don't-trust).
  *
- * CPU, network and disk I/O are cumulative counters, so each needs two
- * readings to become a rate — and where the second reading comes from differs
- * by caller. `snapshot()` (the 5-min background collector) takes its own by
- * waiting; `live()` (polled by the dashboard) measures against the previous
- * poll's reading, because a request that sleeps holds a php-fpm worker while
- * it does nothing.
+ * CPU, network and disk I/O are cumulative counters, so each needs two readings to become a rate.
+ * `snapshot()` (the 5-min background collector) takes its own by waiting; `live()` (polled by the
+ * dashboard) measures against the previous poll's reading, so a request never sleeps and holds a
+ * php-fpm worker.
  */
 class ServerMetrics
 {
@@ -103,9 +101,8 @@ class ServerMetrics
                 'in_human' => Bytes::human($netIn).'/s',
                 'out_human' => Bytes::human($netOut).'/s',
             ],
-            // Throughput and IOPS: on a database server "the disk is slow"
-            // usually means operations per second, not megabytes, and both
-            // come off the same counters.
+            // Throughput and IOPS: on a database server "slow disk" usually means operations per
+            // second, and both come off the same counters.
             'disk_io' => [
                 'read' => $rates['disk_read'],
                 'write' => $rates['disk_write'],
@@ -117,11 +114,6 @@ class ServerMetrics
         ];
     }
 
-    /**
-     * Static-ish server facts for the dashboard info card.
-     *
-     * @return array<string, mixed>
-     */
     /**
      * The facts that move between two loads of the dashboard.
      *
@@ -135,6 +127,11 @@ class ServerMetrics
         ];
     }
 
+    /**
+     * Static-ish server facts for the dashboard info card.
+     *
+     * @return array<string, mixed>
+     */
     public function facts(): array
     {
         $memory = $this->memoryUsage();
@@ -146,21 +143,17 @@ class ServerMetrics
             'kernel' => $this->cmd(['uname', '-r']),
             'arch' => $this->cmd(['uname', '-m']),
             'uptime' => $this->uptime(),
-            // What is on this machine's own interface. On a VPS with a
-            // directly attached address that is also the public one; behind
-            // NAT it is a 10.x/172.x and is *not* the address to point DNS at.
+            // The machine's own interface address. Behind NAT it is a 10.x/172.x and is *not*
+            // the address to point DNS at.
             'ip' => $this->primaryIp(),
-            // The address the internet actually reaches this server on, or
-            // null when the machine genuinely cannot know it. The dashboard
-            // showed `ip` and called it the server's address, so a NAT'd
-            // instance displayed a private address as the one to use.
+            // The address the internet reaches this server on, or null when it cannot be known.
             'public_ip' => $this->publicIp->detect(fn () => $this->dns->serverIp()),
             'cpu' => ['model' => $this->cpuModel(), 'cores' => $this->cpuCores()],
             'memory_total' => $memory['total'],
             'memory_total_human' => Bytes::human((int) $memory['total']),
             'disk_total' => $disk['total'],
             'disk_total_human' => $disk['total'] === null ? null : Bytes::human((int) $disk['total']),
-            // Null when timedatectl does not answer (OLD-3), not a guessed UTC.
+            // Null when timedatectl does not answer, not a guessed UTC.
             'timezone' => $this->cmd(['timedatectl', 'show', '--property=Timezone', '--value']) ?: null,
             'reboot_required' => is_file((string) config('server.reboot_required_file', '/var/run/reboot-required')),
             'runtimes' => $this->runtimes(),
@@ -170,15 +163,9 @@ class ServerMetrics
     /**
      * Top processes by CPU (server process table), and how many there are.
      *
-     * `total` is every process the box is running, not the length of the list
-     * returned. Without it the panel's only number was the row count, which is
-     * the limit — so stopping a process left "25" on screen and the screen
-     * looked broken. The list is a top-N by design; the count has to come from
-     * somewhere that is not the list, or it cannot ever change.
-     *
-     * Counting costs one extra pass over the rows `ps` already printed rather
-     * than a second `ps`, which would be a different moment in time from the
-     * list it is describing.
+     * `total` is every process the box is running, not the length of the returned top-N list,
+     * so it changes when a process is stopped. It is counted in the same pass over the rows `ps`
+     * already printed, not a second `ps` taken at a different moment.
      *
      * @return array{processes: array<int, array<string, mixed>>, total: int, limit: int}
      */
@@ -202,8 +189,7 @@ class ServerMetrics
             }
 
             // Counted before the limit is applied, and only for rows that
-            // would have been shown — the probe row is excluded from the list,
-            // so counting it would report one process nobody can find.
+            // would have been shown (the probe row is excluded).
             $total++;
 
             if (count($processes) >= $limit) {
@@ -221,8 +207,7 @@ class ServerMetrics
                 // Keep the complete argv for diagnosis, but never let a
                 // credential-bearing option cross the API boundary.
                 'command' => CommandRedactor::line($parts[4]),
-                // Bug #7: the screen offered Stop on processes the endpoint
-                // refuses, so the user found out only after clicking.
+                // So the screen does not offer Stop on processes the endpoint refuses.
                 'stoppable' => $refusal === null,
                 'reason' => $refusal === null ? null : ProcessKillException::refused($refusal)->reason(),
             ];
@@ -272,10 +257,9 @@ class ServerMetrics
     /**
      * The refusal Stop would give this process, asked of the same rules.
      *
-     * A process missing from the placement list exited between the two `ps`
-     * calls; Stop would answer "not found", so it is not offered either. An
-     * empty list means the second `ps` itself failed — then the button stays
-     * offered and the endpoint, which checks again, has the last word.
+     * A process missing from the placement list exited between the two `ps` calls, so Stop is not
+     * offered. An empty list means the second `ps` failed: the button stays offered and the
+     * endpoint, which checks again, has the last word.
      *
      * @param  array<int, array{ppid: int, unit: ?string, command: string}>  $placement
      */
@@ -341,11 +325,7 @@ class ServerMetrics
     }
 
     /**
-     * @return array{total: int, used: int, free: int, percent: float}
-     */
-    /**
-     * Null fields when `df` did not answer (OLD-6): the disk showed 0 B of
-     * 0 B, 0 % used — a full disk and an unread one looked the same.
+     * Null fields when `df` did not answer, so a full disk and an unread one look different.
      *
      * @return array{total: ?int, used: ?int, free: ?int, percent: ?float}
      */
@@ -406,10 +386,8 @@ class ServerMetrics
     }
 
     /**
-     * Every cumulative counter this class turns into a rate, read together.
-     *
-     * Read as one set so a rate window can be shared. Reading them separately
-     * is what made a live poll cost one sleep per metric.
+     * Every cumulative counter this class turns into a rate, read together so
+     * a rate window can be shared (one sleep per poll, not per metric).
      *
      * @return array<string, int>
      */
@@ -450,12 +428,9 @@ class ServerMetrics
     /**
      * Rates measured against the previous request's reading.
      *
-     * The live endpoint is polled on a timer, so the gap between two polls is
-     * already a measurement window — using it means the request never sleeps.
-     * Sleeping per metric held a php-fpm worker for a second per counter,
-     * which a few open dashboards would turn into an outage.
-     *
-     * The first poll has nothing to compare against and reports zero.
+     * The gap between two polls is already a measurement window, so the request never sleeps
+     * (sleeping would hold a php-fpm worker per open dashboard). The first poll has nothing to
+     * compare against and reports zero.
      *
      * @return array<string, int|float>
      */
@@ -526,11 +501,9 @@ class ServerMetrics
     /**
      * Cumulative disk counters, summed over whole physical disks only.
      *
-     * /proc/diskstats lists partitions alongside their parent disk and loop
-     * devices alongside both, so summing every line counts the same traffic
-     * two or three times over. Only whole devices (present in /sys/block) of a
-     * real disk type are counted — which also skips the device-mapper nodes on
-     * an LVM box, whose I/O is already counted on the disk underneath.
+     * /proc/diskstats lists partitions alongside their parent disk and loop devices alongside
+     * both, so summing every line double-counts. Only whole devices (present in /sys/block) of a
+     * real disk type are counted, which also skips device-mapper nodes on an LVM box.
      *
      * @return array{read: int, write: int, read_ops: int, write_ops: int}
      */
@@ -629,8 +602,7 @@ class ServerMetrics
 
     /**
      * Delegated, so the metrics screen and the CPU-limit validator cannot
-     * disagree about the size of the box — a validator that refused a limit the
-     * dashboard had just advertised would be the panel arguing with itself.
+     * disagree about the size of the box.
      */
     private function cpuCores(): int
     {
@@ -650,25 +622,10 @@ class ServerMetrics
     private function runtimes(): array
     {
         return [
-            // Read from the running process, not by shelling out to `php`.
-            //
-            // That probe resolved `php` from PATH, and the web process does not
-            // have the one the CLI does. Measured on an OpenLiteSpeed box:
-            // lshttpd runs with `PATH=/bin:/usr/bin`, while install.sh puts the
-            // panel's interpreter at `/usr/local/bin/php` — so the dashboard
-            // reported PHP as blank while `php -r` from a shell answered
-            // 8.4.25. The queue worker has the fuller PATH, which is why every
-            // other PHP-dependent feature was unaffected.
-            //
-            // Asking PHP itself cannot be wrong and cannot depend on PATH,
-            // which retires the failure rather than moving it. It also removes
-            // a subprocess from a dashboard that polls.
-            //
-            // The limitation, stated rather than hidden: on a server with
-            // several versions this is the interpreter the *panel* runs, not
-            // whichever version a given site uses. Per-site versions are the
-            // PHP screen's job, and a single number on a facts card could never
-            // have carried them.
+            // Read from the running process, not by shelling out to `php`: the web process's PATH
+            // may not contain the CLI's interpreter (e.g. OpenLiteSpeed runs with
+            // `PATH=/bin:/usr/bin`). It also saves a subprocess on a polled dashboard.
+            // This is the interpreter the *panel* runs, not a site's PHP version.
             'php' => PHP_VERSION,
             'node' => $this->version([(string) config('server.node_binary', 'node'), '-v']),
             'redis' => $this->version(['redis-server', '--version']),
@@ -678,38 +635,18 @@ class ServerMetrics
     }
 
     /**
-     * The version of the database engine this box actually runs, keyed by its
-     * name — the same shape, and for the same reason, as
-     * {@see webServerVersion()} below.
+     * The version of every database engine this box actually runs, keyed by
+     * its name — the same shape as {@see webServerVersion()}.
      *
-     * This read `mysql --version` under a hardcoded `mysql` key. On a MariaDB
-     * server that is the **client** tool reporting its own protocol version,
-     * so a box with no MySQL on it showed "MySQL 15.2" on the dashboard while
-     * `GET /databases/engines` — asking each engine `SELECT VERSION()` —
-     * correctly reported MariaDB 11.8.6 on the same request cycle. Two screens,
-     * one server, two answers, and the confident one wrong.
-     *
-     * Exactly the mistake the web-server version had and had fixed: assuming
-     * one product and naming the key after the assumption. Asking the engine
-     * rather than a client binary also means the version is the server's, not
-     * whatever happens to be installed to talk to it.
+     * Asks each engine (`SELECT VERSION()`) rather than a client binary: on a MariaDB server
+     * `mysql --version` reports the client's own protocol version and mislabels it "MySQL".
      *
      * @return array<string, string>
      */
     private function databaseVersion(): array
     {
-        // Every engine that answered, not the first.
-        //
-        // This returned only the first, copied from webServerVersion() below —
-        // where one-only is correct, because a single web server owns port 80.
-        // Databases do not work that way: a server can run MariaDB and
-        // PostgreSQL at once, and on the box this was written against it does.
-        // So PostgreSQL was installed, running, correct on the Databases screen
-        // and absent from the dashboard.
-        //
-        // A server with no engine installed contributes no key rather than a
-        // null one: omitting it is honest, and a row reading "MySQL —" invites
-        // the question of why MySQL is listed at all.
+        // Every engine that answered, not the first: unlike web servers, a box can run MariaDB and
+        // PostgreSQL at once. An engine that is not installed contributes no key rather than null.
         return array_filter(
             $this->databases->detectedVersions(),
             fn (?string $version): bool => $version !== null,
@@ -719,15 +656,8 @@ class ServerMetrics
     /**
      * The version of the web server this box actually runs, keyed by its name.
      *
-     * `nginx` used to be hardcoded here, so an Apache or OpenLiteSpeed server
-     * reported `nginx: null` on its dashboard and never showed the version of
-     * the web server it was really running — a blank where the one number the
-     * reader came for should be.
-     *
-     * Read from the recorded capability rather than probed, because probing is
-     * what this method is for and the answer is already known. Recorded, not
-     * detected: this is a dashboard read and must not trigger a box-wide probe
-     * as a side effect.
+     * Read from the recorded capability rather than probed: this is a dashboard read and must not
+     * trigger a box-wide probe as a side effect.
      *
      * @return array<string, string|null>
      */

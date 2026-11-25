@@ -20,11 +20,8 @@ use App\Services\Server\Runtimes\PhpRuntime;
  * The application catalog — resolves site types and describes them for the
  * card grid.
  *
- * Availability is decided by what the server can actually run, the same rule
- * Services and Databases already follow. Unavailable types are still returned,
- * flagged and greyed rather than hidden: a card the user can't use yet is how
- * they discover the runtime exists, and it becomes the install button once the
- * runtime-install feature ships.
+ * Availability is decided by what the server can actually run. Unavailable types are still
+ * returned, flagged rather than hidden, so a card the user can't use yet can offer to fix itself.
  */
 class SiteTypeManager
 {
@@ -89,18 +86,11 @@ class SiteTypeManager
     }
 
     /**
-     * The card grid: every type, with its field schema and whether this server
-     * can run it.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    /**
      * Why a card is greyed, as a value the UI can branch on.
      *
-     * Deliberately three separate codes rather than one "blocked": each has a
-     * different way out. A runtime can be installed from the card itself, a
-     * database from the Databases screen, and a web server's refusal has no way
-     * out at all — offering one would be a lie.
+     * Separate codes rather than one "blocked": each has a different way out. A runtime can be
+     * installed from the card, a database from the Databases screen, and a web server's refusal
+     * has no way out at all.
      */
     public const BLOCKED_RUNTIME = 'runtime';
 
@@ -111,11 +101,9 @@ class SiteTypeManager
     /**
      * The stack does not host this kind of application at all.
      *
-     * Separate from `BLOCKED_RUNTIME` because there is nothing to install. A
-     * Docker box has PHP on it — the panel is PHP — so the runtime check
-     * passes and would have offered WordPress on a server that will never
-     * serve a PHP site. Offering an install button here would be the same lie
-     * the web-server code exists to avoid.
+     * Separate from `BLOCKED_RUNTIME` because there is nothing to install: a Docker box has PHP
+     * (the panel is PHP), so the runtime check would pass for WordPress on a server that will
+     * never serve a PHP site.
      */
     public const BLOCKED_STACK = 'stack';
 
@@ -130,41 +118,27 @@ class SiteTypeManager
 
     /**
      * The database engine is here and running, but older than this application
-     * runs on — Moodle and Mautic on Ubuntu 24.04's MySQL 8.0.
+     * runs on (e.g. Moodle and Mautic on Ubuntu 24.04's MySQL 8.0).
      *
-     * Not `BLOCKED_DATABASE`: that one sends the user to install an engine, and
-     * the engine is installed. MySQL and MariaDB cannot share a server, so the
-     * install offer would be a dead end for every MySQL-only type.
+     * Not `BLOCKED_DATABASE`: that one sends the user to install an engine, and MySQL and MariaDB
+     * cannot share a server, so the install offer would be a dead end.
      */
     public const BLOCKED_DATABASE_VERSION = 'database_version';
 
+    /**
+     * The card grid: every type, with its field schema and whether this server
+     * can run it.
+     *
+     * @return array<int, array<string, mixed>>
+     */
     public function catalog(): array
     {
-        // Types this stack will never host and retired recipes are left out
-        // entirely, rather than rendered as blocked cards.
+        // Types this stack will never host and retired recipes are left out entirely: nothing
+        // installs a way out and it is true of every card at once. `unavailable()` still answers
+        // for them, so the create endpoint refuses a filtered type as before.
         //
-        // Every other block is worth showing: a missing runtime or database
-        // names something you can install, and a web-server refusal affects a
-        // type or two while the rest of the grid still works. `stack` is not
-        // like them — nothing installs a way out, and it is true of every card
-        // at once. On a container-only server that meant seventeen cards
-        // repeating one sentence about the server, which is noise rather than
-        // honesty, and a worse screen than the one it replaced.
-        //
-        // The refusal itself is untouched: `unavailable()` still answers for
-        // these types, and `StoreApplicationRequest` still calls it, so the
-        // endpoint refuses a filtered type exactly as before. This hides a card
-        // whose endpoint says no — not a button whose endpoint works.
-        //
-        // `array_values`, and it is load-bearing: `array_filter` preserves keys,
-        // and the filtered-out types are contiguous at one end of `all()`. The
-        // survivors therefore start at a non-zero index, `json_encode` emits a
-        // JSON *object* instead of an array, and the frontend's `z.array()`
-        // rejects the whole payload — which took the create page down to a
-        // "could not read this" card on every stack except the one whose types
-        // happen to sit first. Every test here reads the response through
-        // `keyBy('name')`, which cannot tell the two shapes apart, so only a
-        // list assertion catches it.
+        // `array_values` is load-bearing: `array_filter` keeps keys, `json_encode` would emit an
+        // object instead of an array and the frontend's `z.array()` would reject the payload.
         $types = array_values(array_filter(
             $this->all(),
             fn (SiteType $type) => ! in_array($this->unavailable($type)['code'] ?? null, [self::BLOCKED_STACK, self::BLOCKED_DEPRECATED], true),
@@ -186,43 +160,20 @@ class SiteTypeManager
                 'method' => $type->method(),
                 'serving_profile' => $profile,
                 'needs_database' => $type->needsDatabase(),
-                // Which engines, not just whether. `needs_database` alone left
-                // the frontend inferring the list from the type's name, which
-                // was right only by coincidence — there happen to be two engine
-                // lists in the whole catalog today, and the first application
-                // accepting both MongoDB and MySQL would have made that
-                // inference silently wrong. An API that makes a client guess
-                // something it already holds is the API's bug.
-                //
-                // Empty when the type needs no database, so "no constraint" and
-                // "no database" are the same value rather than a null to
-                // special-case.
+                // Which engines, not just whether, so the frontend need not infer the list.
+                // Empty when the type needs no database.
                 'accepted_engines' => $this->acceptedEngines($type),
                 'available' => $available,
                 'unavailable_reason' => $blocked['reason'] ?? null,
                 // The same block as a stable value: 'runtime' | 'database' | 'php_version' |
-                // 'web_server', null when available. `unavailable_reason` is
-                // the sentence to show; this is the one to branch on, and the
-                // two must never be read the other way round.
+                // 'web_server', null when available. `unavailable_reason` is the sentence to
+                // show; this is the one to branch on.
                 'unavailable_code' => $blocked['code'] ?? null,
-                // The runtime that would have to be installed to make this card
-                // usable, so an unavailable card can offer to fix itself rather
-                // than just being greyed out. Null when the card is available.
-                //
-                // Named for what it holds. It was `installable`, which read as
-                // "this app installs itself" — a different question, answered
-                // by `has_installer` below, and one the grid genuinely needs
-                // in order to tell "click and get WordPress" apart from "click
-                // and get an empty directory".
-                // Null when nothing installable would fix it — a type this web
-                // server does not support is not an "install a runtime" prompt.
+                // The runtime that would have to be installed to make this card usable. Null when
+                // available, or when nothing installable would fix it (e.g. a web-server refusal).
                 'installable_runtime' => $blocked['runtime'] ?? null,
                 'has_installer' => $this->installers->installerForType($type->name()) !== null,
-                // So the version picker can offer only what this application
-                // runs on. The create endpoint refuses the rest either way —
-                // this is here so the form does not present a choice that is
-                // going to be rejected, the same rule the card grid follows by
-                // reporting `available` instead of failing at submit.
+                // So the version picker offers only what this application runs on.
                 'node_version_range' => $type->supportedNodeRange(),
                 'php_version_range' => $type->supportedPhpRange(),
                 'fields' => [...$type->fields(), ...$this->engineField($type)],
@@ -235,11 +186,8 @@ class SiteTypeManager
      * Why this server cannot serve a site the way it is about to be built, or
      * null when it can.
      *
-     * unavailable() answers for the type, and a git site's type is offered
-     * wherever any one of its profiles is hosted — so on MERN (node, static)
-     * the card is right, and a git site rendered as `php` was still created
-     * there, on a server not set up to serve PHP sites. This is the second
-     * half: the profile this particular request resolves to.
+     * unavailable() answers for the type, and a git site's type is offered wherever any one of
+     * its profiles is hosted. This is the second half: the profile this request resolves to.
      */
     public function unservedProfile(string $profile): ?string
     {
@@ -259,17 +207,8 @@ class SiteTypeManager
     /**
      * Why this server cannot offer a site type, or null when it can.
      *
-     * One method rather than two checks, because the card grid and the create
-     * endpoint both need this answer and must not be able to disagree — a card
-     * shown as available that then fails validation is worse than either.
-     *
-     * Carries a `code` as well as the sentence. The sentence is for reading and
-     * is translated; anything deciding what to *do* about the block needs
-     * something stable to match on. Without one the card grid was inferring the
-     * database case from `needs_database` plus the absence of an installable
-     * runtime — which its own comment notes would misread a web-server refusal
-     * as a missing database, and `site_types` exists precisely so a driver can
-     * refuse one.
+     * One method so the card grid and the create endpoint cannot disagree. Carries a stable `code`
+     * as well as the translated sentence, for anything deciding what to *do* about the block.
      *
      * @return array{code: string, reason: string, runtime: ?string}|null
      */
@@ -283,17 +222,11 @@ class SiteTypeManager
             ];
         }
 
-        // First, because it is the strongest refusal and the others would
-        // answer misleadingly. A Docker box HAS php and node installed — the
-        // panel needs both — so the runtime check below passes cleanly for
-        // WordPress, and the user would be shown a card that fails only once
-        // they try to build a site with it.
-        // `servingProfiles()`, not `servingProfile()`: a type is blocked only
-        // when this server hosts NONE of the profiles it could be served by.
-        // Asked about the single declared profile, the git card — whose
-        // declared value is the `php` fallback and whose rendering type also
-        // produces node and static — was refused on every MERN server, the one
-        // stack built for running the user's own Node code.
+        // First, as the strongest refusal: a Docker box HAS php and node (the panel needs both),
+        // so the runtime check below would pass for WordPress.
+        // `servingProfiles()`, not `servingProfile()`: a type is blocked only when this server
+        // hosts NONE of its profiles (the git card's declared `php` fallback would be refused on
+        // every MERN server otherwise).
         $hosted = array_filter(
             $type->servingProfiles(),
             fn (string $profile): bool => $this->capabilities->hosts($profile),
@@ -302,8 +235,7 @@ class SiteTypeManager
         if ($hosted === []) {
             return [
                 'code' => self::BLOCKED_STACK,
-                // "Containers only" is true of a Docker server and of nothing
-                // else; it was shown on LEMP, LAMP, OLS and MERN as well.
+                // "Containers only" is true of a Docker server and of nothing else.
                 'reason' => $this->capabilities->hosts('docker')
                     ? __('application.unavailable.stack')
                     : __('application.unavailable.stack_profile'),
@@ -351,9 +283,8 @@ class SiteTypeManager
         $webServer = (string) $this->capabilities->webServer();
         $allowed = (array) config("server.web_server_drivers.{$webServer}.site_types", []);
 
-        // An empty list means no restriction, which is the case for nginx and
-        // Apache: they serve everything we ship. A web server lists types only
-        // when it supports some and not others.
+        // An empty list means no restriction (nginx, Apache). A web server lists types only when
+        // it supports some and not others.
         if ($allowed !== [] && ! in_array($type->name(), $allowed, true)) {
             return [
                 'code' => self::BLOCKED_WEB_SERVER,
@@ -373,22 +304,9 @@ class SiteTypeManager
      * The engines this type needs and this server hasn't got, as a readable
      * list — or null when it needs none, or has one.
      *
-     * **Asked of every type that needs a database.** It used to return early
-     * for anything accepting MySQL or MariaDB, which is nearly the whole
-     * catalog, so only NodeBB — MongoDB alone — was ever checked. On a
-     * MongoDB-only server every SQL-backed type reported itself available,
-     * took a filled-in form, and failed at provisioning.
-     *
-     * That early return was argued for, and the argument is worth answering
-     * rather than deleting silently. It said greying ten cards on a server
-     * whose engine "is simply not up yet" would hide the catalog rather than
-     * explain it, and that `create_database` would fail with an accurate
-     * message anyway. Both were reasonable when the alternative was a card
-     * that vanished with no explanation. Neither survives the case that
-     * actually bites: an engine that is up, healthy, and permanently unable to
-     * serve this application. No amount of waiting fixes MongoDB for
-     * WordPress, and an accurate message at `create_database` arrives after
-     * the user has filled in the form.
+     * Asked of every type that needs a database, not only the MySQL-less ones: an engine that is
+     * up but can never serve this application (MongoDB for WordPress) must grey the card, not
+     * fail at provisioning.
      */
     private function missingEngines(SiteType $type): ?string
     {
@@ -413,11 +331,9 @@ class SiteTypeManager
     /**
      * The database engines this type can be installed against.
      *
-     * Empty for a type that needs no database and for one with no installer —
-     * a custom PHP site brings its own arrangements, and the panel has no list
-     * to offer for it. Read from the installer rather than the SiteType because
-     * the installer is what provisioning asks, so the catalog cannot advertise
-     * a pairing that creating would refuse.
+     * Empty for a type that needs no database and for one with no installer. Read from the
+     * installer, which is what provisioning asks, so the catalog cannot advertise a pairing that
+     * creating would refuse.
      *
      * @return list<string>
      */
@@ -433,42 +349,13 @@ class SiteTypeManager
     }
 
     /**
-     * Can this server actually serve an application from `$engine`?
-     *
-     * Memoized for the life of the request, and that is not an optimisation —
-     * it is what makes the check above affordable. `available()` is a live
-     * `SELECT 1` through `sudo`, and the catalog asks this once per type: the
-     * check that used to run for one type now runs for eleven, which without
-     * this would be dozens of subprocesses on a page that renders a grid of
-     * cards.
-     *
-     * ⚠️ `available()` answers "did the query succeed", so an engine that is
-     * absent, stopped, or one the panel is not permitted to ask are all `false`
-     * here. That is right for this question — none of the three can serve an
-     * application right now — but it means a broken sudo grant greys the whole
-     * catalog. The three states the card grid distinguishes come from
-     * `DatabaseManager::capabilities()`, which separates them properly.
-     */
-    /**
      * A database-engine picker, but only where there is genuinely a choice.
      *
-     * Zero or one usable engine means no field at all: a dropdown with one
-     * option is a decision the user cannot make, on seventeen of the eighteen
-     * types, and the create form is long enough already.
+     * Zero or one usable engine means no field. Two or more means the panel would otherwise choose
+     * silently, and that choice is permanent. `mysql, mariadb` is not a choice: the two cannot
+     * coexist, so exactly one is ever usable.
      *
-     * Two or more means the panel would otherwise be choosing silently — and
-     * that choice is permanent. Nothing moves a forum from MongoDB to
-     * PostgreSQL afterwards; it would be delete and start again.
-     *
-     * The pairs that make this real only appeared with PostgreSQL. Eight types
-     * list `mysql, mariadb`, which reads like a choice and is not: the two
-     * cannot coexist — they fight over 3306 and the installer refuses the
-     * second — so exactly one is ever usable and this returns nothing for
-     * them. NodeBB's `mongodb, postgresql` is the first pairing a server can
-     * genuinely have both halves of.
-     *
-     * Built here rather than in the site type because only this class knows
-     * what the *server* has. The type knows what the application supports.
+     * Built here because only this class knows what the *server* has.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -489,10 +376,8 @@ class SiteTypeManager
             'type' => 'select',
             'required' => false,
             'advanced' => false,
-            // The first accepted engine that this server has, which is exactly
-            // what provisioning falls back to when the field is absent. The
-            // form and the fallback cannot disagree, because they are the same
-            // list in the same order.
+            // The first accepted engine this server has, which is what provisioning falls back to
+            // when the field is absent.
             'default' => $usable[0],
             'options' => array_map(fn (string $engine): array => [
                 'value' => $engine,
@@ -504,12 +389,8 @@ class SiteTypeManager
     /**
      * Usable *for this application*: installed, reachable, and new enough.
      *
-     * The version belongs here rather than in {@see engineUsable()} because it
-     * is the only one of the three that depends on which application is
-     * asking — a PostgreSQL 13 is unusable for Moodle and perfectly fine for
-     * NodeBB, on the same server in the same request. Keeping them apart is
-     * what lets the reachability answer stay memoized across every type in the
-     * catalog while the version answer varies by type.
+     * The version belongs here rather than in {@see engineUsable()} because it depends on which
+     * application is asking, which keeps the reachability answer memoized across every type.
      */
     private function engineUsableFor(SiteType $type, string $engine): bool
     {
@@ -527,9 +408,8 @@ class SiteTypeManager
      * The first engine this type accepts that is here and running but below
      * the type's minimum, or null when no engine falls short that way.
      *
-     * Only asked once {@see missingEngines()} has found nothing usable, so it
-     * never turns an available card grey: a Moodle on 24.04 with PostgreSQL
-     * installed beside the old MySQL is still offered, on PostgreSQL.
+     * Only asked once {@see missingEngines()} has found nothing usable, so it never greys an
+     * available card.
      *
      * @return array{engine: string, minimum: string, version: string}|null
      */
@@ -560,6 +440,14 @@ class SiteTypeManager
         return null;
     }
 
+    /**
+     * Can this server actually serve an application from `$engine`?
+     *
+     * Memoized for the request: `available()` is a live `SELECT 1` through `sudo`, asked once per
+     * type. It answers "did the query succeed", so an absent, stopped or not-permitted engine are
+     * all `false` (a broken sudo grant greys the whole catalog).
+     * `DatabaseManager::capabilities()` separates the three states.
+     */
     private function engineUsable(string $engine): bool
     {
         if (! array_key_exists($engine, $this->usableEngines)) {
@@ -573,13 +461,10 @@ class SiteTypeManager
     /**
      * A type with a PHP range, on a server with no installed version inside it.
      *
-     * Found on an OpenLiteSpeed server on Ubuntu 26.04: PrestaShop runs on
-     * 7.2 – 8.1, LiteSpeed publishes 8.2 – 8.5 for that release, and the card
-     * said "available". The form was filled in and then refused with "choose a
-     * version in the range" — a range nothing on the box could reach.
-     *
-     * The package index is read only when nothing installed fits, which is
-     * rare, so the catalog does not pay an `apt-cache` call per type.
+     * Without this, the card says "available" and the filled-in form is then refused with
+     * "choose a version in the range" (e.g. PrestaShop 7.2 – 8.1 where the repo only has 8.2+).
+     * The package index is read only when nothing installed fits, so the catalog does not pay an
+     * `apt-cache` call per type.
      *
      * @return array{code: string, reason: string, runtime: ?string}|null
      */
