@@ -22,17 +22,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
- * A site the panel manages. Provisioning (files, vhost, clone) lands in later
- * phases — a record here only means "the user asked for this".
+ * A site the panel manages. A row only means "the user asked for this"; provisioning runs later.
  */
 #[Fillable([
     'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'node_version_target', 'node_version_failed_reason', 'node_version_failed_reference',
     'app_port', 'internal_port', 'rendering_type', 'web_root',
-    // Containerised applications. `container_port` is the port INSIDE the
-    // container; `app_port` is the loopback port on the host that nginx
-    // proxies to, and conflating the two publishes a container on a port
-    // another application already holds.
+    // Containers: `container_port` is inside the container, `app_port` is the host loopback port
+    // the web server proxies to. Mixing them up publishes a container on a port another app holds.
     'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'site_mount_path', 'docker_secrets', 'credentials_seen_at', 'container_status', 'last_failure',
     'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances', 'supervisor_mode', 'pm2_process_name',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets', 'nginx_location',
@@ -48,30 +45,23 @@ class Application extends Model
     use HasFactory;
 
     /**
-     * The installer's secrets: every field a site type asks for as a
-     * `password`.
+     * Fields a site type asks for as a `password`. Stored in the encrypted `install_secrets`, never
+     * in `settings`, and never returned by the API.
      *
-     * Written to the encrypted `install_secrets` rather than to `settings`,
-     * and never returned by the API. A list rather than read from the site
-     * types, because building a type's fields runs commands on the server
-     * (the PHP versions on offer) and this is read on every response.
-     * InstallSecretsTest fails if a type adds a password field that is not
-     * here.
+     * A fixed list because building a type's fields runs server commands and this is read on every
+     * response. InstallSecretsTest fails if a type adds a password field that is missing here.
      */
     public const INSTALL_SECRET_KEYS = ['admin_password', 'mailer_password'];
 
     /**
-     * Where a container site's create-time env vars wait, encrypted, until
-     * provisioning writes them to its env file (DS-03). Not an install secret
-     * of the form: never accepted from `settings`, never sent back.
+     * Where a container site's create-time env vars wait, encrypted, until provisioning writes them
+     * to its env file. Never accepted from `settings`, never sent back.
      */
     public const CONTAINER_ENV_SECRET = 'container_env';
 
     /**
-     * Settings the installer records about what it installed. Read-only to the
-     * API: `php_range` is what the PHP screen holds a PrestaShop shop to, so a
-     * client that could write it could move the shop onto a PHP its release
-     * dies on.
+     * Settings the installer records about what it installed. Read-only to the API: a client that
+     * could write `php_range` could move a PrestaShop shop onto a PHP its release dies on.
      */
     public const INSTALLER_RECORDED_KEYS = ['php_range', 'prestashop_version'];
 
@@ -97,12 +87,11 @@ class Application extends Model
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
             'volume_mounts' => 'array',
-            // Carries the last lines of the container's own log, which is where
-            // a first boot prints its connection strings. Encrypted like the
-            // secrets beside it; the API shows it to `app_log` viewers only.
+            // Holds the container's last log lines, where a first boot prints connection strings.
+            // Encrypted; the API shows it to `app_log` viewers only.
             'last_failure' => 'encrypted:array',
-            // Live database credentials for a one-click container app. Encrypted
-            // for the same reason `webhook_secret` is: it grants access.
+            // Live database credentials of a one-click container app; encrypted because they grant
+            // access.
             'docker_secrets' => 'encrypted:array',
             'credentials_seen_at' => 'datetime',
             'fail2ban_enabled' => 'boolean',
@@ -112,8 +101,7 @@ class Application extends Model
             'status' => ApplicationStatus::class,
             'supervisor_mode' => SupervisorMode::class,
             'settings' => 'array',
-            // The passwords a one-click installer needs, held only until the
-            // install succeeds. See installSettings().
+            // Installer passwords, held only until the install succeeds. See installSettings().
             'install_secrets' => 'encrypted:array',
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
@@ -121,23 +109,18 @@ class Application extends Model
             'volume_size_bytes' => 'integer',
             'directory_size_updated_at' => 'datetime',
             'webhook_enabled' => 'boolean',
-            // Encrypted at rest: this is the one value that lets an
-            // unauthenticated request start a deploy.
+            // Encrypted: the one value that lets an unauthenticated request start a deploy.
             'webhook_secret' => 'encrypted',
             'webhook_last_delivered_at' => 'datetime',
         ];
     }
 
     /**
-     * What an installer reads: the site's settings plus the passwords it was
-     * created with.
+     * What an installer reads: `settings` plus the passwords it was created with.
      *
-     * The passwords are kept apart, in `install_secrets`, because `settings`
-     * is plain JSON and is returned by the API. They used to live in
-     * `settings`, which put every one-click site's admin password in front of
-     * anyone allowed to view the site, for as long as the site existed. They
-     * are held only until the install succeeds; ProvisionApplication then
-     * clears them, because nothing reads them again.
+     * The passwords live apart in `install_secrets` because `settings` is plain JSON returned by
+     * the API. They are held only until the install succeeds; ProvisionApplication then clears
+     * them.
      *
      * @return array<string, mixed>
      */
@@ -151,20 +134,13 @@ class Application extends Model
         return $this->belongsTo(SystemUser::class);
     }
 
-    /**
-     * Null for a public repository — those need no stored credential.
-     */
+    /** Null for a public repository: no stored credential is needed. */
     public function gitAccount(): BelongsTo
     {
         return $this->belongsTo(GitAccount::class);
     }
 
-    /**
-     * Null for a public image — which is every one-click app and most sites.
-     *
-     * Deliberately shaped like `gitAccount()` above: the same question (whose
-     * credential pulls this code) with the same answer for the same reason.
-     */
+    /** Null for a public image (every one-click app and most sites). Mirrors `gitAccount()`. */
     public function registry(): BelongsTo
     {
         return $this->belongsTo(Registry::class);
@@ -173,11 +149,9 @@ class Application extends Model
     /**
      * Deployed from a git account that is no longer connected.
      *
-     * An account-sourced site is the one with a `repository` and no
-     * `repository_url`, so a public-URL site is never mistaken for a broken
-     * one. Such a site cannot deploy: its remote would be `""`. The resource
-     * reports it and every path that starts a deploy refuses on it, so both
-     * read this one rule.
+     * An account-sourced site has a `repository` and no `repository_url`, so a public-URL site is
+     * never mistaken for it. Such a site cannot deploy (its remote would be `""`); the resource
+     * reports it and every deploy path refuses on it.
      */
     public function gitAccountMissing(): bool
     {
@@ -188,11 +162,8 @@ class Application extends Model
     }
 
     /**
-     * Every name this application answers to.
-     *
-     * `$this->domain` remains the primary one — the vhost filename and the log
-     * filenames are built from it — and is kept in step with whichever row is
-     * marked primary here.
+     * Every name this application answers to. `$this->domain` stays the primary (vhost and log
+     * filenames use it) and follows whichever row is marked primary.
      */
     public function domains(): HasMany
     {
@@ -200,12 +171,11 @@ class Application extends Model
     }
 
     /**
-     * The names the web server should serve this site under: the primary and
-     * its aliases, in a stable order with the primary first. Redirects get
-     * their own server block and are not part of this.
+     * Names the web server serves this site under: primary first, then aliases. Redirects get their
+     * own server block and are not included.
      *
-     * Falls back to the mirrored column when an application has no rows yet,
-     * so a site provisioned before this feature still renders a valid config.
+     * Falls back to the mirrored `domain` column when there are no rows (sites provisioned
+     * earlier).
      *
      * @return array<int, string>
      */
@@ -221,17 +191,9 @@ class Application extends Model
     }
 
     /**
-     * The app-sidebar items this site actually supports, by permission name.
-     *
-     * The second of the two filters behind an application's sidebar — the
-     * first being what the user has been granted. Answered by the site type,
-     * so a WordPress site does not offer a Deployment screen it has no
-     * repository for, and a static site does not offer PHP settings it has no
-     * PHP for.
-     *
-     * An unknown type (a row from before a type was removed) supports nothing
-     * beyond the basics rather than everything: an empty answer shows a thin
-     * sidebar, a permissive one shows screens that then fail.
+     * The app-sidebar items this site supports, by permission name (the second filter, after what
+     * the user was granted). An unknown site type supports only the basics: a thin sidebar beats
+     * screens that fail.
      *
      * @return array<int, string>
      */
@@ -248,40 +210,23 @@ class Application extends Model
     /**
      * The longest a name may be before the paths derived from it stop fitting.
      *
-     * The name becomes a slug ({@see uniqueSlug()}), and the slug names a file
-     * the web server reads. A filename is capped at 255 bytes, and the panel
-     * appends to the slug: `.conf`, and `-tls.conf` for the TLS variant.
-     *
-     * Measured rather than reasoned from the constant: a 255-character slug
-     * plus `.conf` fails to create, 250 plus `.conf` succeeds — so the ceiling
-     * is real and sits between them.
-     *
-     * 240 = 255 − 9 (`-tls.conf`) − 6, the last being room for the collision
-     * suffix `uniqueSlug()` appends: a name capped exactly at the limit would
-     * still overflow the moment it became `-2`.
-     *
-     * A cap rather than truncation, because the name is the user's own word
-     * for their site and quietly shortening it would leave the panel calling
-     * it something they did not choose. {@see \App\Services\Server\WebServers\
-     * OlsDriver} truncates instead where it has no choice — a socket path is
-     * capped at 108 bytes and no user-facing name survives that.
+     * The slug (see uniqueSlug()) names a web server config file; filenames cap at 255 bytes and
+     * the panel appends `-tls.conf` (9). 240 = 255 − 9 − 6, the last being room for the `-2`
+     * collision suffix. A cap, not truncation: silently shortening a name would show the user
+     * something they did not choose. The OpenLiteSpeed driver truncates only where it must (socket
+     * paths cap at 108 bytes).
      */
     public const MAX_NAME_LENGTH = 240;
 
-    /**
-     * How many names `uniqueSlug()` will ask the disk about before giving up
-     * on it. See the loop for why a bound is not optional.
-     */
+    /** How many names `uniqueSlug()` asks the disk about before giving up (see the loop). */
     public const SLUG_DISK_ATTEMPTS = 10;
 
     /**
-     * A stable, unique, filesystem-safe slug from the name — the key for the
-     * web-server config filename. Suffixes `-2`, `-3`, … on collision.
+     * A stable, unique, filesystem-safe slug from the name, the key for the web server config
+     * filename. Suffixes `-2`, `-3`, … on collision.
      *
-     * Stored rather than derived at read time so the panel can always address
-     * the file it wrote, including when the name has since changed and the
-     * rename is halfway through. Same shape as {@see Cronjob::uniqueSlug()},
-     * which names `/etc/cron.d` files the same way.
+     * Stored so the panel can always address the file it wrote, even after the name has changed.
+     * Same shape as {@see Cronjob::uniqueSlug()}.
      */
     public static function uniqueSlug(string $name, ?int $ignoreId = null, ?callable $alsoTaken = null): string
     {
@@ -289,43 +234,19 @@ class Application extends Model
         $slug = $base;
         $suffix = 2;
 
-        // The table-based half of the condition below terminates on its own:
-        // there are finitely many rows, so a suffix eventually clears them.
-        // The disk-based half has no such guarantee — a predicate that answers
-        // "taken" to everything spins this loop forever, incrementing a
-        // counter. That is not hypothetical: it hung the whole test suite for
-        // forty minutes at 100% CPU, because `Process::fake()` with no handler
-        // answers *success* to every command, which this read as "every path
-        // exists".
-        //
-        // So the disk is consulted for a bounded number of names and then
-        // believed to be unhelpful. Falling out of the loop with a slug that
-        // may collide is the right failure: the names it hands back are still
-        // unique in the table, so the worst case is the bug this predicate was
-        // added to prevent, where the alternative is an application that never
-        // responds again.
+        // The table check ends by itself (finite rows); the disk predicate does not. One that
+        // answers "taken" to everything spins forever (`Process::fake()` with no handler does
+        // exactly that). So the disk is asked a bounded number of times, then ignored; the slug
+        // stays unique in the table.
         $attempts = 0;
 
         while (static::query()
             ->where('slug', $slug)
             ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
             ->exists()
-            // "Taken" has a second meaning this table cannot see: the slug is
-            // a filename, and a file already at that path belongs to whoever
-            // put it there. Create and rename refuse outright and say so
-            // ({@see \App\Rules\AvailableSiteName}) — there is a user to tell.
-            // Clone and staging have no one to ask, so they pass a predicate
-            // here and step over the name instead, which is what the `-2`
-            // suffix has always been for.
-            //
-            // Sync discovery deliberately passes nothing: its slug *is* the
-            // folder it found, and the vhost it is adopting is exactly the
-            // file a probe would report — see ApplicationDiscoverer.
-            //
-            // Optional, and null by default, because the predicate reaches the
-            // server: every caller that has already validated the name would
-            // otherwise probe the disk a second time to learn what it was
-            // just told.
+            // Second meaning of "taken": a file already at that path belongs to someone else. Create/rename
+            // refuse ({@see \App\Rules\AvailableSiteName}); clone and staging pass a predicate and step over
+            // the name; sync discovery passes none (its slug is the folder it found).
             || ($alsoTaken !== null && $attempts < self::SLUG_DISK_ATTEMPTS && $alsoTaken($slug))
         ) {
             $slug = $base.'-'.$suffix++;
@@ -336,14 +257,9 @@ class Application extends Model
     }
 
     /**
-     * The same collision handling for the name itself, for the names the panel
-     * derives rather than the user types — "<source> (Clone)" is the same
-     * string every time, and `name` is unique, so a second clone of one site
-     * would otherwise be a constraint violation surfacing as a 500.
-     *
-     * Only for derived names. A name the user typed is checked by validation
-     * instead: silently renaming what someone chose is worse than telling them
-     * it is taken.
+     * Same collision handling for panel-derived names ("<source> (Clone)" repeats and `name` is
+     * unique, so a second clone would be a 500). Not for names the user typed: validation reports
+     * those instead of silently renaming.
      */
     public static function uniqueName(string $name): string
     {
@@ -391,20 +307,9 @@ class Application extends Model
         $features = app(SiteTypeManager::class)->find($this->site_type)?->features()
             ?? ['app_dashboard', 'app_domain', 'app_log'];
 
-        // The 8G Firewall is the one app feature whose availability is a
-        // *server* fact rather than a site-type one: it is rendered into the
-        // vhost, and the OpenLiteSpeed templates carry no WAF rules. Hidden
-        // here rather than shown-and-refused, which also 404s its endpoints
-        // through CheckPermission — same "hide rather than grey" reasoning as
-        // the site-type filter itself. There is nothing the user could do to
-        // turn it on, so a disabled row would only be noise.
-        //
-        // Fails OPEN. driver() throws when the server has no capability row
-        // yet — a freshly provisioned box, or a test that never wrote one —
-        // and this runs on every sidebar and every application route. Hiding
-        // a working screen because the web server is momentarily unknown is
-        // worse than showing one the manager will refuse anyway; Waf8GManager
-        // still guards the write.
+        // 8G Firewall is a server fact, not a site-type one: the OpenLiteSpeed templates carry no WAF
+        // rules, so it is hidden rather than shown-and-refused. Fails OPEN: driver() throws when the
+        // server has no capability row yet, and Waf8GManager still guards the write.
         $wafSupported = rescue(
             fn (): bool => app(WebServerManager::class)->driver()->supportsWaf(),
             true,
@@ -415,27 +320,9 @@ class Application extends Model
             $features = array_values(array_diff($features, ['app_firewall']));
         }
 
-        // The second feature whose availability is a fact about *this
-        // application* rather than about its site type.
-        //
-        // {@see \App\Services\Applications\Types\AbstractSiteType::features()}
-        // adds `app_php` when the site type serves PHP, and a site type has
-        // one answer for all its sites. Git does not: the user picks a
-        // rendering type at create, and
-        // {@see \App\Services\Applications\ServingProfile::resolve()} turns
-        // `static`/`csr` into a directory of files and `ssr` into a Node
-        // process. `GitSiteType::servingProfile()` still has to say `php` —
-        // it is the default for a repository with no rendering type chosen —
-        // so a git site serving no PHP at all was offered the PHP screen, and
-        // {@see \App\Http\Middleware\CheckPermission} let all three of its
-        // endpoints through on the strength of it. Isolating such a site
-        // would have written it a pool under the *server's* default version
-        // (its own is null), set `isolated_at`, and reloaded PHP-FPM across
-        // every real PHP site on the box to serve a directory of static
-        // files.
-        //
-        // Read from the row, not the type, because the row is where the
-        // user's choice is recorded.
+        // A git site's rendering type (static/csr/ssr, see {@see \App\Services\Applications\ServingProfile::resolve()})
+        // decides whether it serves PHP, but `GitSiteType` still reports `php`. Read from the row, where the
+        // user's choice is recorded, so a site serving no PHP is not offered the PHP screen.
         if ($this->serving_profile !== 'php') {
             $features = array_values(array_diff($features, ['app_php']));
         }
@@ -449,9 +336,7 @@ class Application extends Model
     }
 
     /**
-     * Which of the six 8G categories are active. Null (never touched this
-     * screen) means all of them — turning the firewall on should protect
-     * everything by default, not start from an empty set.
+     * Which of the six 8G categories are active. Null (screen never touched) means all of them.
      *
      * @return array<int, string>
      */
@@ -460,10 +345,7 @@ class Application extends Model
         return $this->waf_categories ?? WafCategory::values();
     }
 
-    /**
-     * Newest first wherever this is read — the list only ever answers "what
-     * happened recently".
-     */
+    /** Newest first wherever this is read: the list only answers "what happened recently". */
     public function cronjobs(): HasMany
     {
         return $this->hasMany(Cronjob::class);
@@ -475,10 +357,8 @@ class Application extends Model
     }
 
     /**
-     * Where a provider delivers this site's push events, or null before
-     * deploy-on-push has been set up. The one place it is built, so the URL
-     * shown to the user and the one registered with the provider cannot
-     * differ.
+     * Where a provider delivers this site's push events, or null before deploy-on-push is set up.
+     * Built in one place so the URL shown to the user matches the one registered with the provider.
      */
     public function webhookUrl(): ?string
     {
@@ -493,9 +373,8 @@ class Application extends Model
     }
 
     /**
-     * The newest Pull and redeploy of a container site (D5): what the app
-     * screen reads to show "Redeploying" across a reload, and how the last one
-     * ended.
+     * The newest Pull and redeploy of a container site: the app screen reads it to show
+     * "Redeploying" across a reload, and how the last one ended.
      */
     public function latestContainerRedeploy(): HasOne
     {
@@ -506,14 +385,11 @@ class Application extends Model
     }
 
     /**
-     * The newest deploy that got as far as checking out a commit — the code
-     * that is on disk now, whether or not that deploy went on to succeed.
+     * The newest deploy that got as far as checking out a commit: the code on disk now, whether or
+     * not that deploy then succeeded.
      *
-     * Deploys are in place: the checkout replaces the files first, and the
-     * script, dependency check and verify come after. A deploy that fails in
-     * any of those leaves the new code live, while `last_commit` (written on
-     * success only) still names the old one (found on a real server,
-     * 2026-09-24). See {@see codeOnDisk()}.
+     * Deploys are in place, so one failing after the checkout leaves new code live while
+     * `last_commit` (written on success only) still names the old one. See {@see codeOnDisk()}.
      */
     public function latestCheckout(): HasOne
     {
@@ -524,12 +400,10 @@ class Application extends Model
     }
 
     /**
-     * Which commit is on disk, and whether the deploy that put it there
-     * finished: `deployed`, `incomplete` (it failed after the checkout) or
-     * `deploying`. Falls back to `last_commit` for a site with no recorded
-     * checkout — one deployed before deployments were recorded, or a clone.
-     *
-     * `message` is the warning to show, and is set for `incomplete` only.
+     * Which commit is on disk and whether its deploy finished: `deployed`, `incomplete` (failed
+     * after the checkout) or `deploying`. Falls back to `last_commit` for a site with no recorded
+     * checkout (deployed before deployments were recorded, or a clone). `message` is set for
+     * `incomplete` only.
      *
      * @return array{commit: ?string, state: ?string, message: ?string}
      */
@@ -557,13 +431,11 @@ class Application extends Model
     }
 
     /**
-     * The databases the panel treats as part of this application — what a
-     * backup dumps, and what staging, cloning and restoring copy.
+     * The databases treated as part of this application: backups dump them; staging, cloning and
+     * restoring copy them.
      *
-     * `hasMany` because the column allows it and backups already dump all of
-     * them; attaching is currently capped at one by
-     * `UpdateDatabaseApplicationRequest`, because staging and cloning take the
-     * first row and cannot yet say which they mean.
+     * `hasMany`, but attaching is capped at one by `UpdateDatabaseApplicationRequest` because
+     * staging and cloning take the first row and cannot yet say which they mean.
      */
     public function databases(): HasMany
     {
@@ -575,12 +447,7 @@ class Application extends Model
         return $this->hasOne(Certificate::class);
     }
 
-    /**
-     * The backup configuration for this site, if it has one.
-     *
-     * Null is a real answer here — an unconfigured site is exactly what the
-     * cross-application list is for.
-     */
+    /** The backup configuration for this site; null (unconfigured) is a real answer. */
     public function backupTarget(): HasOne
     {
         return $this->hasOne(BackupTarget::class);
@@ -592,11 +459,8 @@ class Application extends Model
     }
 
     /**
-     * The newest backup, however it ended.
-     *
-     * Not "the newest successful one": a list whose whole job is to show
-     * whether a site is protected must show the failure, not skip past it to
-     * the last time things worked.
+     * The newest backup, however it ended. Not "newest successful": a list showing whether a site
+     * is protected must show the failure.
      */
     public function latestBackup(): HasOne
     {
@@ -604,8 +468,8 @@ class Application extends Model
     }
 
     /**
-     * Every name this site answers to, primary included — to recognise a
-     * certificate v7 left for it (CertificateFiles::v7Pair()).
+     * Every name this site answers to, primary included, to recognise a certificate v7 left for it
+     * (CertificateFiles::v7Pair()).
      *
      * @return array<int, string>
      */
@@ -617,11 +481,9 @@ class Application extends Model
     /**
      * The names that can go on a certificate, primary first.
      *
-     * A subset of `serverNames()`: redirects are included, because a redirect
-     * from `http://old` to `https://new` is only reachable if `old` also
-     * answers on HTTPS — a browser that has ever seen HSTS will refuse the
-     * plaintext hop and the redirect never runs. Test domains are excluded,
-     * since nip.io shares one weekly issuance limit with the whole internet.
+     * Redirects are included: an `http://old` → `https://new` redirect only works if `old` also
+     * answers on HTTPS (HSTS browsers refuse the plaintext hop). Test domains are excluded, since
+     * nip.io shares one weekly issuance limit with the whole internet.
      *
      * @return array<int, string>
      */
@@ -638,15 +500,11 @@ class Application extends Model
     /**
      * The scheme this site can actually be reached on right now.
      *
-     * Not a preference and not a default: `https` is a claim that the site can
-     * complete TLS with a certificate covering its primary hostname. A site
-     * without one still owns its name on port 443 only to reject stale HSTS or
-     * HTTPS-first traffic safely; that isolation listener is deliberately not
-     * a usable public URL and must never make this method advertise HTTPS.
-     *
-     * `force_https` is deliberately not consulted. That flag decides whether
-     * plain HTTP *redirects*, not whether HTTPS answers; a site with a
-     * certificate and the redirect turned off still serves TLS perfectly well.
+     * `https` is a claim that the site can complete TLS with a certificate covering its primary
+     * hostname. The 443 isolation listener a certificate-less site gets only rejects stale HSTS or
+     * HTTPS-first traffic; it is not a usable public URL and must never make this advertise HTTPS.
+     * `force_https` is deliberately not consulted: it decides whether HTTP redirects, not whether
+     * HTTPS answers.
      */
     public function scheme(): string
     {
@@ -657,14 +515,9 @@ class Application extends Model
     }
 
     /**
-     * This site's public URL, optionally with a path appended.
-     *
-     * Exists so that nothing else builds `'https://'.$domain` by hand. Eleven
-     * places did, across the installers, the phpMyAdmin SSO redirect and the
-     * frontend — every one of them wrong on a site with no certificate, and
-     * the installers' copies worse than wrong because they are written into
-     * the application's own configuration, where WordPress and Moodle turn
-     * them into a redirect the panel cannot see or undo.
+     * This site's public URL, optionally with a path appended. Use it instead of building
+     * `'https://'.$domain` by hand: that is wrong on a site with no certificate, and installers
+     * write such URLs into the app's own configuration, where the panel cannot undo them.
      */
     public function url(string $path = ''): string
     {
@@ -672,65 +525,40 @@ class Application extends Model
     }
 
     /**
-     * This site's own directory on disk: `{home}/{slug}`.
+     * This site's own directory: `{home}/{slug}`. Everything the site owns hangs off it
+     * (`public_html`, `.env`, `releases/`, `.panel/`, logs).
      *
-     * Everything the site owns hangs off here — `public_html`, `.env`,
-     * `releases/`, `.panel/`, its logs. Named by **slug, never domain**: a
-     * domain can be changed or pointed elsewhere, and a path that moves when
-     * it does orphans every file already written under the old one.
-     *
-     * This existed as five hand-built copies of the same concatenation, and
-     * the sixth — OpenLiteSpeed's vhost root — used `domain`, which put the
-     * document root outside the directory `restrained 1` confines the vhost
-     * to. One method so the next caller cannot invent a seventh.
+     * Named by slug, never domain: a domain can change, and a path that moves with it orphans the
+     * files already written. One method, so no caller builds its own copy (one used `domain` and
+     * put the OpenLiteSpeed document root outside the directory `restrained 1` confines the vhost
+     * to).
      */
     public function rootPath(): string
     {
         $home = rtrim((string) $this->systemUser?->home_path, '/');
 
-        // No home, no path. This used to fall through to `/{slug}` — a
-        // directory at the top of the filesystem, which "delete with files"
-        // then passed to `rm -rf` as root. A site named `etc` has the slug
-        // `etc`.
+        // No home, no path. Falling through to `/{slug}` once made "delete with files" run `rm -rf`
+        // as root on a top-level directory (a site named `etc`).
         if ($home === '') {
             throw new SystemUserMissingException((string) $this->name);
         }
 
-        // A row from before the slug column would otherwise produce
-        // `{home}/`, which resolves to the system user's home — the directory
-        // every one of its sites would then share.
+        // A row from before the slug column would give `{home}/`, the home all its sites would
+        // share.
         return $this->slug ? "{$home}/{$this->slug}" : $home;
     }
 
     /**
      * The directory the web server serves: `{home}/{slug}/public_html/{web_root}`.
      *
-     * `public_html` is always the base; `web_root` is appended inside it, so a
-     * site can serve from a subdirectory without anything escaping the site's
-     * own tree.
-     *
-     * The provisioner has computed this since the feature was built and still
-     * owns the call sites; this is the same arithmetic on the model, so that a
-     * resource or a form request can ask an application where it lives without
-     * resolving a service to find out.
+     * `public_html` is the fixed base every site's files live under; `web_root` only selects what
+     * is served *inside* it and must not move it (a git checkout would move with it).
      */
     /**
-     * The fixed base every site's files live under, whatever `web_root` says.
-     *
-     * `web_root` selects what the web server serves *inside* this directory;
-     * it does not move the directory. Those are two different questions and
-     * conflating them is what made a git-deployed Laravel application
-     * impossible to configure: the checkout landed wherever the served path
-     * pointed, so changing `web_root` moved the code along with it and the
-     * front controller was never at the root being served.
-     */
-    /**
-     * Where a simple-mode container sees this site's own directory.
-     *
-     * Null is `/app`, what every site created before the column existed was
-     * given — so its compose file renders exactly as it always has. New sites
-     * store {@see ContainerMountPath::SITE_MOUNT}, a path no image ships content
-     * in; `/app` hid the program of roughly a quarter of popular images.
+     * Where a simple-mode container sees this site's own directory. Null means `/app`, what sites
+     * created before the column existed got, so their compose file renders unchanged. New sites
+     * store {@see ContainerMountPath::SITE_MOUNT}, a path no image ships content in (`/app` hid the
+     * program of many popular images).
      */
     public function siteMountPath(): string
     {
@@ -740,10 +568,9 @@ class Application extends Model
     /**
      * Does a stored compose file decide what this container runs?
      *
-     * True for a 1-Click Recipe app (the panel rendered its file at install), a
-     * pasted file, and a simple site whose generated file was taken over on the
-     * Compose File page. The supervisor renders the stored text and ignores the
-     * structured port, network and volume fields — the same test `contents()` makes.
+     * True for a 1-Click Recipe app, a pasted file, and a simple site whose generated file was
+     * taken over on the Compose File page. The supervisor renders the stored text and ignores the
+     * structured port, network and volume fields, same test as `contents()`.
      */
     public function hasOwnCompose(): bool
     {
@@ -764,40 +591,17 @@ class Application extends Model
     }
 
     /**
-     * The directory the application's own command-line tools run from.
+     * The directory the application's own command-line tools run from. Not always the document
+     * root:
      *
-     * **Not always the document root**, which is why this is a separate method
-     * and not a comment on one. Three cases, and the difference is invisible in
-     * fifteen of the seventeen site types:
+     *  - Most marketplace apps unpack into the served directory, so both coincide.
+     *  - Craft and Statamic build a project around the served directory (`web/`, `public/`); their
+     *    `craft`/`please` binaries sit one level above it, where their installers run them.
+     *  - A git site's checkout always lands at `public_html`, whatever `web_root` says.
      *
-     *  - Most marketplace applications unpack into the served directory, so
-     *    `wp-cron.php`, `admin/cli/cron.php` and `cron.php` sit in the document
-     *    root and the two answers coincide.
-     *  - **Craft and Statamic build a project around the served directory** —
-     *    `web/`, `public/` — and their `craft` and `please` binaries sit one
-     *    level above it. That is exactly where their installers `cd` to run
-     *    them.
-     *  - **A git site's checkout always lands at `public_html`**, whatever
-     *    `web_root` says. This used to read "cloned into the document root, so
-     *    whatever the checkout contains is there, `web_root` notwithstanding" —
-     *    which described the bug rather than the intent. A repository whose
-     *    front controller sits in `public/` has no valid configuration under
-     *    that rule: leave `web_root` empty and the served directory has no
-     *    index; set it to `/public` and the checkout moves down with it, so
-     *    the application's own `public/` ends up one level too deep. Either
-     *    way the site 403s and its source is published.
-     *
-     * The first two are derived from the type's {@see SiteType::fixedWebRoot()}
-     * rather than by pattern-matching on `web_root`, because that method is
-     * already the codebase's answer to "does this type's installer build a
-     * layout around the web root". The git case asks
-     * {@see SiteType::method()} instead — a different question with a
-     * different answer: not "what layout does the installer build" but "how
-     * did the code get here", and a checkout always arrives in one place.
-     *
-     * This is the value `{path}` expands to in a cron command preset. A cron
-     * job pointed at the wrong one of these directories does not fail — it runs
-     * a file that is not there and reports nothing.
+     * The first two come from {@see SiteType::fixedWebRoot()}, the git case from {@see
+     * SiteType::method()} ("how did the code get here"). This is what `{path}` expands to in a cron
+     * command preset; a cron job in the wrong directory runs a missing file and reports nothing.
      */
     public function codePath(): string
     {
@@ -813,28 +617,14 @@ class Application extends Model
     }
 
     /**
-     * The HTTP Basic Auth credential file.
+     * The HTTP Basic Auth credential file: `{site}/conf/{web server}/.htpasswd`, where v7 keeps it
+     * (folder named after the web server: nginx, apache, openlitespeed). A server moved from v7
+     * already has its credential there.
      *
-     * Under the app root, deliberately **not** under the document root. The
-     * file has to be 0644 for the web server's worker to read it at request
-     * time, so inside the served directory the only thing standing between a
-     * bcrypt hash and the public internet is the vhost's dotfile deny rule —
-     * which OpenLiteSpeed did not apply to `.panel`. Above the webroot it is
-     * unreachable over HTTP no matter what any vhost says.
-     *
-     * It also stops the path moving when `web_root` changes, which used to
-     * need the credential file relocating in step or protection failed.
-     *
-     * Both the manager that writes it and the driver that points the vhost at
-     * it read this, because they each built the string themselves and would
-     * otherwise have to be changed in lockstep forever.
-     */
-    /**
-     * Where v7 keeps it (v7 layout B4): `{site}/conf/{web server}/.htpasswd`,
-     * the folder named after the web server — nginx, apache, openlitespeed,
-     * which are exactly v8's driver names. A server moved from v7 already has
-     * its credential there; writing it anywhere else meant a second copy and
-     * a vhost pointing at one of them.
+     * Under the app root, not the document root: the file must be 0644 for the web server worker,
+     * and inside the served directory only the vhost's dotfile deny rule (which OpenLiteSpeed did
+     * not apply to `.panel`) would hide the hash. The manager that writes it and the driver that
+     * reads it both call this method.
      */
     public function basicAuthPath(): string
     {
@@ -842,11 +632,9 @@ class Application extends Model
     }
 
     /**
-     * v7's per-site web server folder, `{site}/conf/{web server}`: the vhost
-     * loads every `*.conf` in it (v7 put its bot blocker, 8G and Apache
-     * force-HTTPS there, and so did users with their own rules). Loaded the
-     * v7 way so a site moved from v7 keeps every rule it had (Dipali,
-     * 2026-11-08: vhosts the same as v7). Root's, see SiteConfFolder.
+     * v7's per-site web server folder, `{site}/conf/{web server}`: the vhost loads every `*.conf`
+     * in it (bot blocker, 8G, Apache force-HTTPS and users' own rules), so a site moved from v7
+     * keeps every rule it had. Root's, see SiteConfFolder.
      */
     public function siteConfPath(): string
     {
@@ -856,13 +644,9 @@ class Application extends Model
     /**
      * Where the panel keeps its own bookkeeping for this site.
      *
-     * Above the document root, never inside it. Everything that lands here is
-     * something the panel wrote and no visitor should ever fetch: the Basic
-     * Auth credential, PHP sessions, the PHP error log, the WAF detect log,
-     * and the database dump taken before a staging push. Inside the served
-     * directory the only thing hiding any of it is the vhost's dotfile deny
-     * rule — one line, per web server, that OpenLiteSpeed did not apply to
-     * this directory at all.
+     * Above the document root, never inside it: nothing here may be fetchable, and the vhost's
+     * dotfile deny rule is one line per web server (OpenLiteSpeed did not apply it to this
+     * directory).
      */
     public function panelPath(): string
     {
@@ -870,26 +654,15 @@ class Application extends Model
     }
 
     /**
-     * The application's own `.env`.
+     * The application's own `.env`: beside the code, but never inside the served directory.
      *
-     * One rule: **beside the code, but never inside the served directory.**
+     * The two coincide wherever a web root separates code from served files. They conflict only
+     * when the code root is the served directory, and safety wins. nginx denies dotfiles, but the
+     * codebase does not rely on that (see `panelPath()`).
      *
-     * Those coincide wherever a web root separates the two — a checkout at
-     * `public_html` served from `public_html/public` gets its `.env` exactly
-     * where the framework reads it *and* out of reach over HTTP. They conflict
-     * only when the code root *is* the served directory, and safety wins
-     * there.
-     *
-     * nginx does deny dotfiles, but this codebase already decided not to rely
-     * on that: it is why `.panel` sits above the document root, after
-     * OpenLiteSpeed turned out not to apply its own dotfile rule to it.
-     *
-     * On the model rather than in `ApplicationEnvironment`, because
-     * provisioning needs the same answer when it creates the file and
-     * `ApplicationEnvironment` already depends on `ApplicationProvisioner` —
-     * so the service cannot be the source without a container cycle. Two
-     * places computing this independently is precisely how the panel ended up
-     * opening a `.env` the application never read.
+     * On the model, not in `ApplicationEnvironment`: provisioning needs the same answer, and
+     * `ApplicationEnvironment` depends on `ApplicationProvisioner`, so the service cannot be the
+     * source without a container cycle.
      */
     public function envPath(): string
     {
@@ -903,17 +676,10 @@ class Application extends Model
     /**
      * Does this application's document root hand out files, or is it proxied?
      *
-     * The distinction matters to {@see envPath()} and nowhere else yet. A Node
-     * application is reached through a reverse proxy: nothing under its
-     * document root is fetchable by path, and the vhost denies dotfiles ahead
-     * of the proxy besides. Treating that directory as "served" moved the
-     * `.env` a level up for safety it did not need — while the systemd unit
-     * went on loading `EnvironmentFile` from the code root, so the panel
-     * offered an editor for a file the service never read.
-     *
-     * `php` and `static` genuinely serve what is in the directory, and there
-     * the rule holds: Apache's dotfile rule is a `DirectoryMatch`, which does
-     * not cover a `.env` *file* at all.
+     * Used by {@see envPath()}. A Node app sits behind a reverse proxy: nothing under its document
+     * root is fetchable by path, so its `.env` stays beside the code where the systemd unit loads
+     * it. `php` and `static` serve the directory's files, so the rule holds (Apache's dotfile rule
+     * is a `DirectoryMatch` and does not cover a `.env` file).
      */
     public function servesFiles(): bool
     {
@@ -921,25 +687,12 @@ class Application extends Model
     }
 
     /**
-     * Every log this site produces, in one directory.
+     * Every log this site produces, in one directory (web server access/error logs, process logs,
+     * PHP error and WAF detect logs), so "where are my logs" does not depend on the web server.
      *
-     * They were in four places: the web server's access and error logs under
-     * `/var/log/nginx` or `/var/log/apache2`, the process logs already here,
-     * and the PHP error and WAF detect logs inside `.panel`. So the answer to
-     * "where are my logs" depended on which web server the server was built
-     * with and which kind of log was being asked about, and two of the four
-     * were readable only by root.
-     *
-     * Above the document root, like everything else the panel writes — an
-     * access log names every visitor's address and every URL they asked for,
-     * including whatever people put in query strings, and inside the served
-     * directory the only thing between that and the internet is a vhost deny
-     * rule.
-     *
-     * Not `.panel`: that directory is the panel's own bookkeeping and is
-     * deliberately unreadable by the site's owner, whereas a log is the one
-     * thing they most need to read. {@see ApplicationLogDirectory} for the
-     * ownership that makes both true at once.
+     * Above the document root: an access log names every visitor and URL. Not `.panel`, which is
+     * deliberately unreadable by the site's owner while a log is what they most need to read.
+     * {@see ApplicationLogDirectory} for the ownership that makes both true.
      */
     public function logsPath(): string
     {
@@ -947,12 +700,11 @@ class Application extends Model
     }
 
     /**
-     * The root-owned directory of extra web server rules this site's vhost
-     * includes. {@see config('server.site_rules_root')}
+     * The root-owned directory of extra web server rules this site's vhost includes.
+     * {@see config('server.site_rules_root')}
      *
-     * Named like the vhost file — the slug, which is immutable, or the domain
-     * on a row from before slugs existed — so the two always agree and the
-     * directory never has to follow a rename.
+     * Named like the vhost file (slug, or domain on a row from before slugs) so the two always
+     * agree and the directory never has to follow a rename.
      */
     public function siteRulesPath(): string
     {
@@ -960,14 +712,9 @@ class Application extends Model
     }
 
     /**
-     * Where the WAF writes what it *would* have blocked, in detect mode.
-     *
-     * Defined once because the two places that needed it — the vhost template
-     * data and the Logs screen — each built the string themselves and drifted:
-     * the file the panel opened was not the file the web server wrote, so
-     * detect mode showed an empty log however much it had matched. That reads
-     * as "nothing would be blocked" and invites someone to switch a ruleset to
-     * enforcing without having actually checked it.
+     * Where the WAF writes what it *would* have blocked, in detect mode. Defined once because the
+     * vhost template data and the Logs screen each built it and drifted, so detect mode showed an
+     * empty log however much it matched.
      */
     public function wafDetectLogPath(): string
     {

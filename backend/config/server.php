@@ -93,29 +93,19 @@ use App\Services\Server\WebServers\OlsDriver;
 return [
 
     /*
-     * How long a read-only screen that asks the server keeps its answer
-     * (FS-C46) — Settings, the dashboard facts, the database engine list.
-     * Every change the panel makes clears it at once; this only bounds how
-     * long a change made by hand on the box takes to show. 0 turns it off.
+     * How long a read-only screen that asks the server (Settings, dashboard facts, database engine
+     * list) keeps its answer. Panel changes clear it at once; this only bounds how long a manual
+     * change on the box takes to show. 0 turns it off.
      */
     'probe_cache_seconds' => (int) env('SERVER_PROBE_CACHE_SECONDS', 30),
 
     /*
-     * The wildcard-DNS services behind the temporary hostname a new site can be
-     * given before its real domain points here. Both resolve
-     * `<anything>.<ip>.<suffix>` to that address with no DNS setup at all, and
-     * both accept the address dotted (`1.2.3.4`) or dashed (`1-2-3-4`).
+     * Wildcard-DNS services behind the temporary hostname a new site gets before its real domain
+     * points here. Both resolve `<anything>.<ip>.<suffix>` (dotted or dashed IP).
      *
-     * ONE list, offered and recognised, deliberately. It was briefly two — a
-     * single suffix to offer and a broader list to recognise — and that split
-     * is a trap: a suffix offered but missing from the recognised list would
-     * produce hostnames the panel then believed were the user's own and sent
-     * to Let's Encrypt, spending from a weekly quota shared with the entire
-     * internet. Keeping one list makes that state unrepresentable.
-     *
-     * More than one so a panel is not wholly dependent on a single free
-     * service somebody else runs, and so the frontend can spread new sites
-     * across them rather than pointing every install at the same host.
+     * One list for both offering and recognising: a suffix offered but not recognised would give
+     * hostnames the panel treats as the user's own and sends to Let's Encrypt, burning its shared
+     * weekly quota. More than one so the panel does not depend on a single free service.
      */
     'temporary_domain_suffixes' => ['nip.io', 'sslip.io'],
 
@@ -124,22 +114,14 @@ return [
     | Privilege escalation
     |--------------------------------------------------------------------------
     |
-    | php-fpm runs as the unprivileged panel account (install.sh sets
-    | `user = ${APP_USER}` on the pool), so every operation that touches the
-    | system — useradd, systemctl, ufw, apt-get, writing a vhost — has to go
-    | through sudo. install.sh grants exactly these binaries NOPASSWD in
-    | /etc/sudoers.d/<slug>; this list mirrors it and must stay in step with
-    | it, because a binary here that is not there fails at runtime, and one
-    | there but not here is a privilege granted for no reason.
+    | php-fpm runs as the unprivileged panel account, so anything touching the system goes through
+    | sudo. install.sh grants exactly the binaries below NOPASSWD in /etc/sudoers.d/<slug>; a binary
+    | listed here but not granted fails at runtime, and one granted but not listed is a needless
+    | privilege.
     |
-    | Prefixing happens in ServerOps, in one place, rather than at the 60+
-    | call sites. Commands stay arrays — no shell, no interpolation, so this
-    | adds no injection surface.
-    |
-    | `enabled` is false under phpunit (see phpunit.xml): the suite asserts on
-    | the commands it expects a feature to run, and a sudo prefix everywhere
-    | would test the prefix rather than the feature. ServerOpsPrivilegeTest
-    | turns it on and covers the prefixing itself.
+    | The prefix is added in ServerOps, in one place. Commands stay arrays (no shell, no
+    | interpolation). `sudo` is off under phpunit (see phpunit.xml) so tests assert on the real
+    | commands; ServerOpsPrivilegeTest covers the prefixing.
     |
     */
 
@@ -148,120 +130,76 @@ return [
 
         // Binaries that do not work as the panel user.
         //
-        // This is the ONE list. install.sh's configure_sudoers() no longer
-        // carries a copy of its own — it renders the sudoers file from here
-        // via `artisan panel:sudoers --print`, and so does every update. It
-        // used to be two hand-maintained lists, and every privilege bug this
-        // panel has had was that duplication: `touch`, `certbot`, `openssl`,
-        // `crontab`, `stat` and `mysqldump` were each added to one copy and
-        // not the other, and each one broke a feature that looked configured.
-        //
-        // Adding a binary here is now sufficient. Where it lives on disk, when
-        // that is not /usr/bin, goes in `paths` below.
+        // The ONE list: install.sh renders the sudoers file from here via
+        // `artisan panel:sudoers --print`, and so does every update. Two hand-kept lists drifted and
+        // broke features. A binary not in /usr/bin also goes in `paths` below.
         'binaries' => [
             'apt-get', 'apt-cache', 'dpkg-query',
-            // The security-update button runs unattended-upgrades' own binary
-            // rather than `apt-get upgrade`, so that "install them now" applies
-            // exactly the policy the toggle beside it already configured. The
-            // binary reads that policy whether or not apt's timer is enabled,
-            // which is what makes a manual-only posture work.
+            // Runs unattended-upgrades' own binary (not `apt-get upgrade`) so "install now" applies the
+            // policy the toggle configured, even when apt's timer is disabled.
             'unattended-upgrade',
-            // systemd-run puts the panel update in a transient unit of its
-            // own, so restarting the panel's services partway through the
-            // update does not kill the update — see PanelUpdateRunner.
+            // Runs the panel update in a transient unit so restarting panel services mid-update does
+            // not kill it (see PanelUpdateRunner).
             'systemctl', 'journalctl', 'systemd-run',
             'useradd', 'userdel', 'usermod', 'groupadd',
             'chpasswd', 'gpasswd', 'getent', 'id',
             'tee', 'touch', 'mkdir', 'chown', 'chmod', 'rm',
             'cp', 'mv', 'ln', 'install', 'truncate',
-            // `head` sits beside `tail` and `cat` for the same reason they are
-            // here: the file manager reads a site's files, which belong to the
-            // site's own user. It reads the first bytes of a file to decide
-            // what a preview may claim it is.
+            // The file manager reads the first bytes of a site file (owned by the site user) to
+            // decide what a preview may claim it is.
             'find', 'tail', 'head', 'cat', 'test', 'which', 'stat',
-            // The immutable flag on a site root — see SiteRootLock. Without it
-            // the site user can rename their root-owned site directory away
-            // (it sits in their home) and substitute their own.
+            // Immutable flag on a site root (SiteRootLock): stops the site user renaming their
+            // root-owned site directory away and substituting their own.
             'chattr', 'lsattr',
-            // Per-home ACLs — see HomeDirectoryAccess. A home is closed to
-            // every other local account and opened, by user id, to exactly
-            // the panel and the web server.
+            // Per-home ACLs (HomeDirectoryAccess): a home is closed to other local accounts and
+            // opened, by user id, to the panel and the web server only.
             'setfacl', 'getfacl',
-            // `openssl req` writes the key and certificate into /etc/ssl, and
-            // `openssl x509 -enddate` reads out of /etc/letsencrypt/live —
-            // both root-only. Without this, self-signed certificates cannot be
-            // generated at all and no expiry can be read off disk.
+            // `openssl req` writes into /etc/ssl and `openssl x509 -enddate` reads
+            // /etc/letsencrypt/live, both root-only.
             'openssl',
-            // `crontab -l -u <user>` reads somebody else's crontab, which is
-            // the whole point of it during a server sync.
+            // `crontab -l -u <user>` reads another user's crontab during a server sync.
             'crontab',
-            // certbot writes /etc/letsencrypt and reads the account key. It was
-            // installed by install.sh and never granted, so every Let's
-            // Encrypt issuance ran unprivileged and could not have worked.
+            // certbot writes /etc/letsencrypt and reads the account key.
             'certbot',
             'runuser', 'sh', 'env', 'rsync',
-            // `openlitespeed` alongside `lswsctrl` because they do different
-            // jobs: lswsctrl restarts, and only `openlitespeed -t` validates a
-            // config. Granting the control script but not the binary would
-            // leave the panel able to restart OpenLiteSpeed but not to check
-            // what it is about to restart it into.
+            // `openlitespeed` beside `lswsctrl`: lswsctrl restarts, only `openlitespeed -t` validates
+            // a config.
             'nginx', 'apachectl', 'lswsctrl', 'openlitespeed',
             // Workers run as supervisord programs; this writes and controls them.
             'supervisorctl',
             'phpenmod', 'phpdismod', 'update-alternatives',
-            // The dump/restore clients belong here as much as the shells do:
-            // backups run `dump_client` from the engines list below, and a
-            // client the panel will not elevate fails with "a password is
-            // required" on a feature that looks configured.
+            // DB dump/restore clients (backups run `dump_client` from the engines list below).
             //
-            // Not `redis-cli`, deliberately. It reaches Redis over TCP like the
-            // panel itself does, so it needs no root — and elevating it put the
-            // Redis password on sudo's command line (`sudo -n env
-            // REDISCLI_AUTH=…`), where sudo logs it to auth.log and the journal
-            // on every call, and the Logs screen shows both to anyone who may
-            // view logs. Found on the nginx test box, 2026-09-27.
+            // Not `redis-cli`: it reaches Redis over TCP and needs no root, and elevating it put the
+            // Redis password on sudo's command line, which sudo logs to auth.log and the journal.
             'mysql', 'mysqldump', 'mariadb', 'mariadb-dump',
             'mongosh', 'mongodump', 'mongorestore',
-            // psql is a pg_wrapper symlink rather than the binary itself; sudo
-            // matches it by the path given, the same way it already matches
-            // /usr/bin/mysql, which is a symlink to mariadb on this very box.
+            // psql is a pg_wrapper symlink; sudo matches by the path given, as with /usr/bin/mysql.
             'psql', 'pg_dump', 'pg_restore', 'pg_isready', 'pg_lsclusters',
             'ufw', 'fail2ban-client', 'sshd',
-            // Container login (RC-28) installs its own sudoers drop-in, and a
-            // sudoers file is only ever moved into place after `visudo -cqf`
-            // has accepted it -- the same rule PanelSudoers follows as root.
+            // Container login installs its own sudoers drop-in, moved into place only after
+            // `visudo -cqf` accepts it (the rule PanelSudoers follows).
             'visudo',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
             'tar', 'git', 'fnm', 'wp',
-            // The paid addons Central installs (docs: sv-wp-toolkit and
-            // srvrsoorg/log-monitoring-suite, docs/INTEGRATION.md). wp-toolkit sudoes
-            // to the site user itself and writes web server rules;
-            // log-monitoring-suite reads every site's access log. Both are
-            // called only from the central-only addon endpoints.
+            // Paid addons Central installs (sv-wp-toolkit, log-monitoring-suite). wp-toolkit sudoes to
+            // the site user and writes web server rules; log-monitoring-suite reads every site's
+            // access log. Called only from the central-only addon endpoints.
             'wp-toolkit', 'log-monitoring-suite',
-            // Docker. Granted to the panel rather than by adding the site user
-            // to the `docker` group, and the distinction is the whole security
-            // model: group membership is root equivalence -- a member can bind
-            // mount / into a container and write anywhere. So the panel
-            // elevates the specific commands and nobody else gets the socket.
+            // Docker is granted to the panel, not via the `docker` group: group membership is root
+            // equivalence (bind-mount / into a container), so only specific commands are elevated.
             'docker',
         ],
 
-        // Where a binary lives, when it is not /usr/bin/<name>.
+        // Where a binary lives, when it is not /usr/bin/<name>. Only the exceptions.
         //
-        // Only the exceptions, so the list above stays the thing you read to
-        // answer "what may the panel elevate". sudo matches on the *resolved*
-        // absolute path, so a wrong entry here does not degrade — it silently
-        // denies the command with "a password is required", on a feature that
-        // looks configured.
+        // sudo matches the *resolved* absolute path, so a wrong entry silently denies the command
+        // with "a password is required".
         //
-        // runuser carries both spellings deliberately: it is in /usr/sbin on
-        // Debian/Ubuntu and /usr/bin on RHEL-family, and sudo ignores entries
-        // whose file does not exist, so listing both is safe and listing one
-        // breaks every asUser() operation — file manager, deployments, wp-cli
-        // — on half the distributions.
+        // runuser lists both spellings: /usr/sbin on Debian/Ubuntu, /usr/bin on RHEL-family; sudo
+        // ignores entries whose file does not exist.
         'paths' => [
             'useradd' => ['/usr/sbin/useradd'],
             'userdel' => ['/usr/sbin/userdel'],
@@ -271,8 +209,7 @@ return [
             'runuser' => ['/usr/sbin/runuser', '/usr/bin/runuser'],
             'nginx' => ['/usr/sbin/nginx'],
             'apachectl' => ['/usr/sbin/apachectl'],
-            // Not /usr/bin: OpenLiteSpeed installs under /usr/local/lsws,
-            // so without this the grant would name a path that does not exist.
+            // OpenLiteSpeed installs under /usr/local/lsws, not /usr/bin.
             'lswsctrl' => ['/usr/local/lsws/bin/lswsctrl'],
             'openlitespeed' => ['/usr/local/lsws/bin/openlitespeed'],
             'phpenmod' => ['/usr/sbin/phpenmod'],
@@ -290,21 +227,15 @@ return [
             'log-monitoring-suite' => ['/usr/local/bin/log-monitoring-suite'],
         ],
 
-        // Granted as patterns rather than names, and so absent from `binaries`.
-        //
-        // PoolManager tests a per-app pool with `php-fpmX.Y -t` before every
-        // reload, and the set of installed versions changes through the panel's
-        // own PHP-version feature. An exact list would need editing every time
-        // a version is added; ServerOps::elevate() mirrors this with its
+        // Granted as patterns, not names. PoolManager tests a per-app pool with `php-fpmX.Y -t`, and
+        // installed versions change through the panel; ServerOps::elevate() mirrors this with its
         // str_starts_with('php-fpm') check.
         'wildcards' => [
             '/usr/sbin/php-fpm*',
         ],
 
-        // The file the grant is written to. install.sh names it from
-        // PANEL_SLUG, which also defaults the panel's account name — so the
-        // account is the right derivation, with an override for an operator
-        // who set the two differently.
+        // The file the grant is written to. install.sh names it from PANEL_SLUG, which also defaults
+        // the panel's account name; override when the two differ.
         'sudoers_file' => env('PANEL_SUDOERS_FILE'),
     ],
 
@@ -313,36 +244,22 @@ return [
     | File manager archives
     |--------------------------------------------------------------------------
     |
-    | Compress and extract run on the queue, not in the request. The request's
-    | ceiling belongs to the web server rather than to PHP, and the three the
-    | panel installs disagree:
-    |
-    |   nginx            fastcgi_read_timeout 300
-    |   Apache           ProxyTimeout 300
-    |   OpenLiteSpeed    initTimeout 60
-    |
-    | So there was no synchronous ceiling that both fit a large archive and
-    | held on every web server — past the lowest, the request dies *above* PHP,
-    | where the cleanup that removes a half-written archive cannot run. The
-    | work moved to a worker instead, which is the same conclusion
-    | `RunDatabaseExport` reached about mysqldump.
+    | Compress and extract run on the queue, not in the request: the installed web servers time out
+    | at different points (nginx 300s, Apache 300s, OpenLiteSpeed 60s), and past the lowest the
+    | request dies above PHP, where cleanup of a half-written archive cannot run.
     |
     */
 
     'files' => [
-        // Own keys rather than the backups group's: a nightly job that may run
-        // for six hours and a button a person is waiting on do not want the
-        // same trade-off, even though both drive the same tar.
+        // Own keys, not the backups group's: a six-hour nightly job and a button someone is waiting
+        // on want different trade-offs.
         'compressor' => env('FILES_COMPRESSOR', 'auto'),
         'compression_level' => (int) env('FILES_COMPRESSION_LEVEL', 1),
 
-        // The ceiling for the queued archive job. There is deliberately no
-        // *size* limit any more: a cap only moves the wall, and the selection
-        // a user makes is not the panel's to second-guess.
+        // Ceiling for the queued archive job. No size limit: a cap only moves the wall.
         //
-        // Kept in step with `retry_after` by QueueTimeoutTest, which fails if
-        // a job can outlive its own reservation — the property that was
-        // violated once already by raising one literal on its own.
+        // Kept in step with `retry_after` by QueueTimeoutTest: a job must not outlive its own
+        // reservation.
         'archive_job_timeout' => (int) env('FILES_ARCHIVE_JOB_TIMEOUT', 21600),
     ],
 
@@ -351,21 +268,18 @@ return [
     | Backups
     |--------------------------------------------------------------------------
     |
-    | Ordered steps of one backup run. Order is the safety property: prune is
-    | last and only runs after verify, so the panel never deletes an old backup
-    | to make room for one that then fails.
-    |
+    | Ordered steps of one backup run. Prune is last and runs only after verify, so the panel never
+    | deletes an old backup to make room for one that then fails.
     */
 
     'backups' => [
         'steps' => [
-            // Only for a "This server" destination (#14): is the folder there,
-            // and will the backup fit? First, so a refusal costs nothing.
+            // Only for a "This server" destination: is the folder there and will the backup fit?
+            // First, so a refusal costs nothing.
             CheckLocalSpace::class,
             DumpDatabase::class,
-            // Before ArchiveFiles, which folds the per-volume tars this writes
-            // into the one uploaded artefact — the same way it already folds in
-            // the database dumps.
+            // Before ArchiveFiles, which folds the per-volume tars written here into the uploaded
+            // artefact.
             ArchiveVolumes::class,
             ArchiveFiles::class,
             UploadArtifact::class,
@@ -373,35 +287,29 @@ return [
             PruneOldBackups::class,
         ],
 
-        // Restore stages, in order. Everything before `restore_database` is
-        // non-destructive on purpose: the download, the archive check and the
-        // safety backup all fail with the live application untouched.
+        // Restore stages, in order. Everything before `restore_database` is non-destructive: a
+        // failure leaves the live application untouched.
         'restore_steps' => [
             DownloadArtifact::class,
             VerifyDownload::class,
             SafetyBackup::class,
             ExtractArchive::class,
             RestoreDatabase::class,
-            // After the archive is unpacked and before the compose file is
-            // swapped in: it stops the containers, replaces the volume
-            // contents, and leaves starting them to RestartProcess — so a
-            // volumes+config restore comes up on the restored definition rather
-            // than the old one.
+            // After extraction, before the compose file is swapped in: stops containers and replaces
+            // volume contents; RestartProcess starts them, so the app comes up on the restored
+            // definition.
             RestoreVolumes::class,
             SwapFiles::class,
             RestartProcess::class,
         ],
 
-        // Dumps and archives are written here before upload. Under storage/
-        // rather than /tmp: /tmp is cleared on reboot and is often a small
-        // tmpfs, and a multi-gigabyte site archive would fill it.
+        // Dumps and archives are written here before upload. Under storage/, not /tmp, which is
+        // cleared on reboot and often a small tmpfs.
         'working_dir' => env('BACKUP_WORKING_DIR', storage_path('app/backups')),
 
-        // "This server" destinations (#14). The folder must sit strictly below
-        // one of these roots — where an extra disk is usually mounted, or the
-        // system's own backup directory. A backup is refused when it would
-        // leave less than min_free_percent of the disk, or min_free_bytes,
-        // whichever is more: a full disk takes every site down with it.
+        // "This server" destinations. The folder must sit below one of these roots. A backup is
+        // refused when it would leave less than min_free_percent or min_free_bytes (whichever is
+        // more) free: a full disk takes every site down.
         'local' => [
             'allowed_roots' => ['/var/backups', '/mnt', '/media'],
             'default_path' => '/var/backups/panel',
@@ -412,16 +320,12 @@ return [
         /*
          * Downloads of backups kept on SFTP or FTP (prepare, then download).
          *
-         * Those providers have no link a browser can follow, so the panel
-         * copies the archive here first and serves the copy itself. Under
-         * storage/ for the reason `working_dir` is: /tmp is often a small
-         * tmpfs. Each copy is kept `download_ttl_seconds`, then removed by
-         * `backups:prune-downloads`.
+         * Those providers have no browser-followable link, so the panel copies the archive here
+         * (under storage/, like `working_dir`) and serves the copy. Copies live
+         * `download_ttl_seconds`, then `backups:prune-downloads` removes them.
          *
-         * `download_free_margin_bytes` is what must still be free after the
-         * copy lands — the sites on this server keep writing while it does.
-         * `download_concurrency` caps how many copies are being sent at once:
-         * each one holds a PHP worker for the whole transfer.
+         * `download_free_margin_bytes` must stay free after the copy lands. `download_concurrency`
+         * caps simultaneous copies; each holds a PHP worker for the whole transfer.
          */
         'download_dir' => env('BACKUP_DOWNLOAD_DIR', storage_path('app/backup-downloads')),
         'download_ttl_seconds' => (int) env('BACKUP_DOWNLOAD_TTL_SECONDS', 3600),
@@ -431,133 +335,64 @@ return [
         /*
          * How long one backup or restore may run before the worker kills it.
          *
-         * This was a hardcoded 3600 and it made large sites impossible, not
-         * slow: a 24 GB archive measured 13 minutes to build and — on a link
-         * whose congestion control could not fill it — over three hours to
-         * upload, so the job was killed at the hour mark every time. The
-         * failure looked like a stall rather than a limit, because nothing
-         * recorded progress to contradict it.
+         * Six hours is the point past which waiting is worse than failing; the stall guard below,
+         * not this number, ends a wedged run. Raising one without the other lets a dead upload hold
+         * the only worker until the timeout.
          *
-         * Six hours is not a guess at how long a backup "should" take. It is
-         * the point past which waiting is worse than failing, and the stall
-         * guard below — not this number — is what ends a genuinely wedged run.
-         * A ceiling this high is only safe *because* that guard exists; raise
-         * one without the other and a dead upload owns the only worker until
-         * the timeout, which is precisely the bug this pair replaces.
-         *
-         * `queue.connections.redis.retry_after` MUST stay above this, or a slow
-         * job is handed to a second worker while the first is still running and
-         * the site is archived twice, concurrently, to one key (Laravel queues:
-         * job expirations & timeouts). `config/queue.php` derives it from here
-         * so the two cannot drift.
+         * `queue.connections.redis.retry_after` MUST stay above this, or a second worker takes a
+         * slow job and archives the site twice to one key. `config/queue.php` derives it from here.
          */
         'job_timeout' => (int) env('BACKUP_JOB_TIMEOUT', 21600),
 
         /*
          * Fail an upload that has transferred nothing for this long.
          *
-         * A backup can be slow for honest reasons — a big archive on a thin
-         * link — and no wall-clock limit can tell that apart from a dead
-         * connection. Bytes can: a transfer that is moving is alive however
-         * slowly, and one that has moved nothing in twenty minutes is not
-         * coming back. Google hangs up on an idle resumable session and the
-         * client does not always notice; without this the worker sits in
-         * `poll()` on a half-closed socket until the job timeout above, and
-         * every other backup and restore queues behind it.
-         *
-         * Twenty minutes rather than five: chunks are 100 MB, and at the
-         * ~2 MB/s a throttled link gives, a single chunk legitimately takes
-         * most of a minute — while a *stalled* one shows zero movement, not
-         * slow movement. The guard keys on zero, so it is generous by design.
+         * A wall-clock limit cannot tell a slow link from a dead one; bytes can. Google drops idle
+         * resumable sessions and the client may not notice, leaving the worker blocked on a
+         * half-closed socket until `job_timeout`. Twenty minutes because a 100 MB chunk on a
+         * throttled link takes most of a minute, while a stalled one shows zero movement.
          */
         'upload_stall_seconds' => (int) env('BACKUP_UPLOAD_STALL_SECONDS', 1200),
 
         /*
-         * How long a run that has reported *no* progress at all is given.
+         * How long a run that has reported no progress at all is given.
          *
-         * Only reachable before the upload starts — a crash during the database
-         * dump or while building the archive, where there is no heartbeat to
-         * read. Separate from `job_timeout` on purpose: this used to be derived
-         * from it, so raising the timeout to six hours would have stretched
-         * this from 65 minutes to six hours as a side effect, locking a target
-         * out for an afternoon because of a change about upload speed.
-         *
-         * Must stay well above the longest archive step. Too low does not
-         * abort anything — it frees the guard while the worker is still
-         * writing, and a second backup starts alongside the first.
+         * Only reachable before the upload starts (crash during dump or archive: no heartbeat).
+         * Separate from `job_timeout` so raising that does not stretch this. Must stay above the
+         * longest archive step, or the guard frees while the worker still writes and a second
+         * backup starts alongside.
          */
         'no_heartbeat_stale_seconds' => (int) env('BACKUP_NO_HEARTBEAT_STALE_SECONDS', 3900),
 
         /*
          * Memory the upload step is allowed while it runs.
          *
-         * **Small Drive backups OOM; large ones do not.** The threshold is
-         * inverted from every intuition, and it is not ours:
-         * `GoogleDriveAdapter::upload()` branches on
-         * `$size <= self::MAX_CHUNK_SIZE` (100 MB). Above it, a resumable
-         * `StreamableUpload` streams the archive and memory stays flat at any
-         * size — a 25 GB backup completed this way on 2026-09-21. At or below
-         * it, the adapter takes a "one shot" path into Google's
-         * `MediaFileUpload`, whose multipart branch runs
-         * `base64_encode($this->data)`: the whole archive in RAM, plus a 4/3
-         * copy, plus the concatenation it is spliced into.
+         * `GoogleDriveAdapter::upload()` streams a resumable upload above 100 MB (flat memory), but
+         * at or below it a one-shot `MediaFileUpload` base64-encodes the whole archive in RAM
+         * (worst case about 500 MB). So small Drive backups OOM under the 128M default and large
+         * ones do not. A ceiling is not a reservation; PHP allocates only what it uses.
          *
-         * A 35 MB archive therefore killed the worker six times under the 128 M
-         * default, with `tried to allocate 47,450,536` — exactly 35,587,878 × 4/3.
-         *
-         * Raising the ceiling is the *complete* fix, not a postponement, and
-         * that turns on one fact: the exposure is **bounded at 100 MB by the
-         * adapter itself**. Worst case is roughly 100 MB of data, a 133 MB
-         * base64 copy, and the 133 MB string it is concatenated into — call it
-         * 500 MB — and every archive past that point uses the streaming path
-         * and needs almost nothing. A ceiling is not a reservation: PHP
-         * allocates only what it uses, so a panel whose backups are small never
-         * touches this.
-         *
-         * The alternative was overriding the vendor's `upload()` to force the
-         * streaming path at every size. Rejected on inspection: it reads three
-         * `private` members a subclass cannot reach, and the block that would
-         * have to be copied calls `$this->unpublish()` — a method that does not
-         * exist anywhere in that class. Copying it means copying a fatal that
-         * only today's control flow happens to step around.
+         * Forcing the streaming path means overriding the vendor's `upload()`, which reads private
+         * members and calls a method that does not exist; not worth it.
          */
         'upload_memory_limit' => env('BACKUP_UPLOAD_MEMORY_LIMIT', '768M'),
 
         /*
          * What compresses the archive, and how hard.
          *
-         * `tar -czf` means gzip at level 6 on a single core. Measured on a
-         * 103 GB site: **67 minutes, 99.5% of one core, seven cores idle, and
-         * the output was 99.46% of the input** — an hour of CPU to save half a
-         * percent, because the data was already-compressed media.
+         * `pigz` is gzip split across cores: same format, readable by plain `gzip -d`. `auto` falls
+         * back to gzip when pigz is absent, because the updater ships code, never packages, and
+         * requiring pigz would break existing panels.
          *
-         * `pigz` is gzip split across cores. Same format, same flags, same
-         * output a plain `gzip -d` reads; it just uses the machine. On an
-         * 8-core box that is the difference between ~67 minutes and ~10.
-         *
-         * **`auto` falls back to gzip when pigz is absent, and that is the
-         * point.** The updater ships code, never packages, so a new dependency
-         * reaches fresh installs only — a version that *required* pigz would
-         * break every existing panel on upgrade. Detection happens at run time,
-         * per archive.
-         *
-         * Level 1 rather than gzip's default 6. For already-compressed data the
-         * level is irrelevant (both measured 99.3%); for compressible data
-         * level 1 is 1.8x faster for 7.8% more bytes. A backup is written once
-         * and read almost never, so speed is worth more than the last few
-         * percent — the same call v7's agent made (`gzip -1`, backup.go:369).
+         * Level 1, not gzip's 6: already-compressed data gains nothing, and compressible data is
+         * 1.8x faster for 7.8% more bytes. A backup is written once and rarely read.
          */
         /*
          * How many *consecutive* failed chunks end an upload.
          *
-         * Consecutive, not total: a 100 GB archive is ~1048 chunks, and a
-         * budget of total failures would kill an upload that had recovered
-         * from every one of them hours apart. The counter resets whenever a
-         * chunk lands.
-         *
-         * The backoff grows because the failures worth surviving are transient
-         * — a 5xx, a dropped connection — and hammering Google immediately is
-         * how a blip becomes a ban.
+         * Consecutive, not total: the counter resets whenever a chunk lands, so a long upload that
+         * recovered from every failure is not killed. Backoff grows so a blip does not become a
+         * ban.
          */
         'upload_attempts' => (int) env('BACKUP_UPLOAD_ATTEMPTS', 5),
         'upload_backoff' => [5, 15, 30, 60],
@@ -571,27 +406,20 @@ return [
     | Storage destinations
     |--------------------------------------------------------------------------
     |
-    | `panel_url` is the panel's own public origin, and Google OAuth is why it
-    | has to be configuration rather than something derived from the incoming
-    | request. The redirect URI registered with Google must match the one sent
-    | in the token exchange byte for byte, and a request-derived origin varies
-    | with proxies, Host headers and whoever is calling — so it would match
-    | right up until it silently did not. `install.sh:1226` already writes
-    | FRONTEND_URL as `{scheme}://{PANEL_HOST}`, which is exactly this value.
+    | `panel_url` is the panel's own public origin. It is configuration, not derived from the
+    | request, because Google OAuth requires the registered redirect URI to match the token
+    | exchange byte for byte, and a request-derived origin varies with proxies and Host headers.
     |
     */
 
     'storage' => [
         'panel_url' => env('FRONTEND_URL', env('APP_URL', '')),
 
-        // Google is not slow, but a hung socket during a connect attempt holds
-        // an HTTP worker while somebody watches a spinner.
+        // Bounds a hung connect so it does not hold an HTTP worker.
         'oauth_timeout_seconds' => (int) env('STORAGE_OAUTH_TIMEOUT_SECONDS', 15),
 
-        // How long an operator has to finish approving at Google before the
-        // callback is refused. Long enough to read a consent screen and pick an
-        // account, short enough that an abandoned attempt cannot be resumed by
-        // someone else later.
+        // How long an operator has to finish approving at Google before the callback is refused;
+        // short enough that an abandoned attempt cannot be resumed later by someone else.
         'oauth_state_ttl_seconds' => (int) env('STORAGE_OAUTH_STATE_TTL_SECONDS', 900),
     ],
 
@@ -600,9 +428,8 @@ return [
     | Self-check (doctor)
     |--------------------------------------------------------------------------
     |
-    | Checks run against the real server by `panel:doctor` and the admin
-    | self-check screen. Order is display order, cheapest and most fundamental
-    | first: if privilege fails, most of the rest is noise.
+    | Checks run by `panel:doctor` and the admin self-check screen, in display order: cheapest and
+    | most fundamental first (if privilege fails, most of the rest is noise).
     |
     */
 
@@ -633,33 +460,19 @@ return [
     | Transient failures
     |--------------------------------------------------------------------------
     |
-    | Some failures mean "busy, nothing happened" rather than "wrong". The
-    | account tools take a lock on /etc/passwd and apt takes one on the dpkg
-    | database, and both refuse immediately if anything else holds it — which
-    | is routine on a server that is also running unattended-upgrades, or one
-    | where the installer has only just finished.
-    |
-    | Retrying is safe precisely because the command never started: the lock
-    | is taken before any change. Only patterns with that guarantee belong
-    | here. A failure that might have half-completed must not be retried.
-    |
-    | Without this the operator sees a hard error for something that would
-    | have worked a second later, and has no way to tell the difference.
+    | Some failures mean "busy, nothing happened" (the /etc/passwd lock, the dpkg lock held by
+    | unattended-upgrades). Retrying is safe only because the command never started, so only
+    | patterns with that guarantee belong here; a failure that might have half-completed must not
+    | be retried.
     |
     */
 
     /*
-    | apt's own lock budget, separate from `transient` above.
+    | apt's own lock budget, separate from `transient`.
     |
-    | The generic retry is sized for a passwd lock, whose holder is a competing
-    | account command that finishes in seconds. apt's holder on a freshly booted
-    | server is `unattended-upgrades`, which runs for minutes — so the same
-    | three-attempts-in-four-seconds budget expires long before the lock frees
-    | and the user gets a hard failure for something that would have worked on
-    | its own. 40 x 15s covers a ten-minute first boot.
-    |
-    | The wait costs nothing when the lock is free: apt takes it on the first
-    | attempt and no retry happens.
+    | The generic retry suits a passwd lock (seconds); apt's holder on a fresh server is
+    | `unattended-upgrades`, which runs for minutes. 40 x 15s covers a ten-minute first boot, and
+    | costs nothing when the lock is free.
     */
     'apt' => [
         'lock_attempts' => (int) env('SERVER_APT_LOCK_ATTEMPTS', 40),
@@ -670,18 +483,15 @@ return [
         'attempts' => (int) env('SERVER_OPS_RETRIES', 3),
         'delay_ms' => (int) env('SERVER_OPS_RETRY_DELAY_MS', 1500),
 
-        // A lock that survives every retry is not "busy" — the holder is a
-        // corpse and no amount of waiting helps. Telling the operator to try
-        // again is advice that can never come true, so these get their own
-        // code and their own message. `panel:doctor` names the files.
+        // A lock that survives every retry means a dead holder, so "try again" can never come true;
+        // these get their own code and message. `panel:doctor` names the files.
         'stale_lock_patterns' => [
             'cannot lock',
         ],
 
         // Matched case-insensitively against stderr.
         'patterns' => [
-            // useradd/usermod/userdel/groupadd, when another account tool
-            // (or a package postinst) holds the passwd/group lock.
+            // useradd/usermod/userdel/groupadd: another account tool holds the passwd/group lock.
             'cannot lock',
             'try again later',
             // apt/dpkg.
@@ -690,10 +500,8 @@ return [
             'is another process using it',
             // Generic EAGAIN from a lock file.
             'resource temporarily unavailable',
-            // certbot takes its lock before it does anything, so this one
-            // started nothing either. Usually certbot's own renew timer; it
-            // made a site delete's `certbot delete` fail outright while an
-            // issuance was running (2026-10-21).
+            // certbot takes its lock before doing anything (often its own renew timer), so nothing
+            // was started.
             'another instance of certbot is already running',
         ],
     ],
@@ -703,18 +511,14 @@ return [
     | Account operation serialization
     |--------------------------------------------------------------------------
     |
-    | The OS exposes a single lock over /etc/passwd (shared by useradd, userdel,
-    | usermod, gpasswd, chpasswd, passwd). Two of those running at once collide
-    | with "cannot lock /etc/passwd". The panel funnels every account command
-    | through one shared app-level lock so they run strictly one at a time.
+    | One shared app-level lock runs every account command (useradd, userdel, usermod, gpasswd,
+    | chpasswd, passwd) strictly one at a time; the OS lock on /etc/passwd otherwise fails
+    | concurrent ones with "cannot lock /etc/passwd".
     |
-    | ttl:  hold ceiling if the holder is killed mid-command (normally released
-    |       the instant the command finishes). MUST exceed the slowest account
-    |       command including ServerOps' transient retries (command timeout x
-    |       attempts) or the lock would expire mid-command and let a queued op
-    |       collide. Raise it if you raise SERVER_OPS_RETRIES a lot.
-    | wait: how long a queued command waits for the lock before returning
-    |       503 "busy, try again" instead of running.
+    | ttl:  hold ceiling if the holder dies mid-command. MUST exceed the slowest account command
+    |       including ServerOps' transient retries (command timeout x attempts), or the lock
+    |       expires mid-command. Raise it if you raise SERVER_OPS_RETRIES a lot.
+    | wait: how long a queued command waits before returning 503 "busy, try again".
     |
     */
 
@@ -728,25 +532,21 @@ return [
     |--------------------------------------------------------------------------
     | System user home base
     |--------------------------------------------------------------------------
-    |
-    | Parent directory under which system users' home directories are created
-    | (e.g. /home/<username>). Overridable so tests can point it at a writable
+    | Parent directory for system users' home directories (e.g. /home/<username>). Overridable so
+    | tests can use a temp path.
     | temp path.
     |
     */
 
     'home_base' => env('SERVER_HOME_BASE', '/home'),
 
-    // The Linux account the panel itself runs as — its PHP-FPM pool and queue
-    // worker. Empty: whoever this process runs as, which is that account in
-    // every place that matters (both run as it). HomeDirectoryAccess lets
-    // exactly this account through a closed home.
+    // The Linux account the panel itself runs as (PHP-FPM pool and queue worker). Empty: the
+    // account this process runs as. HomeDirectoryAccess lets exactly this account through a closed
+    // home.
     'panel_account' => env('SERVER_PANEL_ACCOUNT', ''),
 
-    // One shared "site unavailable" page, served in place of a disabled
-    // application's real vhost — same reasoning as the ACME challenge_root
-    // above: a single directory works for every serving profile, including
-    // node/proxy sites that have no document root of their own.
+    // One shared "site unavailable" page served in place of a disabled app's vhost; a single
+    // directory works for every serving profile, including node/proxy sites with no document root.
     'disabled_page_root' => env('SERVER_DISABLED_PAGE_ROOT', '/var/www/.disabled-site'),
 
     /*
@@ -754,21 +554,16 @@ return [
     | 8G Firewall
     |--------------------------------------------------------------------------
     |
-    | nginx's `map` directive only works in the `http` context, so the six
-    | rule-category maps live in one shared, server-wide file rather than a
-    | per-site vhost — see App\Services\Server\Applications\Waf8GManager.
-    | Apache needs no equivalent: SetEnvIfExpr is an ordinary per-vhost
-    | directive, so its ruleset is `Include`d straight from resources/waf/
-    | into each site's own <Directory> block, only when that site turns it on.
-    |
+    | nginx's `map` directive only works in the `http` context, so the six rule-category maps live
+    | in one server-wide file (see App\Services\Server\Applications\Waf8GManager). Apache's
+    | SetEnvIfExpr is per-vhost, so its ruleset is `Include`d from resources/waf/ only for sites
+    | that turn it on.
     */
     'waf' => [
         'nginx_maps_path' => env('SERVER_WAF_NGINX_MAPS_PATH', '/etc/nginx/conf.d/00-8g-firewall-maps.conf'),
-        // Apache's SetEnvIfExpr/SetEnvIfNoCase are ordinary per-vhost
-        // directives, so this isn't required to live anywhere in
-        // particular — one shared path avoids duplicating ~15KB of regex
-        // into every site's own vhost file, and each site just `Include`s
-        // it, matching the official 8G Apache port's own install method.
+        // Apache's SetEnvIf* directives are per-vhost, so the path is free; one shared file avoids
+        // duplicating ~15KB of regex into every vhost, and each site `Include`s it (as the official
+        // 8G Apache port does).
         'apache_setenvif_path' => env('SERVER_WAF_APACHE_SETENVIF_PATH', '/etc/apache2/waf/8g-apache-setenvif.conf'),
     ],
 
@@ -777,9 +572,7 @@ return [
     | Cron.d directory
     |--------------------------------------------------------------------------
     |
-    | Directory where managed cron job files are written (one file per job).
-    | Cron reads this automatically. Overridable so tests can point it at a
-    | writable temp path.
+    | Directory where managed cron job files are written (one per job). Overridable for tests.
     |
     */
 
@@ -794,17 +587,14 @@ return [
     | Per-site web server rules
     |--------------------------------------------------------------------------
     |
-    | One root-owned directory per site, `{root}/{slug}`, whose `*.conf` files
-    | the site's vhost includes. The vhost itself is rendered from a template
-    | and rewritten on every domain, certificate or HTTPS change, so anything
-    | written into it by hand or by an addon is lost on the next one. This
-    | directory is never rendered: the panel only creates it and removes it
-    | with the site, and what is inside belongs to whoever put it there — the
-    | WordPress toolkit's xmlrpc and uploads-PHP blocks, today.
+    | One root-owned directory per site, `{root}/{slug}`, whose `*.conf` files the site's vhost
+    | includes. The vhost is re-rendered on every domain, certificate or HTTPS change and loses
+    | hand edits; this directory is never rendered. The panel only creates it and removes it with
+    | the site; its contents belong to whoever put them there (today the WordPress toolkit's
+    | xmlrpc and uploads-PHP blocks).
     |
-    | Root-owned and outside the site's home on purpose. v7 kept the same
-    | directory under the site and chowned it to the site user, which let the
-    | site's own account write web server configuration.
+    | Root-owned and outside the site's home on purpose: otherwise the site's own account could
+    | write web server configuration.
     |
     */
 
@@ -816,15 +606,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | Paid addons are separate binaries Central installs on the server; the
-    | panel only detects them and runs them for Central (the routes in
-    | routes/api/server/central-addons.php answer nobody else). Whether a
-    | server may use one is decided by the binary itself, against the vendor's
-    | licence API — never here. A binary that is absent is "not installed".
+    | Paid addons are separate binaries Central installs on the server; the panel only detects and
+    | runs them for Central (routes/api/server/central-addons.php). Whether a server may use one
+    | is decided by the binary against the vendor's licence API, never here. An absent binary is
+    | "not installed".
     |
-    | Log Monitoring Suite reads its database location from a `.env` in its
-    | working directory, so it is always started from `workdir`: run from the
-    | panel's own directory it would read the panel's .env and the panel's
-    | database.
+    | Log Monitoring Suite reads its database location from a `.env` in its working directory, so
+    | it always starts from `workdir`; from the panel's directory it would read the panel's .env.
     |
     */
 
@@ -834,30 +622,26 @@ return [
         ],
         'log_monitoring_suite' => [
             'binary' => env('ADDON_LOG_MONITORING_SUITE_BINARY', '/usr/local/bin/log-monitoring-suite'),
-            // 0755, not 0700: the panel starts the binary with this as its
-            // working directory, and the chdir happens as the panel's own
-            // account, before sudo. The .env inside is 0600.
+            // 0755, not 0700: the panel chdirs here as its own account before sudo. The .env inside is
+            // 0600.
             'workdir' => env('ADDON_LOG_MONITORING_SUITE_WORKDIR', '/etc/log-monitoring-suite'),
             // Its SQLite database, root-only (0700).
             'data_dir' => env('ADDON_LOG_MONITORING_SUITE_DATA_DIR', '/var/lib/log-monitoring-suite'),
             // The fetch and prune timers (its docs/INTEGRATION.md §7a).
             'units_dir' => env('ADDON_LOG_MONITORING_SUITE_UNITS_DIR', '/etc/systemd/system'),
-            // `logs:fetch` refuses to run with this little free on the
-            // database's filesystem, so an install below it would sit there
-            // ingesting nothing.
+            // `logs:fetch` refuses to run with less free than this on the database's filesystem.
             'min_free_bytes' => 5 * 1024 * 1024 * 1024,
             'retention_days' => [7, 14, 30],
             'default_retention_days' => 7,
-            // v7's insighthub-agent. It ingests the same access logs, so it is
-            // removed before this one is installed — data included (decided
-            // 2026-10-02: v8 starts fresh).
+            // v7's insighthub-agent ingests the same access logs, so it is removed (data included)
+            // before this one is installed.
             'v7' => [
                 'service' => 'insighthub.service',
                 'unit_files' => ['/lib/systemd/system/insighthub.service', '/etc/systemd/system/insighthub.service'],
                 'directories' => ['/insighthub', '/var/log/insighthub'],
             ],
-            // Every report starts the binary and opens its database, so the
-            // same chart asked for twice within this window is answered once.
+            // Reports start the binary and open its database; the same chart asked for twice within
+            // this window is answered once.
             'cache_seconds' => (int) env('ADDON_LOG_MONITORING_SUITE_CACHE_SECONDS', 300),
         ],
         // A request waits this long for a command; anything that can take
@@ -888,21 +672,16 @@ return [
     ],
 
     /*
-    | Cron writes a job's output nowhere useful by default — it mails it, and a
-    | server with no MTA discards it silently, so a failing job leaves no trace
-    | at all. Managed jobs therefore redirect into one file per job here.
-    |
-    | Capturing output without bounding it is a slow disk-fill: a job running
-    | every minute writes forever. The logrotate drop-in below is written
-    | alongside the first job and is not optional.
+    | Cron mails job output, and a server with no MTA discards it silently, so managed jobs
+    | redirect into one file per job here. Unbounded capture slowly fills the disk, so the
+    | logrotate drop-in below is written with the first job and is not optional.
     */
 
     'cronjob_log_dir' => env('SERVER_CRONJOB_LOG_DIR', '/var/log/cronjobs'),
 
     /*
-    | Where systemd records a pending shutdown. Written when one is scheduled,
-    | removed when it is cancelled or fires — so its presence is the answer to
-    | "is a restart pending", and its USEC key is when.
+    | Where systemd records a pending shutdown: present while a restart is scheduled, and its USEC
+    | key is when.
     */
     'reboot' => [
         'scheduled_file' => env('SERVER_REBOOT_SCHEDULED_FILE', '/run/systemd/shutdown/scheduled'),
@@ -929,11 +708,9 @@ return [
     | Server timezone sources
     |--------------------------------------------------------------------------
     |
-    | Cron interprets schedules in the OS timezone, so "next run" must be
-    | computed there. Read from the filesystem rather than `timedatectl` —
-    | this is called once per row in a list response, and a process per row
-    | would make a cheap endpoint expensive. Overridable so tests can point
-    | at a fixture.
+    | Cron interprets schedules in the OS timezone, so "next run" is computed there. Read from the
+    | filesystem, not `timedatectl`: this runs once per list row and a process per row is
+    | expensive. Overridable for tests.
     |
     */
 
@@ -945,39 +722,25 @@ return [
     | Server capability detection
     |--------------------------------------------------------------------------
     |
-    | Fallback probes for when the installation script never ran (a server
-    | migrated in from another panel). Only one web server can own :80, so the
-    | first directory that exists wins. Overridable so tests can point at
-    | temp fixtures.
+    | Fallback probes for when the installation script never ran (a server migrated from another
+    | panel). Only one web server can own :80, so the first directory that exists wins.
+    | Overridable for tests.
     |
-    | Each entry is the directory the panel writes that web server's vhosts
-    | into, NOT the top of its config tree — and the difference is the whole
-    | point. `/etc/apache2` is shipped by `phpX.Y-fpm`, which every stack
-    | installs, so it is present on a box that has never had Apache: it holds
-    | one file, `conf-available/phpX.Y-fpm.conf`. Detecting on it meant every
-    | OpenLiteSpeed server answered "apache" (apache is listed first), which
-    | `panel:doctor` then reported as a stack mismatch on a perfectly healthy
-    | box — with a fix instruction that could never clear it.
-    |
-    | `sites-available`, `conf.d` and `conf/vhosts` are shipped by the web
-    | server's own package and by nothing else, so they mean what this list is
-    | asking. They are also the exact directories whose absence produced the
-    | original symptom, `tee: /etc/apache2/sites-available/…: No such file or
-    | directory`.
+    | Each entry is the directory the panel writes that web server's vhosts into, NOT the top of
+    | its config tree: `/etc/apache2` is shipped by `phpX.Y-fpm`, so it exists on boxes that never
+    | had Apache, and detecting on it made every OpenLiteSpeed server answer "apache".
+    | `sites-available`, `conf.d` and `conf/vhosts` are shipped only by the web server's own
+    | package.
     |
     */
 
     'web_servers' => [
-        // Narrow FIRST, broad second: the first path that exists wins, so
-        // listing both is strictly more permissive than either alone.
+        // Narrow FIRST, broad second: the first path that exists wins.
         //
-        // Only Apache needs the narrow form. `/etc/apache2` is shipped by
-        // `phpX.Y-fpm`, which every stack installs, so it exists on machines
-        // that have never had Apache -- and `sites-available` is the part only
-        // the apache2 package brings. Nothing ships a decoy `/etc/nginx` or
-        // `/usr/local/lsws`, so narrowing those bought nothing and cost two new
-        // ways to answer "no web server found" on a server plainly running one.
-        // Which is what it did, on a real OpenLiteSpeed box.
+        // Only Apache needs the narrow form: `/etc/apache2` is shipped by `phpX.Y-fpm` and exists
+        // without Apache, while `sites-available` only the apache2 package brings. Nothing ships a
+        // decoy `/etc/nginx` or `/usr/local/lsws`, and narrowing those could answer "no web server
+        // found" on a server plainly running one.
         'nginx' => ['/etc/nginx/sites-available', '/etc/nginx'],
         'apache' => ['/etc/apache2/sites-available', '/etc/httpd/conf.d'],
         'openlitespeed' => ['/usr/local/lsws/conf/vhosts', '/usr/local/lsws'],
@@ -985,10 +748,9 @@ return [
 
     'node_binary' => env('SERVER_NODE_BINARY', 'node'),
 
-    // Where capability detection looks for a binary before asking `which`:
-    // sudo's default secure_path, i.e. where `sudo which` would have looked.
-    // Colon-separated, like PATH; the test suite empties it so the machine
-    // running the tests cannot answer for the server being faked.
+    // Where capability detection looks for a binary before asking `which`: sudo's default
+    // secure_path. Colon-separated, like PATH; tests empty it so the host cannot answer for the
+    // faked server.
     'binary_search_path' => array_values(array_filter(explode(':', (string) env(
         'SERVER_BINARY_SEARCH_PATH',
         '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin',
@@ -999,27 +761,20 @@ return [
     | Applications
     |--------------------------------------------------------------------------
     |
-    | The site-type catalog. Each class declares its own fields, so the create
-    | form is rendered from data and a new type costs one class and one line
-    | here — no frontend change.
+    | The site-type catalog. Each class declares its own fields, so the create form is rendered
+    | from data and a new type costs one class and one line here.
     |
     */
 
     /*
-    | Web servers the panel can write config for. A server running something
-    | not listed here is refused rather than guessed at — a config we invented
-    | would fail its own test at best, and take every site down at worst.
-    | OpenLiteSpeed is absent deliberately: its config format is unlike the
-    | others and deserves its own implementation, not a near-miss.
+    | Web servers the panel can write config for. One not listed is refused rather than guessed
+    | at: an invented config would at best fail its own test and at worst take every site down.
     */
 
     'web_server_drivers' => [
         'nginx' => [
             'driver' => NginxDriver::class,
-            // Every driver carries one. Without it the "not available on this
-            // web server" message falls back to the config key, so a user on
-            // nginx would be told about "nginx" while an OpenLiteSpeed user got
-            // "OpenLiteSpeed" — the same sentence in two registers.
+            // Every driver carries a label, used in the "not available on this web server" message.
             'label' => 'Nginx',
             // Read/merge only when nginx diagnoses an undersized hostname hash.
             'config_path' => env('SERVER_NGINX_CONFIG_PATH', '/etc/nginx/nginx.conf'),
@@ -1029,18 +784,16 @@ return [
             'sites_available_dir' => env('SERVER_NGINX_SITES_AVAILABLE_DIR', '/etc/nginx/sites-available'),
             // Where the vhost templates point `access_log` / `error_log`.
             'log_dir' => env('SERVER_NGINX_LOG_DIR', '/var/log/nginx'),
-            // The answer for names no site claims (bug #55), under v7's names:
-            // port 80 in Ubuntu's own `default` (written only while it is the
-            // package's untouched file or the panel's), 443 beside it.
+            // The answer for names no site claims, under v7's names: port 80 in Ubuntu's own `default`
+            // (written only while it is the package's untouched file or the panel's), 443 beside it.
             'catch_all' => env('SERVER_NGINX_CATCH_ALL', '/etc/nginx/sites-available/default'),
             'catch_all_ssl' => env('SERVER_NGINX_CATCH_ALL_SSL', '/etc/nginx/sites-available/000-default-ssl.conf'),
             'catch_all_enabled_dir' => env('SERVER_NGINX_CATCH_ALL_ENABLED_DIR', '/etc/nginx/sites-enabled'),
             'catch_all_package' => 'nginx-common',
             // Where it lived before v7's names; removed in the same change.
             'catch_all_legacy' => ['/etc/nginx/conf.d/panel-default-server.conf'],
-            // The visitor's own address behind Cloudflare, and compression of
-            // more than HTML — both in v7's nginx, both http-level (CloudflareRealIp,
-            // NginxCompression).
+            // The visitor's own address behind Cloudflare, and compression of more than HTML; both
+            // http-level (CloudflareRealIp, NginxCompression).
             'real_ip' => env('SERVER_NGINX_REAL_IP', '/etc/nginx/conf.d/remoteip.conf'),
             'compression' => env('SERVER_NGINX_COMPRESSION', '/etc/nginx/conf.d/panel-gzip.conf'),
             // Which PHP stack this web server implies — see `php_stacks`.
@@ -1051,62 +804,41 @@ return [
             'label' => 'Apache',
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
             'sites_available_dir' => env('SERVER_APACHE_SITES_AVAILABLE_DIR', '/etc/apache2/sites-available'),
-            // `${APACHE_LOG_DIR}` in the templates, resolved — Apache expands
-            // it from envvars at start, which we cannot read.
+            // `${APACHE_LOG_DIR}` in the templates, resolved: Apache expands it from envvars at start.
             'log_dir' => env('SERVER_APACHE_LOG_DIR', '/var/log/apache2'),
-            // The answer for names no site claims (bug #55), under v7's names:
-            // 000-default.conf (Ubuntu's own, written only while it is the
-            // package's untouched file or the panel's) and 000-default-ssl.conf,
-            // first in sites-enabled. Apache takes the first vhost it loads.
+            // The answer for names no site claims, under v7's names: 000-default.conf (written only
+            // while it is the package's untouched file or the panel's) and 000-default-ssl.conf, first
+            // in sites-enabled. Apache takes the first vhost it loads.
             'catch_all' => env('SERVER_APACHE_CATCH_ALL', '/etc/apache2/sites-available/000-default.conf'),
             'catch_all_ssl' => env('SERVER_APACHE_CATCH_ALL_SSL', '/etc/apache2/sites-available/000-default-ssl.conf'),
             'catch_all_enabled_dir' => env('SERVER_APACHE_CATCH_ALL_ENABLED_DIR', '/etc/apache2/sites-enabled'),
             'catch_all_package' => 'apache2',
             'catch_all_legacy' => ['/etc/apache2/conf-available/panel-default-site.conf', '/etc/apache2/conf-enabled/panel-default-site.conf'],
-            // The visitor's own address behind Cloudflare (CloudflareRealIp), in
-            // conf-enabled as v7 has it.
+            // The visitor's own address behind Cloudflare (CloudflareRealIp), in conf-enabled as v7.
             'real_ip' => env('SERVER_APACHE_REAL_IP', '/etc/apache2/conf-enabled/remoteip.conf'),
             'php_stack' => 'fpm',
         ],
 
         /*
-        | OpenLiteSpeed. Unlike the other two, a site is a directory under
-        | `vhost_root` *and* two entries in `shared_config` — see OlsSharedConfig
-        | for why that file is edited by marked region rather than appended to.
+        | OpenLiteSpeed. A site is a directory under `vhost_root` *and* two entries in
+        | `shared_config`; see OlsSharedConfig for why that file is edited by marked region.
         |
-        | The paths below were checked against the actual openlitespeed 1.9.2
-        | package for Ubuntu 26.04 (2026-09-01) rather than only LiteSpeed's
-        | docs: `vhost_root`, `shared_config` and both halves of `test_command`
-        | exist in the .deb, `bin/lswsctrl` being a symlink to `lswsctrl.open`.
+        | Two paths are assumptions, and both are load-bearing:
         |
-        | Two are still assumptions, and both are load-bearing:
+        |  - `listener`: the shipped config writes `listener Default{` with no space before the
+        |    brace; insertInListener()'s `\s*` tolerates that. Do not "tidy" it.
+        |  - `ssl_listener`: a fresh install has NO Defaultssl listener, only Default on *:8088
+        |    (the case OlsListenerNotFoundException exists for; registration skips SSL maps).
         |
-        |  - `listener` — the shipped config writes `listener Default{`, with no
-        |    space before the brace. insertInListener()'s `\s*` already tolerates
-        |    that; a stricter match would find nothing. Do not "tidy" it.
-        |  - `ssl_listener` — a fresh install has NO Defaultssl listener at all,
-        |    only Default on *:8088. That is the case OlsListenerNotFoundException
-        |    exists for, and why registration skips SSL maps rather than failing.
-        |
-        | Still unverified: that any of this behaves correctly once running. A
-        | path existing is not the same as a config being right. They are config
-        | precisely so a wrong one is an edit rather than a patch.
+        | They are config so a wrong one is an edit rather than a patch.
         */
         'openlitespeed' => [
             'driver' => OlsDriver::class,
             'label' => 'OpenLiteSpeed',
             /*
-            | No `site_types` list, so no restriction — the same as nginx and
-            | Apache. An audit found nothing in any installer or site type that
-            | depends on the web server: none of them mention .htaccess, mod
-            | rewrite or Apache, none declare extension requirements, and the
-            | SiteType contract has no web-server concept at all. All ten
-            | installers ask the PHP stack where the interpreter is.
-            |
-            | A shorter list here was a guess about risk wearing the costume of
-            | a capability limit. If a type is genuinely unsupported on a web
-            | server, list the supported ones here and the grid will grey the
-            | rest with a reason.
+            | No `site_types` list, so no restriction (as nginx and Apache): no installer or site type
+            | depends on the web server. If a type is genuinely unsupported on one, list the
+            | supported ones here and the grid will grey the rest with a reason.
             */
             'vhost_root' => env('SERVER_OLS_VHOST_ROOT', '/usr/local/lsws/conf/vhosts'),
 
@@ -1119,64 +851,48 @@ return [
             /*
             | LSAPI pool size, per site.
             |
-            | Rendered into BOTH `maxConns` and `PHP_LSAPI_CHILDREN` -- one
-            | value, because the web server's connection limit and the number
-            | of workers LSPHP forks to answer them describe the same pool, and
-            | setting one without the other leaves the two halves disagreeing.
+            | Rendered into BOTH `maxConns` and `PHP_LSAPI_CHILDREN`: the connection limit and the
+            | worker count describe the same pool and must agree.
             |
-            | 35, the value ServerAvatar v7 uses (vhosts the same as v7,
-            | 2026-11-08): a site moved from v7 keeps the capacity it had. It is
-            | a ceiling per site — LSPHP forks workers as requests arrive — so
-            | lower it deliberately on a small box with many busy sites.
+            | 35, as ServerAvatar v7 uses, so a migrated site keeps its capacity. It is a per-site
+            | ceiling (LSPHP forks workers as requests arrive); lower it on a small box with many
+            | busy sites.
             */
             'lsapi_children' => (int) env('SERVER_OLS_LSAPI_CHILDREN', 35),
 
             /*
-            | Recycle an LSPHP worker after this many requests -- the analogue
-            | of `pm.max_requests`, which every FPM pool the panel writes
-            | already sets. Without it a worker lives until the server
-            | restarts and any per-request leak accumulates for its lifetime.
+            | Recycle an LSPHP worker after this many requests (like `pm.max_requests` on the FPM pools),
+            | so a per-request leak does not accumulate until restart.
             */
             'lsapi_max_requests' => (int) env('SERVER_OLS_LSAPI_MAX_REQUESTS', 5000),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
-            // OpenLiteSpeed's own WebAdmin console, which the panel binds to
-            // 127.0.0.1 (review finding S5; panel:ols-webadmin).
+            // OpenLiteSpeed's own WebAdmin console, which the panel binds to 127.0.0.1
+            // (panel:ols-webadmin).
             'webadmin_config' => env('SERVER_OLS_WEBADMIN_CONFIG', '/usr/local/lsws/admin/conf/admin_config.conf'),
 
             /*
-            | The account lsws drops to, used only as a fallback: the real
-            | value is read from the `user` directive in `shared_config`
-            | above, because that file is what actually decides it.
+            | The account lsws drops to, used only as a fallback: the real value is read from the
+            | `user` directive in `shared_config`.
             |
-            | Deliberately NOT `server.web_server_user`. That one defaults to
-            | `www-data`, install.sh never writes it, and every path that
-            | reads it is skipped on this stack — so it has been quietly
-            | wrong on every OpenLiteSpeed server without costing anything
-            | yet. Reusing it here would have been the first time it cost
-            | something, and the failure would have been silent: a grant to
-            | an account that does not run the web server looks exactly like
-            | a grant that worked.
+            | Deliberately NOT `server.web_server_user`: that defaults to `www-data`, which install.sh
+            | never writes, and a wrong account here fails silently (a grant to the wrong account
+            | looks like one that worked).
             */
             'user' => env('SERVER_OLS_USER', 'nobody'),
             // A `map` is only legal inside a listener, and this names which.
             'listener' => env('SERVER_OLS_LISTENER', 'Default'),
 
-            // OpenLiteSpeed binds certificates to a listener rather than to a
-            // vhost, so a site only answers on 443 once it is mapped here too.
-            // A box that has never had TLS legitimately has no such listener,
-            // and registration skips it rather than failing.
+            // OpenLiteSpeed binds certificates to a listener, not a vhost, so a site answers on 443
+            // only once it is mapped here too. A box that never had TLS has no such listener;
+            // registration skips it rather than failing.
             'ssl_listener' => env('SERVER_OLS_SSL_LISTENER', 'Defaultssl'),
             'test_command' => ['/usr/local/lsws/bin/openlitespeed', '-t'],
 
-            // OpenLiteSpeed's tmp directory (`DEFAULT_TMP_DIR`, compiled in).
-            // The config test writes its error log here and reads the file
-            // back to decide its own exit code — and test mode is the one mode
-            // that does not create the directory, so without it the test
-            // passes on anything. OlsDriver::test() creates it first; see
-            // there. Config because a package could build it elsewhere.
+            // OpenLiteSpeed's tmp directory (`DEFAULT_TMP_DIR`, compiled in). The config test logs here
+            // and reads the file back for its exit code, but test mode does not create the directory,
+            // so without it the test passes on anything. OlsDriver::test() creates it.
             'tmp_dir' => env('SERVER_OLS_TMP_DIR', '/tmp/lshttpd'),
-            // Restart, not reload: nothing lighter picks up a new virtual host,
-            // and it is graceful — old workers drain rather than being cut off.
+            // Restart, not reload: nothing lighter picks up a new virtual host; it is graceful.
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
             'php_stack' => 'lsphp',
         ],
@@ -1184,16 +900,13 @@ return [
 
     'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
 
-    // What bare `php` resolves through when it exists (install.sh creates it
-    // on OpenLiteSpeed). Read as the PHP screen's default before the
-    // update-alternatives group.
+    // What bare `php` resolves through when it exists (install.sh creates it on OpenLiteSpeed).
+    // Read as the PHP screen's default before the update-alternatives group.
     'php_path_link' => env('SERVER_PHP_PATH_LINK', '/usr/local/bin/php'),
 
     /*
-    | Where PHP-FPM puts its sockets, and the account the web server runs as.
-    |
-    | The web server user matters because a pool's socket has to be reachable
-    | by it: the isolation comes from the pool's `user`, not from the socket's
+    | Where PHP-FPM puts its sockets, and the account the web server runs as. The pool's socket
+    | must be reachable by that account; isolation comes from the pool's `user`, not the socket's
     | permissions, so this is deliberately the shared account.
     */
 
@@ -1203,33 +916,16 @@ return [
     /*
     | Server-wide PHP session directories, as other panels configure them.
     |
-    | Dropped when an existing open_basedir is adopted from a migrated
-    | server. Every site on such a box shares one session directory, so an
-    | open_basedir that names it lets any site read every other site's
-    | session files — which is the isolation per-app pools exist to give.
-    | The adopted site gets its own session directory in the base paths
-    | instead, so nothing it legitimately needs is lost.
-    */
-    /*
-    | The panel's own vhost, by config-file name.
-    |
-    | Excluded from sync discovery: adopting it would put the control plane in
-    | the list of sites the user can rename, move or delete. Matches
-    | install.sh's PANEL_SLUG.
+    | Dropped when an existing open_basedir is adopted from a migrated server: every site shares
+    | them, so an open_basedir naming one would let a site read every other site's sessions. The
+    | adopted site gets its own session directory instead.
     */
     'sync' => [
         /*
-        | Extra things the sync should never offer.
-        |
-        | The panel's own vhosts are detected from where this code runs, not
-        | from a name — install.sh writes both `{slug}.conf` and
-        | `{slug}-tls.conf`, the slug is overridable, and the panel is
-        | reached by a domain rather than by that slug, so every name-based
-        | guess breaks on a custom install. These lists are for the operator
-        | who runs their own stack on the same box: two lines, and it stops
-        | being offered.
-        |
-        | Both accept `*` globs and are matched case-insensitively.
+        | Extra things the sync should never offer, for an operator running their own stack on the
+        | same box. The panel's own vhosts are detected from where this code runs, not from a name
+        | (the slug is overridable and the panel is reached by domain). Both lists accept `*` globs,
+        | matched case-insensitively.
         */
         'exclude' => [
             'vhosts' => [],
@@ -1248,11 +944,9 @@ return [
     // runs on the same PHP that will serve it.
     'php_binary_pattern' => env('SERVER_PHP_BINARY_PATTERN', '/usr/bin/php{version}'),
 
-    // How a version maps to its *FPM* binary. Separate from the CLI above:
-    // a server can have php8.3 without php8.3-fpm, and only the second can
-    // serve a site. This is what decides whether a version is really
-    // installed — `apt remove` takes the binary but leaves /etc/php/<v>/fpm
-    // behind, so the config directory alone would list versions that are gone.
+    // How a version maps to its *FPM* binary. Separate from the CLI above: a server can have
+    // php8.3 without php8.3-fpm, and only the second can serve a site. `apt remove` takes the
+    // binary but leaves /etc/php/<v>/fpm, so the config directory alone would list removed versions.
     'php_fpm_binary_pattern' => env('SERVER_PHP_FPM_BINARY_PATTERN', '/usr/sbin/php-fpm{version}'),
 
     // Applications distributed through Composer are built rather than
@@ -1260,10 +954,9 @@ return [
     'composer_binary' => env('SERVER_COMPOSER_BINARY', 'composer'),
 
     /*
-    | Git deploys. The credential file is written 0600 and deleted as soon as
-    | the command finishes — the token is never a command argument and never
-    | reaches .git/config. Clones and builds are slow, so they get their own
-    | generous timeouts rather than the 60s default.
+    | Git deploys. The credential file is written 0600 and deleted as soon as the command
+    | finishes; the token is never a command argument and never reaches .git/config. Clones and
+    | builds are slow, so they get their own generous timeouts.
     */
 
     /*
@@ -1274,46 +967,35 @@ return [
     */
 
     /*
-    | Applications that run their own process (Node, and anything else with a
-    | start command).
+    | Applications that run their own process (Node, and anything with a start command).
     |
-    | The range sits **below the ephemeral range** the kernel hands to outgoing
-    | connections (`net.ipv4.ip_local_port_range`, 32768–60999 on a stock
-    | Linux). An application parked inside that range would work until the
-    | moment the kernel handed the same port to something else — an
-    | intermittent failure with no obvious cause. The IANA dynamic range
-    | (49152+) is exactly the wrong choice for this, for the same reason.
+    | The port range sits **below the kernel's ephemeral range** (`net.ipv4.ip_local_port_range`,
+    | 32768-60999 on stock Linux): an app inside it breaks intermittently when the kernel hands the
+    | port to an outgoing connection. The IANA dynamic range (49152+) is wrong for the same reason.
     |
-    | Ports that `/etc/services` names are skipped at allocation, so a site
-    | never lands on 3306 and collides with a MySQL installed next week.
+    | Ports named in `/etc/services` are skipped at allocation (a site never lands on 3306).
     | `reserved_ports` is for anything the OS does not know about.
     |
-    | `memory_max` is per app: low enough that one runaway site cannot take the
-    | box down, high enough that an ordinary Node app is not killed
-    | mid-request. Chosen from common practice, not measurement — revisit when
-    | there is real traffic.
+    | `memory_max` is per app: low enough that a runaway site cannot take the box down, high enough
+    | for an ordinary Node app. Chosen from common practice, not measurement.
     */
 
     'applications' => [
         'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
-        // How long a freshly started app must stay up, on the same process,
-        // before it counts as started (bug #91). A Node app missing its
-        // node_modules is "active" for a moment and dies a second later; the
-        // unit waits 5 s before restarting it, so 3 s catches the crash.
+        // How long a freshly started app must stay up, on the same process, before it counts as
+        // started. A Node app missing node_modules is "active" briefly and dies a second later; the
+        // unit waits 5 s before restarting, so 3 s catches the crash.
         'settle_seconds' => (int) env('SERVER_APP_SETTLE_SECONDS', 3),
 
-        // For applications adopted from the old panel, which are still run by
-        // its per-user PM2 daemon. Bare, so `runuser` resolves it on PATH: the
-        // old panel installed PM2 globally from NodeSource (`/usr/bin`) but
-        // then upgraded Node with `n`, which relocates the whole toolchain to
-        // `/usr/local` — so neither absolute path is right on every server.
+        // For applications adopted from the old panel, still run by its per-user PM2 daemon. Bare, so
+        // `runuser` resolves it on PATH: the old panel installed PM2 in /usr/bin but upgraded Node
+        // with `n`, which moves the toolchain to /usr/local, so neither absolute path fits all.
         'pm2_binary' => env('SERVER_LEGACY_PM2_BINARY', 'pm2'),
         'pm2_timeout' => (int) env('SERVER_LEGACY_PM2_TIMEOUT', 120),
 
-        // The old panel's agent. Its HTTPS listener is hardcoded in its own
-        // source, which is why the port is the primary signal; the unit is
-        // named after a build-time variable and differs per white-label build,
-        // so that one is a pattern.
+        // The old panel's agent. Its HTTPS port is hardcoded in its source, so the port is the primary
+        // signal; the unit name is a build-time variable that differs per white-label build, so it
+        // is a pattern.
         'legacy_agent_port' => (int) env('SERVER_LEGACY_AGENT_PORT', 43210),
         'legacy_agent_unit_pattern' => env('SERVER_LEGACY_AGENT_UNIT_PATTERN', '/(serveravatar|sa-agent)/i'),
         'legacy_agent_paths' => [
@@ -1323,17 +1005,13 @@ return [
         ],
 
         /*
-        | Asking a freshly started application for a page before calling it
-        | provisioned.
+        | Asking a freshly started application for a page before calling it provisioned.
         |
-        | `attempts` × `delay` has to outlast a cold boot: NodeBB compiles
-        | nothing at startup but still spends a while connecting to its
-        | database and loading plugins, and a connection refused one second
-        | after `systemctl start` means nothing at all. 15 × 2s ≈ 30 seconds,
-        | which is inside the provisioning budget and well past a normal boot.
+        | `attempts` × `delay` has to outlast a cold boot (database connection, plugin loading; a
+        | refused connection right after `systemctl start` means nothing). 15 × 2s ≈ 30 s, inside the
+        | provisioning budget and well past a normal boot.
         |
-        | `timeout` bounds one request. A server this busy answering slowly is
-        | not the failure being looked for, so it is generous.
+        | `timeout` bounds one request; generous, since slowness is not the failure being looked for.
         */
         'readiness' => [
             'attempts' => (int) env('SERVER_READINESS_ATTEMPTS', 15),
@@ -1341,55 +1019,36 @@ return [
             'timeout' => (int) env('SERVER_READINESS_TIMEOUT', 10),
 
             /*
-            | How much of the application's own log to keep beside a failure.
-            |
-            | The probe records a status code, which says the site is broken
-            | without saying why. The journal is where the reason is — NodeBB
-            | prints the view it could not find and the directory it searched.
-            | Enough lines to include a startup that went wrong, few enough
-            | that the ops log stays readable.
+            | How much of the application's own log to keep beside a failure. A status code says the
+            | site is broken; the journal says why. Enough to include a bad startup, few enough to
+            | keep the ops log readable.
             */
             'journal_lines' => (int) env('SERVER_READINESS_JOURNAL_LINES', 100),
         ],
 
         /*
-        | How long a file manager delete stays recoverable.
-        |
-        | The trash keeps a full copy of everything deleted, so without a
-        | window it is a slow disk-space leak on a machine whose whole job is
-        | running out of disk quietly. A week is long enough to notice a
-        | mistake and short enough that nobody is storing a backup in it.
+        | How long a file manager delete stays recoverable. The trash keeps a full copy, so without a
+        | window it slowly leaks disk space. A week is long enough to notice a mistake and short
+        | enough that nobody stores a backup in it.
         */
         'trash_retention_days' => (int) env('SERVER_TRASH_RETENTION_DAYS', 7),
 
         /*
         | The largest image the file manager will render.
         |
-        | Bounded because this is the one file response a browser is asked to
-        | interpret, and because nothing is gained past it: a photograph that
-        | does not fit in ten megabytes still does not fit on a screen. The
-        | check runs against the stat, before a byte is read, so an oversized
-        | file costs a refusal rather than a transfer.
-        |
-        | Download is deliberately *not* capped (see `FileBrowser::download()`)
-        | — the panel must always hand back a file it accepted. This limit is
-        | about rendering, not about access.
+        | This is the one file response a browser is asked to interpret, and nothing is gained past
+        | it. Checked against the stat before a byte is read. Download is deliberately *not* capped
+        | (see `FileBrowser::download()`): the panel must always hand back a file it accepted.
         */
         'preview_max_bytes' => (int) env('SERVER_PREVIEW_MAX_BYTES', 10 * 1024 * 1024),
 
         /*
         | Where supervisor keeps its program blocks.
         |
-        | Written as well as read, since 2026-09-07: a worker *is* a supervisor
-        | program now, where it used to be a systemd template unit. The sync
-        | has always read this directory, because a migrated box runs its queue
-        | workers under supervisor — that is what every Laravel tutorial
-        | teaches — and the panel now writes the same format it adopts, so an
-        | adopted worker can be edited rather than only recorded.
-        |
-        | One key, deliberately. A second one for "where we write" beside this
-        | one for "where we read" is two answers to the same question, and the
-        | day they disagree the panel adopts a worker it cannot manage.
+        | Written as well as read: a worker is a supervisor program, and the sync reads the same
+        | directory on migrated boxes, so an adopted worker can be edited rather than only recorded.
+        | One key on purpose: separate read and write keys would disagree and the panel would adopt a
+        | worker it cannot manage.
         */
         'supervisor_dir' => env('SERVER_SUPERVISOR_DIR', '/etc/supervisor/conf.d'),
         'port_range' => [
@@ -1403,14 +1062,10 @@ return [
     /*
     | Cloudflare's published address ranges.
     |
-    | Held here rather than fetched. A domain pointing at Cloudflare resolves
-    | perfectly well but does not reach this server, so HTTP validation fails
-    | for a reason no error message mentions — it is the most common SSL
-    | support question on panels of this kind. Recognising the address lets the
-    | panel say so before anyone spends a Let's Encrypt attempt on it.
-    |
-    | A network call in the middle of a form submission is a worse failure than
-    | a list that is a few months stale; these change rarely. Current list:
+    | Held here rather than fetched. A domain pointing at Cloudflare resolves but does not reach this
+    | server, so HTTP validation fails for a reason no error message mentions; recognising the
+    | address lets the panel say so before a Let's Encrypt attempt is spent. The list changes rarely
+    | and a network call in a form submission is worse than a stale list. Current list:
     | https://www.cloudflare.com/ips-v4
     */
     /*
@@ -1418,14 +1073,10 @@ return [
     | TLS certificates
     |--------------------------------------------------------------------------
     |
-    | certbot is driven in `certonly --webroot` mode, never through the
-    | `--nginx` / `--apache` plugins. The plugins work by editing the vhost —
-    | and the panel regenerates that file on every domain change, so their edits
-    | would be silently wiped and the site would lose HTTPS with nothing to show
-    | why. Issuing the files and writing the directives ourselves keeps one
-    | owner for the config. It is also the only mode that works on
-    | OpenLiteSpeed, which has no certbot plugin at all: one code path, three
-    | web servers.
+    | certbot is driven in `certonly --webroot` mode, never through the `--nginx` / `--apache`
+    | plugins: those edit the vhost, which the panel regenerates on every domain change, silently
+    | wiping HTTPS. Writing the directives ourselves keeps one owner for the config, and webroot is
+    | the only mode that works on OpenLiteSpeed (no certbot plugin).
     |
     */
 
@@ -1434,31 +1085,21 @@ return [
     | Deployments
     |--------------------------------------------------------------------------
     |
-    | A site with auto-deploy on a busy repository deploys dozens of times a
-    | day, and every row carries command output. Left unbounded this is the
-    | table that quietly fills a self-hosted SQLite database, so only the newest
-    | are kept — pruned on write rather than by a scheduled command, because the
-    | growth is caused by deploying and the fix belongs where the growth is.
+    | Every deploy row carries command output, so unbounded history fills a self-hosted SQLite
+    | database. Only the newest are kept, pruned on write (the growth is caused by deploying).
     |
-    | Fifty is roughly a fortnight on an active project, which covers the only
-    | question this screen answers: what changed recently. Older deploys cannot
-    | be rolled back to (there are no release directories), and the commit
-    | history lives in git regardless.
+    | Fifty is roughly a fortnight on an active project. Older deploys cannot be rolled back to (no
+    | release directories) and the commit history lives in git.
     |
     */
 
     'deployments' => [
         'keep' => (int) env('SV_DEPLOYMENTS_KEEP', 50),
 
-        // What a new git application's deploy script starts as. A starting
-        // point rather than a policy: it is the user's file the moment they
-        // open the screen.
+        // What a new git application's deploy script starts as; it is the user's file from then on.
         'default_scripts' => [
-            //
-            // No `git pull`: the panel has fetched and checked out the branch
-            // before the script runs, with the account's credential. The
-            // script runs without it, so a pull there failed on every private
-            // repository (measured 2026-10-01) and did nothing on a public one.
+            // No `git pull`: the panel has already fetched and checked out the branch with the
+            // account's credential; a pull in the script fails on private repositories.
             'php' => "cd {path}\n"
                 ."if [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
             'node' => "cd {path}\nnpm ci\nnpm run build --if-present\n",
@@ -1466,25 +1107,17 @@ return [
             'proxy' => "cd {path}\n",
         ],
 
-        // Run on a deploy for which the user wrote no script and no build
-        // command, and only when the checkout's composer.json requires real
-        // packages — exactly the deploys the dependency check would otherwise
-        // fail as composer_dependencies_missing, so no site that deploys
-        // successfully today runs anything new. Until 2026-10-01 nothing ran,
-        // and every new Composer project failed its first deploy.
+        // Run on a deploy with no user script and no build command, only when the checkout's
+        // composer.json requires real packages: exactly the deploys the dependency check would
+        // otherwise fail as composer_dependencies_missing.
         'composer_install' => "composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\n",
 
-        // Install + build for each package manager a Node application can
-        // record. Used two ways: as-is for the create-form's build_command
-        // (the checkout already happened by then), and prefixed with the
-        // `cd` above for the deploy-script default once an
-        // application has a package_manager on record.
+        // Install + build for each package manager a Node application can record. Used as-is for the
+        // create-form's build_command, and prefixed with the `cd` above for the deploy-script
+        // default once an application has a package_manager on record.
         //
-        // `--if-present` is npm's own flag (bun matches it); yarn has never
-        // had an equivalent and pnpm removed the one it briefly shipped
-        // (github.com/pnpm/pnpm/issues/2200), so those two check the script
-        // exists before calling it rather than relying on a flag that would
-        // fail immediately with "Unknown option".
+        // `--if-present` is npm's flag (bun matches it); yarn has no equivalent and pnpm removed
+        // its, so those two check the script exists instead of failing with "Unknown option".
         'package_manager_scripts' => [
             'npm' => "npm ci\nnpm run build --if-present\n",
             'yarn' => "yarn install --frozen-lockfile\ngrep -q '\"build\"' package.json && yarn build\n",
@@ -1492,75 +1125,56 @@ return [
             'bun' => "bun install --frozen-lockfile\nbun run build --if-present\n",
         ],
 
-        // A Node application with no lockfile and no package manager on record
-        // (RC-2): `npm ci` refuses to run without package-lock.json.
+        // A Node application with no lockfile and no package manager on record: `npm ci` refuses to
+        // run without package-lock.json.
         'npm_install_without_lockfile' => "npm install\nnpm run build --if-present\n",
     ],
 
     'certificates' => [
         'certbot' => env('SV_CERTBOT_BIN', 'certbot'),
 
-        // One challenge directory shared by every site, aliased into all nine
-        // vhost templates. Per-site document roots would not work for the node
-        // and proxy profiles, which serve nothing from disk — there is no
-        // directory for certbot to drop the token in.
-        // v7's webroot (v7 layout B3). A v7 certificate renews with
-        // `webroot_path = /var/www/html` in its renewal file, so a challenge
-        // served from anywhere else makes every v7 certificate stop renewing
-        // once v8 writes the site's vhost.
+        // One challenge directory shared by every site, aliased into all the vhost templates; per-site
+        // roots would not work for node and proxy profiles, which serve nothing from disk. It is v7's
+        // webroot: a v7 certificate renews with `webroot_path = /var/www/html`, so a challenge
+        // served from anywhere else stops every v7 certificate renewing.
         'challenge_root' => env('SV_ACME_CHALLENGE_ROOT', '/var/www/html'),
 
         'live_dir' => env('SV_LETSENCRYPT_LIVE_DIR', '/etc/letsencrypt/live'),
 
-        // One file per certificate certbot renews, whoever issued it — the
-        // panel's own included, which has no row in the certificates table.
-        // World-readable, unlike live_dir, so the panel can ask without sudo.
+        // One file per certificate certbot renews, whoever issued it (the panel's own included).
+        // World-readable, unlike live_dir, so the panel can read it without sudo.
         'renewal_dir' => env('SV_LETSENCRYPT_RENEWAL_DIR', '/etc/letsencrypt/renewal'),
 
-        // Where certbot runs its post-renewal commands. The renewal itself is
-        // certbot's own systemd timer; without a hook here the new certificate
-        // sits on disk while the web server keeps serving the old one from
-        // memory until something happens to reload it.
+        // Where certbot runs post-renewal commands. Without a hook here the web server keeps serving
+        // the old certificate from memory until something reloads it.
         'renewal_hook_dir' => env('SV_LETSENCRYPT_HOOK_DIR', '/etc/letsencrypt/renewal-hooks/deploy'),
 
-        // Uploaded and self-signed certificates go where v7 put them (operator,
-        // 2026-10-08): `{certs_dir}/{site}.crt` and `{keys_dir}/{site}.key`,
-        // named after the application, so a server moved from v7 keeps working
-        // with the same files. Not under /etc/letsencrypt — certbot owns that
-        // tree and prunes what it does not recognise.
+        // Uploaded and self-signed certificates go where v7 put them: `{certs_dir}/{site}.crt` and
+        // `{keys_dir}/{site}.key`, so a server moved from v7 keeps working. Not under
+        // /etc/letsencrypt: certbot owns that tree and prunes what it does not recognise.
         'certs_dir' => env('SV_CUSTOM_CERT_CERTS_DIR', '/etc/ssl/certs'),
         'keys_dir' => env('SV_CUSTOM_CERT_KEYS_DIR', '/etc/ssl/private'),
 
-        // The panel's own directory: the shared TLS-reject pair, and every
-        // uploaded/self-signed certificate made before 2026-10-08 (still
-        // removable from here).
+        // The panel's own directory: the shared TLS-reject pair, and older uploaded/self-signed
+        // certificates (still removable from here).
         'custom_dir' => env('SV_CUSTOM_CERT_DIR', '/etc/ssl/sv-oss'),
 
-        // certbot can sit through two DNS lookups, an HTTP round trip and a
-        // retry. The default 60s ServerOps timeout runs out in the middle of a
-        // successful issuance and leaves a certificate on disk that the panel
-        // thinks failed.
+        // certbot can take two DNS lookups, an HTTP round trip and a retry; the default 60s ServerOps
+        // timeout would cut a successful issuance short.
         'timeout' => 180,
 
-        // Issuing a site's certificate and deleting the site take turns
-        // (CertificateLock). The numbers have to fit the things around them:
+        // Issuing a site's certificate and deleting the site take turns (CertificateLock).
         //
-        // ttl:           longer than any live holder, so the lock never lapses
-        //                under one. The issuing job is killed at its 600s
-        //                timeout; a delete is a request behind a 300s proxy
-        //                timeout. 900 clears both, and is how long a holder
-        //                that died without releasing blocks the next one.
-        // delete_wait:   how long a delete waits for an issuance before
-        //                answering 503 "busy, try again" — far inside the
-        //                proxy's 300s, so the answer arrives.
-        // requeue_delay: the job never waits for the lock inside a worker
-        //                (that would spend its own 600s timeout). Held, it
-        //                dispatches a fresh copy of itself this much later —
-        //                still one attempt each, so a certbot error is never
-        //                retried against Let's Encrypt's rate limit.
-        // max_requeues:  bounds that. 30 x 30s outlasts the ttl, so even a
-        //                dead holder's lock has lapsed before the job gives up
-        //                and marks the certificate failed.
+        // ttl:           longer than any live holder: the issuing job is killed at 600s and a delete
+        //                is a request behind a 300s proxy timeout. 900 clears both, and is how long
+        //                a holder that died without releasing blocks the next one.
+        // delete_wait:   how long a delete waits for an issuance before answering 503 "busy, try
+        //                again"; well inside the proxy's 300s.
+        // requeue_delay: the job never waits for the lock inside a worker; held, it dispatches a
+        //                fresh copy of itself this much later. Still one attempt each, so a certbot
+        //                error is never retried against Let's Encrypt's rate limit.
+        // max_requeues:  bounds that. 30 x 30s outlasts the ttl, so a dead holder's lock has lapsed
+        //                before the job gives up and marks the certificate failed.
         'lock' => [
             'ttl' => (int) env('SV_CERTIFICATE_LOCK_TTL', 900),
             'delete_wait' => (int) env('SV_CERTIFICATE_LOCK_DELETE_WAIT', 20),
@@ -1568,15 +1182,12 @@ return [
             'max_requeues' => (int) env('SV_CERTIFICATE_LOCK_MAX_REQUEUES', 30),
         ],
 
-        // Try for a certificate on its own once a site is provisioned, when
-        // the domain already points here — a migrated site, or a record set in
-        // advance. Off makes the panel wait to be asked, which is the right
-        // choice on a box with no public DNS. It declines silently either way:
-        // a decline writes nothing, so a new site never opens on a red error
-        // about SSL the user has not set up yet.
+        // Try for a certificate on its own once a site is provisioned, when the domain already
+        // points here. Off makes the panel wait to be asked (right for a box with no public DNS).
+        // It declines silently either way, so a new site never opens on an SSL error.
         'auto_issue' => env('SV_AUTO_ISSUE_CERTIFICATES', true),
-        // Bug #52: the check after a reload can reach workers that do not know
-        // the new site yet. A "not served" answer is asked again this often.
+        // The check after a reload can reach workers that do not know the new site yet; a "not
+        // served" answer is asked again this often.
         'auto_issue_attempts' => (int) env('SV_AUTO_ISSUE_ATTEMPTS', 4),
         'auto_issue_retry_seconds' => (int) env('SV_AUTO_ISSUE_RETRY_SECONDS', 2),
 
@@ -1612,15 +1223,12 @@ return [
     | Site clone
     |--------------------------------------------------------------------------
     |
-    | How long the file copy may take. A clone used to carry a served directory;
-    | it now carries the whole working copy — for a git application that means
-    | the checkout, its `.git` history and its `node_modules`, which on a real
-    | project is usually most of the bytes on disk.
+    | How long the file copy may take. A clone carries the whole working copy (for git apps the
+    | checkout, `.git` history and `node_modules`, usually most of the bytes on disk).
     |
     */
-    // RC-16: a staging push (with its optional backup first) or update from
-    // live, run on the queue. StagingManager's own lock is an hour; the
-    // backup before a push can take longer.
+    // A staging push (with its optional backup first) or update from live, run on the queue.
+    // StagingManager's own lock is an hour; the backup before a push can take longer.
     'staging' => [
         'job_timeout' => (int) env('SERVER_STAGING_JOB_TIMEOUT', 7200),
     ],
@@ -1630,36 +1238,26 @@ return [
     ],
 
     /*
-    | `memory_limit` for the CLI step an application runs during its own
-    | installation -- Mautic's `bin/console mautic:install`, Craft's `craft
-    | install`, Nextcloud's `occ`, and the rest.
+    | `memory_limit` for the CLI step an application runs during its own installation (Mautic's
+    | `mautic:install`, Craft's `craft install`, Nextcloud's `occ`, ...).
     |
-    | Set explicitly because the ambient limit differs per web server, and on
-    | one of them it is too small to install with. Debian's CLI ini carries
-    | `memory_limit = -1`, so on nginx and Apache the interpreter is effectively
-    | unlimited; LiteSpeed's lsphp loads its *production* ini at 128M instead,
-    | and Mautic's Symfony container compile does not fit -- "Allowed memory
-    | size of 134217728 bytes exhausted", on OpenLiteSpeed only, for what is
-    | otherwise the same command. Every PHP site type runs a CLI step, so Mautic
-    | was the heaviest rather than the only one at risk.
+    | Set explicitly because the ambient limit differs per web server: Debian's CLI ini is
+    | `memory_limit = -1`, but LiteSpeed's lsphp loads its production ini at 128M, where Mautic's
+    | container compile exhausts memory (OpenLiteSpeed only).
     |
-    | 512M is what Mautic's own documentation asks for. Deliberately not `-1`:
-    | unbounded on a 1 GB box trades a failed install for an OOM-killed server,
-    | and PHP stopping at a limit it names is the legible failure of the two.
+    | 512M is what Mautic's documentation asks for. Not `-1`: unbounded on a 1 GB box trades a
+    | failed install for an OOM-killed server.
     |
-    | This is not the site's `memory_limit` from its PHP settings screen. That
-    | value is written into the FPM pool or the site's ini, which a CLI
-    | invocation never reads, and it describes a request-serving budget rather
-    | than a one-off container compile.
+    | Not the site's `memory_limit` from its PHP settings screen: that is written into the FPM pool
+    | or the site's ini, which a CLI invocation never reads.
     */
     'installer_php_memory_limit' => env('SERVER_INSTALLER_PHP_MEMORY_LIMIT', '512M'),
 
     /*
-    | Everything a provision or deploy does *besides* the slow part: the
-    | directory, ownership, the vhost write/test/reload, creating the database,
-    | and starting the unit. Added to the installer (or git + build) timeout to
-    | size the queued job, because a job killed at its own timeout leaves a
-    | half-applied server change with nothing but "worker" to point at.
+    | Everything a provision or deploy does besides the slow part (directory, ownership, vhost
+    | write/test/reload, creating the database, starting the unit). Added to the installer (or git
+    | + build) timeout to size the queued job: a job killed at its own timeout leaves a
+    | half-applied server change.
     */
     'job_overhead' => (int) env('SERVER_JOB_OVERHEAD', 120),
 
@@ -1673,9 +1271,8 @@ return [
         ],
 
         'joomla' => [
-            // Joomla's downloads carry the version in the filename with no
-            // "latest" alias, so the installer asks which release is current
-            // rather than holding a URL that 404s at the next release.
+            // Downloads carry the version in the filename with no "latest" alias, so the installer
+            // asks which release is current rather than holding a URL that 404s at the next release.
             'driver' => JoomlaInstaller::class,
             'download_url' => env('SERVER_JOOMLA_URL', ''),
             'releases_api' => env('SERVER_JOOMLA_RELEASES_API', 'https://api.github.com/repos/joomla/joomla-cms/releases/latest'),
@@ -1685,10 +1282,9 @@ return [
 
         'prestashop' => [
             'driver' => PrestaShopInstaller::class,
-            // PrestaShop's distribution API, not GitHub and not channel.xml:
-            // their 9.x tags ship no package, and channel.xml still names
-            // 8.2.1 as current. This lists every release with its PHP range
-            // and package URL — the source their own Docker images build from.
+            // PrestaShop's distribution API, not GitHub or channel.xml: their 9.x tags ship no package
+            // and channel.xml still names 8.2.1. It lists every release with its PHP range and
+            // package URL (the source their Docker images build from).
             'download_url' => env('SERVER_PRESTASHOP_URL', ''),
             'releases_api' => env('SERVER_PRESTASHOP_RELEASES_API', 'https://api.prestashop-project.org/prestashop'),
             'timeout' => (int) env('SERVER_PRESTASHOP_TIMEOUT', 1800),
@@ -1709,17 +1305,16 @@ return [
         ],
 
         'craftcms' => [
-            // Distributed through Composer — there is no tarball, so this one
-            // builds the application rather than unpacking it.
+            // Distributed through Composer (no tarball), so this builds the application rather than
+            // unpacking it.
             'driver' => CraftCmsInstaller::class,
             'timeout' => (int) env('SERVER_CRAFTCMS_TIMEOUT', 1800),
         ],
 
         'mautic' => [
             'driver' => MauticInstaller::class,
-            // Mautic publishes zip only, and versioned — so the release is
-            // resolved, and the full package taken rather than the update
-            // package, which carries changed files alone.
+            // Mautic publishes versioned zips only, so the release is resolved, and the full package
+            // taken rather than the update package, which carries changed files alone.
             'download_url' => env('SERVER_MAUTIC_URL', ''),
             'releases_api' => env('SERVER_MAUTIC_RELEASES_API', 'https://api.github.com/repos/mautic/mautic/releases/latest'),
             'config_dir' => env('SERVER_MAUTIC_CONFIG_DIR', 'config'),
@@ -1728,8 +1323,8 @@ return [
 
         'moodle' => [
             'driver' => MoodleInstaller::class,
-            // The branch is part of the path, so a new major release means a
-            // new value here rather than a silent download of the old one.
+            // The branch is part of the path, so a new major release means a new value here rather
+            // than a silent download of the old one.
             'download_url' => env('SERVER_MOODLE_URL', 'https://packaging.moodle.org/stable500/moodle-latest-500.tgz'),
             // 75 MB, then a schema of several hundred tables to build.
             'timeout' => (int) env('SERVER_MOODLE_TIMEOUT', 1800),
@@ -1737,44 +1332,35 @@ return [
 
         'nextcloud' => [
             'driver' => NextcloudInstaller::class,
-            // Upstream publishes bzip2 and zip only — no gzip. The zip, because
-            // extracting the bzip2 tarball needs a decompressor `tar` merely
-            // Suggests: on a lean image the install died at `extract` naming a
-            // missing `lbzip2`. `unzip` is already a required binary.
+            // Upstream publishes bzip2 and zip only. The zip: extracting the bzip2 tarball needs a
+            // decompressor `tar` merely Suggests (`lbzip2`), missing on lean images. `unzip` is
+            // already a required binary.
             'download_url' => env('SERVER_NEXTCLOUD_URL', 'https://download.nextcloud.com/server/releases/latest.zip'),
             'database' => env('SERVER_NEXTCLOUD_DATABASE', 'mysql'),
-            // 280 MB to fetch and a schema to build afterwards. The shared
-            // default would time this out on any ordinary connection.
+            // 280 MB to fetch and a schema to build afterwards; the shared default would time out.
             'timeout' => (int) env('SERVER_NEXTCLOUD_TIMEOUT', 1800),
         ],
 
         /*
-        | The Node applications. Distributed as git repositories or npm
-        | packages rather than release archives, so these do not use the
-        | shared download-and-extract helper.
+        | The Node applications. Distributed as git repositories or npm packages rather than release
+        | archives, so they do not use the shared download-and-extract helper.
         |
-        | `version` is pinned to a range rather than a number: `latest` on a
-        | major-version boundary is how an install silently becomes an upgrade
-        | nobody asked for.
+        | `version` is pinned to a range rather than a number: `latest` on a major-version boundary
+        | silently turns an install into an upgrade nobody asked for.
         */
 
         'uptimekuma' => [
             'driver' => UptimeKumaInstaller::class,
             'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
-            // Empty means "the newest stable release", resolved from the
-            // repository's own tags at install time. It held `2.0.0` until
-            // 2026-09-08, by which point upstream was on 2.5.3 — a pin in a
-            // one-click installer does not stay current, it stops being
-            // noticed. Set this to a tag or branch to hold a version
-            // deliberately.
+            // Empty means "the newest stable release", resolved from the repository's own tags at
+            // install time; a pin in a one-click installer goes stale unnoticed. Set a tag or branch
+            // to hold a version deliberately.
             'branch' => env('SERVER_UPTIME_KUMA_BRANCH', ''),
-            // Asked first, because it distinguishes a release from a tag and
-            // marks drafts and pre-releases explicitly. The *list*, not
-            // `/releases/latest`: GitHub's "latest" is the newest by date, and
-            // this project back-patches its old line — 1.23.17 shipped in
-            // October 2025, well after 2.x — so one more such patch would make
-            // "latest" name a 1.x release. Sorting the list by version cannot.
-            // Empty disables it and leaves `git ls-remote` as the only source.
+            // Asked first: it distinguishes a release from a tag and marks drafts and pre-releases.
+            // The *list*, not `/releases/latest`: GitHub's "latest" is newest by date, and this
+            // project back-patches its old line, so "latest" could name a 1.x release; sorting the
+            // list by version cannot. Empty disables it and leaves `git ls-remote` as the only
+            // source.
             'releases_api' => env(
                 'SERVER_UPTIME_KUMA_RELEASES_API',
                 'https://api.github.com/repos/louislam/uptime-kuma/releases',
@@ -1791,25 +1377,13 @@ return [
 
         'n8n' => [
             'driver' => N8nInstaller::class,
-            // Current stable, deliberately, and it moves on its own.
-            //
-            // `latest` and `stable` are both published by n8n and agree, so
-            // this tracks the release they call current rather than a number
-            // that silently ages. What is current:
+            // Current stable, deliberately; it moves on its own (`latest` and `stable` agree). Check:
             // `curl -s https://registry.npmjs.org/-/package/n8n/dist-tags`.
             //
-            // It was held on major `1` until 2026-09-18, which by then meant
-            // 1.123.81 — a version npm had started tagging `rc` while stable
-            // was on 2.x.
-            //
-            // ⚠️ Coupled to N8nSiteType::supportedNodeRange(). n8n refuses to
-            // start outside the Node range it documents, so the two have to
-            // agree: 2.x wants Node 24, and the site type allows exactly that.
-            // A moving version pin and a hand-written range will drift the day
-            // n8n's next major raises its floor — new installs would get an
-            // application that cannot run on the only Node the form offers.
-            // Pin the major, or derive the range from `engines.node` at
-            // install time, to remove the coupling.
+            // ⚠️ Coupled to N8nSiteType::supportedNodeRange(): n8n refuses to start outside its
+            // documented Node range (2.x wants Node 24), so a moving pin and a hand-written range
+            // drift when n8n's next major raises its floor. Pin the major, or derive the range from
+            // `engines.node` at install time, to remove the coupling.
             'version' => env('SERVER_N8N_VERSION', 'latest'),
             // The largest npm install in the catalog by some distance.
             'timeout' => (int) env('SERVER_N8N_TIMEOUT', 1800),
@@ -1832,15 +1406,13 @@ return [
 
         'adminer' => [
             'driver' => AdminerInstaller::class,
-            // The newest stable release is asked for at install time, the way
-            // Uptime Kuma's is: a pin in a one-click installer stops being
-            // noticed. `version` is only the fallback for when GitHub cannot
-            // be asked — set it, and empty `releases_api`, to hold one.
+            // The newest stable release is asked for at install time, as Uptime Kuma's is. `version`
+            // is only the fallback for when GitHub cannot be asked; set it, and empty
+            // `releases_api`, to hold one.
             'releases_api' => env('SERVER_ADMINER_RELEASES_API', 'https://api.github.com/repos/vrana/adminer/releases'),
             'version' => env('SERVER_ADMINER_VERSION', '6.2.0'),
-            // The single-file build with every bundled driver and language.
-            // Both hops (github.com -> objects.githubusercontent.com) are
-            // https, which the download step requires.
+            // The single-file build with every bundled driver and language. Both hops
+            // (github.com -> objects.githubusercontent.com) are https, as the download step requires.
             'download_url' => env('SERVER_ADMINER_URL', 'https://github.com/vrana/adminer/releases/download/v{version}/adminer-{version}.php'),
             'db_host' => env('SERVER_ADMINER_DB_HOST', '127.0.0.1'),
         ],
@@ -1853,51 +1425,36 @@ return [
     /*
     | Where the per-version `php` shims live.
     |
-    | A deploy script runs `composer install` and `php artisan`, and both find
-    | their interpreter on `PATH`. The site's own binary cannot be put there
-    | directly the way Node's can: fnm gives every Node version its own `bin`
-    | directory, while apt puts every PHP in `/usr/bin` under a versioned name
-    | (`php8.2`, `php8.3`), so there is no directory to prepend that means
-    | "this version". A directory holding one symlink named `php` is that
-    | directory. One per version, reused by every site on it.
+    | Deploy scripts find `php` on `PATH`. Unlike Node's per-version fnm `bin`, apt puts every PHP in
+    | `/usr/bin` under a versioned name (`php8.3`), so no directory means "this version". A
+    | directory holding one symlink named `php` is that directory; one per version, shared by every
+    | site on it.
     |
-    | Under `/var/lib` rather than `/tmp`: a shim that disappears on reboot
-    | would make the first deploy after one behave differently from the last
-    | deploy before it, which is the exact class of bug this fixes.
+    | Under `/var/lib`, not `/tmp`: a shim that vanishes on reboot would make the first deploy after
+    | it behave differently from the last before it.
     */
     'php_shim_dir' => env('SERVER_PHP_SHIM_DIR', '/var/lib/panel/php-shims'),
 
     /*
-    | Relabelling a site whose type is wrong.
+    | Relabelling a site whose type is wrong (e.g. a Custom PHP site with WordPress installed by
+    | hand). `Detect` reads the disk and offers the correction.
     |
-    | A user creates a Custom PHP site, installs WordPress into it by hand,
-    | and the panel goes on calling it Custom PHP — so it withholds Staging,
-    | Clone and Magic Login from a site that could use all three. `Detect`
-    | reads the disk and offers the correction.
+    | `suggestable` is NOT the list of types the detector can return: `SiteTypeDetector` resolves an
+    | `artisan` to `git`, which describes a checkout the panel owns (repository, branch, deploy
+    | script, webhook) and cannot be conjured from files on disk. Only types a site can genuinely
+    | *be* relabelled as belong here.
     |
-    | `suggestable` is NOT the list of types the detector can return, and the
-    | difference is the whole point. `SiteTypeDetector` resolves an `artisan`
-    | to `git`, which describes a checkout the panel owns — a repository, a
-    | branch, a deploy script, a webhook. None of that can be conjured from
-    | files on disk, so offering it would be offering a state the panel cannot
-    | enter. Only types a site can genuinely *be* relabelled as belong here.
-    |
-    | Deliberately short. WordPress (95) and Joomla (60) are the only
-    | signatures specific enough to act on; `index.php` and the no-match
-    | fallback both mean "there is PHP here", which is what the site already
-    | says it is.
+    | Deliberately short: WordPress (95) and Joomla (60) are the only signatures specific enough to
+    | act on; `index.php` and the no-match fallback both just mean "there is PHP here".
     */
     'site_type_detection' => [
         'suggestable' => ['wordpress', 'joomla'],
 
-        // Types that may be relabelled *away from*, and relabelled *to* as the
-        // escape hatch. Generic by nature: they promise nothing, so nothing is
-        // taken away by leaving them and nothing is claimed by arriving.
+        // Types that may be relabelled *away from*, and *to* as the escape hatch. Generic: they
+        // promise nothing, so leaving or arriving costs nothing.
         'generic' => ['php', 'static'],
 
-        // Below this, say nothing. `index.php` matches at 40 on every PHP site
-        // in existence, and a panel that nags about it is a panel people learn
-        // to dismiss without reading.
+        // Below this, say nothing: `index.php` matches at 40 on every PHP site.
         'min_confidence' => 60,
     ],
 
@@ -1912,68 +1469,52 @@ return [
         // with it. Per-application overridable; never absent.
         'default_memory_limit' => env('DOCKER_DEFAULT_MEMORY_LIMIT', '512m'),
 
-        // A database is not the application, and one budget for the pair means
-        // the app's ceiling is really the pair's. MySQL's default buffer pool
-        // alone is 128M, so a one-click app sharing 512m with its engine would
-        // be tuned by whichever container asked for memory first.
+        // A database is not the application: one budget for the pair would make the app's ceiling
+        // the pair's (MySQL's buffer pool alone is 128M).
         'default_db_memory_limit' => env('DOCKER_DEFAULT_DB_MEMORY_LIMIT', '512m'),
 
-        // How long the installer waits for an app's first-run setup endpoint to
-        // answer before giving up, in two-second tries. Generous because Chatwoot
-        // migrates its database on first boot behind a 502: 90 is three minutes.
+        // How long the installer waits for an app's first-run setup endpoint to answer, in
+        // two-second tries. Generous: some apps migrate their database on first boot behind a 502
+        // (90 is three minutes).
         'claim_attempts' => env('DOCKER_CLAIM_ATTEMPTS', 90),
 
-        // `compose up` pulls an image the first time, and an image can be
-        // large on a slow link. Generous, because the failure it prevents is a
-        // deploy that was working and got killed.
+        // `compose up` pulls an image the first time, which can be large on a slow link; generous so
+        // a working deploy is not killed.
         'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
 
-        // The first install of a Docker app — every recipe and the Container
-        // tab — pulls its images inside the provisioning job, and recipes and
-        // `docker` have no `installers.<type>.timeout`, so they got the 300 s
-        // default: 420 s with the overhead. Open WebUI + Ollama (3.8 GB) died
-        // at step `worker` twice that way on an ordinary link (RC-16), and
-        // Immich and Dify are the same size. This is both the job's installer
-        // allowance (`ProvisioningBudget`) and the timeout of that first
-        // `compose up`; later `up`/`pull` calls keep `command_timeout`.
-        // Stays under the queue worker's 1800 s TimeoutStopSec, so a restart
-        // still drains a running install (RC-F04).
+        // The first install of a Docker app (every recipe and the Container tab) pulls its images
+        // inside the provisioning job, and these have no `installers.<type>.timeout`, so they would
+        // get the 300 s default. This is both the job's installer allowance (`ProvisioningBudget`)
+        // and the timeout of that first `compose up`; later `up`/`pull` calls keep
+        // `command_timeout`. Stays under the queue worker's 1800 s TimeoutStopSec, so a restart
+        // still drains a running install.
         'install_timeout' => (int) env('DOCKER_INSTALL_TIMEOUT', 1200),
 
-        // How long a container that restarted recently is watched before it is
-        // called a crash loop (F2). One restart is the restart policy working; a
-        // loop restarts again or sits in `restarting` within this window, because
-        // Docker's backoff is short while the count is low. Paid only when the
-        // first sample looked suspicious.
+        // How long a container that restarted recently is watched before it is called a crash loop.
+        // One restart is the restart policy working; a loop restarts again or sits in `restarting`
+        // within this window. Paid only when the first sample looked suspicious.
         'crash_loop_confirm_seconds' => (int) env('DOCKER_CRASH_LOOP_CONFIRM_SECONDS', 10),
 
-        // Where a registry credential is materialised for the length of one
-        // pull. Mirrors `git_credential_dir`, and for the identical reason: the
-        // secret has to reach a CLI that only reads it from a file, so it is
+        // Where a registry credential is materialised for the length of one pull. Mirrors
+        // `git_credential_dir`: the secret must reach a CLI that only reads it from a file, so it is
         // written root-owned and removed in a `finally`.
         //
-        // **Never the site's document root.** The site user can read their own
-        // tree, and the panel deliberately keeps them out of the `docker` group
-        // because that group is root-equivalent — handing them a registry token
-        // there would give away by file what was withheld by group.
-        // Defaults to the system temp dir, the same as `git_credential_dir`,
-        // and deliberately not a new path under /var/lib: install.sh runs once
-        // and the updater ships code, never directories, so a fresh default
-        // path would exist on new boxes and be missing on every existing one.
-        // The per-pull subdirectory is created on demand regardless.
+        // **Never the site's document root.** The site user can read their own tree, and is kept out
+        // of the `docker` group because that group is root-equivalent.
+        // Defaults to the system temp dir, like `git_credential_dir`: install.sh runs once and the
+        // updater ships code, never directories, so a new default path would be missing on existing
+        // boxes. The per-pull subdirectory is created on demand.
         'registry_credential_dir' => env('DOCKER_REGISTRY_CREDENTIAL_DIR', sys_get_temp_dir()),
 
-        // The credential probe talks to a remote registry, so it needs its own
-        // ceiling: `command_timeout` is 600s because a pull may be gigabytes,
-        // and a login that has not answered in half a minute is not going to.
-        // The endpoint is throttled as well — a slow registry must not become a
-        // way to occupy the panel's workers.
+        // The credential probe talks to a remote registry, so it needs its own ceiling:
+        // `command_timeout` allows a multi-GB pull, and a login silent for 30 s will not answer.
+        // The endpoint is throttled too, so a slow registry cannot occupy the panel's workers.
         'login_timeout' => (int) env('DOCKER_LOGIN_TIMEOUT', 30),
 
         /*
-        | Image discovery (DS-02): reading an image from its registry without
-        | pulling it. Every call is a request to somebody else's server while a
-        | user waits on a form, so the timeouts are short and the answers cached.
+        | Image discovery: reading an image from its registry without pulling it. Every call hits
+        | somebody else's server while a user waits on a form, so timeouts are short and answers
+        | cached.
         */
         'images' => [
             'connect_timeout' => (int) env('DOCKER_IMAGES_CONNECT_TIMEOUT', 5),
@@ -1990,9 +1531,8 @@ return [
             // commit (`sha-…`) have thousands; a picker needs the recent ones.
             'max_tag_pages' => 5,
 
-            // The largest answer read from a registry, in bytes. A config blob
-            // is tens of KB and a page of a thousand tags well under one MB;
-            // the registry is user-chosen and every answer is decoded whole.
+            // The largest answer read from a registry, in bytes. The registry is user-chosen and every
+            // answer is decoded whole (a config blob is tens of KB).
             'max_response_bytes' => 2 * 1024 * 1024,
 
             // "This image is X GB" from this size up.
@@ -2002,9 +1542,9 @@ return [
             // runs on. Set only to inspect for a different architecture.
             'architecture' => env('DOCKER_IMAGES_ARCHITECTURE'),
 
-            // ENV keys that are build plumbing, not settings — hidden from the
-            // form. `Str::is` patterns. Changing `NGINX_VERSION` does not change
-            // the nginx in the image; changing `PATH` breaks it.
+            // ENV keys that are build plumbing, not settings, hidden from the form (`Str::is`
+            // patterns). Changing `NGINX_VERSION` does not change the nginx in the image; `PATH`
+            // breaks it.
             'hidden_env' => [
                 'PATH', 'HOME', 'HOSTNAME', 'TERM', 'SHELL', 'USER', 'PWD',
                 'LANG', 'LANGUAGE', 'LC_*', 'container', 'DEBIAN_FRONTEND',
@@ -2018,15 +1558,14 @@ return [
                 'PYTHONPATH', 'UV_*',
             ],
 
-            // Settings an image will not start without, by repository. Images
-            // cannot declare this, so it is never guessed (see
-            // ImageInspector::environment()); each entry is from the image's
+            // Settings an image will not start without, by repository. Images cannot declare this, so
+            // it is never guessed (see ImageInspector::environment()); each entry is from the image's
             // own documentation.
             'required_env' => [
                 'postgres' => ['POSTGRES_PASSWORD'],
                 'mysql' => ['MYSQL_ROOT_PASSWORD'],
                 'mariadb' => ['MARIADB_ROOT_PASSWORD'],
-                // Crash-loops on `TypeError: Invalid URL` without it (DS-07).
+                // Crash-loops on `TypeError: Invalid URL` without it.
                 'umamisoftware/umami' => ['DATABASE_URL'],
                 'ghcr.io/umami-software/umami' => ['DATABASE_URL'],
             ],
@@ -2043,13 +1582,9 @@ return [
                 'n8nio/n8n' => 5678,
             ],
 
-            // Folders an image keeps its data in without declaring them
-            // (no VOLUME), by repository. Added to the declared ones, so the
-            // data survives the container being recreated on an update.
-            // Measured 2026-10-07: Uptime Kuma 1.x declared /app/data, 2.x no
-            // longer does, and changedetection.io, Gotify, Actual and
-            // code-server declare nothing; the paths are from each image's
-            // own documentation.
+            // Folders an image keeps its data in without declaring them (no VOLUME), by repository.
+            // Added to the declared ones, so the data survives the container being recreated on an
+            // update. Paths are from each image's own documentation.
             'known_volumes' => [
                 'louislam/uptime-kuma' => ['/app/data'],
                 'dgtlmoon/changedetection.io' => ['/datastore'],
@@ -2062,22 +1597,19 @@ return [
                 'ghcr.io/gethomepage/homepage' => ['/app/config'],
             ],
 
-            // Read the image while creating a site from it (DS-03): the port
-            // when none was typed, a warning when the typed one is not one the
-            // image declares, and its VOLUMEs as the default volumes. Off in
-            // the test suite, which must not reach Docker Hub.
+            // Read the image while creating a site from it: the port when none was typed, a warning
+            // when the typed one is not declared, and its VOLUMEs as the default volumes. Off in the
+            // test suite, which must not reach Docker Hub.
             'inspect_on_create' => (bool) env('DOCKER_INSPECT_ON_CREATE', true),
         ],
 
         /*
-        | After `compose up`, how long the panel waits for the site to answer
-        | (DS-03). The container has to be running — not restarting — and
-        | something has to answer HTTP on its loopback port, any status. A
-        | first boot that runs migrations can take a minute, hence 90 s.
+        | After `compose up`, how long the panel waits for the site to answer. The container has to be
+        | running (not restarting) and something has to answer HTTP on its loopback port, any status.
+        | A first boot that runs migrations can take a minute, hence 90 s.
         */
         'readiness' => [
-            // A wall-clock deadline (DS-09), capped at
-            // ContainerReadinessCheck::MAX_TIMEOUT whatever is set here.
+            // Wall-clock deadline; capped at ContainerReadinessCheck::MAX_TIMEOUT whatever is set here.
             'timeout' => (int) env('DOCKER_READINESS_TIMEOUT', 90),
             'interval' => (int) env('DOCKER_READINESS_INTERVAL', 3),
             // How long a single-image site may keep restarting, with nothing
@@ -2086,11 +1618,9 @@ return [
             'restart_grace' => (int) env('DOCKER_READINESS_RESTART_GRACE', 30),
             // Log lines kept on the application beside a failure.
             'log_lines' => 50,
-            // Container ports that speak something other than HTTP, so a
-            // request for `/` can never pass: verified by the container's
-            // state instead (S-09). PostgreSQL, MySQL/MariaDB, Redis,
-            // MongoDB, Memcached, AMQP, MQTT, NATS, Kafka, ZooKeeper,
-            // Cassandra, SMTP.
+            // Container ports that speak something other than HTTP, so a request for `/` can never
+            // pass: verified by the container's state instead. PostgreSQL, MySQL/MariaDB, Redis,
+            // MongoDB, Memcached, AMQP, MQTT, NATS, Kafka, ZooKeeper, Cassandra, SMTP.
             'non_http_ports' => [5432, 3306, 6379, 27017, 11211, 5672, 1883, 4222, 9092, 2181, 9042, 25, 587],
         ],
     ],
@@ -2100,16 +1630,12 @@ return [
     | One-click Docker applications
     |--------------------------------------------------------------------------
     |
-    | The images each Docker app runs, here rather than in its site type so an
-    | operator can pin or mirror one without editing code — the same reason the
-    | PHP one-clicks keep their repositories and archive URLs in config.
+    | The images each Docker app runs, here rather than in its site type so an operator can pin or
+    | mirror one without editing code.
     |
-    | A floating tag, not a digest. A one-click that pins an exact version does
-    | not stay current; it stops being noticed, and every site created after
-    | that gets an old release. `5-alpine` tracks Ghost 5 patches, which is the
-    | behaviour somebody choosing "one-click Ghost" is asking for. The rendered
-    | compose file is stored per site, so an existing site is NOT moved when this
-    | changes — only new ones.
+    | A floating tag, not a digest: a pinned one-click stops being noticed and every new site gets
+    | an old release. `5-alpine` tracks Ghost 5 patches. The rendered compose file is stored per
+    | site, so an existing site is NOT moved when this changes, only new ones.
     |
     */
     /*
@@ -2117,40 +1643,31 @@ return [
     | Containerised database engines
     |--------------------------------------------------------------------------
     |
-    | Engines a Docker box can run as shared objects for its container sites —
-    | not as applications. A database has no HTTP interface, so it gets no domain,
-    | no vhost and no certificate; see the DockerDatabase model for why that
-    | distinction is structural rather than a preference.
+    | Engines a Docker box can run as shared objects for its container sites, not as applications.
+    | A database has no HTTP interface, so it gets no domain, vhost or certificate (see the
+    | DockerDatabase model).
     |
-    | Versions are explicit image references rather than a pattern with the
-    | version interpolated. A transform would happily invent `postgres:99-alpine`
-    | for a version somebody typed, and the failure would land at `docker pull`
-    | minutes into provisioning. Every tag below was verified against the
-    | registry's per-tag endpoint on 2026-09-30 — not against a page of recent
-    | tags, which returns the 60 most recently UPDATED and reports a live tag as
-    | missing.
+    | Versions are explicit image references, not a pattern with the version interpolated: a
+    | transform would invent `postgres:99-alpine` for a typed version and fail at `docker pull`
+    | minutes into provisioning. Verify a tag against the registry's per-tag endpoint, not a page of
+    | recent tags (it lists the 60 most recently UPDATED and reports a live tag as missing).
     |
-    | MySQL's 9.x innovation line is deliberately absent: `9.4` had not been
-    | rebuilt since 2025-10-18, and a stale innovation release is the wrong
-    | default for a panel to offer. 8.4 is the LTS.
+    | MySQL's 9.x innovation line is deliberately absent: a stale innovation release is the wrong
+    | default to offer. 8.4 is the LTS.
     |
-    | `data_path` is the directory the engine keeps its data in, which the panel
-    | mounts as a named volume. `port` is the port inside the container.
+    | `data_path` is the directory the engine keeps its data in, which the panel mounts as a named
+    | volume. `port` is the port inside the container.
     |
     */
     'docker_databases' => [
-        // Where the compose files live. Root-owned and outside any site's tree: a
-        // database is not a site and has no system user, and the file holds its
-        // password. Created on demand, because install.sh runs once and the
+        // Where the compose files live. Root-owned and outside any site's tree: a database is not a
+        // site, has no system user, and the file holds its password. Created on demand, because the
         // updater ships code rather than directories.
         'directory' => env('DOCKER_DATABASE_DIR', '/var/lib/panel/docker-databases'),
 
-        // How long to wait for a new engine to report itself healthy before
-        // treating it as broken. Generous on purpose: MySQL's first start
-        // initialises a data directory and can take half a minute on a small box,
-        // and a create that gave up early would roll back a database that was
-        // about to work. Two minutes is well past any healthy first start and
-        // well short of leaving somebody watching a spinner.
+        // How long to wait for a new engine to report healthy before treating it as broken. MySQL's
+        // first start initialises a data directory and can take half a minute on a small box;
+        // giving up early would roll back a database that was about to work.
         'ready_timeout' => (int) env('DOCKER_DATABASE_READY_TIMEOUT', 120),
 
         'engines' => [
@@ -2159,38 +1676,18 @@ return [
                 'port' => 5432,
                 'data_path' => '/var/lib/postgresql/data',
                 /*
-                | 🔴 **Postgres 18 moved its data directory, and mounting the old
-                | path makes the container REFUSE TO START.** It says so itself:
-                |
-                |   The suggested container configuration for 18+ is to place a
-                |   single mount at /var/lib/postgresql which will then place
-                |   PostgreSQL data in a subdirectory, allowing usage of
-                |   "pg_upgrade --link" without mount point boundary issues.
-                |
-                | `PGDATA` is `/var/lib/postgresql/18/docker` in that image and the
+                | Postgres 18 moved its data directory: mounting the old path makes the container
+                | REFUSE TO START. In that image `PGDATA` is `/var/lib/postgresql/18/docker` and the
                 | declared `VOLUME` is `/var/lib/postgresql`; 16 and 17 still use
-                | `/var/lib/postgresql/data` for both. Verified on the box with
-                | `docker inspect` on all three.
+                | `/var/lib/postgresql/data` for both.
                 |
-                | Found because 18 is the NEWEST version, so it is what the new
-                | one-click control offers by default — the first database anybody
-                | starts from that screen was the one that could not start. The
-                | panel rolled it back correctly ("no row, no container and no port
-                | held"), so the only symptom was a create that failed.
-                |
-                | A per-version override rather than a second engine entry: it is
-                | the same engine, and splitting it would double the versions list
-                | in the UI.
+                | A per-version override rather than a second engine entry: same engine, and splitting
+                | it would double the versions list in the UI.
                 */
                 'data_path_overrides' => [
                     '18' => '/var/lib/postgresql',
                 ],
                 'template' => 'server.docker.databases.postgres',
-                // The default user and database the image creates on an empty
-                // data directory. Both are init-only: changing them afterwards
-                // does nothing, which is why they are fixed here rather than
-                // asked for — a field that silently stops applying is worse than
-                // no field. See `init-only env vars` in the panel's own history.
                 'versions' => [
                     '18' => 'postgres:18-alpine',
                     '17' => 'postgres:17-alpine',
@@ -2213,8 +1710,8 @@ return [
                 'label' => 'MariaDB',
                 'port' => 3306,
                 'data_path' => '/var/lib/mysql',
-                // MariaDB's image accepts the MYSQL_* variables as well as its
-                // own, so it shares MySQL's template rather than duplicating it.
+                // MariaDB's image accepts the MYSQL_* variables as well as its own, so it shares
+                // MySQL's template.
                 'template' => 'server.docker.databases.mysql',
                 'versions' => [
                     '12.3' => 'mariadb:12.3',
@@ -2249,8 +1746,7 @@ return [
                 'label' => 'Valkey',
                 'port' => 6379,
                 'data_path' => '/data',
-                // A Redis fork with the same wire protocol and the same
-                // `--requirepass`, so the same template.
+                // A Redis fork with the same wire protocol and `--requirepass`, so the same template.
                 'template' => 'server.docker.databases.redis',
                 'versions' => [
                     '9' => 'valkey/valkey:9-alpine',
@@ -2299,14 +1795,11 @@ return [
     | fail2ban
     |--------------------------------------------------------------------------
     |
-    | Brute-force containment. Server-level settings live in jail.local.
-    | Per-application jails remain isolated under jail.d.
+    | Brute-force containment. Server-level settings live in jail.local; per-application jails stay
+    | isolated under jail.d.
     |
-    | The ban action is left to fail2ban's default rather than set to `ufw`.
-    | Routing bans through UFW would mean the Firewall screen's on/off switch
-    | silently disables every ban, with nothing on this screen to say so; two
-    | features that each claim to be protecting the server should not have one
-    | quietly turning the other off.
+    | The ban action is left to fail2ban's default, not `ufw`: routing bans through UFW would let the
+    | Firewall screen's on/off switch silently disable every ban.
     |
     */
 
@@ -2321,11 +1814,9 @@ return [
             'maxretry' => (int) env('SERVER_FAIL2BAN_MAXRETRY', 5),
         ],
 
-        // The jails the panel manages. `sshd` guards the way into the server
-        // and is the reason to run fail2ban at all; `recidive` watches
-        // fail2ban's own log and gives repeat offenders a much longer ban.
-        // Per-application jails (a WordPress login, say) belong with the
-        // application, whose log path only exists once the app does.
+        // The jails the panel manages. `sshd` guards the way into the server; `recidive` watches
+        // fail2ban's own log and gives repeat offenders a much longer ban. Per-application jails
+        // belong with the application, whose log path only exists once the app does.
         'jails' => [
             [
                 'name' => 'sshd',
@@ -2333,25 +1824,15 @@ return [
                 // Enabling this one can lock the operator out of their own
                 // server, so the API requires an explicit acknowledgement.
                 'lockout_risk' => true,
-                // `{ssh_port}` is replaced with the port SSH is really on.
-                // Left as fail2ban's default it would resolve to 22, so on a
-                // server whose SSH was moved — via this very panel — the ban
-                // would land on a port nobody uses.
+                // `{ssh_port}` is replaced with the port SSH is really on; fail2ban's default would be 22,
+                // so a moved SSH port would get the ban on a port nobody uses.
                 //
-                // `backend` belongs HERE, on the one jail that wants the
-                // journal, and not in `[DEFAULT]` where it used to be. A
-                // backend in `[DEFAULT]` applies to every jail, and the
-                // systemd backend makes fail2ban ignore `logpath` entirely —
-                // so every file-watching jail the panel writes was reading the
-                // journal instead of the file it named, matching nothing. That
-                // silently disabled `recidive` and every per-site application
-                // jail while the panel reported them enabled.
+                // `backend` belongs HERE, on the one jail that wants the journal, not in `[DEFAULT]`:
+                // the systemd backend makes fail2ban ignore `logpath`, so every file-watching jail
+                // (`recidive`, per-site jails) would read the journal and match nothing.
                 //
-                // `%(sshd_backend)s` rather than a literal `systemd`: it is
-                // fail2ban's own variable and resolves to whatever is correct
-                // for the distribution, so this stays right on a box whose
-                // sshd does not log to the journal. Taken from v7, which has
-                // always put it here.
+                // `%(sshd_backend)s`, not a literal `systemd`: fail2ban's own variable resolves to the
+                // right backend for the distribution.
                 'options' => [
                     'mode' => 'aggressive',
                     'port' => '{ssh_port}',
@@ -2363,11 +1844,9 @@ return [
                 'label' => 'Repeat offenders',
                 'lockout_risk' => false,
                 'options' => [
-                    // The panel's copy of fail2ban's own filter, which also
-                    // leaves out the per-site jails' bans. Those are for one
-                    // site only; counted here, three of them in a day became
-                    // a week-long ban on every port of the server — the panel
-                    // and SSH included (found live 2026-10-07, FB-K).
+                    // The panel's copy of fail2ban's own filter, which also leaves out the per-site jails'
+                    // bans: those are for one site only, and counted here three of them in a day became
+                    // a week-long ban on every port, the panel and SSH included.
                     'filter' => 'panel-recidive',
                     'logpath' => '/var/log/fail2ban.log',
                     'bantime' => 604800,  // a week
@@ -2377,11 +1856,9 @@ return [
             ],
         ],
 
-        // Ban-time presets, so the form offers "1 hour" rather than 3600.
-        // Backend-driven for the same reason the cron schedule presets are:
-        // the frontend should not be maintaining its own copy of a list that
-        // has to agree with what the API accepts. `-1` is fail2ban's
-        // permanent ban.
+        // Ban-time presets, so the form offers "1 hour" rather than 3600. Backend-driven so the
+        // frontend does not keep its own copy of a list that must agree with the API. `-1` is
+        // fail2ban's permanent ban.
         'bantime_presets' => [
             ['key' => '10m', 'seconds' => 600],
             ['key' => '1h', 'seconds' => 3600],
@@ -2398,26 +1875,20 @@ return [
     | Per-application fail2ban
     |--------------------------------------------------------------------------
     |
-    | A different feature from `fail2ban` above, not a filtered view of it —
-    | this watches one site's own access log, which only exists once the
-    | application does. A separate drop-in from the server-level one, so
-    | disabling one never touches the other.
+    | A different feature from `fail2ban` above, not a filtered view of it: it watches one site's own
+    | access log, which only exists once the application does, in a separate drop-in so disabling
+    | one never touches the other.
     |
-    | Two jail templates, not one: a generic access log has no reliable way
-    | to tell a failed login from a successful one for an arbitrary
-    | application (most apps answer 200 either way), so the generic jail
-    | only ever rate-limits raw request volume from one address — real
-    | flood/scraping protection that needs no assumption about what the
-    | request meant. WordPress gets a second, stricter jail on top, because
-    | its login endpoints are fixed, well-known targets (the same "rate the
-    | login attempts themselves" approach published fail2ban configs for
-    | WordPress — e.g. "wordpress-hard" — already use).
+    | Two jail templates: a generic access log cannot tell a failed login from a successful one
+    | (most apps answer 200 either way), so the generic jail only rate-limits raw request volume per
+    | address. WordPress gets a second, stricter jail because its login endpoints are fixed, known
+    | targets.
     |
     */
     'fail2ban_apps' => [
         'jail_d' => env('SERVER_FAIL2BAN_JAIL_D', '/etc/fail2ban/jail.d'),
-        // A site jail bans for that site only, in its own web-server config:
-        // the action fail2ban calls, and the script it runs (FB-K).
+        // A site jail bans for that site only, in its own web-server config: the action fail2ban
+        // calls, and the script it runs.
         'action_d' => env('SERVER_FAIL2BAN_ACTION_D', '/etc/fail2ban/action.d'),
         'ban_script' => env('SERVER_FAIL2BAN_BAN_SCRIPT', '/usr/local/sbin/panel-site-ban'),
         'drop_in' => env('SERVER_FAIL2BAN_APPS_DROP_IN', 'panel-apps.local'),
@@ -2444,10 +1915,9 @@ return [
     | Firewall
     |--------------------------------------------------------------------------
     |
-    | `default_firewall_ports` are the TCP ports seeded as `allow` rules when
-    | the firewall is enabled (SSH is always added on top). These are the
-    | panel's own service ports plus the web ports so enabling never locks the
-    | box (or its sites) out.
+    | `default_firewall_ports` are the TCP ports seeded as `allow` rules when the firewall is
+    | enabled (SSH is always added on top): the panel's own service ports plus the web ports, so
+    | enabling never locks the box (or its sites) out.
     |
     */
 
@@ -2456,9 +1926,8 @@ return [
     ))),
 
     'firewall' => [
-        // Ports worth a warning that aren't a database engine we manage —
-        // those are derived from what's installed. These are the ones that
-        // hand over the machine, or a large part of it, if reached from the
+        // Ports worth a warning that aren't a database engine we manage (those are derived from what
+        // is installed): the ones that hand over the machine, or much of it, if reached from the
         // internet.
         'risky_ports' => [
             6379 => 'Redis',
@@ -2495,23 +1964,19 @@ return [
         'fpm' => ['driver' => FpmPhpStack::class],
 
         /*
-        | LSPHP. Note `{compact}` — LiteSpeed names everything `lsphp84`, not
-        | `lsphp8.4`, and assuming the dot produces a "package not found" that
-        | reads like a broken repository. Unverified against a real box.
+        | LSPHP. Note `{compact}`: LiteSpeed names everything `lsphp84`, not `lsphp8.4`, and assuming
+        | the dot gives a "package not found" that reads like a broken repository.
         */
         'lsphp' => [
             'driver' => LsphpPhpStack::class,
             'dir' => env('SERVER_LSWS_DIR', '/usr/local/lsws'),
             'ini_path' => '{root}/lsphp{compact}/etc/php/{version}/litespeed/php.ini',
             /*
-            | Two binaries, and they are not interchangeable. `php` is the
-            | ordinary CLI, used by installers; `lsphp` is the LSAPI build the
-            | web server spawns. A vhost pointed at the CLI runs no PHP at all.
+            | Two binaries, not interchangeable: `php` is the ordinary CLI used by installers; `lsphp`
+            | is the LSAPI build the web server spawns (a vhost pointed at the CLI runs no PHP).
             |
-            | Lists, not single paths, and probed in order: LSPHP is not always
-            | in the lsws tree. Note the dot in the /usr/bin forms where the
-            | lsws tree uses `lsphp82` — that asymmetry is real, and taken from
-            | the Go agent that ran on production servers.
+            | Lists, probed in order: LSPHP is not always in the lsws tree. The /usr/bin forms have a
+            | dot (`lsphp8.2`) where the lsws tree uses `lsphp82`; that asymmetry is real.
             */
             'binary_candidates' => [
                 '{root}/lsphp{compact}/bin/php',
@@ -2529,38 +1994,18 @@ return [
             /*
             | The packages LiteSpeed actually ships, which is NOT the FPM set.
             |
-            | This used to mirror FPM's names on the reasoning that a smaller
-            | base set would be a real difference in what the two stacks can
-            | run. The reasoning was right and the conclusion was wrong: five
-            | of those names do not exist in any repository.
+            | Mirroring FPM's names fails: `lsphp84-mbstring`, `-xml`, `-zip`, `-bcmath` and `-soap` do
+            | not exist, and apt fails the whole transaction on one missing name, so "install PHP 8.3"
+            | installed nothing. Those extensions (and gd) are compiled into the interpreter
+            | (`lsphp84/bin/php -m`), so no capability is lost; `lsphp84-gd` resolves with no
+            | installation candidate, which is worse than absent.
             |
-            |   E: Unable to locate package lsphp84-mbstring
-            |   E: Unable to locate package lsphp84-xml
-            |   E: Unable to locate package lsphp84-zip
-            |   E: Unable to locate package lsphp84-bcmath
-            |   E: Unable to locate package lsphp84-soap
-            |
-            | apt fails a whole transaction on one missing name, so "install
-            | PHP 8.3" from the panel installed NOTHING on OpenLiteSpeed --
-            | mysql, pgsql and curl went down with the five phantoms.
-            |
-            | There is no capability lost, which is why the names are absent:
-            | mbstring, xml, zip, gd, bcmath and soap are COMPILED INTO the
-            | interpreter. Verified with `lsphp84/bin/php -m` on a real server
-            | -- all six are loaded on a box with none of those packages
-            | installed. `lsphp84-gd` resolves as a name with no installation
-            | candidate, which is worse than absent: it looks real in a search
-            | and still kills the transaction.
-            |
-            | This is install.sh's list, and deliberately so. A version added
-            | from the panel should be the same interpreter the installer
-            | would have built, and that set is the one proven on hardware.
-            | OpenLiteSpeedTest asserts the two stay in step.
+            | This is install.sh's list, so a version added from the panel is the interpreter the
+            | installer would have built. OpenLiteSpeedTest asserts the two stay in step.
             */
-            // imagick and imap as v7 has them (operator, 2026-10-07); LiteSpeed
-            // packages them from 8.2 up and compiles gmp in. A version with no
-            // package for one is installed without it — the runtime drops an
-            // extension the index does not have rather than failing.
+            // imagick and imap as v7 has them; LiteSpeed packages them from 8.2 up and compiles gmp in.
+            // A version with no package for one is installed without it (the runtime drops an
+            // extension the index does not have rather than failing).
             'base_packages' => ['common', 'mysql', 'pgsql', 'curl', 'intl', 'sqlite3', 'redis', 'igbinary', 'opcache', 'imagick', 'imap'],
         ],
     ],
@@ -2592,68 +2037,46 @@ return [
         ['key' => 'apache', 'unit' => 'apache2', 'label' => 'Apache', 'packages' => ['apache2', 'apache2-bin']],
         ['key' => 'openlitespeed', 'unit' => 'lshttpd', 'label' => 'OpenLiteSpeed', 'packages' => ['openlitespeed']],
         /*
-        | `install` names the runtime_installs row this service's install is
-        | tracked under, as [runtime, version]. Present it and the service list
-        | shows the entry while it is installing and after a failed install,
-        | instead of the row simply not existing — which reads as "I asked for
-        | MySQL, where did it go".
-        |
-        | Config rather than a match() in the manager on purpose. Setup's
-        | progressFor() is a match over database|php|node with a null default,
-        | and that is exactly why a failed fail2ban install is invisible there:
-        | a match is a list somebody forgets to extend. Omit the key and the
-        | service behaves as before — absent until its unit exists.
+        | `install` names the runtime_installs row this service's install is tracked under, as
+        | [runtime, version]. With it the service list shows the entry while installing and after a
+        | failed install, instead of the row not existing. Config rather than a match() in the
+        | manager: a match is a list somebody forgets to extend. Omit the key and the service is
+        | absent until its unit exists.
         */
         /*
-        | Docker. `install` names the runtime_installs row so the Services list
-        | shows the entry while it installs and after a failed install, rather
-        | than the row simply not existing -- which reads as "I asked for
-        | Docker, where did it go".
-        |
-        | The unit is `docker`, not `docker.socket`: the socket unit is active
-        | on a box where the daemon has failed to start, so reading it would
-        | report a working Docker on a server that cannot run a container.
+        | Docker. The unit is `docker`, not `docker.socket`: the socket unit is active even when the
+        | daemon failed to start, which would report a working Docker on a server that cannot run a
+        | container.
         */
         ['key' => 'docker', 'unit' => 'docker', 'label' => 'Docker', 'install' => ['runtime', 'docker'], 'packages' => ['docker-ce', 'docker.io']],
         ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql'], 'packages' => ['mysql-server-core-*', 'mysql-server']],
         ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb'], 'packages' => ['mariadb-server', 'mariadb-server-core']],
         ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb'], 'packages' => ['mongodb-org-server']],
         /*
-        | PostgreSQL, and the one entry in this list whose status cannot come
-        | from systemd.
+        | PostgreSQL, the one entry whose status cannot come from systemd.
         |
-        | `postgresql.service` is a meta unit — `Type=oneshot`,
-        | `ExecStart=/bin/true`, `RemainAfterExit=on` — so `ActiveState` is
-        | `active` because /bin/true succeeded, whatever the clusters are
-        | doing. `postgresql@.service` prefixes its ExecStart with `-`, which
-        | tells systemd to ignore a failed start, so it cannot report a dead
-        | cluster either. Both read from the shipped package, 2026-09-10.
+        | `postgresql.service` is a meta unit (`Type=oneshot`, `ExecStart=/bin/true`,
+        | `RemainAfterExit=on`), so it is `active` whatever the clusters are doing, and
+        | `postgresql@.service` ignores a failed start (`-` prefix), so it cannot report a dead
+        | cluster either. Without `health` this screen would say "Running" while the Databases screen
+        | (pg_isready) says down.
         |
-        | Listing it without `health` would put "Running" on this screen while
-        | the Databases screen — which asks pg_isready — says it is down. Two
-        | screens, opposite answers, and the reassuring one wrong.
+        | The unit stays the meta unit because start/stop/restart through it work (the per-cluster
+        | units are `PartOf=postgresql.service`); only the status is overridden.
         |
-        | The unit is still the meta unit, because start/stop/restart through
-        | it *do* work: the per-cluster units are `PartOf=postgresql.service`.
-        | Only the status is untrustworthy, and only the status is overridden.
-        |
-        | The port comes from the same env var as the engine's `default_port`
-        | above, so the probe and the connection cannot drift apart.
+        | The port comes from the same env var as the engine's `default_port`, so they cannot drift.
         */
-        // `instances`: each cluster is enabled at boot on its own, so "Start
-        // on boot" has to reach them too (bug #12) — see runService().
-        // `postgresql` itself is a meta package versioned like `16+257`; the
-        // server is `postgresql-16`.
+        // `instances`: each cluster is enabled at boot on its own, so "Start on boot" has to reach
+        // them too (see runService()). `postgresql` itself is a meta package versioned like
+        // `16+257`; the server is `postgresql-16`.
         ['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'install' => ['database', 'postgresql'], 'instances' => 'postgresql@*', 'packages' => ['postgresql-[0-9]*'],
             'health' => ['pg_isready', '--quiet', '--host=127.0.0.1', '--port='.(int) env('SERVER_POSTGRES_PORT', 5432)]],
         ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis', 'packages' => ['redis-server']],
         ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor', 'packages' => ['supervisor']],
         ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban', 'install' => ['fail2ban', 'latest'], 'packages' => ['fail2ban']],
-        // The server's own mail relay; install.sh sets it up (configure_mail),
-        // and v7 listed it here. Shown only where the unit exists. No
-        // `instances`: 26.04 ships a postfix@ template next to the real
-        // postfix.service, so the pattern matched a dead unit — the row lost
-        // its figures, and "Start on boot" would have enabled a second master.
+        // The server's own mail relay; install.sh sets it up (configure_mail). Shown only where the
+        // unit exists. No `instances`: 26.04 ships a postfix@ template next to postfix.service, so
+        // the pattern matched a dead unit and "Start on boot" would have enabled a second master.
         ['key' => 'postfix', 'unit' => 'postfix', 'label' => 'Postfix', 'packages' => ['postfix']],
     ],
 
@@ -2662,13 +2085,10 @@ return [
     ))),
 
     /*
-    | Which log sources belong to which service, as keys into the `logs`
-    | registry below. This maps a service row to the existing Logs feature
-    | instead of giving services a second way to read a log — same reader,
-    | same permission, and the incremental cursor already there means the
-    | frontend can poll for a live view. php-fpm and PostgreSQL (one log per
-    | cluster) are derived. Keys pointing at a file that doesn't exist are
-    | dropped at request time.
+    | Which log sources belong to which service, as keys into the `logs` registry below: the same
+    | reader, permission and incremental cursor as the Logs feature, so the frontend can poll a live
+    | view. php-fpm and PostgreSQL (one log per cluster) are derived. Keys pointing at a missing
+    | file are dropped at request time.
     */
 
     'service_logs' => [
@@ -2677,8 +2097,7 @@ return [
         'apache' => ['apache_error', 'apache_access'],
         'openlitespeed' => ['openlitespeed_error', 'openlitespeed_access'],
         'mysql' => ['mysql_error', 'mysql_slow'],
-        // Ubuntu's MariaDB logs to the journal, not /var/log/mysql — without
-        // `mariadb` its Services row had no log on any of our servers.
+        // Ubuntu's MariaDB logs to the journal, not /var/log/mysql, hence `mariadb`.
         'mariadb' => ['mysql_error', 'mysql_slow', 'mariadb'],
         'mongodb' => ['mongodb'],
         'redis' => ['redis'],
@@ -2687,11 +2106,10 @@ return [
     ],
 
     /*
-    | Service usage sampling. CPU is a cumulative counter, so a percentage is
-    | measured between two reads (see ServiceUsage): `window` is the oldest
-    | previous sample still worth comparing against — beyond it the average
-    | describes a period nobody is watching — and `ttl` is how long a sample
-    | is kept at all.
+    | Service usage sampling. CPU is a cumulative counter, so a percentage is measured between two
+    | reads (see ServiceUsage): `window` is the oldest previous sample still worth comparing against
+    | (beyond it the average describes a period nobody is watching), and `ttl` is how long a sample
+    | is kept.
     */
 
     'usage_sample_window' => (int) env('SERVER_USAGE_SAMPLE_WINDOW', 60),
@@ -2702,31 +2120,24 @@ return [
     | Logs
     |--------------------------------------------------------------------------
     |
-    | Read-only server log sources the panel surfaces. No DB — the catalog is
-    | filtered at request time to the files that actually exist on the box
-    | (detect-don't-trust). php-fpm logs are detected per installed version
-    | from `php_dir`. The client only ever references a source by its `key`;
-    | the panel resolves the path from this registry (never a client path).
+    | Read-only server log sources the panel surfaces. No DB: the catalog is filtered at request time
+    | to the files that exist on the box. php-fpm logs are detected per installed version from
+    | `php_dir`. The client only references a source by its `key`; the panel resolves the path
+    | from this registry (never a client path).
     |
     */
 
     /*
-    | `clearable` marks the logs the panel will empty on request (truncate, see
-    | LogManager::clear). It is opt-IN per row on purpose: a source added here
-    | later is not clearable until somebody decides it should be.
+    | `clearable` marks the logs the panel will empty on request (truncate, see LogManager::clear).
+    | Opt-IN per row: a source added later is not clearable until somebody decides it should be.
     |
-    | `sensitive` marks the ones that record what happened to the *machine*
-    | rather than what a service is chattering about: auth.log, ufw.log,
-    | fail2ban.log, syslog, kern.log, mail.log and the Let's Encrypt log. They
-    | are clearable by operator decision, and the flag exists so the
-    | confirmation can name what is being destroyed — these are the files an
-    | investigation needs and the first ones an intruder would erase, so the
-    | answer is informed consent rather than a silent button.
+    | `sensitive` marks logs that record what happened to the *machine* (auth.log, ufw.log,
+    | fail2ban.log, syslog, kern.log, mail.log, the Let's Encrypt log). They are clearable, and the
+    | flag lets the confirmation name what is destroyed: these are what an investigation needs and
+    | what an intruder erases first.
     |
-    | The journal has no `clearable` and cannot get one: it is not a file, so
-    | there is nothing to truncate. Emptying it means `journalctl --vacuum`,
-    | which discards the host's entire journal rather than one source — a
-    | different operation with a different blast radius, and not this one.
+    | The journal is not a file, so it has no `clearable`: emptying it means `journalctl --vacuum`,
+    | which discards the host's entire journal, a different operation with a different blast radius.
     */
     'logs' => [
         // Web server (only the installed one has files)
@@ -2734,24 +2145,17 @@ return [
         ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => '/var/log/nginx/error.log', 'clearable' => true],
         ['key' => 'apache_access', 'label' => 'Apache — Access', 'group' => 'web', 'path' => '/var/log/apache2/access.log', 'clearable' => true],
         ['key' => 'apache_error', 'label' => 'Apache — Error', 'group' => 'web', 'path' => '/var/log/apache2/error.log', 'clearable' => true],
-        // Both, like the other two. OpenLiteSpeed had only an error log here,
-        // so the Logs screen offered no access log on that stack at all. The
-        // shipped httpd_config.conf writes `accessLog logs/access.log`, which
-        // resolves against $SERVER_ROOT.
-        // `privileged`: /usr/local/lsws/logs is root:nogroup 0750, so the panel
-        // account cannot even see these files exist — as plain `file` sources
-        // both were silently dropped from the list on every OpenLiteSpeed
-        // server (found 2026-09-23). Read through sudo, like Let's Encrypt's.
+        // Both, like the other two. The shipped httpd_config.conf writes `accessLog logs/access.log`,
+        // which resolves against $SERVER_ROOT.
+        // `privileged`: /usr/local/lsws/logs is root:nogroup 0750, so the panel account cannot see
+        // these files and plain `file` sources would be dropped. Read through sudo.
         ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'kind' => 'privileged', 'path' => '/usr/local/lsws/logs/access.log', 'clearable' => true],
         ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'kind' => 'privileged', 'path' => '/usr/local/lsws/logs/error.log', 'clearable' => true],
         // Database (installed engine)
         ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log', 'clearable' => true],
         ['key' => 'mysql_slow', 'label' => 'MySQL — Slow Query', 'group' => 'database', 'path' => '/var/log/mysql/mariadb-slow.log', 'clearable' => true],
-        // MariaDB on Debian/Ubuntu logs to the journal, not /var/log/mysql —
-        // so on those servers the file entry above never appears and there was
-        // no database log at all. Tagged `mariadbd` by the unit itself; shown
-        // only once it has written something, so a server without MariaDB
-        // does not list an empty log.
+        // MariaDB on Debian/Ubuntu logs to the journal, not /var/log/mysql, so the file entry above
+        // never appears. Tagged `mariadbd` by the unit; shown only once it has written something.
         ['key' => 'mariadb', 'label' => 'MariaDB', 'group' => 'database', 'kind' => 'journal', 'identifier' => 'mariadbd', 'path' => '', 'hide_when_empty' => true],
         ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => '/var/log/mongodb/mongod.log', 'clearable' => true],
         // Cache
@@ -2762,9 +2166,7 @@ return [
         // Hardware, drivers, and the OOM killer — the log that answers "the
         // site did not crash, it was killed".
         ['key' => 'kernel', 'label' => 'System — Kernel', 'group' => 'system', 'path' => '/var/log/kern.log', 'clearable' => true, 'sensitive' => true],
-        // Only present where an MTA is installed. The panel does not install
-        // one; it reads what is already there, and the source hides itself on
-        // the servers that have none.
+        // Only present where an MTA is installed; the source hides itself on servers that have none.
         ['key' => 'mail', 'label' => 'System — Mail', 'group' => 'system', 'path' => '/var/log/mail.log', 'clearable' => true, 'sensitive' => true],
         // Security / daemons
         ['key' => 'ufw', 'label' => 'Firewall — UFW', 'group' => 'security', 'path' => '/var/log/ufw.log', 'clearable' => true, 'sensitive' => true],
@@ -2775,9 +2177,8 @@ return [
         // `kind` is `file` unless it says otherwise — read natively, followed
         // by byte offset, downloadable. The two below cannot be any of that.
 
-        // certbot's directory is 0700 root, so the panel account cannot even
-        // stat inside it. Read through ServerOps, the same way the unattended
-        // upgrades log already is.
+        // certbot's directory is 0700 root, so the panel account cannot stat inside it. Read through
+        // ServerOps, like the unattended upgrades log.
         ['key' => 'letsencrypt', 'label' => "Let's Encrypt", 'group' => 'security', 'kind' => 'privileged', 'path' => '/var/log/letsencrypt/letsencrypt.log', 'clearable' => true, 'sensitive' => true],
 
         // Not a file at all — a binary store read through journalctl. `path` is
@@ -2825,18 +2226,16 @@ return [
             '/var/log/nginx/*.log',
             '/var/log/apache2/*.log',
             '/usr/local/lsws/logs/*.log',
-            // Sites' own logs are not listed here: they live in each site's
-            // `logs/` directory on every stack and have their own category,
-            // SiteLogsTarget.
+            // Sites' own logs are not listed: they live in each site's `logs/` directory on every stack
+            // and have their own category, SiteLogsTarget.
             '/var/log/mysql/*.log',
             '/var/log/mongodb/*.log',
             '/var/log/redis/*.log',
             '/var/log/supervisor/*.log',
             '/var/log/php*-fpm.log',
-            // Not ufw.log or fail2ban.log (bug #24): they are the record of
-            // attacks, and fail2ban's recidive jail reads its own log, so
-            // emptying it forgets every repeat offender. v7 never empties a
-            // live log; logrotate already keeps both in check.
+            // Not ufw.log or fail2ban.log: they record attacks, and fail2ban's recidive jail reads its
+            // own log, so emptying it forgets every repeat offender. logrotate already keeps both in
+            // check.
         ],
     ],
 
@@ -2845,10 +2244,9 @@ return [
     | Settings
     |--------------------------------------------------------------------------
     |
-    | Paths + option sets for the server Settings feature. Changes are written
-    | to managed, NON-DESTRUCTIVE drop-ins (never the distro's own config), so
-    | a migrated server keeps its existing configuration. Overridable so tests
-    | can point them at writable temp paths.
+    | Paths + option sets for the server Settings feature. Changes go to managed, NON-DESTRUCTIVE
+    | drop-ins (never the distro's own config), so a migrated server keeps its configuration.
+    | Overridable for tests.
     |
     */
 
@@ -2864,30 +2262,27 @@ return [
     // Read after the drop-ins, for a port set by hand (App\Support\SshPort).
     'sshd_config_file' => env('SERVER_SSHD_CONFIG_FILE', '/etc/ssh/sshd_config'),
 
-    // Present only when the kernel has IPv6: a host booted with
-    // ipv6.disable=1 has no such file, and an nginx site listening on [::]
-    // fails its config test there (App\Services\Server\WebServers\NginxDriver).
-    // install.sh's have_ipv6 asks the same file.
+    // Present only when the kernel has IPv6: a host booted with ipv6.disable=1 has no such file, and
+    // an nginx site listening on [::] fails its config test there (NginxDriver). install.sh's
+    // have_ipv6 asks the same file.
     'ipv6_probe_file' => env('SERVER_IPV6_PROBE_FILE', '/proc/net/if_inet6'),
 
     /*
     |--------------------------------------------------------------------------
-    | Container login (RC-28)
+    | Container login
     |--------------------------------------------------------------------------
     |
-    | A Docker app's own system user logs in straight into the app's container:
-    | sshd forces every login of a member of `group` through `login`, which runs
-    | `helper` as root through one NOPASSWD rule, and the helper reaches only
-    | the containers `map` says that user owns. See AppShellInstaller.
+    | A Docker app's own system user logs in straight into the app's container: sshd forces every
+    | login of a member of `group` through `login`, which runs `helper` as root through one NOPASSWD
+    | rule, and the helper reaches only the containers `map` says that user owns. See
+    | AppShellInstaller.
     |
-    | `sshd_drop_in` sorts right after SecuritySettings' 00-panel.conf: sshd
-    | keeps the FIRST value it reads for a keyword, so the block has to come
-    | before anything that might set forwarding or a forced command globally.
+    | `sshd_drop_in` sorts right after SecuritySettings' 00-panel.conf: sshd keeps the FIRST value it
+    | reads for a keyword, so the block must precede anything that sets forwarding or a forced
+    | command globally.
     |
-    | `sync` is off under phpunit (see phpunit.xml) for the same reason
-    | privilege.sudo is: the suite asserts on the commands a feature runs, and
-    | a map rewrite after every Application save would be in all of them.
-    | AppShellMapTest turns it on.
+    | `sync` is off under phpunit (see phpunit.xml), like privilege.sudo: a map rewrite after every
+    | Application save would show up in every command assertion. AppShellMapTest turns it on.
     |
     */
 
@@ -2906,20 +2301,17 @@ return [
     'reboot_required_file' => env('SERVER_REBOOT_REQUIRED', '/var/run/reboot-required'),
 
     /*
-    | How many updates are waiting. This is the script the MOTD uses: it reads
-    | the apt cache directly, so it needs no lock, no network and no `apt-get
-    | update` — and it prints `updates;security` to **stderr**, not stdout.
+    | How many updates are waiting: the script the MOTD uses. It reads the apt cache directly (no
+    | lock, no network, no `apt-get update`) and prints `updates;security` to **stderr**.
     |
-    | It ships in `update-notifier-common`, which a minimal install may not
-    | have. Absent, the counts read `null` — deliberately not `0`, which would
-    | claim the box is up to date on no evidence.
+    | It ships in `update-notifier-common`, which a minimal install may not have. Absent, the counts
+    | read `null`, deliberately not `0`, which would claim the box is up to date on no evidence.
     */
     'apt_check' => env('SERVER_APT_CHECK', '/usr/lib/update-notifier/apt-check'),
 
     /*
-    | Touched by APT::Periodic only when `apt-get update` *succeeded*, which is
-    | the question being asked. The mtime of /var/lib/apt/lists moves on failed
-    | runs too, so it would report a refresh that did not happen.
+    | Touched by APT::Periodic only when `apt-get update` *succeeded*; the mtime of
+    | /var/lib/apt/lists moves on failed runs too, so it would report a refresh that did not happen.
     */
     'apt_update_stamp' => env('SERVER_APT_UPDATE_STAMP', '/var/lib/apt/periodic/update-success-stamp'),
 
@@ -2930,14 +2322,9 @@ return [
     'unattended_upgrades_log' => env('SERVER_UNATTENDED_LOG', '/var/log/unattended-upgrades/unattended-upgrades.log'),
 
     /*
-    | Where the *reason* actually is when a package fails to configure.
-    |
-    | The log above is unattended-upgrades' own narration, and for a failed
-    | dpkg step it says little more than `ERROR` plus a summary. dpkg's output
-    | — the maintainer script's stderr, the conffile prompt it could not
-    | answer, the dependency it could not satisfy — goes only here. Reporting a
-    | failure from the first file alone tells an administrator that something
-    | broke and not one word about what.
+    | Where the *reason* is when a package fails to configure. The log above is
+    | unattended-upgrades' own narration; dpkg's output (maintainer script stderr, conffile prompts,
+    | unsatisfied dependencies) goes only here.
     */
     'unattended_upgrades_dpkg_log' => env(
         'SERVER_UNATTENDED_DPKG_LOG',
@@ -2947,15 +2334,13 @@ return [
     /*
     | Installing the waiting security updates on demand.
     |
-    | `unattended-upgrade` (singular) is the binary; `unattended-upgrades` is
-    | the service. Running the binary applies the same Allowed-Origins policy
-    | the drop-in configures, whether or not apt's timer is enabled.
+    | `unattended-upgrade` (singular) is the binary; `unattended-upgrades` is the service. Running
+    | the binary applies the same Allowed-Origins policy the drop-in configures, whether or not
+    | apt's timer is enabled.
     |
-    | The timeout has to cover both halves of the work. ServerOps waits out the
-    | dpkg lock for up to ten minutes (40 attempts, 15s apart) before the
-    | upgrade starts at all, so 900 — the runtime-install figure — could leave a
-    | kernel and a hundred packages five minutes to install. 30 minutes is the
-    | whole budget, and the queue job's timeout matches it.
+    | The timeout covers both halves: ServerOps waits out the dpkg lock for up to ten minutes (40
+    | attempts, 15s apart) before the upgrade starts, so 900 would leave too little to install.
+    | 30 minutes is the whole budget, and the queue job's timeout matches it.
     */
     'security_updates' => [
         'binary' => env('SERVER_UNATTENDED_UPGRADE_BIN', '/usr/bin/unattended-upgrade'),
@@ -2972,12 +2357,10 @@ return [
     | Runtimes
     |--------------------------------------------------------------------------
     |
-    | Language versions the server can hold several of at once, shown under
-    | Settings. Node is managed with fnm rather than nvm because a systemd
-    | unit's ExecStart needs an absolute binary path and has no shell to
-    | source a profile in — fnm keeps every version at a fixed, readable path.
-    |
-    | Installed system-wide so one copy serves every site user.
+    | Language versions the server can hold several of at once, shown under Settings. Node is
+    | managed with fnm, not nvm: a systemd unit's ExecStart needs an absolute binary path and has no
+    | shell to source a profile in, and fnm keeps every version at a fixed path. Installed
+    | system-wide so one copy serves every site user.
     |
     */
 
@@ -2986,8 +2369,7 @@ return [
     'reboot_schedule' => [
         'file' => env('SERVER_REBOOT_SCHEDULE_FILE', 'panel-reboot'),
         'default_hour' => (int) env('SERVER_REBOOT_SCHEDULE_HOUR', 3),
-        // On the hour the user picked, as in v7 (bug #8: "04:00" restarted at
-        // 04:11). The operator can still move it off the hour here.
+        // On the hour the user picked, as in v7 ("04:00" must not restart at 04:11); movable here.
         'minute' => (int) env('SERVER_REBOOT_SCHEDULE_MINUTE', 0),
         // Where a switched-off schedule's day/hour are kept, so switching it
         // back on offers what the administrator had. Panel-owned, never cron.
@@ -3016,30 +2398,21 @@ return [
             'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
             // Offer versions Node itself has stopped supporting.
             //
-            // Off, because installing one is a trap rather than a choice: a
-            // dead line gets no security fixes, and native modules stop
-            // shipping prebuilt binaries for it — which is how a one-click
-            // n8n install ended in a C++ compiler error on Node 21, a release
-            // that died in June 2024. The lifecycle badge was already there
-            // and was evidently not enough; a version nobody should install
-            // does not belong in the list of versions to install.
+            // Off: a dead line gets no security fixes and native modules stop shipping prebuilt
+            // binaries for it (a one-click n8n install failed compiling on Node 21).
             //
-            // On restores the old list for a server migrating an application
-            // that genuinely needs a dead runtime. Versions already installed
-            // are never hidden by this — only the offer to add new ones.
+            // On restores the old list for a server migrating an application that needs a dead
+            // runtime. Installed versions are never hidden by this, only the offer to add new ones.
             'offer_eol' => filter_var(env('SERVER_NODE_OFFER_EOL', false), FILTER_VALIDATE_BOOLEAN),
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
-            // PM2 is installed per Node version, for applications that run
-            // more than one process. Pinned rather than `@latest`: two servers
-            // provisioned a week apart would otherwise get different majors,
-            // and re-running the install would upgrade PM2 underneath running
-            // applications.
+            // PM2 is installed per Node version, for applications that run more than one process.
+            // Pinned, not `@latest`: servers provisioned a week apart would get different majors, and
+            // re-running the install would upgrade PM2 under running applications.
             'pm2_version' => env('SERVER_PM2_VERSION', '6.0.13'),
         ],
 
-        // Where "the newest npm this Node version can run" comes from. Read
-        // by a scheduled command into `npm_releases`, never inside a request,
-        // for the reason the lifecycle URLs above give.
+        // Where "the newest npm this Node version can run" comes from. Read by a scheduled command
+        // into `npm_releases`, never inside a request (see the lifecycle URLs below).
         'npm' => [
             'registry_url' => env('SERVER_NPM_REGISTRY_URL', 'https://registry.npmjs.org/npm'),
             'timeout' => (int) env('SERVER_NPM_REGISTRY_TIMEOUT', 30),
@@ -3060,10 +2433,8 @@ return [
         ],
 
         'fail2ban' => [
-            // Same apt output as PHP, so the same four codes — kept as its own
-            // entry rather than pointed at PHP's, because the classifier looks
-            // up by runtime name and a shared list would silently give
-            // fail2ban PHP's reasons the moment either one diverges.
+            // Same apt output as PHP, so the same codes. Its own entry, not pointed at PHP's: the
+            // classifier looks up by runtime name, and a shared list would drift silently.
             'failure_reasons' => [
                 'package_not_found' => '/Unable to locate package|has no installation candidate/i',
                 'apt_lock' => '/Could not get lock|Unable to acquire the dpkg frontend lock/i',
@@ -3082,27 +2453,21 @@ return [
         ],
 
         'php' => [
-            // Offer PHP versions whose apt candidate is an alpha, beta, RC or
-            // dev build. Off: those showed up in the install list looking
+            // Offer PHP versions whose apt candidate is an alpha, beta, RC or dev build. Off: they looked
             // exactly like a release. For testing a pre-release on purpose.
             'offer_prerelease' => (bool) env('SERVER_PHP_OFFER_PRERELEASE', false),
 
-            // The oldest PHP offered for a new install. Anything older that is
-            // already installed is still listed and still usable — this only
-            // stops the panel offering releases long past end of life (5.6 to
-            // 7.3 came up in ondrej's repository and were offered like any
-            // other). Operator decision 2026-09-28: 7.4 and newer.
+            // The oldest PHP offered for a new install. Older versions already installed are still
+            // listed and usable; this only stops offering releases long past end of life (5.6 to
+            // 7.3 appear in ondrej's repository).
             'min_offered' => (string) env('SERVER_PHP_MIN_OFFERED', '7.4'),
 
             /*
             | Why an install failed, matched against apt's output in order.
             |
-            | These become `reason` codes on the PHP screen, rendered into a
-            | sentence in the viewer's locale — the raw output is never shown,
-            | because it names internal paths and cannot be translated. An
-            | unmatched failure is `unknown`, which still carries a reference
-            | to the server-ops log; guessing a cause we cannot recognise
-            | would be worse than saying we do not know.
+            | These become `reason` codes on the PHP screen, rendered into a sentence in the viewer's
+            | locale; the raw output is never shown (internal paths, untranslatable). An unmatched
+            | failure is `unknown`, which still carries a reference to the server-ops log.
             */
             'failure_reasons' => [
                 'package_not_found' => '/Unable to locate package|has no installation candidate/i',
@@ -3111,43 +2476,32 @@ return [
                 'no_space' => '/No space left on device/i',
             ],
 
-            // A bare phpX.Y-fpm has no mysql, no curl, no mbstring — every
-            // application in the marketplace would fail on it. Installing a
-            // version means installing something usable.
+            // A bare phpX.Y-fpm has no mysql, curl or mbstring, so every marketplace application would
+            // fail on it.
             'base_packages' => array_values(array_filter(explode(',', (string) env(
                 'SERVER_PHP_BASE_PACKAGES',
-                // 🔴 This is install.sh's list, and must stay identical to it.
-                // `sqlite3` is the one that was missing and the one that hurt:
-                // the panel's own database is SQLite, so a version installed
-                // from the panel and then made the default left bare `php` —
-                // which the deploy runbook uses — unable to open it at all.
-                // Reported from a real server as "could not find driver" from
-                // `php artisan migrate`, on a box where PHP 8.5 had been added
-                // from the PHP screen.
-                //
-                // OpenLiteSpeed never had this because OlsInstallerTest has
-                // asserted the same parity since its own drift caused an
-                // install of nothing. PhpRuntimeTest now does the same here.
+                // 🔴 This is install.sh's list, and must stay identical to it. `sqlite3` is the one
+                // that hurt: the panel's own database is SQLite, so a version installed from the
+                // panel and made the default left bare `php` unable to open it ("could not find
+                // driver"). PhpRuntimeTest asserts the parity, as OlsInstallerTest does for
+                // OpenLiteSpeed.
                 'fpm,cli,common,mysql,pgsql,curl,mbstring,xml,zip,gd,intl,bcmath,soap,sqlite3,redis,igbinary,opcache,imagick,imap,gmp'
             )))),
             'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
 
-            // SAPIs an extension is toggled in. All of them together: cli and
-            // fpm diverging means a site that works in a browser and fails in
-            // a cron deploy, with nothing on screen explaining why.
+            // SAPIs an extension is toggled in. All together: cli and fpm diverging means a site that
+            // works in a browser and fails in a cron deploy.
             'sapis' => array_values(array_filter(explode(',', (string) env('SERVER_PHP_SAPIS', 'cli,fpm')))),
 
-            // Share the phpX.Y- prefix but are not extensions: the SAPIs
-            // themselves, the shared config package, the headers. Nothing to
-            // toggle, so nothing to list.
+            // Share the phpX.Y- prefix but are not extensions (SAPIs, shared config, headers): nothing
+            // to toggle, so nothing to list.
             'non_extension_packages' => array_values(array_filter(explode(',', (string) env(
                 'SERVER_PHP_NON_EXTENSION_PACKAGES',
                 'cli,common,dev,fpm,cgi,phpdbg,embed,litespeed,all_dev'
             )))),
 
-            // Modules the panel itself needs. Turning one of these off under
-            // the panel's own version means the request to turn it back on
-            // never gets answered.
+            // Modules the panel itself needs. Turning one off under the panel's own version means the
+            // request to turn it back on is never answered.
             'panel_required' => array_values(array_filter(explode(',', (string) env(
                 'SERVER_PHP_PANEL_REQUIRED',
                 'curl,mbstring,xml,dom,tokenizer,fileinfo,pdo,pdo_sqlite,sqlite3,phar,openssl,simplexml,xmlwriter,ctype'
@@ -3160,44 +2514,38 @@ return [
     | ionCube Loader
     |--------------------------------------------------------------------------
     |
-    | Commercial PHP applications (WHMCS and most licensed scripts) ship their
-    | source encrypted and cannot run without this loader. There is no apt
-    | package: it is a closed-source `.so` published by ionCube, one per PHP
-    | version, and it is installed as a `zend_extension`.
+    | Commercial PHP applications (WHMCS and most licensed scripts) ship encrypted source and cannot
+    | run without this loader. No apt package: it is a closed-source `.so` published by ionCube,
+    | one per PHP version, installed as a `zend_extension`.
     |
-    | ⚠️ The vendor publishes no checksum file — `.sha256` and `SHA256SUMS` are
-    | both absent — so the download is verified by TLS, a size cap and an ELF
-    | header check, and the installed file's SHA-256 is reported so an operator
-    | can compare it across servers. That is a sanity check, not a supply-chain
-    | guarantee. Nothing installs it unless somebody presses the button.
+    | ⚠️ The vendor publishes no checksum file, so the download is verified by TLS, a size cap and an
+    | ELF header check, and the installed file's SHA-256 is reported so an operator can compare it
+    | across servers. That is a sanity check, not a supply-chain guarantee. Nothing installs it
+    | unless somebody presses the button.
     |
     */
     'ioncube' => [
-        // Architecture decides the archive. Both are published; the ELF check
-        // at install refuses a file whose machine type disagrees with the URL
-        // it came from.
+        // Architecture decides the archive. Both are published; the ELF check at install refuses a
+        // file whose machine type disagrees with the URL it came from.
         'urls' => [
             'x86_64' => env('SERVER_IONCUBE_URL_X86_64', 'https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz'),
             'aarch64' => env('SERVER_IONCUBE_URL_AARCH64', 'https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_aarch64.tar.gz'),
         ],
 
-        // Which PHP versions ionCube publishes a loader for, so the screen can
-        // say "not supported" without downloading 29 MB to find out. A hint,
-        // not the authority: the install refuses on the archive itself if the
-        // file turns out to be absent. Measured from the 2026-03-18 archive,
-        // which carries 4.2 through 8.5 — note 8.0 is NOT in it, and the panel
-        // still offers 8.0.
+        // Which PHP versions ionCube publishes a loader for, so the screen can say "not supported"
+        // without downloading 29 MB. A hint, not the authority: the install refuses on the archive
+        // itself. The archive carries 4.2 through 8.5 but NOT 8.0, which the panel still offers.
         'versions' => array_values(array_filter(explode(',', (string) env(
             'SERVER_IONCUBE_VERSIONS',
             '8.1,8.2,8.3,8.4,8.5'
         )))),
 
-        // Loaded before OPcache's `10-`, and that ordering is load-bearing:
-        // Loading ionCube after OPcache can immediately prevent PHP from starting.
+        // Loaded before OPcache's `10-`; that ordering is load-bearing: loading ionCube after OPcache
+        // can prevent PHP from starting.
         'ini_name' => env('SERVER_IONCUBE_INI_NAME', '01-ioncube.ini'),
 
-        // The archive was 29 MB in March 2026. The cap is for a response that
-        // is not the archive at all, not for a slightly larger release.
+        // The archive is about 29 MB. The cap catches a response that is not the archive at all, not
+        // a slightly larger release.
         'max_bytes' => (int) env('SERVER_IONCUBE_MAX_BYTES', 104857600),
         'timeout' => (int) env('SERVER_IONCUBE_TIMEOUT', 300),
     ],
@@ -3207,41 +2555,25 @@ return [
         'volatile-lru', 'volatile-lfu', 'volatile-random', 'volatile-ttl',
     ],
 
-    // Swap: a single managed swap file. Only this file + its fstab line are
-    // ever touched (non-destructive → a migrated server keeps existing swap).
+    // Swap: a single managed swap file. Only this file + its fstab line are ever touched
+    // (non-destructive: a migrated server keeps existing swap).
     //
-    // `/swapfile-panel`, and it has to be: install.sh creates a file by that
-    // name and this is the path the panel calls "ours". While the two names
-    // disagreed, the installer's gigabyte was live and the Memory screen read
-    // `enabled: false, size: 0` — because `enabled` is answered by looking for
-    // *this* path in the kernel's swap list, and it was never there. Reported
-    // as "1 GB of swap during installation, off afterwards", which is exactly
-    // what it was.
+    // `/swapfile-panel`, and it has to be: install.sh creates a file by that name, and `enabled` is
+    // answered by looking for *this* path in the kernel's swap list. A plain `/swapfile` may already
+    // be someone else's, and `createOrResize()` runs `rm -f` over this path, so it must be a name
+    // the panel owns.
     //
-    // Not the other way round — the installer's comment says why, and it
-    // governs: a plain `/swapfile` may already be someone else's, and
-    // `createOrResize()` runs `rm -f` over this path. Pointing that at a name
-    // the panel does not own is how a VPS image's swap gets deleted.
-    //
-    // ⚠️ A panel that created swap through the Settings screen before this
-    // change has it at `/swapfile`, and that file is now unmanaged — reported
-    // honestly under `unmanaged` / `system_total`, but no longer resizable or
-    // removable from the screen. `SERVER_SWAP_FILE=/swapfile` restores the old
-    // behaviour for such a server. Deliberately no auto-adoption of a bare
-    // `/swapfile`: its fstab line carries no mark of who wrote it, and
-    // claiming one on sight is the mistake `SwapSettings::isActive()` exists
-    // to avoid.
+    // ⚠️ A panel that created swap through Settings before this change has it at `/swapfile`, now
+    // unmanaged (reported under `unmanaged` / `system_total`, not resizable or removable from the
+    // screen). `SERVER_SWAP_FILE=/swapfile` restores the old behaviour. No auto-adoption of a bare
+    // `/swapfile`: its fstab line carries no mark of who wrote it (see `SwapSettings::isActive()`).
     'swap_file' => env('SERVER_SWAP_FILE', '/swapfile-panel'),
 
     'swap_max_mb' => (int) env('SERVER_SWAP_MAX_MB', 65536), // 64 GB ceiling
 
-    // Disk left free after a swap file is created or resized. The new file is
-
-    // built while the old one still exists, so its size is not counted as
-
-    // free. A request that would leave less than this is refused — asking for
-
-    // more than the disk held once filled it completely (2026-09-23).
+    // Disk left free after a swap file is created or resized. The new file is built while the old
+    // one still exists, so its size is not counted as free. A request leaving less than this is
+    // refused.
 
     'swap_reserve_mb' => (int) env('SERVER_SWAP_RESERVE_MB', 1024),
 
@@ -3252,12 +2584,11 @@ return [
     | Dashboard / metrics
     |--------------------------------------------------------------------------
     |
-    | Server dashboard reads facts + live metrics cheaply from `/proc` (+ df).
-    | `sample_interval` is the short window (seconds) used to compute the rate
-    | for cumulative counters (CPU %, network) — two reads that far apart.
-    | `metrics.retention_hours` bounds the `server_metrics` table (the 5-min
-    | collector prunes anything older). All overridable so tests can point
-    | `proc_dir`/`os_release` at fixtures and set the interval to 0.
+    | The dashboard reads facts and live metrics cheaply from `/proc` (+ df). `sample_interval` is
+    | the short window (seconds) used to compute the rate for cumulative counters (CPU %, network):
+    | two reads that far apart. `metrics.retention_hours` bounds the `server_metrics` table (the
+    | 5-min collector prunes older rows). All overridable so tests can point `proc_dir`/`os_release`
+    | at fixtures and set the interval to 0.
     |
     */
 
@@ -3271,17 +2602,13 @@ return [
     'cgroup_dir' => env('SERVER_CGROUP_DIR', '/sys/fs/cgroup'),
 
     /*
-    | The cloud metadata service, used only to learn this server's own public
-    | address when the machine cannot see it on any of its interfaces.
+    | The cloud metadata service, used only to learn this server's own public address when the
+    | machine cannot see it on any interface.
     |
-    | 169.254.169.254 is link-local: the request never leaves the host's own
-    | network segment, so nothing is disclosed to a third party. The obvious
-    | alternative — an external "what is my IP" service — would send a request
-    | to somebody else's server on a dashboard load, which is not a thing a
-    | self-hosted panel should do without being asked.
-    |
-    | Bounded tightly. On bare metal nothing answers this address, and the
-    | timeout is paid on a dashboard request.
+    | 169.254.169.254 is link-local: the request never leaves the host's network segment. An
+    | external "what is my IP" service would contact a third party on a dashboard load, which a
+    | self-hosted panel should not do unasked. Bounded tightly: on bare metal nothing answers, and
+    | the timeout is paid on a dashboard request.
     */
     'metadata_base' => env('SERVER_METADATA_BASE', 'http://169.254.169.254'),
     'metadata_timeout' => (int) env('SERVER_METADATA_TIMEOUT', 2),
@@ -3295,22 +2622,17 @@ return [
     /*
      * The per-minute size sweep.
      *
-     * Both default to 0, which means "every site, every minute" — the sizes on
-     * the applications list are never more than a minute old.
+     * Both default to 0: every site, every minute, so list sizes are never more than a minute old.
      *
-     * Know what that costs before raising the site count. `du` walks every
-     * inode, so this is the one scheduled job whose cost scales with how much
-     * data the customer has rather than how many rows the panel holds: one
-     * pass over eight small test sites is already ~6s of solid disk, and it
-     * repeatedly evicts the page cache the sites themselves are served from.
-     * On a server with dozens of large sites a pass will not finish inside the
-     * minute, and `withoutOverlapping()` then means it simply runs forever.
+     * Know the cost before raising the site count: `du` walks every inode, so this job's cost
+     * scales with the customer's data, and it evicts the page cache the sites are served from. On
+     * a server with dozens of large sites a pass will not finish inside the minute, and
+     * `withoutOverlapping()` then keeps it running forever.
      *
-     * An operator seeing that should bound it rather than turn it off:
-     * `per_run` caps how many sites one tick may walk, and `stale_minutes`
-     * skips any measured more recently than that. Sites are taken
-     * least-recently-measured first, so a bounded sweep still brings every
-     * site round — just over several ticks instead of one.
+     * Bound it rather than turn it off: `per_run` caps how many sites one tick may walk, and
+     * `stale_minutes` skips any measured more recently than that. Sites are taken
+     * least-recently-measured first, so a bounded sweep still reaches every site over several
+     * ticks.
      */
     'application_size' => [
         'stale_minutes' => (int) env('SERVER_APPLICATION_SIZE_STALE_MINUTES', 0),
@@ -3318,29 +2640,24 @@ return [
     ],
 
     /*
-     * How much of a failed command's stdout is kept in the server-ops log.
-     *
-     * Enough to hold the error a tool printed before dying, not enough for the
-     * successful path of a command whose output is a file listing. The tail is
-     * kept rather than the head — a command that printed progress first puts
-     * the reason last.
+     * How much of a failed command's stdout is kept in the server-ops log: enough for the error a
+     * tool printed before dying. The tail is kept, not the head, since progress output comes first
+     * and the reason last.
      */
     'log_output_limit' => (int) env('SERVER_LOG_OUTPUT_LIMIT', 4000),
 
     'metrics' => [
         'sample_interval' => (int) env('SERVER_METRICS_SAMPLE_INTERVAL', 1),
-        // Oldest previous poll still worth measuring against on the live
-        // endpoint; past this the average describes a window nobody is
-        // watching, so it reports zero instead.
+        // Oldest previous poll still worth measuring against on the live endpoint; past this the
+        // average describes a window nobody is watching, so it reports zero.
         'rate_window' => (int) env('SERVER_METRICS_RATE_WINDOW', 120),
-        // Device names counted for disk I/O. Restricted to real disk types so
-        // loop devices (mounted files) and device-mapper nodes — whose traffic
-        // is already counted on the disk underneath — are left out.
+        // Device names counted for disk I/O. Real disk types only: loop devices and device-mapper
+        // nodes are left out because their traffic is already counted on the disk underneath.
         'disk_devices' => env('SERVER_METRICS_DISK_DEVICES', '/^(sd|nvme|vd|xvd|hd|md)/'),
         'retention_hours' => (int) env('SERVER_METRICS_RETENTION_HOURS', 24),
         'processes_limit' => (int) env('SERVER_METRICS_PROCESSES_LIMIT', 25),
-        // How long Stop waits for a signalled process to exit before saying
-        // it is still running (bug #6). TERM is a request, not a guarantee.
+        // How long Stop waits for a signalled process to exit before saying it is still running
+        // (TERM is a request, not a guarantee).
         'stop_wait_seconds' => (int) env('SERVER_PROCESS_STOP_WAIT_SECONDS', 5),
     ],
 
@@ -3349,81 +2666,57 @@ return [
     | Databases
     |--------------------------------------------------------------------------
     |
-    | The Databases feature manages MySQL / MariaDB / MongoDB via a
-    | DatabaseEngine strategy. The per-engine admin connection lives in the
-    | `database_connections` table (NOT here) — this file only holds the
-    | static engine capabilities, client binaries, protected system objects,
-    | and the charset/collation whitelist (identifiers can't be parameterised
-    | in DDL, so the whitelist IS the injection guard). Client names + the
-    | auth-file dir are overridable so tests can fake the Process calls.
+    | The Databases feature manages MySQL / MariaDB / PostgreSQL / MongoDB via a DatabaseEngine
+    | strategy. The per-engine admin connection lives in the `database_connections` table (NOT
+    | here); this file holds the static engine capabilities, client binaries, protected system
+    | objects and the charset/collation whitelist (identifiers can't be parameterised in DDL, so
+    | the whitelist IS the injection guard). Client names + the auth-file dir are overridable so
+    | tests can fake the Process calls.
     |
     */
 
     'databases' => [
         'engines' => [
             // `installer` is what makes an engine offerable in the setup page.
-            // MongoDB is operable but not installable yet — it needs its own apt
-            // repository — so it has none, and the catalog says so rather than
-            // showing a button that cannot work.
             'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class, 'service' => 'mysql', 'remote_bind_file' => env('SERVER_MYSQL_REMOTE_BIND_FILE', '/etc/mysql/mysql.conf.d/zz-panel-remote.cnf'), 'legacy_remote_bind_files' => ['/etc/mysql/mysql.conf.d/99-panel-remote.cnf']],
             'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class, 'service' => 'mariadb', 'remote_bind_file' => env('SERVER_MARIADB_REMOTE_BIND_FILE', '/etc/mysql/mariadb.conf.d/99-panel-remote.cnf')],
             /*
-            | `unsupported_codenames` — Ubuntu releases this engine's vendor has
-            | not published for.
+            | `unsupported_codenames`: Ubuntu releases this engine's vendor has not published for.
             |
-            | MongoDB publishes per Ubuntu codename from its own repository, and
-            | for `resolute` (26.04) it ships `mongodb-database-tools` and
-            | nothing else: no `mongodb-org`, no `mongodb-org-server`, not even
-            | `mongodb-mongosh`. Measured 2026-09-11 against
-            | dists/resolute/mongodb-org/8.0 — one package, where noble carries
-            | thirteen.
+            | MongoDB publishes per Ubuntu codename, and for `resolute` (26.04) ships only
+            | `mongodb-database-tools`: no `mongodb-org`, `mongodb-org-server` or `mongodb-mongosh`.
+            | Listed here so the setup page greys the card instead of offering a button that writes an
+            | apt source and key, waits two minutes, then fails. Unlike PHP (sury.org) there is no
+            | second source.
             |
-            | Listed here so the setup page can grey the card instead of
-            | offering a button that writes an apt source and a signing key to
-            | the box, waits two minutes, and then fails. The panel supports
-            | 26.04; MongoDB does not, and unlike PHP (where sury.org publishes
-            | what ondrej does not) there is no second source to point at.
-            |
-            | **This list goes stale by design.** It is a statement about what a
-            | vendor has published today, and the day MongoDB ships for resolute
-            | this entry is wrong in the direction of refusing something that
-            | would work. Overridable per-server with SERVER_MONGO_UNSUPPORTED
-            | (comma-separated, empty string to clear) so nobody is stuck behind
-            | our release cycle, and the install itself still classifies the
-            | real failure as `os_unsupported` if this list is ever too
-            | optimistic instead.
+            | **This list goes stale by design:** it states what a vendor has published, and wrongly
+            | refuses once MongoDB ships for resolute. Override per server with
+            | SERVER_MONGO_UNSUPPORTED (comma-separated, empty string to clear); the install itself
+            | still classifies the real failure as `os_unsupported` if this list is ever too
+            | optimistic.
             */
             'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'dump_extension' => 'archive.gz', 'uri_scheme' => 'mongodb', 'installer' => MongoDbInstaller::class, 'unsupported_codenames' => array_filter(array_map('trim', explode(',', (string) env('SERVER_MONGO_UNSUPPORTED', 'resolute'))))],
-            // Installable from Ubuntu's own archive — no third-party
-            // repository, unlike MongoDB.
+            // Installable from Ubuntu's own archive: no third-party repository, unlike MongoDB.
             //
-            // `uri_scheme` is `postgresql`, not the engine name: that is the
-            // scheme libpq and every client library accept, and `pgsql://`
-            // would be a connection string nothing can open.
+            // `uri_scheme` is `postgresql`, not the engine name: that is the scheme libpq and every
+            // client library accept (`pgsql://` opens nowhere).
             //
-            // The default socket is a *directory*. libpq takes the directory
-            // holding `.s.PGSQL.5432` as its host, not the socket file, and
-            // naming the file is an error rather than a nicety.
+            // The default socket is a *directory*: libpq takes the directory holding `.s.PGSQL.5432`
+            // as its host, and naming the file is an error.
             'postgresql' => ['label' => 'PostgreSQL', 'driver' => 'pgsql', 'client' => env('SERVER_PSQL_CLIENT', 'psql'), 'dump_client' => env('SERVER_PGDUMP', 'pg_dump'), 'restore_client' => env('SERVER_PGRESTORE', 'pg_restore'), 'default_port' => (int) env('SERVER_POSTGRES_PORT', 5432), 'default_socket' => '/var/run/postgresql', 'dump_extension' => 'sql', 'uri_scheme' => 'postgresql', 'installer' => PostgresInstaller::class],
         ],
 
         /*
-        | MongoDB's apt repository.
+        | MongoDB's apt repository (not in Ubuntu's archive). Every value is overridable because the
+        | series is a moving target: MongoDB drops old per-series lists, and a panel pinned to a
+        | series that stopped being published installs nothing on a new OS release.
         |
-        | Not in Ubuntu's archive, which is why this engine had no installer for
-        | so long. Every value here is overridable because the series is a
-        | moving target: MongoDB publishes per-series lists and drops old ones,
-        | and a panel pinned to a series that stopped being published installs
-        | nothing on a new OS release.
+        | `codename` is deliberately empty: it is read from the server's own /etc/os-release, because
+        | a codename MongoDB does not publish for adds a list with no packages. Set it only to
+        | override that detection, e.g. to point a newer Ubuntu at the last codename MongoDB
+        | published for.
         |
-        | `codename` is deliberately empty — it is read from the server's own
-        | /etc/os-release, because a codename MongoDB does not publish for adds
-        | as a valid list that then carries no packages at all. Set it only to
-        | override that detection, e.g. to point a newer Ubuntu at the last
-        | codename MongoDB published for.
-        |
-        | Licensing, worth stating rather than discovering: MongoDB Community is
-        | SSPL, which is not OSI-approved. The panel installs it on request; it
+        | MongoDB Community is SSPL, which is not OSI-approved. The panel installs it on request; it
         | does not ship it.
         */
         'mongodb' => [
@@ -3435,30 +2728,23 @@ return [
             'codename' => env('SERVER_MONGO_CODENAME', ''),
             'codename_fallback' => env('SERVER_MONGO_CODENAME_FALLBACK', 'noble'),
             'packages' => ['mongodb-org'],
-            // Detection targets the *server*, not the meta-package and not the
-            // shell: `mongosh` alone is a box that talks to someone else's
-            // MongoDB, and treating that as installed would offer databases the
-            // panel cannot make.
+            // Detection targets the *server*, not the meta-package or the shell: `mongosh` alone is a
+            // box that talks to someone else's MongoDB, and treating it as installed would offer
+            // databases the panel cannot make.
             'server_package' => env('SERVER_MONGO_SERVER_PACKAGE', 'mongodb-org-server'),
             'service' => env('SERVER_MONGO_SERVICE', 'mongod'),
             'config_file' => env('SERVER_MONGO_CONFIG', '/etc/mongod.conf'),
         ],
 
         /*
-        | PostgreSQL's packages.
+        | PostgreSQL's packages. Ubuntu's own archive, so no repository or key (the `mongodb` block
+        | above exists because MongoDB is not in the archive).
         |
-        | Ubuntu's own archive, so there is no repository to add and no key to
-        | trust — the whole `mongodb` block above exists because MongoDB is not
-        | in the archive, and none of it is needed here.
+        | `postgresql` is the version-tracking metapackage: it pulls whatever major the distribution
+        | ships. Pinning a major would stop working when the distribution moves on.
         |
-        | `postgresql` is the version-tracking metapackage: it pulls whatever
-        | major the distribution ships, which is what a panel wants. Pinning a
-        | major here would mean shipping an install that stops working when the
-        | distribution moves on.
-        |
-        | Detection targets the same name, and that is deliberate: the client
-        | packages sit on plenty of boxes that run no server, and treating one
-        | of those as installed would offer databases the panel cannot make.
+        | Detection targets the same name: client packages sit on plenty of boxes with no server, and
+        | treating one as installed would offer databases the panel cannot make.
         */
         'postgresql' => [
             'packages' => ['postgresql'],
@@ -3481,37 +2767,28 @@ return [
         ],
 
         /*
-        | Per-driver facts. One block per `driver` above, and every driver must
-        | appear here — `DatabaseEngineCatalogTest` fails the build otherwise.
+        | Per-driver facts. One block per `driver` above, and every driver must appear here:
+        | `DatabaseEngineCatalogTest` fails the build otherwise.
         |
-        | That completeness rule is the point of this block. These values used
-        | to be written inline as `driver === 'mongo' ? x : y`, where the `y`
-        | arm silently meant MySQL. A third driver would have inherited MySQL's
-        | answers at five call sites without a single line changing — including
-        | `system_schemas`, which is a deny-by-default guard, so the failure
-        | would have been an engine whose own system databases were droppable
-        | while it protected four that do not exist on it.
-        |
-        | A missing key is a test failure at build time rather than a wrong
-        | answer at runtime, which is the only version of this that stays true
-        | when somebody adds the fourth engine.
+        | These used to be inline `driver === 'mongo' ? x : y`, where `y` silently meant MySQL. A
+        | third driver would have inherited MySQL's answers, including `system_schemas`, a
+        | deny-by-default guard: its own system databases would have been droppable. A missing key is
+        | a build-time test failure instead of a wrong answer at runtime.
         */
         'drivers' => [
             'sql' => [
                 // Never created/dropped/altered by the panel.
                 'system_schemas' => ['information_schema', 'mysql', 'performance_schema', 'sys'],
-                // Whitelist for validation — charset => allowed collations.
-                // Identifiers cannot be parameterised in DDL, so the whitelist
-                // IS the injection guard.
+                // Whitelist for validation: charset => allowed collations. Identifiers cannot be
+                // parameterised in DDL, so the whitelist IS the injection guard.
                 'charsets' => [
                     'utf8mb4' => ['utf8mb4_unicode_ci', 'utf8mb4_general_ci', 'utf8mb4_0900_ai_ci', 'utf8mb4_bin'],
                     'utf8mb3' => ['utf8mb3_general_ci', 'utf8mb3_unicode_ci'],
                     'latin1' => ['latin1_swedish_ci', 'latin1_general_ci'],
                     'ascii' => ['ascii_general_ci'],
                 ],
-                // `RENAME USER` carries the password across, so changing both
-                // at once needs a second statement. Mongo has no rename: it
-                // drops and recreates, and the new password is applied there.
+                // `RENAME USER` carries the password across, so changing both at once needs a second
+                // statement. Mongo has no rename: it drops and recreates, applying the new password.
                 'rename_keeps_password' => true,
                 // MySQL and MongoDB both carry the host in the account itself,
                 // so a remote user is created by creating it.
@@ -3521,57 +2798,38 @@ return [
                 'system_schemas' => ['admin', 'config', 'local'],
                 'charsets' => [],
                 'rename_keeps_password' => false,
-                // MySQL and MongoDB both carry the host in the account itself,
-                // so a remote user is created by creating it.
                 'supports_remote_users' => true,
             ],
             'pgsql' => [
-                // The cluster's own databases. `template0` cannot even be
-                // connected to, and `postgres` is the maintenance database
-                // every administrative statement is issued against — dropping
-                // it would take the panel's own access with it.
+                // The cluster's own databases. `template0` cannot be connected to, and `postgres` is the
+                // maintenance database every administrative statement runs against: dropping it would
+                // take the panel's own access with it.
                 'system_schemas' => ['postgres', 'template0', 'template1'],
-                // PostgreSQL's ENCODING, and LC_COLLATE as the "collation".
-                // Nothing here overlaps MySQL's list, which is the reason this
-                // is per driver: `utf8mb4` is not an encoding PostgreSQL has
-                // ever heard of, and offering it would produce a create that
-                // the engine refuses after the form said it was fine.
+                // PostgreSQL's ENCODING, and LC_COLLATE as the "collation". Per driver because MySQL's
+                // list does not overlap (`utf8mb4` is not a PostgreSQL encoding), and offering it would
+                // pass the form and be refused by the engine.
                 //
-                // The locale values assume a glibc cluster initialised with
-                // UTF-8, which is what every Debian/Ubuntu package does. `C`
-                // is always present and never wrong.
+                // The locale values assume a glibc cluster initialised with UTF-8, as every
+                // Debian/Ubuntu package does. `C` is always present.
                 'charsets' => [
                     'UTF8' => ['C', 'C.UTF-8', 'en_US.UTF-8'],
                     'LATIN1' => ['C'],
                     'SQL_ASCII' => ['C'],
                 ],
-                // Measured on PostgreSQL 16: `ALTER ROLE … RENAME` keeps the
-                // password under scram-sha-256, the default. So a rename plus
-                // a password change needs the second statement, exactly as
-                // MySQL does.
+                // `ALTER ROLE … RENAME` keeps the password under scram-sha-256 (the default), so a
+                // rename plus a password change needs the second statement, as in MySQL.
                 'rename_keeps_password' => true,
-                // True since 2026-09-12, and it was false for a good reason
-                // that is now handled rather than avoided.
-                //
-                // In MySQL the host is half the account's identity and `CREATE
-                // USER 'a'@'10.0.0.5'` grants access from there — one statement
-                // and it is done. A PostgreSQL role is cluster-wide and has no
-                // host, so the same grant is three facts in three places:
-                // `pg_hba.conf` decides who may authenticate, `listen_addresses`
-                // decides whether the cluster is bound off-box at all, and the
-                // firewall decides whether 5432 is reachable. The panel now owns
-                // all three (see PgsqlEngine's remote-access section and
-                // DatabaseFirewall), so the preference is applied rather than
+                // A MySQL account's host is half its identity, so `CREATE USER 'a'@'10.0.0.5'` grants
+                // access from there. A PostgreSQL role is cluster-wide with no host: remote access is
+                // `pg_hba.conf` (who may authenticate), `listen_addresses` (bound off-box at all) and
+                // the firewall (5432 reachable). The panel owns all three (see PgsqlEngine's
+                // remote-access section and DatabaseFirewall), so the preference is applied, not
                 // stored and ignored.
-                //
-                // Refusing was right while it was unimplemented: accepting a
-                // setting nothing applies is the OpenLiteSpeed PHP screen again
-                // — a 200, a saved value, and no effect on the server.
                 'supports_remote_users' => true,
             ],
         ],
-        // `postgres` is PostgreSQL's own superuser (bug #25). Names starting
-        // with `pg_` are reserved by PostgreSQL too and refused by the requests.
+        // `postgres` is PostgreSQL's own superuser. Names starting with `pg_` are reserved by
+        // PostgreSQL too and refused by the requests.
         'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys', 'postgres'],
 
         'default_charset' => 'utf8mb4',
@@ -3589,8 +2847,8 @@ return [
         // read a customer's dump or swap the file before it is loaded.
         'import_dir' => env('SERVER_DB_IMPORT_DIR', storage_path('app/db-imports')),
 
-        // The largest file an import accepts (operator decision 2026-10-14:
-        // 2 GB). The disk check runs against this as well as the free space.
+        // The largest file an import accepts (2 GB). The disk check runs against this as well as the
+        // free space.
         'import_max_bytes' => (int) env('SERVER_DB_IMPORT_MAX_BYTES', 2 * 1024 * 1024 * 1024),
 
         // A run: the safety backup, the load, and putting the backup back if
@@ -3603,14 +2861,12 @@ return [
     | Git provider integrations
     |--------------------------------------------------------------------------
     |
-    | Connected accounts used to reach private repositories. `fields` is the
-    | connect-form schema the API hands the frontend, because the providers
-    | genuinely differ: GitLab can point at a self-hosted host, and Bitbucket
-    | addresses everything through a workspace (its scoped Access Tokens
-    | authenticate as the token, not as a user).
+    | Connected accounts used to reach private repositories. `fields` is the connect-form schema the
+    | API hands the frontend, because providers differ: GitLab can point at a self-hosted host, and
+    | Bitbucket addresses everything through a workspace (its scoped Access Tokens authenticate as
+    | the token, not as a user).
     |
-    | Outbound calls are bounded — a provider being slow must never hold a
-    | request open.
+    | Outbound calls are bounded: a slow provider must never hold a request open.
     |
     */
 
@@ -3648,19 +2904,16 @@ return [
     ],
 
     /*
-    | Deploy-on-push. One verifier per provider, because the three sign
-    | differently and one of the differences is a trap: GitHub's header is
-    | `X-Hub-Signature-256` and Bitbucket's is `X-Hub-Signature` — the same
-    | scheme under a name that differs by a suffix.
+    | Deploy-on-push. One verifier per provider, because the three sign differently: GitHub's header
+    | is `X-Hub-Signature-256` and Bitbucket's is `X-Hub-Signature`, the same scheme under a name
+    | that differs by a suffix.
     |
-    | `timestamp_tolerance` bounds replay on GitLab's signed deliveries, which
-    | carry a timestamp inside the signed content. A captured delivery stays
-    | validly signed forever; the window is what stops it being replayable
-    | forever. Five minutes covers ordinary clock skew and queueing.
+    | `timestamp_tolerance` bounds replay on GitLab's signed deliveries (the timestamp is inside the
+    | signed content; a captured delivery would otherwise stay valid forever). Five minutes covers
+    | clock skew and queueing.
     |
-    | `delivery_memory` is how long a delivery id is remembered so a retried or
-    | replayed delivery does not deploy twice. Providers retry on timeout, so
-    | this is a normal occurrence, not an attack.
+    | `delivery_memory` is how long a delivery id is remembered so a retried or replayed delivery
+    | does not deploy twice (providers retry on timeout; it is routine).
     */
     'webhooks' => [
         'timestamp_tolerance' => (int) env('SERVER_WEBHOOK_TIMESTAMP_TOLERANCE', 300),
@@ -3678,28 +2931,23 @@ return [
     | API rate limits
     |--------------------------------------------------------------------------
     |
-    | Requests per minute, per authenticated user (`api`) or per IP for guests.
-    | Applied to every API route by bootstrap/app.php.
+    | Requests per minute, per authenticated user (`api`) or per IP for guests. Applied to every API
+    | route by bootstrap/app.php.
     |
-    | A per-route `throttle:N,1` does NOT replace this — both buckets must
-    | pass, so the lower wins. Raising this number does not make a higher
-    | per-route limit take effect; the route has to drop `throttle:api`.
+    | A per-route `throttle:N,1` does NOT replace this: both buckets must pass, so the lower wins. A
+    | higher per-route limit only takes effect if the route drops `throttle:api`.
     |
     */
 
     'rate_limits' => [
         'api' => (int) env('RATE_LIMIT_API', 180),
         'guest' => (int) env('RATE_LIMIT_GUEST', 20),
-        // The central panel, which arrives as one machine account for every
-        // site it manages here. Its own budget so a vendor operating several
-        // sites is not sharing one person's allowance.
+        // The central panel arrives as one machine account for every site it manages here; its own
+        // budget so a vendor operating several sites does not share one person's allowance.
         'central' => (int) env('RATE_LIMIT_CENTRAL', 3000),
-        // Progress-polling endpoints only, and they are exempt from the `api`
-        // budget above rather than sharing it — so this number stands on its
-        // own instead of being capped by the lower of the two. High on purpose:
-        // these are watched screens polling for as long as a job runs, and the
-        // thing being prevented is a panel telling its own user that watching
-        // an install too closely is an attack.
+        // Progress-polling endpoints only. They are exempt from the `api` budget above, so this
+        // number stands on its own. High on purpose: watched screens poll for as long as a job runs,
+        // and watching an install closely must not look like an attack.
         'progress' => (int) env('RATE_LIMIT_PROGRESS', 600),
     ],
 

@@ -11,59 +11,24 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
 /**
- * PostgreSQL via `psql`. A separate driver from {@see SqlEngine}, not a
- * subclass of it: the two share the word "SQL" and almost nothing else that
- * matters here.
+ * PostgreSQL via `psql`. A separate driver from {@see SqlEngine}, not a subclass of it.
  *
- * Four differences were measured against PostgreSQL 16 before this was written
- * (2026-09-09), because each of them turns a plausible translation of the MySQL
- * code into a silent failure:
+ * Differences from MySQL that a literal translation would turn into silent failures:
+ *  1. `psql` exits 0 after a failed statement read from stdin, so every {@see must()} needs
+ *     `ON_ERROR_STOP=1`.
+ *  2. `GRANT ALL PRIVILEGES ON DATABASE` grants no table privileges, and since PG15 `public`
+ *     is not writable by PUBLIC. The model is ownership: the role owns the database and schema.
+ *  3. `DROP DATABASE` fails while sessions are connected and `DROP ROLE` while the role owns
+ *     anything: hence `WITH (FORCE)` and `DROP OWNED BY`.
+ *  4. A role is cluster-wide with no host: the host half lives in `pg_hba.conf`, the binding
+ *     in `listen_addresses` (see the remote-access section below).
  *
- *  1. **`psql` exits 0 after a failed statement read from stdin.** Not 1 — zero.
- *     `-c` fails loudly, a piped script does not. `SqlEngine` pipes over stdin
- *     deliberately, so the password never reaches argv, and this class does the
- *     same. Without `ON_ERROR_STOP=1` every {@see must()} would report success
- *     for a `CREATE USER` that never ran. It is not a nicety; it is the reason
- *     this class can be trusted at all, and a test fails when it is removed.
- *
- *  2. **`GRANT ALL PRIVILEGES ON DATABASE` grants nothing useful.** It carries
- *     CONNECT/CREATE/TEMP and not one table privilege, and since PG15 the
- *     `public` schema is not writable by PUBLIC either — so the literal
- *     translation of MySQL's `GRANT ALL ON db.* TO user` produces an account
- *     that can neither read a table nor create one. Measured, both ways. The
- *     working model is **ownership**: the role owns the database and its
- *     `public` schema.
- *
- *  3. **Teardown refuses more often than MySQL's.** `DROP DATABASE` fails while
- *     any session is connected, and `DROP ROLE` fails while the role owns
- *     anything. Hence `WITH (FORCE)` and a `DROP OWNED BY` first. Without them
- *     a delete half-completes, which is how a site ends up removed from the
- *     panel and still present on the server.
- *
- *  4. **A role is cluster-wide and has no host.** MySQL's identity is
- *     `'user'@'host'` — creating the account *is* the grant. Here the host half
- *     lives in `pg_hba.conf`, and binding lives in `listen_addresses`, so one
- *     MySQL statement becomes three facts in three places that must agree.
- *
- *     Until 2026-09-12 every `$host` here was accepted and ignored, and the
- *     request layer refused to offer remote access at all rather than store a
- *     setting nothing applied. It is now implemented: see the remote-access
- *     section below. `$host` is no longer decorative, and the only argument
- *     still ignored is `$newHost`'s counterpart in {@see setPassword()}, where
- *     a password change genuinely says nothing about addresses.
- *
- * Credentials go in a 0600 `PGPASSFILE` (measured: 0644 is warned about and
- * ignored), never on argv. Identifiers are double-quoted and validated upstream
- * by the FormRequests; string literals are single-quoted and escaped.
+ * Credentials go in a 0600 `PGPASSFILE`, never on argv. Identifiers are double-quoted and
+ * string literals single-quoted and escaped; names are validated upstream by FormRequests.
  */
 class PgsqlEngine implements DatabaseEngine, ListensRemotely
 {
-    /**
-     * The database `psql` connects *to* in order to run administrative
-     * statements. `CREATE DATABASE` cannot run from inside the database it is
-     * creating, and cannot run in a transaction block either, so every
-     * statement here is sent to the cluster's maintenance database.
-     */
+    /** Maintenance database: `CREATE DATABASE` cannot run from inside the database it creates. */
     private const MAINTENANCE_DATABASE = 'postgres';
 
     /** What `env` exits with when the client program is not installed. */
@@ -91,8 +56,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
     public function version(): ?string
     {
-        // `server_version` rather than `version()`: the latter is a sentence
-        // including the compiler and platform, and the screen wants a number.
+        // `server_version`, not `version()`: that one is a sentence with compiler and platform.
         $result = $this->run('SHOW server_version;', probe: true);
 
         return $result->ok ? (trim($result->output()) ?: null) : null;
@@ -100,9 +64,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
     public function listDatabases(): array
     {
-        // `datallowconn` excludes template0, which exists but cannot be
-        // connected to at all — offering it would be offering a database no
-        // operation could ever touch.
+        // `datallowconn` excludes template0, which cannot be connected to.
         $result = $this->run(
             'SELECT datname FROM pg_database WHERE datistemplate = false AND datallowconn = true ORDER BY datname;'
         );
@@ -121,15 +83,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
     public function listUsers(): array
     {
-        // `rolcanlogin` — a role that cannot log in is a group, not an account,
-        // and listing it as a database user on a migrated server invites
-        // someone to hand it a password it will never use.
-        //
-        // Not `rolsuper` either. That is `postgres` and the panel's own
-        // `panel_*` connection account, and both were offered as users of
-        // every site database (2026-09-24): adopted, they could be renamed or
-        // dropped from the Databases screen, and dropping the panel's account
-        // ends its PostgreSQL management. A superuser belongs to no one site.
+        // `rolcanlogin`: a role that cannot log in is a group, not an account.
+        // Not `rolsuper`: `postgres` and the panel's own `panel_*` account must never be offered
+        // as site users, or they could be renamed or dropped from the Databases screen.
         $result = $this->run(
             'SELECT rolname FROM pg_roles WHERE rolcanlogin = true AND rolsuper = false ORDER BY rolname;'
         );
@@ -150,9 +106,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
             $users[] = [
                 'username' => $username,
-                // Always localhost: a role has no host of its own. Reported
-                // rather than left blank so the shape matches the other
-                // engines and the adopt screen has something to show.
+                // A role has no host; reported as localhost so the shape matches the other engines.
                 'host' => 'localhost',
                 'databases' => $this->reachableDatabases($username),
             ];
@@ -170,8 +124,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $this->literal($name),
         ));
 
-        // A strict preflight: an unreachable server must throw rather than look
-        // empty and falsely approve a name somebody else already has.
+        // Strict preflight: an unreachable server must throw, not look empty and approve a
+        // taken name.
         if ($result->failed()) {
             throw new DatabaseOperationException($result->reference);
         }
@@ -195,25 +149,13 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * The databases that are an account's own: owned by it, or granted to it
-     * by name.
-     *
-     * Not "can connect to". PostgreSQL grants CONNECT to PUBLIC by default, so
-     * that question answers "all of them" for every login role. The price of
-     * asking this one instead is that a grant received only through a group
-     * role is not seen; a user missing from the offer is added by hand, a user
-     * offered for the wrong site is the mistake that matters.
+     * The databases an account owns or was granted by name. Not "can connect to": CONNECT is
+     * granted to PUBLIC, which would match every database.
      *
      * @return array<int, string>
      */
     private function reachableDatabases(string $username): array
     {
-        // Databases the role owns or was granted something on by name — not
-        // every database it can CONNECT to. CONNECT is granted to PUBLIC by
-        // default, so that test matched every login role to every database,
-        // and Server Sync offered each site's user as a user of every other
-        // site (measured 2026-09-24). Ownership and an explicit grant in
-        // `datacl` are the two facts that say a database is this role's.
         $result = $this->run(sprintf(
             'SELECT d.datname FROM pg_database d '
             .'WHERE d.datistemplate = false AND d.datallowconn = true '
@@ -237,14 +179,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * `$charset` is PostgreSQL's ENCODING; `$collation` is LC_COLLATE.
-     *
-     * `TEMPLATE template0` whenever either is given, because a database can
-     * only be created with an encoding or collation different from the
-     * template's if that template is template0 — the one template guaranteed to
-     * contain nothing locale-specific. Without it PostgreSQL refuses outright,
-     * which would make the charset field on the create form fail every time it
-     * was used.
+     * `$charset` is ENCODING, `$collation` is LC_COLLATE. `TEMPLATE template0` whenever either
+     * is given: only template0 may be copied with a different encoding or collation.
      */
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
@@ -262,22 +198,14 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $sql .= ' TEMPLATE template0';
         }
 
-        // Bug #35: PostgreSQL grants CONNECT and TEMP on every new database to
-        // PUBLIC, so every site's user could open every other site's database
-        // and read its table names. Only its own users get in (createUser()
-        // grants them by name); the panel's account is a superuser.
+        // PostgreSQL grants CONNECT and TEMP to PUBLIC on every new database; revoke them so a
+        // site's users cannot open other sites' databases. createUser() grants its users by name.
         $this->must($sql.'; REVOKE CONNECT, TEMPORARY ON DATABASE '.$this->ident($name).' FROM PUBLIC;');
     }
 
     /**
-     * `WITH (FORCE)` — PostgreSQL 13+ — because a plain DROP DATABASE fails
-     * while any session is connected, and the site being deleted is usually
-     * the thing holding a connection open. Measured: refused without it,
-     * succeeds with it.
-     *
-     * `IF EXISTS` for the same reason as the MySQL engine: a deletion can have
-     * dropped the database and failed while cleaning up its role, and retrying
-     * must finish that cleanup rather than fail here.
+     * `WITH (FORCE)` (PostgreSQL 13+): a plain DROP fails while a session is connected.
+     * `IF EXISTS` so a retry can finish a deletion that failed while cleaning up the role.
      */
     public function dropDatabase(string $name): void
     {
@@ -285,20 +213,11 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Bug #35 for a database made before the fix: take CONNECT and TEMP away
-     * from PUBLIC, as {@see createDatabase()} now does for a new one.
+     * Take CONNECT and TEMP away from PUBLIC on an existing database, as {@see createDatabase()}
+     * does for a new one.
      *
-     * The revoke must not lock out anyone who really uses the database, and
-     * the panel cannot know every such role: an adopted database, or one
-     * from a migrated server, may be used by roles the panel never recorded.
-     * So first every role that *uses* it gets CONNECT by name: whoever owns
-     * a schema or table in it, or holds a grant on one, plus the panel's own
-     * recorded users. A role that relied on PUBLIC alone owns nothing there
-     * and can read no table in it, so it loses only the ability to list the
-     * names, which is the leak itself. Superusers bypass both and are left out.
-     *
-     * In one transaction, grants first: a failed grant leaves PUBLIC's
-     * access exactly as it was.
+     * Every role that uses the database (owners and grantees in it, plus the panel's recorded
+     * users) first gets CONNECT by name, so nobody is locked out. One transaction, grants first.
      *
      * @param  array<int, string>  $users  The panel's recorded users of it.
      * @return bool Whether anything changed. False when PUBLIC already had no
@@ -350,18 +269,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Drop the database, then the roles — with **no** `REASSIGN OWNED` /
-     * `DROP OWNED`, which is the one thing that separates this from calling
-     * `dropUser()` in a loop.
-     *
-     * Those two statements have to run *inside* the database whose objects are
-     * owned, and by this point that database no longer exists: psql cannot
-     * connect, so the cleanup that was meant to make `DROP ROLE` possible is
-     * what fails instead. Skipping it is not a workaround. `WITH (FORCE)`
-     * above takes the owned objects with the database, so the role that owned
-     * them owns nothing by the time it is dropped — `DatabaseUser` is scoped
-     * to exactly one database, so there is nowhere else for it to own
-     * anything the panel gave it.
+     * Drop the database, then the roles. No `REASSIGN OWNED` / `DROP OWNED`: those must run
+     * inside the database, which is gone; `WITH (FORCE)` takes the owned objects with it.
      *
      * @param  array<int, array{username: string, host: string}>  $users
      */
@@ -373,7 +282,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $this->must('DROP ROLE IF EXISTS '.$this->ident($user['username']).';');
         }
 
-        // Its group, if it had one: owned nothing once the database went.
+        // Its owner group, if it had one.
         $this->must('DROP ROLE IF EXISTS '.$this->ident($this->ownerGroup($name)).';');
     }
 
@@ -390,13 +299,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * PostgreSQL's equivalents, which are not called charset and collation.
-     *
-     * `encoding` is a numeric oid in the catalogue, so it goes through
-     * `pg_encoding_to_char()` to come back as the name the create form uses.
-     * `datcollate` is LC_COLLATE — the same value {@see createDatabase()}
-     * passes as `LC_COLLATE`, so what is read back matches what would be
-     * written.
+     * `encoding` (an oid, converted by `pg_encoding_to_char()`) and `datcollate` (LC_COLLATE).
      *
      * @return array{charset: ?string, collation: ?string}
      */
@@ -423,22 +326,12 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * Create the role and give it its database.
      *
-     * Ownership, not `GRANT ALL PRIVILEGES ON DATABASE`. That grant was
-     * measured to leave the account unable to read a table *or* create one —
-     * it carries CONNECT/CREATE/TEMP and no table privileges, and since PG15
-     * the `public` schema is not writable by PUBLIC either. An application
-     * handed such an account fails inside its own installer, long after the
-     * panel has reported the site created.
+     * Ownership, not `GRANT ALL PRIVILEGES ON DATABASE`, which leaves the account without table
+     * privileges. The first user owns the database itself; a database has one owner, so from
+     * the second user on it belongs to a shared role ({@see shareWithGroup()}). The schema is
+     * re-owned in a second connection because `ALTER SCHEMA` must run inside that database.
      *
-     * The first user owns the database itself. A database has one owner, so
-     * from the second user on it belongs to a shared role instead — see
-     * {@see shareWithGroup()}.
-     *
-     * The schema is re-owned in a second connection because `ALTER SCHEMA`
-     * has to run *inside* the database that holds the schema, while
-     * `CREATE ROLE` and `ALTER DATABASE` do not.
-     *
-     * `$host` is ignored: a role is cluster-wide. See the class docblock.
+     * `$host` only feeds the `pg_hba.conf` rule: a role itself is cluster-wide.
      */
     public function createUser(string $username, string $host, string $password, string $database): void
     {
@@ -465,19 +358,14 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             ));
         }
 
-        // The host half of the account. A role is cluster-wide, so this is the
-        // only place the address is recorded — and without it a user created
-        // as "remote" would be a role that exists and cannot connect.
+        // A role is cluster-wide: the hba rule is the only place the address is recorded.
         $this->syncHbaRule($database, $username, $host);
     }
 
     /**
-     * The shared role that owns a database once it has more than one user.
-     *
-     * Not a name a user can be given: usernames are `[A-Za-z0-9_]`, and `#`
-     * is neither. PostgreSQL cuts identifiers at 63 bytes without an error,
-     * so a long database name is shortened with a hash of the whole name —
-     * two databases sharing a 57-character prefix must not share an owner.
+     * The shared role that owns a database once it has more than one user. `#` cannot appear in
+     * a username. Names are cut at 63 bytes silently, so a long one is shortened with a hash of
+     * the whole name: two databases sharing a long prefix must not share an owner.
      */
     public function ownerGroup(string $database): string
     {
@@ -491,11 +379,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Who owns the database, and whether that is a site's login role.
-     *
-     * 'login' is an ordinary account, 'nologin' a role nobody logs in as (the
-     * group), 'super' a superuser such as the panel's own connection account.
-     * Only a 'login' owner is ever moved into a group.
+     * Who owns the database, and whether that is a site's login role: 'login' (ordinary
+     * account), 'nologin' (the group) or 'super' (e.g. the panel's connection account). Only a
+     * 'login' owner is ever moved into a group.
      *
      * @return array{0: string, 1: string}
      */
@@ -511,25 +397,17 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * A second user on a database (bug #23).
-     *
-     * Before this the second user took the database and its schema over, and
-     * the tables stayed with the first: measured on PostgreSQL 18, the second
-     * user got "permission denied for table" on every one of them, **and the
-     * first could no longer create a table** — it had lost the schema.
-     *
-     * Now everything the first user owns in the database moves to a shared
-     * role nobody logs in as, and both users become members of it. Each user
-     * acts as that role inside this database (`SET role`), so a table either
-     * of them creates is the group's, and every member can read, write and
-     * alter every table — a later migration by either user works.
+     * A second user: everything the first user owns moves to a shared role nobody logs in as,
+     * and both become members. Each acts as that role in this database (`SET role`), so tables
+     * either creates belong to the group. Otherwise the second user took over the schema and
+     * the first could no longer create tables.
      */
     private function shareWithGroup(string $database, string $owner, string $username, string $group): void
     {
         $exists = trim($this->run(sprintf('SELECT 1 FROM pg_roles WHERE rolname = %s;', $this->literal($group)))->output()) === '1';
 
-        // One transaction: done in steps, an application connecting halfway
-        // would meet tables owned by a role it is not yet acting as.
+        // One transaction: an application connecting halfway would meet tables owned by a role
+        // it is not yet acting as.
         $this->mustIn($database, 'BEGIN; '
             .($exists ? '' : sprintf('CREATE ROLE %s NOLOGIN; ', $this->ident($group)))
             .$this->reassignWithin($database, $owner, $group)
@@ -544,11 +422,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Make a user a member of the database's group, acting as it there.
-     *
-     * CONNECT by name as well, though membership carries it: the database is
-     * the user's by name then, which is how {@see reachableDatabases()} and
-     * {@see restrictToItsUsers()} recognise its users.
+     * Make a user a member of the database's group, acting as it there. CONNECT by name too:
+     * {@see reachableDatabases()} and {@see restrictToItsUsers()} recognise users by it.
      */
     private function joinGroupSql(string $username, string $database, string $group): string
     {
@@ -561,13 +436,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * `REASSIGN OWNED`, kept to one database.
-     *
-     * It moves what the role owns in the current database *and* every
-     * database it owns anywhere in the cluster. A role adopted from a
-     * migrated server can own more than one, so those are handed straight
-     * back in the same transaction — measured: the other database stays the
-     * role's own. Returned as SQL for the caller's transaction.
+     * `REASSIGN OWNED`, kept to one database: it also moves every other database the role owns,
+     * so those are handed straight back. Returned as SQL for the caller's transaction.
      */
     private function reassignWithin(string $database, string $from, string $to): string
     {
@@ -585,25 +455,18 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * `DROP OWNED BY` first — measured: `DROP ROLE` is refused outright while
-     * the role owns anything, and by this point it owns the database's schema.
-     * That statement has to run inside the database whose objects are owned,
-     * so it is a separate connection.
-     *
-     * The database itself is handed back to the connection's own account
-     * rather than dropped: dropping a database here would delete a site's data
-     * as a side effect of removing one of its users.
+     * `DROP OWNED BY` first: `DROP ROLE` is refused while the role owns anything. It runs inside
+     * the database, so over a separate connection. The database goes back to the connection's
+     * own account rather than being dropped: removing a user must not delete a site's data.
      */
     public function dropUser(string $username, string $host, string $database): void
     {
-        // Into the group when the database has one: what this user made there
-        // is the other users' data too.
+        // Into the group when the database has one: what this user made is the others' data too.
         $group = $this->ownerGroup($database);
         $admin = $this->databaseOwner($database)[0] === $group ? $group : (string) $this->connection->username;
 
-        // Reassign before dropping so the database survives its owner. Both
-        // are sent together: a REASSIGN that succeeds and a DROP OWNED that
-        // does not would leave the role undroppable and the reason obscure.
+        // Reassign before dropping so the database survives its owner. Sent together: a REASSIGN
+        // that succeeds and a DROP OWNED that does not would leave the role undroppable.
         $this->mustIn($database, sprintf(
             'REASSIGN OWNED BY %s TO %s; DROP OWNED BY %s;',
             $this->ident($username),
@@ -611,9 +474,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $this->ident($username),
         ));
 
-        // Before the role goes, while its name still means something. A `host`
-        // line naming a dropped role is a grant nobody can see and nothing
-        // reports.
+        // Before the role goes, while its name still means something: a `host` line naming a
+        // dropped role is a grant nobody can see.
         $this->syncHbaRule($database, $username, null);
 
         $this->must('DROP ROLE IF EXISTS '.$this->ident($username).';');
@@ -629,14 +491,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Rename in place. Measured on PostgreSQL 16: the password survives a
-     * rename under scram-sha-256, which is the default — so `$password` is
-     * unused here and the driver reports `rename_keeps_password`, which is what
-     * makes the caller issue its own `setPassword()` when one was requested.
-     *
-     * (Under the long-deprecated md5 encoding a rename clears the password,
-     * because the username is part of the hash. A cluster configured that way
-     * would need the password set again; nothing the panel installs does so.)
+     * Rename in place. The password survives a rename under scram-sha-256 (the default), so
+     * `$password` is unused and the driver reports `rename_keeps_password`. (Under the deprecated
+     * md5 encoding a rename clears it, because the username is part of the hash.)
      */
     public function renameUser(string $username, string $host, string $newUsername, string $newHost, string $password, string $database): void
     {
@@ -646,20 +503,13 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $this->ident($newUsername),
         ));
 
-        // The rule is keyed by role name, so a rename has to move it: left
-        // alone, the old name keeps a grant and the new one has none.
+        // The hba rule is keyed by role name: move it, or the old name keeps a grant and the new
+        // one has none.
         $this->syncHbaRule($database, $username, null);
         $this->syncHbaRule($database, $newUsername, $newHost);
     }
 
-    /**
-     * Live backends, excluding this connection.
-     *
-     * `pid <> pg_backend_pid()` for the reason the MySQL engine excludes its
-     * own thread: without it the panel is always in its own list, an idle
-     * server never reads as idle, and the Stop button is offered for a backend
-     * that has already gone by the time the kill is issued.
-     */
+    /** Live backends, excluding this connection so the panel is not always in its own list. */
     public function processes(): array
     {
         $result = $this->run(
@@ -700,11 +550,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
         return $processes;
     }
 
-    /**
-     * `pg_terminate_backend`, not `pg_cancel_backend`: the control is labelled
-     * as ending the session, and cancel only stops the current statement while
-     * leaving the connection open — which looks like the button did nothing.
-     */
+    /** `pg_terminate_backend`, not `pg_cancel_backend`: cancel leaves the connection open. */
     public function killProcess(string $id): void
     {
         $this->must('SELECT pg_terminate_backend('.(int) $id.');');
@@ -730,17 +576,10 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             'connections' => (int) ($c[0] ?? 0),
             'max_connections' => (int) ($c[1] ?? 0),
             'threads_running' => (int) ($c[2] ?? 0),
-            // Transactions, not statements: PostgreSQL does not count
-            // statements globally, and a made-up number would be worse than
-            // the nearest true one.
+            // Transactions, not statements: PostgreSQL has no global statement count.
             'queries' => (int) ($c[3] ?? 0),
-            // Null, not zero. PostgreSQL has no slow-query counter without
-            // `pg_stat_statements`, an extension the panel does not install —
-            // so there is nothing to report, and a screen rendering `0`
-            // presents "we never looked" as "none happened", which is the
-            // better news of the two and the false one. MongoEngine already
-            // answers null here for the same reason; zero was my
-            // inconsistency, reported by the frontend on the day it shipped.
+            // Null, not zero: there is no slow-query counter without `pg_stat_statements`, which
+            // the panel does not install, and `0` would present "never looked" as "none happened".
             'slow_queries' => null,
             'uptime_seconds' => (int) ($c[4] ?? 0),
         ];
@@ -748,11 +587,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
     public function tables(string $database): array
     {
-        // Runs inside the database being inspected: PostgreSQL's catalogs are
-        // per-database, unlike MySQL's information_schema which spans the
-        // server. `n_live_tup` is an estimate for the same reason MySQL's
-        // `table_rows` is — counting every row of every table to draw a list
-        // would be a table scan per row on the screen.
+        // Runs inside the database being inspected (catalogs are per-database). `n_live_tup` is
+        // an estimate: counting every table's rows to draw a list would be a scan per table.
         $result = $this->runIn($database,
             'SELECT relname, COALESCE(n_live_tup, 0), COALESCE(pg_total_relation_size(relid), 0) '
             .'FROM pg_stat_user_tables ORDER BY relname;'
@@ -777,16 +613,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Plain SQL, not a custom-format archive.
-     *
-     * `--format=plain` keeps the file a `.sql` the backup and restore steps
-     * already know how to name, size and sanity-check, and it is restorable
-     * with `psql` alone — so a user with a dump and no panel is not stuck.
-     *
-     * `--no-owner` and `--no-privileges` because ownership is the panel's to
-     * decide: {@see restore()} runs as the database's owning role, and a dump
-     * carrying `ALTER TABLE … OWNER TO` would reinstate whoever owned it on the
-     * machine it came from — a role that need not exist here.
+     * Plain SQL, restorable with `psql` alone. `--no-owner` and `--no-privileges`: ownership is
+     * the panel's to decide ({@see restore()}), and a dump carrying `OWNER TO` would reinstate a
+     * role that need not exist here.
      */
     public function dump(string $database, string $path): void
     {
@@ -804,33 +633,17 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Import a plain dump. Destructive — the caller drops and recreates the
-     * database first, so this is the inverse of dump() rather than a merge.
+     * Import a plain dump. Destructive: the caller drops and recreates the database first.
      *
-     * **As the database's owner**, not as the panel's account. The dump
-     * carries no ownership (`--no-owner`), so whoever loads it owns every
-     * table — and loaded as the panel's superuser, not one of the site's
-     * users could read them (measured on PostgreSQL 18, 2026-10-04). The
-     * caller gives the database back to its users first
-     * ({@see reattachUsers()}); `SET ROLE` then makes what the dump creates
-     * theirs. A database with no user is owned by the panel and loads as
-     * before.
+     * Runs as the database's owner (`SET ROLE`), not the panel's account: the dump carries no
+     * ownership, so whoever loads it owns every table. The caller gives the database back to its
+     * users first ({@see reattachUsers()}); a database with no user loads as the panel.
      *
-     * Except when the dump needs an extension only a superuser may create
-     * (PostGIS, for one). Creating it first as the panel does not help: the
-     * dump's next line is `COMMENT ON EXTENSION`, which only the extension's
-     * owner may run (measured), so the load would fail — and so would the
-     * undo, from a safety backup holding the same extension. That dump loads
-     * as the panel, as every dump did before. Trusted extensions (pg_trgm,
-     * pgcrypto, uuid-ossp, hstore, citext…) are created by the owner itself.
+     * Also as the panel when the dump creates an extension only a superuser may create
+     * (PostGIS): its `COMMENT ON EXTENSION` needs the extension's owner, so the load would fail.
      *
-     * `--file`, not stdin: a site's dump is routinely larger than the whole PHP
-     * memory limit, and reading it in to pass as process input would kill the
-     * worker on exactly the databases most worth restoring.
-     *
-     * `ON_ERROR_STOP=1` matters more here than anywhere else. Without it psql
-     * replays a dump that fails halfway and still exits 0 — a restore that
-     * reports success over a half-populated database, discovered later.
+     * `--file`, not stdin: a dump can be larger than PHP's memory limit. `ON_ERROR_STOP=1`:
+     * without it psql replays a failing dump to the end and exits 0.
      */
     public function restore(string $database, string $path): void
     {
@@ -851,27 +664,18 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Give a recreated database back to its users ({@see DatabaseEngine}).
-     *
-     * One user owns it and its schema, as a new database's first user does.
-     * More than one share it through the group, as {@see shareWithGroup()}
-     * leaves them — created here if a database from before that change has
-     * several users and no group, since the restored tables have a single
-     * owner and the others could read none of them otherwise. One
-     * transaction, inside the database.
+     * Give a recreated database back to its users ({@see DatabaseEngine}): one user owns it and
+     * its schema; several share it through the group ({@see shareWithGroup()}), created if
+     * missing. One transaction, inside the database.
      */
     /**
-     * As the database's own user, over TCP to the admin connection's host —
-     * a site user authenticates with its password there, not over the local
-     * socket's peer rule. Connected as them, their `SET role = {db}#owner`
-     * applies, so what the file creates belongs to the database's owner group
-     * the way everything the panel creates does.
+     * Load a file as the database's own user, over TCP (a site user authenticates with its
+     * password there, not by the socket's peer rule), so their `SET role = {db}#owner` applies
+     * and the file's objects belong to the owner group.
      *
-     * One transaction (`--single-transaction`, `ON_ERROR_STOP`): a file that
-     * fails halfway leaves nothing behind it, and the caller puts the safety
-     * copy back. psql's own client commands are refused before this runs
-     * ({@see PgsqlLexer}) — psql has no switch to disable them, and this
-     * client runs as root.
+     * One transaction: a failing file leaves nothing behind. psql's own client commands are
+     * refused before this runs ({@see PgsqlLexer}): psql has no switch to disable them, and
+     * this client runs as root.
      */
     public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void
     {
@@ -904,10 +708,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Turn a `pg_dump -Fc` archive into the plain SQL the import loads, so it
-     * goes through the same checks as any other file. `pg_restore --file`
-     * writes SQL without connecting to anything. Owner and privilege lines are
-     * left out here, as the panel's own exports leave them out.
+     * Turn a `pg_dump -Fc` archive into plain SQL so it goes through the same checks as any
+     * other file (`pg_restore --file` does not connect). Owner and privilege lines are left out.
      */
     public function customToPlain(string $archive, string $target): void
     {
@@ -926,9 +728,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
     public function reattachUsers(string $database, array $usernames): void
     {
-        // Only roles that still exist: one dropped outside the panel would
-        // otherwise fail the whole transaction, after the database has
-        // already been dropped for the restore.
+        // Only roles that still exist: one dropped outside the panel would fail the whole
+        // transaction after the database was already dropped.
         $usernames = $usernames === [] ? [] : array_values(array_filter(array_map('trim', explode("\n", $this->run(sprintf(
             'SELECT rolname FROM pg_roles WHERE rolname IN (%s) ORDER BY rolname;',
             implode(', ', array_map(fn (string $user) => $this->literal($user), array_unique($usernames))),
@@ -961,9 +762,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * The extensions a dump creates, read a line at a time — dumps are
-     * routinely larger than PHP's memory limit. pg_dump writes each
-     * `CREATE EXTENSION IF NOT EXISTS name WITH SCHEMA …;` on its own line.
+     * The extensions a dump creates, read a line at a time (dumps can exceed PHP's memory limit).
      *
      * @return array<int, string>
      */
@@ -991,10 +790,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Whether every one of these extensions may be created by a database's
-     * owner: marked trusted in its control file (PostgreSQL 13+). An unknown
-     * one counts as not — it fails either way, and loading as the panel at
-     * least fails the way it always has.
+     * Whether every one of these extensions may be created by a database's owner: marked
+     * trusted in its control file (PostgreSQL 13+). An unknown one counts as not.
      *
      * @param  array<int, string>  $extensions
      */
@@ -1017,28 +814,13 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     | Remote access — pg_hba.conf and listen_addresses
     |---------------------------------------------------------------------------
     |
-    | A role is cluster-wide and carries no host, so "which addresses may reach
-    | this account" is two separate facts held in two separate places, and both
-    | have to be true:
-    |
-    |   * `pg_hba.conf` decides which client addresses may authenticate. Read on
-    |     start-up and on SIGHUP, so a change takes a reload.
-    |   * `listen_addresses` decides which interfaces are bound at all. Its
-    |     default is `localhost`, and PostgreSQL's documentation is explicit:
-    |     "This parameter can only be set at server start." No reload will do —
-    |     it takes a **restart**, which interrupts every application connected
-    |     to the cluster. That is why granting remote access cannot be a silent
-    |     side effect of creating a user.
+    | Two facts in two places, both must hold: `pg_hba.conf` says which client addresses may
+    | authenticate (a reload applies it); `listen_addresses` says which interfaces are bound
+    | and only takes a **restart**, so granting remote access is never a silent side effect.
     */
 
     /**
-     * Where this cluster's `pg_hba.conf` actually is.
-     *
-     * Asked, never assembled from a version and a cluster name. The path is
-     * `/etc/postgresql/<version>/<cluster>/pg_hba.conf` on Ubuntu and something
-     * else everywhere else, and `hba_file` is the server's own answer — the
-     * same reasoning that made the installer discover the cluster with
-     * `pg_lsclusters` rather than assume `16-main`.
+     * Where `pg_hba.conf` is: asked of the server, never assembled from a version and cluster name.
      */
     private function hbaPath(): ?string
     {
@@ -1050,14 +832,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * Grant one role remote access to one database, or take it away.
      *
-     * `$host` is the panel's stored preference: `localhost` (no rule at all),
-     * `%` (anywhere), or an address/CIDR. Null removes the account's rules,
-     * which is what a drop or a move back to localhost-only means.
-     *
-     * The whole block is re-rendered from what is already in the file plus this
-     * one change, so the account's previous rules are replaced rather than
-     * accumulated — a user moved from one address to another must not keep the
-     * old one.
+     * `$host` is `localhost` (no rule), `%` (anywhere) or an address/CIDR; null removes the
+     * account's rules. The block is re-rendered from the file's current rules plus this change,
+     * so a user moved to another address does not keep the old one.
      */
     private function syncHbaRule(string $database, string $role, ?string $host): void
     {
@@ -1087,19 +864,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Write, prove it parses, then reload — and put the old file back if it
-     * does not.
-     *
-     * `pg_hba_file_rules` is what makes this safe rather than hopeful:
-     * PostgreSQL's documentation says it "reports on the current contents of
-     * the file, not on what was last loaded by the server", and recommends it
-     * "for pre-testing changes". So the file on disk can be checked *before*
-     * anything is signalled, and a reload only ever happens against a file
-     * already known to be valid.
-     *
-     * The previous contents are restored on any failure. Not a copy left beside
-     * it under another name: a stale `pg_hba.conf.bak` next to a live one is a
-     * trap for the next person to read the directory.
+     * Write, prove it parses, then reload, and put the old file back if it does not.
+     * `pg_hba_file_rules` reports on the file's current contents, so it can be checked before
+     * anything is signalled. The old contents are restored in place, not left in a `.bak`.
      */
     private function writeHba(string $path, string $previous, string $rendered): void
     {
@@ -1107,8 +874,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
 
         $check = $this->run('SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL;');
 
-        // A cluster too old for the view, or one that would not answer, is not
-        // a licence to reload an unverified authentication file.
+        // Too old for the view, or no answer: never reload an unverified authentication file.
         if ($check->failed() || (int) trim($check->output()) !== 0) {
             $this->writeFile($path, $previous);
 
@@ -1119,13 +885,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * `tee`, not a shell redirect.
-     *
-     * `pg_hba.conf` is `0640 postgres:postgres`. `tee` writes through the
-     * existing inode and leaves owner and mode exactly as they were; a redirect
-     * run as root would create a root-owned file, which the postmaster refuses
-     * to read — turning an authentication change into a cluster that cannot
-     * authenticate anyone.
+     * `tee`, not a shell redirect: it keeps owner and mode of `pg_hba.conf` (`postgres:postgres`),
+     * while a redirect run as root creates a root-owned file the postmaster refuses to read.
      */
     private function writeFile(string $path, string $contents): void
     {
@@ -1156,10 +917,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Which interfaces the cluster is bound to, as the running server sees it.
-     *
-     * `localhost` (the default) means no remote client can connect whatever
-     * `pg_hba.conf` says, so this is what decides whether a restart is needed.
+     * Which interfaces the cluster is bound to. `localhost` (the default) means no remote client
+     * can connect whatever `pg_hba.conf` says.
      */
     public function listenAddresses(): string
     {
@@ -1169,12 +928,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Is the cluster already reachable from off the box?
-     *
-     * Anything that is not the default loopback-only setting counts: an
-     * operator who has already set `listen_addresses` to a specific interface
-     * has made this decision themselves, and the panel has no business
-     * restarting their cluster to widen it further.
+     * Is the cluster already reachable from off the box? Anything but the loopback default
+     * counts: the panel must not restart an operator's cluster to widen a setting they chose.
      */
     public function listensRemotely(): bool
     {
@@ -1184,17 +939,11 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Bind every interface, then restart — the only way this setting takes.
+     * Bind every interface, then restart (the only way this setting takes).
      *
-     * Written with `ALTER SYSTEM`, which lands in `postgresql.auto.conf` rather
-     * than editing `postgresql.conf`: the operator's own file stays theirs, and
-     * the override is visible in one obvious place and removable with
-     * `ALTER SYSTEM RESET`.
-     *
-     * Binding is not granting. A cluster listening on every interface still
-     * authenticates nobody without a matching `pg_hba.conf` record, and the
-     * firewall still has to open 5432 — this is the first of three locks, not
-     * the only one.
+     * Written with `ALTER SYSTEM` into `postgresql.auto.conf`, so the operator's own
+     * `postgresql.conf` stays theirs. Binding is not granting: `pg_hba.conf` still needs a
+     * record and the firewall must open 5432.
      */
     public function openRemoteListening(): void
     {
@@ -1218,11 +967,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * The cluster as `<version>-<name>`, discovered rather than assumed.
-     *
-     * Same source the installer uses. A server whose cluster is not `16-main`
-     * is not exotic — a second cluster on a different port is ordinary — and
-     * restarting the wrong unit would report success having done nothing.
+     * The cluster as `<version>-<name>`, discovered with `pg_lsclusters`: restarting the wrong
+     * unit would report success having done nothing.
      */
     private function cluster(): ?string
     {
@@ -1265,11 +1011,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * `$probe` is only for the "is it here?" questions (available, version).
-     * Exit 127 is `env` finding no psql: PostgreSQL is not installed, the
-     * answer is "no", and it is not a failed server command. Until 2026-11-05
-     * it was logged as one on every read of /setup, /server/facts and
-     * /databases/engines, and filled the Error Log of servers without it.
+     * `$probe` is for the "is it here?" questions (available, version): exit 127 is `env`
+     * finding no psql, which means "not installed", not a failed server command.
      */
     private function run(string $sql, bool $probe = false): ServerOpsResult
     {
@@ -1279,20 +1022,12 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * Run SQL against one database.
      *
-     * The flags are not interchangeable with a tidier set:
+     *  - `--set=ON_ERROR_STOP=1` makes a failure a failure: SQL read from stdin exits 0 on an
+     *    error without it. Every `must()` depends on this flag.
+     *  - `-t -A -F` give tab-separated, header-free output; `-q` silences command tags.
      *
-     *  - `--set=ON_ERROR_STOP=1` is what makes a failure a failure. Measured on
-     *    PostgreSQL 16: SQL read from stdin that errors exits **0** without it,
-     *    and 3 with it. Every `must()` above depends on this one flag.
-     *  - `-t` drops the header and row count, `-A` turns off column alignment
-     *    and `-F` sets the separator — together they give exactly the
-     *    tab-separated, header-free output the parsers above expect.
-     *  - `-q` silences `CREATE ROLE`-style command tags, so `output()` holds
-     *    query results and nothing else.
-     *
-     * SQL goes over stdin and the password lives in a 0600 PGPASSFILE, so
-     * neither reaches argv, where anything is readable in /proc for the life of
-     * the process.
+     * SQL goes over stdin and the password in a 0600 PGPASSFILE, so neither reaches argv
+     * (readable in /proc).
      */
     private function runIn(string $database, string $sql, bool $probe = false): ServerOpsResult
     {
@@ -1343,12 +1078,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Host, port and user — never the password, which travels in PGPASSFILE.
-     *
-     * `--no-password` so a client that cannot authenticate fails immediately
-     * instead of blocking on a prompt that nothing will ever answer. A
-     * background job hanging on an invisible password prompt is indefinite,
-     * and looks like the queue has stalled rather than like a bad credential.
+     * Host, port and user, never the password (it travels in PGPASSFILE). `--no-password` so a
+     * client that cannot authenticate fails at once instead of blocking on a prompt.
      *
      * @return array<int, string>
      */
@@ -1365,15 +1096,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * A 0600 pgpass file: `host:port:database:user:password`.
-     *
-     * The mode is not defensive tidiness — measured on PostgreSQL 16, a pgpass
-     * file with group or world access is refused with a warning and the
-     * password is simply not used, so a 0644 file authenticates nothing.
-     *
-     * `*` for the database field because these credentials are the admin
-     * connection's and are used against the maintenance database, each managed
-     * database in turn, and pg_dump.
+     * A 0600 pgpass file: `host:port:database:user:password`. psql ignores a file with group or
+     * world access. `*` for the database field: the admin credentials are used against every
+     * database.
      */
     private function writePassFile(): string
     {
@@ -1384,9 +1109,8 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             ? (string) $this->connection->socket
             : (string) ($this->connection->host ?: '127.0.0.1');
 
-        // A literal colon or backslash in a field has to be escaped or it is
-        // read as a separator — which would silently shift every field after
-        // it and authenticate as somebody else, or nobody.
+        // Escape a literal colon or backslash, or it is read as a separator and shifts every
+        // later field.
         $fields = array_map(
             fn (string $value): string => str_replace(['\\', ':'], ['\\\\', '\\:'], $value),
             [$host, (string) ((int) ($this->connection->port ?: 5432)), '*', (string) $this->connection->username, (string) $this->connection->password],
@@ -1399,24 +1123,15 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Double-quote an identifier (already regex-validated upstream).
-     *
-     * Quoting is not optional here the way back-ticking is in MySQL: an
-     * unquoted PostgreSQL identifier is folded to lower case, so a database
-     * created as `Shop` would be created as `shop` and every later statement
-     * naming `Shop` would miss it.
+     * Double-quote an identifier (already regex-validated upstream). Required: unquoted names
+     * fold to lower case, so a database created as `Shop` would be `shop`.
      */
     private function ident(string $value): string
     {
         return '"'.str_replace('"', '""', $value).'"';
     }
 
-    /**
-     * A single-quoted string literal, quotes included.
-     *
-     * Returns the delimiters as well as the content, unlike the MySQL engine's
-     * `esc()`, so no caller can interpolate a value and forget to quote it.
-     */
+    /** A single-quoted string literal, quotes included, so no caller can forget to quote it. */
     private function literal(string $value): string
     {
         return "'".str_replace("'", "''", $value)."'";

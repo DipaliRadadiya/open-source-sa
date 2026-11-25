@@ -24,73 +24,39 @@ use Throwable;
 /**
  * List, view, edit and download a site's own files.
  *
- * Every command runs as **the site's own Linux user**, via `runuser -u`, never
- * as the panel's root. That is the one thing that makes this feature safe: a
- * client-supplied path is validated at the edges (`App\Rules\SafeRelativePath`
- * refuses `..`, absolute paths and anything outside a conservative charset),
- * but validation only catches the tricks someone thought to name. A symlink
- * inside the site pointing outside it is not a `..` in the string — it is
- * exactly the shape of attack path validation cannot see. Running as the
- * site's own user means that attack, if it slipped through, gains nothing:
- * the user already cannot read anything outside what they own.
- *
- * Intentionally still smaller than a full file manager in some ways (no
- * in-place text search, no bulk multi-select) — see this repo's file-manager
- * research for the reasoning behind what's here versus what isn't.
+ * Every command runs as the site's own Linux user (`runuser -u`), never as root. Path validation
+ * (`SafeRelativePath`) cannot see a symlink pointing outside the site; running as the site user means
+ * such a link gains nothing, because that user cannot read outside what it owns.
  */
 class FileBrowser
 {
-    /** Larger belongs to SFTP, which every panel in the research pointed at
-     * for exactly this reason — buffering a big file through a PHP process is
-     * how a download becomes a memory exhaustion bug. */
+    /** Larger files belong to SFTP; buffering a big file through PHP risks memory exhaustion. */
     public const MAX_BYTES = 5 * 1024 * 1024;
 
-    /** Bigger than MAX_BYTES on purpose — an uploaded plugin zip is larger
-     * than anything reasonable to open in a text editor, but still bounded:
-     * this is buffered through a PHP process the same as everything else
-     * here, not streamed. */
+    /** Larger than MAX_BYTES (plugin zips) but still bounded: uploads are buffered through PHP. */
     public const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
-    /** Total *uncompressed* size an archive is allowed to expand to — the
-     * zip-bomb guard, checked from the listing before a single byte is
-     * extracted. */
+    /** Max total *uncompressed* size an archive may expand to (zip-bomb guard, checked before extraction). */
     public const MAX_UNCOMPRESSED_BYTES = 250 * 1024 * 1024;
 
-    /** A second, independent bomb guard: a bomb built from many tiny files
-     * passes a byte-size check but not an entry-count one. */
+    /** Second bomb guard: many tiny files pass a byte check but not an entry count. */
     public const MAX_ARCHIVE_ENTRIES = 10000;
 
-    /** Backups kept per file. Mirrors `ApplicationEnvironment::KEEP_BACKUPS`
-     * — enough to undo a mistake, bounded. */
+    /** Backups kept per file; mirrors `ApplicationEnvironment::KEEP_BACKUPS`. */
     public const KEEP_BACKUPS = 5;
 
-    /** Recursive search is heavier than a flat listing and has no natural
-     * page size — capped the same way `LogManager` bounds a tail read,
-     * with a `truncated` flag so the caller knows there's more. */
+    /** Cap on recursive search results; `truncated` tells the caller there are more. */
     public const MAX_SEARCH_RESULTS = 200;
 
-    /**
-     * How many files the type breakdown will account for before it stops and
-     * says so. A quarter of a million covers a real site with a dependency
-     * tree; past that the chart's shape has long since stopped changing, and
-     * the honest move is to report a partial answer as partial.
-     */
+    /** Files the type breakdown counts before it stops and reports `truncated`. */
     public const MAX_BREAKDOWN_FILES = 250_000;
 
-    /**
-     * The breakdown runs on page load, so it cannot be allowed to hold the
-     * screen. A directory that cannot be walked in this long reports itself
-     * unmeasurable rather than making someone wait for a chart.
-     */
+    /** A directory that cannot be walked in this time reports itself unmeasurable (runs on page load). */
     private const BREAKDOWN_TIMEOUT_SECONDS = 20;
 
     /**
-     * How many paths one bulk request may name.
-     *
-     * `rm`/`chmod`/`cp` take a list natively, but an argument vector has a
-     * kernel limit (ARG_MAX) and crossing it fails obscurely, mid-operation,
-     * with some paths already handled. A refusal the caller can read beats a
-     * truncation it cannot see.
+     * Max paths per bulk request: an argument vector has a kernel limit (ARG_MAX), and crossing it
+     * fails mid-operation with some paths already handled.
      */
     public const MAX_BULK_PATHS = 250;
 
@@ -99,13 +65,7 @@ class FileBrowser
     /** The default for `server.applications.preview_max_bytes` — see there. */
     public const PREVIEW_MAX_BYTES = 10 * 1024 * 1024;
 
-    /**
-     * How much of a file is read to decide what it is.
-     *
-     * Every image signature lives in the first dozen bytes; the window is this
-     * wide for SVG, whose root element can sit behind an XML declaration, a
-     * doctype and a licence comment.
-     */
+    /** Bytes read to identify a file type; wide enough for SVG, whose root can follow a doctype or comment. */
     private const PREVIEW_SNIFF_BYTES = 512;
 
     public function __construct(
@@ -116,16 +76,9 @@ class FileBrowser
     ) {}
 
     /**
-     * @return array<int, array<string, mixed>>
-     */
-    /**
      * One directory, one level deep.
      *
-     * `$includeHidden` filters dotfiles *here* rather than in the browser. The
-     * same `find` runs either way — the cost is identical and the response is
-     * smaller when they are excluded — but the count of what was held back
-     * comes from the same read that produced the list, so the two can never
-     * disagree about a directory that changed between them.
+     * Dotfiles are filtered here, not in the browser, so `hidden_count` comes from the same read as the list.
      *
      * @return array{entries: array<int, array<string, mixed>>, hidden_count: int}
      */
@@ -151,44 +104,30 @@ class FileBrowser
             $entries[] = $this->buildEntry($name, $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget);
         }
 
-        // Unix's definition, and the only one worth using: a leading dot. Not a
-        // list of known names — a site root holds `.git`, `.well-known`,
-        // `.user.ini` and whatever else a framework leaves behind, and a
-        // curated list would quietly treat the unlisted ones as ordinary.
+        // Hidden = a leading dot (not a name list: `.git`, `.well-known`, `.user.ini`, ...).
         $hidden = array_filter($entries, fn (array $entry): bool => str_starts_with($entry['name'], '.'));
 
         if (! $includeHidden) {
             $entries = array_values(array_diff_key($entries, $hidden));
         }
 
-        // Directories first, then alphabetical — how every file manager in
-        // the research (and every OS file browser) orders a listing.
+        // Directories first, then alphabetical.
         usort($entries, fn (array $a, array $b): int => match (true) {
             $a['type'] === 'dir' && $b['type'] !== 'dir' => -1,
             $a['type'] !== 'dir' && $b['type'] === 'dir' => 1,
             default => strcasecmp($a['name'], $b['name']),
         });
 
-        // Always the real number, whether or not they were filtered. A screen
-        // that hides files without saying how many is indistinguishable from
-        // one that lost them, and this is the screen where that costs most.
+        // Always the real count, so a filtered listing never looks like lost files.
         return ['entries' => $entries, 'hidden_count' => count($hidden)];
     }
 
     /**
      * How this directory's bytes divide by file type.
      *
-     * Recursive, and the expensive thing on this class after `du`: it walks
-     * every file under the target. It is scoped to the directory being looked
-     * at rather than the whole site precisely so that browsing bounds its own
-     * cost — the site root is the worst case and someone three folders down
-     * pays for three folders.
-     *
-     * Bounded twice over. `find` gets a short timeout, and its output is
-     * parsed only up to MAX_BREAKDOWN_FILES; past either, `truncated` says so
-     * rather than letting a partial answer read as a complete one. A tree too
-     * big to walk in the time allowed reports that it could not be measured,
-     * which is a fact somebody can act on, unlike a page that hangs.
+     * Recursive and expensive (walks every file), so it is scoped to the directory being viewed.
+     * `find` has a short timeout and parsing stops at MAX_BREAKDOWN_FILES; past either, `truncated`
+     * or `available: false` says the answer is partial or unmeasurable.
      *
      * @return array{available: bool, truncated: bool, total_bytes: int, file_count: int, categories: array<int, array<string, mixed>>}
      */
@@ -198,8 +137,7 @@ class FileBrowser
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
-        // Not `run()`, which throws: a directory too large to walk inside the
-        // timeout is an ordinary answer for this feature, not a server fault.
+        // Not run(), which throws: a directory too large to walk in time is a normal answer here.
         $result = $this->serverOps->run(
             $this->asUser($application, ['find', $target, '-type', 'f', '-printf', "%s\t%f\n"]),
             ['feature' => 'application', 'op' => 'file_breakdown', 'application' => $application->id],
@@ -226,8 +164,7 @@ class FileBrowser
                 break;
             }
 
-            // Split once from the left: a filename may contain tabs, and the
-            // size never does.
+            // Split from the left: a filename may contain tabs, a size never does.
             [$size, $name] = array_pad(explode("\t", $line, 2), 2, '');
             $files[] = ['name' => $name, 'size' => (int) $size];
         }
@@ -247,14 +184,10 @@ class FileBrowser
     }
 
     /**
-     * Recursively searches a subtree (default: the whole site) by filename,
-     * case-insensitively. Flat across every matched depth, unlike `list()` —
-     * a result's `path` (relative to the site root, not to `$scopePath`) is
-     * what tells the caller where it actually lives.
+     * Recursive, case-insensitive filename search of a subtree (default: the whole site).
      *
-     * Capped at `MAX_SEARCH_RESULTS`; `truncated` tells the caller there was
-     * more than that so the UI can say so rather than silently showing a
-     * partial list as if it were complete.
+     * Results are flat; each `path` is relative to the site root, not `$scopePath`. Capped at
+     * MAX_SEARCH_RESULTS; `truncated` says there were more.
      *
      * @return array{entries: array<int, array<string, mixed>>, truncated: bool}
      */
@@ -264,9 +197,7 @@ class FileBrowser
         $target = $this->resolve($application, $scopePath);
         $this->assertType($application, $target, 'd');
 
-        // `-iname`'s pattern is find's own glob syntax, not a literal
-        // substring — a query containing `*`/`?`/`[` must be escaped or it
-        // would be interpreted as a wildcard instead of matched literally.
+        // `-iname` takes find's glob syntax: escape `*`, `?` and `[` so the query matches literally.
         $pattern = '*'.$this->escapeFindPattern($query).'*';
 
         $result = $this->run($application, [
@@ -280,10 +211,7 @@ class FileBrowser
                 continue;
             }
 
-            // `%P` is relative to $target (the search scope), not the site
-            // root — rejoined with $scopePath so a result's `path` is always
-            // usable directly against every other endpoint here, regardless
-            // of which subtree was searched.
+            // `%P` is relative to $target; rejoin with $scopePath so `path` works against every other endpoint.
             [$relativeToScope, $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget] = self::splitEntry($line);
             $relativePath = $scopePath === '' ? $relativeToScope : "{$scopePath}/{$relativeToScope}";
 
@@ -303,11 +231,8 @@ class FileBrowser
     }
 
     /**
-     * Total size of a directory's contents — deliberately not part of
-     * `list()`. A recursive walk over an entry with thousands of files (a
-     * WordPress `uploads` folder, say) would make every listing as slow as
-     * its heaviest subfolder; this is its own on-demand call instead, made
-     * only when a user actually asks for one folder's size.
+     * Total size of a directory's contents. Its own on-demand call, not part of `list()`: a recursive
+     * walk would make every listing as slow as its heaviest subfolder.
      *
      * @return array{size: int, size_human: string}
      */
@@ -317,18 +242,8 @@ class FileBrowser
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
-        // **This answers about a DIRECTORY, and no longer about the site.** It used
-        // to read and write `directory_size_bytes` when the path was the root, which
-        // was right while the two meant the same thing. They do not any more: the
-        // site's size now includes its Docker volumes, so serving that figure here
-        // would tell the File Manager a nearly-empty folder is 284 MB, and writing
-        // this figure there would silently drop the volumes back out again on the
-        // next click.
-        //
-        // `applicationSize()` owns that column. The only thing lost is a free
-        // refresh when somebody happened to ask for the root folder's size —
-        // `sizeChanged()` already queues a real measurement whenever the contents
-        // change, which is the event that actually matters.
+        // Answers about a directory, never the site: the site's size includes its Docker volumes and is
+        // owned by `applicationSize()`. Writing `directory_size_bytes` here would drop them again.
         $bytes = $this->measure($application, $target);
 
         return [
@@ -341,19 +256,10 @@ class FileBrowser
     /**
      * The size of every folder directly inside `$path`, from one `du`.
      *
-     * For the file manager's size column, which showed a folder's size only
-     * after a click per folder (operator, 2026-10-01: show them). Measured on
-     * the nginx test server at a site's root: 0.3 s for 45–60k files, 1.5 s
-     * for n8n's 292k (8 s with a cold disk cache) — so it runs at the lowest
-     * CPU and disk priority, stays on the site's own filesystem (`-x`), and
-     * the answer is kept for five minutes. Anything that changes the site
-     * through the panel forgets it ({@see forgetFolderSizes()}); a change made
-     * outside the panel shows within those five minutes, or on `refresh`.
-     *
-     * A run that hits the 60-second ceiling is the same timed-out error as any
-     * file operation (ServerOps keeps no output from a killed process).
-     * `complete` is false only when `du` printed folders but not the total —
-     * an answer that is true for what it names, and so not remembered.
+     * Runs at the lowest CPU/disk priority, stays on the site's filesystem (`-x`) and is cached for five
+     * minutes. Panel changes forget it ({@see forgetFolderSizes()}); outside changes show after five
+     * minutes or on `refresh`. Past the 60-second ceiling it is a timed-out FileOperationException.
+     * `complete` is false when `du` printed folders but not the total; such an answer is not cached.
      *
      * @return array{sizes: array<string, array{size: int, size_human: string}>, total: ?array{size: int, size_human: string}, complete: bool, measured_at: string}
      */
@@ -391,8 +297,7 @@ class FileBrowser
             }
         }
 
-        // `du` exits 1 over a few unreadable files and still prints the rest
-        // (see measure()); only an answer with nothing in it is a failure.
+        // `du` exits 1 over a few unreadable files and still prints the rest (see measure()).
         if ($result->failed() && $sizes === [] && $total === null) {
             throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied, timedOut: $result->timedOut);
         }
@@ -414,10 +319,7 @@ class FileBrowser
     /** How long `folderSizes()` answers are kept. */
     public const FOLDER_SIZES_TTL = 300;
 
-    /**
-     * Drop every remembered folder size for this site at once — one counter in
-     * the cache key, rather than a list of every path ever measured.
-     */
+    /** Drop every remembered folder size for this site at once, via one counter in the cache key. */
     public function forgetFolderSizes(Application $application): void
     {
         Cache::forever('file-sizes-gen:'.$application->id, $this->sizesGeneration($application) + 1);
@@ -429,28 +331,14 @@ class FileBrowser
     }
 
     /**
-     * Measure the whole application directory now, and remember when.
+     * The whole site: its document root plus the Docker volumes it keeps data in.
      *
-     * @return array{size: int, size_human: string, measured_at: string}
-     */
-    /**
-     * The whole site: its document root, plus the Docker volumes it keeps data in.
+     * A container site's document root holds only a compose file; its data lives in named volumes the
+     * site user cannot read, so `folderSize('/')` would badly understate it. The two halves are stored
+     * separately as well as summed, so the total can be explained.
      *
-     * **No longer just `folderSize('/')`, and that was the bug.** A container site's
-     * document root holds a compose file and nothing else — everything the site
-     * actually owns lives in named volumes under `/var/lib/docker/volumes`, which
-     * the site's own user cannot even read. Measured on the test box: a Mattermost
-     * install reported 6,468 bytes while its six volumes held about 284 MB, one of
-     * them 164 MB of plugins. The sites list sorts by this figure, so it was
-     * ordering container sites by the length of their compose files.
-     *
-     * The two halves are stored separately as well as summed, because a total with
-     * no breakdown is unexplainable: 284 MB against a directory the File Manager
-     * shows as almost empty reads as a bug in the panel.
-     *
-     * `volume_size_bytes` stays **null** for a site with no volumes to measure, and
-     * that is not the same as 0. Null means the question does not apply — every PHP,
-     * Node and static site — while 0 is a container site whose volumes are empty.
+     * `volume_size_bytes` is null when the site has no volumes to measure (PHP, Node, static), which
+     * is not the same as 0 (a container site with empty volumes).
      */
     public function applicationSize(Application $application, bool $refresh = false): array
     {
@@ -471,10 +359,7 @@ class FileBrowser
 
         $directory = $this->measure($application, $this->root($application));
 
-        // Only for a site that has volumes at all. Asking Docker about a WordPress
-        // site would be a shell-out per measurement on every server in order to be
-        // told nothing, and on a box with no Docker it would be a shell-out that
-        // fails.
+        // Only for sites with volumes: asking Docker about anything else is a pointless (or failing) shell-out.
         $volumes = $application->serving_profile === 'docker'
             ? $this->volumeSizes->forApplication($application)
             : null;
@@ -498,14 +383,9 @@ class FileBrowser
     /**
      * Note that this site's contents changed, so the stored size is stale.
      *
-     * Called by the operations that add or remove bytes — not by a rename or a
-     * chmod, which move and relabel what is already counted.
-     *
-     * Queued and debounced rather than measured here: `du` walks every inode,
-     * and paying for that inside the request would make deleting one file as
-     * slow as counting the whole site. The job is unique per application and
-     * delayed, so a burst of fifty deletions walks the site once, shortly after
-     * the person stops, instead of fifty times while they work.
+     * Called by operations that add or remove bytes, not by rename/chmod. The measurement is queued
+     * and debounced (unique per application, delayed): `du` walks every inode, and a burst of
+     * deletions should walk the site once.
      */
     private function sizeChanged(Application $application): void
     {
@@ -516,23 +396,14 @@ class FileBrowser
     }
 
     /**
-     * `du -sb` walks every inode, so this costs file *count*, not bytes — a
-     * site with node_modules is a hundred thousand of them. It is why no
-     * listing calls it and why nothing runs it on a schedule.
+     * `du -sb` walks every inode, so it costs file *count*, not bytes. Hence no listing calls it and
+     * nothing runs it on a schedule.
      */
     private function measure(Application $application, string $target): int
     {
-        // Not `run()`, which throws on a non-zero exit. `du` exits 1 when it
-        // could not read *some* entries and still prints a correct total for
-        // everything it could — and it walks as the site's own user, so any
-        // file that user cannot read produces exactly that. A real site hit
-        // this: an uptime-kuma checkout with a handful of unreadable files
-        // under test/ made the whole site permanently unmeasurable, because a
-        // usable total was thrown away over the files missing from it.
-        //
-        // A slightly low figure beats none. A total of zero is a different
-        // matter — that is not a partial answer, it is no answer — so it still
-        // fails, and the caller keeps whatever it had before.
+        // Not run(), which throws on a non-zero exit: du exits 1 when it could not read *some* entries
+        // (files the site user cannot read) and still prints a correct total for the rest. A slightly
+        // low figure beats none; a total of zero is no answer, so that still fails.
         $result = $this->serverOps->run(
             $this->asUser($application, ['du', '-sb', $target]),
             ['feature' => 'application', 'op' => 'file_folder_size', 'application' => $application->id],
@@ -550,18 +421,11 @@ class FileBrowser
     }
 
     /**
-    /**
      * Fields every listing asks `find` for, in order.
      *
-     * `%l` is last on purpose: it is the only field whose value is an
-     * arbitrary path the site's owner chose, so it is the only one that can
-     * contain a tab. Last means a stray tab lands inside the target itself
-     * rather than shifting every field after it.
-     *
-     * `%Y` is the type *after* following the link, which is what makes a
-     * broken symlink identifiable — find reports `N` when the target does not
-     * exist and `L` when the links loop. Identical to `%y` for everything
-     * that is not a link.
+     * `%l` is last on purpose: it is the only field holding an arbitrary owner-chosen path, so a stray
+     * tab lands inside it instead of shifting later fields. `%Y` is the type after following the link,
+     * which identifies a broken symlink (`N` missing target, `L` loop); same as `%y` for non-links.
      */
     private const PRINTF_FORMAT = "%f\t%y\t%s\t%T@\t%m\t%u\t%g\t%Y\t%l\n";
 
@@ -574,10 +438,8 @@ class FileBrowser
     }
 
     /**
-     * @return array<int, string> exactly ENTRY_FIELDS values, padded when find
-     *                            emitted fewer (`%l` is empty for non-links,
-     *                            and a trailing empty field is not preserved
-     *                            by explode alone).
+     * @return array<int, string> exactly ENTRY_FIELDS values, padded when find emitted fewer (a
+     *                            trailing empty `%l` is not preserved by explode alone).
      */
     private static function splitEntry(string $line): array
     {
@@ -606,18 +468,13 @@ class FileBrowser
 
         $modifiedAt = Carbon::createFromTimestamp((int) (float) $mtime);
 
-        // A symlink's own mode/ownership (`lrwxrwxrwx`, always) isn't a
-        // meaningful permission to show or set — omitted the same way size
-        // is uninteresting for it, rather than showing a constant that never
-        // varies.
+        // A symlink's own mode/owner (`lrwxrwxrwx`, always) is not a meaningful permission: omitted.
         $isSymlink = $entryType === 'symlink';
 
         return [
             'name' => $name,
             'type' => $entryType,
-            // Null for a folder (APP-5): what find reports there is the
-            // directory entry's own block, 4096 whatever it holds. Its real
-            // size is `folder-size`'s job.
+            // Null for a folder: find reports the directory entry's own block (4096); see `folder-size`.
             'size' => $entryType === 'dir' ? null : (int) $size,
             'size_human' => $entryType === 'dir' ? null : Bytes::human((int) $size),
             'modified_at' => $modifiedAt->format('d-m-Y H:i:s'),
@@ -625,28 +482,22 @@ class FileBrowser
             'mode' => $isSymlink ? null : $mode,
             'owner' => $isSymlink ? null : $owner,
             'group' => $isSymlink ? null : $group,
-            // Where it points, verbatim — relative targets are left relative,
-            // because that is what the link actually says and resolving it
-            // here would invent a path the user never wrote.
+            // Verbatim: resolving a relative target would invent a path the user never wrote.
             'link_target' => $isSymlink && $linkTarget !== '' ? $linkTarget : null,
-            // `N` is a target that does not exist, `L` a loop, `?` an error
-            // reading it. A link that resolves to nothing looks identical to
-            // a working one in a listing, which is exactly when knowing
-            // matters.
+            // `N` = missing target, `L` = loop, `?` = unreadable; a broken link looks like a working one in a listing.
             'link_broken' => $isSymlink ? in_array($targetType, ['N', 'L', '?'], true) : null,
         ];
     }
 
-    /** Escapes find's own glob metacharacters so a search query is matched literally, not as a wildcard pattern. */
+    /** Escapes find's glob metacharacters so a query is matched literally. */
     private function escapeFindPattern(string $value): string
     {
         return str_replace(['\\', '*', '?', '['], ['\\\\', '\\*', '\\?', '\\['], $value);
     }
 
     /**
-     * `version` is a hash of the content, sent back on save to catch two
-     * people editing one file (OLD-27). A hash rather than the mtime: two
-     * saves inside one second share an mtime, and `touch` moves it without
+     * `version` is a hash of the content, sent back on save to catch two people editing one file.
+     * A hash, not the mtime: two saves in one second share an mtime, and `touch` moves it without
      * changing a byte.
      *
      * @return array{content: string, size: int, binary: bool, version: string, backups: array<int, array{name: string, created_at: string}>}
@@ -672,20 +523,12 @@ class FileBrowser
         ];
     }
 
-    /** Raw bytes for a download response. Binary is fine here — it is the client's file, not rendered as text. */
     /**
      * A file's size and a generator over its bytes.
      *
-     * Deliberately not capped at MAX_BYTES the way `read()` is. That limit
-     * exists because a file has to fit in memory to be shown in an editor;
-     * a download does not, and capping it meant the panel could accept a
-     * multi-gigabyte upload and then refuse to give the same file back.
-     * Nothing is buffered here — the caller streams each chunk out as it
-     * arrives, so resident memory is one chunk regardless of the file.
-     *
-     * The size is returned alongside so the response can carry a real
-     * Content-Length and the browser can show progress rather than an
-     * indeterminate spinner.
+     * Not capped at MAX_BYTES like `read()`: that limit exists because an editor needs the file in
+     * memory, a download does not. Nothing is buffered; the caller streams each chunk. The size is
+     * returned so the response can carry a real Content-Length.
      *
      * @return array{size: int, chunks: \Generator<int, string>}
      */
@@ -707,29 +550,14 @@ class FileBrowser
     /**
      * An image's own bytes, for rendering in the browser.
      *
-     * `read()` refuses this file (it is binary) and `download()` deliberately
-     * serves every file as `application/octet-stream` so that nothing the
-     * panel hands back can be interpreted by the browser. Both are right for
-     * what they do, and between them there was no way to show a picture — the
-     * file manager could list a JPEG and never display it.
+     * The one endpoint that returns a real content type (`download()` serves everything as
+     * `application/octet-stream`), so it is kept narrow:
      *
-     * So this is the one endpoint that returns a real content type, and
-     * everything about it is built around keeping that narrow:
-     *
-     *  - **The type comes from the file's first bytes, never its name.** A
-     *    file called `logo.png` holding HTML would otherwise be served as an
-     *    image, and a browser that sniffs past our content type would run it
-     *    on the API's own origin. The extension is not consulted at all.
-     *  - **SVG is refused**, with its own reason so the UI can say why. It is
-     *    the one image format that is a script container, and this response is
-     *    inline and same-origin. Download still returns it, as octet-stream,
-     *    which is where an untrusted SVG belongs.
-     *  - **Size is capped.** A browser gains nothing from a 4 GB "image", and
-     *    the cap is checked from the stat before a byte is read. `download()`
-     *    stays uncapped for the reason its own docblock gives.
-     *
-     * Two commands, both cheap: the sniff reads a few hundred bytes, then the
-     * file streams like a download does. Nothing is buffered whole.
+     *  - The type comes from the file's first bytes, never its name: a `logo.png` holding HTML would
+     *    otherwise run on the API's own origin.
+     *  - SVG is refused (with its own reason): it is a script container and this response is inline
+     *    and same-origin. Download still returns it as octet-stream.
+     *  - Size is capped, checked from the stat before a byte is read.
      *
      * @return array{size: int, mime: string, chunks: \Generator<int, string>}
      */
@@ -750,10 +578,8 @@ class FileBrowser
         $mime = $this->imageType($head);
 
         if ($mime === null) {
-            // Asked in this order, not the other one: a real PNG whose pixels
-            // happen to spell `<svg` is still a PNG. The SVG question is only
-            // ever a way to explain a file that is *not* one of the formats
-            // above, never a way to reject one that is.
+            // Image formats are tried first: a real PNG whose pixels spell `<svg` is still a PNG. The SVG
+            // check only explains a file that is not one of those formats.
             if ($this->looksLikeSvg($head)) {
                 throw FileRefusedException::because('path', 'svg_not_previewable', 'errors/application.file_svg_not_previewable');
             }
@@ -774,10 +600,7 @@ class FileBrowser
     /**
      * The image format these bytes actually are, or null for anything else.
      *
-     * Signatures rather than a `file` call: this runs on every thumbnail, the
-     * answer has to be one the panel can defend, and the whole list is seven
-     * formats. `finfo` is not an option — the panel's own process cannot read
-     * a site's files; everything here goes through the site's user.
+     * Signatures rather than `finfo`: the panel's own process cannot read a site's files.
      */
     private function imageType(string $head): ?string
     {
@@ -785,13 +608,11 @@ class FileBrowser
             str_starts_with($head, "\x89PNG\r\n\x1a\n") => 'image/png',
             str_starts_with($head, "\xFF\xD8\xFF") => 'image/jpeg',
             str_starts_with($head, 'GIF87a'), str_starts_with($head, 'GIF89a') => 'image/gif',
-            // RIFF is also WAV and AVI, so the WEBP tag at byte 8 is the half
-            // that identifies the format.
+            // RIFF is also WAV and AVI; the WEBP tag at byte 8 identifies the format.
             str_starts_with($head, 'RIFF') && substr($head, 8, 4) === 'WEBP' => 'image/webp',
             str_starts_with($head, 'BM') => 'image/bmp',
             str_starts_with($head, "\x00\x00\x01\x00") => 'image/x-icon',
-            // ISO-BMFF: a box length, then `ftyp`, then the brand. AVIF and
-            // HEIC share the container and differ only in that brand.
+            // ISO-BMFF: box length, `ftyp`, then the brand; AVIF and HEIC differ only in that brand.
             substr($head, 4, 4) === 'ftyp' && in_array(substr($head, 8, 4), ['avif', 'avis'], true) => 'image/avif',
             default => null,
         };
@@ -800,14 +621,8 @@ class FileBrowser
     /**
      * Whether these bytes are an SVG.
      *
-     * Told apart from "not an image at all" on purpose: an SVG is a file the
-     * user would reasonably expect to see, so it earns a message saying why it
-     * is not shown rather than the generic one.
-     *
-     * Looks for the root element rather than for `<?xml`, which any XML file
-     * starts with — a `.xml` sitemap is not an SVG and must not be told it is.
-     * That element can sit behind an XML declaration, a doctype and a comment,
-     * which is what the sniff window is sized for.
+     * Looks for the root element, not `<?xml` (any XML file, e.g. a sitemap, starts with that). The root
+     * can follow an XML declaration, doctype and comment, which the sniff window is sized for.
      */
     private function looksLikeSvg(string $head): bool
     {
@@ -815,26 +630,18 @@ class FileBrowser
     }
 
     /**
-     * Overwrites an existing file, keeping a copy of what was there —
-     * mirrors `ApplicationEnvironment::write()`'s backup-before-write, just
-     * generalised to any file rather than only `.env`.
+     * Overwrites an existing file, keeping a copy of what was there (like `ApplicationEnvironment::write()`).
      *
-     * The backup comes first and its failure is fatal: this is the whole
-     * safety story for "edit", and a save that silently skipped the copy
-     * would be the one time that promise mattered. Skipped only when the user
-     * turned the copy off (`$keepCopy`, 2026-10-29) — then there is no
-     * previous version to go back to, and the editor said so first.
+     * The backup comes first and its failure is fatal: it is the safety story for "edit". Skipped only
+     * when the user turned the copy off (`$keepCopy`).
      */
     public function write(Application $application, string $path, string $content, ?string $expectedVersion = null, bool $keepCopy = true): string
     {
         $target = $this->resolve($application, $path);
-        // Editing, not creating: a path that does not already resolve to a
-        // regular file is refused, the same distinction "edit" implies
-        // everywhere else in the panel.
+        // Editing, not creating: the path must already be a regular file.
         $this->assertType($application, $target, 'f');
 
-        // OLD-27: someone else saved since this editor opened the file.
-        // Overwriting would throw their change away with nothing to say so.
+        // Someone else saved since this editor opened the file; overwriting would silently drop their change.
         if ($expectedVersion !== null
             && ! hash_equals($expectedVersion, sha1($this->run($application, ['cat', $target], 'read')->output()))) {
             throw FileRefusedException::because('version', 'changed_on_disk', 'errors/application.file_changed_on_disk', status: 409);
@@ -854,12 +661,8 @@ class FileBrowser
     /**
      * Previous saves for one file, newest first.
      *
-     * Stored under `.panel/backups/`, not beside the file — a name like
-     * `plugin.php.bak-...` sitting next to `plugin.php` would be reachable
-     * over HTTP unless every vhost template happens to block that exact
-     * pattern. `.panel/` is already outside every vhost's served paths (see
-     * `PoolManager`'s session/log paths), so backups live there instead of
-     * inventing a second thing for the web server to be told to ignore.
+     * Stored above the document root (see backupsDirectory()), not beside the file: a
+     * `plugin.php.bak-...` next to `plugin.php` would be reachable over HTTP unless every vhost blocks it.
      *
      * @return array<int, array{name: string, created_at: string}>
      */
@@ -872,11 +675,9 @@ class FileBrowser
     }
 
     /**
-     * Puts a previous save back — taking a backup of the current content
-     * first, so restoring the wrong one is itself undoable.
-     */
-    /**
-     * @return array{content: string, version: string} what the file now holds (APP-5)
+     * Puts a previous save back, taking a backup of the current content first so restoring the wrong one is undoable.
+     *
+     * @return array{content: string, version: string} what the file now holds
      */
     public function restoreBackup(Application $application, string $path, string $name, bool $keepCopy = true): array
     {
@@ -891,8 +692,7 @@ class FileBrowser
             __('errors/application.unknown_backup'),
         );
 
-        // Located rather than assumed: a copy taken before the relocation is
-        // still in the old directory, and restoring it has to keep working.
+        // Located, not assumed: a copy taken before the relocation is still in the old directory.
         $entry = collect($this->backupEntries($application, $target))->firstWhere('name', $name);
         abort_if($entry === null, 404);
 
@@ -908,23 +708,11 @@ class FileBrowser
     }
 
     /**
-     * Where a file's saved copies live: under the application's own `.panel`
-     * directory, which sits ABOVE the document root.
+     * Where a file's saved copies live: the application's own `.panel` directory, ABOVE the document root.
      *
-     * This used to be `dirname($target).'/.panel/backups'` — a `.panel` folder
-     * beside the edited file, inside the served tree. That was safe only for as
-     * long as every web server blocked dot-directories at every depth, and
-     * OpenLiteSpeed's rule is anchored at the web root, so a nested one may not
-     * have been covered. The payload made it worth moving rather than arguing
-     * about: back up `wp-config.php` once and that copy holds live database
-     * credentials.
-     *
-     * Above the document root there is nothing to block. It also matches the
-     * rule the rest of the panel already follows — nothing the panel writes
-     * lives under the document root.
-     *
-     * The file's directory (relative to the web root) is kept in the path, so
-     * `wp-config.php` and `wp-content/plugins/config.php` cannot collide.
+     * Never beside the file inside the served tree: a backup of `wp-config.php` holds live database
+     * credentials, and not every web server blocks nested dot-directories. The file's directory
+     * (relative to the web root) is kept in the path so same-named files cannot collide.
      */
     private function backupsDirectory(Application $application, string $target): string
     {
@@ -936,11 +724,7 @@ class FileBrowser
         return rtrim($application->panelPath().'/file-backups/'.$relative, '/');
     }
 
-    /**
-     * The pre-relocation location. Still read, so nobody loses the history
-     * they had, and still pruned, so those copies drain out of the served
-     * tree over time rather than sitting there indefinitely.
-     */
+    /** The pre-relocation location (inside the served tree): still read and pruned, so old copies drain out. */
     private function legacyBackupsDirectory(string $target): string
     {
         return dirname($target).'/.panel/backups';
@@ -963,7 +747,7 @@ class FileBrowser
                 ]),
                 ['feature' => 'application', 'op' => 'file_backups', 'application' => $application->id],
                 timeout: 15,
-                expectedExitCodes: [1], // no backups folder yet (bug #48)
+                expectedExitCodes: [1], // no backups folder yet
             );
 
             if ($result->failed()) {
@@ -971,8 +755,7 @@ class FileBrowser
             }
 
             foreach (array_filter(array_map('trim', explode("\n", $result->output()))) as $name) {
-                // Keyed by name so a copy present in both locations is listed
-                // once — the new location wins, since it is read first.
+                // Keyed by name so a copy present in both locations is listed once (the new location wins).
                 $entries[$name] ??= [
                     'name' => $name,
                     'dir' => $directory,
@@ -990,15 +773,13 @@ class FileBrowser
     private function backup(Application $application, string $target): void
     {
         if ($this->stat($application, $target) === null) {
-            // Nothing to back up yet — write() is about to create the file
-            // for the first time (unreachable via the HTTP endpoint today,
-            // since write() always requires an existing file first, but this
-            // method stays correct if that ever changes).
+            // Nothing to back up yet: write() is creating the file (not reachable via the HTTP endpoint
+            // today, but stays correct if that changes).
             return;
         }
 
-        // The top of the tree is root's to give away (see PanelDirectory); the
-        // per-file subdirectory below it is then the site user's to create.
+        // The top of the tree is root's to give away (see PanelDirectory); the per-file subdirectory
+        // below it is the site user's to create.
         $this->panelDirectory->ensure($application, 'file-backups');
 
         $directory = $this->backupsDirectory($application, $target);
@@ -1012,9 +793,7 @@ class FileBrowser
     }
 
     /**
-     * Keeps the newest N across both locations. Deleting from whichever
-     * directory a copy actually sits in also drains the pre-relocation ones
-     * out of the served tree as a file is edited over time.
+     * Keeps the newest N across both locations (also drains pre-relocation copies out of the served tree).
      */
     private function pruneBackups(Application $application, string $target): void
     {
@@ -1038,33 +817,21 @@ class FileBrowser
     /**
      * Writes a new file at `path`, refusing to stand on one already there.
      *
-     * The original client-supplied filename is never used to build the
-     * target — `$path` is the whole answer to "where does this go", validated
-     * the same way as everything else here. A filename is exactly as
-     * attacker-controlled as any other client input, and stitching a
-     * validated directory to an unvalidated name would reopen the traversal
-     * surface `SafeRelativePath` exists to close.
+     * The client-supplied filename is never used to build the target: `$path` is the whole answer,
+     * validated like everything else here. Joining a validated directory to an unvalidated name would
+     * reopen the traversal surface `SafeRelativePath` closes.
      */
     public function upload(Application $application, string $path, string $contents): void
     {
         $target = $this->resolve($application, $path);
         $directory = dirname($target);
 
-        // The directory has to already exist — no implicit `mkdir`, the same
-        // restraint the rest of this feature keeps. The file itself is what
-        // upload is allowed to create; the folder structure is not.
+        // The directory must already exist (no implicit mkdir); upload may create the file, not folders.
         $this->assertDestination($application, $directory, 'path', dirname($path));
 
-        // Refused rather than overwritten. An upload that lands on an existing
-        // file destroys it with no undo and no trace — the panel keeps a copy
-        // when *it* replaces a file (see the backup this class writes before an
-        // edit), and an upload had none. Dropping a file into a folder is also
-        // the one operation here a user can do by accident, with a drag they
-        // did not mean onto a folder they did not check.
-        //
-        // Same shape as createDirectory below: refuse, and name what is in the
-        // way. Deleting the file first is the deliberate act that makes the
-        // replacement intentional.
+        // Refused, not overwritten: replacing a file here would destroy it with no backup. Same shape as
+        // createDirectory(): refuse and name what is in the way; deleting it first makes a replace
+        // deliberate.
         if ($this->stat($application, $target) !== null) {
             throw FileRefusedException::because('path', 'path_exists', 'errors/application.upload_exists', ['name' => basename($target)]);
         }
@@ -1075,19 +842,14 @@ class FileBrowser
     }
 
     /**
-     * Creates an empty directory, or succeeds as a no-op if one is already
-     * there — idempotent the same way `mkdir -p` is, but only one level: the
-     * containing directory must already exist, the same restraint every
-     * other write in this class keeps.
+     * Creates an empty directory, one level only: the containing directory must already exist.
      */
     public function createDirectory(Application $application, string $path): void
     {
         $target = $this->resolve($application, $path);
         $this->assertDestination($application, dirname($target), 'path', dirname($path));
 
-        // FI-9: refused, not a silent "OK". Someone creating a folder that is
-        // already there has the wrong name or the wrong place in mind, and an
-        // OK told them neither.
+        // Refused, not a silent OK: a folder that already exists means the wrong name or place.
         if ($this->stat($application, $target) !== null) {
             throw FileRefusedException::because('path', 'path_exists', 'errors/application.path_exists');
         }
@@ -1097,14 +859,10 @@ class FileBrowser
     }
 
     /**
-     * Renames or moves a file/directory — one endpoint for both, since `mv`
-     * does not distinguish them.
+     * Renames or moves a file/directory (`mv` does not distinguish them).
      *
-     * Deliberately the opposite default from `upload()`: the destination must
-     * **not** already exist. A mistyped rename silently destroying an
-     * unrelated file is a far easier accident than upload's "replace this
-     * specific thing I picked" — overwrite-by-default is right there and
-     * wrong here.
+     * Unlike `upload()`, the destination must not already exist: a mistyped rename silently
+     * destroying an unrelated file is too easy.
      */
     public function rename(Application $application, string $path, string $targetPath): void
     {
@@ -1123,12 +881,9 @@ class FileBrowser
     }
 
     /**
-     * Copies a file or directory (recursively) to a new path — same shape as
-     * `rename()`, source untouched instead of moved.
+     * Copies a file or directory (recursively) to a new path; the source is untouched.
      *
-     * Same non-overwrite default as `rename()`, for the same reason: a
-     * typo'd destination silently clobbering something is a worse failure
-     * mode than refusing and asking again.
+     * Same non-overwrite default as `rename()`.
      */
     public function copy(Application $application, string $path, string $targetPath): void
     {
@@ -1147,17 +902,11 @@ class FileBrowser
     }
 
     /**
-     * Packages a file or directory into a new `.zip` elsewhere in the site —
-     * the reverse of `extract()`.
+     * Packages a file or directory into a new archive elsewhere in the site (the reverse of `extract()`).
      *
-     * Unlike extract, there is no zip-slip surface here: the panel is
-     * archiving files it already trusts from this site's own filesystem, not
-     * accepting someone else's archive. `zip -r` runs with the source's
-     * *parent* directory as `cwd` and the source's own basename as the
-     * argument, so the archive contains relative paths (`my-folder/file.txt`)
-     * rather than the full server path — the same reason every archiver
-     * defaults to relative paths when you "compress this folder" in a
-     * desktop file manager.
+     * No zip-slip surface here: the panel archives files from the site's own filesystem. `zip -r` runs
+     * with the source's parent as `cwd` and its basename as the argument, so the archive holds
+     * relative paths.
      */
     public function compress(Application $application, string $path, string $targetPath): FileArchiveJob
     {
@@ -1165,8 +914,7 @@ class FileBrowser
         $sourceStat = $this->stat($application, $source);
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
-        // Decided by the same function `extract()` reads, so the formats the
-        // panel can write and the formats it can open cannot drift apart.
+        // Same function `extract()` reads, so the formats the panel can write and open cannot drift apart.
         $format = $this->archiveFormat($targetPath);
         if ($format === null) {
             throw FileRefusedException::because('target', 'not_archive', 'errors/application.target_not_archive');
@@ -1181,24 +929,10 @@ class FileBrowser
     }
 
     /**
-     * Deletes a file or a directory (recursively). The one destructive
-     * operation in this feature — no trash, no undo, same stated limitation
-     * as `extract()`'s lack of rollback. The site root itself can never be
-     * the target; that would be deleting the whole site through a "delete
-     * one thing" button.
-     */
-    /**
-     * Deletes a file or directory — to the trash by default, permanently when
-     * asked.
+     * Deletes a file or directory: to the trash by default, permanently when asked.
      *
-     * Trashing is a `mv`, not a copy. On the same filesystem that is a rename:
-     * instant, and it costs no extra disk. A copy of a 40 GB directory would
-     * take minutes and could fill the disk while "deleting" it, which is a
-     * strange way to run out of space.
-     *
-     * Permanent stays available and is not a second-class path: someone
-     * deleting 40 GB to free space and seeing nothing freed would rightly call
-     * that a bug, so "delete" still means delete when they say so.
+     * Trashing is a `mv`: a rename on the same filesystem, instant and with no extra disk (a copy of a
+     * large directory could fill the disk while "deleting" it). The site root can never be the target.
      */
     public function delete(Application $application, string $path, bool $permanent = false): void
     {
@@ -1224,9 +958,8 @@ class FileBrowser
     /**
      * Moves one path into the trash, keeping where it came from.
      *
-     * The original relative path is preserved inside the timestamped folder so
-     * a restore knows where to put it back, and so two files called
-     * `config.php` from different directories cannot collide.
+     * The original relative path is kept inside the timestamped folder so a restore knows where to
+     * put it back and same-named files cannot collide.
      */
     private function moveToTrash(Application $application, string $relative, string $target): void
     {
@@ -1240,19 +973,12 @@ class FileBrowser
     }
 
     /**
-     * Note what a batch actually holds, beside it as `<batch>.paths`.
+     * Note what a batch actually holds, beside it as `<batch>.paths` (one line per path, appended, as
+     * the site user).
      *
-     * The trash cannot answer that on its own. Deleting `qa/note.txt` first
-     * makes `<batch>/qa/` so the file has somewhere to go, and read back that
-     * scaffolding is indistinguishable from a deleted folder called `qa`: the
-     * listing showed `qa`, hid the file under it, and "restore all" tried to
-     * put back a folder that was never deleted and refused with `exists`
-     * (found live 2026-09-29). Anything deleted below the site root was
-     * unrecoverable from the screen.
-     *
-     * One line per path, appended, as the site user like every other trash
-     * write. Beside the batch rather than in it, so it can never collide with
-     * a deleted file's own name and is never mistaken for trash.
+     * The trash cannot answer that itself: deleting `qa/note.txt` creates `<batch>/qa/` as scaffolding,
+     * which reads back as a deleted folder `qa`, and "restore all" would try to put back a folder that
+     * was never deleted. Kept beside the batch so it never collides with a deleted file's name.
      *
      * @param  array<int, string>  $paths
      */
@@ -1260,8 +986,7 @@ class FileBrowser
     {
         $lines = implode('', array_map(fn (string $path): string => ltrim($path, '/')."\n", $paths));
 
-        // Not fatal: the item is already safely in the trash, and a batch with
-        // no record is still listed the old way.
+        // Not fatal: the item is already in the trash, and a batch with no record is still listed.
         $this->serverOps->run(
             $this->asUser($application, ['tee', '-a', $this->trashDirectory($application)."/{$batch}.paths"]),
             ['feature' => 'application', 'op' => 'file_trash_record', 'application' => $application->id],
@@ -1270,12 +995,7 @@ class FileBrowser
         );
     }
 
-    /**
-     * Above the document root, for the same reason the backups are: a deleted
-     * `wp-config.php` still holds live database credentials, and the trash
-     * would otherwise be a directory of other people's secrets inside the
-     * served tree.
-     */
+    /** Above the document root, like the backups: a deleted `wp-config.php` still holds live credentials. */
     private function trashDirectory(Application $application): string
     {
         return $application->panelPath().'/trash';
@@ -1284,9 +1004,7 @@ class FileBrowser
     /**
      * What is in the trash: one entry per deleted path, newest first.
      *
-     * Reported with the batch it was deleted in, so a selection deleted
-     * together can be restored together — and with its original location,
-     * because "config.php" alone does not tell anyone which one it was.
+     * Reported with its batch (so a selection deleted together restores together) and its original location.
      *
      * @return array<int, array{batch: string, path: string, deleted_at: string}>
      */
@@ -1323,9 +1041,7 @@ class FileBrowser
                 continue;
             }
 
-            // Only the top of each deleted tree is listed. A deleted directory
-            // is one thing the user deleted, not four hundred, and listing its
-            // contents would bury the entry they are looking for.
+            // Only the top of each deleted tree is listed: a deleted directory is one deletion, not hundreds.
             if (collect($entries)->contains(fn (array $e): bool => $e['batch'] === $batch && str_starts_with($path.'/', $e['path'].'/'))) {
                 continue;
             }
@@ -1337,9 +1053,8 @@ class FileBrowser
             ];
         }
 
-        // Exactly what was deleted, and only what is still there — a path
-        // restored on its own drops out, and a move that failed is never
-        // offered back.
+        // Exactly what was deleted and is still there: a path restored on its own drops out, and a
+        // failed move is never offered back.
         foreach ($recorded as $batch => $paths) {
             foreach (array_unique($paths) as $path) {
                 if (isset($present[$batch][$path])) {
@@ -1358,10 +1073,8 @@ class FileBrowser
     }
 
     /**
-     * Each batch's `<batch>.paths` record, batch => paths.
-     *
-     * Batches from before the record existed have none and are listed as
-     * they always were; they age out with the retention window.
+     * Each batch's `<batch>.paths` record, batch => paths. Batches from before the record existed have
+     * none and are listed the old way until they age out.
      *
      * @return array<string, array<int, string>>
      */
@@ -1382,8 +1095,7 @@ class FileBrowser
         $records = [];
 
         foreach (array_filter(explode("\n", $result->output())) as $line) {
-            // `<root>/<batch>.paths:<path>` — the path is everything after the
-            // first colon following the record's own name.
+            // `<root>/<batch>.paths:<path>`: the path is everything after the first colon past the record's name.
             if (! preg_match('#^'.preg_quote($root, '#').'/(\d{8}-\d{6})\.paths:(.+)$#', $line, $m)) {
                 continue;
             }
@@ -1397,9 +1109,8 @@ class FileBrowser
     /**
      * The recoverable entries together with their actual disk footprint.
      *
-     * One `du` invocation measures every top-level entry. That makes a
-     * directory's size useful (unlike its inode size from `find`) without
-     * turning one trash listing into one process per deleted file.
+     * One `du` measures every top-level entry, so a directory's size is useful (unlike its inode size
+     * from `find`) without one process per deleted file.
      *
      * @return array{trash: array<int, array{batch: string, path: string, deleted_at: string, size: ?int, size_human: ?string}>, total_size: ?int, total_size_human: ?string}
      */
@@ -1451,9 +1162,8 @@ class FileBrowser
             $bySource[$source] = $key;
         }
 
-        // `du` may fail for one unreadable entry while still printing sizes
-        // for the rest. Its output, not its aggregate exit code, is therefore
-        // the per-entry source of truth.
+        // `du` may fail for one unreadable entry yet print sizes for the rest: its output, not its exit
+        // code, is the per-entry truth.
         $result = $this->serverOps->run(
             $this->asUser($application, array_merge(['du', '-sb'], $sources)),
             ['feature' => 'application', 'op' => 'trash_sizes', 'application' => $application->id],
@@ -1476,9 +1186,7 @@ class FileBrowser
     /**
      * Puts one trashed path back where it came from.
      *
-     * Refuses rather than overwrites if something is there again — the same
-     * rule rename() and copy() keep, and the one case where silently winning
-     * would destroy the thing the user kept.
+     * Refuses rather than overwrites if something is there again (same rule as rename() and copy()).
      */
     public function restoreFromTrash(Application $application, string $batch, string $path): void
     {
@@ -1497,9 +1205,8 @@ class FileBrowser
     }
 
     /**
-     * Restores every top-level deletion in a batch independently. One path
-     * being occupied must not make the remaining recoverable files stay in
-     * trash, and the response must identify precisely what happened.
+     * Restores every top-level deletion in a batch independently, so one occupied path does not strand
+     * the rest, and reports exactly what happened.
      *
      * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
      */
@@ -1549,10 +1256,8 @@ class FileBrowser
     }
 
     /**
-     * Empties the trash — the whole thing, or one batch.
-     *
-     * This is the only unrecoverable operation the file manager offers, and it
-     * is meant to be: it exists so the disk space actually comes back.
+     * Empties the trash: all of it, or one batch. The only unrecoverable operation here, by design: it
+     * exists so the disk space comes back.
      */
     public function emptyTrash(Application $application, ?string $batch = null): void
     {
@@ -1564,21 +1269,15 @@ class FileBrowser
             return;
         }
 
-        // What is in it, not the directory. `.panel` is root's (c2d827a2), so
-        // the site user can no longer remove `trash` itself: `rm -rf` on it
-        // deleted everything inside, then failed on the directory and turned
-        // a successful empty into a 500 (found live 2026-09-29).
+        // Empty its contents, not the directory: `.panel` is root's, so the site user cannot remove `trash`
+        // itself, and `rm -rf` on it would delete the contents, then fail and turn a successful empty into a 500.
         $this->run($application, ['find', $this->trashDirectory($application), '-mindepth', '1', '-maxdepth', '1', '-exec', 'rm', '-rf', '{}', '+'], 'trash_empty');
 
         $this->sizeChanged($application);
     }
 
     /**
-     * Drops batches older than the retention window.
-     *
-     * Without this the trash is a slow disk-space leak: every delete keeps a
-     * full copy forever, on a server whose whole job is running out of disk
-     * quietly.
+     * Drops batches older than the retention window, so the trash does not leak disk space.
      */
     public function pruneTrash(Application $application): void
     {
@@ -1593,7 +1292,7 @@ class FileBrowser
             ]),
             ['feature' => 'application', 'op' => 'trash_prune', 'application' => $application->id],
             timeout: 60,
-            // No trash yet on most sites: find exits 1 (bug #48).
+            // No trash yet on most sites: find exits 1.
             expectedExitCodes: [1],
         );
 
@@ -1601,14 +1300,11 @@ class FileBrowser
     }
 
     /**
-     * Sets the mode on a single file or directory — the counterpart to
-     * `PermissionFixer::fix()`'s whole-site reset, for the one-off case of
-     * "this one file needs to be different".
+     * Sets the mode on a single file or directory (the one-off counterpart to `PermissionFixer::fix()`).
      *
-     * Three octal digits, or four with a sticky or setgid first digit
-     * (OLD-26: 1777 and 2775 are ordinary folder modes, and refusing them
-     * sent people to SSH). Setuid is never accepted, and setgid only on a
-     * folder — on a file both let whoever runs it act as the site.
+     * Three octal digits, or four with a sticky or setgid first digit (1777 and 2775 are ordinary
+     * folder modes). Setuid is never accepted, and setgid only on a folder: on a file both let whoever
+     * runs it act as the site.
      */
     public function chmod(Application $application, string $path, string $mode): void
     {
@@ -1624,21 +1320,13 @@ class FileBrowser
     }
 
     /**
-     * Extracts a `.zip` or `.tar.gz`/`.tgz` already sitting in the site into
-     * an existing directory, in place, overwriting anything that collides —
-     * the same "drop a file here" expectation `upload()` carries, and what
-     * installing or updating a plugin actually needs.
+     * Extracts a `.zip` or `.tar.gz`/`.tgz` already in the site into an existing directory, in place,
+     * overwriting anything that collides (what installing or updating a plugin needs).
      *
-     * The archive is untrusted content, unlike `Restores\Steps\ExtractArchive`
-     * (which unpacks the panel's own backups). Every entry is listed and
-     * validated *before* anything is written: no `.`/`..`/absolute entries
-     * (zip-slip), no symlink entries (an archive can plant one that a later
-     * static request might follow — neither `unzip` nor `tar` resolves it
-     * during extraction, but the web server serving the finished site would),
-     * and a cap on total uncompressed bytes and entry count (zip-bomb).
-     * Extraction then runs as the site's own user, same as everything else
-     * here — the validation above is the primary control, running as the
-     * site's user is the backstop if it is ever wrong.
+     * The archive is untrusted. Every entry is listed and validated *before* anything is written: no
+     * `.`/`..`/absolute entries (zip-slip), no symlink entries (a later static request might follow
+     * one), and a cap on total uncompressed bytes and entry count (zip-bomb). Extraction then runs as
+     * the site's own user: validation is the primary control, the user is the backstop.
      */
     public function extract(Application $application, string $path, string $targetPath): FileArchiveJob
     {
@@ -1660,26 +1348,21 @@ class FileBrowser
 
         $unpacked = $this->validateArchiveEntries($application, $entries, $target);
 
-        // Room for what it unpacks to first (2026-10-29): said now, not by a
-        // half-extracted folder and a full disk.
+        // Room for what it unpacks to, checked now rather than found out as a half-extracted folder and
+        // a full disk.
         app(DiskSpaceCheck::class)->require($unpacked, $target, 'disk_space');
 
-        // Queued for the same reason compress is, and validated first for the
-        // same reason too: the zip-slip and zip-bomb checks above are the
-        // security boundary, so they must answer before the request is
-        // accepted rather than inside a worker nobody is watching.
+        // Queued like compress(), but validated first: the zip-slip and zip-bomb checks are the security
+        // boundary, so they must answer before the request is accepted, not inside a worker.
         return $this->queue($application, 'extract', [$path], $targetPath);
     }
 
     /**
      * Records an accepted archive operation and hands it to a worker.
      *
-     * Everything that can refuse has already refused by the time this is
-     * called — the path guards, the format check, the collision check, and for
-     * extract the zip-slip and zip-bomb validation. That ordering is the point:
-     * those are the security boundary and they are cheap, so they answer
-     * inside the request. Only the part whose cost scales with the user's data
-     * goes to the queue.
+     * Everything that can refuse (path guards, format, collision, zip-slip/zip-bomb validation) has
+     * already refused by now: those are the security boundary and are cheap, so they answer inside the
+     * request. Only the part whose cost scales with the user's data is queued.
      *
      * @param  list<string>  $sources  relative to the document root
      */
@@ -1700,12 +1383,10 @@ class FileBrowser
     }
 
     /**
-     * Performs the work a queued row describes.
+     * Performs the work a queued row describes. Called only by {@see RunFileArchive}.
      *
-     * Called only by {@see RunFileArchive}. The command is rebuilt here from
-     * the stored paths rather than serialized into the job payload, so a row
-     * cannot carry an absolute path that was resolved against a web root the
-     * site no longer has.
+     * The command is rebuilt from the stored paths, not serialized into the job payload, so a row cannot
+     * carry an absolute path resolved against a web root the site no longer has.
      */
     public function runArchiveJob(FileArchiveJob $job): void
     {
@@ -1744,16 +1425,10 @@ class FileBrowser
                 timeout: $timeout,
             );
         } catch (FileOperationException $e) {
-            // A killed `tar` has already created its output file. Leaving it
-            // is what turned one clear failure into two confusing ones: the
-            // directory gains a truncated archive that looks real, and the
-            // obvious retry is refused by the collision guard, reporting a
-            // naming problem instead of the timeout that happened.
-            //
-            // Best-effort and deliberately unchecked — this runs on a path the
-            // panel was just cut off from, so its failing too is plausible,
-            // and losing the original error to report a failed `rm` is a worse
-            // trade than leaving the file.
+            // A killed `tar` has already created its output file. Remove it, or the directory keeps a
+            // truncated archive that looks real and the retry is refused by the collision guard.
+            // Best-effort and unchecked: the panel was just cut off from this path, and losing the original
+            // error to report a failed `rm` is worse than leaving the file.
             $this->serverOps->run(
                 $this->asUser($application, ['rm', '-f', $target]),
                 ['feature' => 'application', 'op' => 'file_archive_cleanup', 'application' => $application->id],
@@ -1766,10 +1441,7 @@ class FileBrowser
         $this->sizeChanged($application);
     }
 
-    /**
-     * Bytes the finished archive occupies, or 0 when there is no single file
-     * to measure — which is every extract.
-     */
+    /** Bytes the finished archive occupies, or 0 when there is no single file to measure (every extract). */
     public function archiveSize(FileArchiveJob $job): int
     {
         if ($job->operation !== 'compress' || $job->application === null) {
@@ -1784,17 +1456,11 @@ class FileBrowser
     /**
      * The command that writes one archive, by format.
      *
-     * Both run from the sources' own directory (`cwd`) and are given bare
-     * names, so the archive contains `plugin/…` rather than
-     * `home/siteowner/shop/public_html/wp-content/plugins/plugin/…` — an
-     * archive carrying the server's directory layout is both useless to
-     * extract elsewhere and a small disclosure of where things live.
+     * Both run from the sources' own directory (`cwd`) with bare names, so the archive holds `plugin/…`
+     * rather than the server's directory layout (useless elsewhere, and a small disclosure).
      *
-     * tar.gz is worth having as more than symmetry with extract(): ZIP does
-     * not preserve Unix permissions, so a site zipped and unzipped comes back
-     * with whatever modes the extractor chose — a 0600 wp-config.php does not
-     * stay 0600. tar keeps mode, ownership and symlinks, which is what "keep a
-     * copy of this folder before I touch it" actually needs.
+     * tar.gz is more than symmetry with extract(): ZIP does not keep Unix permissions (a 0600
+     * wp-config.php does not stay 0600); tar keeps mode, ownership and symlinks.
      *
      * @param  array<int, string>  $names
      * @return array<int, string>
@@ -1802,14 +1468,10 @@ class FileBrowser
     private function compressCommand(string $format, string $target, array $names): array
     {
         return $format === 'zip'
-            // No parallel equivalent exists for the zip format, so this stays
-            // on one core however many the box has. Worth knowing when a .zip
-            // hits the size limit that a .tar.gz of the same selection clears.
+            // zip has no parallel equivalent, so it stays on one core.
             ? array_merge(['zip', '-r', $target], $names)
-            // `--use-compress-program` rather than `-z`: `-z` hardcodes gzip
-            // at level 6 on a single core. pigz emits ordinary gzip, so the
-            // archive opens with `tar -xzf` and in every desktop tool exactly
-            // as before — only faster to produce.
+            // `--use-compress-program` rather than `-z`, which hardcodes single-core gzip level 6. pigz emits
+            // ordinary gzip, so `tar -xzf` and desktop tools still open it.
             //
             // `--` so a name beginning with a dash is a path, not an option.
             : array_merge(['tar', '--use-compress-program='.$this->compressor->program('server.files'), '-cf', $target, '--'], $names);
@@ -1827,8 +1489,7 @@ class FileBrowser
     }
 
     /**
-     * The zip-slip/zip-bomb checks, shared by both archive formats so the
-     * safety rules can't quietly drift apart between them.
+     * The zip-slip/zip-bomb checks, shared by both archive formats so the safety rules cannot drift.
      *
      * @param  array<int, array{name: string, type: string, size: int, host?: string}>  $entries
      */
@@ -1842,9 +1503,7 @@ class FileBrowser
 
         foreach ($entries as $entry) {
             abort_if($entry['type'] === 'l', 422, __('errors/application.archive_has_symlink'));
-            // `?`: no file type recorded (zips written by Python, Java and the
-            // like), which unzip extracts as a plain file — it only makes a
-            // link when the entry says it is one.
+            // `?`: no file type recorded (zips written by Python, Java, ...); unzip extracts it as a plain file.
             abort_unless(in_array($entry['type'], ['-', 'd', '?'], true), 422, __('errors/application.archive_unsafe_entry'));
 
             $name = rtrim($this->extractedName($entry), '/');
@@ -1871,17 +1530,12 @@ class FileBrowser
     }
 
     /**
-     * An entry's name as it will be written, so the checks above judge the
-     * path that actually lands on disk.
+     * An entry's name as it will be written, so the checks judge the path that actually lands on disk.
      *
-     * A zip made on Windows can use `\` as its folder separator (bug #7: it
-     * was refused outright as unsafe). unzip turns `\` into `/` itself, but
-     * only for an entry made on FAT — MS-DOS or Windows — whose name has no
-     * `/` in it; any other name it writes literally, as one file called
-     * `folder\file.txt` (measured on unzip 6.0-28ubuntu4.1). So this converts
-     * exactly when unzip will, and every check after it — `..`, a leading
-     * `/`, staying inside the site — sees `..\..\etc\passwd` as
-     * `../../etc/passwd` and refuses it.
+     * A zip made on Windows can use `\` as its folder separator. unzip turns `\` into `/` only for an
+     * entry made on FAT (MS-DOS/Windows) whose name has no `/`; any other name is written literally.
+     * So this converts exactly when unzip will, and the later checks (`..`, leading `/`, staying inside
+     * the site) see `..\..\etc\passwd` as `../../etc/passwd` and refuse it.
      *
      * @param  array{name: string, type: string, size: int, host?: string}  $entry
      */
@@ -1901,22 +1555,18 @@ class FileBrowser
 
         $name = str_replace('\\', '/', $name);
 
-        // `C:\x.txt`: a Windows absolute path. unzip would make a folder named
-        // `C:`, which is not what the archive meant.
+        // `C:\x.txt`: a Windows absolute path; unzip would make a folder named `C:`.
         abort_if(preg_match('/^[A-Za-z]:(\/|$)/', $name) === 1, 422, __('errors/application.archive_windows_drive'));
 
         return $name;
     }
 
     /**
-     * One line per zip entry: permission string (first character is the
-     * type — `d`/`l`/`-`), size, and name. A single `unzip -Z` pass gives
-     * name+type+size together, so listing and the size total come from the
-     * same read rather than two commands that could disagree.
+     * One line per zip entry: permission string (first character is the type: `d`/`l`/`-`), size and
+     * name, from a single `unzip -Z` pass so the listing and size total cannot disagree.
      *
-     * The third column is the system the entry was made on (`unx`, `fat`,
-     * `ntf`…), which decides how unzip treats a `\` in its name — see
-     * {@see extractedName()}.
+     * The third column is the system the entry was made on (`unx`, `fat`, `ntf`…), which decides how
+     * unzip treats a `\` in its name; see {@see extractedName()}.
      *
      * @return array<int, array{name: string, type: string, size: int, host: string}>
      */
@@ -1928,17 +1578,14 @@ class FileBrowser
             timeout: 30,
         );
 
-        // A failed listing means the archive could not be read — corrupt or
-        // not really a zip despite the extension. That is the caller's input
-        // being wrong, not a server operation failing.
+        // A failed listing means a corrupt archive or not really a zip: the caller's input is wrong, not a
+        // server failure.
         abort_if($result->failed(), 422, __('errors/application.archive_unreadable'));
 
         $entries = [];
 
-        // Any attribute string, not only Unix's `-rw-r--r--`: a zip made on
-        // Windows lists `-rw-a--` (MS-DOS attributes), so every entry was
-        // skipped and the archive read as empty (bug #57). The type is still
-        // the first character, and validateArchiveEntries() admits files and
+        // Any attribute string, not only Unix's `-rw-r--r--` (a Windows zip lists `-rw-a--`, which would
+        // read as empty). The type is the first character; validateArchiveEntries() admits files and
         // directories only.
         foreach (explode("\n", $result->output()) as $line) {
             if (preg_match('/^(\S)\S{5,9}\s+\d+\.\d+\s+(\S+)\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(.*)$/', $line, $m) !== 1) {
@@ -1948,10 +1595,8 @@ class FileBrowser
             $entries[] = ['type' => $m[1], 'host' => $m[2], 'size' => (int) $m[3], 'name' => $m[4]];
         }
 
-        // Every entry unzip will extract has to have been read here — a line
-        // this parser skipped would be extracted without being checked. unzip
-        // ends the listing with "N files, …"; a count that disagrees refuses
-        // the archive.
+        // Every entry unzip will extract must have been read here: a skipped line would be extracted
+        // unchecked. unzip ends the listing with "N files, …"; a disagreeing count refuses the archive.
         if (preg_match('/^(\d+) files?,/m', $result->output(), $total) === 1) {
             abort_if((int) $total[1] !== count($entries), 422, __('errors/application.archive_unreadable'));
         }
@@ -1960,10 +1605,8 @@ class FileBrowser
     }
 
     /**
-     * One line per tar entry via `tar -tvzf`: permission string, owner/group,
-     * size, date, time, name — a symlink entry's name is suffixed
-     * `-> target`, which is never read since symlink entries are rejected by
-     * type alone in `validateArchiveEntries()`.
+     * One line per tar entry via `tar -tvzf`: permission string, owner/group, size, date, time, name.
+     * A symlink's `-> target` suffix is never read: symlink entries are rejected by type alone.
      *
      * @return array<int, array{name: string, type: string, size: int}>
      */
@@ -1993,19 +1636,10 @@ class FileBrowser
     /**
      * The directory this browser is confined to: the site's `public_html`.
      *
-     * The **code root, not the document root.** They are the same thing for a
-     * site with no web root, and for Statamic, Craft or any git site serving
-     * from `public/` they are not: the document root is a subdirectory, and
-     * rooting here meant the file manager could show neither the application's
-     * `.env` nor its `composer.json`, `vendor/` or config — only the small
-     * served folder. There is no path a user could type to reach the rest,
-     * because the traversal guard refuses anything climbing out of the root,
-     * correctly.
-     *
-     * Still the *site's* directory and not its home: `.panel/` is a sibling of
-     * `public_html`, so the Basic Auth hash and the pre-push database dumps
-     * stay out of reach exactly as before. That is the whole reason the panel
-     * writes them one level up.
+     * The code root, not the document root: for sites serving from `public/` the document root is a
+     * subdirectory, and rooting there would hide the application's `.env`, `composer.json` and `vendor/`.
+     * Still the site's directory, not its home: `.panel/` is a sibling, so the Basic Auth hash and
+     * pre-push database dumps stay out of reach.
      */
     private function root(Application $application): string
     {
@@ -2022,10 +1656,8 @@ class FileBrowser
     /**
      * Confirms the web root directory actually exists on disk.
      *
-     * When the path is wrong (e.g. app created with default web_root but directory
-     * was named differently), FileBrowser would silently return an empty listing —
-     * which looks like "no files" rather than "wrong path". This check returns
-     * a clear 422 error instead.
+     * Otherwise a wrong path would silently return an empty listing, which looks like "no files";
+     * this returns a clear 422 instead.
      */
     private function assertRootExists(Application $application): void
     {
@@ -2037,10 +1669,8 @@ class FileBrowser
             timeout: 15,
         );
 
-        // A 422 telling someone to check their web root is advice, and advice
-        // about the wrong thing wastes the time of the person least able to
-        // spare it. When the probe itself never ran, say so with a reference
-        // instead — the directory may be perfectly fine.
+        // When the probe itself never ran, say so with a reference: advice to "check your web root"
+        // would be about the wrong thing, and the directory may be fine.
         if (! $result->answered) {
             throw new FileOperationException($result->reference);
         }
@@ -2049,11 +1679,8 @@ class FileBrowser
     }
 
     /**
-     * The folder something is going into must exist (FI-B).
-     *
-     * A 404 "item could not be found" here read as if the *file* being
-     * copied had gone — the one thing that was fine. Refused instead, under
-     * the field that names the folder, and naming it.
+     * The folder something is going into must exist. Refused under the field that names the folder (a
+     * generic 404 would read as if the file being copied had gone).
      */
     private function assertDestination(Application $application, string $directory, string $field, string $shown): void
     {
@@ -2080,20 +1707,17 @@ class FileBrowser
     }
 
     /**
-     * Moving or copying a folder into itself (`a` to `a/b`): `mv` and `cp`
-     * refuse it, and the refusal surfaced as a 500. A sibling whose name only
-     * starts the same (`a` to `ab/x`) is a different folder and is allowed.
+     * Refuses moving or copying a folder into itself (`a` to `a/b`), which `mv`/`cp` reject with a 500.
+     * A sibling whose name only starts the same (`a` to `ab/x`) is a different folder and is allowed.
      */
     private function refuseIntoItself(string $type, string $source, string $target, string $field): void
     {
-        // A file cannot hold anything: `f` to `f/x` keeps its existing
-        // "that is not a folder" answer.
+        // A file cannot hold anything: `f` to `f/x` keeps its existing "not a folder" answer.
         if ($type !== 'd') {
             return;
         }
 
-        // The same path is left to refuseExisting(): "already exists" is the
-        // truer answer for renaming something to its own name.
+        // The same path is left to refuseExisting(): "already exists" is the truer answer.
         if ($target !== rtrim($source, '/') && self::isInside($target, $source)) {
             throw FileRefusedException::because($field, 'into_itself', 'errors/application.into_itself');
         }
@@ -2115,9 +1739,8 @@ class FileBrowser
     }
 
     /**
-     * Confirms the path exists and is the expected type, without treating
-     * "does not exist" as a server-operation failure — that is a 404 for the
-     * caller, not something needing a support reference.
+     * Confirms the path exists and is the expected type. "Does not exist" is a 404 for the caller, not a
+     * server-operation failure.
      */
     private function assertType(Application $application, string $target, string $expected): int
     {
@@ -2129,10 +1752,8 @@ class FileBrowser
     }
 
     /**
-     * Like `assertType()`, but returns `null` instead of aborting when the
-     * path does not exist — for the operations where "does not exist yet" is
-     * a valid, expected answer (create-directory, rename's destination),
-     * not an error.
+     * Like `assertType()`, but returns `null` instead of aborting when the path does not exist (for
+     * create-directory and rename's destination, where that is expected).
      *
      * @return array{type: string, size: int}|null
      */
@@ -2157,8 +1778,6 @@ class FileBrowser
 
     /**
      * @param  array<int, string>  $command
-     */
-    /**
      * @param  (callable(ServerOpsResult): bool)|null  $tolerated  a failure the caller knows is not one
      */
     private function run(Application $application, array $command, string $op, ?string $input = null, ?string $cwd = null, ?int $timeout = null, ?callable $tolerated = null): ServerOpsResult
@@ -2166,10 +1785,8 @@ class FileBrowser
         $result = $this->serverOps->run(
             $this->asUser($application, $command),
             ['feature' => 'application', 'op' => "file_{$op}", 'application' => $application->id],
-            // 60 s for the twenty-odd operations that are a single fast
-            // syscall. Archiving is the exception and passes its own, because
-            // it is the only one here whose runtime scales with how much data
-            // the user selected.
+            // 60 s for the fast single-syscall operations; archiving passes its own, as its runtime scales
+            // with the data selected.
             timeout: $timeout ?? 60,
             input: $input,
             cwd: $cwd,
@@ -2185,11 +1802,9 @@ class FileBrowser
     /**
      * unzip's exit 1 after it turned a Windows zip's `\` into folders.
      *
-     * Exit 1 is unzip's "warnings, but processing completed", and converting
-     * backslashes is one of them: every file is written and the run still
-     * "fails" (measured on unzip 6.0-28ubuntu4.1, FS-C22 #7). Accepted only
-     * when that warning is the whole of stderr — exit 1 also covers entries
-     * unzip skipped, and those must still fail the job.
+     * Exit 1 is unzip's "warnings, but completed": every file is written and the run still "fails".
+     * Accepted only when that warning is the whole of stderr: exit 1 also covers skipped entries, which
+     * must still fail the job.
      */
     private static function onlyBackslashWarning(ServerOpsResult $result): bool
     {
@@ -2206,15 +1821,10 @@ class FileBrowser
     }
 
     /**
-     * Stats many paths in one command.
+     * Stats many paths in one command (N separate stats is N processes before any work starts).
      *
-     * The reason bulk operations are worth having at all: statting N paths
-     * one at a time is N processes before any work starts, which is most of
-     * what made deleting a selection slow enough to be unusable.
-     *
-     * `find` reports a missing path on stderr and exits non-zero while still
-     * processing the rest, so the exit code is deliberately ignored — absence
-     * from the output *is* the answer for a path that is not there.
+     * `find` reports a missing path on stderr and exits non-zero while still processing the rest, so the
+     * exit code is ignored: absence from the output is the answer.
      *
      * @param  list<string>  $paths  relative to the document root
      * @return array<string, array{type: string, mode: string}> keyed by relative path
@@ -2255,15 +1865,9 @@ class FileBrowser
     /**
      * Deletes many paths, reporting the outcome of each.
      *
-     * Files and directories are separated rather than sent through one
-     * `rm -rf`: `delete()` has always used `-f` for a file and `-r` only for a
-     * directory, and doing a bulk delete with a blanket `-r` would quietly
-     * widen what a single mistaken path can destroy.
-     *
-     * The result is derived by re-statting afterwards rather than by reading
-     * `rm`'s stderr. `rm` reports failures it can attribute and stays silent
-     * about ones it cannot; what is actually on disk afterwards is the only
-     * answer that cannot be wrong.
+     * Files and directories are sent separately (`-f` vs `-rf`) like `delete()`: a blanket `-r` would
+     * widen what one mistaken path can destroy. The result comes from re-statting afterwards, not from
+     * `rm`'s stderr, which stays silent about failures it cannot attribute.
      *
      * @param  list<string>  $paths
      * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
@@ -2272,8 +1876,7 @@ class FileBrowser
     {
         $this->assertRootExists($application);
 
-        // The site root is not a path the file manager may delete, in bulk or
-        // otherwise -- it would take the document root with it.
+        // The site root may never be deleted, in bulk or otherwise: it would take the document root with it.
         abort_if(in_array('', $paths, true), 422, __('errors/application.cannot_delete_root'));
 
         $found = $this->statMany($application, $paths);
@@ -2287,9 +1890,7 @@ class FileBrowser
             $found[$relative]['type'] === 'd' ? $directories[] = $target : $files[] = $target;
         }
 
-        // One timestamp for the whole selection, so "the twelve things I
-        // deleted together" restore together rather than scattering across
-        // twelve folders a second apart.
+        // One timestamp for the whole selection, so things deleted together restore together.
         if (! $permanent) {
             $stamp = now()->format('Ymd-His');
 
@@ -2302,9 +1903,8 @@ class FileBrowser
                 $this->tolerant($application, ['mv', $this->resolve($application, $relative), $destination], 'trash');
             }
 
-            // What was meant to go in, not what made it: the listing only shows
-            // a recorded path that is really there, so a failed move is never
-            // offered back.
+            // What was meant to go in, not what made it: the listing only shows recorded paths that are
+            // really there.
             $this->recordTrashed($application, $stamp, array_keys($found));
 
             $directories = [];
@@ -2338,11 +1938,7 @@ class FileBrowser
     }
 
     /**
-     * Copies or moves many paths into one directory.
-     *
-     * A destination *directory*, not a target path per source: "put these
-     * twelve in here" is the operation a selection expresses, and a per-source
-     * target would need the caller to name twelve of them.
+     * Copies or moves many paths into one directory (a selection names one destination, not one per source).
      *
      * @param  list<string>  $paths
      * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
@@ -2357,10 +1953,8 @@ class FileBrowser
         $found = $this->statMany($application, $paths);
         $failed = $this->missing($paths, $found);
 
-        // A destination that is already occupied is refused rather than
-        // overwritten -- the same rule `copy()` and `rename()` already apply
-        // to a single path, kept here so a bulk move cannot destroy something
-        // a single move would have protected.
+        // An occupied destination is refused, not overwritten: same rule as `copy()`/`rename()`, so a bulk
+        // move cannot destroy something a single move would have protected.
         $landing = [];
 
         foreach (array_keys($found) as $relative) {
@@ -2423,8 +2017,7 @@ class FileBrowser
         $found = $this->statMany($application, $paths);
         $failed = $this->missing($paths, $found);
 
-        // Setgid on a file runs it as the site's group for whoever starts
-        // it; only folders take it (OLD-26).
+        // Setgid on a file runs it as the site's group for whoever starts it; only folders take it.
         if (self::setsGroupId($mode)) {
             foreach ($found as $relative => $entry) {
                 if (($entry['type'] ?? '') !== 'd') {
@@ -2443,8 +2036,7 @@ class FileBrowser
             $this->tolerant($application, array_merge(['chmod', $mode], $targets), 'chmod_many');
         }
 
-        // Verified against the mode actually on disk, which is why statMany
-        // reads `%m` at all.
+        // Verified against the mode actually on disk (hence `%m` in statMany).
         $after = $this->statMany($application, array_keys($found));
         $succeeded = [];
 
@@ -2464,11 +2056,8 @@ class FileBrowser
     /**
      * Zips many paths into one archive.
      *
-     * Every source must sit in the same directory. `zip` is run from that
-     * directory with bare names so the archive contains `style.css` rather
-     * than `home/siteowner/shop/public_html/style.css` — the same reason
-     * `compress()` already passes a `cwd` — and there is no single directory
-     * to run from once the sources are spread across the tree.
+     * Every source must sit in the same directory: `zip` runs from there with bare names (as in
+     * `compress()`), so the archive holds `style.css` rather than the server's directory layout.
      *
      * @param  list<string>  $paths
      */
@@ -2501,10 +2090,9 @@ class FileBrowser
     }
 
     /**
-     * Room for the archive first (2026-10-29). Its size is not known until it
-     * is written, so this asks for the size of what goes in — the most it can
-     * be, as compression only makes it smaller. A source that cannot be
-     * measured counts as nothing, and the check lets it through.
+     * Room for the archive first. Its size is unknown until written, so this asks for the size of what
+     * goes in (the most it can be; compression only shrinks it). A source that cannot be measured counts
+     * as nothing.
      *
      * @param  list<string>  $sources  absolute paths
      */
@@ -2546,10 +2134,8 @@ class FileBrowser
     /**
      * Runs a command whose failure is reported per path rather than thrown.
      *
-     * `run()` turns a non-zero exit into a FileOperationException, which is
-     * right when one path was asked for and wrong here: `rm` on twelve paths
-     * exits non-zero if one of them fails, and throwing would report eleven
-     * successful deletions as a server error.
+     * `run()` throws on a non-zero exit, which is wrong here: `rm` on twelve paths exits non-zero if one
+     * fails, and throwing would report eleven successful deletions as a server error.
      *
      * @param  array<int, string>  $command
      */

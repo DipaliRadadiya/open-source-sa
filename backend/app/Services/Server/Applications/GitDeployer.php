@@ -19,27 +19,13 @@ use Throwable;
 /**
  * Fetches an application's code with git.
  *
- * The whole design here is about one thing: **the token must not end up
- * anywhere durable.** The obvious approach is the wrong one —
+ * The token must not end up anywhere durable: `git clone https://user:TOKEN@host/…` leaks it in
+ * `ps` and in `.git/config`. So the remote is stored clean and the credential reaches git through
+ * a 0600 file that lives only as long as the command; the path is on the command line, the token
+ * never is.
  *
- *     git clone https://user:TOKEN@github.com/owner/repo.git
- *
- * leaks twice: the token is visible in `ps` while the command runs, and git
- * writes the whole URL into `.git/config`, where it then sits in plaintext
- * inside the user's own web directory forever.
- *
- * So instead: the remote is stored clean, and the credential is handed to git
- * through a 0600 file that exists only for the length of the command. The file
- * path is on the command line; the token never is.
- *
- * And git runs **as the site's own user** inside the site's repository, never
- * as root (FS-C22 #1). The repository's `.git/config` is the site user's to
- * write, and git executes some of what it says — `core.fsmonitor`,
- * `core.sshCommand`, hooks — so root running git there ran the site user's
- * commands as root on the next deploy or webhook.
- *
- * Public repositories skip all of this — no credential is involved at all,
- * which makes them the safer path by construction.
+ * Git runs as the site's own user, never root: its `.git/config` is the site user's to write and
+ * git executes parts of it (`core.fsmonitor`, `core.sshCommand`, hooks).
  */
 class GitDeployer
 {
@@ -57,28 +43,16 @@ class GitDeployer
     ) {}
 
     /**
-     * Steps land on the application as they complete — a build is the longest
-     * thing this panel does on a live site, and the user watching it deserves
-     * to see where it is rather than an empty list until it ends.
+     * Steps land on the application as they complete, so a long build shows its progress live.
      *
      * @return array{steps: array<int, string>, commit: ?string}
      *
      * @throws ProvisioningFailedException
      */
-    /**
-     * How long to keep asking, and how long to wait between asks.
-     *
-     * Four probes over roughly fourteen seconds. Long enough for a web server
-     * to notice a document root that has just appeared and for a restarted
-     * process to bind its port; short enough that a genuinely broken deploy is
-     * still reported while the person is looking at the screen.
-     */
+    /** Delays in ms between verify probes: about fourteen seconds in total. */
     private const VERIFY_BACKOFF_MS = [0, 2000, 4000, 8000];
 
-    /**
-     * @return array<int, int> the schedule, overridable so the test suite does
-     *                         not spend fourteen real seconds proving it waits
-     */
+    /** @return array<int, int> the schedule, overridable so tests do not really wait */
     private function verifyBackoff(): array
     {
         $configured = config('server.verify_backoff_ms');
@@ -94,11 +68,7 @@ class GitDeployer
         $this->progress->open($application);
 
         try {
-            // Deploy directly into the document root. Every site type uses the
-            // same flat `/home/<user>/<slug>/public_html/<web_root>` structure,
-            // and `ApplicationProvisioner` creates and chowns that directory
-            // before this method is called — which for a git site it did not
-            // do at all until provisioning stopped branching on the site type.
+            // Deploy into the document root, already created and chowned by `ApplicationProvisioner`.
             $this->reclaimGitDirectory($application, $documentRoot);
 
             $credentialDir = $this->writeSiteCredential($application);
@@ -106,17 +76,12 @@ class GitDeployer
             $remote = $this->remoteUrl($application);
             $branch = $application->branch ?: 'main';
 
-            // git init + fetch + reset-hard into the document root.
-            // No credential survives past this block; the remote stays clean.
+            // git init + fetch + reset-hard; no credential survives this block, the remote stays clean.
             $this->run('init', $this->git($application, null, [
                 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
             ]));
 
-            // Added only when it is missing. It used to be run every time and
-            // left to fail, which on every deploy after the first wrote
-            // "remote origin already exists" into the log as an error
-            // (bug #71) — noise that buries the real failures. `git remote`
-            // lists and always succeeds.
+            // Only when missing: avoids a "remote origin already exists" error in every later deploy log.
             $remotes = $this->serverOps->run(
                 $this->git($application, null, ['-C', $documentRoot, 'remote']),
                 ['feature' => 'application', 'op' => 'git.remote_list'],
@@ -128,18 +93,8 @@ class GitDeployer
                 ]));
             }
 
-            // **Before the fetch, not after it.**
-            //
-            // `remote add` above is a no-op on an existing checkout, so when
-            // the remote changes it is this line that moves it. It used to run
-            // after `reset --hard`, which was harmless only while the URL could
-            // never change: the account was fixed at creation. Now that a site
-            // can be re-pointed at a different account, that ordering meant the
-            // first deploy fetched from the OLD remote and checked out the old
-            // repository's code, then corrected the URL for next time.
-            //
-            // Succeeding while serving the wrong repository is worse than
-            // failing, because nothing looks wrong.
+            // Before the fetch: `remote add` is a no-op on an existing checkout, so this moves a
+            // changed remote. Fetching from the old one would silently serve the wrong repository.
             $this->run('init', $this->git($application, null, [
                 '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
             ]));
@@ -152,14 +107,8 @@ class GitDeployer
                 '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
             ]));
 
-            // Give the checked-out branch an upstream. `git init` + `fetch` +
-            // `reset` leaves none, so a deploy script that says a bare
-            // `git pull` — the commonest one there is — died on the first
-            // deploy with "There is no tracking information for the current
-            // branch". `fetch origin <branch>` has just written
-            // `origin/<branch>`, so this cannot point at a missing ref.
-            // Unchecked: the checkout above already succeeded, and a script
-            // that never mentions git does not need this.
+            // Give the branch an upstream (init + fetch + reset leaves none) so a bare `git pull` in a
+            // deploy script works. Unchecked: the checkout already succeeded.
             $this->serverOps->run(
                 $this->git($application, null, ['-C', $documentRoot, 'branch', '--set-upstream-to=origin/'.$branch]),
                 ['feature' => 'application', 'op' => 'git.set_upstream'],
@@ -168,16 +117,10 @@ class GitDeployer
             $commit = $this->currentCommit($application, $documentRoot);
             $details = $this->commitDetails($application, $documentRoot);
 
-            // Recorded here rather than only on success. Everything below this
-            // line can fail — ownership, the deploy script, the restarts, the
-            // verify — and all of it fails with this revision already checked
-            // out. A failed deploy that cannot say which commit it was running
-            // is missing the one fact somebody debugging it needs.
+            // Recorded now: everything below can fail with this revision already checked out.
             $this->recorder->commit($commit, $details['message'], $details['author']);
 
-            // Site is owned by its Linux user. git now runs as that user and
-            // leaves nothing root-owned, but this stays: it is also what hands
-            // over a tree an older, root-run deploy left behind.
+            // Also hands over a tree that an older, root-run deploy left behind.
             $this->run('set_ownership', [
                 'chown', '-R',
                 "{$application->systemUser->username}:{$application->systemUser->username}",
@@ -185,8 +128,7 @@ class GitDeployer
             ]);
             $handedOver = true;
 
-            // Before the deploy script, which is where `php artisan migrate`
-            // lives: it reads the file this seeds.
+            // Before the deploy script: `php artisan migrate` there reads the file this seeds.
             $this->seedEnvironment($application, $documentRoot);
             // The seed is a copy of the repository's example, 0644.
             $this->secretPrivacy->narrow($application);
@@ -194,38 +136,22 @@ class GitDeployer
             if (filled($this->script($application))) {
                 $this->runScript($application, $documentRoot);
             } elseif ($this->requiresComposerPackages($documentRoot, $application)) {
-                // Nothing written to run, and a composer project that cannot
-                // serve without its packages: install them, rather than fail
-                // the check below. See `composer_install` in config/server.php.
+                // No script, and a composer project that needs its packages: install them.
                 $this->runScript($application, $documentRoot, (string) config('server.deployments.composer_install'));
             } elseif (($install = $this->nodeInstall($documentRoot, $application)) !== null) {
-                // The same gap for a Node application (RC-2): no script, so
-                // nothing ran `npm ci`, and the first start died on
-                // MODULE_NOT_FOUND.
+                // Same gap for a Node application: with no script, nothing ran `npm ci`.
                 $this->runScript($application, $documentRoot, $install);
             }
 
-            // Before the restarts and before the verify, because this is the
-            // question the verify cannot answer. Both orders end in a failed
-            // deploy; only this one says why.
+            // Before the restarts and the verify: the verify cannot say why a deploy failed, this can.
             $this->checkDependencies($application, $documentRoot);
 
-            // New code is only live once the process running it has been
-            // replaced. A deploy that pulls, builds and leaves the old process
-            // serving is the most confusing possible outcome: the panel says
-            // deployed, the site says otherwise.
-            //
-            // `apply` rather than `restart`: provisioning writes the unit but
-            // deliberately does not start it, because there was no code yet.
-            // This is where there is. It also rewrites the unit first, so a
-            // changed port or start command takes effect on the same deploy
-            // that changed it rather than the one after.
+            // New code is live only once its process is replaced. `apply`, not `restart`: it also
+            // rewrites the unit, and provisioning writes the unit without starting it.
             if ($this->supervisor->runs($application)) {
                 $this->supervisor->apply($application, $documentRoot);
 
-                // The proxy has to point where the process now listens. A port
-                // changed in the settings reached the unit on this deploy but
-                // not the vhost, so every visitor got 502 (frontend QA FS-C41).
+                // The vhost must follow the port the process now listens on, or visitors get a 502.
                 if ($application->app_port) {
                     $this->republishVhost($application, $documentRoot);
                 }
@@ -233,24 +159,17 @@ class GitDeployer
                 $this->progress->record('restart_app');
             }
 
-            // And the workers, for exactly the same reason but worse: a queue
-            // worker holds the old code in memory indefinitely, so without
-            // this the site serves the new version while its background jobs
-            // quietly keep running last week's — with nothing anywhere to
-            // connect the two.
+            // Workers too: a queue worker keeps the old code in memory until restarted.
             if ($this->restartWorkers($application) > 0) {
                 $this->progress->record('restart_workers');
             }
 
-            // The script and all restarts succeeded — but the site itself might still
-            // be broken. Curl the deployed URL and treat a 5xx as a failed deploy,
-            // because to the user "deployed" and "working" are the same thing.
-            // Skip for types that have no reachable URL yet.
+            // The site may still be broken despite a clean script and restarts: a 5xx fails the
+            // deploy. Skipped for types with no reachable URL yet.
             if ($application->domain !== null) {
                 $this->verifyDeploy($application);
             }
 
-            // Directory size is measured against the deployed document root.
             $this->refreshDirectorySize($application, $documentRoot);
 
             return [
@@ -259,11 +178,8 @@ class GitDeployer
                 ...$details,
             ];
         } finally {
-            // A deploy that failed before the hand-over above (a fetch from a
-            // wrong URL or a revoked token) left the `.git` that `git init`
-            // made as root, which the site user can then neither repair nor
-            // delete (bug #101). Handed over anyway; best effort, the deploy
-            // has already failed for its own reason.
+            // A failure before the hand-over leaves the root-made `.git`, which the site user can
+            // neither repair nor delete. Best effort.
             if (! $handedOver && $application->systemUser !== null) {
                 $this->serverOps->run(
                     ['chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $documentRoot],
@@ -278,33 +194,14 @@ class GitDeployer
         }
     }
 
+    /** @throws ProvisioningFailedException */
     /**
-     * Curl the deployed site to confirm it responds below 500.
+     * Ask the site whether it is serving, once the deploy is done.
      *
-     * A 5xx means the deploy — however clean its script exit code — left the
-     * site broken. The user sees "deployed" and "broken" as the same event, so
-     * the panel should too.
-     *
-     * @throws ProvisioningFailedException
-     */
-    /**
-     * Ask the site whether it is actually serving, once the deploy is done.
-     *
-     * Retried, because the first deploy of a site is the one case where a
-     * single immediate probe is guaranteed to be unfair. The document root for
-     * a framework repository (`public/`) did not exist until the checkout
-     * seconds ago, php-fpm and the web server can still be holding the old
-     * missing path, and a process that has just been restarted has not
-     * finished booting. One curl with a five-second timeout and no second
-     * chance failed every first deploy and then passed on the re-run — the
-     * deploy was never the problem, the timing of the question was.
-     *
-     * Unreachable is not the same answer as unhealthy, and only one of them is
-     * this deploy's fault. A curl that never connected — DNS that does not
-     * resolve yet on a brand-new domain, a firewall, a port — says nothing
-     * about the code that was just deployed, and failing the deploy over it
-     * tells someone to fix a build that worked. A curl that *did* connect and
-     * got a 500 is the failure this check exists to catch, and still fails.
+     * Retried because the first probe of a first deploy is unfair: the document root may be
+     * seconds old, the web server may still hold the old path, a restarted process may still be
+     * booting. A curl that never connected (DNS, firewall) says nothing about the deployed code and
+     * does not fail the deploy; one that got a 5xx does.
      */
     private function verifyDeploy(Application $application): void
     {
@@ -320,10 +217,7 @@ class GitDeployer
             $result = $this->probe($url, $application);
             $code = (int) trim($result->output());
 
-            // Any answer below 500 is a working site (FS-C42): an API with no
-            // route at `/` answers 404, an app behind a login 302 or 401.
-            // Only a 5xx says the deploy left it broken — the same rule
-            // HttpReadinessCheck applies to installs.
+            // Below 500 is working: an API answers 404 at `/`, an app behind a login 302 or 401.
             if ($code >= 100 && $code < 500) {
                 $this->recorder->step('verify', $result);
                 $this->progress->record('verify');
@@ -334,38 +228,25 @@ class GitDeployer
 
         $this->recorder->step('verify', $result);
 
-        // Never reached the site at all. Recorded so the build log says so, and
-        // deliberately not fatal: the checkout, the script and the restarts all
-        // succeeded, and "your DNS has not propagated" is not a deploy failure.
+        // Never reached the site: recorded but not fatal (e.g. DNS not propagated); the checkout,
+        // script and restarts succeeded.
         if ($result->exitCode() !== 0) {
             $this->progress->record('verify_unreachable');
 
             return;
         }
 
-        // Connected, and the site answered with something that is not success.
-        // That is the case this check was added for, so it still fails.
+        // Connected, but the site answered with a 5xx: the case this check exists to catch.
         $application->update([
             'failed_step' => 'verify',
             'reference' => $result->reference,
         ]);
 
-        // A reason code, never free text (FS-C40): the reason becomes a
-        // translation key, and "curl … returned HTTP 502" showed as a raw
-        // `application.failure_reason.curl …` key in every language. The URL
-        // and status are in the deployment's own log under the reference.
+        // A reason code, never free text: it becomes a translation key. Details are in the deploy log.
         throw new ProvisioningFailedException('verify', $result->reference, 'verify_http');
     }
 
-    /**
-     * One probe. Split out so the retry loop above reads as a loop.
-     *
-     * --silent --show-error: no progress output, errors still visible
-     * --max-time 5: hard timeout, do not hang the deploy
-     * --location --max-redirs 1: follow one redirect (http→https most common)
-     * --write-out '%{http_code}': extract the final status code
-     * --output /dev/null: discard body, we only care about the status
-     */
+    /** One probe: 5s hard timeout, one redirect followed (http→https), prints only the status. */
     private function probe(string $url, Application $application): ServerOpsResult
     {
         return $this->serverOps->run(
@@ -382,11 +263,8 @@ class GitDeployer
     }
 
     /**
-     * Recompute the directory size and persist it on the application record.
-     *
-     * Run after every successful deploy so the file manager does not hit the disk
-     * on every browse. Also recomputes if the cached value is stale (null = never
-     * computed). Uses `-k` to get 1K-block output stable across systems.
+     * Recompute the directory size and persist it, so the file manager does not hit the disk on
+     * every browse. `-k` gives 1K blocks, stable across systems.
      */
     private function refreshDirectorySize(Application $application, string $documentRoot): void
     {
@@ -404,10 +282,7 @@ class GitDeployer
         $kilobytes = (int) ($parts[0] ?? 0);
         $bytes = $kilobytes * 1024;
 
-        // The timestamp goes with it, always. Writing the size alone left a
-        // fresh number carrying whenever the file browser last happened to
-        // measure — or no date at all — and a size with no date reads as
-        // current. That is the whole reason the column exists.
+        // The timestamp always goes with the size: a size with no date reads as current.
         $application->updateQuietly([
             'directory_size_bytes' => $bytes,
             'directory_size_updated_at' => now(),
@@ -417,18 +292,9 @@ class GitDeployer
     /**
      * Can this repository be reached, and does the branch exist in it?
      *
-     * Null when both hold, or the reason: `repository_unreachable` (wrong
-     * URL, no access, or the account's token cannot see it),
-     * `host_unreachable` (the server could not reach the git host at all)
-     * or `branch_missing`. Asked before anything is created or saved: a site
-     * created from a wrong URL used to exist anyway, report "Running", and
-     * fail its first deploy with no reason (bug #101); a branch was saved
-     * unchecked and broke the next deploy (bug #71).
-     *
-     * The same remote and credential the deploy itself uses, so a probe that
-     * passes is a fetch that can. `ls-remote` downloads nothing, never
-     * prompts (credential.interactive=never, GIT_TERMINAL_PROMPT=0) and is
-     * bounded by a short timeout.
+     * Null when both hold, else `repository_unreachable` (wrong URL, no access, token cannot see
+     * it), `host_unreachable` or `branch_missing`. Same remote and credential as the deploy;
+     * `ls-remote` downloads nothing, never prompts, and has a short timeout.
      */
     public function checkRemoteBranch(Application $application): ?string
     {
@@ -453,13 +319,10 @@ class GitDeployer
                 env: ['GIT_TERMINAL_PROMPT' => '0'],
             );
         } catch (ProvisioningFailedException) {
-            // The credential could not be written privately, so git never ran
-            // with it: no answer either way, and the probe stays out of the
-            // way rather than refusing a site.
+            // The credential could not be written privately: no answer, rather than refusing a site.
             return null;
         } finally {
-            // Only a directory the writer itself made. `rm` does not follow a
-            // symlink given as its operand.
+            // Only a directory the writer made; `rm` does not follow a symlink operand.
             if ($credentialDirectory !== null) {
                 $this->serverOps->run(['rm', '-rf', $credentialDirectory], ['feature' => 'application', 'op' => 'remove_credential']);
             }
@@ -476,9 +339,7 @@ class GitDeployer
             : 'repository_unreachable';
     }
 
-    /**
-     * The clean remote — never carries credentials.
-     */
+    /** The clean remote: never carries credentials. */
     public function remoteUrl(Application $application): string
     {
         if ($application->git_account_id === null) {
@@ -487,8 +348,7 @@ class GitDeployer
 
         $account = $application->gitAccount;
 
-        // The web host, not the API host — you cannot clone from
-        // api.github.com. Self-hosted GitLab serves both from one host.
+        // The web host, not the API host (cannot clone from api.github.com).
         $host = match ($account->provider) {
             'github' => 'https://github.com',
             'bitbucket' => 'https://bitbucket.org',
@@ -499,21 +359,13 @@ class GitDeployer
     }
 
     /**
-     * The probe's credential: root's, since the probe runs as root with no
-     * repository and no site user yet. Returns the directory (the file is
-     * `credentials` inside it), or null for a public repository. A deploy
-     * uses {@see writeSiteCredential()}.
+     * The probe's credential, written as root (no site user yet). Returns the directory (the file
+     * is `credentials` inside it), or null for a public repository. A deploy uses
+     * {@see writeSiteCredential()}.
      *
-     * Private from the moment it exists, never made private afterwards. This
-     * used to `tee` a file straight into /tmp under the default umask and
-     * `chmod 0600` it after: the token sat world-readable in between — a
-     * watcher on a test server caught it at 0644 — and a failed chmod went
-     * unnoticed. Now `mkdir -m 0700` makes a directory only root can enter
-     * (mkdir without `-p` fails on any path already there, symlink included,
-     * so nothing planted at the name is followed, written or later removed),
-     * and the umask is set before the shell opens the file inside it, so the
-     * file is 0600 from open(2). The token arrives on stdin, and `cat` echoes
-     * nothing back into a log the way `tee` would.
+     * Private from creation: `mkdir -m 0700` without `-p` (a planted path or symlink fails, is never
+     * followed) and `umask 077` before the file opens. The token arrives on stdin, and `cat` echoes
+     * nothing into a log the way `tee` would.
      *
      * @throws ProvisioningFailedException
      */
@@ -549,19 +401,12 @@ class GitDeployer
     }
 
     /**
-     * The credential for a deploy, in a directory only the site user can
-     * enter, since the site user is who runs git now. Returns the directory
-     * (the file is `credentials` inside it), or null for a public repository.
+     * The credential for a deploy, in a directory only the site user can enter. Returns the
+     * directory (the file is `credentials` inside it), or null for a public repository.
      *
-     * Everything is done *as* the site user, root never writes here: the
-     * directory is theirs, and root writing a file into a directory somebody
-     * else owns follows whatever symlink they have put at that name. `mkdir`
-     * without `-p` fails on a path that already exists, so nothing can be
-     * waiting at it either. The token arrives on stdin, and `cat` echoes
-     * nothing back into a log the way `tee` would.
-     *
-     * The site user can read the token while the fetch runs — git needs it,
-     * and git is theirs. Nothing outlives the deploy.
+     * Done *as* the site user: root writing into a directory somebody else owns follows any
+     * symlink they planted. `mkdir` without `-p` fails on an existing path; the token arrives on
+     * stdin, so `cat` echoes nothing into a log. The site user can read it while the fetch runs.
      *
      * @throws ProvisioningFailedException
      */
@@ -596,9 +441,8 @@ class GitDeployer
     }
 
     /**
-     * As the site user first — it is their directory. Root only when that
-     * fails (the account went away mid-deploy, say); `rm -r` does not follow
-     * a symlink it meets, so root cannot be steered elsewhere by one.
+     * As the site user first (it is their directory); root only if that fails. `rm -r` does not
+     * follow a symlink, so root cannot be steered elsewhere.
      */
     private function removeSiteCredential(Application $application, string $directory): void
     {
@@ -614,9 +458,7 @@ class GitDeployer
         return rtrim((string) config('server.git_credential_dir', sys_get_temp_dir()), '/');
     }
 
-    /**
-     * One `store`-helper line for the account's host.
-     */
+    /** One `store`-helper line for the account's host. */
     private function credentialLine(Application $application): string
     {
         $account = $application->gitAccount;
@@ -628,14 +470,11 @@ class GitDeployer
     }
 
     /**
-     * A git command run as the site user, with the deploy's credential when
-     * there is one.
+     * A git command run as the site user, with the deploy's credential when there is one.
      *
-     * `-c` values are parsed by git itself, not a shell. The path is visible
-     * in `ps`; the token inside the file is not. The empty helper comes first
-     * because it clears every helper configured before the command line —
-     * including one in the repository's own config, which the site user
-     * writes — so the token goes to this helper and to no other.
+     * The empty `credential.helper=` comes first: it clears every helper configured before it,
+     * including one in the repo's own config (writable by the site user), so the token goes to
+     * this helper only. The path shows in `ps`; the token in the file does not.
      *
      * @param  array<int, string>  $arguments
      * @return array<int, string>
@@ -678,14 +517,10 @@ class GitDeployer
             timeout: (int) config('server.git_timeout', 300),
         );
 
-        // The deployment row gets the output; ProvisionProgress gets only the
-        // step name, because it is also used by provisioning where there is no
-        // row to write to.
+        // The deployment row gets the output; ProvisionProgress only the step name.
         $this->recorder->step($step, $result);
 
-        // Classified, like the deploy script's failure: a fetch that failed
-        // used to leave `failed_reason` empty, so a typo in the repository or
-        // the branch read as "failed at fetch" and a reference to the log.
+        // Classified, so a typo in the repository or branch gets a reason, not just "failed at fetch".
         if ($result->failed()) {
             throw ProvisioningFailedException::fromResult($step, $result);
         }
@@ -696,32 +531,17 @@ class GitDeployer
     }
 
     /**
-     * The build command is whatever the user typed, so it runs **as the site's
-     * own user**, never as the panel. A shell is unavoidable here (users write
-     * `npm ci && npm run build`), which makes dropping privileges the control
-     * that matters: `application:manage` must not be a route to running
-     * commands as root.
+     * The build command is user-typed, so it runs as the site's own user: `application:manage`
+     * must not be a route to root commands.
      *
      * @throws ProvisioningFailedException
      */
     /**
      * Give a fresh checkout a `.env` with something in it.
      *
-     * Provisioning `touch`es an empty file so the path exists and belongs to
-     * the site user. Nothing then filled it, and a repository does not carry
-     * its own `.env` — it is gitignored, by every framework's own instruction.
-     * So a git-deployed Laravel site arrived with a zero-byte environment
-     * file, no APP_KEY, and a panel screen correctly reporting exactly that
-     * while looking, to the user, like the screen had failed to load.
-     *
-     * Three guards, because this runs on every deploy and not just the first:
-     * a file with anything in it is never touched, a repository with no
-     * `.env.example` is left alone rather than guessed at, and `key:generate`
-     * runs only when it would write to the same file we just seeded — it
-     * targets `base_path('.env')` and would otherwise create a second one.
-     *
-     * As the site user: the file must stay theirs, and a root-owned `.env` is
-     * one their own process cannot write.
+     * Repositories do not carry a `.env`, so without this a git-deployed Laravel site gets an
+     * empty one and no APP_KEY. Runs on every deploy: a non-empty file is never touched, and no
+     * `.env.example` means leave it alone. Runs as the site user so the file stays theirs.
      */
     private function seedEnvironment(Application $application, string $codeRoot): void
     {
@@ -729,38 +549,19 @@ class GitDeployer
             'set -e',
             'env='.escapeshellarg($application->envPath()),
             'root='.escapeshellarg($codeRoot),
-            // `if`, not `[ … ] && exit 0` — under `set -e` a false test at the
-            // head of an && list ends the script with its exit code, so the
-            // "nothing to do" path would report a failed deploy.
+            // `if`, not `[ … ] && exit 0`: under `set -e` a false test at the head of an && list aborts.
             'if [ -s "$env" ]; then exit 0; fi',
             'if [ ! -f "$root/.env.example" ]; then exit 0; fi',
             'cp "$root/.env.example" "$env"',
-            // The example's APP_URL is the framework's development default —
-            // `http://localhost` in Laravel's, a port on the visitor's own
-            // machine. Replaced, never appended: a repository whose example
-            // has no APP_URL is not a Laravel-shaped one, and inventing a key
-            // for it would be guessing at somebody else's config format.
+            // The example's APP_URL is a dev default: replaced, never appended (none = not Laravel-shaped).
             'if grep -q "^APP_URL=" "$env"; then',
             '  sed -i '.escapeshellarg('s|^APP_URL=.*|APP_URL='.$application->url().'|').' "$env"',
             'fi',
-            // Not `artisan key:generate`, which is what this used to be and
-            // could not work. `artisan` requires `vendor/autoload.php` on its
-            // tenth line, and `vendor/` is created by `composer install` —
-            // which lives in the *deploy script*, and the deploy script runs
-            // after this step. So the first deploy of any Laravel repository
-            // died here on a fatal require, while the re-run passed because
-            // the `.env` copied a moment ago made the whole step exit early.
-            //
-            // The key is 32 random bytes base64-encoded, which is exactly what
-            // key:generate writes for the default cipher. openssl is on every
-            // box this panel supports and needs no application to boot, so the
-            // one step that must work before dependencies exist no longer
-            // depends on them.
+            // Not `artisan key:generate`: artisan needs `vendor/`, which the deploy script (a later
+            // step) creates. 32 random base64 bytes is what key:generate writes.
             'if [ "$env" = "$root/.env" ] && ! grep -q "^APP_KEY=base64:." "$env"; then',
             '  if key=$(openssl rand -base64 32 2>/dev/null); then',
-            // `|` as the delimiter: base64 is [A-Za-z0-9+/=], so it can carry
-            // a `/` but never a `|`. `&` is sed's "the whole match" and is not
-            // in the alphabet either.
+            // `|` as the delimiter: base64 can carry `/` but never `|` or `&`.
             '    if grep -q "^APP_KEY=" "$env"; then',
             '      sed -i "s|^APP_KEY=.*|APP_KEY=base64:$key|" "$env"',
             '    else',
@@ -775,20 +576,10 @@ class GitDeployer
 
     private function runScript(Application $application, string $documentRoot, ?string $script = null): void
     {
-        // `set -e` so the script stops at the first failing line. Without it a
-        // failed `composer install` is followed cheerfully by `php artisan
-        // migrate`, and the deploy reports success on a half-updated site —
-        // which is worse than the failure it was hiding.
-        // `set -e` first, before anything else runs — including the `cd`. It
-        // makes the script stop at the first failing line; without it a failed
-        // `composer install` is followed cheerfully by `php artisan migrate`,
-        // and the deploy reports success on a half-updated site. Putting it
-        // after the `cd` would leave the one command whose failure matters most
-        // unguarded: running the rest of a deploy script in the wrong directory.
+        // `set -e` first, before the `cd`: a failed `composer install` must not be followed by `migrate`.
         $body = $script ?? (string) $this->script($application);
 
-        // Before anything runs: a `{PHP81}` with no PHP 8.1 behind it would
-        // otherwise reach the shell as text and fail halfway through.
+        // Before anything runs: a `{PHP81}` with no PHP 8.1 behind it would reach the shell as text.
         if (($missing = app(DeployScriptPhp::class)->missing($body)) !== []) {
             $reference = (string) Str::uuid();
             Log::channel('server-ops')->warning('deploy.script_php_missing', [
@@ -818,12 +609,7 @@ class GitDeployer
 
         $this->recorder->step('script', $result);
 
-        // `fromResult`, not the bare constructor. The deploy script is where
-        // `composer install` and `npm ci` run, which makes it the step with the
-        // most classifiable failures in the whole panel — and it was the one
-        // step throwing with no reason attached at all, so the out-of-memory
-        // and missing-compiler classifications that exist for the marketplace
-        // installers never once applied to a git deploy.
+        // `fromResult` classifies the failure (out of memory, missing compiler) for composer/npm steps.
         if ($result->failed()) {
             throw ProvisioningFailedException::fromResult('script', $result);
         }
@@ -832,23 +618,11 @@ class GitDeployer
     }
 
     /**
-     * A composer project must have its dependencies on disk before anything
-     * is asked to serve it.
+     * A composer project must have its dependencies on disk before anything serves it.
      *
-     * The failure this exists for is silent by construction: a site with no
-     * deploy script, or with one that never runs `composer install`, checks
-     * out cleanly, restarts cleanly, and then answers every request with a
-     * fatal on the missing `vendor/autoload.php`. The panel's only verdict was
-     * "curl returned HTTP 500" from the verify — correct, and useless, because
-     * the one fact needed to fix it is not in it.
-     *
-     * **Gated on the manifest actually requiring something.** Not on the mere
-     * presence of `composer.json`: a repository that carries one only to pin a
-     * linter has `require-dev` and no runtime dependencies at all, serves
-     * perfectly well with no `vendor/`, and deploys fine today. Failing that
-     * site would be this method causing the outage it was written to describe.
-     * Platform entries do not count either — `php` and `ext-*` are constraints
-     * on the interpreter, not packages that land in `vendor/`.
+     * Otherwise the failure is silent: checkout and restarts succeed, then every request fatals on
+     * the missing `vendor/autoload.php`. Gated on the manifest requiring something (a repo with only
+     * `require-dev` serves fine), and platform entries (`php`, `ext-*`) do not count.
      *
      * @throws ProvisioningFailedException
      */
@@ -892,19 +666,11 @@ class GitDeployer
     }
 
     /**
-     * Does the checkout's `composer.json` require at least one real package?
-     * The same question, and the same answer, as {@see checkDependencies()}.
-     */
-    /**
-     * The install + build to run for a Node application nobody wrote a script
-     * for, or null when there is nothing it needs (RC-2).
+     * The install + build to run for a Node application nobody wrote a script for, or null.
      *
-     * Only for an application served by Node — a PHP repository with a
-     * `package.json` for its assets deploys today without npm, and must keep
-     * doing so — whose `package.json` lists dependencies that are not on disk.
-     * The package manager is the one on record, else the one whose lockfile
-     * the repository carries; `npm ci` needs a lockfile, so a repository with
-     * none gets `npm install`.
+     * Only for Node-served applications whose `package.json` lists dependencies not on disk. The
+     * package manager is the one on record, else the one whose lockfile exists; `npm ci` needs a
+     * lockfile, so none means `npm install`.
      */
     private function nodeInstall(string $codeRoot, Application $application): ?string
     {
@@ -957,9 +723,7 @@ class GitDeployer
     /**
      * Does this `composer.json` require at least one real package?
      *
-     * Malformed JSON answers no. A manifest we cannot parse is not evidence
-     * that anything is missing, and this check's whole licence to fail a
-     * deploy rests on being certain.
+     * Malformed JSON answers no: an unparseable manifest is not evidence anything is missing.
      */
     private function requiresPackages(string $json): bool
     {
@@ -976,8 +740,7 @@ class GitDeployer
                 continue;
             }
 
-            // `ext-`/`lib-` are the interpreter's own extensions and libraries;
-            // `composer-*-api` are composer's, satisfied by composer itself.
+            // `ext-`/`lib-` are the interpreter's own; `composer-*-api` is satisfied by composer itself.
             if (str_starts_with($name, 'ext-') || str_starts_with($name, 'lib-') || str_starts_with($name, 'composer-')) {
                 continue;
             }
@@ -989,13 +752,8 @@ class GitDeployer
     }
 
     /**
-     * What to run after checkout.
-     *
-     * `deploy_script` when the user has written one, otherwise the old
-     * `build_command`. Kept as a fallback rather than migrated, so an
-     * application configured before the Deployment screen existed keeps
-     * deploying exactly as it did — a silent change to what runs on someone's
-     * production site is not an upgrade.
+     * What to run after checkout: `deploy_script`, else the legacy `build_command`, kept so older
+     * applications deploy exactly as before.
      */
     public function script(Application $application): ?string
     {
@@ -1004,21 +762,14 @@ class GitDeployer
             : $application->build_command;
     }
 
-    /**
-     * Substitute the placeholders the script may use.
-     *
-     * The same `{path}` convention the cron command presets already use, so a
-     * user who has met one recognises the other.
-     */
+    /** Substitute the placeholders the script may use. */
     private function expand(string $script, Application $application, string $documentRoot): string
     {
         return strtr($script, $this->variables($application, $documentRoot));
     }
 
     /**
-     * What each placeholder becomes in this site's deploy, as the Deployment
-     * screen shows it — computed here, by the code that substitutes them, so
-     * the screen cannot describe a different value from the one that runs.
+     * What each placeholder becomes in this site's deploy, as the Deployment screen shows it.
      *
      * @return array<string, string>
      */
@@ -1034,10 +785,7 @@ class GitDeployer
     private function variables(Application $application, string $documentRoot): array
     {
         return [
-            // The site's own interpreter, spelled out. `php` on PATH already
-            // resolves to it, but a script written before that was true may
-            // name a version explicitly, and this is the way to do so without
-            // hardcoding a path that changes when the site's version does.
+            // The site's own interpreter, without hardcoding a path that changes with its version.
             '{php}' => $this->phpBinary($application),
             '{path}' => $documentRoot,
             '{branch}' => $application->branch ?: 'main',
@@ -1046,11 +794,7 @@ class GitDeployer
     }
 
     /**
-     * The commit's subject and author, for the deployment record.
-     *
-     * Read from the checkout rather than from the webhook payload: the payload
-     * describes what was pushed, this describes what is on disk, and when a
-     * deploy lands mid-push those differ.
+     * The commit's subject and author, read from the checkout (what is on disk), not the webhook.
      *
      * @return array{message: ?string, author: ?string}
      */
@@ -1074,17 +818,10 @@ class GitDeployer
     }
 
     /**
-     * `export PATH=…;` putting the site's own Node first, or nothing when the
-     * site pinned no version.
+     * `export PATH=…;` putting the site's own Node first, or nothing when no version is pinned.
      *
-     * Without it `npm ci && npm run build` runs under whatever `node` the
-     * default happens to be. A site pinned to 18 on a box defaulting to 22
-     * built with 22 — silently, and only visibly much later, as a runtime
-     * error in code that compiled fine.
-     *
-     * Written into the shell command rather than passed as an environment
-     * variable because `runuser` sits in between, and how much of the
-     * environment survives that depends on its configuration. This does not.
+     * Written into the shell command, not the environment: how much of that survives `runuser`
+     * depends on its configuration.
      */
     private function nodePath(Application $application): string
     {
@@ -1097,10 +834,7 @@ class GitDeployer
         return 'export PATH='.escapeshellarg($bin).':"$PATH"; ';
     }
 
-    /**
-     * The site's PHP binary, or the bare name when it cannot be resolved —
-     * which is what the script would have used anyway.
-     */
+    /** The site's PHP binary, or the bare name when it cannot be resolved. */
     private function phpBinary(Application $application): string
     {
         $version = (string) $application->php_version;
@@ -1113,28 +847,12 @@ class GitDeployer
     }
 
     /**
-     * `export PATH=…;` putting the site's own PHP first, or nothing when it
-     * cannot be established.
+     * `export PATH=…;` putting the site's own PHP first, or nothing when it cannot be established.
      *
-     * The same bug as {@see nodePath()} and a worse one, because PHP is what
-     * `composer install` resolves its platform requirements against. A site
-     * set to 8.2 on a box whose default `php` is 8.4 had its dependencies
-     * resolved for 8.4 — and composer writes what it resolved against into
-     * `vendor/composer/platform_check.php`, which `vendor/autoload.php`
-     * requires on its way in. So the deploy succeeded, every step went green,
-     * and the site answered **every request with a 500** thrown by composer's
-     * own guard, saying a PHP version nobody had chosen was required.
-     *
-     * That is worse than Node's version of this because nothing in the output
-     * points at it: the build log shows a clean `composer install`, and the
-     * panel's only verdict is "curl returned HTTP 500".
-     *
-     * A symlink directory rather than `dirname($binary)`, which is what Node
-     * can do and PHP cannot: fnm gives each Node version its own `bin`, while
-     * apt puts every PHP in `/usr/bin` under a versioned name. Prepending
-     * `/usr/bin` selects nothing. A directory holding one symlink called `php`
-     * is the only shape that means "this version" to a `#!/usr/bin/env php`
-     * shebang — which is how composer itself is started.
+     * Composer resolves platform requirements against the running PHP, so the wrong one makes every
+     * request fail with a 500 after a green deploy (see {@see nodePath()}). A directory holding one
+     * `php` symlink, not `/usr/bin`: apt installs every PHP there under a versioned name, and only
+     * a `php` link satisfies a `#!/usr/bin/env php` shebang.
      */
     private function phpPath(Application $application): string
     {
@@ -1142,17 +860,9 @@ class GitDeployer
     }
 
     /**
-     * Hand a `.git` that root made back to the site user before git runs as
-     * them. Checkouts made before git ran as the site user — and v7's —
-     * may still hold root-owned objects, which the site user could not
-     * write, so the first deploy after the upgrade would fail at `fetch`.
-     *
-     * In place of what was here: a `safe.directory` entry added to root's
-     * global config for every document root, which is what let root run git
-     * in a directory the site user controls. Entries already written are left
-     * where they are; nothing runs git as root in these directories any more.
-     *
-     * `-h`: a symlink inside is changed itself, never what it points at.
+     * Hand a root-made `.git` back to the site user before git runs as them: older checkouts may
+     * hold root-owned objects that would fail `fetch`. `-h`: a symlink is changed itself, never
+     * what it points at.
      */
     private function reclaimGitDirectory(Application $application, string $documentRoot): void
     {
@@ -1180,10 +890,7 @@ class GitDeployer
     /**
      * Restart every worker that asked to be restarted on deploy.
      *
-     * Failures are logged, not thrown: the deploy itself has already
-     * succeeded, and turning "one worker would not come back" into "the
-     * deploy failed" would send someone rolling back a release that is fine.
-     * The worker's own state reports it honestly on the next screen load.
+     * Failures are logged, not thrown: the deploy itself succeeded.
      */
     private function restartWorkers(Application $application): int
     {
@@ -1210,10 +917,7 @@ class GitDeployer
         return $workers->count();
     }
 
-    /**
-     * Rewrite the application's vhost and reload, refusing a config the web
-     * server rejects rather than reloading into it.
-     */
+    /** Rewrite the vhost and reload, refusing a config the web server rejects. */
     private function republishVhost(Application $application, string $documentRoot): void
     {
         $driver = $this->webServers->driver();
@@ -1229,8 +933,7 @@ class GitDeployer
             throw new ProvisioningFailedException('test_config', $tested->reference);
         }
 
-        // Checked like ApplyVhost checks it: a deploy whose new config never
-        // went live is not a deploy that finished.
+        // A deploy whose new config never went live did not finish.
         $reload = $driver->reload();
 
         if ($reload->failed()) {
