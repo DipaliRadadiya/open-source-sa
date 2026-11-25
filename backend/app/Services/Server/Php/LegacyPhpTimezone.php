@@ -9,25 +9,13 @@ use Illuminate\Support\Facades\Log;
 /**
  * Tell PHP 5.6–7.4 the server's timezone instead of letting it guess.
  *
- * Junior re-test #14: after the server timezone was set to Asia/Kolkata, every
- * site on PHP 5.6–7.4 answered 500 with "Timezone database is corrupt - this
- * should *never* happen!", and 8.x carried on. Measured on the nginx test
- * server (Ubuntu 26.04, tzdata 2026c, 2026-10-05) with the CLI, which shares
- * the code path:
+ * On those versions a guessed zone (e.g. Asia/Kolkata) makes every site answer 500 with
+ * "Timezone database is corrupt"; an explicit `date.timezone` works. Only below 8.0: 8.x guesses
+ * correctly, and a file here would override whatever is set in that version's own php.ini.
  *
- *  - no `date.timezone`, zone guessed from the system → fatal, on 5.6 and 7.4;
- *  - `date.timezone = Asia/Kolkata` set explicitly → works, on both;
- *  - UTC either way → works, which is why nobody saw it before a change.
- *
- * So it is the *guess* that breaks on those versions, not the zone data, and
- * an explicit value is the fix. Only below 8.0: 8.x guesses correctly, and a
- * file here would quietly override whatever someone set in that version's own
- * php.ini.
- *
- * A file of its own in the scan directory rather than an edit to php.ini, for
- * the reason FpmReloadGrace gives: the distro's conffile stays untouched. A
- * site's own PHP setting still wins — the pool sets it with
- * php_admin_value, which beats any ini file.
+ * A file of its own in the scan directory, not an edit to php.ini, so the distro's conffile stays
+ * untouched (see FpmReloadGrace). A site's own PHP setting still wins: the pool's php_admin_value
+ * beats any ini file.
  */
 class LegacyPhpTimezone
 {
@@ -50,10 +38,8 @@ class LegacyPhpTimezone
     }
 
     /**
-     * Every installed version that needs it. Never fatal: the timezone itself
-     * has already changed, and failing the request over one PHP version would
-     * report the opposite of what happened. Returns the versions it could not
-     * update, which the server-ops log has the reason for.
+     * Every installed version that needs it. Never fatal: the timezone itself has already changed.
+     * Returns the versions it could not update; the server-ops log has the reason.
      *
      * @return array<int, string>
      */
@@ -71,8 +57,7 @@ class LegacyPhpTimezone
     }
 
     /**
-     * One version: write the file into every directory it scans, then reload
-     * so running workers stop guessing. False on any failure.
+     * One version: write the file into every directory it scans, then reload. False on any failure.
      */
     public function apply(string $version, string $timezone): bool
     {

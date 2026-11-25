@@ -6,10 +6,8 @@ use App\Contracts\GitProvider;
 use App\Exceptions\Server\GitProviderException;
 
 /**
- * Resolves the GitProvider strategy for a provider key and describes the
- * connect form, so the frontend renders it from data rather than hardcoding
- * a field set per provider (they genuinely differ — Bitbucket needs a
- * workspace, GitLab can point at a self-hosted host).
+ * Resolves the GitProvider strategy for a provider key and describes the connect form, so the
+ * frontend renders it from data (fields differ per provider: Bitbucket workspace, GitLab host).
  */
 class GitProviderManager
 {
@@ -57,16 +55,8 @@ class GitProviderManager
                     'label' => __("git.fields.{$field}"),
                     'required' => (bool) ($spec['required'] ?? false),
                     'type' => (string) ($spec['type'] ?? 'text'),
-                    // Per-field guidance, null when the field speaks for
-                    // itself. There was nowhere to put this, so what a
-                    // self-hosted GitLab URL should contain and where a
-                    // Bitbucket workspace name comes from were either absent
-                    // or buried inside the *token's* help string — text about
-                    // one field, describing another, next to neither.
-                    //
-                    // Keyed per provider and field: `host` means a GitLab URL
-                    // and nothing else, and a shared key would eventually be
-                    // asked to describe two different things at once.
+                    // Per-field guidance, null when the field speaks for itself. Keyed per provider
+                    // and field: `host` means a GitLab URL only, so a shared key would clash.
                     'help' => $this->fieldHelp($provider, $field),
                 ], array_keys($fields), array_values($fields)),
             ];
@@ -76,9 +66,8 @@ class GitProviderManager
     /**
      * Help for one field of one provider, or null when there is none.
      *
-     * Absent by default rather than falling back to the key: a missing
-     * translation surfacing as `git.field_help.github.token` in a form input's
-     * hint is worse than no hint at all.
+     * Absent by default rather than falling back to the key: a raw `git.field_help.github.token`
+     * in a form hint is worse than no hint.
      */
     private function fieldHelp(string $provider, string $field): ?string
     {

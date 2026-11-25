@@ -12,13 +12,11 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * A site's own logs — access, error, and for a supervised application the
- * process output as well.
+ * A site's own logs — access, error, and for a supervised application the process output.
  *
- * Read, plus one destructive action: emptying a log. The client only ever names
- * a source by key — the path is resolved server-side from the web-server
- * driver, so no request can point this at a file of its choosing, and that is
- * what makes a `DELETE` here safe to offer at all.
+ * The client only names a source by key; the path is resolved server-side from the
+ * web-server driver, so no request can point this at a file of its choosing. That is
+ * what makes the `DELETE` safe to offer.
  */
 class ApplicationLogController extends Controller
 {
@@ -65,9 +63,8 @@ class ApplicationLogController extends Controller
         );
 
         if ($content === null) {
-            // The source is one this application should have, but there is
-            // nothing to read — a site that has never been visited has no
-            // access log. An empty screen that says so beats a 500.
+            // Valid source with nothing to read yet (e.g. a never-visited site has no access
+            // log): answer with an empty log, not a 500.
             return response()->json([
                 'log' => [
                     'key' => $key,
@@ -77,8 +74,7 @@ class ApplicationLogController extends Controller
                     'lines' => [],
                     'first_line' => null,
                     'truncated' => false,
-                    // Same shape whether or not there was anything to read, so
-                    // the client never has to check for the field's absence.
+                    // Same shape as the non-empty response.
                     'search_window_capped' => false,
                 ],
             ]);
@@ -95,7 +91,7 @@ class ApplicationLogController extends Controller
     }
 
     /**
-     * Download one log whole (LOG-dl) — the screen shows the last lines only.
+     * Download one log whole; the screen shows the last lines only.
      */
     public function download(
         Application $application,
@@ -140,11 +136,8 @@ class ApplicationLogController extends Controller
     /**
      * Empty one log. `app_log` **manage**.
      *
-     * Truncated rather than deleted — see ApplicationLogManager::clear(), where
-     * the reason lives. Logged to the activity feed with the source named:
-     * destroying a record without recording that it was destroyed is the worst
-     * version of this feature, and the only one a support conversation cannot
-     * recover from.
+     * Truncated rather than deleted — see ApplicationLogManager::clear(). Always logged to
+     * the activity feed with the source named.
      */
     public function destroy(
         Application $application,
@@ -168,8 +161,7 @@ class ApplicationLogController extends Controller
 
         $activity->log('application.log_cleared', $application, ['log' => $key, 'name' => $application->name]);
 
-        // The source still exists, it is simply empty now — so the client can
-        // re-read it rather than being told the key is gone.
+        // The source still exists, now empty, so the client can re-read it.
         return response()->json([
             'log' => [
                 'key' => $key,

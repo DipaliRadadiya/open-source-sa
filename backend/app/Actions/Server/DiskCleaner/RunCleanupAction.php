@@ -17,9 +17,8 @@ class RunCleanupAction
     ) {}
 
     /**
-     * Clean each selected category, measuring freed space (estimate before −
-     * after). Runs synchronously (Phase 1). Returns refreshed disk usage +
-     * per-category freed bytes.
+     * Clean each selected category, measuring freed space (estimate before − after).
+     * Runs synchronously. Returns refreshed disk usage + per-category freed bytes.
      *
      * @param  array<int, string>  $keys
      * @param  string  $trigger  `manual` (default) or `scheduled` — recorded
@@ -36,23 +35,18 @@ class RunCleanupAction
         foreach ($keys as $key) {
             $target = $this->cleaner->find($key);
 
-            // Defence in depth — the FormRequest already whitelists to
-            // available keys, but never trust that alone for a destructive op.
+            // Defence in depth: the FormRequest already whitelists keys, but this op is destructive.
             if (! $target || ! $target->available()) {
                 abort(404, __('errors/disk-cleaner.not_found'));
             }
 
-            // Measured with the same choice it cleans with, or the freed
-            // number compares two different selections.
+            // Same keep choice as the clean, or the freed number compares two selections.
             $before = $target->estimate($keepDays);
             $result = $target->clean($keepDays);
 
             if ($result->failed()) {
-                // Recorded before throwing. A scheduled clean swallows the
-                // exception so one bad category cannot stop the tick, which
-                // used to mean a cleaner failing every night looked exactly
-                // like one that had never run — and the `failed` status the
-                // run table defines was never written by anything.
+                // Recorded before throwing: a scheduled clean swallows the exception, so
+                // without this row a nightly failure looks like a cleaner that never ran.
                 DiskCleanerRun::create([
                     'trigger' => $trigger,
                     'categories' => $keys,
@@ -112,14 +106,9 @@ class RunCleanupAction
     /**
      * The activity verb for this run.
      *
-     * A separate verb rather than a `trigger` property, because the activity
-     * filters are built from the lang keys and filter on the indexed `action`
-     * column — a property would only be visible by opening each row, while a
-     * verb becomes something you can actually filter the page by.
-     *
-     * It also lets the automatic sentence stand on its own. A scheduled run has
-     * no actor, and "Cleaned disk" next to an empty name reads as though we had
-     * lost track of who did it.
+     * A separate verb rather than a `trigger` property: the activity filters are built from
+     * the lang keys and filter on the indexed `action` column. It also lets the automatic
+     * sentence stand alone, since a scheduled run has no actor.
      */
     private function verb(string $trigger, bool $failed = false): string
     {

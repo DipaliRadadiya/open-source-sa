@@ -10,9 +10,8 @@ use App\Services\Server\ServerOpsResult;
 /**
  * Ask the registry whether the stored credential works.
  *
- * Worth its own endpoint for the reason the storage probe is: without it the
- * first time anyone learns a token is wrong is when a site fails to provision,
- * at which point the failure is attributed to the site.
+ * Its own endpoint, like the storage probe: otherwise a wrong token is first noticed when a
+ * site fails to provision, and the failure is blamed on the site.
  */
 class TestRegistry
 {
@@ -43,22 +42,13 @@ class TestRegistry
     }
 
     /**
-     * Two outcomes worth telling apart, because they have different fixes: a
-     * credential the registry refused, and a registry nobody could reach.
+     * Two outcomes with different fixes: a credential the registry refused, and a registry
+     * nobody could reach. `docker login` words these differently for Hub (`unauthorized:
+     * incorrect username or password`), self-hosted (`401 Unauthorized`) and DNS failures
+     * (`no such host`), hence the needles below.
      *
-     * Measured against `docker login` on 2026-09-29, which words the same two
-     * failures three ways depending on what it is talking to:
-     *
-     *   - Hub, wrong password: `Get "https://registry-1.docker.io/v2/":
-     *     unauthorized: incorrect username or password`
-     *   - self-hosted, wrong password: `login attempt to http://…/v2/ failed
-     *     with status: 401 Unauthorized`
-     *   - host that does not resolve: `dial tcp: lookup … no such host`
-     *
-     * Unreachable is decided FIRST and by its own needles rather than by
-     * elimination. A DNS failure with `401` nowhere in it would otherwise fall
-     * through to "credentials", telling somebody to rotate a token because their
-     * registry hostname has a typo.
+     * Unreachable is decided FIRST, by its own needles: a DNS failure with no `401` in it would
+     * otherwise fall through to "credentials" and tell someone to rotate a token over a typo.
      */
     private function classify(ServerOpsResult $result): string
     {
@@ -83,10 +73,8 @@ class TestRegistry
             }
         }
 
-        // Neither pattern matched, so say so rather than picking the likelier of
-        // the two. A wrong category here is a user changing the thing that was
-        // never broken, which is the same rule the provisioning classifier
-        // states about itself.
+        // Neither pattern matched: say so rather than guess. A wrong category sends the user to
+        // change something that was never broken.
         return 'unknown';
     }
 }

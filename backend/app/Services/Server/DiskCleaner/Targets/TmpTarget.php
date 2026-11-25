@@ -11,12 +11,9 @@ use Illuminate\Support\Facades\Date;
  * Old files in /tmp and /var/tmp: older than the keep choice, or — for delete
  * all — every file nothing has written to in the last hour.
  *
- * Delete all is the one choice that does not mean "everything" here, because
- * /tmp is not a store, it is where running work lives: the panel's own
- * installers, staging and clone dumps write there (`installer_work_dir`,
- * `WordPressStagingStrategy`, `DatabaseCopy`), and so do uploads and package
- * builds in progress. An hour without a write is the line between a file in
- * use and one that was left behind.
+ * Delete all does not mean "everything" here: /tmp is where running work lives (installers,
+ * staging and clone dumps, uploads, package builds), so an hour without a write is the line
+ * between a file in use and one left behind.
  */
 class TmpTarget extends AbstractCleanupTarget
 {
@@ -65,9 +62,8 @@ class TmpTarget extends AbstractCleanupTarget
     }
 
     /**
-     * `null` is the request from before the choice: the exact test it always
-     * ran (`-mtime +7`, which find reads as eight days or more), so a schedule
-     * nobody has touched since does not start deleting a day earlier.
+     * `null` keeps the original test (`-mtime +7`, i.e. eight days or more) so an untouched
+     * schedule does not start deleting a day earlier.
      */
     public function clean(?int $keepDays = null): ServerOpsResult
     {
@@ -108,18 +104,12 @@ class TmpTarget extends AbstractCleanupTarget
      */
     private function findArgs(): array
     {
-        // `-xdev` for the same reason as the rotated logs: /tmp is a common
-        // mount point, and anything mounted under it belongs to something else.
+        // `-xdev`: anything mounted under /tmp belongs to something else.
         return [
             'find', ...$this->dirs(), '-xdev', '-type', 'f',
-            // OpenLiteSpeed's runtime directory. Its pid file is written at
-            // start and never touched again, so on a server up for more than a
-            // week it is "old"; without it `lswsctrl restart` takes its "not
-            // running" path — a start that logs fatal "address already in
-            // use" errors before a new server takes over (measured on the OLS
-            // test box, 2026-09-30: the reload still happened, but only by
-            // luck of that fallback). Nothing in there is junk while
-            // OpenLiteSpeed runs.
+            // OpenLiteSpeed's runtime directory. Its pid file is never touched after start, so it
+            // looks "old"; without it `lswsctrl restart` takes its "not running" path and logs
+            // fatal "address already in use" errors. Nothing in there is junk while OLS runs.
             '!', '-path', $this->olsRuntimeDir().'/*',
         ];
     }

@@ -5,19 +5,15 @@ namespace App\Support;
 use Illuminate\Support\Facades\File;
 
 /**
- * The timezone the operating system runs in — which is the one cron schedules
- * are interpreted in, and therefore the only correct basis for "when does this
- * job run next".
+ * The timezone the operating system runs in: the one cron schedules are interpreted in, so the
+ * only correct basis for "when does this job run next".
  *
- * Deliberately a filesystem read rather than `timedatectl`: this is called once
- * per cron job in a list response, and spawning a process per row would make a
- * cheap endpoint expensive.
+ * A filesystem read rather than `timedatectl`: it is called once per cron job in a list
+ * response, and a process per row would make a cheap endpoint expensive.
  *
- * Memoized against what it was read from — the link's target and the file's
- * mtime — not for the life of the process. The queue worker runs for days:
- * a plain memo kept the zone it first read, so a PHP version installed after
- * a timezone change was given the old zone (OLD-4, 2026-10-22). Checking the
- * key is a readlink and a stat; reading the zone again only follows a change.
+ * Memoized against what it was read from (the link's target and the file's mtime), not for the
+ * life of the process: the queue worker runs for days and would keep a stale zone after a
+ * timezone change.
  */
 class ServerTimezone
 {
@@ -59,14 +55,11 @@ class ServerTimezone
     }
 
     /**
-     * `/etc/localtime` first, because it is what the system clock — and so
-     * cron — actually uses. `timedatectl set-timezone` repoints that link and
-     * on Ubuntu 24.04 leaves `/etc/timezone` as it was (RC-1, measured
-     * 2026-10-20): read first, the stale file kept every cron job saying
-     * "Etc/UTC" while it fired 5½ hours earlier in Asia/Kolkata.
+     * `/etc/localtime` first, because it is what cron actually uses: `timedatectl set-timezone`
+     * repoints that link and on Ubuntu 24.04 leaves `/etc/timezone` stale.
      *
-     * `/etc/timezone` stays as the fallback for systems where the link is a
-     * plain copy of the zone file (some containers), which names no zone.
+     * `/etc/timezone` is the fallback where the link is a plain copy of the zone file (some
+     * containers), which names no zone.
      */
     private static function detect(): string
     {

@@ -7,18 +7,10 @@ use App\Services\Server\Metrics\ServerMetrics;
 /**
  * What operating system this server is, read from `/etc/os-release`.
  *
- * Read with a plain file read, **not** through `ServerOps`. `/etc/os-release`
- * is world-readable by design — it is the file everything on the box uses to
- * identify the distribution — so routing it through `sudo -n` would invent a
- * permission failure that cannot otherwise happen, and then require handling
- * for it. That is exactly the mistake made with
- * `/run/systemd/shutdown/scheduled`, where careful refusal-vs-absence
- * reasoning guarded a failure mode created by choosing the wrong tool.
- * {@see ServerMetrics} already reads this file the
- * same way.
+ * Read with a plain file read, **not** through `ServerOps`: the file is world-readable, so `sudo -n`
+ * would only invent a permission failure. {@see ServerMetrics} reads it the same way.
  *
- * Memoized per path for the request: several messages can name the OS, and the
- * answer cannot change while the process is running.
+ * Memoized per path: the answer cannot change while the process runs.
  */
 final class OsRelease
 {
@@ -28,13 +20,10 @@ final class OsRelease
     /**
      * A short human label for this release — "Ubuntu 26.04".
      *
-     * Built from `NAME` + `VERSION_ID` rather than `PRETTY_NAME`, which carries
-     * the point release and the edition ("Ubuntu 24.04.4 LTS"). A message
-     * saying a vendor has not built for "Ubuntu 24.04.4 LTS" reads as though
-     * the patch level were the problem.
+     * Built from `NAME` + `VERSION_ID`, not `PRETTY_NAME`: its point release and edition
+     * ("Ubuntu 24.04.4 LTS") make a message read as if the patch level were the problem.
      *
-     * Null when the file cannot be read or says nothing useful — the caller
-     * decides what to say instead, because "unknown" is not a sentence.
+     * Null when the file cannot be read or says nothing useful; the caller words the fallback.
      */
     public static function label(): ?string
     {

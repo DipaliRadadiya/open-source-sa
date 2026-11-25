@@ -23,8 +23,7 @@ class UpdateCronjob
      */
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
-        // Path is derived from the slug, so a rename (new slug) relocates the
-        // file. Regenerate the slug when the name changes.
+        // The path derives from the slug, so a rename (new slug) relocates the file.
         $oldPath = $this->crontab->path($cronjob);
         $oldSlug = (string) $cronjob->slug;
 
@@ -32,9 +31,8 @@ class UpdateCronjob
             $data['slug'] = Cronjob::uniqueSlug($data['name'], $cronjob->id);
         }
 
-        // Resolved through the same check create uses, so a job can never be
-        // pointed at an account that does not exist — cron accepts such a file
-        // and then fails to run it, silently, on every tick.
+        // Same check create uses: cron accepts a file for a missing account and then silently
+        // fails to run it on every tick.
         if (array_key_exists('system_user_id', $data) || array_key_exists('username', $data)) {
             $data = array_merge($data, $this->runAsUser->resolve(
                 $data['system_user_id'] ?? null,
@@ -42,38 +40,29 @@ class UpdateCronjob
             ));
         }
 
-        // Kept so the row can be put back if the file operation refuses. No
-        // transaction: one held open across `tee` blocks every other write in
-        // the panel for the length of the command, and on SQLite that is the
-        // whole panel.
+        // Kept so the row can be put back if the file operation refuses. No transaction: one held
+        // open across `tee` would block every other write (on SQLite, the whole panel).
         $before = $cronjob->getOriginal();
 
-        // A job the panel created for a site is removed with the site. Once
-        // its command is edited it may do something the user wants kept, so
-        // it becomes theirs. A caller that only swaps the PHP it runs on
-        // (SwitchCronjobsPhp) says so, and the job stays the site's.
+        // A job the panel created for a site is removed with the site. Once its command is edited
+        // it becomes the user's. A caller that only swaps the PHP version (SwitchCronjobsPhp)
+        // passes `application_owned` and the job stays the site's.
         if (isset($data['command']) && $data['command'] !== $cronjob->command && ! array_key_exists('application_owned', $data)) {
             $data['application_owned'] = false;
         }
 
-        // Moved to another site (or to none): the user's from now on, so it is
-        // not deleted with either site behind their back (2026-10-29).
+        // Moved to another site (or to none): the user's from now on, not deleted with either site.
         if (array_key_exists('application_id', $data) && (int) $data['application_id'] !== (int) $cronjob->application_id && ! array_key_exists('application_owned', $data)) {
             $data['application_owned'] = false;
         }
 
         $cronjob->update($data);
 
-        // Re-materialise from the new state: active → (over)write the file,
-        // inactive → remove it.
-        //
-        // Ordered before the old file is removed, not after. If this fails the
-        // job is still described on disk exactly as it was, so a rename that
-        // cannot be written leaves a working cronjob rather than none.
+        // Re-materialise from the new state: active writes the file, inactive removes it. Done
+        // before the old file is removed, so a rename that cannot be written leaves a working job.
         try {
             if ($cronjob->active) {
-                // Throws with the step that failed — write() knows which of its
-                // seven privileged paths went wrong and nothing else can.
+                // Throws with the step that failed; only write() knows which one it was.
                 $this->crontab->write($cronjob);
             } else {
                 $removed = $this->crontab->remove($cronjob);
@@ -107,21 +96,17 @@ class UpdateCronjob
                 throw new CronjobOperationException($removed->reference, step: 'remove_stale');
             }
 
-            // Carry the output history over to the new name rather than
-            // stranding it under the old one.
+            // Carry the output history over to the new name.
             $this->crontab->moveLog($oldSlug, $cronjob);
         }
 
-        // An adopted job is still described by the file Server Sync found it
-        // in. Now that the panel has written its own — or removed it, for a job
-        // just switched off — that one has to go, or the command runs twice and
-        // switching a job off leaves it running.
+        // An adopted job is still described by the file Server Sync found it in. That file has to
+        // go once the panel writes its own, or the command runs twice (and "off" stays running).
         if ($cronjob->source_path) {
             $detached = $this->crontab->detachSource($cronjob);
 
             if ($detached?->failed()) {
-                // Same rule as the rename above: one edit must never leave two
-                // schedules behind, so ours goes rather than the original's.
+                // As with the rename: one edit must never leave two schedules, so ours goes.
                 $cleanup = $cronjob->active ? $this->crontab->remove($cronjob) : null;
                 if ($cleanup?->failed()) {
                     Log::warning('cronjob source detach cleanup failed', ['reference' => $cleanup->reference]);

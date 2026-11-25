@@ -10,11 +10,9 @@ class UpdateStorageDestination
     public function __construct(private ActivityLogger $activityLogger) {}
 
     /**
-     * Partial update. The FormRequest is responsible for sending only the
-     * keys the caller actually wants to change — a missing credential means
-     * "leave the rotated-in value alone", which is what a plain rename PATCH
-     * should do. The model's `encrypted:array` setter re-encrypts the whole
-     * config document when any part of it changes.
+     * Partial update. The FormRequest sends only the keys the caller wants to change; a missing
+     * credential means "leave the stored value alone". The model's `encrypted:array` setter
+     * re-encrypts the whole config document when any part changes.
      *
      * @param  array<string, mixed>  $data
      */
@@ -22,13 +20,8 @@ class UpdateStorageDestination
     {
         $config = $data['config'] ?? [];
 
-        // Merged, never replaced. A PATCH carrying only `config.host` must
-        // not clear the password stored beside it — assigning the incoming
-        // array wholesale would do exactly that, and the destination would
-        // keep working until the next backup ran.
-        // FTP-01: trusting a renewed FTPS certificate forgets the pinned one;
-        // the next connection records whatever the server presents now. A
-        // flag, never stored.
+        // Trusting a renewed FTPS certificate forgets the pinned one; the next connection records
+        // whatever the server presents now. A flag, never stored.
         $trusting = is_array($config) && (bool) ($config['trust_new_certificate'] ?? false);
 
         if ($trusting) {
@@ -39,16 +32,15 @@ class UpdateStorageDestination
             unset($config['trust_new_certificate']);
         }
 
+        // Merged, never replaced: a PATCH with only `config.host` must not clear the stored password.
         if (is_array($config) && $config !== []) {
             $destination->mergeConfig($config);
         }
 
         $destination->fill(array_intersect_key($data, array_flip(['name', 'prefix'])))->save();
 
-        // A stored test result describes the credentials and address that
-        // were probed. Change either and it describes nothing — keeping it
-        // would show "Connected" for a key that was rotated out a moment
-        // ago, which is worse than showing nothing at all.
+        // A stored test result describes the credentials and address that were probed; once either
+        // changes, keeping it would show "Connected" for a key that was rotated out.
         if ($trusting || $this->invalidatesTestResult($config)) {
             $destination->forgetTestResult();
         }
@@ -59,18 +51,11 @@ class UpdateStorageDestination
     }
 
     /**
-     * A rename or a prefix change leaves the connection itself untouched, so
-     * they do not throw the result away. Everything that decides *what the
-     * panel talks to* does.
+     * A rename or prefix change leaves the connection untouched, so the result stays; any config
+     * key (what the panel talks to) invalidates it.
      *
-     * This is now "any config key at all" rather than the old hardcoded list
-     * of five S3 columns: that list could only ever be right for one
-     * provider, and a host or password change slipping past it would leave a
-     * green "Connected" badge describing a destination that no longer exists.
-     *
-     * `host_fingerprint` is the one exception — it is *recorded by* a
-     * successful probe rather than supplied by a user, so treating it as a
-     * change would make every SFTP probe invalidate its own result.
+     * The fingerprints are the exception: a successful probe records them, so counting them as a
+     * change would make every probe invalidate its own result.
      *
      * @param  array<string, mixed>  $config
      */

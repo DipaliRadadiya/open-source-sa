@@ -9,18 +9,17 @@ use Illuminate\Support\Facades\View;
 /**
  * One-click sign-in to an Adminer site.
  *
- * How the token reaches the site, and why it is a file, is shared with
- * phpMyAdmin and explained on {@see DatabaseClientSso}. What is Adminer's own:
+ * How the token reaches the site is shared with phpMyAdmin; see {@see DatabaseClientSso}.
+ * Adminer's own parts:
  *
- *  - **`index.php`**, a wrapper that locks Adminer to this server's own
- *    database servers. Stock Adminer takes any host and any driver on its login
- *    form, which on a public URL is a probe for whatever the server can reach.
- *  - **`sso.php`** writes the session layout Adminer's own login form writes
- *    (`pwds` / `db` keyed by driver, server and user).
+ *  - **`index.php`**, a wrapper that locks Adminer to this server's own database servers. Stock
+ *    Adminer accepts any host and driver on its login form, a probe for whatever the server can
+ *    reach.
+ *  - **`sso.php`** writes the session layout Adminer's own login form writes (`pwds` / `db`
+ *    keyed by driver, server and user).
  *
- * Both are rewritten on every click, like phpMyAdmin's script: a site
- * installed before a change to either repairs itself the next time someone
- * opens a database, and a database port changed since install is picked up.
+ * Both are rewritten on every click, so older sites repair themselves and a changed database
+ * port is picked up.
  */
 class AdminerSso extends DatabaseClientSso
 {

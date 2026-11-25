@@ -52,16 +52,13 @@ class BackupDownloadController extends Controller
     }
 
     /**
-     * The prepared copy itself.
+     * The prepared copy itself, sent from the panel's own disk.
      *
-     * The one place the panel sends an archive's bytes, and only ever from
-     * its own disk. Each send holds a PHP worker for the whole transfer, so
-     * only a few run at once; one more is told to try again shortly rather
-     * than queued behind them with a connection open.
+     * Each send holds a PHP worker for the whole transfer, so only a few run at once;
+     * one more gets 503 and a retry hint instead of waiting with a connection open.
      *
-     * Recorded as `backup.downloaded` when the file starts going out — not
-     * when the link is made, which is only an offer. A resumed download
-     * (a `Range` past the start) is the same download, and is not logged again.
+     * Logged as `backup.downloaded` when the file starts going out, not when the link is
+     * made. A resumed download (a `Range` past the start) is not logged again.
      */
     public function file(Request $request, Backup $backup, PreparedDownloads $downloads, ActivityLogger $activity): BinaryFileResponse|JsonResponse
     {
@@ -80,9 +77,8 @@ class BackupDownloadController extends Controller
             return response()->json(['message' => __('backup.errors.download_busy'), 'reason' => 'busy'], 503, ['Retry-After' => '30']);
         }
 
-        // Freed when the response has been sent, and — because a client that
-        // hangs up mid-transfer ends the script before `terminating` runs —
-        // at shutdown as well. Releasing twice is harmless.
+        // Freed after the response, and at shutdown too: a client that hangs up mid-transfer
+        // ends the script before `terminating` runs. Releasing twice is harmless.
         $release = static fn () => $slot->release();
         app()->terminating($release);
         register_shutdown_function($release);
@@ -93,8 +89,7 @@ class BackupDownloadController extends Controller
         $range = (string) $request->headers->get('Range', '');
 
         if ($range === '' || str_starts_with($range, 'bytes=0-')) {
-            // Who took a copy of every file on the site and its database. The
-            // link is not recorded: it works for as long as the copy exists.
+            // Records who took a copy of the site's files and database.
             $activity->log('backup.downloaded', $backup, [
                 'application' => $backup->subjectName(),
                 'backup_id' => $backup->getKey(),

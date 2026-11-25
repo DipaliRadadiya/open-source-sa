@@ -9,22 +9,15 @@ use Throwable;
 /**
  * Reads an SSH server's public host key and renders it as a fingerprint.
  *
- * This is the "first use" half of trust-on-first-use. The panel records what
- * the host presented the first time it connected, and every connection after
- * that is pinned to it — so a destination that starts answering with a
- * different key stops the backup instead of handing a site's database and
- * `.env` to whoever is now on the other end.
+ * This is the "first use" half of trust-on-first-use: the key seen on the first connection is
+ * recorded and every later connection is pinned to it, so a destination that starts answering
+ * with a different key stops the backup instead of receiving a site's database and `.env`.
  *
- * ⚠️ The first connection is, unavoidably, unauthenticated. TOFU cannot verify
- * a key it has never seen; what it buys is detection of a *change*. An
- * operator who needs certainty can read the fingerprint off the server
- * (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) and compare it with the
- * one the panel displays — which is why `host_fingerprint` is shown in the UI
- * rather than kept hidden.
+ * ⚠️ The first connection is unauthenticated; TOFU only detects a *change*. For certainty, compare
+ * the fingerprint shown in the UI with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`.
  *
- * The format is the one `SftpConnectionProvider` accepts and the one OpenSSH
- * prints: `sha256:` followed by the unpadded base64 of the SHA-256 digest of
- * the binary key.
+ * Format (same as OpenSSH and `SftpConnectionProvider`): `sha256:` plus the unpadded base64 of
+ * the SHA-256 digest of the binary key.
  */
 class SftpHostKey
 {
@@ -46,10 +39,8 @@ class SftpHostKey
     /**
      * The host's fingerprint, or null if it could not be read.
      *
-     * Null is not an error worth surfacing on its own: the probe that follows
-     * will fail for the same reason and will say something more useful about
-     * it than "could not read a host key" — which, to someone who typed a
-     * wrong hostname, explains nothing.
+     * Null is not surfaced as an error: the probe that follows fails for the same reason with a
+     * more useful message.
      */
     public function fingerprint(string $host, int $port): ?string
     {

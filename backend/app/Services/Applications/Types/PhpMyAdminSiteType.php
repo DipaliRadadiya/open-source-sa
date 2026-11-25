@@ -5,9 +5,8 @@ namespace App\Services\Applications\Types;
 /**
  * phpMyAdmin — a database client, not a site.
  *
- * The simplest card in the catalog: no admin account to create, no database
- * of its own, nothing to name. Whoever opens it signs in with their own
- * database credentials, so the create form is just the common fields.
+ * No admin account or database of its own: whoever opens it signs in with their own database
+ * credentials, so the create form is just the common fields.
  */
 class PhpMyAdminSiteType extends AbstractSiteType
 {
@@ -42,9 +41,8 @@ class PhpMyAdminSiteType extends AbstractSiteType
     }
 
     /**
-     * It reads the databases already on the server. One of its own would sit
-     * empty, and the standing account that came with it would be a credential
-     * nobody asked for.
+     * It reads the databases already on the server; one of its own would sit empty and add a
+     * standing credential nobody asked for.
      */
     public function needsDatabase(): bool
     {
@@ -62,14 +60,11 @@ class PhpMyAdminSiteType extends AbstractSiteType
     }
 
     /**
-     * A tool, not a site. It holds no content of its own — it reads the
-     * databases that are already on the server — so backing it up, cloning it
-     * or password-listing it are all screens about nothing. Reinstalling is
-     * the honest recovery path.
+     * A tool, not a site: it holds no content, so backup and clone make no sense; reinstalling is
+     * the recovery path.
      *
-     * Password protection stays: an exposed phpMyAdmin is a login page for
-     * every database on the box, and a second lock in front of it is the one
-     * hardening step that matters most here.
+     * Password protection stays: an exposed phpMyAdmin is a login page for every database on the
+     * box, and a second lock is the hardening step that matters most here.
      */
     public function features(): array
     {
@@ -80,16 +75,10 @@ class PhpMyAdminSiteType extends AbstractSiteType
     }
 
     /**
-     * phpMyAdmin 5.2.3, measured 2026-09-18.
+     * phpMyAdmin 5.2.3: `composer.json` declares `"php": "^7.2.5 || ^8.0"`.
      *
-     * `composer.json` declares `"php": "^7.2.5 || ^8.0"`.
-     *
-     * 🔴 **No ceiling, deliberately.** A proposed `max => 8.3` was refused
-     * because nothing supports it: `^8.0` admits every 8.x, and phpMyAdmin's
-     * own FAQ only ever states minimums — "Since release 5.2, phpMyAdmin
-     * supports only PHP 7.2 and newer." 5.2.3 shipped in October 2025, almost
-     * a year after PHP 8.4, and declares no incompatibility with it. A ceiling
-     * with no source behind it refuses working versions for nothing.
+     * 🔴 **No ceiling, deliberately.** `^8.0` admits every 8.x and upstream only states minimums;
+     * a ceiling with no source would refuse working versions for nothing.
      */
     public function supportedPhpRange(): ?array
     {

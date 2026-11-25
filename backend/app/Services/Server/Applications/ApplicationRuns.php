@@ -8,13 +8,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Writes the record of one install or one container redeploy (D3/D5).
+ * Writes the record of one install or one container redeploy.
  *
- * Opened `queued` by whoever dispatches the job, so Background jobs and the
- * app screen show it in the seconds before a worker picks it up, then moved on
- * by the job. Every transition out of `queued`/`running` is conditional on the
- * row still being there, so a row closed as stranded is never reopened by a
- * job that turns up late.
+ * Opened `queued` by whoever dispatches the job, so Background jobs and the app screen
+ * show it before a worker picks it up. Every transition out of `queued`/`running` is
+ * conditional on the row's current status, so a row closed as stranded is never reopened
+ * by a job that turns up late.
  */
 class ApplicationRuns
 {
@@ -51,9 +50,8 @@ class ApplicationRuns
     }
 
     /**
-     * The install job's way in: it is dispatched from more than one place and
-     * may be one queued before this record existed, so it adopts the newest
-     * row still open for its site, or opens one.
+     * The install job's way in: it is dispatched from several places and may predate this
+     * record, so it adopts the newest open row for its site, or opens one.
      */
     public function startInstall(Application $application, ?int $userId): ApplicationRun
     {
@@ -74,9 +72,8 @@ class ApplicationRuns
             'reference' => null,
         ])->save();
 
-        // An older row still open for this site belongs to a dispatch that
-        // never ran (the job is unique per site, so it cannot be running): left
-        // alone it would read "waiting" in Background jobs once this one ends.
+        // An older open row is a dispatch that never ran (the job is unique per site); left
+        // alone it would read "waiting" in Background jobs after this one ends.
         ApplicationRun::query()
             ->where('application_id', $application->id)
             ->where('kind', ApplicationRun::INSTALL)
@@ -103,9 +100,8 @@ class ApplicationRuns
     }
 
     /**
-     * Close whatever is still open for this site and kind — for the paths that
-     * have only the application to go on: a job's `failed()`, a stranded
-     * install.
+     * Close whatever is still open for this site and kind, for paths that have only the
+     * application to go on (a job's `failed()`, a stranded install).
      */
     public function failOpen(int $applicationId, string $kind, string $step, ?string $reference): int
     {

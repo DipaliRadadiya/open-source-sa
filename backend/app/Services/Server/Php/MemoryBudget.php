@@ -8,14 +8,9 @@ use App\Models\ApplicationPhpSettings;
 /**
  * What every site's PHP settings add up to, against what the server has.
  *
- * The number none of the panels I looked at will show you. All of them let you
- * set 50 workers × 512M on a 2 GB box; you find out when the OOM killer takes
- * a *different* site down at three in the morning and nothing connects the two
- * events.
- *
- * A worst case, not a prediction — workers rarely all sit at their limit. But
- * the worst case is what the kernel reacts to, and it is the only number that
- * can be computed rather than guessed.
+ * Without it, 50 workers × 512M on a 2 GB box goes unnoticed until the OOM killer takes a
+ * *different* site down. A worst case, not a prediction, but it is what the kernel reacts to
+ * and the only number that can be computed rather than guessed.
  */
 class MemoryBudget
 {
@@ -28,10 +23,8 @@ class MemoryBudget
         $committed = 0;
         $sites = 0;
 
-        // Every site with a pool of its own, saved settings or not
-        // (PHP-mem). Counting only saved rows left out every pool still on
-        // the defaults — 20 workers × 256M is 5 GB per site — so the screen
-        // showed memory free that was already spoken for.
+        // Every site with a pool of its own, saved settings or not: pools still on the defaults
+        // (20 workers × 256M = 5 GB) are committed memory too.
         $applications = Application::query()
             ->whereNotNull('isolated_at')
             ->with('phpSettings')
@@ -55,8 +48,7 @@ class MemoryBudget
     }
 
     /**
-     * The budget as it would be with these settings applied to this site —
-     * what the screen shows *before* someone presses save.
+     * The budget as it would be with these settings applied to this site, shown before save.
      *
      * @return array{total: int, committed: int, available: int, over_committed: bool, sites: int, this_site: int}
      */
@@ -77,10 +69,8 @@ class MemoryBudget
     }
 
     /**
-     * Total RAM, read from /proc rather than stored.
-     *
-     * A VPS can be resized under you, and a cached figure would then be a
-     * budget against a machine that no longer exists. 0 when unknown.
+     * Total RAM, read from /proc rather than stored: a resized VPS would leave a cached figure
+     * stale. 0 when unknown.
      */
     public function totalMemoryBytes(): int
     {

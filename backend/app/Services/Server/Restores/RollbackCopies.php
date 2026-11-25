@@ -16,16 +16,13 @@ use Throwable;
 /**
  * The `.rollback-{id}` copies a file restore leaves beside the site.
  *
- * `SwapFiles` moves the live site aside before putting the restored one in its
- * place, and the copy stays. After a successful restore the runner keeps only
- * the newest one per site. A *failed* restore's copy was never removed by
- * anything (2026-10-18): it is left when the restore fails after the swap —
- * the restored site came back but its process would not start — or when moving
- * the old site back failed. A whole second copy of the site, kept for good.
+ * `SwapFiles` moves the live site aside before putting the restored one in its place. After a
+ * successful restore the runner keeps only the newest copy per site; a *failed* restore's copy
+ * (swap done but the process would not start, or the move back failed) is pruned here.
  */
 class RollbackCopies
 {
-    /** Days a failed restore's copy is kept before {@see pruneFailed()} removes it. Operator's call, 2026-10-18. */
+    /** Days a failed restore's copy is kept before {@see pruneFailed()} removes it. */
     public const FAILED_KEEP_DAYS = 7;
 
     public function __construct(
@@ -35,17 +32,13 @@ class RollbackCopies
     ) {}
 
     /**
-     * Remove failed restores' copies older than {@see FAILED_KEEP_DAYS}, where
-     * that is safe. Returns how many were removed.
+     * Remove failed restores' copies older than {@see FAILED_KEEP_DAYS}, where that is safe.
+     * Returns how many were removed.
      *
-     * A copy goes only when all of these hold, because when the move back
-     * failed the copy *is* the site:
-     * - the path is exactly the `.rollback-{id}` beside this site's root, as
-     *   the panel itself recorded it;
-     * - the site's root is there now (asked, not assumed — a refused or failed
-     *   check keeps the copy);
-     * - the safety backup this restore took first still exists and was
-     *   verified, so what the copy holds is also in a backup the user can see.
+     * A copy goes only when all hold, because after a failed move back the copy *is* the site:
+     * - the path is exactly the `.rollback-{id}` beside this site's root;
+     * - the site's root exists now (a refused or failed check keeps the copy);
+     * - the verified safety backup this restore took first still exists.
      */
     public function pruneFailed(): int
     {
@@ -100,12 +93,11 @@ class RollbackCopies
     }
 
     /**
-     * Delete one recorded copy and clear it from the row. False when `rm`
-     * failed; the row then still points at what is left.
+     * Delete one recorded copy and clear it from the row. False when `rm` failed; the row then
+     * still points at what is left.
      *
-     * The site root's immutable flag is lifted around it, as for every other
-     * change beside the root. `rm -rf` on a symlink removes the link and not
-     * its target, so a copy swapped for one cannot redirect this.
+     * The site root's immutable flag is lifted around it. `rm -rf` on a symlink removes the link,
+     * not its target, so a copy swapped for one cannot redirect this.
      */
     public function remove(Restore $restore, Application $application): bool
     {

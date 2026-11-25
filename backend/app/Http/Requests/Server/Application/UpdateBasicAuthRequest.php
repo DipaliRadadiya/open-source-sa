@@ -22,22 +22,14 @@ class UpdateBasicAuthRequest extends FormRequest
     {
         return [
             'enabled' => ['required', 'boolean'],
-            // Both required whenever turning protection on, or changing the
-            // credential on a site already protected — one save action, no
-            // partial "keep the old password" update to reason about.
+            // Both required when turning protection on or changing the credential: no partial update.
             'username' => [
                 Rule::requiredIf($this->boolean('enabled')),
                 'string',
                 'max:255',
-                // The htpasswd line is `username:hash` — a colon in the
-                // username would corrupt it, and this is the one place
-                // nothing downstream re-validates that.
-                //
-                // Printable ASCII only (bug #76). Browsers send Basic Auth
-                // credentials in an encoding the standard never pinned down,
-                // so a username with an accent or a non-Latin letter could be
-                // saved here and then never match what the browser sends:
-                // a site nobody can open.
+                // The htpasswd line is `username:hash`: a colon would corrupt it, and nothing
+                // downstream re-validates. Printable ASCII only: browsers send Basic Auth in an
+                // unspecified encoding, so an accented or non-Latin name would never match.
                 'regex:/^[\x21-\x39\x3B-\x7E]+$/',
             ],
             'password' => [
@@ -63,15 +55,9 @@ class UpdateBasicAuthRequest extends FormRequest
      * Refuse to put Basic Auth in front of an application that authenticates
      * with the `Authorization` header.
      *
-     * HTTP carries one `Authorization` header. If the application's own client
-     * sends `Authorization: Bearer <token>`, that replaces the Basic
-     * credentials the browser would attach and nginx answers 401; send the
-     * credentials instead and the application answers 401. The application
-     * becomes unusable rather than merely double-protected, so this is
-     * rejected at the boundary rather than left to be discovered.
-     *
-     * These applications are not left unprotected: every type that returns
-     * true here mandates its own credentials at install time.
+     * HTTP carries one `Authorization` header: with the application's own `Bearer` token, nginx
+     * answers 401; with the Basic credentials, the application does. It becomes unusable, so this
+     * is rejected up front. These applications still mandate their own credentials at install.
      */
     public function withValidator(Validator $validator): void
     {

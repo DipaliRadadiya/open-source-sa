@@ -7,31 +7,17 @@ use GuzzleHttp\Client as GuzzleClient;
 /**
  * The HTTP client both Drive disks upload through.
  *
- * Exists for one setting: **cURL's low-speed abort**. A resumable upload that
- * Google has hung up on does not raise an error — the client sits in `poll()`
- * on a half-closed socket, transferring nothing, until something else kills it.
- * On the run that prompted this that "something else" was the job timeout an
- * hour later, and in the meantime the only queue worker was occupied, so every
- * other backup and restore on the box queued behind a transfer that was already
- * dead.
+ * Exists for one setting: **cURL's low-speed abort**. A resumable upload that Google has hung up
+ * on raises no error; the client sits on a half-closed socket until the job timeout, blocking
+ * the queue worker for every other backup and restore.
  *
- * `CURLOPT_LOW_SPEED_LIMIT`/`TIME` is cURL's own answer to exactly this, and it
- * is better than any timeout we could impose from outside because it measures
- * **bytes, not wall-clock**. A 24 GB archive on a thin link legitimately takes
- * hours; the same archive on a dead socket moves nothing. A wall-clock limit
- * cannot tell those apart and must therefore be set high enough to be useless.
- * A byte-rate floor separates them exactly.
+ * `CURLOPT_LOW_SPEED_LIMIT`/`TIME` measures **bytes, not wall-clock**, so a huge archive on a
+ * thin link still passes while a dead socket is aborted. A wall-clock limit cannot tell them apart.
  *
- * The floor is one byte per second, deliberately: this is a liveness check, not
- * a performance target. Anything above zero means the transfer is progressing
- * and is none of this class's business — a user on a slow link is not having a
- * failure, and a guard that fails them would be worse than the bug it replaces.
+ * The floor is one byte per second on purpose: a liveness check, not a performance target.
  *
- * `timeout => 0` is equally deliberate. Guzzle's total-request timeout would
- * apply to the whole multi-hour upload, so any finite value here reintroduces
- * the "killed at the limit regardless of health" bug this pair exists to
- * remove. `connect_timeout` stays finite because establishing a connection is
- * not a long operation under any circumstances.
+ * `timeout => 0` is also deliberate: Guzzle's total-request timeout would cap the whole
+ * multi-hour upload. `connect_timeout` stays finite.
  */
 class GoogleHttpClient
 {
