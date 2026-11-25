@@ -11,18 +11,15 @@ use Illuminate\Support\Str;
 /**
  * A cron job's runs, read back out of its output log.
  *
- * The log is the record, not the database: cron runs a job as its own
- * account, which cannot write to the panel's database, and the wrapper
- * {@see CrontabManager::runLine()} writes already frames every run in it:
+ * The log is the record, not the database: cron runs a job as its own account, which cannot
+ * write to the panel's database. The wrapper {@see CrontabManager::runLine()} frames every run:
  *
  *     --- start pid=4711 at 2026-10-27T03:00:01+00:00
  *     …whatever the job printed…
  *     --- exit=0 pid=4711 at 2026-10-27T03:00:09+00:00
  *
- * Jobs written before the start line existed have only
- * `--- exit=N at <time>`; their runs are still found, without a start time.
- * History reaches as far back as the current log file — logrotate moves the
- * rest aside.
+ * Older jobs have only `--- exit=N at <time>`; their runs are found without a start time.
+ * History reaches back as far as the current log file (logrotate moves the rest aside).
  */
 class CronjobHistory
 {
@@ -68,12 +65,10 @@ class CronjobHistory
     }
 
     /**
-     * The latest run of each job, keyed by job id — null for a job that has
-     * not run. One privileged process for the whole page, not one per job.
+     * The latest run of each job, keyed by job id (null if it has not run), using one
+     * privileged process for the whole page.
      *
-     * A read that fails answers null for every job rather than failing the
-     * list: the list is how a user reaches the job, and "last run unknown" is
-     * still true.
+     * A failed read answers null for every job rather than failing the list.
      *
      * @param  iterable<Cronjob>  $cronjobs
      * @return array<int, array<string, mixed>|null>
@@ -95,9 +90,8 @@ class CronjobHistory
             return $latest;
         }
 
-        // Each file's tail behind a line nobody can predict. tail's own
-        // `==> file <==` headers would do, except that a job can print one
-        // and pass its output off as another account's job.
+        // Each file's tail behind an unpredictable boundary: a job could print tail's own
+        // `==> file <==` header and pass its output off as another job's.
         $boundary = '--- panel-'.Str::random(32);
         $bytes = (string) (int) config('server.cronjob_latest_window_bytes', 16384);
 
@@ -124,8 +118,7 @@ class CronjobHistory
             [$size, $path] = array_pad(explode(' ', $header, 2), 2, '');
 
             if (isset($paths[$path])) {
-                // The file's size, not the length read: the last section has
-                // no separator after it, so the two cannot be compared alike.
+                // The file's size, not the length read: the last section has no separator.
                 $runs = $this->scan($content, (int) $size > (int) $bytes);
 
                 if ($runs !== []) {
@@ -142,15 +135,11 @@ class CronjobHistory
     }
 
     /**
-     * Fill in the start of a last run whose start line is outside the list's
-     * window (RC-38).
+     * Fill in the start of a last run whose start line is outside the list's window.
      *
-     * A run that printed more than the window shows only its exit there, and
-     * was listed as started by cron — `manual: false`, no start time — while
-     * its history, read from a wider window, said Run now. The start lines are
-     * read again for just those logs, from the history's window, so the list
-     * and the history agree. Only start lines come back, so the second read
-     * stays small, and it only happens when a run needs it.
+     * A run that printed more than the window shows only its exit there and would be listed as
+     * started by cron. The start lines are read again, from the history's wider window, for
+     * just those logs, so the list and the history agree.
      *
      * @param  array<string, array<string, mixed>>  $runs  path => run
      * @return array<string, array<string, mixed>>
@@ -171,9 +160,8 @@ class CronjobHistory
             array_push($pairs, (string) $run['pid'], $path);
         }
 
-        // The window's first line is dropped when the file is longer than the
-        // window, as parse() drops it: it may be the end of a line the job
-        // printed, `xx--- start …`, cut to look like a marker.
+        // The window's first line is dropped when the file is longer than the window, as
+        // parse() does: it may be a printed `xx--- start …` line cut to look like a marker.
         $result = $this->serverOps->run(
             [
                 'sh', '-c',
@@ -216,10 +204,8 @@ class CronjobHistory
     /**
      * Split a log into runs, oldest first.
      *
-     * Output belongs to the run that is open when it is printed. Two open at
-     * once (a Run now during cron's own run) write into the same file
-     * interleaved, and nothing can untangle that — the output goes to the
-     * newer one and both say they overlapped.
+     * Output belongs to the run open when it is printed. Overlapping runs write interleaved
+     * output that cannot be untangled: it goes to the newer one and both are flagged `overlapped`.
      *
      * @param  bool  $clipped  The text is the end of a longer file, so its
      *                         first line may be cut and its first run's output
@@ -232,8 +218,7 @@ class CronjobHistory
     }
 
     /**
-     * {@see parse()}, before the runs are put in the API's shape: with their
-     * pids and raw times.
+     * {@see parse()} before the API shape is applied: runs keep their pids and raw times.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -252,8 +237,8 @@ class CronjobHistory
 
         foreach ($lines as $line) {
             if (preg_match(self::START, $line, $m)) {
-                // A pid still open from an earlier start is a run that never
-                // wrote its exit (a reboot) and whose pid came round again.
+                // A pid still open is a run that never wrote its exit (a reboot) whose pid
+                // came round again.
                 if (isset($open[(int) $m[1]])) {
                     $runs[$open[(int) $m[1]]]['killed'] = true;
                     unset($open[(int) $m[1]]);
@@ -281,8 +266,8 @@ class CronjobHistory
                     $index = $open[$pid];
                     unset($open[$pid]);
                 } else {
-                    // Its start is before the window, or it predates the start
-                    // line: everything since the last run ended is its output.
+                    // Start is before the window or predates the start line: everything since
+                    // the last run ended is its output.
                     $runs[] = $this->run(pid: $pid, manual: false, startedAt: null);
                     $index = array_key_last($runs);
                     $runs[$index]['output'] = $loose;
@@ -337,11 +322,8 @@ class CronjobHistory
         $status = match (true) {
             $run['exit_code'] === 0 => 'succeeded',
             $run['exit_code'] !== null => 'failed',
-            // No exit line yet: still going if the shell that wrote the start
-            // line is, otherwise it was killed (a reboot, an OOM) before it
-            // could say how it ended.
-            // /proc lists every process to every account, so the panel can
-            // ask without sudo.
+            // No exit line: running if the shell that wrote the start line is (/proc needs no
+            // sudo), otherwise killed (reboot, OOM) before it could say how it ended.
             ! $run['killed'] && $run['pid'] !== null && is_dir("/proc/{$run['pid']}") => 'running',
             default => 'interrupted',
         };

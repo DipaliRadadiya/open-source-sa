@@ -9,28 +9,15 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
 /**
- * Is there a web server the panel can write config for, and is that config
- * currently valid?
+ * Is there a web server the panel can write config for, and is that config currently valid?
  *
- * Two separate failures hide here. A box running something the panel has no
- * driver for means every site creation is refused — correctly, but only at
- * the moment someone tries. And a config that no longer passes its own test
- * means the *next* reload takes every hosted site down, whether or not the
- * panel caused it; finding that out during a deploy is the worst possible
- * time.
- *
- * There is a third answer, and leaving it out is what made this check lie: the
- * panel may not be *allowed* to run the config test. That is a warning about
- * this check, not a verdict on the config — {@see PrivilegeCheck} is where the
- * missing grant belongs, and it reports it.
- *
- * And a fourth, which this check used to be blind to. Everything above asks
- * the *box* what is installed. The panel does not use that answer — it uses
- * `ServerCapability.web_server`, recorded at install time. When the two
- * disagree the box is fine, the config test passes, and doctor reported a
- * clean bill of health on a server where every site creation was writing an
- * Apache vhost into a directory that did not exist. A check that reads a
- * different value from the code it is checking is not checking that code.
+ * Failures it reports:
+ *  - No driver for the installed web server: every site creation is refused.
+ *  - A config that fails its own test: the next reload takes every site down.
+ *  - The panel is not allowed to run the config test: a warning about this check, not a
+ *    verdict on the config ({@see PrivilegeCheck} reports the missing grant).
+ *  - The box and `ServerCapability.web_server` (recorded at install, and what the panel
+ *    actually uses) disagree.
  */
 class WebServerCheck implements DoctorCheck
 {
@@ -46,9 +33,7 @@ class WebServerCheck implements DoctorCheck
 
     public function run(): array
     {
-        // Before anything else, because it can repair itself: a record the box
-        // flatly contradicts is corrected here rather than left for an operator
-        // to fix with a command they would first have to be told about.
+        // First: a record the box flatly contradicts is corrected here.
         $this->capabilities->reconcileWebServer();
 
         $detected = $this->detect();
@@ -74,9 +59,8 @@ class WebServerCheck implements DoctorCheck
         $drivers = (array) config('server.web_server_drivers');
 
         if (! isset($drivers[$detected])) {
-            // Detected but undrivable — sites cannot be created. Deliberate:
-            // a config we invented would fail its own test at best and take
-            // every site down at worst.
+            // Detected but undrivable: sites cannot be created, deliberately (an invented
+            // config could take every site down).
             return [
                 'status' => 'fail',
                 'detail' => __('doctor.details.web_undrivable', ['server' => $detected]),
@@ -84,18 +68,8 @@ class WebServerCheck implements DoctorCheck
             ];
         }
 
-        // OpenLiteSpeed used to be asked `lswsctrl status` here — whether the
-        // service is running, which is not what this check is for. A box with
-        // a healthy process and a broken vhost got "config valid", on the one
-        // stack whose config test needs the panel's help to work at all. Same
-        // shape as PhpIsolationCheck's bare pass: a check answering "fine"
-        // about a thing it never looked at.
-        //
-        // The real test goes through OlsConfigCheck rather than being spelled
-        // out here, because on this stack the command cannot fail unless a
-        // directory is created first — and a second copy of that knowledge is
-        // how the shared-config guard came to be wired to a check that could
-        // not fail.
+        // OpenLiteSpeed: test the config (not `lswsctrl status`, which only says it runs).
+        // It goes through OlsConfigCheck, which creates a directory the command needs first.
         if ($detected === 'openlitespeed') {
             return $this->openLiteSpeed();
         }
@@ -109,14 +83,8 @@ class WebServerCheck implements DoctorCheck
         $result = Process::timeout(15)->run(array_merge(['sudo', '-n', $binary], $args));
 
         if (! $result->successful()) {
-            // A non-zero exit is two different findings wearing one face. sudo
-            // refuses before the binary runs, and the refusal exits non-zero
-            // exactly like a failed config test — so on a box with no sudoers
-            // grant this reported "the web server configuration is invalid"
-            // while `nginx -t` passed and every vhost was fine. Doctor is what
-            // you run when something is already broken; inventing a second,
-            // false problem out of the first sends the reader in the wrong
-            // direction at the worst moment.
+            // A non-zero exit can also be sudo refusing before the binary runs; without a
+            // sudoers grant that must not be reported as an invalid configuration.
             if (! $this->permitted($binary)) {
                 return [
                     'status' => 'warn',
@@ -142,10 +110,8 @@ class WebServerCheck implements DoctorCheck
     /**
      * OpenLiteSpeed's config test, with the preparation it cannot do itself.
      *
-     * Reads the same three answers as the branch above — permitted or not,
-     * valid or not — and keeps the same order, so a missing sudoers grant is
-     * still reported as a gap in this check rather than as a verdict on the
-     * configuration.
+     * Same answers and order as the branch above: a missing sudoers grant is a gap in this
+     * check, not a verdict on the configuration.
      *
      * @return array<string, mixed>
      */
@@ -172,10 +138,7 @@ class WebServerCheck implements DoctorCheck
             ];
         }
 
-        // OpenLiteSpeed prints the contents of its test log on stdout, so the
-        // reason is there rather than on stderr — reading stderr first the way
-        // the other web servers need would report a failure with nothing to
-        // back it up.
+        // OpenLiteSpeed prints its test log on stdout, so the reason is there, not on stderr.
         return [
             'status' => 'fail',
             'detail' => trim(__('doctor.details.web_invalid', ['server' => 'openlitespeed', 'command' => $test, 'error' => $this->firstLine($result->output() ?: $result->errorOutput())])),
@@ -186,16 +149,9 @@ class WebServerCheck implements DoctorCheck
     /**
      * May this panel run that command at all?
      *
-     * Asked of sudo itself rather than by reading the failed command's stderr,
-     * for the same reason {@see PrivilegeCheck} asks it: `sudo -n -l <binary>`
-     * resolves the real sudoers rule for the real user and changes nothing,
-     * whereas sudo's refusals are prose ("a password is required", "Sorry,
-     * user … is not allowed to execute"), differ between refusal kinds and are
-     * translated on a localized host. A diagnostic that mistakes one failure
-     * for another must not be built on string matching.
-     *
-     * Only ever reached after the test has already failed, so the extra
-     * process costs nothing on a healthy server.
+     * Asked of sudo itself (`sudo -n -l <binary>`, as {@see PrivilegeCheck} does), not by
+     * matching the failed command's stderr: sudo's refusals are prose and may be localized.
+     * Only reached after the test has failed.
      */
     private function permitted(string $binary): bool
     {
@@ -203,11 +159,7 @@ class WebServerCheck implements DoctorCheck
     }
 
     /**
-     * The one line of the config test worth putting in front of an operator.
-     *
-     * `nginx -t` names the file and the line it choked on; without it this
-     * check asserted the configuration was invalid and offered nothing to back
-     * the claim up.
+     * The one line of the config test worth showing: `nginx -t` names the file and line.
      */
     private function firstLine(string $output): string
     {
@@ -221,18 +173,10 @@ class WebServerCheck implements DoctorCheck
     }
 
     /**
-     * The same detection the panel itself uses — not a second copy of it.
+     * The same detection the panel itself uses, not a second copy.
      *
-     * This was a private directory walk returning the first config directory
-     * that existed, which is the version `ServerCapabilities` was fixed away
-     * from: a directory is not a web server, and a running unit beats a
-     * leftover one. Left unfixed here, it made this check report a stack
-     * mismatch on every healthy OpenLiteSpeed box, because `/etc/apache2` is
-     * shipped by `phpX.Y-fpm` and apache is listed before openlitespeed.
-     *
-     * Worse than a wrong verdict: the fix it offered — `server:record-stack
-     * ols` — re-records the value that was already correct, so the check failed
-     * again identically and there was no way out of it.
+     * A directory walk is wrong: `/etc/apache2` is shipped by `phpX.Y-fpm`, so it reported a
+     * mismatch on healthy OpenLiteSpeed boxes. A running unit beats a leftover directory.
      */
     private function detect(): ?string
     {

@@ -5,20 +5,15 @@ namespace App\Services\Server\Applications;
 /**
  * Turns the raw text of a `.env` into something a screen can render.
  *
- * Two jobs, both deliberately here rather than in the frontend: parsing the
- * file into key/value pairs, and judging it. The frontend should not have to
- * know dotenv quoting rules, nor what Laravel considers dangerous — a check
- * added here is a check that appears in the UI with no frontend change, the
- * same trade the site-type field schema already makes.
+ * Parses the file into key/value pairs and judges it, so the frontend needs no dotenv
+ * quoting rules and a new check appears in the UI without a frontend change.
  */
 class EnvironmentInspector
 {
     /**
      * Key names whose values are never sent to the client.
      *
-     * Matched on the key, not the value: guessing at whether a string "looks
-     * secret" gets both answers wrong, and the key is what the author already
-     * told us.
+     * Matched on the key, not the value: guessing whether a string "looks secret" is unreliable.
      */
     private const SECRET_PATTERN = '/(PASSWORD|SECRET|TOKEN|_KEY|^KEY$|SALT|HASH|DSN|CREDENTIAL|PRIVATE|AUTH)/i';
 
@@ -29,9 +24,8 @@ class EnvironmentInspector
     }
 
     /**
-     * Parse into ordered pairs. Comments and blank lines are dropped — this is
-     * the structured view; the raw text is what the editor shows and what is
-     * written back, so nothing is lost.
+     * Parse into ordered pairs. Comments and blank lines are dropped; the raw text is what
+     * the editor shows and writes back.
      *
      * @return array<int, array{key: string, value: string|null, secret: bool}>
      */
@@ -54,8 +48,7 @@ class EnvironmentInspector
 
             $variables[] = [
                 'key' => $m[1],
-                // Null, not a masked string: a `••••` in a JSON response is
-                // something you can still copy, so it protects nobody.
+                // Null, not a masked string: a mask in a JSON response can still be copied.
                 'value' => $secret ? null : $this->unquote(trim($m[2])),
                 'secret' => $secret,
             ];
@@ -67,9 +60,8 @@ class EnvironmentInspector
     /**
      * Every value one key is given in the file, in order, secret or not.
      *
-     * Every one rather than "the" value: which definition wins depends on who
-     * reads the file (dotenv keeps the first, systemd the last), so a check
-     * that must not be fooled looks at all of them.
+     * Every one, not "the" value: which definition wins depends on who reads the file
+     * (dotenv keeps the first, systemd the last).
      *
      * @return array<int, string>
      */
@@ -89,24 +81,18 @@ class EnvironmentInspector
     /**
      * Everything worth telling the user about this file, framework-aware.
      *
-     * Each entry carries the key, its current value, a severity and a
-     * suggested value, so the UI can offer a one-click fix without knowing
-     * which framework it is looking at.
+     * Each entry carries the key, value, severity and a suggested value for a one-click fix.
      *
      * @return array<int, array{key: string|null, value: string|null, severity: string, code: string, title: string, detail: string, suggested: string|null}>
      */
     public function checks(string $raw, string $framework, bool $exposed = false): array
     {
-        // Read from the raw text, not from variables(), which blanks secret
-        // values before they leave the server. APP_KEY matches the secret
-        // pattern, so reading the parsed value here would see null and report
-        // a perfectly good key as missing — on every Laravel site.
+        // From the raw text, not variables(), which blanks secrets: APP_KEY would read as
+        // missing on every Laravel site.
         $values = $this->rawValues($raw);
 
         return array_merge(
-            // First, because it is about the file rather than a line in it, and
-            // because no value inside the file matters as much as the file
-            // being fetchable.
+            // First: it is about the file, not a line in it.
             $exposed ? [$this->check('file_exposed', 'error', null, null, null)] : [],
             $this->syntaxChecks($raw, $framework),
             $this->frameworkChecks($raw, $framework, $values),
@@ -114,8 +100,7 @@ class EnvironmentInspector
     }
 
     /**
-     * The four mistakes that actually happen, and are invisible until
-     * something breaks.
+     * Syntax mistakes that stay invisible until something breaks.
      *
      * @param  array<int, mixed>  ...$_
      * @return array<int, array<string, mixed>>
@@ -146,10 +131,8 @@ class EnvironmentInspector
                 continue;
             }
 
-            // `export FOO=bar` is valid in a shell and valid for dotenv, but
-            // systemd's EnvironmentFile rejects the line outright — so a Node
-            // service simply refuses to start, with the cause in the journal
-            // and nowhere near this screen.
+            // `export FOO=bar` is valid for a shell and dotenv, but systemd's EnvironmentFile
+            // rejects it, so a Node service refuses to start.
             if (str_starts_with(ltrim($line), 'export ') && $this->isSystemdRead($framework)) {
                 $checks[] = $this->check('syntax_export', 'warning', $m[1], null, null, ['line' => $number + 1]);
             }
@@ -159,8 +142,7 @@ class EnvironmentInspector
             }
 
             if (isset($seen[$m[1]])) {
-                // dotenv silently keeps the last one, so the value someone is
-                // staring at may not be the value in effect.
+                // The value someone is looking at may not be the one in effect.
                 $checks[] = $this->check('duplicate_key', 'warning', $m[1], null, null, ['line' => $number + 1]);
             }
 
@@ -179,9 +161,7 @@ class EnvironmentInspector
         $checks = [];
 
         if (in_array($framework, [FrameworkDetector::LARAVEL, FrameworkDetector::STATAMIC], true)) {
-            // Per the security guide: APP_DEBUG=false in production, verified
-            // rather than assumed. A debug page prints the database password
-            // to anyone who triggers an error.
+            // A debug page prints the database password to anyone who triggers an error.
             if (($values['APP_DEBUG'] ?? null) !== null && $this->truthy($values['APP_DEBUG'])) {
                 $checks[] = $this->check('app_debug_on', 'warning', 'APP_DEBUG', $values['APP_DEBUG'], 'false');
             }
@@ -196,9 +176,8 @@ class EnvironmentInspector
         }
 
         if ($framework === FrameworkDetector::NEXTJS) {
-            // NEXT_PUBLIC_* is inlined into the browser bundle at build time.
-            // A secret with that prefix is not leaked by a mistake later — it
-            // is already public, to every visitor, right now.
+            // NEXT_PUBLIC_* is inlined into the browser bundle at build time, so a secret
+            // with that prefix is already public.
             foreach ($this->variables($raw) as $variable) {
                 if (str_starts_with($variable['key'], 'NEXT_PUBLIC_') && $variable['secret']) {
                     $checks[] = $this->check('next_public_secret', 'error', $variable['key'], null, null);
@@ -242,8 +221,7 @@ class EnvironmentInspector
     }
 
     /**
-     * Every key with its real value. Server-side only — this is what the
-     * checks reason about, and it never reaches a response.
+     * Every key with its real value. Server-side only; never put in a response.
      *
      * @return array<string, string>
      */
@@ -278,8 +256,7 @@ class EnvironmentInspector
             return substr($value, 1, -1);
         }
 
-        // An unquoted `#` starts a comment — the value stops there, and a
-        // screen showing the rest would be showing something dotenv ignores.
+        // An unquoted `#` starts a comment: the value stops there.
         return trim(preg_replace('/\s+#.*$/', '', $value) ?? $value);
     }
 }

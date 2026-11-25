@@ -75,8 +75,7 @@ class AddonInstaller
 
             $lms = $addon instanceof LogMonitoringSuite;
 
-            // Before anything changes: a server that cannot run it is refused
-            // with nothing touched.
+            // Before anything changes, so a server that cannot run it is refused untouched.
             if ($lms) {
                 $this->assertDiskSpace($addon);
             }
@@ -117,10 +116,8 @@ class AddonInstaller
     }
 
     /**
-     * Remove the binary and everything that belongs to it — for Log
-     * Monitoring Suite its timers, configuration and database too (all of
-     * its data; decided 2026-11-05). Removing an addon that is not there
-     * succeeds: the end state is the one asked for.
+     * Remove the binary and everything that belongs to it; for Log Monitoring Suite also its
+     * timers, configuration and database (all its data). Removing an absent addon succeeds.
      *
      * @return array<string, mixed>
      *
@@ -133,8 +130,7 @@ class AddonInstaller
         if ($addon instanceof LogMonitoringSuite) {
             $present = fn (array $units) => array_values(array_filter($units, fn (string $unit) => is_file($addon->unitPath($unit))));
 
-            // Stopped before the database is deleted from under them. A fetch
-            // already running is stopped too; that it was not running is fine.
+            // Stopped before the database is deleted from under them.
             if (($timers = $present($addon->timers())) !== []) {
                 $this->mustRemove(['systemctl', 'disable', '--now', ...$timers], 'disable_timers', $addon);
             }
@@ -166,8 +162,7 @@ class AddonInstaller
     /** @throws AddonException */
     private function assertDiskSpace(LogMonitoringSuite $addon): void
     {
-        // The data directory may not exist yet; its filesystem is that of
-        // the nearest directory that does.
+        // The data directory may not exist yet: use the nearest one that does.
         $path = $addon->dataDirectory();
         while (! is_dir($path) && $path !== dirname($path)) {
             $path = dirname($path);
@@ -251,16 +246,13 @@ class AddonInstaller
 
         $this->file($addon, $addon->envFile(), $addon->envContents(), '0600');
 
-        // Creates the database, or brings an existing one up to this
-        // version's schema. Forward only: rolled back, an update keeps the
-        // migrated database. Its own errors (licence_required included) are
-        // what Central is shown.
+        // Creates the database or migrates it to this version. Forward only: a rolled-back
+        // update keeps the migrated database. Its own errors are what Central is shown.
         $addon->run(['schema:migrate'], (int) config('server.addons.sync_timeout'), ['run' => $this->runId]);
 
         $fresh = ! is_file($addon->unitPath($addon->timers()[0]));
 
-        // Pushed before the units are written, so on a failure it runs after
-        // they are removed or restored.
+        // Pushed before the units are written, so on failure it runs after they are restored.
         $this->undo[] = ['systemctl', 'daemon-reload'];
 
         foreach ($addon->unitFiles($retentionDays) as $path => $contents) {
@@ -277,9 +269,8 @@ class AddonInstaller
     }
 
     /**
-     * Register every live site, through the same code path as the register
-     * route. One site the addon refuses does not undo the install for all
-     * the others; it is reported, and Central can register it again later.
+     * Register every live site, through the same code path as the register route. A site the
+     * addon refuses is reported, not rolled back; Central can register it again later.
      *
      * @return array{registered: int, failed: list<array{application_id: int, message: string}>}
      */
@@ -354,9 +345,8 @@ class AddonInstaller
     }
 
     /**
-     * A directory `rm -rf` may be pointed at: absolute, nothing relative in
-     * it, and not one of the system's own. It comes from config, and a typo
-     * there must not become `rm -rf /etc`.
+     * A directory `rm -rf` may be pointed at: absolute, no relative parts, not a system
+     * directory. It comes from config; a typo must not become `rm -rf /etc`.
      *
      * @throws AddonException
      */

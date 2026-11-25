@@ -42,17 +42,9 @@ class FirewallController extends Controller
         RiskyPorts $risky,
         FirewallRuleDiscoverer $discoverer,
     ): JsonResponse {
-        // `status()` throws when it cannot read ufw, and for every other
-        // caller that is right: the guards decide whether a rule is safe to
-        // remove from `enabled`, so "I could not ask" must stop them rather
-        // than read as "nothing is being blocked".
-        //
-        // This one is a screen. Failing the whole request meant that on a
-        // server whose sudo grant is out of date -- which is exactly when
-        // someone opens the firewall page -- there was nothing to look at at
-        // all: no rules, no listening ports, no SSH port. Undetermined is
-        // reported as a third state instead, and every other field on the
-        // page still renders.
+        // `status()` throws when ufw cannot be read, which is right for the guards. This is a
+        // screen: failing the request would hide the rules, ports and SSH port, so an
+        // undetermined state is reported as `null` and the rest still renders.
         try {
             $status = $firewall->status();
             $reference = null;
@@ -62,42 +54,28 @@ class FirewallController extends Controller
         }
 
         return response()->json([
-            // **Nullable.** `true` and `false` are answers; `null` means the
-            // panel could not read the firewall's state. A client must not
-            // treat it as `false`: "off" invites turning it on, and this one
-            // needs a fix on the server first.
+            // Nullable: `null` means the state could not be read. Clients must not treat it as
+            // `false`: "off" invites turning the firewall on, and this needs a server fix first.
             'enabled' => $status['enabled'],
             'default_policy' => $status['default_policy'],
-            // Present only when the state could not be read, so the screen can
-            // show a reference alongside the banner.
+            // Present only when the state could not be read.
             'status_reference' => $reference,
-            // Every rule, unpaged (OLD-12): `GET /firewall/rules` pages them,
-            // and this list made that saving nothing. Left on by default
-            // because the current screen still reads it for its overlap and
-            // reachability checks; `?rules=0` leaves it out, and a client that
-            // pages should send that.
+            // Every rule, unpaged. `?rules=0` leaves it out; paging clients should send that
+            // (`GET /firewall/rules` pages them).
             'rules' => $request->query('rules') === '0'
                 ? null
                 : FirewallRuleResource::collection(FirewallRule::query()->latest()->get())->resolve(),
-            // The caller's own address, so "only my IP" is one click. Without
-            // it people leave ports open to everyone rather than go and look
-            // their address up.
+            // The caller's own address, so "only my IP" is one click.
             'your_ip' => $request->ip(),
-            // Read here rather than from Settings: a user with firewall
-            // access but not settings would get a 403 and fall back to 22,
-            // and being wrong about the SSH port on the firewall screen is
-            // how people lock themselves out.
+            // Read here, not from Settings: a user without settings access would get a 403 and
+            // fall back to 22, and a wrong SSH port on this screen locks people out.
             'ssh_port' => SshPort::current(),
-            // What is actually behind the rules — a rule list alone cannot
-            // tell an open port with a service on it from an open port with
-            // nothing there.
+            // What actually listens behind the rules.
             'listening' => $listening->all(),
             'risky_ports' => $risky->all(),
-            // Rules ufw enforces that were added outside the panel (FW-08),
-            // which this screen used to leave out entirely. `adoptable`
-            // false means the panel cannot hold it (LIMIT, outbound, an
-            // application profile) and `reason` says which. Null when ufw
-            // could not be read.
+            // Rules ufw enforces that were added outside the panel. `adoptable` false means the
+            // panel cannot hold it (LIMIT, outbound, application profile); `reason` says why.
+            // Null when ufw could not be read.
             'unmanaged_rules' => $this->unmanagedRules($discoverer),
         ]);
     }
@@ -181,10 +159,7 @@ class FirewallController extends Controller
     /**
      * The rules on their own, paged.
      *
-     * Separate from {@see index()} because that endpoint answers "what is the
-     * state of this firewall" and this one answers "which rules are there".
-     * Turning a page should not re-run `ss` to rebuild a list of listening
-     * ports that has not changed.
+     * Separate from {@see index()} so turning a page does not re-run `ss`.
      */
     public function rules(IndexFirewallRulesRequest $request): JsonResponse
     {
@@ -192,17 +167,12 @@ class FirewallController extends Controller
         $filter = (array) $request->validated('filter', []);
 
         $rules = FirewallRule::query()
-            // array_key_exists, not `??` — `filter[enabled]=0` is a real
-            // request for the disabled rules, and a falsy check would drop it
-            // and answer with everything.
+            // array_key_exists, not `??`: `filter[enabled]=0` asks for disabled rules.
             ->when(array_key_exists('enabled', $filter) && $filter['enabled'] !== null,
                 fn ($query) => $query->where('enabled', (bool) $filter['enabled']))
             ->when($filter['action'] ?? null, fn ($query, $action) => $query->where('action', $action))
             ->when($filter['origin'] ?? null, fn ($query, $origin) => $query->where('origin', $origin))
-            // Grouped, because the service-name match is an OR and the filters
-            // above are an AND. Without the outer where() the OR would escape
-            // its bracket and `filter[action]=deny&search=ssh` would answer
-            // with every rule on port 22, refused filter included.
+            // Grouped: the service-name match is an OR and must not escape the AND filters above.
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($query) => $this->applyRuleSearch($query, $search)
             ));
@@ -224,19 +194,8 @@ class FirewallController extends Controller
     /**
      * Free text across a rule's own fields, plus the service name for its port.
      *
-     * The text half is unchanged. The addition is that a preset name resolves
-     * to its port, because the rules the panel seeds itself — SSH and the web
-     * ports — carry no description at all, so searching "ssh" matched nothing
-     * on a freshly installed server while the row sat in plain sight.
-     *
-     * Deliberately a query-time mapping rather than a description written onto
-     * those rows: `description` is the user's own field, a stored label would
-     * need backfilling onto every server already installed, and neither would
-     * find a hand-made rule someone opened on 22 without describing it.
-     *
-     * A range covering the port matches too. A rule for 20:30 visibly covers
-     * SSH, and a search that hides it is harder to trust than one that does not
-     * answer at all.
+     * A preset name resolves to its port at query time, because the seeded SSH and web rules
+     * have no description. A range covering the port matches too (20:30 covers SSH).
      */
     private function applyRuleSearch(Builder $query, string $search): Builder
     {
@@ -289,22 +248,9 @@ class FirewallController extends Controller
         return response()->json([
             'enabled' => $status['enabled'],
             'default_policy' => $status['default_policy'],
-            // The rules as they stand *after* the toggle, because enabling
-            // creates some. `ToggleFirewall::seedDefaults()` writes an allow
-            // rule for SSH and the panel/web ports so the box cannot lock
-            // itself out — four rows that appear as a side effect of this
-            // request and that no client could predict.
-            //
-            // Returning only `enabled` left the screen with nothing to render:
-            // on a freshly set-up server the list stayed empty while the note
-            // said incoming traffic was blocked, and the rules only appeared
-            // after switching the firewall off and on again, which happened to
-            // trigger a refetch. The seeding was never the bug; not saying so
-            // was.
-            //
-            // Unpaginated on purpose: this is the seeded set plus whatever the
-            // operator already had, and a page boundary here would reintroduce
-            // the same silence for anyone past the first page.
+            // Rules as they stand after the toggle: enabling seeds allow rules for SSH and the
+            // panel/web ports (`ToggleFirewall::seedDefaults()`) that no client could predict.
+            // Unpaginated on purpose, so a page boundary cannot hide the seeded rows.
             'rules' => FirewallRuleResource::collection(
                 FirewallRule::query()->orderBy('port_from')->orderBy('id')->get()
             )->resolve(),

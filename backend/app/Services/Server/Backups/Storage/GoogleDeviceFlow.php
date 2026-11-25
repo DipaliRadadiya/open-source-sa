@@ -9,25 +9,17 @@ use Throwable;
 /**
  * Obtains a Google refresh token without ever needing a redirect URL.
  *
- * The panel shows a short code and a link; the operator opens the link on any
- * device, approves, and the panel polls until Google hands over a refresh
- * token. The same flow a smart TV uses, and for the same reason: the machine
- * asking for access has no browser and cannot be redirected back to.
+ * The panel shows a short code and a link; the operator approves on any device and the panel
+ * polls until Google hands over a refresh token (the smart-TV flow: the machine has no
+ * browser to redirect back to).
  *
- * **Why this and not the ordinary redirect flow.** A redirect URI must be
- * HTTPS on a domain you own — raw IPs are refused, and the consent screen's
- * authorized domain has to be verified in Search Console. Our default install
- * is reached at `panel.1-2-3-4.nip.io` (`install.sh:449`; `--domain=` is the
- * opt-in), on a self-signed certificate when no real domain was given. So the
- * redirect flow cannot serve a *default* panel at all, and `nip.io` is not a
- * domain anybody here owns. Swapping "free Gmail users are excluded" for
- * "default installs are excluded" would have been no trade at all.
+ * Not the ordinary redirect flow: its redirect URI must be HTTPS on a verified domain you
+ * own (raw IPs are refused), and a default install is reached at a `nip.io` host on a
+ * self-signed certificate.
  *
- * Google restricts this flow to a small scope list, of which the Drive entries
- * are `drive.appdata` and `drive.file`. That is a gift rather than a
- * limitation: `drive.file` grants access only to files the app itself created,
- * which is exactly a backup destination's business, and it is non-sensitive,
- * so it avoids the restricted-scope security assessment full `drive` triggers.
+ * Google limits this flow to a small scope list; the Drive entries are `drive.appdata` and
+ * `drive.file`. `drive.file` only reaches files the app created and is non-sensitive, so it
+ * avoids the restricted-scope assessment full `drive` triggers.
  *
  * See `google-drive-oauth-design.md`.
  */
@@ -47,9 +39,7 @@ class GoogleDeviceFlow
      * Ask Google for a user code.
      *
      * @return array{ok: bool, reason: string|null, device_code: string|null, user_code: string|null, verification_url: string|null, interval: int, expires_in: int}
-     *                                                                                                                                                               `reason` is an i18n key, never Google's own text — the same rule the
-     *                                                                                                                                                               rest of this subsystem follows, because those strings carry URLs and
-     *                                                                                                                                                               occasionally identifiers, and they are not translated.
+     *                                                                                                                                                               `reason` is an i18n key, never Google's own (untranslated) text.
      */
     public function start(string $clientId): array
     {
@@ -68,9 +58,7 @@ class GoogleDeviceFlow
         }
 
         if (! $response->successful()) {
-            // A wrong client id fails here rather than at approval time, which
-            // is the good case: the operator is still looking at the form they
-            // pasted it into.
+            // A wrong client id fails here, while the operator is still on the form.
             return $this->startFailure($this->classifyStart($response->json()));
         }
 
@@ -86,15 +74,11 @@ class GoogleDeviceFlow
             'reason' => null,
             'device_code' => $deviceCode,
             'user_code' => $userCode,
-            // `verification_url` is the documented field; newer responses also
-            // carry `verification_uri`. Reading both means a field rename by
-            // Google does not leave the operator with a code and nowhere to
-            // type it.
+            // `verification_url` is the documented field; newer responses carry `verification_uri`.
             'verification_url' => (string) ($response->json('verification_url')
                 ?? $response->json('verification_uri')
                 ?? 'https://www.google.com/device'),
-            // Google's own pacing. Polling faster earns `slow_down`, so the
-            // caller is told the interval rather than guessing one.
+            // Google's pacing: polling faster earns `slow_down`.
             'interval' => max(1, (int) ($response->json('interval') ?? 5)),
             'expires_in' => max(60, (int) ($response->json('expires_in') ?? 1800)),
         ];
@@ -103,9 +87,7 @@ class GoogleDeviceFlow
     /**
      * Ask whether the operator has approved yet.
      *
-     * Deliberately one poll, not a loop. A loop here would hold an HTTP worker
-     * for up to half an hour waiting on a human; the caller polls instead and
-     * the browser shows progress while it does.
+     * One poll, not a loop: a loop would hold an HTTP worker for up to half an hour.
      *
      * @return array{status: 'approved'|'pending'|'slow_down'|'denied'|'expired'|'failed', refresh_token: string|null, reason: string|null}
      */
@@ -122,9 +104,7 @@ class GoogleDeviceFlow
                     'grant_type' => self::GRANT_TYPE,
                 ]);
         } catch (ConnectionException) {
-            // Not a failure of the authorization — the network blinked. The
-            // caller keeps polling, because the code is still valid and the
-            // operator may already have approved it.
+            // Not an authorization failure: the caller keeps polling, the code is still valid.
             return $this->pollResult('pending');
         } catch (Throwable) {
             return $this->pollResult('failed', reason: 'storage.oauth.poll_failed');
@@ -133,11 +113,8 @@ class GoogleDeviceFlow
         if ($response->successful()) {
             $refreshToken = (string) ($response->json('refresh_token') ?? '');
 
-            // Approval without a refresh token is unusable: the access token
-            // expires within the hour and nothing could renew it, so a 3am
-            // backup would fail forever. Google omits it when the account has
-            // already granted this client before, which is why the caller must
-            // surface a real instruction rather than storing half a credential.
+            // Unusable without a refresh token: the access token expires within the hour.
+            // Google omits it when the account already granted this client before.
             if ($refreshToken === '') {
                 return $this->pollResult('failed', reason: 'storage.oauth.no_refresh_token');
             }
@@ -146,9 +123,9 @@ class GoogleDeviceFlow
         }
 
         return match ((string) $response->json('error')) {
-            // Nobody has approved it yet. The overwhelmingly common answer.
+            // Not approved yet.
             'authorization_pending' => $this->pollResult('pending'),
-            // We polled faster than Google's interval. Back off, do not fail.
+            // Polled faster than Google's interval: back off, do not fail.
             'slow_down' => $this->pollResult('slow_down'),
             'access_denied' => $this->pollResult('denied', reason: 'storage.oauth.denied'),
             'expired_token' => $this->pollResult('expired', reason: 'storage.oauth.code_expired'),
@@ -159,20 +136,11 @@ class GoogleDeviceFlow
     /**
      * Why Google refused to issue a code.
      *
-     * The two causes both arrive as `invalid_client` and need completely
-     * different actions, so the error code alone is not enough to say anything
-     * useful. Found on a real box: a correctly-copied client id of the wrong
-     * *type* was reported as "check it was copied whole", sending the operator
-     * to re-verify a value that was perfectly fine. The faked `invalid_client`
-     * in the test suite carried no description, so nothing could catch it.
+     * A wrong client id and a client id of the wrong *type* both arrive as `invalid_client`
+     * but need different actions, so the `error_description` is read too. Google says
+     * "Only clients of type 'TVs and Limited Input devices' can use the OAuth 2.0 flow ...".
      *
-     * Google's own words for that case:
-     *
-     *   "Only clients of type 'TVs and Limited Input devices' can use the
-     *    OAuth 2.0 flow for TV and Limited-Input Device Applications."
-     *
-     * Matched on "limited input" rather than the full sentence: the quotes come
-     * back HTML-escaped, and the wording around them is Google's to change.
+     * Matched on "limited input", not the full sentence: the quotes come back HTML-escaped.
      *
      * @param  array<string, mixed>|null  $body
      */

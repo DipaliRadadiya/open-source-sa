@@ -7,22 +7,14 @@ use App\Models\Application;
 /**
  * Nextcloud — file sync and share.
  *
- * Installed with its own `occ maintenance:install`, which upstream documents
- * as the command-line equivalent of the setup wizard. Four things it demands
- * that the other installers do not:
+ * Installed with `occ maintenance:install`. What it demands that other installers do not:
  *
- *  - **It must be run from Nextcloud's own directory.** Upstream is explicit:
- *    run it from anywhere else and it dies with a PHP fatal error. There is no
- *    shell here to `cd` in, so the working directory is set on the process.
- *  - **The passwords are prompted, not passed.** `--database-pass` and
- *    `--admin-pass` would put both on the command line, where `ps` shows them
- *    to every user on the machine. Omitting them makes occ ask on stdin —
- *    database password first, then admin password — which is where they go.
- *  - **The data directory belongs outside the web root.** It holds every
- *    file every user uploads, and under the document root each one is a URL.
- *  - **The domain must be trusted.** Nextcloud refuses to serve a hostname
- *    that is not in `trusted_domains`, so a site installed without this step
- *    answers every request with a refusal page.
+ *  - It must run from Nextcloud's own directory (a PHP fatal otherwise), so the working
+ *    directory is set on the process.
+ *  - Passwords are prompted on stdin (database first, then admin), never passed as
+ *    `--database-pass`/`--admin-pass`: `ps` would show them to every user.
+ *  - The data directory lives outside the web root, or every upload would be a URL.
+ *  - The domain must be in `trusted_domains`, or every request gets a refusal page.
  */
 class NextcloudInstaller extends AbstractPhpInstaller
 {
@@ -32,12 +24,8 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * PostgreSQL last, so MySQL stays the first available engine and no
-     * existing server changes the database it gives a new Nextcloud.
-     *
-     * Upstream lists PostgreSQL among its supported engines and recommends it
-     * for larger instances; `pgsql` is the value its own
-     * `core/Command/Maintenance/Install.php` accepts for `--database`.
+     * PostgreSQL last, so MySQL stays the first available engine and no existing server changes
+     * the database it gives a new Nextcloud.
      *
      * @return array<int, string>
      */
@@ -47,8 +35,7 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * Nextcloud's system requirements list PostgreSQL 14 through 18; 13 and
-     * below are off the supported set entirely.
+     * Nextcloud supports PostgreSQL 14 through 18.
      *
      * @return array<string, string>
      */
@@ -58,15 +45,8 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * Upstream publishes bzip2 and zip only — there is no gzip build.
-     *
-     * The bzip2 tarball was the original choice and it cost a server: `tar`
-     * only *suggests* bzip2 in Debian packaging, so a lean image has tar but
-     * nothing to decompress with, and the install died at `extract` reporting
-     * a missing `lbzip2` — tar's preferred helper, named nowhere in this
-     * codebase and installed on nobody's server. `unzip` is already on
-     * BinariesCheck's REQUIRED list, so the zip needs nothing the panel does
-     * not already demand.
+     * Upstream publishes bzip2 and zip only. Zip, because lean images have `tar` without a bzip2
+     * helper, while `unzip` is already on BinariesCheck's REQUIRED list.
      */
     protected function archiveFormat(): string
     {
@@ -96,14 +76,13 @@ class NextcloudInstaller extends AbstractPhpInstaller
         $this->run('configure', [
             'chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $dataDir,
         ], $application);
-        // Upstream's hardening guidance: nobody but the site user has any
-        // business reading what users have uploaded.
+        // Only the site user may read what users uploaded.
         $this->run('configure', ['chmod', '0750', $dataDir], $application);
 
         $php = $this->phpCommand($application);
 
-        // Both passwords are omitted so that occ prompts for them, and both
-        // answers go in on stdin in the order it asks: database, then admin.
+        // Both passwords are omitted so occ prompts; the answers go in on stdin in its order:
+        // database, then admin.
         $this->runAsSiteUser('install_app', $application, [
             ...$php, 'occ', 'maintenance:install',
             '--database', $this->databaseDriver($context),
@@ -116,19 +95,16 @@ class NextcloudInstaller extends AbstractPhpInstaller
             '--data-dir', $dataDir,
         ], $context['db_password']."\n".($application->installSettings()['admin_password'] ?? '')."\n", $documentRoot);
 
-        // Installed from the command line, Nextcloud has no request to learn
-        // the hostname from, so it trusts only localhost. Without this the
-        // site is reachable and refuses everyone.
+        // From the CLI Nextcloud has no request to learn the hostname from and trusts only
+        // localhost; without this the site refuses everyone.
         $this->runAsSiteUser('trust_domain', $application, [
             ...$php, 'occ', 'config:system:set', 'trusted_domains', '1',
             '--value='.$application->domain,
         ], null, $documentRoot);
 
-        // Nextcloud chmods config.php to this on every write, defaulting to
-        // 0640 — group-readable, which on OpenLiteSpeed is the web server
-        // account (it is in every site user's group). Its own setting, so
-        // Nextcloud keeps the file private itself rather than the panel
-        // sweeping up after it. An integer: `chmod()` is handed it as is.
+        // Nextcloud chmods config.php to this on every write; its default 0640 is group-readable,
+        // and on OpenLiteSpeed the web server account is in every site user's group. An integer,
+        // handed to `chmod()` as is.
         $this->runAsSiteUser('configure', $application, [
             ...$php, 'occ', 'config:system:set', 'configfilemode',
             '--value='.octdec($this->ownership->secretFileMode($application)), '--type=integer',
@@ -141,9 +117,7 @@ class NextcloudInstaller extends AbstractPhpInstaller
             '--value='.$application->url(),
         ], null, $documentRoot);
 
-        // Background jobs by system cron, which Nextcloud recommends; its
-        // default (AJAX) only runs them when someone has a page open, and a
-        // fresh install reported "background jobs last ran 56 years ago".
+        // System cron for background jobs; the default (AJAX) only runs them while a page is open.
         $this->runAsSiteUser('schedule_cron', $application, [...$php, 'occ', 'background:cron'], null, $documentRoot);
         $this->scheduleCron($application, $documentRoot, 'cron.php', '*/5 * * * *');
     }
@@ -151,16 +125,9 @@ class NextcloudInstaller extends AbstractPhpInstaller
     /**
      * The value for `--database`.
      *
-     * 🔴 This used to be `config('server.installers.nextcloud.database')`
-     * alone — **a configured constant, not the engine the site was given.**
-     * Harmless while every Nextcloud got MySQL; the moment PostgreSQL is
-     * accepted it would hand a PostgreSQL database the string `mysql`, and
-     * the site dies inside occ's own install. Joomla's `--db-type` carried a
-     * comment warning about exactly this shape.
-     *
-     * PostgreSQL branches; everything else still reads the config, so the
-     * MySQL path is byte-identical to what it wrote before — including for
-     * anyone who has set `SERVER_NEXTCLOUD_DATABASE` deliberately.
+     * Must follow the engine the site was given: the config value alone would hand a PostgreSQL
+     * database the string `mysql` and occ's install would die. PostgreSQL branches; everything
+     * else still reads the config (`SERVER_NEXTCLOUD_DATABASE`).
      *
      * @param  array<string, mixed>  $context
      */
@@ -172,11 +139,7 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * `--database-port`, which occ has and Joomla does not.
-     *
-     * Absent when the port is the one the driver already assumes, so the
-     * command line for a stock local database is the one every existing
-     * Nextcloud was installed with.
+     * `--database-port`, omitted when the port is the driver's default.
      *
      * @param  array<string, mixed>  $context
      * @return array<int, string>

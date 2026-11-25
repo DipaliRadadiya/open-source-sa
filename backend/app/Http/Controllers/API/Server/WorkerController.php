@@ -43,8 +43,7 @@ class WorkerController extends Controller
 
         return response()->json([
             'workers' => WorkerResource::collection($workers)->resolve(),
-            // The empty state is the feature for most people: a working queue
-            // worker should be one click, not a remembered set of flags.
+            // A working queue worker should be one click, not a remembered set of flags.
             'presets' => $presets->for($application),
             'checks' => $presets->checks($application),
         ]);
@@ -53,17 +52,11 @@ class WorkerController extends Controller
     /**
      * Install supervisord, which workers run under.
      *
-     * Dispatched, never inline: apt waits out the dpkg lock for up to ten
-     * minutes and this codebase is explicit that a package install belongs in
-     * a job and never in a request — see {@see InstallFail2ban}
-     * and PhpExtensionManager::install(). A request held open that long dies
-     * at the web server long before apt finishes, leaving a half-done install
-     * nobody can see.
+     * Dispatched, never inline: apt can wait up to ten minutes on the dpkg lock, and a request
+     * held that long dies at the web server. See {@see InstallFail2ban}.
      *
-     * The tracker row is started here rather than inside the job, for the
-     * reason the fail2ban endpoint documents: between this 202 and a worker
-     * picking the job up there would otherwise be a window where the install
-     * is real and nothing can see it.
+     * The tracker row is started here, not in the job, so the install is visible between the
+     * 202 and a worker picking the job up.
      */
     public function installSupervisor(
         Application $application,
@@ -71,7 +64,7 @@ class WorkerController extends Controller
         ActivityLogger $activity,
         InstallTracker $installs,
     ): JsonResponse {
-        // Already there: say so rather than spending minutes of apt proving it.
+        // Already installed: say so rather than spend minutes of apt proving it.
         if ($supervisor->installed()) {
             return response()->json([
                 'message' => __('errors/application.supervisor_already_installed'),
@@ -104,29 +97,19 @@ class WorkerController extends Controller
         WorkerSupervisor $supervisor,
         ActivityLogger $activity,
     ): JsonResponse {
-        // Before the row exists, not after. `apply()` checks too, but by then
-        // this method has already written a worker the panel would list and
-        // supervisord has never heard of — and the request that created it
-        // returns an error, so nobody expects it to be there.
-        //
-        // And when it is missing, start installing it rather than handing back
-        // a command to run. The panel has the grant and knows the package; it
-        // installs PHP versions and fail2ban the same way. The install still
-        // cannot happen inside this request — apt is minutes long — so this
-        // answers 202 and the worker is created on the next attempt, which is
-        // one more click and no shell.
+        // Checked before the row exists: otherwise a failed request leaves behind a worker the
+        // panel lists and supervisord has never heard of. When supervisord is missing, install it
+        // (a job, so this answers 202) and create the worker on the next attempt.
         if (! $supervisor->installed()) {
             return $this->installSupervisor($application, $supervisor, $activity, app(InstallTracker::class));
         }
 
-        // The slug that names this worker's systemd unit is derived on the
-        // model's `creating` hook — it is not fillable, so no request can
-        // choose the name of a file the panel writes.
+        // The slug naming this worker's unit is derived on the model's `creating` hook and is not
+        // fillable, so no request can choose the name of a file the panel writes.
         $data = $request->validated();
 
-        // A queue worker that is not given time to finish loses the job it
-        // is running at every restart (bug #74). A custom worker keeps the
-        // column's default unless asked otherwise.
+        // A queue worker not given time to finish loses its running job at every restart.
+        // A custom worker keeps the column default unless asked otherwise.
         if (! array_key_exists('stop_wait_seconds', $data)
             && in_array($data['kind'] ?? Worker::KIND_CUSTOM, [Worker::KIND_QUEUE, Worker::KIND_HORIZON], true)) {
             $data['stop_wait_seconds'] = Worker::MAX_STOP_WAIT;
@@ -136,35 +119,19 @@ class WorkerController extends Controller
             'application_id' => $application->id,
         ]);
 
-        // Refreshed before anything reads it. Columns the request omitted —
-        // enabled, processes, the restart flags — exist only as database
-        // defaults, and a model built by create() has no idea what those are:
-        // `$worker->enabled` would be null, which reads as "disabled" and
-        // stops the worker this call was supposed to start.
+        // Columns the request omitted (enabled, processes, restart flags) exist only as database
+        // defaults; without a refresh `$worker->enabled` is null and reads as "disabled".
         $worker->refresh();
 
-        // Written and started before the row is worth anything: a worker the
-        // panel lists but never started is the kind of thing discovered when
-        // the queue is already hours behind.
-        //
-        // And when that fails, the row goes with it. `apply()` throws on a
-        // unit it could not write and on a program that would not start, and
-        // until now the worker stayed behind either way — so a request that
-        // returned an error still left the panel listing a worker supervisord
-        // has never heard of, which nobody goes looking for because the call
-        // that made it failed. Same reasoning as the installed() check above,
-        // which exists for exactly this and only covers the one case.
-        //
-        // Not a swallow: the exception is rethrown untouched, so the user gets
-        // the same step and reference they would have. The catch is here to
-        // undo, not to hide.
+        // Written and started right away. If that fails the row goes with it, so a failed
+        // request does not leave a worker supervisord has never heard of. The exception is
+        // rethrown untouched: the catch undoes, it does not hide.
         try {
             $supervisor->applySaved($worker->load('application.systemUser'));
         } catch (Throwable $e) {
-            // applySaved clears program only after verified cleanup. If it
-            // retains an identity, cleanup was refused or uncertain: keeping
-            // the row prevents a retry from creating an untracked duplicate.
-            // Do not repeat a best-effort removal or discard its owner here.
+            // applySaved clears `program` only after verified cleanup. If it keeps one, cleanup
+            // was refused or uncertain: keep the row so a retry cannot create an untracked
+            // duplicate. Do not repeat a best-effort removal here.
             if ($worker->program === null) {
                 $worker->delete();
             } else {
@@ -204,11 +171,9 @@ class WorkerController extends Controller
 
         $worker->update($request->validated());
 
-        // W-edit: a change that will not start used to leave the worker
-        // removed from supervisord (apply() cleans up a program that died)
-        // with the bad command saved — the panel showed a worker that no
-        // longer existed. Put the row back and bring the old program up
-        // again; the error still reaches the user unchanged.
+        // A change that will not start would leave the worker removed from supervisord with the
+        // bad command saved. Put the row back and bring the old program up again; the error
+        // still reaches the user unchanged.
         try {
             $supervisor->applySaved($worker->load('application.systemUser'), $original);
         } catch (Throwable $e) {
@@ -249,9 +214,7 @@ class WorkerController extends Controller
     ): JsonResponse {
         $this->assertBelongsTo($worker, $application);
 
-        // Units removed before the row: deleting the row first would leave
-        // processes running that nothing in the panel knows about, still
-        // consuming the queue.
+        // Units first: deleting the row first would leave untracked processes consuming the queue.
         $supervisor->remove($worker->load('application.systemUser'));
 
         $activity->log('application.worker_deleted', $application, [
@@ -265,10 +228,8 @@ class WorkerController extends Controller
     }
 
     /**
-     * A program that would not start is the user's command, not a server
-     * fault (APP-1/FS-C44): it was a bare 500 with no reason and no
-     * reference. Answered 422 with what the program last printed — the
-     * output a command that exits at once leaves in its log.
+     * A program that would not start is the user's command, not a server fault: answer 422 with
+     * what the program last printed instead of a bare 500.
      */
     private function explainStart(Throwable $e, Worker $worker, WorkerSupervisor $supervisor, bool $edit = false): Throwable
     {
@@ -283,8 +244,7 @@ class WorkerController extends Controller
         }
 
         return new HttpResponseException(response()->json([
-            // An edit is never "not added": the change was rolled back and the
-            // worker keeps its previous command (RC-4).
+            // An edit is never "not added": the change was rolled back.
             'message' => $said === null
                 ? __($edit ? 'worker.errors.edit_did_not_start' : 'worker.errors.did_not_start', ['reference' => $e->reference])
                 : __($edit ? 'worker.errors.edit_did_not_start_said' : 'worker.errors.did_not_start_said', ['output' => $said, 'reference' => $e->reference]),
@@ -298,15 +258,11 @@ class WorkerController extends Controller
     /**
      * The worker in the URL must be this application's.
      *
-     * Route model binding resolves `{worker}` from the whole table, so without
-     * this `PUT /applications/1/workers/99` edits site 2's worker while the
-     * activity log records the action against site 1 — an audit trail naming
-     * the wrong site is worse than none, because it is believed.
+     * Route model binding resolves `{worker}` from the whole table, so without this
+     * `PUT /applications/1/workers/99` edits site 2's worker while the activity log names site 1.
      *
-     * 404 rather than 403, like the deployment, domain and SSH-key routes that
-     * already check this: from where the caller stands that worker does not
-     * exist under that application, and saying "forbidden" would confirm it
-     * exists somewhere else.
+     * 404 rather than 403, like the other nested routes: 403 would confirm the worker exists
+     * under another application.
      */
     private function assertBelongsTo(Worker $worker, Application $application): void
     {

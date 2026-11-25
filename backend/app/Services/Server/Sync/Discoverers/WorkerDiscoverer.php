@@ -12,20 +12,13 @@ use Illuminate\Support\Collection;
 /**
  * Background processes a migrated site is already running.
  *
- * Harder than the other resources, and fuzzier: nothing on a server says
- * "this is a queue worker". What can be said is that a program's working
- * directory is inside a site the panel now knows about, which is enough to
- * attribute it, and that its command looks like a queue runner, which is
- * enough to guess its kind.
+ * Nothing on a server says "this is a queue worker", so a program is attributed by its working
+ * directory being inside a known site, and its kind is guessed from the command line.
  *
- * Two sources, because migrated boxes use both: supervisor program blocks
- * (the convention every Laravel tutorial teaches) and systemd units.
+ * Two sources: supervisor program blocks and systemd units.
  *
- * Everything adopted here lands **disabled**. A worker the panel starts while
- * the original is still running means two processes pulling the same queue,
- * and for anything touching money that is the failure that matters. The panel
- * records what exists; turning it on is a decision the user makes after
- * stopping the old one.
+ * Everything adopted here lands **disabled**: starting a panel worker while the original still
+ * runs puts two processes on the same queue. The user enables it after stopping the old one.
  */
 class WorkerDiscoverer implements Discoverable
 {
@@ -38,16 +31,14 @@ class WorkerDiscoverer implements Discoverable
 
     public function dependsOn(): array
     {
-        // A worker belongs to a site. Before applications have run there is
-        // nothing to attribute one to.
+        // A worker belongs to a site; without applications there is nothing to attribute it to.
         return ['application'];
     }
 
     public function discover(SyncRun $run): array
     {
         $applications = Application::query()->with('systemUser')->get()
-            // Longest root first, so a site nested inside another claims its
-            // own workers rather than the parent swallowing them.
+            // Longest root first, so a nested site claims its own workers.
             ->sortByDesc(fn (Application $a): int => strlen($a->rootPath()))
             ->values();
 
@@ -78,15 +69,13 @@ class WorkerDiscoverer implements Discoverable
                 'kind' => $attributes['kind'],
                 'directory' => $attributes['directory'],
                 'processes' => $attributes['processes'],
-                // Disabled on purpose. See the class docblock: enabling this
-                // while the original is still running puts two processes on
-                // one queue.
+                // Disabled on purpose; see the class docblock.
                 'enabled' => false,
             ],
         );
 
-        // Only a single canonical v7 file can be controlled in place. A
-        // shared config must never be deleted when one of its groups is saved.
+        // Only a single canonical v7 file can be controlled in place. Never delete a shared
+        // config when one of its groups is saved.
         $evidence = $item['evidence'] ?? [];
         $program = $evidence['program'] ?? '';
         $directory = rtrim((string) config('server.applications.supervisor_dir', '/etc/supervisor/conf.d'), '/');
@@ -171,10 +160,8 @@ class WorkerDiscoverer implements Discoverable
 
             $name = basename($path, '.service');
 
-            // The panel's own units. Their names encode a worker id from this
-            // database, so either the row already exists or the id is
-            // meaningless — adopting one would invent a worker whose unit the
-            // panel would then write under a different name.
+            // The panel's own units: their names encode a worker id from this database, and
+            // adopting one would invent a worker whose unit the panel writes under another name.
             if (str_starts_with($name, 'sv-worker-') || str_starts_with($name, 'sv-app-')) {
                 continue;
             }
@@ -213,12 +200,8 @@ class WorkerDiscoverer implements Discoverable
     /**
      * Tie one program to a site, or leave it alone.
      *
-     * Attribution is by path, not by name: a program called `worker` says
-     * nothing about which of forty sites it belongs to, while a working
-     * directory inside one of them says exactly that. A program the panel
-     * cannot place is not reported at all — the box is full of services that
-     * have nothing to do with hosting, and listing every one of them would
-     * bury the handful that matter.
+     * Attribution is by path, not by name: `worker` says nothing about which site it belongs
+     * to. A program the panel cannot place is not reported; the box is full of unrelated services.
      *
      * @param  Collection<int, Application>  $applications
      * @param  Collection<int|string, \Illuminate\Database\Eloquent\Collection<int, Worker>>  $tracked
@@ -234,9 +217,8 @@ class WorkerDiscoverer implements Discoverable
         int $processes,
         array $evidence,
     ): ?array {
-        // The working directory when there is one, otherwise wherever the
-        // command itself points — plenty of units pass an absolute path to
-        // artisan and set no WorkingDirectory at all.
+        // The working directory, else wherever the command points: many units pass an absolute
+        // path to artisan and set no WorkingDirectory.
         $haystack = $workingDir ?: $command;
 
         $application = $applications->first(function (Application $candidate) use ($haystack): bool {
@@ -246,10 +228,8 @@ class WorkerDiscoverer implements Discoverable
                 return false;
             }
 
-            // The directory *is* the site root in the common case
-            // (`directory=/home/user/shop`), so requiring a trailing slash
-            // matched nothing at all — while a bare `str_contains($root)`
-            // would let `/home/user/shop` claim `/home/user/shopping`.
+            // The directory is often the site root itself (`directory=/home/user/shop`), while a
+            // bare `str_contains($root)` would let `/home/user/shop` claim `/home/user/shopping`.
             return $haystack === $root || str_contains($haystack, $root.'/');
         });
 
@@ -257,12 +237,9 @@ class WorkerDiscoverer implements Discoverable
             return null;
         }
 
-        // A site with no worker screen cannot own a worker: nothing could ever
-        // edit, start or remove it, and deleting the site would be the first
-        // the panel did with it (FS-C22 #14). Static, Docker and marketplace
-        // PHP sites. Asked of the feature, not of `serving_profile`, because a
-        // git site rendered static still has workers. Not reported, like a
-        // program the panel cannot place.
+        // A site without a worker screen (static, Docker, marketplace PHP) cannot own a worker:
+        // nothing could edit or remove it. Asked of the feature, not `serving_profile`, because
+        // a git site rendered static still has workers.
         if (! $application->supports('app_worker')) {
             return null;
         }
@@ -277,8 +254,7 @@ class WorkerDiscoverer implements Discoverable
         return [
             'key' => $application->domain.':'.$name,
             'label' => $name,
-            // Attribution is a fact (the path is inside the site); the kind is
-            // read off a command line and is not.
+            // Attribution is a fact (path inside the site); the kind is only guessed.
             'confidence' => $kind === 'custom' ? 50 : 90,
             'evidence' => $evidence + [
                 'application' => $application->domain,
@@ -302,10 +278,8 @@ class WorkerDiscoverer implements Discoverable
     /**
      * What sort of worker this is, judged by the command.
      *
-     * It decides how the panel restarts it — Horizon wants
-     * `horizon:terminate`, a queue worker wants `queue:restart`, and anything
-     * else can only be bounced. Guessing wrong means a restart that silently
-     * does not restart.
+     * It decides how the panel restarts it: Horizon wants `horizon:terminate`, a queue worker
+     * `queue:restart`, anything else is bounced. A wrong guess means a restart that does nothing.
      */
     private function kind(string $command): string
     {

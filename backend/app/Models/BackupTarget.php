@@ -13,12 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * What to back up for one application, where to, how often, and how many to
- * keep.
+ * What to back up for one application, where to, how often, and how many to keep.
  *
- * The schedule lives in this row rather than in a cron file, so it can never
- * drift with the user-managed Cronjobs feature — same reasoning and same
- * frequency vocabulary as DiskCleanerSchedule.
+ * The schedule lives in this row, not a cron file, so it cannot drift with the user-managed
+ * Cronjobs feature. Same frequency vocabulary as DiskCleanerSchedule.
  */
 #[Fillable([
     'application_id', 'database_id', 'storage_destination_id', 'type', 'retention_count',
@@ -27,9 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class BackupTarget extends Model
 {
     /**
-     * In the order a dropdown shows them. The options endpoint and the save
-     * validation both read this, so what is offered and what is accepted are
-     * one list.
+     * In dropdown order. The options endpoint and the save validation both read this.
      *
      * @var list<string>
      */
@@ -55,9 +51,8 @@ class BackupTarget extends Model
     ];
 
     /**
-     * Friendly frequency → cron expression. 02:00 rather than the disk
-     * cleaner's 03:00 so the two do not contend for the same disk and CPU on
-     * a small VPS — a backup competing with a cleanup is how both get slow.
+     * Friendly frequency → cron expression. 02:00, not the disk cleaner's 03:00, so the two do
+     * not compete for disk and CPU on a small VPS.
      */
     private const CRON = [
         'daily' => '0 2 * * *',
@@ -75,10 +70,8 @@ class BackupTarget extends Model
             'retention_count' => 'integer',
             'file_excludes' => 'array',
             'database_excludes' => 'array',
-            // Null is meaningful: every volume, including ones added later. An
-            // empty array reads the same way rather than as "none", because a
-            // target that captures nothing yet runs nightly and succeeds is the
-            // worst state this feature can be in.
+            // Null means every volume, including ones added later. An empty array is read the
+            // same way, not as "none": a target that captures nothing but succeeds is the worst state.
             'volume_scope' => 'array',
             'enabled' => 'boolean',
             'last_run_at' => 'datetime',
@@ -91,8 +84,7 @@ class BackupTarget extends Model
     }
 
     /**
-     * A database on its own (2026-10-16): a target belongs to a site or to a
-     * database, never both. See {@see self::subjectName()}.
+     * A target belongs to a site or to a database, never both. See {@see self::subjectName()}.
      */
     public function database(): BelongsTo
     {
@@ -123,11 +115,8 @@ class BackupTarget extends Model
     }
 
     /**
-     * The newest run of this target — scheduled or "Back up now", whatever its
-     * status — never a safety copy taken before a restore. The same rule the
-     * coverage list's `state` uses (BackupCoverage), so a row's `last_backup`
-     * and its `state` can never disagree: a failed safety copy says nothing
-     * about whether the schedule works.
+     * The newest run of this target, whatever its status, never a pre-restore safety copy. Same
+     * rule as the coverage list's `state` (BackupCoverage), so `last_backup` and `state` agree.
      */
     public function latestRun(): HasOne
     {
@@ -138,11 +127,9 @@ class BackupTarget extends Model
     }
 
     /**
-     * The newest good backup that still exists — what "last backup" means to
-     * a user (BK-A).
+     * The newest good backup that still exists: what "last backup" means to a user.
      *
-     * Not `last_run_at`: that is when the scheduler last ran this target, and
-     * it has to survive deleting the backups, or `isDue()` would read null as
+     * Not `last_run_at`, which must survive deleting backups or `isDue()` would read null as
      * "never ran" and take a new one on the next tick.
      */
     public function latestKeptBackup(): HasOne
@@ -156,21 +143,13 @@ class BackupTarget extends Model
     /**
      * The timezone this schedule is interpreted in.
      *
-     * The app's, because that is what `RunScheduledBackups` compares against:
-     * it calls `Date::now()`, and `isDue()` resolves the cron slot in the same
-     * zone. So "02:00" on this target means 02:00 here, and on a server set to
-     * anything else it does NOT mean 02:00 to the person who typed it.
+     * The app's timezone, because `RunScheduledBackups` and `isDue()` both resolve the cron slot
+     * in it.
      *
-     * 🔴 **Not `ServerTimezone::get()`, and the difference is the whole point.**
-     * Cronjob uses that because Linux cron genuinely runs on the OS clock.
-     * Backups do not. Naming the server's timezone on a schedule evaluated in
-     * UTC would print a confident, specific, wrong time — worse than the bare
-     * number it replaces, since a user cannot tell it is wrong.
+     * Never `ServerTimezone::get()`: Cronjob uses that because Linux cron runs on the OS clock,
+     * but backups do not, and it would label the schedule with a confident, wrong time.
      *
-     * A method rather than the config read inline in the resource: the day
-     * these move to server time, this is the one line that changes and the
-     * label follows. A resource holding its own copy is a label that goes
-     * stale the moment the clock moves — which is the bug this exists to fix.
+     * A method so the resource's label follows if this ever moves to server time.
      */
     public function scheduleTimezone(): string
     {
@@ -202,11 +181,8 @@ class BackupTarget extends Model
             $every = self::EVERY_HOURS[$this->frequency];
             [$hour, $minute] = explode(':', $this->schedule_time ?? '02:00', 2);
 
-            // The chosen time is one of the runs, and the rest fall every N
-            // hours around it. The range has to start at the hour modulo N:
-            // `14-23/12` means "from 14:00", so 14:30 every 12 hours would run
-            // once a day. `2-23/12` runs at 02:30 and 14:30, which is what was
-            // asked for. Measured against the cron library, 2026-09-24.
+            // The chosen time is one of the runs. The range must start at the hour modulo N:
+            // `14-23/12` means "from 14:00" and would run once a day, `2-23/12` runs 02:30 and 14:30.
             return (int) $minute.' '.((int) $hour % $every).'-23/'.$every.' * * *';
         }
 
@@ -216,9 +192,8 @@ class BackupTarget extends Model
             return $base;
         }
 
-        // Replace only the minute (field 0) and hour (field 1) fields,
-        // preserving the day-of-week (field 4) for weekly and day-of-month
-        // (field 2) for monthly. "14:30" on a weekly cron keeps its Sunday.
+        // Replace only minute (field 0) and hour (field 1); weekly keeps its day-of-week and
+        // monthly its day-of-month.
         $parts = preg_split('/\s+/', $base);
         [$hour, $minute] = explode(':', $this->schedule_time, 2);
 
@@ -231,12 +206,9 @@ class BackupTarget extends Model
     /**
      * When the next scheduled run will happen.
      *
-     * Computed here rather than published as a cron string, so the schedule
-     * stays one constant in one place — a frontend holding its own copy of
-     * `0 2 * * *` is a copy that goes stale the day this changes.
+     * Computed here, not published as a cron string, so the schedule stays defined in one place.
      *
-     * Null when nothing is scheduled: a disabled or manual target has no next
-     * run, and showing one would promise a backup that is never taken.
+     * Null when nothing is scheduled (disabled or manual).
      */
     public function nextRunAt(?DateTimeInterface $now = null): ?DateTimeInterface
     {
@@ -256,10 +228,8 @@ class BackupTarget extends Model
     /**
      * Whether a scheduled run is due.
      *
-     * Compares the last run against the most recent cron slot rather than
-     * against "now minus an interval", so a scheduler tick that was missed —
-     * a reboot, a busy box, a worker restart — still fires once when it comes
-     * back rather than silently skipping the day.
+     * Compares the last run against the most recent cron slot, not "now minus an interval", so a
+     * missed scheduler tick (reboot, worker restart) still fires once afterwards.
      */
     public function isDue(DateTimeInterface $now): bool
     {

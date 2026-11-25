@@ -14,12 +14,9 @@ use Throwable;
 /**
  * FTP, optionally over TLS (FTPS).
  *
- * ⚠️ **Plain FTP sends the password and the entire backup archive in the
- * clear.** It is supported because real infrastructure still runs it and
- * refusing outright would push people to keep no off-box backup at all — but
- * `ssl` defaults to on, and a destination that turns it off is labelled as
- * insecure everywhere it appears. The choice is the operator's; pretending it
- * is a safe one is not.
+ * ⚠️ Plain FTP sends the password and the whole backup archive in the clear. It stays supported
+ * because refusing it would leave some users with no off-box backup, but `ssl` defaults to on and
+ * a destination with it off is labelled insecure everywhere it appears.
  */
 class FtpDriver extends RemoteHostDriver
 {
@@ -27,10 +24,7 @@ class FtpDriver extends RemoteHostDriver
 
     private const DEFAULT_PORT = 21;
 
-    /**
-     * Bounds a *stalled* socket, not the length of a transfer — PHP applies it
-     * per network operation, so a steady multi-gigabyte download is unaffected.
-     */
+    /** Bounds a stalled socket, not the transfer: PHP applies it per network operation. */
     private const TRANSFER_TIMEOUT_SECONDS = 30;
 
     public function provider(): StorageProvider
@@ -51,20 +45,15 @@ class FtpDriver extends RemoteHostDriver
             'port' => (int) ($destination->configValue('port') ?: self::DEFAULT_PORT),
             'root' => $this->remoteRoot($destination),
 
-            // Defaults chosen for the case that actually happens. TLS on,
-            // because the alternative ships credentials in cleartext. Passive
-            // on, because the panel is usually behind NAT and an active-mode
-            // transfer needs the *server* to open a connection back to it,
-            // which a firewall will drop.
+            // TLS on: otherwise credentials go in cleartext. Passive on: the panel is usually
+            // behind NAT, and active mode needs the server to connect back, which a firewall drops.
             'ssl' => (bool) ($destination->configValue('ssl') ?? true),
             'passive' => (bool) ($destination->configValue('passive') ?? true),
 
-            // A backup upload is long; a stalled control connection should
-            // not hang a queue worker indefinitely.
+            // A stalled control connection must not hang a queue worker.
             'timeout' => self::TRANSFER_TIMEOUT_SECONDS,
 
-            // Same reason as S3: without it a failed write returns false and
-            // an upload that never happened looks exactly like one that did.
+            // Without it a failed write returns false and looks like a successful upload.
             'throw' => true,
         ];
     }
@@ -80,8 +69,8 @@ class FtpDriver extends RemoteHostDriver
             'config.password' => [...$secret, 'string', 'max:512'],
             'config.ssl' => ['nullable', 'boolean'],
             'config.passive' => ['nullable', 'boolean'],
-            // FTP-01: after a legitimate certificate renewal, forget the
-            // recorded fingerprint so the next connection records the new one.
+            // After a legitimate certificate renewal: forget the pinned fingerprint so the
+            // next connection records the new one.
             'config.trust_new_certificate' => ['sometimes', 'boolean'],
         ]);
     }
@@ -106,15 +95,13 @@ class FtpDriver extends RemoteHostDriver
             'root' => $destination->configValue('root'),
             'ssl' => (bool) ($destination->configValue('ssl') ?? true),
             'passive' => (bool) ($destination->configValue('passive') ?? true),
-            // The certificate this destination is pinned to (FTP-01). Safe to
-            // show: a certificate fingerprint is public by definition.
+            // The pinned certificate; a fingerprint is public, so safe to show.
             'tls_fingerprint' => $destination->configValue('tls_fingerprint'),
         ];
     }
 
     /**
-     * Checked before every connection a backup, restore or test makes — the
-     * disk is built only after this runs (DestinationDisk::for).
+     * Checked before every backup, restore or test connection (see DestinationDisk::for).
      *
      * @throws FtpsCertificateException
      */
@@ -139,9 +126,8 @@ class FtpDriver extends RemoteHostDriver
     }
 
     /**
-     * Pin the FTPS certificate on first use and refuse a different one after
-     * (FTP-01), the same trust-on-first-use SFTP applies to its host key.
-     * Plain FTP has no certificate and nothing to check.
+     * Pin the FTPS certificate on first use and refuse a different one after (trust on first use,
+     * like SFTP host keys). Plain FTP has nothing to check.
      *
      * @throws FtpsCertificateException
      */
@@ -158,8 +144,7 @@ class FtpDriver extends RemoteHostDriver
         );
 
         if ($pinned === '') {
-            // First use. Nothing readable to record means the real connection
-            // will fail on its own, with its own reason.
+            // First use. If nothing is readable, the real connection fails with its own reason.
             if ($current !== null) {
                 $destination->mergeConfig(['tls_fingerprint' => $current]);
 
@@ -181,14 +166,9 @@ class FtpDriver extends RemoteHostDriver
     }
 
     /**
-     * FTP separates the two cases cleanly, which S3 does not: the adapter
-     * raises `UnableToAuthenticate` for a rejected login and
-     * `UnableToConnectToFtpHost` for everything about getting there.
-     *
-     * The `530` fallback covers the case where the failure surfaces as a raw
-     * server reply rather than a typed exception — 530 is FTP's "not logged
-     * in", and without it a wrong password reads as an unreachable host and
-     * sends the user to check DNS.
+     * The adapter raises `UnableToAuthenticate` for a rejected login and `UnableToConnectToFtpHost`
+     * for everything about getting there. The `530` ("not logged in") fallback in
+     * `categoryForMessage()` covers failures that surface as a raw server reply.
      */
     protected function categoryForType(Throwable $e): ?string
     {
@@ -200,14 +180,8 @@ class FtpDriver extends RemoteHostDriver
             return 'storage.test.invalid_credentials';
         }
 
-        // The host answered and the login succeeded; the folder is not there.
-        // Measured against a live FTP server: this is what a brand-new
-        // destination pointed at a folder the user has not created yet does,
-        // and it is the single most likely first-run mistake. Reporting it as
-        // "unreachable" sends them to check DNS and a firewall over a missing
-        // directory. FTP surfaces it where SFTP does not, because the FTP
-        // adapter resolves its root by changing into it and refuses when that
-        // fails, rather than creating it.
+        // Login worked but the folder is missing (likely first-run mistake). The FTP adapter
+        // resolves its root by changing into it and refuses instead of creating it.
         if ($e instanceof UnableToResolveConnectionRoot) {
             return 'storage.test.root_missing';
         }
@@ -234,12 +208,9 @@ class FtpDriver extends RemoteHostDriver
     /**
      * Does this server offer encryption (FTPS) at all?
      *
-     * Asked only after an encrypted login was refused (bug #39). A server
-     * with no TLS refuses `AUTH TLS`, and vsftpd does it with **530** — the
-     * same code as a wrong password, measured 2026-10-03 — so the failure
-     * was reported as "rejected the credentials" with the password right.
-     * `234` is the one answer that means yes. Null when the server could not
-     * be asked, so the caller keeps its own verdict.
+     * Asked only after an encrypted login was refused: a server without TLS refuses `AUTH TLS`
+     * with 530 (vsftpd), the same code as a wrong password. `234` is the only answer meaning yes.
+     * Null when the server could not be asked, so the caller keeps its own verdict.
      */
     public function supportsTls(StorageDestination $destination): ?bool
     {
@@ -265,21 +236,12 @@ class FtpDriver extends RemoteHostDriver
     /**
      * Download straight onto disk, never through `php://temp`.
      *
-     * The adapter's `readStream()` is `fopen('php://temp')` + `ftp_fget`: the
-     * whole object lands in a buffer before the caller sees a byte, and that
-     * buffer spills into the system temp directory — a tmpfs of a couple of
-     * gigabytes on a normal install. Restoring a 24 GB archive failed with
-     * "Unable to read file" while the transfer itself was perfectly healthy;
-     * the same download to /dev/null finished in 34 seconds.
+     * The adapter's `readStream()` buffers the whole object in `php://temp`, which spills into the
+     * system temp directory (a small tmpfs), so large restores fail. `ftp_fget` writes to the
+     * destination file directly instead.
      *
-     * `ftp_fget` writes to whatever handle it is given, so handing it the
-     * destination file removes the buffer entirely. The archive is then
-     * bounded by the disk it is about to be extracted on, which is the only
-     * limit that should apply.
-     *
-     * Returns false rather than throwing when it cannot connect: the caller
-     * falls back to the streaming copy, and a slow fallback beats a restore
-     * that refuses to start.
+     * Returns false rather than throwing when it cannot connect: the caller falls back to the
+     * streaming copy.
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool
     {
@@ -288,8 +250,7 @@ class FtpDriver extends RemoteHostDriver
         $ssl = (bool) ($destination->configValue('ssl') ?? true);
         $timeout = self::TRANSFER_TIMEOUT_SECONDS;
 
-        // This path opens its own connection rather than going through the
-        // disk, so it checks the certificate itself.
+        // Opens its own connection (not via the disk), so it checks the certificate itself.
         $this->verifyCertificate($destination);
 
         $connection = $ssl
@@ -308,9 +269,7 @@ class FtpDriver extends RemoteHostDriver
                 return false;
             }
 
-            // Passive unless explicitly turned off, for the reason `config()`
-            // gives: an active transfer needs the server to open a connection
-            // back to the panel, which a firewall drops.
+            // Passive unless turned off, for the reason given in `config()`.
             @ftp_pasv($connection, (bool) ($destination->configValue('passive') ?? true));
             @ftp_set_option($connection, FTP_TIMEOUT_SEC, $timeout);
 

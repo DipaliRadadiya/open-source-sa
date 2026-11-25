@@ -11,41 +11,25 @@ use Illuminate\Support\Sleep;
  *
  * ## Why this is not just a command
  *
- * OpenLiteSpeed does not report a broken configuration through the return path
- * of its config test. In test mode a fatal configuration error is explicitly
- * *not* treated as failure — `lshttpdmain.cpp` reads
- * `if (ret && !m_iConfTestMode)` — and the error log is redirected to
- * `{tmp}/testconf` instead. The exit code is then decided at the very end by
- * reading that file back:
+ * In test mode OpenLiteSpeed does not treat a fatal configuration error as failure
+ * (`lshttpdmain.cpp`: `if (ret && !m_iConfTestMode)`) and redirects the error log to
+ * `{tmp}/testconf`. The exit code is decided at the end by reading that file back:
  *
  *  - absent or empty → **0**
  *  - non-empty, no `[ERROR]` in it → **1**
  *  - contains `[ERROR]` → **2**
  *
- * ⚠️ **And test mode is the one mode that does not create that directory.**
- * `mkdir(DEFAULT_TMP_DIR, 0755)` sits behind `if (!m_iConfTestMode)`. So when
- * `/tmp/lshttpd` is missing the log cannot be written, the file is never
- * found, and the test exits 0 on any configuration however broken. That is not
- * an edge case: `/tmp` is tmpfs or is cleaned by systemd-tmpfiles, so it is the
- * normal state of a rebooted box and the permanent state of one where lshttpd
- * has never started — which is exactly when a panel provisions its first site.
- *
- * The panel therefore creates the directory itself before asking.
+ * Test mode is also the one mode that does not create that directory
+ * (`mkdir(DEFAULT_TMP_DIR, 0755)` sits behind `if (!m_iConfTestMode)`). When `/tmp/lshttpd` is
+ * missing, which is normal after a reboot or before lshttpd first starts, the test exits 0 on
+ * any configuration. The panel therefore creates the directory itself before asking.
  *
  * ## Why it is a class rather than a method on the driver
  *
- * There are two callers and they are not the same danger. `OlsDriver` tests
- * before publishing one site's vhost; `OlsSharedConfig` tests before keeping a
- * write to `httpd_config.conf`, which is the file every site on the box shares
- * — and rolls the whole file back when the test fails. That rollback is the
- * single most important use of the test in the panel, and it had its own
- * duplicate copy of the command, so a fix applied to the driver alone would
- * have left it exiting 0 on anything: a rollback guarding every site, wired to
- * a check that could not fail.
- *
- * It cannot live on either of them, either. `OlsDriver` already depends on
- * `OlsSharedConfig`, so the dependency can only point one way, and a container
- * cycle here does not fail loudly — it hangs.
+ * `OlsDriver` tests before publishing one site's vhost; `OlsSharedConfig` tests before keeping
+ * a write to `httpd_config.conf` (shared by every site) and rolls the file back on failure. Both
+ * need the same fixed check. It cannot live on either: `OlsDriver` already depends on
+ * `OlsSharedConfig`, and a container cycle hangs instead of failing loudly.
  */
 class OlsConfigCheck
 {
@@ -55,46 +39,31 @@ class OlsConfigCheck
     {
         $context = $context + ['feature' => 'application', 'op' => 'ols_config_test'];
 
-        // Not fatal. Failing to create it leaves the test exactly as
-        // uninformative as it has always been, which is no reason to refuse
-        // the write it was asked about.
+        // Not fatal: failing to create it only leaves the test uninformative.
         $this->serverOps->run(
             ['mkdir', '-p', $this->tmpDirectory()],
             $context + ['op' => 'ols_config_test_prepare'],
             timeout: 15,
         );
 
-        // Declared as an answer rather than a failure so a warning does not
-        // land on the admin error dashboard. It does not make the result ok —
-        // that decision is below, where it can be explained.
+        // Exit 1 is declared an answer so a warning stays off the admin error dashboard; ok is
+        // decided below.
         $result = $this->serverOps->run($this->command(), $context, expectedExitCodes: [1]);
 
-        // Killed, not answered. About six seconds after a graceful restart
-        // OpenLiteSpeed kills every `openlitespeed` process it finds, a test
-        // still running included (measured on 1.9.4, 2026-11-11: started 0 s
-        // and 4 s after `lswsctrl restart` it died with signal 9, 8 s after it
-        // ran). Every panel write that reloads and then tests again hit it —
-        // `sites:resync` refused the Cloudflare list on a fresh install that
-        // way. That says nothing about the config, so ask again.
+        // Killed, not answered: about six seconds after a graceful restart OpenLiteSpeed kills
+        // every `openlitespeed` process, a running test included. That says nothing about the
+        // config, so ask again.
         for ($retry = 0; $retry < 2 && $this->killed($result); $retry++) {
             Sleep::for(2)->seconds();
             $result = $this->serverOps->run($this->command(), $context, expectedExitCodes: [1]);
         }
 
-        // Exit 1 is "the log had something in it, none of it an error" — the
-        // log level in test mode is WARN, so this is a deprecation notice and
-        // friends. Refusing here would turn a warning into a site that cannot
-        // be created, and until the directory above was created the test
-        // exited 0 regardless, so exit 1 has never been reachable on a real
-        // server: treating it as failure would be a brand-new refusal shipped
-        // as a fix. Errors are exit 2 and still fail.
+        // Exit 1 means the log held only warnings (test-mode log level is WARN); refusing
+        // would turn a warning into a site that cannot be created. Errors are exit 2 and still
+        // fail.
         //
-        // Deliberately checked against 1 and not "anything below 2": a code
-        // the panel has no reading for is a failure, including the ones that
-        // never came from OpenLiteSpeed at all — sudo refusing is 1 too, but
-        // it arrives with a non-empty stderr, which is why `expectedExitCodes`
-        // above leaves `answered` false for it while this returns ok. That is
-        // the wrong shape to rely on, so it is checked explicitly.
+        // Checked against 1 explicitly, not "below 2": a code the panel cannot read is a
+        // failure. sudo refusing is also 1 but arrives with non-empty stderr, hence the check.
         if ($result->exitCode() === 1 && trim($result->errorOutput()) === '') {
             return new ServerOpsResult(true, $result->reference, $result->result);
         }
@@ -103,10 +72,8 @@ class OlsConfigCheck
     }
 
     /**
-     * Ended by a signal. Symfony throws for a signalled process and ServerOps
-     * returns it with no process result at all — the same shape as a spawn
-     * that failed, which for this command (no working directory, an absolute
-     * path) asking again also does no harm. Not our own timeout or sudo.
+     * Ended by a signal: ServerOps returns no process result, the same shape as a failed
+     * spawn, for which asking again is harmless. Not our own timeout or sudo.
      */
     private function killed(ServerOpsResult $result): bool
     {
@@ -118,11 +85,8 @@ class OlsConfigCheck
      */
     private function command(): array
     {
-        // `openlitespeed -t`, not `lswsctrl config_test`: lswsctrl has no such
-        // verb. It prints its usage and exits non-zero for anything outside
-        // start|stop|restart|reload|status, so an earlier default failed
-        // exactly the way a rejected config fails — every write through
-        // OlsSharedConfig would have rolled itself back.
+        // `openlitespeed -t`, not `lswsctrl config_test`: lswsctrl has no such verb and exits
+        // non-zero, which would read as a rejected config.
         return (array) config(
             'server.web_server_drivers.openlitespeed.test_command',
             ['/usr/local/lsws/bin/openlitespeed', '-t'],
@@ -132,9 +96,7 @@ class OlsConfigCheck
     /**
      * Where OpenLiteSpeed writes the log that decides the config test.
      *
-     * Config because it is compiled in (`DEFAULT_TMP_DIR`) and a package could
-     * build it elsewhere — the same reason every other path on this driver is
-     * config: a wrong one should be an edit, not a patch.
+     * Config because it is compiled in (`DEFAULT_TMP_DIR`) and a package could build it elsewhere.
      */
     private function tmpDirectory(): string
     {

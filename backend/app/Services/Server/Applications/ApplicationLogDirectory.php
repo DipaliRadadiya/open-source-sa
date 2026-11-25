@@ -10,36 +10,19 @@ use Throwable;
 /**
  * The one directory every log for a site lands in: `{appRoot}/logs`.
  *
- * **Owned by root, group the site user, mode 0750.** That combination is the
- * whole point of this class, and both halves of it are load-bearing.
+ * **Owned by root, group the site user, mode 0750.** Both halves are load-bearing.
  *
- * The site user is in the group, so it can read every log — which is the
- * reason the logs moved out of `/var/log/nginx` and out of `.panel` at all. A
- * developer whose site is throwing 500s needs its error log, and needing root
- * for that on your own site is absurd.
+ * The site user is in the group, so it can read every log of its own site.
  *
- * The site user does **not** own the directory, so it cannot create, delete or
- * replace anything in it. That matters because the files here are opened by
- * root: nginx and Apache open their access logs in the master process, systemd
- * opens `StandardOutput=append:` targets in PID 1, and php-fpm opens a pool's
- * `error_log` before dropping to the pool user. Write permission on a
- * directory is permission to unlink what is inside it, so a user-owned log
- * directory lets a compromised site delete `access.log`, put a symlink to
- * `/etc/cron.d/anything` in its place, and have a root process append
- * attacker-chosen request text into it. That is the reason distributions keep
- * web server logs under root-owned `/var/log` in the first place, and it does
- * not stop being true because the directory moved.
+ * The site user does **not** own the directory, so it cannot create, delete or replace anything
+ * in it. The files here are opened by root (nginx/Apache master process, systemd `append:`
+ * targets, php-fpm `error_log` before it drops to the pool user). Write permission on a directory
+ * is permission to unlink, so a user-owned directory would let a compromised site replace
+ * `access.log` with a symlink to `/etc/cron.d/anything` and have a root process append
+ * attacker-chosen text into it. Never `chown` this directory to the site user.
  *
- * The corollary — every writer here is a root master process handing a
- * descriptor down — is what makes a root-owned directory workable at all.
- * Nothing running *as* the site user ever needs to create a file in here.
- * {@see vps-security-hardening-research §9: "files outside the application
- * tree are not owned by the app user".}
- *
- * `ProcessSupervisor::ensureLogDirectory()` used to `chown {user}:{user}` this
- * same path, because when it was written the only things in it were that
- * application's own process logs. Adding the web server's logs to the same
- * directory is what makes the ownership matter.
+ * Every writer is a root process handing a descriptor down, so nothing running as the site user
+ * ever needs to create a file in here.
  */
 class ApplicationLogDirectory
 {
@@ -53,15 +36,12 @@ class ApplicationLogDirectory
     /**
      * Ensure the directory exists with the right owner, group and mode.
      *
-     * Idempotent, and deliberately re-asserts ownership every time rather than
-     * only on creation: a server that provisioned sites before this existed
-     * has a user-owned `logs/`, and it repairs itself on the next provision or
-     * `sites:resync` without anyone running anything by hand.
+     * Idempotent; ownership is re-asserted every run (not only on creation), so a user-owned
+     * `logs/` from an older provision repairs itself on the next provision or `sites:resync`.
      *
-     * Returns whether anything was actually granted, which the caller needs in
-     * order to know whether the web server has to be restarted — see
-     * {@see admitLogWriter()}. False is the normal answer: on nginx and Apache
-     * always, and on OpenLiteSpeed every run after the first.
+     * Returns whether a group grant was actually made, which tells the caller the web server
+     * must restart — see {@see admitLogWriter()}. False is normal: always on nginx and Apache,
+     * and on OpenLiteSpeed every run after the first.
      */
     public function ensure(Application $application): bool
     {
@@ -75,10 +55,8 @@ class ApplicationLogDirectory
             'path' => $directory,
         ];
 
-        // Created with the site root's immutable flag lifted when it is
-        // missing — `logs` is an entry of that directory ({@see SiteRootLock}).
-        // Ownership and mode below change the directory itself, not the site
-        // root, so they need nothing lifted.
+        // Created with the site root's immutable flag lifted if missing ({@see SiteRootLock});
+        // the chown/chmod below touch only this directory and need nothing lifted.
         $this->rootLock->ensureDirectory($application, $directory, $context);
 
         foreach ([
@@ -89,56 +67,35 @@ class ApplicationLogDirectory
             $this->serverOps->run($command, $context, timeout: 15);
         }
 
-        // Every site with a log directory gets a policy for it (LOG-01): this
-        // is the one place both the web server and a process site pass through,
-        // on create and on every `sites:resync`.
+        // Every site with a log directory gets a rotation policy; this runs on create and on
+        // every `sites:resync`.
         $this->rotation->write($application);
 
         return $this->admitLogWriter($application, $group);
     }
 
     /**
-     * Let the web server's own account into the group, when it is the thing
-     * that opens the log files.
+     * Let the web server's own account into the group, when it is the one that opens the log files.
      *
-     * Null for nginx and Apache, whose root master process opens the log and
-     * hands the descriptor down — so on those stacks this grants nothing and
-     * the directory stays exactly as it was. Only OpenLiteSpeed answers, and
-     * only because its workers run as `nobody` and open the vhost's logs
-     * themselves.
+     * Null for nginx and Apache (a root master process opens the log), so nothing is granted
+     * there. Only OpenLiteSpeed answers: its workers run as `nobody` and open the logs themselves.
      *
-     * Group membership rather than `chmod o+x`, which was the cheaper fix and
-     * the wrong one: traversal for "other" lets *every* local account read
-     * every site's access log — IPs, URLs, whatever is in a query string — on
-     * a panel whose whole point is that sites are separate tenants. This
-     * admits one named account and leaves the mode alone, so the site user
-     * still cannot unlink what a privileged process is appending to.
+     * Group membership, never `chmod o+x`: traversal for "other" would let every local account
+     * read every site's access log (IPs, URLs, query strings). This admits one named account and
+     * leaves the mode alone, so the site user still cannot unlink what a privileged process
+     * appends to.
      *
-     * 🔴 The ordering is the correctness of this, not a detail. Supplementary
-     * groups are read when a process starts, so a membership added after the
-     * web server has started does nothing at all until it restarts. This runs
-     * from `ensureDirectories()`, inside `apply()`, before the restart that
-     * publishes the vhost — measured on a live box: the grant alone left
-     * access.log at zero bytes, and `lswsctrl restart` made the next request
-     * appear in it.
+     * 🔴 Ordering matters: supplementary groups are read when a process starts, so a grant added
+     * after the web server started is inert until it restarts. This runs inside `apply()`, before
+     * the restart that publishes the vhost.
      *
-     * Best-effort like every other step here. A server running a web server
-     * the panel cannot configure has no driver to ask, and that must not stop
-     * a log directory being created.
+     * Best-effort: a web server the panel cannot configure has no driver to ask, and that must not
+     * stop the directory being created.
      *
-     * Returns true only when the membership was actually added. That is what
-     * makes the restart decidable: `sites:resync` reloads the web server when
-     * a site's config text changed, and this grant changes no text at all — so
-     * on a server whose sites were all already current, the grant landed and
-     * sat inert until something else happened to restart the web server.
-     * Measured on a live box: `1 already current, 0 updated`, no reload, and
-     * the site went on logging nothing.
-     *
-     * Asking first, rather than granting unconditionally and reporting true,
-     * is the whole point. `gpasswd -a` succeeds just as happily on an account
-     * that is already a member, so an unconditional grant can only answer "I
-     * ran something", and a resync that restarts the web server on every run
-     * would be a worse bug than the one this fixes.
+     * Returns true only when the membership was actually added. `sites:resync` reloads the web
+     * server only when config text changed, and this grant changes none, so the caller restarts
+     * on this result. Ask first: `gpasswd -a` also succeeds for an existing member, and restarting
+     * the web server on every resync would be worse.
      */
     private function admitLogWriter(Application $application, string $group): bool
     {
@@ -159,9 +116,8 @@ class ApplicationLogDirectory
             'user' => $user,
         ];
 
-        // `id -nG` lists the account's groups by name. An unreadable answer is
-        // treated as "not a member", which costs one redundant `gpasswd` and a
-        // restart; the opposite default would skip a grant the site needs.
+        // An unreadable answer counts as "not a member": costs one redundant `gpasswd` and
+        // restart, whereas the opposite default could skip a needed grant.
         $groups = $this->serverOps->run(['id', '-nG', $user], $context, timeout: 15);
 
         if ($groups->ok && in_array($group, preg_split('/\s+/', trim($groups->output())) ?: [], true)) {

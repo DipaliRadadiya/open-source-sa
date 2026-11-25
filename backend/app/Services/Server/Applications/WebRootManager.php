@@ -15,24 +15,16 @@ use Illuminate\Validation\ValidationException;
 /**
  * Move which directory of a site is actually served.
  *
- * The column and the validation for it already existed; what did not was
- * anything that made the change *true*. Storing `web_root` and returning 200
- * left the server serving the old directory until someone re-provisioned —
- * the panel reporting a change it had not made, which is the one thing this
- * panel is not allowed to do.
- *
- * The document root is not just the vhost's `root`. Three other things are
- * derived from it, and all three break quietly if only the vhost moves:
+ * The document root is not just the vhost's `root`. Three other things derive from it and break
+ * quietly if only the vhost moves:
  *
  *  - the PHP-FPM pool's `session.save_path` and error log,
  *  - the systemd unit's `WorkingDirectory` for a Node app,
  *  - `.panel/.htpasswd`, which Password Protection points the vhost at.
  *
- * Ordering is the safety property, same as everywhere else in this namespace:
- * everything the *new* config will reference is put in place first, the vhost
- * is applied → tested → reloaded with a rollback on a failed test, and only
- * then is the old sidecar removed. At no instant does a live config reference
- * a file that is not there.
+ * Ordering is the safety property: everything the new config references is put in place first,
+ * the vhost is applied → tested → reloaded (rolled back on a failed test), and only then is the
+ * old sidecar removed. A live config never references a file that is not there.
  */
 class WebRootManager
 {
@@ -60,12 +52,9 @@ class WebRootManager
             return;
         }
 
-        // Nothing has been written to the server for these, so there is no
-        // config to move — storing the value is the whole change. A disabled
-        // site is in the same position for a different reason: its vhost
-        // deliberately points at the disabled page, and re-applying the real
-        // one here would put the site back online as a side effect of an
-        // unrelated setting.
+        // Not live: nothing is on the server to move, so storing the value is the whole change.
+        // A disabled site's vhost points at the disabled page; re-applying the real one here
+        // would put the site back online as a side effect.
         if ($application->status !== ApplicationStatus::Active || $application->disabled_at !== null) {
             $application->web_root = $next;
             $application->save();
@@ -80,21 +69,14 @@ class WebRootManager
         $this->refuseLinks($application, $documentRoot, $previous);
         $this->refuseMissing($application, $documentRoot, $previous);
 
-        // No `mkdir` and no `chown` here any more (WR-01). Both ran as root on
-        // a path inside the site user's own public_html, and both follow
-        // symlinks: a link the user planted (public_html/pub -> /etc) handed
-        // the target to the user. They had stopped doing anything useful once
-        // the folder had to exist already (#8) — it is the user's folder, made
-        // by the user or by a deploy that runs as the user.
+        // Never `mkdir`/`chown` here: they would run as root inside the site user's public_html
+        // and follow a planted symlink (public_html/pub -> /etc), handing the target to the user.
 
-        // The credential file no longer moves with the document root — it
-        // lives above it now — so this is only here to guarantee it exists
+        // The credential file lives above the document root; this only guarantees it exists
         // before the vhost that references it goes live.
         $this->basicAuth->publish($application);
 
-        // The pool before the vhost, for the same reason isolating a site
-        // writes the pool first: the vhost is what starts sending requests
-        // into it, so it must be the last thing to change.
+        // Pool before vhost: the vhost starts sending requests into the pool, so it changes last.
         $this->republishPool($application);
 
         $applied = $this->applyVhost($application);
@@ -115,14 +97,11 @@ class WebRootManager
 
         $reload = $this->webServers->driver()->reload();
 
-        // Saved either way: the tested config is on disk, and the row has to
-        // say what the disk says. A failed reload is reported, not passed off
-        // as success — see WebServerReloadFailedException.
+        // Saved even if the reload failed: the tested config is on disk and the row must match.
+        // The failure is still reported (WebServerReloadFailedException).
         $application->save();
 
-        // After the reload: the unit's working directory only matters to the
-        // next start, and the old credential file must outlive the config that
-        // referenced it.
+        // After the reload: the unit's working directory only matters at the next start.
         $this->republishUnit($application, $documentRoot);
 
         if ($reload->failed()) {
@@ -133,11 +112,8 @@ class WebRootManager
     /**
      * Put the previous web root back on the model and in the live config.
      *
-     * Nothing has been reloaded at either call site, so the server is still
-     * serving the old root — this restores the *files* to match, and leaves
-     * the freshly created directory behind rather than removing it, because a
-     * `rm -rf` on a path derived from user input is not a rollback anyone
-     * should write.
+     * Nothing was reloaded yet, so the server still serves the old root; this restores the files
+     * to match. Never `rm -rf` a path derived from user input to roll back.
      */
     private function rollback(Application $application, string $previous): void
     {
@@ -149,18 +125,11 @@ class WebRootManager
     }
 
     /**
-     * Refuse a web root that is not there yet (junior re-test #8, 2026-10-05).
+     * Refuse a web root that is not there yet.
      *
-     * This used to create it — empty — and point the live site at it, so a
-     * typo (`/etc` became `public_html/etc`) took the site down with a 403 and
-     * no word of warning. An empty folder is never what someone moving a live
-     * site's web root meant: the files they want served are either already
-     * there or about to be uploaded, and the second case is a two-step job
-     * the user can see. The full path is in the message, so `/etc` reads as
-     * the site-relative path it really is.
-     *
-     * Live sites only: a pending site has nothing on disk yet, which is what
-     * apply() already handles above by storing the value alone.
+     * Never create it: a typo (`/etc` became `public_html/etc`) would point the live site at an
+     * empty folder and take it down with a 403. The message carries the full path.
+     * Live sites only; apply() stores the value alone for the others.
      */
     private function refuseMissing(Application $application, string $documentRoot, string $previous): void
     {
@@ -172,8 +141,7 @@ class WebRootManager
 
         $application->web_root = $previous;
 
-        // Anything but "not there" (a refused sudo, a timeout) is a fault, not
-        // an answer, and must not read as one.
+        // Anything but "not there" (refused sudo, timeout) is a fault, not an answer.
         // `denied` first: sudo refusing the command also exits 1.
         if ($exists->denied || $exists->exitCode() !== 1) {
             throw new WebRootOperationException($exists->reference);
@@ -185,13 +153,11 @@ class WebRootManager
     }
 
     /**
-     * Refuse a web root reached through a symlink (WR-01, old QA list).
+     * Refuse a web root reached through a symlink.
      *
-     * The site user owns public_html and can plant a link anywhere in it.
-     * Served through one, the site publishes whatever the link points at —
-     * /etc, another site's files — to the web. Every component from
-     * public_html down is checked, not only the last: `a/b` is just as far
-     * from home when `a` is the link.
+     * The site user can plant a link anywhere in public_html and would publish its target
+     * (/etc, another site's files). Every component from public_html down is checked, not
+     * only the last: `a/b` escapes just as far when `a` is the link.
      */
     private function refuseLinks(Application $application, string $documentRoot, string $previous): void
     {
@@ -203,8 +169,7 @@ class WebRootManager
         }
 
         foreach ($paths as $path) {
-            // Exit 0 = it is a link; 1 = it is not (or is not there, which
-            // refuseMissing() answers next).
+            // Exit 0 = a link; 1 = not a link (or missing, which refuseMissing() handles).
             $link = $this->serverOps->probe(['test', '-L', $path], $this->context($application, 'web_root_link'));
 
             if ($link->ok) {
@@ -224,9 +189,7 @@ class WebRootManager
     }
 
     /**
-     * Only an isolated site has a pool of its own to rewrite. A shared-pool
-     * site keeps sessions wherever the shared pool puts them, which the web
-     * root does not move.
+     * Only an isolated site has a pool of its own to rewrite; the shared pool does not move.
      */
     private function republishPool(Application $application): void
     {
@@ -248,9 +211,8 @@ class WebRootManager
     }
 
     /**
-     * A Node app's unit runs from the document root, so a moved root means the
-     * unit is now pointed at the wrong directory. Rewritten without starting
-     * anything: a stopped app must not be started by a settings change.
+     * A Node app's unit runs from the document root. Rewritten without starting anything: a
+     * stopped app must not be started by a settings change.
      */
     private function republishUnit(Application $application, string $documentRoot): void
     {
@@ -267,8 +229,7 @@ class WebRootManager
     }
 
     /**
-     * Stored without a leading or trailing slash, so `/public`, `public/` and
-     * `public` are the same web root and a no-op change is recognised as one.
+     * Stored without leading/trailing slash, so `/public`, `public/` and `public` are equal.
      */
     private function normalize(?string $webRoot): string
     {

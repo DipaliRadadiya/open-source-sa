@@ -40,8 +40,7 @@ class WordPressInstaller extends AbstractPhpInstaller
             'database' => $context['database'],
             'username' => $context['db_user'],
             'password' => $context['db_password'],
-            // `host:port` when the port is not the one WordPress assumes —
-            // wpdb parses that shape out of DB_HOST itself.
+            // `host:port` when the port is non-default; wpdb parses it out of DB_HOST.
             'host' => $this->hostWithPort($context),
             'prefix' => $settings['table_prefix'] ?? 'wp_',
             'salts' => $this->salts(),
@@ -49,17 +48,11 @@ class WordPressInstaller extends AbstractPhpInstaller
 
         $this->ensureWpCli($application);
 
-        // The admin password goes in on stdin via --prompt, never as an
-        // argument — `ps` is readable by every user on the machine.
-        // Run the phar through the site's own interpreter rather than letting
-        // its `#!/usr/bin/env php` shebang pick one. Two reasons: on
-        // OpenLiteSpeed there may be no system `php` at all — LSPHP lives in
-        // the lsws tree — and even on nginx the shebang finds whatever
-        // /usr/bin/php happens to be, which need not be the version this site
-        // was given.
-        // Build the wp core install command. Arguments that are present only when
-        // the user supplied a value are added as separate array items so array_filter
-        // can exclude the nulls cleanly.
+        // The admin password goes in on stdin via --prompt, never as an argument: `ps` is
+        // readable by every user on the machine.
+        // The phar runs through the site's own interpreter, not its `#!/usr/bin/env php`
+        // shebang: OpenLiteSpeed may have no system `php`, and /usr/bin/php may be another version.
+        // Optional arguments are null when unset, so array_filter drops them.
         $installCmd = array_filter([
             ...$this->phpCommand($application),
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
@@ -71,8 +64,7 @@ class WordPressInstaller extends AbstractPhpInstaller
             '--admin_email='.($settings['admin_email'] ?? ''),
             '--skip-email',
             '--prompt=admin_password',
-            // --locale is available on wp core install and sets the site language.
-            // Omitting it defaults to en_US, which is already the form default.
+            // Omitted, the site language defaults to en_US.
             filled($settings['site_language'] ?? null)
                 ? '--locale='.$settings['site_language']
                 : null,
@@ -80,10 +72,8 @@ class WordPressInstaller extends AbstractPhpInstaller
 
         $this->runAsSiteUser('install_app', $application, $installCmd, ($settings['admin_password'] ?? '')."\n");
 
-        // Timezone must be set after wp core install — it is not a flag on that
-        // command. wp option update validates the value against PHP timezone
-        // strings; a bad value is silently ignored by WordPress, so this step
-        // is best-effort and never throws.
+        // Timezone is not a flag of `wp core install`, so it is set afterwards. A bad value is
+        // silently ignored by WordPress, so this step is best-effort and never throws.
         if (filled($settings['timezone'] ?? null)) {
             try {
                 $this->runAsSiteUser('set_timezone', $application, [
@@ -94,15 +84,13 @@ class WordPressInstaller extends AbstractPhpInstaller
                     '--path='.$documentRoot,
                 ]);
             } catch (ProvisioningFailedException $e) {
-                // A site with a wrong timezone string still works. Log and continue.
+                // A wrong timezone string does not break the site: report and continue.
                 report($e);
             }
         }
 
-        // `--locale` above only saves WPLANG: the language files are not
-        // downloaded, so the site stayed in English (QA, 2026-11-17). Fetched
-        // from wordpress.org and switched on here. Best-effort like the
-        // timezone: an offline server keeps a working English site.
+        // `--locale` above only saves WPLANG without downloading the language files, so fetch and
+        // activate them here. Best-effort like the timezone: an offline server keeps English.
         $locale = (string) ($settings['site_language'] ?? '');
 
         if ($locale !== '' && $locale !== 'en_US') {
@@ -127,19 +115,13 @@ class WordPressInstaller extends AbstractPhpInstaller
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
         ];
 
-        // Read before anything changes: the content follows only a real
-        // change of scheme, and this also runs on every routine resync.
+        // Read before anything changes: content follows only a real change of scheme.
         $previous = $this->currentHome($application, $wp, $documentRoot);
 
-        // Constants first. A staging site pins WP_HOME/WP_SITEURL in
-        // wp-config.php so a copied database can never point it at
-        // production — and a constant overrides the option. Left alone, the
-        // pin kept the address it was created with (http://) through every
-        // certificate, and once the database already held the new address
-        // `option update` failed outright ("Could not update option"), so
-        // every resync of that site failed. Following the pin keeps its
-        // protection and lets the address change. A normal site defines
-        // neither, and nothing is written.
+        // Constants first. A staging site pins WP_HOME/WP_SITEURL in wp-config.php so a copied
+        // database can never point it at production, and a constant overrides the option. Update
+        // the pin too: otherwise it keeps the old address and `option update` fails once the
+        // database holds the new one. A normal site defines neither; nothing is written.
         foreach (['WP_HOME', 'WP_SITEURL'] as $constant) {
             if ($this->definesConstant($application, $wp, $constant, $documentRoot)) {
                 $this->runAsSiteUser('sync_url', $application, [
@@ -165,19 +147,14 @@ class WordPressInstaller extends AbstractPhpInstaller
     /**
      * The site's own links in its content, moved to the new scheme with it.
      *
-     * A certificate changed `home` and `siteurl` and nothing else, so posts
-     * kept every `http://` link to the site itself — on a page now served
-     * over https, where browsers block http images and scripts as mixed
-     * content. A clone or new staging copy has it worst: it is copied before
-     * its certificate exists, so every link to itself is http (found testing
-     * bug #92). A failed certificate calls this back with the old address,
-     * which turns the links back too.
+     * Otherwise posts keep `http://` links to the site on a page now served over https, which
+     * browsers block as mixed content. A failed certificate calls this back with the old
+     * address, which turns the links back.
      *
-     * Only on a real change of scheme for the same host: this runs on every
-     * routine resync, and a full-table search-replace there would be waste.
-     * The host is matched up to its end, so `http://example.com.au` is not
-     * another site's address made https. Best effort: a failure here must not
-     * fail the certificate the site is otherwise ready to serve.
+     * Only on a real scheme change for the same host: this runs on every routine resync and a
+     * full-table search-replace would be waste. The host is matched up to its end, so
+     * `http://example.com.au` is not mistaken for this site. Best effort: a failure here must
+     * not fail the certificate.
      *
      * @param  array<int, string>  $wp
      */
@@ -241,9 +218,8 @@ class WordPressInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * Whether wp-config.php defines this constant. `wp config has` answers
-     * with its exit status, so it is run without the installer's
-     * throw-on-failure wrapper: "no" is an answer here, not an error.
+     * Whether wp-config.php defines this constant. `wp config has` answers with its exit status,
+     * so "no" is an answer here, not an error.
      *
      * @param  array<int, string>  $wp
      */
@@ -259,14 +235,13 @@ class WordPressInstaller extends AbstractPhpInstaller
             ['feature' => 'application', 'op' => 'installer.sync_url_check', 'application' => $application->id],
             timeout: $this->timeout(),
             cwd: $documentRoot,
-            // And logged as one (bug #48): "WP_HOME missing" was an error.
+            // Exit 1 = "not defined", not a failure to log.
             expectedExitCodes: [1],
         )->ok;
     }
 
     /**
-     * wp-cli is not part of a base system, so fetch it on first use. Skipped
-     * when it is already present, which is the normal case after one install.
+     * wp-cli is not part of a base system: fetched on first use, skipped when present.
      */
     private function ensureWpCli(Application $application): void
     {
@@ -284,10 +259,8 @@ class WordPressInstaller extends AbstractPhpInstaller
     /**
      * A fresh set of authentication keys per install.
      *
-     * Fetched from WordPress's salt service, with locally generated randomness
-     * as the fallback. Reusing salts across installs would let a leak from one
-     * site forge sessions on another, so a static set is never acceptable —
-     * better a locally random one than a shared one.
+     * Fetched from WordPress's salt service, with local randomness as the fallback. Never reuse
+     * a static set: a leak from one site would let sessions be forged on another.
      *
      * @return array<string, string>
      */

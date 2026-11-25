@@ -14,15 +14,12 @@ use Illuminate\Support\Str;
 /**
  * Mautic — marketing automation.
  *
- * `mautic:install` takes every credential as a command-line option and never
- * prompts, which looked like the first installer that would have to put a
- * password in `ps`. Reading the command shows otherwise: it merges parameters
- * from `local.php` first and only lets CLI options override them. So the
- * entire configuration — database *and* administrator — is written to that
- * file, and the install command is invoked with no secrets at all.
+ * `mautic:install` merges parameters from `local.php` before CLI options, so the whole
+ * configuration (database and administrator) is written to that file and the command runs with
+ * no secrets on its command line.
  *
- * Its package is also the first zip in the set, and a flat one: entries start
- * at `.env.test` and `favicon.ico`, with no wrapping directory.
+ * The package is a flat zip: entries start at `.env.test` and `favicon.ico`, with no wrapping
+ * directory.
  */
 class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
@@ -39,13 +36,10 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * What Mautic's own installer enforces, word for word: "Supported versions
-     * are MySQL 8.4.0 (or higher) and MariaDB 10.11.0 (or higher)".
+     * What Mautic's own installer enforces: MySQL 8.4.0+ and MariaDB 10.11.0+.
      *
-     * The panel installs the latest release, so this follows upstream rather
-     * than a pinned line. Without it a stock Ubuntu 24.04 box (MySQL 8.0) was
-     * offered Mautic, and the site was created and then cancelled inside
-     * `mautic:install` — found by the CF-06 create matrix, 2026-10-21.
+     * Follows upstream, since the panel installs the latest release. Without it, older engines
+     * were offered Mautic and `mautic:install` then cancelled after the site was created.
      *
      * @return array<string, string>
      */
@@ -66,13 +60,10 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
         $configDir = $documentRoot.'/'.trim((string) config('server.installers.mautic.config_dir', 'config'), '/');
         $this->run('configure', ['mkdir', '-p', $configDir], $application);
 
-        // Everything the installer needs, so that no secret has to be argued
-        // for on a command line. `site_url` is deliberately absent: Mautic
-        // treats a local.php containing both db_driver and site_url as proof
-        // that installation already finished, prints "Mautic already
-        // installed", and exits 0 without creating a single table. The URL is
-        // the command's non-secret positional argument instead, and Mautic
-        // writes it into local.php itself in its final installation step.
+        // Everything the installer needs, so no secret goes on a command line. `site_url` is
+        // deliberately absent: with both db_driver and site_url in local.php Mautic prints
+        // "already installed" and exits 0 without creating tables. The URL is the command's
+        // positional argument; Mautic writes it to local.php itself.
         $this->writeSecretFile($application, "{$configDir}/local.php", View::make('server.apps.mautic.local', [
             'parameters' => [
                 'db_driver' => 'pdo_mysql',
@@ -89,11 +80,7 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
                 'admin_firstname' => (string) ($settings['admin_first_name'] ?? 'Admin'),
                 'admin_lastname' => (string) ($settings['admin_last_name'] ?? 'User'),
                 'site_title' => (string) ($settings['site_title'] ?? $application->name),
-                // Mautic 5+ reads one DSN. It used to get the Mautic 4 keys
-                // (mailer_transport/host/port/user/password), which it ignores:
-                // every SMTP detail a user typed was dropped and Mautic mailed
-                // through its own default, smtp://localhost:1025 (measured on
-                // Mautic 7.2.1). See mailerDsn().
+                // Mautic 5+ reads one DSN and ignores the Mautic 4 mailer_* keys. See mailerDsn().
                 'mailer_dsn' => $this->mailerDsn($settings),
                 'mailer_from_email' => (string) (($settings['mailer_email'] ?? '') ?: ($settings['admin_email'] ?? '')),
                 'mailer_from_name' => (string) (($settings['mailer_name'] ?? '') ?: ($settings['site_title'] ?? $application->name)),
@@ -103,24 +90,16 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
         $this->runAsSiteUser('install_app', $application, [
             ...$this->phpCommand($application), 'bin/console', 'mautic:install',
             $application->url(),
-            // Mautic treats recommendations (including its 512M memory
-            // preference) as a confirmation prompt. With nobody to answer,
-            // --no-interaction declines that prompt at step zero — whose
-            // negated exit code is still zero. --force means continue past
-            // recommendations; hard requirements still fail normally.
-            //
-            // The 512M recommendation itself is now met rather than waved
-            // past: `phpCommand()` passes it on the interpreter, because on
-            // OpenLiteSpeed the ambient CLI limit is 128M and this command's
-            // container compile died in it.
+            // Mautic asks to confirm on recommendations (incl. 512M memory). With nobody to
+            // answer, --no-interaction declines at step zero yet exits 0. --force continues
+            // past recommendations; hard requirements still fail. The 512M limit is met by
+            // `phpCommand()` on the interpreter.
             '--force',
             '--no-interaction',
         ], null, $documentRoot);
 
-        // Mautic has two known success-without-installing paths: "already
-        // installed" and a declined step-zero recommendation both return 0.
-        // Ask Doctrine for a table the installer creates instead of trusting
-        // that exit code. This is read-only and carries no credentials.
+        // "Already installed" and a declined step-zero recommendation both exit 0, so query a
+        // table the installer creates instead of trusting the exit code. Read-only, no credentials.
         $this->runAsSiteUser('verify_install', $application, [
             ...$this->phpCommand($application), 'bin/console', 'doctrine:query:sql',
             'SELECT COUNT(*) FROM users',
@@ -131,15 +110,12 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * Mautic's cron jobs (bug #15). Without them Mautic installs and looks
-     * fine, and nothing happens: segments never fill, campaigns never run,
-     * queued messages are never sent. Mautic leaves them to the host.
+     * Mautic's cron jobs. Without them segments never fill, campaigns never run and queued
+     * messages are never sent; Mautic leaves them to the host.
      *
-     * The "required" set from Mautic's documentation (5.x, Cron jobs), plus
-     * imports and webhooks, which do nothing until they are used. Staggered
-     * across each quarter hour, as the documentation asks, so no two start in
-     * the same minute. With the installer's memory limit: the console is what
-     * needed 512M to install (see phpCommand()).
+     * The required set from Mautic's documentation plus imports and webhooks, staggered across
+     * each quarter hour so no two start in the same minute, with the installer's memory limit
+     * (see phpCommand()).
      */
     private function scheduleJobs(Application $application, string $documentRoot): void
     {
@@ -207,8 +183,7 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
             return $configured;
         }
 
-        // FS-B3: a release host that does not answer is a reason, not a
-        // bare "download failed".
+        // An unreachable release host gets its own reason, not a bare "download failed".
         try {
             $response = Http::timeout(15)->acceptJson()
                 ->get((string) config('server.installers.mautic.releases_api'));
@@ -230,12 +205,9 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * The Symfony Mailer DSN for the SMTP details given, or `null://null` —
-     * sending off — when there are none, so a site can be created before its
-     * SMTP account exists. `smtps://` on 465, where the connection is TLS from
-     * the first byte; `smtp://` elsewhere, which upgrades with STARTTLS when
-     * the server offers it. Credentials are URL-encoded: a password with `@`
-     * or `/` in it would otherwise be read as part of the host.
+     * The Symfony Mailer DSN for the SMTP details given, or `null://null` (sending off) when
+     * there are none. `smtps://` on 465 (TLS from the first byte), `smtp://` elsewhere (STARTTLS
+     * when offered). Credentials are URL-encoded so `@` or `/` is not read as part of the host.
      *
      * @param  array<string, mixed>  $settings
      */
@@ -275,13 +247,11 @@ class MauticInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * Mautic's own manual method: the full package of the target release over
-     * the old files, then its migrations and a cache clear.
+     * Mautic's own manual method: the full package of the target release over the old files,
+     * then its migrations and a cache clear.
      *
-     * Not v7's `mautic:update:find` / `mautic:update:apply`: Mautic removed
-     * those commands, and the release v8 installs (7.x) has neither — measured
-     * on a live site (2026-10-13). `config/local.php` survives the copy: the
-     * package does not ship one.
+     * Not `mautic:update:find` / `mautic:update:apply`: Mautic 7.x no longer has them.
+     * `config/local.php` survives the copy because the package does not ship one.
      */
     public function update(Application $application, string $from, string $to): void
     {

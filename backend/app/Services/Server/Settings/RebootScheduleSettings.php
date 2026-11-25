@@ -12,24 +12,14 @@ use Illuminate\Support\Facades\File;
 use Throwable;
 
 /**
- * A plain scheduled reboot — restart the machine every day, week or month,
- * whether or not anything asked for it.
+ * A plain scheduled reboot: restart the machine every day, week or month.
  *
- * Distinct from the `updates` group, which is unattended-upgrades' own
- * auto-reboot: that one only fires *when a reboot is required* after an
- * upgrade, and has no frequency at all. Both exist because they answer
- * different questions — "restart when a patch needs it" and "restart on a
- * cadence" — and merging them would mean one of the two lying about what it
- * does.
+ * Distinct from the `updates` group (unattended-upgrades' auto-reboot), which only fires
+ * when a reboot is required and has no frequency.
  *
- * There is no free-form cron expression here, deliberately. Every other
- * scheduling surface in the panel takes one; this one reboots the server, and
- * an arbitrary expression is how somebody writes `* * * * *` and never gets
- * back in.
+ * No free-form cron expression on purpose: one bad `* * * * *` would reboot-loop the server.
  *
- * Times are in the **server's own timezone**, which is what cron uses and
- * what the user set two fields higher on the same screen. Silently converting
- * to UTC is how a 3am maintenance window fires at 8am.
+ * Times are in the server's own timezone (what cron uses); never convert to UTC.
  */
 class RebootScheduleSettings implements SettingGroup
 {
@@ -60,8 +50,7 @@ class RebootScheduleSettings implements SettingGroup
             'hour' => (int) config('server.reboot_schedule.default_hour', 3),
             'day_of_week' => 0,
             'day_of_month' => 1,
-            // Named so nobody has to guess. cron runs in server-local time;
-            // reporting it removes the "why did it fire an hour early" ticket.
+            // cron runs in server-local time; report it.
             'timezone' => $this->timezone(),
             'next_run' => null,
             'next_run_human' => null,
@@ -84,8 +73,7 @@ class RebootScheduleSettings implements SettingGroup
         if (! ($data['enabled'] ?? false)) {
             $this->remember($data);
 
-            // Removed, not commented out: a disabled schedule that still sits
-            // in /etc/cron.d is one uncomment away from an unexpected reboot.
+            // Removed, not commented out: a leftover file is one uncomment from a surprise reboot.
             $result = $this->files->delete($path, ['feature' => 'setting', 'group' => 'reboot_schedule']);
 
             if ($result->failed()) {
@@ -100,16 +88,10 @@ class RebootScheduleSettings implements SettingGroup
         $contents = "# Managed by the panel — edit via Settings, not by hand.\n"
             ."SHELL=/bin/sh\n"
             ."PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n"
-            // `shutdown -r` rather than `reboot`: it gives logged-in users the
-            // wall message and lets services stop cleanly. `now`, not `+1`:
-            // the restart happens at the time the screen shows (bug #8).
-            //
-            // The activity entry is written first, and separated with `;`
-            // rather than `&&` on purpose: a reboot the administrator
-            // scheduled must happen even if the panel's database is down. `&&`
-            // would make an audit record a precondition of the restart, so a
-            // logging failure would silently cancel maintenance — the opposite
-            // of what an audit trail is for.
+            // `shutdown -r` rather than `reboot`: logged-in users get the wall message and
+            // services stop cleanly. `now`, not `+1`: it restarts at the time shown.
+            // The log command is separated with `;`, not `&&`: the reboot must happen even if
+            // the panel's database is down.
             ."{$expression} root {$this->logCommand()} ; /sbin/shutdown -r now \"Scheduled reboot from the server panel\"\n";
 
         $result = $this->files->put($path, $contents, ['feature' => 'setting', 'group' => 'reboot_schedule']);
@@ -122,18 +104,12 @@ class RebootScheduleSettings implements SettingGroup
     /**
      * The command that records the reboot in the activity log.
      *
-     * Run through `runuser` as the account the panel itself runs as, not as
-     * root. Artisan writes to storage/ — logs, cache — and a root-owned file
-     * in there breaks the panel on its next request. The cron line is root so
-     * that `shutdown` works; only this half drops privileges.
+     * Run through `runuser` as the panel's own account, not root: a root-owned file in
+     * storage/ breaks the panel. Only this half drops privileges; `shutdown` needs root.
      *
-     * The PHP binary is named explicitly rather than taken from PHP_BINARY,
-     * which under FPM is the FPM binary and cannot run artisan. The panel's
-     * own, as install.sh recorded it (PANEL_PHP_BIN), before the distro
-     * pattern: on OpenLiteSpeed there is no /usr/bin/php8.4 at all — PHP is
-     * /usr/local/lsws/lsphp84/bin/php — so the log half of the cron line
-     * failed on every scheduled reboot and the reboot happened unrecorded
-     * (seen 2026-09-23; the `;` let `shutdown` run regardless).
+     * The PHP binary is named explicitly: PHP_BINARY under FPM cannot run artisan. The one
+     * install.sh recorded (PANEL_PHP_BIN) wins over the distro pattern, which does not exist
+     * on OpenLiteSpeed.
      */
     private function logCommand(): string
     {
@@ -156,8 +132,7 @@ class RebootScheduleSettings implements SettingGroup
     }
 
     /**
-     * The OS account this process is running as — which is the account that
-     * owns the panel's files, so it is the one that may write to storage/.
+     * The OS account this process runs as: it owns the panel's files and may write storage/.
      */
     private function panelUser(): string
     {
@@ -192,12 +167,9 @@ class RebootScheduleSettings implements SettingGroup
     /**
      * Keep a schedule's day and hour when it is switched off.
      *
-     * The cron file is the only record of an enabled schedule and it is
-     * deleted on disable (see apply()), so without this the screen fell back
-     * to "daily at 03:00" and the administrator had to re-enter their
-     * maintenance window. What they sent wins; a client that sends only
-     * `enabled: false` keeps what the file said. Best effort: failing to
-     * remember must never stop the reboot from being switched off.
+     * The cron file is deleted on disable (see apply()), so the day and hour are saved
+     * separately. What the client sent wins; otherwise what the file said. Best effort:
+     * failing to remember must never stop the schedule being switched off.
      *
      * @param  array<string, mixed>  $data
      */
@@ -228,9 +200,8 @@ class RebootScheduleSettings implements SettingGroup
     }
 
     /**
-     * The day/hour of the last switched-off schedule, validated again on the
-     * way out: the file is ours, but a hand edit must not put an hour of 99
-     * on the screen.
+     * The day/hour of the last switched-off schedule, re-validated: a hand edit must not
+     * put an hour of 99 on the screen.
      *
      * @return array<string, mixed>
      */
@@ -257,8 +228,7 @@ class RebootScheduleSettings implements SettingGroup
     }
 
     /**
-     * Read back what is actually on disk rather than what we last wrote —
-     * the file is editable by root, and the screen should show the truth.
+     * Read back what is on disk, not what we last wrote: root can edit the file.
      */
     private function currentExpression(): ?string
     {
@@ -325,10 +295,8 @@ class RebootScheduleSettings implements SettingGroup
     }
 
     /**
-     * The zone cron reads this file in. ServerTimezone, not /etc/timezone
-     * alone: Ubuntu 26.04 no longer ships that file, and the fallback to the
-     * app's UTC labelled a 04:10 IST reboot "04:10 UTC" (seen on the nginx
-     * test box, 2026-09-26).
+     * The zone cron reads this file in. ServerTimezone, not /etc/timezone alone: newer Ubuntu
+     * no longer ships that file.
      */
     private function timezone(): string
     {

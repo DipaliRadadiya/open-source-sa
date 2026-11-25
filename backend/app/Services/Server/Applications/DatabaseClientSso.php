@@ -12,39 +12,25 @@ use Illuminate\Support\Str;
  * One-click sign-in to a browser database client the panel installed —
  * phpMyAdmin ({@see PhpMyAdminSso}) or Adminer ({@see AdminerSso}).
  *
- * The panel knows a database user's credentials; the client only trusts a PHP
- * session written on its own site. Nothing in the panel can write that session
- * — it is a different application, running as a different account. So the two
- * meet on disk: the panel drops a file that only the client site's user can
- * read, and sends the browser to a small script on that site holding the file's
- * name. The script reads it, deletes it, writes the session, and redirects.
+ * The client only trusts a PHP session written on its own site, which the panel cannot write.
+ * So the panel drops a token file only the client site's user can read and sends the browser
+ * to a small script on that site holding the file's name. The script reads it, deletes it,
+ * writes the session, and redirects.
  *
- * Why not the obvious alternatives:
- *  - **Credentials in the URL.** They land in the browser history, the access
- *    log of every proxy in between, and the `Referer` of the first outbound
- *    link the client renders.
- *  - **A shared cache.** The panel's Redis is the panel's; reaching it from a
- *    file in a customer's web root means putting the panel's Redis credentials
- *    in a customer's web root.
- *  - **A callback to the panel API.** Works, but makes a database login depend
- *    on the panel being reachable from the site, on the panel's own
- *    certificate, and on whichever of those two is misconfigured today.
+ * Not done on purpose:
+ *  - Credentials in the URL: they land in browser history, proxy logs and `Referer`.
+ *  - A shared cache: it would put the panel's Redis credentials in a customer's web root.
+ *  - A callback to the panel API: ties a database login to the panel being reachable.
  *
- * The file is the whole trust boundary, which is why {@see canIssue()} refuses
- * to mint one for a site whose PHP runs under the shared, server-wide pool: in
- * that arrangement every site on the box executes as the same account, and a
- * file readable by the client is readable by all of them.
+ * The file is the whole trust boundary, so {@see canIssue()} refuses a site whose PHP runs
+ * under the shared pool: every site would run as the same account and could read it.
  *
- * Extracted from PhpMyAdminSso when Adminer arrived, so the two cannot drift
- * apart on the parts that make a token private: where it lives, who writes it,
- * how long it lasts and what sweeps it.
+ * Shared by both clients so where a token lives, who writes it, how long it lasts and what
+ * sweeps it cannot drift apart.
  */
 abstract class DatabaseClientSso
 {
-    /**
-     * Long enough to survive a redirect, short enough that a token left in a
-     * browser's history is worthless by the time anyone reads it.
-     */
+    /** Long enough to survive a redirect, short enough that a token left in history is dead. */
     public const TOKEN_TTL_SECONDS = 60;
 
     public function __construct(
@@ -56,9 +42,8 @@ abstract class DatabaseClientSso
     abstract protected function opName(): string;
 
     /**
-     * Where token files are dropped: under the site's `.panel` directory, which
-     * is above the document root by design. A token holding a database password
-     * must not be somewhere a visitor could request by guessing its name.
+     * Where token files are dropped: under `.panel`, above the document root, so a visitor
+     * cannot request one by guessing its name.
      */
     public function tokenDirectory(Application $application): string
     {
@@ -73,26 +58,19 @@ abstract class DatabaseClientSso
     /**
      * Whether this site can be signed into at all.
      *
-     * PHP-FPM gives an isolated site its own pool running as its own user; the
-     * shared pool runs every site on the server as one account. The token file
-     * is only private in the first case, so the second is refused rather than
-     * quietly downgraded — a credential readable by every other site on the box
-     * is exactly what per-site pools exist to prevent.
+     * The token file is only private when the site runs as its own user; the shared pool is
+     * refused rather than quietly downgraded.
      */
     public function canIssue(Application $application): bool
     {
-        // Asked of RuntimeOwnership rather than of `isolated_at`, which
-        // records whether a site has an FPM *pool*. On OpenLiteSpeed that
-        // column is null for every site forever, so this refused every
-        // database on the server with `phpmyadmin_not_isolated` — a whole
-        // feature dead on one stack, reported as one disabled button.
+        // Not `isolated_at`: that only says whether a site has an FPM pool, and is always null
+        // on OpenLiteSpeed.
         return $this->ownership->runsAsOwnUser($application);
     }
 
     /**
-     * Make the private token directory, the way every other user directory in
-     * `.panel` is made (PanelDirectory), then 0700 by its owner: it holds
-     * database passwords for the next sixty seconds each.
+     * Make the token directory like every other user directory in `.panel`
+     * (PanelDirectory), then 0700: it holds database passwords.
      */
     protected function ensureTokenDirectory(Application $application): ServerOpsResult
     {
@@ -107,9 +85,7 @@ abstract class DatabaseClientSso
      * Drop a one-time token file holding $payload and return the URL that
      * redeems it, or null when the file could not be written.
      *
-     * The scheme comes from the application rather than being assumed: a site
-     * with no certificate rejects requests on 443, and sending someone
-     * there produces a connection refused that reads as a broken panel.
+     * The scheme comes from the application: a site with no certificate refuses 443.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -136,9 +112,7 @@ abstract class DatabaseClientSso
     /**
      * Remove token files left behind by a link nobody clicked.
      *
-     * They expire on read, so a stale one cannot be redeemed — but it still
-     * holds a password, and an unswept directory accumulates one per click
-     * forever.
+     * They expire on read, but a stale file still holds a password and would pile up.
      */
     public function sweep(Application $application): void
     {
@@ -152,10 +126,8 @@ abstract class DatabaseClientSso
     /**
      * The site's served directory.
      *
-     * Resolved on call rather than injected. `ApplicationProvisioner` pulls in
-     * most of this namespace, and a constructor dependency on it from a service
-     * that namespace might one day reach back into closes a container cycle —
-     * which does not raise an error, it hangs the process until it is killed.
+     * Resolved on call, not injected: a constructor dependency on `ApplicationProvisioner`
+     * can close a container cycle, which hangs the process instead of raising.
      */
     protected function documentRoot(Application $application): string
     {
@@ -168,14 +140,8 @@ abstract class DatabaseClientSso
      */
     protected function writeFile(Application $application, string $path, string $contents, string $mode): ServerOpsResult
     {
-        // As the site user, all of it. Every path here is in a directory that
-        // user owns — the document root, and `.panel/sso` — and this ran as
-        // root: `tee` followed a link the user had put at `sso.php` or
-        // `config.inc.php`, and the `chown` after it then handed whatever the
-        // link pointed at to the user. Found with the same class of bug in
-        // `.panel` (2026-09-29). Written as the user the file is theirs by
-        // construction, and a link reaches only what they could already
-        // write — so there is nothing left to chown.
+        // Always as the site user. As root, `tee` would follow a symlink the user planted at
+        // `sso.php` or `config.inc.php`, and a `chown` would then hand its target to them.
         $result = $this->run($this->asUser($application, ['tee', $path]), $application, input: $contents);
 
         if ($result->failed()) {

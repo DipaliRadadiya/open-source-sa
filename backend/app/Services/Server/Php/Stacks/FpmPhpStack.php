@@ -9,10 +9,6 @@ use App\Services\Server\ServerOpsResult;
 
 /**
  * PHP-FPM — what nginx and Apache talk to.
- *
- * Every value here was previously spelled out at each call site. Collecting
- * them changes nothing about what the panel does on an FPM server; it just
- * means there is one place to answer the same questions for LSPHP.
  */
 class FpmPhpStack implements PhpStack
 {
@@ -24,19 +20,11 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * Detected from the FPM config directories *and* the binary that runs
-     * them, rather than from a package list.
+     * Detected from the FPM config directories *and* the binary that runs them.
      *
-     * The config directory alone is not enough, which is what this used to
-     * check. `apt remove php8.5-fpm` leaves `/etc/php/8.5/fpm` behind — its
-     * contents are conffiles, and only `purge` deletes those — and the panel's
-     * own pool files under `pool.d/` are not dpkg's to remove at all, so that
-     * directory can outlive the package permanently. A removed version
-     * therefore stayed on the PHP screen forever, offering settings for a
-     * runtime that was gone and reloads of a service that could not start.
-     *
-     * The binary is the honest test: it is what actually serves a site, and
-     * apt does take it away.
+     * The config directory alone is not enough: `apt remove php8.5-fpm` leaves `/etc/php/8.5/fpm`
+     * behind (conffiles survive until `purge`, and the panel's `pool.d/` files are not dpkg's).
+     * The binary is what serves a site, and apt does remove it.
      *
      * @return array<int, string>
      */
@@ -62,10 +50,8 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * The FPM binary for a version — `/usr/sbin/php-fpm8.3` on Debian and
-     * Ubuntu. Distinct from `binaryPath()`, which is the CLI: a server can
-     * have `php8.3` without `php8.3-fpm`, and only the second one can serve a
-     * site.
+     * The FPM binary for a version (`/usr/sbin/php-fpm8.3` on Debian/Ubuntu). Distinct from
+     * `binaryPath()`, the CLI: a server can have `php8.3` without `php8.3-fpm`.
      */
     public function fpmBinaryPath(string $version): string
     {
@@ -87,12 +73,9 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * `/etc/php/8.5` — everything for one version, config the panel wrote
-     * included.
+     * `/etc/php/8.5` — everything for one version, including panel-written config.
      *
-     * Safe to remove only after a purge has succeeded, which is the one place
-     * this is called from: at that point the interpreter is gone and its
-     * configuration means nothing.
+     * Safe to remove only after a successful purge (its only caller).
      */
     public function residualDir(string $version): ?string
     {
@@ -100,9 +83,7 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * None: the loader sits in `/usr/lib/php/{abi}`, which versions sharing
-     * an ABI share, and residualDir() already clears the version's own
-     * config tree.
+     * None: the loader sits in `/usr/lib/php/{abi}`, shared between versions with the same ABI.
      */
     public function emptyFoldersDir(string $version): ?string
     {
@@ -113,15 +94,12 @@ class FpmPhpStack implements PhpStack
     {
         $pattern = (string) config('server.php_binary_pattern', '/usr/bin/php{version}');
 
-        // A blank pattern means "whatever `php` resolves to on PATH". The
-        // Nextcloud installer carried this case on its own; it belongs here,
-        // because an empty pattern is just as blank for the other seven.
+        // A blank pattern means whatever `php` resolves to on PATH.
         return $pattern === '' ? 'php' : str_replace('{version}', $version, $pattern);
     }
 
     /**
-     * None: nginx and Apache hand requests to a running FPM daemon over a
-     * socket rather than starting a binary themselves.
+     * None: nginx and Apache hand requests to a running FPM daemon over a socket.
      */
     public function handlerPath(string $version): ?string
     {
@@ -153,8 +131,7 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * A site here runs as the web server's account until the panel gives it a
-     * pool of its own. {@see PoolIsolator}
+     * A site runs as the web server's account until it gets its own pool. {@see PoolIsolator}
      */
     public function isolatesByDefault(): bool
     {
@@ -167,8 +144,7 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * `-s ALL` deliberately: splitting cli from fpm lets a site work in a
-     * browser and fail in a cron deploy, with nothing on screen to explain it.
+     * `-s ALL` deliberately: splitting cli from fpm lets a site work in a browser and fail in cron.
      *
      * @return array<int, string>
      */
@@ -179,8 +155,8 @@ class FpmPhpStack implements PhpStack
             $enable ? '/usr/sbin/phpenmod' : '/usr/sbin/phpdismod',
         );
 
-        // All in one call, measured on PHP 8.3: one module at a time leaves a
-        // window where mysqli is on and mysqlnd, which it needs, is not.
+        // All in one call: one module at a time leaves a window where mysqli is on and the
+        // mysqlnd it needs is not.
         return [$binary, '-v', $version, '-s', 'ALL', ...$modules];
     }
 
@@ -204,17 +180,10 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * Three groups, not one.
+     * Three alternatives groups, not one: `php8.x-cli` registers `php`, `phar` and `phar.phar`,
+     * and moving only `php` leaves `phar` on the old default version.
      *
-     * `php8.x-cli` registers `php`, `phar` and `phar.phar`, and moving only the
-     * first leaves `phar` executing under whichever version was default before
-     * — so `php -v` and `phar -v` disagree, which is the kind of thing found
-     * weeks later by a build script.
-     *
-     * The two `phar` groups are not fatal. They exist on every ondrej install,
-     * but a box assembled some other way may have the interpreter without
-     * them, and refusing to change the PHP default over a missing `phar` link
-     * would be refusing the thing that does work.
+     * The two `phar` groups are not fatal: a server may have the interpreter without them.
      *
      * @return array<int, array{command: array<int, string>, fatal: bool}>
      */
@@ -282,10 +251,8 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * Debian's layout: `mods-available` holds the real ini files and each
-     * SAPI's `conf.d` holds the numbered symlinks the interpreter reads. The
-     * scanned one is `conf.d`, and it is per-SAPI — cli and fpm can genuinely
-     * differ about which extensions are on.
+     * Debian's layout: `mods-available` holds the ini files, each SAPI's `conf.d` holds the
+     * numbered symlinks the interpreter reads, so cli and fpm can differ.
      */
     public function scanDir(string $version, string $sapi): string
     {

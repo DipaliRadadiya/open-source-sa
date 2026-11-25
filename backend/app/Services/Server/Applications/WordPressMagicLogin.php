@@ -13,23 +13,16 @@ use JsonException;
 /**
  * Signs a panel user into a WordPress site as one of its administrators.
  *
- * The panel already holds the keys to this site — it owns the files and the
- * database credentials — so this grants nothing that was not already reachable
- * by someone with file access. What it changes is the number of steps, which
- * is precisely why it is gated on its own permission and written to the
- * activity log with the name of the account that was assumed.
+ * Gated on its own permission and logged with the assumed account's name.
  *
- * **Nothing is downloaded.** The loader is a file in this repository, copied
- * into the site. The implementation this replaces took a URL as a request
- * parameter, fetched it into the customer's document root and executed it —
- * arbitrary remote code execution offered as a feature. A panel that can be
- * told which code to run on a customer's site is not a panel.
+ * Nothing is downloaded: the loader is a file in this repository, copied into the site. Never
+ * accept a URL or code to run from the request.
  */
 class WordPressMagicLogin
 {
     /**
-     * Long enough to cross a slow network and a redirect; short enough that a
-     * token captured in transit is worthless before it can be used by hand.
+     * Long enough for a slow network and a redirect; short enough that a token captured in
+     * transit is worthless.
      */
     private const TTL_SECONDS = 60;
 
@@ -42,10 +35,7 @@ class WordPressMagicLogin
     /**
      * Every administrator of the site, as WordPress itself reports them.
      *
-     * Read from WordPress rather than from anything the panel stored at
-     * install time: roles change, accounts are added by people who never touch
-     * this panel, and an install-time snapshot would offer a list of users who
-     * may no longer be administrators — or miss the one the operator needs.
+     * Read live: roles change and accounts are added outside the panel.
      *
      * @return array<int, array{id: int, login: string, name: string, email: string}>
      *
@@ -69,10 +59,8 @@ class WordPressMagicLogin
         try {
             $rows = json_decode(trim($result->output()), true, 16, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            // wp-cli printed something that is not the JSON we asked for —
-            // a PHP notice from the site, most often. Reported as its own
-            // failure rather than rendered as an empty list, which would read
-            // as "this site has no administrators".
+            // Not the JSON we asked for (a PHP notice, usually). A failure of its own, not an
+            // empty list, which would read as "no administrators".
             throw ValidationException::withMessages([
                 'magic_login' => [__('errors/magic_login.list_unreadable')],
             ]);
@@ -93,13 +81,8 @@ class WordPressMagicLogin
     }
 
     /**
-     * A network install needs a different answer than this gives.
-     *
-     * `--role=administrator` on multisite lists per-site administrators, who
-     * cannot reach the network admin at all — so the operator would be signed
-     * in with less access than the button implies, on a screen that looks
-     * right. Refused rather than half-answered; the honest fix is `super-admin`
-     * handling, which is its own piece of work.
+     * Multisite is refused: `--role=administrator` lists per-site administrators, who cannot
+     * reach the network admin, so the login would give less access than the button implies.
      */
     public function isMultisite(Application $application): bool
     {
@@ -109,16 +92,11 @@ class WordPressMagicLogin
     /**
      * Check, and mint a single-use token for one administrator, in one go.
      *
-     * One WP-CLI run (FS-C16). It used to be three — `core is-installed
-     * --network`, the administrator list again, then `option update` — at
-     * roughly 1.2–2.3 s each, because every run boots WordPress. 3.6–7 s
-     * after the click is past the point where a browser still lets the page
-     * open the new tab, so the login fell back to a toast. The same three
-     * questions are asked inside one boot instead, and the answer to each is
-     * still a refusal with its own sentence.
+     * One WP-CLI run, because every run boots WordPress and slow runs make the browser block the
+     * new tab. Each refusal keeps its own message.
      *
-     * The script reaches WP-CLI over stdin, not argv: the payload holds the
-     * token's hash, and argv is readable by every account on the box.
+     * The script reaches WP-CLI over stdin, not argv: the payload holds the token's hash, and
+     * argv is readable by every account on the box.
      *
      * @return array{url: string, token: string, expires_at: int, user: array{id: int, login: string, name: string, email: string}}
      *
@@ -151,9 +129,8 @@ class WordPressMagicLogin
             ]);
         }
 
-        // Re-read inside WordPress rather than trusting the id off the request:
-        // a subscriber's id, or an account demoted since the list was shown,
-        // must not be handed a token. The loader checks again at use.
+        // The role is re-checked inside WordPress, not trusted from the request: a subscriber or a
+        // demoted account must not get a token. The loader checks again at use.
         if (($answer['error'] ?? null) === 'not_administrator') {
             throw ValidationException::withMessages([
                 'wp_user_id' => [__('errors/magic_login.not_an_administrator')],
@@ -180,11 +157,8 @@ class WordPressMagicLogin
     }
 
     /**
-     * The PHP WP-CLI runs for mint(). The values are an int and two hex/int
-     * strings, written with var_export(), so nothing in them can become code.
-     *
-     * Not autoloaded: the token is read on exactly one request in its
-     * sixty-second life, and autoloading would fetch it on every page load.
+     * The PHP WP-CLI runs for mint(). Values go through var_export(), so nothing in them can
+     * become code. Not autoloaded: the token is read once, autoload would fetch it on every page.
      *
      * @param  array{hash: string, user_id: int, expires_at: int}  $payload
      */
@@ -206,8 +180,7 @@ class WordPressMagicLogin
     }
 
     /**
-     * The script's answer is its last line. Anything before it is whatever
-     * the site printed while booting — a PHP notice, a plugin's echo.
+     * The script's answer is its last line; anything before it is site output (notices, echoes).
      *
      * @return array<string, mixed>|null
      */
@@ -220,16 +193,11 @@ class WordPressMagicLogin
     }
 
     /**
-     * Put the loader in place, owned by the site user like everything else it
-     * loads. Rewritten every time rather than only when absent, so a site whose
-     * copy was edited or half-written is repaired by using the feature.
+     * Put the loader in place. Rewritten every time, so an edited or half-written copy is repaired.
      *
-     * Written AS the site user. `wp-content` is the user's, and so is every
-     * name in it: as root, `install -d` + `tee` + `chown` followed whatever
-     * `mu-plugins` or `sv-magic-login.php` pointed at, which made this button
-     * a way to have root write a file anywhere and hand it to the site user.
-     * As the user, a planted link reaches only what the user could already
-     * write — and the result is the user's without a chown.
+     * Written AS the site user: `wp-content` is the user's, and as root a planted symlink at
+     * `mu-plugins` or `sv-magic-login.php` would make root write anywhere. As the user it reaches
+     * only what the user could already write.
      *
      * @throws ValidationException
      */
@@ -275,10 +243,7 @@ class WordPressMagicLogin
                 $arguments,
                 [
                     '--path='.$application->documentRoot(),
-                    // One broken plugin or theme must not be able to hide the
-                    // administrator list — the moment an operator most needs to
-                    // get into a site is usually the moment something on it is
-                    // broken.
+                    // A broken plugin or theme must not hide the administrator list.
                     '--skip-plugins',
                     '--skip-themes',
                 ],

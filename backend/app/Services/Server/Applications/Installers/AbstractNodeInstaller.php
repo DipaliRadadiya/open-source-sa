@@ -17,21 +17,14 @@ use Illuminate\Support\Str;
 /**
  * Shared machinery for the one-click Node applications.
  *
- * Three things differ from the PHP family, and each of them is a way to get
- * this wrong:
+ * Differences from the PHP family:
  *
- *  - **The site's own Node has to reach every command.** `npm` is a script
- *    with a `#!/usr/bin/env node` shebang, so running it finds whatever `node`
- *    the panel's PATH happens to have — not the version the site pinned and
- *    not the version its unit will run under. Every command here is prefixed
- *    with an explicit PATH instead.
- *  - **The application writes inside its own directory, not the home.** The
- *    unit sets `ProtectHome=read-only` with the document root as the single
- *    writable path, so an application that defaults to `~/.n8n` or
- *    `~/.node-red` must be pointed at the site instead — otherwise it starts,
- *    fails to write, and the reason is buried in the journal.
- *  - **They need no database.** These store their own state in a file beside
- *    the application. NodeBB is the exception and says so.
+ *  - The site's own Node must reach every command. `npm` has a `#!/usr/bin/env node` shebang
+ *    and would find the panel's `node`, so every command gets an explicit PATH.
+ *  - The application writes inside its document root, not the home: the unit sets
+ *    `ProtectHome=read-only` with the document root as the only writable path, so apps that
+ *    default to `~/.n8n` or `~/.node-red` must be pointed at the site.
+ *  - They need no database (state lives in a file beside the app). NodeBB is the exception.
  */
 abstract class AbstractNodeInstaller extends AbstractSiteInstaller
 {
@@ -55,10 +48,8 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     /**
      * The command that starts this application once installed.
      *
-     * The panel writes it rather than asking, because a one-click application
-     * has exactly one right answer and the user has no way to know it. It is
-     * stored on the application, so the process controls and the deploy path
-     * treat these no differently from an app someone typed a command for.
+     * Stored on the application, so process controls and deploys treat it like any user-typed
+     * command.
      */
     abstract public function startCommand(Application $application, string $documentRoot): ?string;
 
@@ -82,26 +73,20 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     }
 
     /**
-     * npm 12 blocks every dependency's install scripts unless the project's
-     * package.json lists it under `allowScripts`, and it does so silently:
-     * the install "succeeds" and ends with a line saying what it skipped. No
-     * app the panel installs has that field, so a native module never gets
-     * built — n8n installed on a server whose npm had been updated from the
-     * Node screen crashed at start with "SQLite package has not been found".
+     * npm 12 silently blocks dependency install scripts unless package.json lists them under
+     * `allowScripts`, so native modules never get built (n8n crashes at start with "SQLite
+     * package has not been found").
      *
-     * These installs are the panel's own, of packages it chose, and npm 11
-     * and older ran their scripts unconditionally; this restores exactly
-     * that. npm 11 ignores the variable. A user's own git deploy is not
-     * routed through here and keeps whatever policy its package.json sets.
+     * These are the panel's own installs of packages it chose, so this restores npm 11's
+     * behaviour of running scripts. npm 11 ignores the variable. A user's own git deploy does
+     * not go through here.
      */
     private const NPM_ENVIRONMENT = ['npm_config_dangerously_allow_all_scripts' => 'true'];
 
     /**
      * Run a command as the site user with the site's Node first on PATH.
      *
-     * `env` rather than a shell: these commands are the panel's own, fixed and
-     * argument-shaped, so there is nothing here that needs a shell to parse
-     * and no reason to hand one a string.
+     * `env` rather than a shell: the commands are fixed and argument-shaped.
      *
      * @param  array<int, string>  $command
      * @param  array<string, string>  $environment
@@ -135,16 +120,12 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     /**
      * Run a command whose environment holds secrets.
      *
-     * The variables go into a 0600 file owned by the site user and are sourced
-     * by a shell, rather than being passed to `env` as arguments: anything on
-     * a command line is in `/proc/<pid>/cmdline` for the whole time the
-     * command runs, and a database password or an admin password does not
-     * belong there. The file is removed whether the command succeeds or not.
+     * The variables go into a 0600 file owned by the site user and are sourced by a shell, not
+     * passed to `env` as arguments: a command line is visible in `/proc/<pid>/cmdline`, which
+     * must not hold passwords. The file is removed whether the command succeeds or not.
      *
-     * A shell is used here — unlike everywhere else in this class — because
-     * sourcing a file is the thing being asked for. Nothing user-supplied
-     * reaches the shell string: the path is the panel's own and the command is
-     * fixed.
+     * A shell is needed to source the file. Nothing user-supplied reaches the shell string: the
+     * path is the panel's own and the command is fixed.
      *
      * @param  array<int, string>  $command
      * @param  array<string, string>  $secrets
@@ -191,10 +172,8 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     /**
      * A bcrypt hash the Node ecosystem will accept.
      *
-     * PHP emits `$2y$`, which `bcryptjs` accepts but the native `bcrypt`
-     * binding rejects outright. `$2a$` is accepted by both and is the same
-     * hash — the prefix records which historical 8-bit handling produced it,
-     * not a different algorithm.
+     * PHP emits `$2y$`, which the native `bcrypt` binding rejects; `$2a$` is accepted by both
+     * and is the same hash.
      */
     protected function bcrypt(string $password): string
     {
@@ -206,17 +185,15 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     /**
      * Clone a project at a fixed branch into the document root.
      *
-     * The directory already exists and holds the placeholder the provisioner
-     * wrote, and `git clone` refuses a non-empty target — so this clones into
-     * a temporary path and moves the contents in, which is also what makes a
-     * retry after a failure converge instead of half-cloning.
+     * `git clone` refuses the non-empty document root (it holds the provisioner's placeholder),
+     * so this clones into a temporary path and copies in, which also makes a retry converge.
      *
      * @throws ProvisioningFailedException
      */
     protected function cloneInto(Application $application, string $repository, string $branch, string $documentRoot): void
     {
-        // A name nobody can guess, as downloadAndExtract() uses: this was
-        // `node-{id}`, which a site user could create first.
+        // An unguessable name, as downloadAndExtract() uses: a predictable one could be
+        // created first by a site user.
         $work = rtrim((string) config('server.installer_work_dir', sys_get_temp_dir()), '/')
             .'/node-'.Str::uuid();
 
@@ -225,8 +202,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
             'git', 'clone', '--depth', '1', '--branch', $branch, $repository, $work,
         ], $application);
 
-        // The placeholder would otherwise sit in the web root of an
-        // application that never serves files from it.
+        // Drop the placeholder: this app never serves files from the web root.
         $this->run('extract', ['rm', '-f', $documentRoot.'/index.html', $documentRoot.'/index.php'], $application);
         $this->copyIntoSite($application, $work, $documentRoot, $work);
         $this->run('extract', ['rm', '-rf', $work], $application);

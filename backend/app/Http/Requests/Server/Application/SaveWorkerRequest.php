@@ -31,50 +31,33 @@ class SaveWorkerRequest extends FormRequest
         return [
             'name' => [
                 'required', 'string', 'max:60',
-                // The name is rendered into the supervisor program block. A
-                // newline there is a directive of the caller's choosing in a
-                // file the panel writes and supervisord executes — the same
-                // hazard the cron rule exists for, one file format over.
+                // Rendered into the supervisor program block: a newline would inject a directive.
                 new SingleLine,
                 Rule::unique('workers', 'name')
                     ->where('application_id', $application->id)
                     ->ignore($worker),
             ],
 
-            // A bare `binary arg arg` line. supervisord does not run the
-            // command through a shell either, so a pipe or a semicolon here
-            // would not do what someone writing it expects — it would be
-            // passed to the binary as a literal argument. Refusing is clearer
-            // than silently running something else, and it keeps the value
-            // safe to write into an ini file.
+            // A bare `binary arg arg` line. supervisord runs no shell, so a pipe or semicolon would
+            // be passed as a literal argument; refuse it, which also keeps the ini value safe.
             'command' => ['required', 'string', 'max:500', 'regex:/^[^\n\r;|&`$<>()]+$/'],
 
             'kind' => ['sometimes', Rule::in([Worker::KIND_QUEUE, Worker::KIND_HORIZON, Worker::KIND_CUSTOM])],
-            // `WorkingDirectory=` in the same unit, so the same rule applies:
-            // the traversal guard stops it pointing elsewhere, and this stops
-            // it being two directives instead of one.
+            // `WorkingDirectory=` in the same unit: no traversal, and one line only.
             'directory' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./', new SingleLine],
 
-            // The account the copies run as. Left empty the panel uses the
-            // site's own system user, which is the answer for anything it
-            // created; this exists so an adopted block naming another account
-            // keeps it. Same character class the system-user rules use — it
-            // becomes `user=` in a file supervisord parses.
+            // The account the copies run as; empty means the site's own system user. Exists so an
+            // adopted block keeps its account. Becomes `user=`, so it uses the system-user character class.
             'user' => ['sometimes', 'nullable', 'string', 'max:32', 'regex:/^[a-z_][a-z0-9_-]*$/'],
 
-            // `stdout_logfile`. Absolute, and no traversal, for the reason the
-            // directory rule says: this is a path the panel writes into a
-            // config that runs as root.
+            // `stdout_logfile`: absolute, no traversal; it is a path in a config that runs as root.
             'log_file' => ['sometimes', 'nullable', 'string', 'max:255', 'starts_with:/', 'not_regex:/\.\./', new SingleLine],
 
-            // supervisord's own set. Constrained here rather than in the
-            // database so adding one is a validation change, not a migration.
+            // supervisord's own set; kept here, not in the database, so adding one needs no migration.
             'log_level' => ['sometimes', 'nullable', Rule::in(['critical', 'error', 'warn', 'info', 'debug', 'trace', 'blather'])],
 
-            // Appended verbatim, so a directive here wins over everything the
-            // panel wrote. A section header would let it define a *second*
-            // program — one the panel does not know about and would never
-            // stop — so the one thing it may not contain is `[`.
+            // Appended verbatim, so it wins over what the panel wrote. No `[`: a section header
+            // would define a second program the panel never stops.
             'extra_config' => ['sometimes', 'nullable', 'string', 'max:2000', 'not_regex:/\[/'],
 
             'auto_start' => ['sometimes', 'boolean'],
@@ -108,10 +91,7 @@ class SaveWorkerRequest extends FormRequest
                 ->exists();
 
             if ($exists) {
-                // Horizon supervises its own queue workers. Running both means
-                // every job is picked up twice, and neither tool can see the
-                // other — so the panel is the only thing in a position to say
-                // so, and it will not be obvious from either one's output.
+                // Horizon supervises its own queue workers; running both picks every job up twice.
                 $validator->errors()->add('kind', __('worker.errors.queue_conflict'));
             }
         });
@@ -123,13 +103,11 @@ class SaveWorkerRequest extends FormRequest
     private const CONFINED_KEYS = ['user', 'command', 'directory', 'stdout_logfile', 'stderr_logfile'];
 
     /**
-     * A worker is a process supervisord starts as root and hands to `user`,
-     * and whose log file root opens. Bug #72: anyone allowed to manage
-     * workers could run one as root, or have root write anywhere.
+     * supervisord starts a worker as root, hands it to `user` and opens its log file as root, so
+     * anyone allowed to manage workers could otherwise run one as root or have root write anywhere.
      *
-     * The panel admin keeps what v7 allowed: any account, any path. Workers
-     * moved over from v7 are adopted, not posted here, so they keep working.
-     * Everyone else is held to the site's own account and folders.
+     * The panel admin may use any account and path. Everyone else is held to the site's own
+     * account and folders.
      */
     private function confine(Validator $validator): void
     {
@@ -139,8 +117,7 @@ class SaveWorkerRequest extends FormRequest
         $worker = $this->route('worker');
         $extra = (string) $this->input('extra_config', '');
 
-        // Read the way supervisord reads it, or the checks below are checks on
-        // a different file. An unreadable one is refused outright.
+        // Read the way supervisord reads it; an unreadable value is refused.
         $keys = $this->extraConfigKeys($extra);
 
         if ($keys === null) {
@@ -148,22 +125,19 @@ class SaveWorkerRequest extends FormRequest
             $keys = ['keys' => [], 'indented' => false];
         }
 
-        // Not even for the admin: the screen shows the "Run as" field, and a
-        // `user=` underneath it would make that field lie.
+        // Not even for the admin: a `user=` here would make the "Run as" field lie.
         if (in_array('user', $keys['keys'], true)) {
             $validator->errors()->add('extra_config', __('worker.errors.extra_config_user'));
         }
 
-        // W12: the panel writes its own `environment=` line (PATH),
-        // and supervisord refuses a program with two — the worker never
-        // starts again. Not even for the admin, for the same reason.
+        // The panel writes its own `environment=` (PATH) and supervisord refuses a program with
+        // two, so the worker would never start again. Not even for the admin.
         if (in_array('environment', $keys['keys'], true)) {
             $validator->errors()->add('extra_config', __('worker.errors.extra_config_environment'));
         }
 
-        // An indented line is not a setting of its own: supervisord appends it
-        // to the value above. The line above the first one is the panel's own
-        // `environment=`, so indenting was a way past the check just made.
+        // An indented line continues the value above it, which for the first line is the panel's
+        // own `environment=`: indenting would get past the check above.
         if ($keys['indented'] && ! $validator->errors()->has('extra_config')) {
             $validator->errors()->add('extra_config', __('worker.errors.extra_config_indented'));
         }
@@ -173,9 +147,7 @@ class SaveWorkerRequest extends FormRequest
         }
 
         $siteUser = (string) $application->systemUser?->username;
-        // What the worker will run as after this save: a request that leaves
-        // the field out keeps the stored one, so editing a root worker's
-        // command is caught too.
+        // What the worker will run as after this save: an omitted field keeps the stored value.
         $user = $this->has('user') ? $this->input('user') : $worker?->user;
 
         if ($user !== null && $user !== '' && $user !== $siteUser) {
@@ -189,8 +161,8 @@ class SaveWorkerRequest extends FormRequest
             $validator->errors()->add('directory', __('worker.errors.directory_outside_home', ['home' => $home]));
         }
 
-        // Only the site's own logs folder. It is root-owned, so the site user
-        // cannot plant a symlink there for root to follow; their home is not.
+        // Only the site's logs folder: it is root-owned, so the site user cannot plant a symlink
+        // there for root to follow.
         $logFile = $this->has('log_file') ? $this->input('log_file') : $worker?->log_file;
 
         if ($logFile !== null && $logFile !== '' && dirname((string) $logFile) !== $application->logsPath()) {
@@ -205,9 +177,8 @@ class SaveWorkerRequest extends FormRequest
     }
 
     /**
-     * Python's `str.isspace()` set, which is what configparser strips from a
-     * key. `\s` alone misses the non-breaking space, so `user\u{a0}: root`
-     * went through as a key PHP did not recognise and supervisord did.
+     * Python's `str.isspace()` set, which configparser strips from a key. `\s` alone misses the
+     * non-breaking space, so `user\u{a0}: root` would pass PHP and still be read as `user`.
      */
     private const INI_SPACE = '[\s\x{1C}-\x{1F}\x{85}\x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}]';
 
@@ -215,14 +186,9 @@ class SaveWorkerRequest extends FormRequest
      * The keys supervisord will read out of Extra config, lower-cased, and
      * whether any line is indented. Null when it is not valid UTF-8.
      *
-     * Bug #72 was checked with `^\s*key\s*=`, and supervisord's parser
-     * (configparser, `strict=False`, so the last copy of a key wins) differs
-     * from that in three ways that each let `user` or a log path through:
-     * `:` is a delimiter as much as `=`; a lone `\r` ends a line, because the
-     * file is read with universal newlines; and the key is trimmed of Unicode
-     * spaces before it is lower-cased. So every line is read here the same
-     * way — split where Python splits, key up to the first `=` or `:` — and
-     * indented lines are read as keys too, which only ever refuses more.
+     * Mirrors supervisord's parser (configparser, `strict=False`, last copy of a key wins): `:`
+     * delimits as well as `=`, a lone `\r` ends a line, and the key is trimmed of Unicode spaces.
+     * Indented lines are read as keys too, which only ever refuses more.
      *
      * @return array{keys: array<int, string>, indented: bool}|null
      */
@@ -235,9 +201,8 @@ class SaveWorkerRequest extends FormRequest
         $keys = [];
         $indented = false;
 
-        // Exactly the breaks Python's universal newlines know. Splitting on
-        // more (`\R` takes \v and \f too) hid an indent: Python counts a
-        // leading \v as one, and continued the panel's `environment=` with it.
+        // Exactly Python's universal newlines. `\R` also splits on \v and \f, which hides an
+        // indent: Python counts a leading \v as one.
         foreach (preg_split('/\r\n|\r|\n/', $extra) ?: [] as $line) {
             $trimmed = (string) preg_replace('/^'.self::INI_SPACE.'+|'.self::INI_SPACE.'+$/u', '', $line);
 

@@ -25,23 +25,17 @@ class SshKeyManager
     /**
      * A plausible SSH public key: `<type> <base64-blob> [comment]`, on ONE line.
      *
-     * One line is the whole point. authorized_keys is line-oriented, so a
-     * value carrying a newline is two keys to sshd — and one key to the panel,
-     * which lists a single row and a single fingerprint. The second line was
-     * accepted, written and honoured: reproduced on a real server
-     * (2026-09-23), logging in with a key the panel never showed.
+     * One line matters: authorized_keys is line-oriented, so a value with a newline is two keys
+     * to sshd but one row to the panel, letting a key log in that the panel never showed.
      *
-     * The blob is also asked what it is. Every OpenSSH public key blob starts
-     * with its own type as a length-prefixed string, so a blob that does not
-     * name the type in front of it is not that key — decoding as base64 alone
-     * accepts any base64 at all.
+     * The blob must also name its own type as its first length-prefixed string; base64 alone
+     * accepts anything.
      */
     public function isValidPublicKey(string $publicKey): bool
     {
         $publicKey = trim($publicKey);
 
-        // Any control character but a tab: \n and \r are a second line, and
-        // the rest have no business in a key and are not worth reasoning about.
+        // Any control character but a tab: \n and \r are a second line, the rest do not belong.
         if (preg_match('/[\x00-\x08\x0A-\x1F\x7F]/', $publicKey)) {
             return false;
         }
@@ -52,14 +46,12 @@ class SshKeyManager
             return false;
         }
 
-        // `sk-…@openssh.com`: a key held on a hardware token (YubiKey and
-        // the like). sshd takes them like any other.
+        // `sk-…@openssh.com`: hardware-token keys, which sshd accepts like any other.
         if (! preg_match('/^(ssh-rsa|ssh-ed25519|ssh-dss|ecdsa-sha2-\S+|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com)$/', $parts[0])) {
             return false;
         }
 
-        // Padding included: PHP decodes a key whose closing `=` was lost, sshd
-        // does not, and refuses it at login (measured, 2026-11-19).
+        // Padding included: PHP decodes a key whose closing `=` was lost, sshd refuses it.
         if (strlen($parts[1]) % 4 !== 0) {
             return false;
         }
@@ -76,11 +68,9 @@ class SshKeyManager
             return false;
         }
 
-        // The whole key, not just its start: a key cut short while copying
-        // is still valid base64 and still names its type, so it was saved,
-        // written to authorized_keys — and never logged anyone in (QA,
-        // 2026-11-19). Each type has a fixed number of fields (RFC 4253
-        // §6.6, RFC 5656 §3.1, RFC 8709 §4, OpenSSH PROTOCOL.u2f).
+        // The whole key, not just its start: a truncated key is still valid base64 and names its
+        // type. Each type has a fixed field count (RFC 4253 §6.6, RFC 5656 §3.1, RFC 8709 §4,
+        // OpenSSH PROTOCOL.u2f).
         $expected = match ($parts[0]) {
             'ssh-ed25519' => 2,
             'ssh-rsa' => 3,
@@ -103,8 +93,7 @@ class SshKeyManager
     }
 
     /**
-     * The length-prefixed fields of a key blob, or null when the blob does
-     * not split into whole fields — the last one cut short.
+     * The length-prefixed fields of a key blob, or null when it does not split into whole fields.
      *
      * @return array<int, string>|null
      */
@@ -136,17 +125,13 @@ class SshKeyManager
     public const MIN_RSA_BITS = 2048;
 
     /**
-     * Why a well-formed key will not be taken, or null when it will
-     * (2026-10-28).
+     * Why a well-formed key will not be taken, or null when it will.
      *
-     * - `dsa`: OpenSSH turned DSA off by default in 7.0 and removed it in
-     *   9.8, so every Ubuntu the panel runs on refuses to log in with one.
-     *   It used to be accepted, written, and listed as working.
+     * - `dsa`: OpenSSH disabled DSA in 7.0 and removed it in 9.8, so logins with it fail.
      * - `weak_rsa`: an RSA modulus under {@see MIN_RSA_BITS} bits.
      *
-     * Separate from {@see isValidPublicKey()}, which only asks "is this a key
-     * line": the file merge and the server sync still have to recognise a DSA
-     * line somebody put there by hand.
+     * Separate from {@see isValidPublicKey()}: the file merge and server sync must still
+     * recognise a hand-added DSA line.
      */
     public function rejection(string $publicKey): ?string
     {
@@ -189,27 +174,16 @@ class SshKeyManager
     }
 
     /**
-     * Rewrite the user's authorized_keys from the DB rows (the source of
-     * truth).
+     * Rewrite the user's authorized_keys from the DB rows (the source of truth).
      *
-     * Every step runs AS THE USER (`runuser -u`), never as root. ~/.ssh lives
-     * in a directory the user owns, so the user decides what every name in it
-     * points at — and root follows a symlink like anyone else. This used to
-     * `tee` and `chmod` as root: a user who replaced authorized_keys with a
-     * link had the panel overwrite the link's target with their keys and
-     * chmod it 0600. Reproduced on a real server (2026-09-23) against a
-     * root-owned file outside the home; aimed at /root/.ssh/authorized_keys it
-     * is root, aimed at /etc/passwd it is a dead server. Anything running as
-     * the site user can plant that link — a compromised plugin included.
+     * Every step runs AS THE USER (`runuser -u`), never as root. The user owns ~/.ssh and can
+     * plant a symlink there; root would follow it and overwrite and chmod the target (e.g.
+     * /etc/passwd). As the user, a planted link reaches only what the user could already write.
+     * For the same reason there is no `chown`: `chown -R` over a user-controlled tree is the
+     * same mistake.
      *
-     * As the user, a planted link reaches only what the user could already
-     * write, so there is nothing to check for and no check-then-write race.
-     * It is also why there is no `chown` any more: files the user creates are
-     * the user's, and `chown -R` over a user-controlled tree is the same
-     * mistake one step later.
-     *
-     * Through ServerOps, not PHP's File facade — the home is not the panel's,
-     * and a raw write fails with a bare "Permission denied" and no reference.
+     * Through ServerOps, not PHP's File facade: the home is not the panel's, and a raw write
+     * fails with a bare "Permission denied" and no reference.
      */
     public function sync(SystemUser $systemUser, ?string $removedKey = null): void
     {
@@ -224,15 +198,12 @@ class SshKeyManager
             fn () => $this->serverOps->run([...$asUser, 'mkdir', '-p', $sshDir], $context),
             fn () => $this->serverOps->run([...$asUser, 'chmod', '0700', $sshDir], $context),
             function () use ($asUser, $file, $context, $panelKeys, $removedKey) {
-                // Read first (SU-03): this used to `tee` the panel's keys over
-                // the whole file, so a key added by hand on the server — often
-                // the one somebody logs in with — vanished the next time any
-                // key was added or removed here.
+                // Read first: writing the panel's keys over the whole file would drop keys
+                // added by hand on the server.
                 $current = $this->serverOps->run([...$asUser, 'cat', $file], $context, expectedExitCodes: [1]);
 
-                // Only a file that is not there may be read as empty. Anything
-                // else (a denial, an unreadable file) would turn into writing
-                // the panel's keys over whatever it holds — the very bug.
+                // Only a missing file may be read as empty; a denial or unreadable file would
+                // end in overwriting whatever it holds.
                 $missing = ! $current->denied && $current->exitCode() === 1
                     && str_contains($current->errorOutput(), 'No such file');
 
@@ -253,9 +224,8 @@ class SshKeyManager
             $result = $step();
 
             if ($result->failed()) {
-                // The reference from whichever step failed — the one the
-                // operator sees, correlated to the one line in the
-                // server-ops log that has the real stderr.
+                // The reference of whichever step failed; it maps to the server-ops log line
+                // with the real stderr.
                 throw new SystemUserSshFailedException($result->reference);
             }
         }
@@ -266,14 +236,11 @@ class SshKeyManager
     public const BLOCK_END = '# END panel-managed keys';
 
     /**
-     * The file with the panel's keys in a block of their own and everything
-     * else exactly as it was (SU-03).
+     * The file with the panel's keys in a block of their own and everything else as it was.
      *
-     * Lines outside the block are the server's: kept, minus any that is one
-     * of the panel's keys (it lives in the block now) or the one just
-     * removed. The removed key matters on a file the panel wrote before the
-     * block existed: there, its keys sit outside any block, and a deleted one
-     * would otherwise read as hand-added and keep its access.
+     * Lines outside the block are kept, minus any panel key or the one just removed. The
+     * removed key matters on files written before the block existed: a deleted key outside any
+     * block would read as hand-added and keep its access.
      *
      * @param  array<int, string>  $panelKeys
      */

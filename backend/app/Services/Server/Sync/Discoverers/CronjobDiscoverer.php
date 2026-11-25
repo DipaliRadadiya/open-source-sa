@@ -15,18 +15,11 @@ use Illuminate\Support\Str;
 /**
  * Scheduled jobs already running for a site's account.
  *
- * The resource people notice last and miss most: a cron job that silently
- * stops after a migration is discovered a week later, by whatever did not
- * happen.
+ * Two sources: `/etc/cron.d` files (where this panel writes) and a user's personal crontab
+ * (where a developer edits by hand).
  *
- * Two sources, because both are in use: `/etc/cron.d` files, which is where
- * this panel and the one before it write, and a user's personal crontab,
- * which is where a developer puts things by hand.
- *
- * Only jobs belonging to an account the panel manages are reported. Root's
- * cron is the operating system's — certbot renewals, log rotation, apt
- * timers — and a panel that offered to manage those would eventually be
- * asked to delete one.
+ * Only jobs of accounts the panel manages are reported. Root's cron belongs to the operating
+ * system (certbot, log rotation, apt timers); the panel must never offer to manage or delete it.
  */
 class CronjobDiscoverer implements Discoverable
 {
@@ -47,8 +40,7 @@ class CronjobDiscoverer implements Discoverable
     {
         $users = SystemUser::query()->pluck('id', 'username');
 
-        // A preview's own accounts, which applying it would adopt first. See
-        // SyncRun::previewedSystemUsers().
+        // Accounts a preview would adopt first. See SyncRun::previewedSystemUsers().
         foreach ($run->previewedSystemUsers()->keys() as $username) {
             if (! $users->has($username)) {
                 $users->put($username, null);
@@ -61,12 +53,8 @@ class CronjobDiscoverer implements Discoverable
 
         $tracked = Cronjob::query()->pluck('command', 'slug');
 
-        // A job already adopted is not found again. The file check in
-        // fromCronD() only knows the panel's own file names, and an adopted
-        // job keeps its original file until its first edit, so every run
-        // offered it as new and "adopted" it again (the adopt below returns
-        // the existing row, so nothing duplicated, but the preview said
-        // otherwise). The slug is derived from the same fields on every run.
+        // Skip jobs already adopted: fromCronD() only knows the panel's own file names, and an
+        // adopted job keeps its original file until its first edit. The slug is stable per run.
         return array_values(array_filter(
             array_merge(
                 $this->fromCronD($users, $tracked),
@@ -89,24 +77,17 @@ class CronjobDiscoverer implements Discoverable
         return Cronjob::create(
             [
                 'slug' => $attributes['slug'],
-                // Where it was read from, so the first edit or delete can
-                // remove it. The slug names the file the panel *would* write,
-                // never the one it found, so nothing else can recover this.
+                // Where it was read from, so the first edit or delete can remove it. The slug
+                // names the file the panel would write, not the one it found.
                 'source_path' => $attributes['source_path'] ?? null,
                 'source_line' => $attributes['source_line'] ?? null,
-                // `name` is unique in this table. Two jobs legitimately run
-                // the same command on different schedules — a nightly backup
-                // and a midday one — and taking the command as the name made
-                // the second collide and be recorded as a failure.
+                // `name` is unique, but two jobs may run the same command on different schedules.
                 'name' => $this->uniqueName($attributes['name']),
                 'username' => $attributes['username'],
                 'system_user_id' => $attributes['system_user_id'],
                 'command' => $attributes['command'],
                 'expression' => $attributes['expression'],
-                // True, because it *is* running. This is the one resource
-                // where the panel writing its own copy does not double up:
-                // adopting records the job, and the file it came from stays
-                // exactly where it is until someone changes it here.
+                // It is already running; the original file stays untouched until edited here.
                 'active' => true,
             ],
         );
@@ -115,15 +96,8 @@ class CronjobDiscoverer implements Discoverable
     /**
      * A name no other cron job has.
      *
-     * `cronjobs.name` is unique, and two jobs legitimately run the same
-     * command on different schedules — a nightly backup and a midday one.
-     * Taking the command as the name made the second collide and be recorded
-     * as a failure, which reads as "the panel could not import this" when the
-     * job was perfectly fine.
-     *
-     * Same shape as Application::uniqueName rather than a new idea, and local
-     * rather than on the model because only adoption derives a name; a job
-     * created in the panel has one the user typed.
+     * `cronjobs.name` is unique, but two jobs may run the same command on different schedules.
+     * Same shape as Application::uniqueName; local because only adoption derives a name.
      */
     private function uniqueName(string $name): string
     {
@@ -204,16 +178,12 @@ class CronjobDiscoverer implements Discoverable
                 ['crontab', '-l', '-u', (string) $username],
                 ['feature' => 'sync', 'op' => 'read_user_crontab', 'system_user' => $username],
                 timeout: 30,
-                expectedExitCodes: [1], // "no crontab for x" (bug #48)
+                expectedExitCodes: [1], // "no crontab for x"
             );
 
-            // "no crontab for x" exits non-zero. The common case, not an error.
-            //
-            // A denied sudo exits non-zero too, and treating that as "this user
-            // has no jobs" is how this reports an empty result on a server full
-            // of them — which is what an install whose sudoers predates
-            // `crontab` joining the allowlist would do. Said out loud rather
-            // than left to look like a clean scan that found nothing.
+            // "no crontab for x" exits non-zero: the common case, not an error.
+            // A denied sudo also exits non-zero (sudoers predating `crontab` in the allowlist);
+            // log it so it does not pass as a clean scan that found nothing.
             if ($result->failed()) {
                 if (str_contains($result->errorOutput(), 'password is required')) {
                     Log::warning('crontab discovery skipped: the panel may not run crontab', [
@@ -253,11 +223,8 @@ class CronjobDiscoverer implements Discoverable
      */
     private function item($users, string $username, string $expression, string $command, array $evidence, ?string $crontabLine = null): array
     {
-        // A trailing `# note` is split off (the extra item on the frontend
-        // list): the panel writes `command >> log 2>&1`, so a comment kept
-        // in the command would swallow the redirect, and the save rule
-        // refuses one — the job's very first edit failed. The note becomes
-        // the job's name, which is what it was for.
+        // Split off a trailing `# note`: the panel appends `>> log 2>&1`, which a comment would
+        // swallow, and the save rule refuses one. The note becomes the job's name.
         $note = null;
         $original = $command;
 
@@ -266,19 +233,15 @@ class CronjobDiscoverer implements Discoverable
             $command = rtrim(substr($command, 0, $at));
         }
 
-        // The slug names the file the panel would write. Derived from the
-        // command so re-running the sync produces the same one, and suffixed
-        // with a hash because two jobs can legitimately run the same command
-        // on different schedules.
-        // From the line as found, so a job adopted before the note was split
-        // off keeps its slug and is not offered again.
+        // The slug names the file the panel would write: derived from the command, plus a hash
+        // because two jobs may share a command. Taken from the line as found, so jobs adopted
+        // before the note split keep their slug.
         $slug = Str::slug(Str::limit($original, 30, '')).'-'.substr(md5($username.$expression.$original), 0, 6);
 
         return [
             'key' => $username.':'.$slug,
             'label' => Str::limit($command, 60),
-            // Read verbatim from a file. The only judgement is whose it is,
-            // and that came from the file too.
+            // Read verbatim from a file.
             'confidence' => 100,
             'evidence' => $evidence + [
                 'username' => $username,
@@ -287,11 +250,8 @@ class CronjobDiscoverer implements Discoverable
             ],
             'attributes' => [
                 'slug' => $slug,
-                // Where the job came from, so the panel's first edit or delete
-                // can take the original away: a cron.d file is removed whole;
-                // a crontab line is removed from that user's crontab, which is
-                // why the exact line is kept. Leaving either made the job run
-                // twice once the panel wrote its own.
+                // Where the job came from, so the first edit or delete can remove the original
+                // (a cron.d file whole, or the exact crontab line); else it would run twice.
                 'source_path' => $evidence['source'] === 'cron.d'
                     ? $evidence['path']
                     : 'crontab:'.$username,

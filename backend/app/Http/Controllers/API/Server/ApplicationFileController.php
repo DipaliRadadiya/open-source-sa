@@ -59,9 +59,7 @@ class ApplicationFileController extends Controller
     /**
      * How this directory's bytes divide by file type.
      *
-     * Its own endpoint rather than a field on the listing: it walks every file
-     * underneath, while a listing reads one level. Folding it in would make
-     * opening a folder pay for a chart nobody asked for.
+     * Separate from the listing: it walks every file underneath, a listing reads one level.
      */
     public function breakdown(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
     {
@@ -151,8 +149,7 @@ class ApplicationFileController extends Controller
             'safety_copy' => $request->safetyCopy(),
         ]);
 
-        // The content too (APP-5), so the editor shows what is now on disk
-        // without a second request.
+        // Includes the content, so the editor shows what is now on disk.
         return response()->json(['restored' => true, ...$restored]);
     }
 
@@ -193,12 +190,9 @@ class ApplicationFileController extends Controller
     }
 
     /**
-     * Archive operations that are running, or that finished recently enough
-     * that the person who started one has not seen the result yet.
+     * Archive operations that are running or finished in the last 5 minutes.
      *
-     * Recent completions are included on purpose: a poll that only returned
-     * in-flight rows would have a job vanish between two polls, and the panel
-     * could never tell "finished" from "the page was reloaded".
+     * Recent completions are included so a job does not vanish between two polls.
      */
     public function archiveJobs(Application $application, FileBrowser $files): JsonResponse
     {
@@ -208,11 +202,8 @@ class ApplicationFileController extends Controller
             ->latest('id')
             ->limit(20)
             ->get()
-            // A worker killed outright never reaches `failed()`, so the row
-            // sits at `running` forever and the screen shows a spinner that
-            // will not resolve. Settled on read rather than by a scheduled
-            // reaper: the poll is the only thing that cares, and a stale row
-            // nobody is looking at costs nothing.
+            // A killed worker never reaches `failed()` and the row stays `running`;
+            // settle it on read.
             ->each(function (FileArchiveJob $job) use ($files) {
                 if ($job->isStale()) {
                     $job->update([
@@ -224,16 +215,8 @@ class ApplicationFileController extends Controller
                     return;
                 }
 
-                // Progress, for a compress that is still writing. Read here
-                // rather than written by the worker because the worker is
-                // inside one blocking `tar` for the whole run and has nowhere
-                // to report from — and tar itself says nothing about how far
-                // it has got.
-                //
-                // Not persisted: this is one `find` per poll on a value that
-                // is stale the instant it is read, and a write per poll per
-                // viewer would be a row update every two seconds for the
-                // length of a fifteen-minute archive.
+                // Progress of a running compress, read here because the worker is inside one
+                // blocking `tar`. Not persisted: it is stale the moment it is read.
                 if ($job->status === FileArchiveStatus::Running && $job->operation === 'compress') {
                     $job->size_bytes = $files->archiveSize($job);
                 }
@@ -321,9 +304,7 @@ class ApplicationFileController extends Controller
             'count' => count($paths),
         ]);
 
-        // 202, not 200: the archive does not exist yet. Saying "compressed"
-        // here is what the synchronous version did, and on anything large it
-        // was saying it about work that had not happened.
+        // 202, not 200: the archive does not exist yet.
         return response()->json(
             ['job' => new FileArchiveJobResource($job)],
             SymfonyResponse::HTTP_ACCEPTED,
@@ -333,10 +314,7 @@ class ApplicationFileController extends Controller
     /**
      * Wraps a single-path operation in the per-path result shape.
      *
-     * The single form still aborts on failure rather than reporting it — a
-     * caller who named one file wants the status code, not a list with one
-     * entry in it. This only makes the successful response the same shape as
-     * the bulk one, so a client can read one field either way.
+     * A failure still aborts (status code); only success is shaped like the bulk response.
      *
      * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
      */
@@ -381,9 +359,9 @@ class ApplicationFileController extends Controller
     }
 
     /**
-     * Put one trashed path, or every path in one batch, back where it came
-     * from. Batch restores report per-path outcomes rather than letting one
-     * occupied destination hide every other successful restore.
+     * Put one trashed path, or every path in one batch, back where it came from.
+     *
+     * Batch restores report per-path outcomes.
      */
     public function restoreTrash(
         RestoreTrashRequest $request,
@@ -413,9 +391,7 @@ class ApplicationFileController extends Controller
     }
 
     /**
-     * Empty the trash, or one batch of it. The only unrecoverable thing the
-     * file manager does, and deliberately so — it is how the disk space comes
-     * back.
+     * Empty the trash, or one batch of it. Unrecoverable by design: it frees the disk space.
      */
     public function emptyTrash(
         EmptyTrashRequest $request,
@@ -447,15 +423,11 @@ class ApplicationFileController extends Controller
             ? $files->deleteMany($application, $paths, $permanent)
             : $this->single(fn () => $files->delete($application, $paths[0], $permanent), $paths[0]);
 
-        // One entry for the whole operation, with the count. N entries would
-        // bury every other kind of activity the moment someone clears a cache
-        // directory.
+        // One entry for the whole operation, with the count.
         $activity->log('application.file_deleted', $application, [
             'name' => $application->name,
             'path' => $paths[0],
             'count' => count($paths),
-            // Recorded because "deleted" and "deleted permanently" are
-            // different events to whoever reads this afterwards.
             'permanent' => $permanent ? 'yes' : 'no',
         ]);
 
@@ -470,9 +442,7 @@ class ApplicationFileController extends Controller
             foreach ($file['chunks'] as $chunk) {
                 echo $chunk;
 
-                // Without this the chunks pile up in PHP's own output buffer
-                // and the memory saved by streaming the read is spent on the
-                // write instead.
+                // Without this the chunks pile up in PHP's output buffer.
                 if (ob_get_level() > 0) {
                     ob_flush();
                 }
@@ -480,37 +450,26 @@ class ApplicationFileController extends Controller
                 flush();
             }
         }, 200, [
-            // Never sniffed from the file's own content — an arbitrary
-            // downloaded file served as, say, text/html would let its
-            // content run as a script in the browser. Force a download
-            // instead of letting the browser decide what this is.
+            // Never sniffed from the file's content: a user file served as text/html would
+            // run as a script. Force a download.
             'Content-Type' => 'application/octet-stream',
             'Content-Disposition' => $this->attachment(basename($request->targetPath())),
             'Content-Length' => (string) $file['size'],
-            // Chunks must reach the client as they are produced. Without this
-            // nginx buffers the whole response before sending a byte, which
-            // reinstates on the way out exactly the memory cost the streaming
-            // read removed.
+            // Without this nginx buffers the whole response before sending a byte.
             'X-Accel-Buffering' => 'no',
         ]);
     }
 
     /**
-     * An image, as an image — the one response here a browser may render.
+     * An image, as an image: the one response here a browser may render.
      *
-     * Everything that makes that safe is either in `FileBrowser::preview()`
-     * (the type comes from the file's bytes, SVG is refused, the size is
-     * capped) or in these headers:
+     * Safety is in `FileBrowser::preview()` (type from the file's bytes, SVG refused, size
+     * capped) and these headers:
      *
-     *  - `nosniff` so a browser cannot decide this is something other than
-     *    the type we determined,
-     *  - a CSP of `default-src 'none'` plus `sandbox`, so that if a file ever
-     *    does reach this response with content we misidentified, opening its
-     *    URL directly executes nothing and loads nothing,
-     *  - `inline`, which is the entire difference from `download()` and the
-     *    reason the rest of this list exists,
-     *  - `no-store`, because this is a customer's file behind a permission
-     *    check and shared caches have no business keeping it.
+     *  - `nosniff`: the browser cannot reinterpret the type,
+     *  - CSP `default-src 'none'` + `sandbox`: a misidentified file executes and loads nothing,
+     *  - `inline`: the only difference from `download()`,
+     *  - `no-store`: a customer's file must not sit in shared caches.
      */
     public function preview(BrowseFilesRequest $request, Application $application, FileBrowser $files): StreamedResponse
     {
@@ -540,11 +499,8 @@ class ApplicationFileController extends Controller
     /**
      * A Content-Disposition value that survives the filename.
      *
-     * `addslashes()` was not enough: it leaves UTF-8 alone (so a non-ASCII
-     * name arrives mangled or dropped) and does nothing about a newline,
-     * which would end the header and let the rest be read as another one.
-     * RFC 6266 answers both — a plain ASCII `filename` for old clients and a
-     * percent-encoded `filename*` that everything current prefers.
+     * `addslashes()` is not enough: it mangles UTF-8 and lets a newline end the header.
+     * RFC 6266: an ASCII `filename` for old clients plus a percent-encoded `filename*`.
      */
     private function attachment(string $filename): string
     {
@@ -552,9 +508,7 @@ class ApplicationFileController extends Controller
     }
 
     /**
-     * The same header, built the same way, for a response meant to be shown
-     * rather than saved. Shared so the escaping above cannot be reimplemented
-     * — a newline in a filename ends the header either way.
+     * The same header for a response meant to be shown rather than saved.
      */
     private function disposition(string $type, string $filename): string
     {
