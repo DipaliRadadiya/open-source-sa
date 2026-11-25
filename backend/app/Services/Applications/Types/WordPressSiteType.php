@@ -10,9 +10,7 @@ use App\Support\FieldOptions;
 use Illuminate\Validation\Rule;
 
 /**
- * WordPress — the reference one-click type, and the one with the most
- * type-specific fields. If the generic form renderer can draw this, it can
- * draw every other marketplace app.
+ * WordPress, the reference one-click type and the one with the most type-specific fields.
  */
 class WordPressSiteType extends AbstractSiteType
 {
@@ -57,8 +55,7 @@ class WordPressSiteType extends AbstractSiteType
             $this->field('site_title', 'text', required: true, extra: ['placeholder' => __('application.placeholders.site_title')]),
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
             $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
-            // Offered pre-filled with a strong value so the simple path never
-            // invites a weak password.
+            // Pre-filled with a strong value so the simple path never invites a weak password.
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('site_language', 'select', advanced: true, extra: [
                 'default' => 'en_US',
@@ -88,10 +85,8 @@ class WordPressSiteType extends AbstractSiteType
     }
 
     /**
-     * WordPress runs its scheduled work (scheduled posts, update checks,
-     * plugin jobs) by requesting its own `wp-cron.php` over HTTP. With
-     * Password Protection on, that request got the 401 every visitor gets,
-     * so nothing scheduled ever ran (bug #75).
+     * WordPress runs scheduled work by requesting its own `wp-cron.php` over HTTP. With Password
+     * Protection on, that request gets a 401 and nothing scheduled runs.
      *
      * @return array<int, string>
      */
@@ -101,29 +96,19 @@ class WordPressSiteType extends AbstractSiteType
     }
 
     /**
-     * Staging is a per-type recipe, not a generic file copy: pushing a
-     * WordPress staging site back needs URL rewriting inside serialised data,
-     * wp-cron disabled and outbound mail trapped. That recipe exists for
-     * WordPress and nothing else yet, so nothing else offers the screen.
+     * Staging is a per-type recipe (URL rewriting inside serialised data, wp-cron disabled,
+     * outbound mail trapped), and only WordPress has one.
      *
-     * No `app_environment`: WordPress keeps its configuration in
-     * wp-config.php, which is the application's file, not an env file the
-     * panel owns. Presenting it as one would invite edits that the next
-     * WordPress update overwrites.
+     * No `app_environment`: wp-config.php is the application's file, not an env file the panel
+     * owns, and edits there would be overwritten by the next WordPress update.
      */
     public function features(): array
     {
-        // `app_clone` is re-added, not inherited: the base list withholds it
-        // from every database-backed type because copying the files alone
-        // leaves a site pointing at the original's database. WordPress is the
-        // one type with a `cloneStrategy()`, so it is the one type that gets
-        // the screen back.
-        // `app_magic_login` is WordPress's alone, and deliberately not on the
-        // base list. Signing in without a password needs somewhere to put the
-        // loader and a notion of "administrator" to sign in as; nothing else
-        // here has both. Being the only holder is also what makes the routes
-        // 404 everywhere else without a single site-type check in the
-        // controller.
+        // `app_clone` is re-added: the base list withholds it from database-backed types, as
+        // copying only the files leaves the clone on the original's database. WordPress has a
+        // `cloneStrategy()`.
+        // `app_magic_login` is WordPress's alone (it needs a loader location and an administrator
+        // to sign in as), so the routes 404 elsewhere without a site-type check.
         return [...parent::features(), 'app_clone', 'app_staging', 'app_magic_login'];
     }
 
@@ -138,18 +123,8 @@ class WordPressSiteType extends AbstractSiteType
     }
 
     /**
-     * WordPress, measured 2026-09-18.
-     *
-     * `wp-includes/version.php` carries `$required_php_version = '7.4'` — the
-     * value WordPress itself enforces before it will run.
-     *
-     * No ceiling, and that is WordPress's own position: it supports new PHP
-     * releases rather than declaring an upper bound. Recording a maximum here
-     * would refuse versions that work.
-     *
-     * The floor is deliberately WordPress's rather than a tidier modern one. A
-     * range exists to stop installs that cannot work, not to express a
-     * preference — and 7.4 is what the application will actually start on.
+     * The floor is `$required_php_version` in `wp-includes/version.php`, which WordPress enforces.
+     * No ceiling: WordPress declares no upper bound, so a maximum would refuse working versions.
      */
     public function supportedPhpRange(): ?array
     {

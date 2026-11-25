@@ -26,11 +26,9 @@ abstract class AbstractGitProvider implements GitProvider
 {
     protected function client(GitAccount $account): PendingRequest
     {
-        // Pinned to an address checked just now (bug #34): the account's host
-        // was checked when it was saved, but a name can resolve to something
-        // else later, and `127.0.0.1.nip.io` never looked like loopback at
-        // all. A blocked address throws here, inside send(), and reaches the
-        // user as "unreachable" with a reference.
+        // Pinned to an address checked just now: the host was checked when saved, but a name can
+        // resolve elsewhere later (`127.0.0.1.nip.io` never looked like loopback). A blocked
+        // address throws here, inside send(), and reaches the user as "unreachable".
         $pin = RemoteHost::pin($account->apiBaseUrl());
 
         return Http::withToken($account->token)
@@ -58,9 +56,7 @@ abstract class AbstractGitProvider implements GitProvider
      *  401/403 → invalid or under-scoped credential (the user's to fix)
      *  anything else / transport error → unreachable, logged with a reference
      *
-     * `$missingOk`: a 404 is an answer, not a failure, and comes back as the
-     * response — for updating or removing a webhook somebody may already have
-     * deleted by hand.
+     * `$missingOk`: a 404 is an answer, not a failure (a webhook may already be deleted by hand).
      *
      * @param  callable(PendingRequest): Response  $call
      */
@@ -79,9 +75,8 @@ abstract class AbstractGitProvider implements GitProvider
                 'message' => $e->getMessage(),
             ]);
 
-            // FS-C39: a self-hosted address that does not answer at all is
-            // most likely a wrong address — "try again in a moment" sent
-            // people to wait for something waiting would not fix.
+            // A self-hosted address that does not answer at all is most likely a wrong address, so
+            // say that instead of "try again in a moment".
             if (filled($account->host)) {
                 throw GitProviderException::hostUnreachable((string) parse_url((string) $account->host, PHP_URL_HOST) ?: (string) $account->host, $reference);
             }
@@ -112,13 +107,10 @@ abstract class AbstractGitProvider implements GitProvider
     }
 
     /**
-     * Make a request for a *status* check, where failure is information
-     * rather than an error.
+     * Make a request for a *status* check, where failure is information rather than an error.
      *
-     * Distinguishes the two failures that must not look alike in the UI: a
-     * rejected credential (the user must act) versus a provider we could not
-     * reach (nobody should act — a five-second outage must not paint every
-     * account red).
+     * Keeps two failures apart in the UI: a rejected credential (the user must act) versus an
+     * unreachable provider (nobody should act; a short outage must not paint every account red).
      *
      * @param  callable(PendingRequest): Response  $call
      * @return array{status: 'valid'|'invalid'|'unknown', response: ?Response}
@@ -136,9 +128,8 @@ abstract class AbstractGitProvider implements GitProvider
     }
 
     /**
-     * Parse a provider-supplied expiry into a date, tolerating whatever
-     * format it uses. An unparseable value is simply "no expiry known" — it
-     * must never turn a healthy account into an error.
+     * Parse a provider-supplied expiry into a date, whatever its format. An unparseable value
+     * means "no expiry known", never an error on a healthy account.
      */
     protected function parseExpiry(?string $value): ?Carbon
     {
@@ -154,8 +145,8 @@ abstract class AbstractGitProvider implements GitProvider
     }
 
     /**
-     * Repository shape shared by every provider — an explicit allow-list, so
-     * no unexpected vendor field can travel further into the panel.
+     * Repository shape shared by every provider: an explicit allow-list, so no unexpected vendor
+     * field travels further into the panel.
      *
      * @return array<string, mixed>
      */
@@ -175,10 +166,7 @@ abstract class AbstractGitProvider implements GitProvider
         return (int) config('server.git.per_page', 30);
     }
 
-    /**
-     * The provider as people write it (FS-C38): "GitHub", not the `github`
-     * id — "The github token was rejected" read like a typo.
-     */
+    /** The provider as people write it: "GitHub", not the `github` id. */
     protected function displayName(): string
     {
         return match ($this->key()) {

@@ -18,20 +18,14 @@ use Throwable;
 /**
  * Backs up the current state before it is overwritten.
  *
- * This is the step that makes the whole feature defensible. Without it a
- * restore is a one-way door: pick the wrong backup from a list of similar
- * timestamps and the state you were in is gone with no way to describe what
- * was lost. With it, the wrong choice costs a few minutes.
+ * Without this a restore is a one-way door: pick the wrong backup and the previous state is gone.
  *
- * On by default, and the user's choice since 2026-10-29 (support list,
- * Dipali): a restore with `safety_copy` off skips it. Then there is no Undo,
- * and a database import that fails part-way leaves the database as far as it
- * got — files are still put back from the copy SwapFiles moved aside. The
- * restore dialog says so before the user turns it off.
+ * On by default; a restore with `safety_copy` off skips it. Then there is no Undo, and a database
+ * import that fails part-way leaves the database as far as it got (files are still put back from
+ * the copy SwapFiles moved aside). The restore dialog warns before it is turned off.
  *
- * If the safety backup fails, the restore stops. That will occasionally annoy
- * someone whose bucket is full; it is the correct trade against silently
- * removing the only way back at the exact moment it was about to be needed.
+ * If the safety backup fails, the restore stops, even when the bucket is full: better than
+ * silently removing the only way back.
  */
 class SafetyBackup implements RestoreStep
 {
@@ -55,9 +49,8 @@ class SafetyBackup implements RestoreStep
 
     public function run(RestoreContext $context): void
     {
-        // A database restore saves the database it is about to replace: its own
-        // target — which, for an archived backup restored somewhere else, is
-        // the *chosen* database's target, not the deleted one's.
+        // A database restore saves the database it is about to replace: the *chosen* database's
+        // target, which for an archived backup restored elsewhere is not the deleted one's.
         $target = $context->isDatabaseRestore()
             ? $context->database?->backupTarget
             : $context->backup->target;
@@ -66,18 +59,13 @@ class SafetyBackup implements RestoreStep
             throw new RuntimeException('the backup settings this backup came from no longer exist');
         }
 
-        // The configured target, whatever it covers — not just the half being
-        // restored. Restoring only the database still changes the site, and a
-        // half safety backup is a half way back.
-        // Flagged at creation rather than after the run. The upload can take
-        // an hour, and a worker that dies inside that window used to leave a
-        // safety backup recorded as an ordinary one — which strips it of the
-        // retention exemption that exists to keep it. See BackupRunner::run().
+        // The whole configured target, not just the half being restored: a half backup is a half
+        // way back. Flagged safety at creation, since a worker dying mid-upload would otherwise
+        // leave an ordinary backup without the retention exemption. See BackupRunner::run().
         $safety = $this->backups->run($target, $context->restore->user_id, isSafety: true);
 
-        // Out of disk space is said as such (2026-10-29): it is the one
-        // failure here the user can fix on the spot, by freeing space or by
-        // restoring without a copy.
+        // Out of disk space is reported as such: the user can fix it by freeing space or restoring
+        // without a copy.
         if ($safety->status !== BackupStatus::Verified && $safety->reason === NotEnoughBackupSpace::REASON) {
             throw new NotEnoughBackupSpace('the safety backup did not fit on the disk, so nothing was restored');
         }
@@ -95,33 +83,24 @@ class SafetyBackup implements RestoreStep
 
     public function cleanup(RestoreContext $context, bool $failed): void
     {
-        // The safety backup outlives the restore on purpose — it is the way
-        // back, and cleaning it up would defeat the entire point of taking it.
+        // The safety backup outlives the restore on purpose: it is the way back.
     }
 
     /**
-     * Safety backups are exempt from the target's retention, so they need
-     * their own bound or a site restored twenty times keeps twenty archives.
+     * Safety backups are exempt from the target's retention, so they need their own bound.
      *
-     * Through DeleteBackup, archive first and then the row, the same as
-     * retention. This used to delete the rows only: every restore from the
-     * third on left a full copy of the site in the bucket that nothing in the
-     * panel could see or remove, billed for good. Found on a real server,
-     * 2026-09-24, as a 40 MB archive left behind in AWS.
+     * Goes through DeleteBackup (archive first, then the row), like retention; deleting only the
+     * rows left archives in the bucket that nothing in the panel could see or remove.
      *
-     * An archive that will not delete keeps its row, visible and retried by the
-     * next restore, and does not fail this one: the safety backup this restore
-     * depends on has already been taken.
+     * An archive that will not delete keeps its row, visible and retried by the next restore, and
+     * does not fail this one.
      */
     /**
-     * @param  list<int>  $keep  the new safety backup, and the backup this
-     *                           restore is reading from — an undo restores a
-     *                           safety backup, and pruning it mid-restore
-     *                           deleted the archive being extracted (FS-C4)
+     * @param  list<int>  $keep  the new safety backup and the backup being restored (an undo restores a safety backup, so pruning it would delete the archive being extracted)
      */
     private function pruneOlderSafetyBackups(int $targetId, array $keep): void
     {
-        // Nor one another restore, queued or running, is about to read.
+        // Also keep any backup another queued or running restore will read.
         $inUse = Restore::query()
             ->whereIn('status', [RestoreStatus::Pending, RestoreStatus::Running])
             ->pluck('backup_id')

@@ -6,19 +6,17 @@ use App\Models\Registry;
 use App\Rules\ContainerMountPath;
 
 /**
- * What a simple-mode Docker site takes from its image when it is created (DS-03).
+ * What a simple-mode Docker site takes from its image when it is created.
  *
  * - **The container port**, when none was typed: the image's EXPOSE, chosen
  *   the way {@see ImageInspector} suggests. An image that declares none is
- *   refused with a question — there is no silent 80 any more.
+ *   refused with a question; there is no silent 80.
  * - **A warning**, when the typed port is not one the image declares. Accepted,
- *   because some images listen on a port they never EXPOSE, but said.
+ *   because some images listen on a port they never EXPOSE.
  * - **Its VOLUMEs**, as the site's volumes, when the request named none at all.
  *   `volume_mounts: []` means "none" and is respected.
  * - **Settings it will not start without** (`required_env`), refused when
- *   missing or empty (DS-09). The form holds Deploy on them, but the form is
- *   not the only client — and deleting the row got past it: Umami was created
- *   without `DATABASE_URL` and crash-looped on `TypeError: Invalid URL`.
+ *   missing or empty. The form checks this too, but it is not the only client.
  *
  * Read from the registry, never pulled. A registry that cannot be asked only
  * matters when the port is missing; otherwise the site is created as typed.
@@ -35,8 +33,7 @@ class CreateDefaults
     {
         $answer = ['container_port' => null, 'volume_mounts' => null, 'warnings' => [], 'error' => null, 'env_error' => null];
 
-        // From config, not the registry: answered even when the registry
-        // cannot be asked, and before anything that may return early.
+        // From config, not the registry: answered even when the registry cannot be asked.
         $missing = $this->missingEnv($input);
 
         if ($missing !== []) {
@@ -136,14 +133,11 @@ class CreateDefaults
     }
 
     /**
-     * The image's VOLUME paths a site can mount — the same paths the Container
-     * card would accept. One it would refuse (the site mount, a reserved
-     * path) is left to Docker's anonymous volume, as before.
+     * The image's VOLUME paths a site can mount: the same paths the Container card accepts.
+     * One it would refuse (the site mount, a reserved path) is left to Docker's anonymous volume.
      *
-     * The paths come from a config blob served by whatever registry the user
-     * named, so they are input like any other and get the same rule — dropped,
-     * not refused, because the user did not type them. A `VOLUME` containing a
-     * newline would otherwise be written into the compose file as new keys.
+     * The paths come from a registry the user named, so they are untrusted input: dropped, not
+     * refused. A `VOLUME` containing a newline would otherwise add keys to the compose file.
      *
      * @param  array<int, mixed>  $paths
      * @return list<array{path: string}>

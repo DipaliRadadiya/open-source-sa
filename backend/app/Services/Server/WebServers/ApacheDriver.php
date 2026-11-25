@@ -42,18 +42,14 @@ class ApacheDriver extends AbstractWebServerDriver
     /**
      * Lift the read-only /home that Ubuntu 26.04's apache2.service imposes.
      *
-     * The unit ships `ProtectHome=read-only`. Every site lives in its owner's
-     * home and logs to `<site>/logs`, which Apache's root master opens at
-     * start, so the first site's reload failed with "Read-only file system:
-     * could not open error log file" and **Apache exited — every site and the
-     * panel itself with it**. Found on the 26.04 test server.
+     * The unit ships `ProtectHome=read-only`, but every site logs to `<site>/logs` under its
+     * owner's home, which Apache's root master opens at start. Without this the first site's
+     * reload fails with "Read-only file system" and **Apache exits, taking every site and the
+     * panel with it**.
      *
-     * `ReadWritePaths=/home` does not lift it (measured with systemd-run);
-     * `ProtectHome=no` does. install.sh writes the same drop-in for new
-     * servers; this covers the ones installed before, on their next site or
-     * `sites:resync`. The sandbox is fixed when the service starts, so this is
-     * the one place a restart, not a reload, is needed — and only the first
-     * time: afterwards the unit reports `no` and nothing runs.
+     * `ReadWritePaths=/home` does not lift it; `ProtectHome=no` does. install.sh writes the same
+     * drop-in for new servers; this covers older ones on their next site or `sites:resync`. The
+     * sandbox is fixed at service start, so this needs a restart, not a reload, and only once.
      */
     private function ensureHomeWritable(): void
     {
@@ -64,8 +60,7 @@ class ApacheDriver extends AbstractWebServerDriver
         $context = ['feature' => 'application', 'op' => 'apache_protect_home', 'web_server' => 'apache'];
         $unit = $this->serverOps->run(['systemctl', 'show', 'apache2', '-p', 'ProtectHome', '--value'], $context, 15);
 
-        // Unreadable is left alone: writing a drop-in and restarting Apache on
-        // a guess is a bigger risk than the one it removes.
+        // Unreadable is left alone: restarting Apache on a guess is a bigger risk.
         if ($unit->failed() || in_array(trim($unit->output()), ['', 'no'], true)) {
             $this->homeWritable = $unit->ok;
 
@@ -82,10 +77,8 @@ class ApacheDriver extends AbstractWebServerDriver
 
         $this->serverOps->run(['systemctl', 'daemon-reload'], $context, 30);
 
-        // Tested first, like every reload. A restart is not a reload: on a
-        // config Apache refuses, a reload keeps serving the old one, but a
-        // restart stops Apache and cannot start it again — every site and the
-        // panel down. The drop-in stays; the next call retries the restart.
+        // Tested first: on a config Apache refuses, a reload keeps serving the old one, but a
+        // restart stops Apache for good (every site and the panel down). The next call retries.
         if ($this->test()->failed()) {
             return;
         }
@@ -101,8 +94,7 @@ class ApacheDriver extends AbstractWebServerDriver
      */
     public function logPaths(Application $application): array
     {
-        // The application's own `logs/` directory, not ${APACHE_LOG_DIR} —
-        // one place per site, readable by the site's owner.
+        // The application's own `logs/` directory, readable by the site's owner.
         // {@see Application::logsPath()}
         $dir = $application->logsPath();
 
@@ -116,15 +108,11 @@ class ApacheDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Apache: the pattern sits inside `m#...#` in a quoted `SetEnvIfExpr`.
-     * `#` is the regex delimiter; `preg_quote` escapes it anyway since PHP 7.3,
-     * and it is named as the delimiter only to say so.
+     * Apache: the pattern sits inside `m#...#` in a quoted `SetEnvIfExpr`; `#` is the delimiter.
      *
-     * Apache's config parser turns `\\` into `\` and `\"` into `"` before
-     * the regex is compiled (httpd `substring_conf`), so both are written
-     * doubled/escaped here. Escaping only the quote left a backslash the user
-     * typed — `c:\tmp` — reaching the regex as an escape of the next
-     * character. Found while porting 8G to OpenLiteSpeed, 2026-09-30.
+     * Apache's config parser turns `\\` into `\` and `\"` into `"` before compiling the regex
+     * (httpd `substring_conf`), so both are escaped here. Escaping only the quote lets a typed
+     * backslash (`c:\tmp`) reach the regex as an escape of the next character.
      */
     public function wafPattern(string $value): string
     {

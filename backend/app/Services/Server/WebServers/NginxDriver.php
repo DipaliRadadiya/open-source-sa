@@ -33,14 +33,10 @@ class NginxDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Whether the templates may listen on `[::]`. On a host booted with
-     * `ipv6.disable=1` there is no AF_INET6 at all, and a single `[::]` listen
-     * fails `nginx -t` with "Address family not supported by protocol", so
-     * every new site stopped at `test_config`. The kernel's IPv6 interface
-     * list exists exactly when IPv6 does (the sysctl switch leaves it, and
-     * binding `[::]` still works there); install.sh's have_ipv6 asks the
-     * same file, so the panel's own vhosts and the sites agree. Asked once
-     * per driver instance: it only changes with a reboot.
+     * Whether the templates may listen on `[::]`. With `ipv6.disable=1` at boot there is no
+     * AF_INET6, and a `[::]` listen fails `nginx -t` ("Address family not supported by protocol").
+     * The kernel's IPv6 interface list exists exactly when IPv6 does; install.sh's have_ipv6 asks
+     * the same file. Asked once per driver instance: it only changes with a reboot.
      */
     public function hasIpv6(): bool
     {
@@ -48,10 +44,8 @@ class NginxDriver extends AbstractWebServerDriver
     }
 
     /**
-     * `ssl_reject_handshake` arrived in 1.19.4; Ubuntu 22.04 ships 1.18, where
-     * it is an unknown directive: `nginx -t` failed and every new site on the
-     * box stopped at `test_config`. False when the version cannot be read, as
-     * the reserved-pair form works on every nginx.
+     * `ssl_reject_handshake` arrived in 1.19.4; before that it is an unknown directive and
+     * `nginx -t` fails. False when the version cannot be read (the older form works everywhere).
      */
     public function rejectsHandshake(): bool
     {
@@ -59,9 +53,8 @@ class NginxDriver extends AbstractWebServerDriver
     }
 
     /**
-     * A site without a certificate on an nginx that cannot refuse the
-     * handshake presents the panel's reserved pair instead, so the pair has to
-     * be on disk before its config names it.
+     * A site without a certificate on an nginx that cannot refuse the handshake presents the
+     * panel's reserved pair, so the pair must be on disk before the config names it.
      */
     protected function ensureTlsFallback(Application $application): ServerOpsResult
     {
@@ -73,13 +66,10 @@ class NginxDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Whether this nginx takes `http2 on;` (1.25.1+). On those, the older
-     * `listen 443 ssl http2` still works but is deprecated: `nginx -t` on
-     * Ubuntu 26.04 (nginx 1.28) printed 36 warnings for 18 sites, and the
-     * Services screen's config test showed every one. The old form stays
-     * wherever the new one would be a hard error — Ubuntu 24.04 ships 1.24 —
-     * and whenever the version cannot be read, since it works everywhere.
-     * Asked once per driver instance.
+     * Whether this nginx takes `http2 on;` (1.25.1+). There the older `listen 443 ssl http2` is
+     * deprecated and makes `nginx -t` warn for every site. The old form stays on older nginx
+     * (where the new one is a hard error) and when the version cannot be read. Asked once per
+     * driver instance.
      */
     public function supportsHttp2Directive(): bool
     {
@@ -130,13 +120,11 @@ class NginxDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Matches the `access_log` / `error_log` lines in the nginx vhost
-     * templates. If those move, this moves with them.
+     * Matches the `access_log` / `error_log` lines in the nginx vhost templates; if those move,
+     * this moves with them.
      *
-     * In the application's own `logs/` directory rather than
-     * `/var/log/nginx`, so a site's logs are all in one place whichever web
-     * server the box runs, and its owner can read them without root.
-     * {@see Application::logsPath()}
+     * In the application's own `logs/` directory, not `/var/log/nginx`, so the owner can read
+     * them without root. {@see Application::logsPath()}
      *
      * @return array<string, string>
      */
@@ -147,7 +135,7 @@ class NginxDriver extends AbstractWebServerDriver
         return [
             'access' => "{$dir}/access.log",
             'error' => "{$dir}/error.log",
-            // The HTTPS block's, named as v7 names them.
+            // The HTTPS block's logs.
             'access_ssl' => "{$dir}/access-ssl.log",
             'error_ssl' => "{$dir}/error-ssl.log",
         ];

@@ -17,23 +17,12 @@ use Throwable;
 /**
  * Builds or unpacks an archive out of the request cycle.
  *
- * It used to run inline, against a 60 s ceiling every file operation shared.
- * That made a large selection impossible rather than slow: `tar` was killed at
- * the minute mark, leaving a partial archive, and the retry was then refused
- * by the does-it-already-exist guard — so a size problem was reported as a
- * filename collision.
+ * Inline, a large selection hit the web server's request timeout (nginx 300 s, Apache 300 s,
+ * OpenLiteSpeed 60 s), which fails above PHP where no cleanup can run. Same shape as
+ * `RunDatabaseExport`.
  *
- * Raising the ceiling was not available. It belongs to the web server, and the
- * three the panel installs disagree: nginx `fastcgi_read_timeout 300`, Apache
- * `ProxyTimeout 300`, OpenLiteSpeed `initTimeout 60`. A timeout tuned past the
- * lowest fails *above* PHP, where no cleanup of ours can run.
- *
- * `RunDatabaseExport` reached the same conclusion for the same reason, and the
- * shape here is deliberately its shape.
- *
- * One attempt, no retries. A half-written archive racing a second attempt over
- * the same path is a worse outcome than a failure the user can see and repeat
- * deliberately.
+ * One attempt, no retries: a half-written archive racing a second attempt over the same path is
+ * worse than a visible failure the user can repeat.
  */
 class RunFileArchive implements ShouldBeUnique, ShouldQueue
 {
@@ -46,24 +35,16 @@ class RunFileArchive implements ShouldBeUnique, ShouldQueue
 
     public function __construct(public int $archiveJobId)
     {
-        // Read from config rather than declared, so the ceiling and the
-        // reservation window stay derivable from one number. The guard in
-        // QueueTimeoutTest asserts this stays inside `retry_after` on every
-        // connection — a property that was violated once already by raising
-        // one of the two literals alone.
+        // From config so the ceiling and the reservation window derive from one number;
+        // QueueTimeoutTest asserts it stays inside `retry_after` on every connection.
         $this->timeout = (int) config('server.files.archive_job_timeout', 21600);
     }
 
     /**
      * One archive operation per target path at a time.
      *
-     * Keyed on the path rather than the application: two people compressing
-     * two different folders on one site are not in conflict, but two jobs
-     * writing the same `archive.tar.gz` produce a corrupt file and no error.
-     * Before this, a double-submit started as many jobs as it was clicked.
-     *
-     * The row id is not usable here — the lock has to be the same for a second
-     * *request*, which has a different row.
+     * Keyed on the path, not the application: two jobs writing the same `archive.tar.gz` corrupt
+     * it silently. Not the row id either: a second request has a different row.
      */
     public function uniqueId(): string
     {
@@ -81,8 +62,7 @@ class RunFileArchive implements ShouldBeUnique, ShouldQueue
         }
 
         if ($job->application === null) {
-            // The site was deleted between the request and the worker. The
-            // archive would land nowhere; nothing worth failing loudly over.
+            // The site was deleted between the request and the worker; nothing to fail loudly over.
             $job->update([
                 'status' => FileArchiveStatus::Failed,
                 'reason' => 'application_missing',
@@ -105,9 +85,7 @@ class RunFileArchive implements ShouldBeUnique, ShouldQueue
         } catch (FileOperationException $e) {
             $job->update([
                 'status' => FileArchiveStatus::Failed,
-                // `timed_out` is worth its own code: nothing is broken, the
-                // work outlived even the job's ceiling, and the advice is a
-                // smaller selection rather than a retry.
+                // `timed_out` gets its own code: nothing is broken, the advice is a smaller selection.
                 'reason' => $e->timedOut ? 'timed_out' : 'command_failed',
                 'reference' => $e->reference,
                 'finished_at' => now(),
@@ -118,10 +96,8 @@ class RunFileArchive implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * The job died outright — timeout, or the worker was killed. Without this
-     * the row sits at `running` forever, the screen shows a spinner that never
-     * resolves, and because the unique lock is keyed on the target path, that
-     * path can never be compressed again.
+     * The job died outright (timeout, killed worker). Without this the row stays `running` forever
+     * and the unique lock keeps that path from ever being compressed again.
      */
     public function failed(?Throwable $e): void
     {

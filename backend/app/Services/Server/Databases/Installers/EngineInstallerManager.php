@@ -11,24 +11,21 @@ use InvalidArgumentException;
  * Resolves the installer for an engine, and reports which engines the panel can
  * install **on this server**.
  *
- * Two separate questions, and conflating them is what made the setup page offer
- * MongoDB on Ubuntu 26.04:
+ * Two separate questions:
  *
- *  - *Does the panel know how to install this engine?* — whether the config
- *    names an installer class. Every shipped engine has one now.
- *  - *Can it be installed here?* — whether this Ubuntu release is one the
+ *  - *Does the panel know how to install this engine?* Whether the config
+ *    names an installer class.
+ *  - *Can it be installed here?* Whether this Ubuntu release is one the
  *    engine's vendor publishes for. MongoDB builds per codename and has none
- *    for `resolute`, so the install writes an apt source and a signing key,
- *    waits two minutes for apt, and fails on a package that was never there.
+ *    for `resolute`, so the install would wait on apt and fail on a package that
+ *    was never there.
  *
- * `canInstall()` answers the second, because that is the one the button depends
- * on. The first is still true and still useless to a user.
+ * `canInstall()` answers the second, because that is the one the button depends on.
  */
 class EngineInstallerManager
 {
     /**
-     * Engines the panel has an installer for, before asking what this server
-     * can actually run.
+     * Engines the panel has an installer for, whether or not this server can run them.
      *
      * @return array<int, string>
      */
@@ -49,11 +46,8 @@ class EngineInstallerManager
     /**
      * Why this engine cannot be installed here, or null when it can.
      *
-     * Same shape the site-type catalog uses for a blocked card
-     * ({@see SiteTypeManager}) — a stable `code` for
-     * the client to branch on and a sentence already translated for the viewer
-     * — so the frontend renders a blocked engine and a blocked site type the
-     * same way instead of learning a second convention.
+     * Same shape as a blocked site type ({@see SiteTypeManager}): a stable `code` for the
+     * client and an already-translated sentence.
      *
      * @return array{code: string, reason: string}|null
      */
@@ -67,10 +61,7 @@ class EngineInstallerManager
 
         $codename = OsRelease::codename();
 
-        // An unreadable /etc/os-release means the panel does not know which
-        // release this is — and "I cannot tell" must not become "refused". The
-        // install still classifies the real failure if it turns out to be one;
-        // guessing here would block an engine on a server we failed to read.
+        // An unreadable /etc/os-release means "cannot tell", which must not become "refused".
         if ($codename === null || ! in_array($codename, $unsupported, true)) {
             return null;
         }
@@ -97,12 +88,9 @@ class EngineInstallerManager
     }
 
     /**
-     * MySQL and MariaDB cannot share a server: apt removes one to install the
-     * other. The install job already refused it, but only once it ran — so the
-     * list offered "Install MySQL" beside a working MariaDB and the job then
-     * failed (Apache test server). Said up front, in the words the job used.
-     * An engine that is installed itself is never blocked by this: installing
-     * it again is how its panel account is repaired.
+     * MySQL and MariaDB cannot share a server: apt removes one to install the other. Said up
+     * front, in the words the install job uses. An engine that is installed itself is never
+     * blocked: installing it again is how its panel account is repaired.
      *
      * @param  array<string, bool>  $installed
      * @return array{code: string, reason: string}|null

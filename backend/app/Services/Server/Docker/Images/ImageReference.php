@@ -8,18 +8,14 @@ use App\Support\RemoteHost;
 /**
  * An image reference taken apart the way Docker takes it apart.
  *
- * The rules are Docker's own (distribution/reference), not a guess at them,
- * because the panel and `docker pull` must agree on which registry a name
- * means. A reference that looked like Hub to one and like `memos.example` to
- * the other would inspect one image and deploy another:
+ * The rules are Docker's own (distribution/reference): the panel and `docker pull` must agree on
+ * which registry a name means, or the panel would inspect one image and deploy another.
  *
- *  - The first path component is a registry only if it contains a `.` or a
- *    `:`, or is `localhost`. So `usememos/memos` is Hub and `ghcr.io/x/y` is
- *    not — and `myhost/app` is Hub, which is what Docker does too.
+ *  - The first path component is a registry only if it contains a `.` or a `:`, or is
+ *    `localhost`. So `usememos/memos` and `myhost/app` are Hub, and `ghcr.io/x/y` is not.
  *  - A single-component Hub name lives under `library/`.
  *  - No tag and no digest means `latest`.
- *  - Repository paths are lowercase. Docker refuses an uppercase one outright,
- *    so accepting it here would inspect an image nobody can deploy.
+ *  - Repository paths are lowercase: Docker refuses an uppercase one.
  */
 final class ImageReference
 {
@@ -56,8 +52,8 @@ final class ImageReference
             }
         }
 
-        // The tag is whatever follows the last `:` AFTER the last `/` — the
-        // `:` in `registry.example.com:5000/app` is a port, not a tag.
+        // The tag follows the last `:` AFTER the last `/`; in `registry.example.com:5000/app` it
+        // is a port.
         $tag = null;
         $slash = strrpos($value, '/');
         $colon = strrpos($value, ':');
@@ -78,10 +74,8 @@ final class ImageReference
             $registry = strtolower(array_shift($parts));
         }
 
-        // The host is connected to, so it is read the way every other host
-        // the panel connects to is: `0x7f.0.0.1` and `127.0x1` are loopback to
-        // libcurl and a name to the resolver, which finds nothing and so
-        // checks nothing. Refused here as not a reference at all.
+        // The host is connected to, so it is checked like every other host the panel connects to:
+        // `0x7f.0.0.1` and `127.0x1` are loopback to libcurl but a name the resolver cannot check.
         if ($registry !== self::HUB && RemoteHost::isUninterpretable((string) preg_replace('/:\d{1,5}$/D', '', $registry))) {
             return null;
         }
@@ -115,9 +109,7 @@ final class ImageReference
     /**
      * The host the registry API is spoken to.
      *
-     * `lscr.io` is LinuxServer's vanity name for images that live on GHCR: it
-     * answers a manifest request with GHCR's own token challenge, so going
-     * straight to GHCR is the same answer with one round trip fewer.
+     * `lscr.io` is LinuxServer's vanity name for GHCR images; going straight to GHCR saves a hop.
      */
     public function apiHost(): string
     {
@@ -139,8 +131,7 @@ final class ImageReference
     /**
      * The repository as a user writes it, without a tag.
      *
-     * Hub's `library/` prefix is taken back off: `nginx` is the name everybody
-     * types and the name the compose file will carry.
+     * Hub's `library/` prefix is taken back off: `nginx` is what users type and compose carries.
      */
     public function name(): string
     {
@@ -176,8 +167,8 @@ final class ImageReference
     /**
      * Is this stored credential for this image's registry?
      *
-     * A credential is only ever sent to the registry it was saved for. Sending
-     * a GHCR token to whichever host a user typed would hand it to that host.
+     * A credential is only ever sent to the registry it was saved for: sending a GHCR token to
+     * whichever host a user typed would hand it to that host.
      */
     public function matches(Registry $registry): bool
     {

@@ -11,22 +11,12 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Delete one backup: the archive first, then the record of it.
+ * Delete one backup: the archive first, then the record of it (same order as {@see PruneOldBackups}).
  *
- * That order is the whole of it, and it is the same order
- * {@see PruneOldBackups} uses — deliberately,
- * because the two are the same operation reached from different directions and
- * the day they disagree is the day one of them starts lying.
+ * Row first would leave an object in the bucket that nothing in the panel knows about: unfindable
+ * and billed. Archive first leaves, on failure, a visible, retryable row.
  *
- * Delete the row first and a failure leaves an object in someone's bucket that
- * nothing in the panel knows about: unfindable, undeletable, and billed for
- * every month until a human goes looking. Delete the archive first and a failure
- * leaves a row pointing at something already gone, which is visible, retryable
- * and free.
- *
- * Where retention *skips* what it cannot delete and moves on — a cost problem is
- * not worth stopping a backup run for — this refuses. Someone pressed delete and
- * is owed a straight answer about whether it happened.
+ * Retention skips what it cannot delete; this refuses, because the user is owed a straight answer.
  */
 class DeleteBackup
 {
@@ -40,9 +30,7 @@ class DeleteBackup
      */
     public function execute(Backup $backup): void
     {
-        // A run in flight is writing to the very key this would delete. The
-        // uploader would then finish against a row that no longer exists and
-        // leave the artefact behind — the orphan this class exists to avoid.
+        // A run in flight writes to the very key this would delete, leaving an orphaned artefact.
         if (in_array($backup->status, [BackupStatus::Pending, BackupStatus::Running, BackupStatus::Verifying], true)) {
             throw ValidationException::withMessages([
                 'backup' => [__('backup.errors.delete_running')],
@@ -52,24 +40,14 @@ class DeleteBackup
         $key = $backup->manifest['key'] ?? null;
         $destination = $backup->destination();
 
-        // `$destination === null` would mean a key with nowhere to send it —
-        // the row deletable, the object not — and the archive would be skipped
-        // in silence. Two constraints make it unreachable: `backups` cascades
-        // on its target, so a backup always has one, and that target holds
-        // `storage_destination_id` with `restrictOnDelete`, so the destination
-        // cannot go while it does. Deliberately left unhandled rather than
-        // guarded with a branch nothing can execute.
-        //
-        // Whatever gives an application more than one backup target should
-        // check this again: independently deletable targets are exactly what
-        // would open it.
+        // A null `$destination` is unreachable: `backups` cascades on its target, and the target's
+        // `storage_destination_id` is `restrictOnDelete`. Deliberately unguarded; recheck if an
+        // application ever gets more than one independently deletable backup target.
         if (is_string($key) && $key !== '' && $destination !== null) {
             try {
                 $disk = $this->disks->for($destination);
 
-                // `exists` first so a backup whose archive was already removed
-                // by hand still deletes cleanly rather than failing forever on
-                // something that is not there.
+                // `exists` first so an archive already removed by hand does not fail forever.
                 if ($disk->exists($key)) {
                     $disk->delete($key);
                 }
@@ -82,20 +60,14 @@ class DeleteBackup
             }
         }
 
-        // Recorded before the row goes, because afterwards there is nothing left
-        // to name it with.
-        // The backup's own application, not the target's: a target can be gone
-        // by the time its last backup is cleaned up, and the log entry still
-        // has to be able to name the site.
+        // Logged before the row goes. The backup's own application, not the target's: the target
+        // can be gone by the time its last backup is cleaned up.
         $this->activityLogger->log('backup.deleted', $backup->application ?? $backup->database ?? $backup, [
-            // The sentence reads `:name`; without it the log showed the
-            // placeholder itself ("Deleted a backup of :name").
+            // The log sentence needs `:name` filled in.
             'name' => $backup->subjectName(),
             'backup' => $backup->id,
             'started_at' => (string) $backup->created_at,
-            // A safety backup is the parachute from a bad restore. Deleting one
-            // is allowed — it is the user's data and this is an explicit act —
-            // but it is worth being able to find in the log afterwards.
+            // Deleting a safety backup (the undo for a bad restore) is allowed, but must be findable.
             'is_safety' => (bool) $backup->is_safety,
         ]);
 

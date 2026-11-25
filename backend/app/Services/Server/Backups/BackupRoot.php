@@ -7,34 +7,20 @@ use App\Models\Backup;
 use App\Services\Server\Applications\ApplicationProvisioner;
 
 /**
- * Which directory a backup is of — and, for an archive already written, which
- * directory it came from.
+ * Which directory a backup is of, and which directory an existing archive came from.
  *
- * Backups used to archive the **document root**, which is the same directory as
- * the application for most site types and a subdirectory of it for the rest:
- * anything with a `web_root` (a git-deployed Laravel serving `public`) and
- * Craft and Statamic, where the type fixes one. For those sites the archive
- * held the public folder and nothing above it — no application code, no `.env`,
- * no vendor — and it restored cleanly, which is the worst way for a backup to
- * be wrong. It is the application's own directory that is being backed up, so
- * that is what is archived now.
+ * Backups used to archive the document root, which for sites with a `web_root` (git-deployed
+ * Laravel serving `public`, Craft, Statamic) is a subdirectory, so the archive lacked the
+ * application code and `.env`. New backups archive the application's own directory.
  *
- * Changing that changes the archive's top-level entry, from `public` to
- * `public_html`, and the restore asserts on that name before it swaps anything.
- * So the format is **recorded on the backup**, not inferred from the site:
- * `manifest['root_kind']`, set when the archive is written and read back when
- * it is restored. An archive taken before this existed has no key, which is
- * itself the answer — it was made from the document root.
+ * That changes the archive's top-level entry, which the restore asserts on before swapping, so
+ * the format is recorded on the backup as `manifest['root_kind']`. No key means an older archive
+ * made from the document root.
  *
- * A *kind* rather than the path, deliberately. An absolute path recorded at
- * backup time stops being true the moment the site's slug or its user's home
- * changes, and a restore would then unpack a real archive over a directory
- * nobody is serving. The kind is resolved against the application as it is
- * today, which is the only version of it that can be restored onto.
+ * A kind, not a path: a recorded absolute path goes stale when the slug or home changes. The kind
+ * is resolved against the application as it is today.
  *
- * One class, because the rule is a compatibility rule: the archive step and the
- * two restore steps have to agree about it forever, and three copies of a
- * three-line conditional is how they stop agreeing.
+ * One class so the archive step and both restore steps always agree.
  */
 class BackupRoot
 {
@@ -44,8 +30,7 @@ class BackupRoot
     public const APPLICATION = 'application';
 
     /**
-     * The served directory — what backups taken before this archived, and what
-     * an archive with no recorded kind is therefore assumed to hold.
+     * The served directory — what older backups archived; assumed when no kind is recorded.
      */
     public const DOCUMENT_ROOT = 'document_root';
 
@@ -54,9 +39,7 @@ class BackupRoot
     /**
      * The directory to archive, and the kind to record beside it.
      *
-     * Returned together so a caller cannot write one without the other: an
-     * archive of the application recorded as a document root restores into the
-     * wrong directory, and the two values are only correct as a pair.
+     * Returned together: a path recorded with the wrong kind restores into the wrong directory.
      *
      * @return array{path: string, kind: string}
      */
@@ -69,8 +52,7 @@ class BackupRoot
     }
 
     /**
-     * The directory this backup's archive was made from, which is where its
-     * contents belong when they go back.
+     * The directory this backup's archive was made from, where its contents go back to.
      *
      * @param  array<string, mixed>|null  $manifest  the backup's own manifest
      */
@@ -84,8 +66,7 @@ class BackupRoot
     }
 
     /**
-     * The same answer for a backup, for callers holding the model rather than
-     * the manifest array.
+     * The same answer for callers holding the model rather than the manifest.
      */
     public function forBackup(Backup $backup, Application $application): string
     {

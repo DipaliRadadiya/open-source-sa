@@ -17,33 +17,21 @@ abstract class ServerOperationException extends Exception
     public function __construct(
         public readonly string $reference,
         /**
-         * The operation lost a race for a system lock and never started.
-         * Reported differently because the answer is "try again", not
-         * "something is wrong" — and telling someone their server is broken
-         * when it is merely busy sends them debugging a non-problem.
+         * The operation lost a race for a system lock and never started: "try again", not a fault.
          */
         public readonly bool $busy = false,
         /**
-         * A lock nobody holds. Separated from `busy` because "try again in a
-         * moment" is advice that can never come true here — the operator has
-         * to remove a file, and telling them to wait sends them in circles.
+         * A lock nobody holds. Separate from `busy`: waiting never helps, the operator must remove a file.
          */
         public readonly bool $staleLock = false,
         /**
-         * sudo refused the command outright. Neither a busy server nor a
-         * broken one: the panel's grant is older than the code running on it,
-         * and the message says which command repairs it. Answered before the
-         * feature's own message, because "changing the web root failed on the
-         * server" describes a fault that does not exist and hides one that
-         * does.
+         * sudo refused the command: the panel's grant is older than the running code, and the message
+         * names the repair command. Answered before the feature's own message, which would hide it.
          */
         public readonly bool $denied = false,
         /**
-         * Killed at its timeout. Answered before the feature's own message
-         * because "the file operation failed on the server" describes a fault
-         * that does not exist: nothing is broken, the work was too big for the
-         * time allowed. Told the truth, the user makes a smaller selection;
-         * told the generic message, they retry the same thing and wait again.
+         * Killed at its timeout. Answered before the feature's own message: nothing is broken, the
+         * work was too big for the time allowed.
          */
         public readonly bool $timedOut = false,
     ) {
@@ -56,12 +44,8 @@ abstract class ServerOperationException extends Exception
     abstract protected function messageKey(): string;
 
     /**
-     * The stable code for this failure, for a client that branches on it.
-     *
-     * Overridable because one feature's "the server operation failed" can be
-     * several different failures — a cron job write touches seven privileged
-     * paths — and a single code for all of them tells the user only that
-     * something went wrong, which they already knew.
+     * The stable code for this failure, for a client that branches on it. Overridable because one
+     * feature can fail in several distinct ways.
      */
     protected function code(): string
     {
@@ -78,8 +62,7 @@ abstract class ServerOperationException extends Exception
                 $this->timedOut => 'errors/server.operation_timed_out',
                 default => $this->messageKey(),
             }),
-            // A stable code so the frontend can offer a retry button for this
-            // case without matching on translated prose.
+            // A stable code so the frontend need not match translated prose.
             'code' => match (true) {
                 $this->denied => 'server_sudo_denied',
                 $this->staleLock => 'server_stale_lock',
@@ -88,9 +71,7 @@ abstract class ServerOperationException extends Exception
                 default => $this->code(),
             },
             'reference' => $this->reference,
-            // 503 for busy (come back later); 500 for a stale lock and for a
-            // refused grant, because both are faults on this server that need
-            // a human rather than a retry.
+            // 503 for busy (retry later); 500 for a stale lock or refused grant (a human must fix it).
         ], $this->busy && ! $this->staleLock && ! $this->denied ? 503 : 500);
     }
 }

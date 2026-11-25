@@ -15,20 +15,14 @@ use RuntimeException;
 use Throwable;
 
 /**
- * "This server": backups kept in a folder on the panel's own server (#14).
+ * "This server": backups kept in a folder on the panel's own server.
  *
- * Written through Laravel's local disk like any other destination, so
- * listing, retention, delete and restore need nothing of their own. Three
- * things do differ:
+ * Written through Laravel's local disk like any other destination. Three things differ:
  *
- * - **Storing an archive is a move**, not a copy, when the folder is on the
- *   disk the archive was built on — instant, and no second copy of a
- *   multi-gigabyte file ever exists. On another disk it is copied.
+ * - **Storing an archive is a move**, not a copy, when the folder is on the same disk; on another
+ *   disk it is copied.
  * - **The space is checked** before the archive is stored ({@see LocalSpaceGuard}).
  * - **Download is a signed panel link** that reads the file where it is.
- *
- * Off the server it is not a backup at all if the server or its disk dies;
- * the screen says so, and this class does not pretend otherwise.
  */
 class LocalDriver implements StorageDriver
 {
@@ -93,9 +87,8 @@ class LocalDriver implements StorageDriver
     }
 
     /**
-     * The folder must already be there and be the panel's. Never created
-     * here: one that has gone missing may be a disk that is not mounted, and
-     * recreating it would put the backups on the system disk instead.
+     * The folder must already be there and be the panel's. Never created here: a missing one may
+     * be an unmounted disk, and recreating it would put backups on the system disk.
      */
     public function preflight(StorageDestination $destination): ?string
     {
@@ -103,11 +96,8 @@ class LocalDriver implements StorageDriver
     }
 
     /**
-     * Called before the disk is opened for anything — and it is what keeps a
-     * missing folder missing. Laravel's local disk runs `mkdir -p` on its root
-     * the moment it is built, so without this a retention pass or a delete
-     * could quietly recreate a folder that went away with an unmounted disk,
-     * and the next backup would land on the system disk.
+     * Called before the disk is opened for anything. Laravel's local disk runs `mkdir -p` on its
+     * root when built, which would recreate a folder lost with an unmounted disk.
      *
      * @throws LocalBackupFolderException
      */
@@ -121,9 +111,8 @@ class LocalDriver implements StorageDriver
     }
 
     /**
-     * For a restore: a hard link into the working folder when it is on the
-     * same disk — instant, and no second copy. Anything else falls back to
-     * the ordinary streamed copy.
+     * For a restore: a hard link into the working folder when on the same disk; otherwise the
+     * caller falls back to the streamed copy.
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool
     {
@@ -133,9 +122,8 @@ class LocalDriver implements StorageDriver
     }
 
     /**
-     * A panel link, signed and short-lived, that reads the archive where it
-     * is. Relative, like the prepared-download link: the browser reaches the
-     * panel through whatever host it already uses.
+     * A signed, short-lived panel link that reads the archive where it is. Relative, so the
+     * browser uses whatever host it already reaches the panel on.
      */
     public function downloadUrl(StorageDestination $destination, string $key): ?string
     {
@@ -148,9 +136,8 @@ class LocalDriver implements StorageDriver
     }
 
     /**
-     * Store the archive: check the space against its real size, then move it
-     * in (same disk) or copy it (another disk), and hand it to the panel,
-     * private.
+     * Store the archive: check the space against its real size, then move (same disk) or copy
+     * (another disk) it in, private.
      *
      * @throws NotEnoughBackupSpace
      */
@@ -165,9 +152,7 @@ class LocalDriver implements StorageDriver
         $size = (int) filesize($path);
         $sameDisk = $this->folder->sameDisk($path, $root);
 
-        // On the same disk the archive already takes its space, and moving it
-        // adds nothing: the disk must just not already be below the reserve.
-        // On another disk the whole archive is still to be written there.
+        // Same disk: moving adds nothing, the disk just must not be below the reserve.
         $this->space->ensureRoomFor($root, $sameDisk ? 0 : $size);
 
         $target = $root.'/'.ltrim($key, '/');
@@ -202,9 +187,8 @@ class LocalDriver implements StorageDriver
     }
 
     /**
-     * The archive's real path, or null when the key would leave the folder or
-     * names nothing. The key comes from a signed link, but it is checked here
-     * as though it did not.
+     * The archive's real path, or null when the key would leave the folder or names nothing.
+     * Checked even though the key comes from a signed link.
      */
     public function file(StorageDestination $destination, string $key): ?string
     {

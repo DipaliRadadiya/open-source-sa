@@ -14,23 +14,13 @@ use Throwable;
 /**
  * Gives a new site HTTPS without anyone asking, when that is actually possible.
  *
- * Runs at the end of provisioning, once the vhost is live — which it has to be,
- * since the challenge is served by it.
+ * Runs at the end of provisioning, once the vhost is live (the challenge is served by it).
  *
- * **Silence is the design.** For a genuinely new domain the DNS record almost
- * never points here yet, so most of the time this declines. If declining wrote
- * a `failed` certificate, every new site would be born showing a red SSL error
- * about something the user has not set up yet. So a decline writes nothing at
- * all: no row, no activity entry, `certificate: null`, and the SSL screen shows
- * its ordinary install button.
+ * **Silence is the design.** For a new domain the DNS record usually does not point here yet, so
+ * this declines. A decline writes nothing (no row, no activity entry, `certificate: null`), or
+ * every new site would show a red SSL error about something the user has not set up yet.
  *
- * Where it does pay off is the case where DNS was pointed in advance — a site
- * migrated from another server, a domain re-pointed before the site was
- * created. For those, HTTPS simply exists.
- *
- * There is deliberately no retry sweep. The button is one click and now
- * explains precisely why it says no, which is worth more than a background job
- * acting while nobody is watching.
+ * There is deliberately no retry sweep: the install button is one click and says why it declines.
  */
 class AutoIssueCertificate
 {
@@ -42,16 +32,13 @@ class AutoIssueCertificate
             return null;
         }
 
-        // Never overwrite a certificate that is already there. Provisioning can
-        // be re-run, and reissuing on top of a working one spends rate limit to
-        // achieve nothing.
+        // Never overwrite an existing certificate: provisioning can be re-run, and reissuing
+        // spends rate limit for nothing.
         if ($application->certificate !== null) {
             return null;
         }
 
-        // Every name the site has. A hostname is not disqualified by the shape
-        // of its suffix — the dry run below decides, the same way it does for a
-        // domain somebody registered themselves.
+        // Every name the site has. The dry run below decides, not the shape of the suffix.
         $candidates = $application->domains->values();
 
         if ($candidates->isEmpty()) {
@@ -72,8 +59,7 @@ class AutoIssueCertificate
             'auto_renew' => true,
         ]);
 
-        // No actor: nobody pressed anything. Reads as System in the activity
-        // log, the same as a deploy triggered by a git webhook.
+        // No actor: reads as System in the activity log, like a git-webhook deploy.
         IssueCertificate::dispatch($certificate->id, null)
             ->onQueue(app(QueueWorker::class)->priorityQueue());
 
@@ -83,14 +69,9 @@ class AutoIssueCertificate
     /**
      * The names that answered the dry-run challenge.
      *
-     * Asked again, briefly, when the only problem is that the challenge was
-     * not served yet (bug #52). `systemctl reload` returns before the web
-     * server's new workers take over, and a Blank PHP, Static, Git, Staging
-     * or Clone site reaches this step straight after that reload — the old
-     * workers do not know the new name, so the check failed and no
-     * certificate was issued, while one-click apps, which install for a
-     * while first, got theirs. Measured on the nginx test server: the same
-     * check minutes later passed. Anything else (DNS elsewhere, a proxy) is a
+     * Retried briefly when the only problem is that the challenge was not served yet:
+     * `systemctl reload` returns before the new web server workers take over, so a site reaching
+     * this step right after it fails the check. Any other failure (DNS elsewhere, a proxy) is a
      * real answer and is not retried.
      *
      * @return array<int, string>
@@ -120,19 +101,17 @@ class AutoIssueCertificate
     }
 
     /**
-     * Run without being able to break the thing that called it.
+     * Run without being able to break the caller.
      *
-     * Provisioning has already succeeded by the time this runs — the site is
-     * created, serving and correct. A DNS timeout or an unreachable host must
-     * not turn that into a failed application, because the user would lose a
-     * working site over a certificate they never asked for.
+     * Provisioning has already succeeded by now; a DNS timeout or unreachable host must not turn
+     * a working site into a failed application.
      */
     public function attempt(Application $application): void
     {
         try {
             $this->execute($application);
         } catch (Throwable) {
-            // Deliberately swallowed. The install button is still there.
+            // Deliberately swallowed: the install button is still there.
         }
     }
 }

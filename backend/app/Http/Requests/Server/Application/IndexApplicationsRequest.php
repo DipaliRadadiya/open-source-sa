@@ -10,46 +10,30 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Search, filters and paging for the applications list.
+ * Search, filters (status, site type) and paging for the applications list.
  *
- * Two filters, both driven by what the screen already groups by: status and
- * site type. Filtering by system user or by server was offered and declined —
- * a filter nothing uses is still surface to validate, document and keep
- * working.
- *
- * Both are validated against the real sets rather than accepted as strings. A
- * typo in `filter[status]` would otherwise return an empty list, which reads
- * to the user as "you have no applications" — the same failure the backup
- * list had before its filters were validated.
+ * Filters are validated against the real sets: a typo would otherwise return an empty list,
+ * which reads as "you have no applications".
  */
 class IndexApplicationsRequest extends FormRequest
 {
     /**
-     * Ten, because the list is a card grid rather than a dense table and the
-     * per-row cost is real: {@see ApplicationResource}
-     * asks systemd for the state of every application that runs a process, so
-     * a page is a number of subprocesses as much as a number of rows.
+     * Ten, because each row costs real work: {@see ApplicationResource} asks systemd for the state
+     * of every application that runs a process.
      */
     public const PER_PAGE = 10;
 
-    /**
-     * The columns the applications table shows, in the order it shows them.
-     *
-     * Newest first by default — a site somebody just created is the one they
-     * came here to find. Owner is absent on purpose: it lives on a relation, so
-     * sorting by it means a join, and the column shows a username the list can
-     * already be searched by.
-     */
     public const PAUSED = 'paused';
 
+    /**
+     * The columns the applications table shows, in order. Newest first by default. Owner is absent
+     * on purpose: it is a relation, so sorting by it would need a join.
+     */
     public const SORTS = ['created_at', 'name', 'domain', 'status', 'site_type', 'directory_size_bytes'];
 
     /**
-     * Size is null for a site nothing has measured yet, and that is not the
-     * same as a site of zero bytes. Sorted as the smallest value so the
-     * unmeasured group together at one end rather than being mixed in with
-     * genuinely empty sites — which is the decision the table already made
-     * client-side, before paging moved sorting to the server.
+     * Null size means "not measured yet", not zero bytes. Sorted as the smallest value so the
+     * unmeasured group at one end instead of mixing with genuinely empty sites.
      *
      * @var array<int, string>
      */
@@ -66,19 +50,14 @@ class IndexApplicationsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Free text over name and domain. Bounded because it reaches a
-            // LIKE, and an unbounded pattern is a slow query somebody can ask
-            // for repeatedly.
+            // Free text over name and domain. Bounded because it reaches a LIKE.
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
 
-            // `paused` is not a stored status — a paused site stays `active`
-            // with `disabled_at` set — but it is what the badge shows, so it
-            // is what the filter offers (junior re-test #5).
+            // `paused` is not a stored status (a paused site stays `active` with `disabled_at` set),
+            // but it is what the badge shows, so the filter offers it.
             'filter.status' => ['sometimes', 'nullable', Rule::in([...array_column(ApplicationStatus::cases(), 'value'), self::PAUSED])],
 
-            // Against the registered site types, not a free string — the same
-            // list the catalog is built from, so the filter cannot offer or
-            // accept a type the panel does not have.
+            // Against the registered site types (the catalog's own list), not a free string.
             'filter.site_type' => ['sometimes', 'nullable', Rule::in(app(SiteTypeManager::class)->names())],
 
             'sort' => ListSort::rule(self::SORTS),

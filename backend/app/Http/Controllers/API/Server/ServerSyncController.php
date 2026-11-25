@@ -30,19 +30,11 @@ class ServerSyncController extends Controller
 {
     public function store(StartSyncRequest $request, ActivityLogger $activity): JsonResponse
     {
-        // Not the request's default: an omitted `mode` must never resolve to
-        // the one that writes.
+        // An omitted `mode` must never resolve to the one that writes.
         $mode = SyncMode::from((string) $request->validated('mode', SyncMode::Preview->value));
 
-        // One at a time. The job is unique, so a second dispatch would be
-        // silently dropped — better to say so than to hand back a run id that
-        // never starts.
-        //
-        // `hasLiveRun` retires abandoned runs before answering. This used to be
-        // a plain existence check, which meant a run left `pending` by a queue
-        // worker that was not running, or `running` by a worker that was
-        // killed, refused every later sync forever — the button was dead and no
-        // screen could revive it.
+        // One at a time: the job is unique, so a second dispatch would be silently dropped.
+        // `hasLiveRun` retires abandoned runs first, so a dead worker cannot block syncs forever.
         if (SyncRun::hasLiveRun()) {
             throw ValidationException::withMessages([
                 'sync' => [__('sync.errors.already_running')],
@@ -68,25 +60,11 @@ class ServerSyncController extends Controller
     }
 
     /**
-     * A run and its items after a cursor.
+     * Finish taking a migrated server over: the writes Sync deliberately does not make.
      *
-     * The cursor is what makes this a live feed: the client polls with the id
-     * of the last item it has, and appends what comes back. Returning the
-     * whole list every second would re-send a thousand rows to add three.
-     */
-    /**
-     * Finish taking a migrated server over: the writes Sync deliberately does
-     * not make.
-     *
-     * Separate from Sync, and separate for a reason. `discover()` and
-     * `adopt()` are forbidden from touching the server, because the whole
-     * feature depends on people not being afraid to press Sync — and these are
-     * the customer's live sites. Retiring the old agent, repairing boot
-     * persistence and giving PM2's logs a rotation policy are all server
-     * writes, so they are a decision someone makes rather than a side effect
-     * of looking.
-     *
-     * None of it restarts an application. Safe on a working server.
+     * `discover()` and `adopt()` must never touch the server, so retiring the old agent, repairing
+     * boot persistence and giving PM2's logs a rotation policy are a separate, explicit decision.
+     * None of it restarts an application.
      */
     public function handover(LegacyHandover $handover, ActivityLogger $activity): JsonResponse
     {
@@ -97,8 +75,7 @@ class ServerSyncController extends Controller
             'users' => array_column($result['users'], 'username'),
         ]);
 
-        // 500 with the per-step results when anything failed, so a screen
-        // cannot read a half-done handover as "Done".
+        // 500 with the per-step results on failure, so a half-done handover is not read as "Done".
         return response()->json($result, $result['ok'] ? 200 : 500);
     }
 
@@ -107,13 +84,15 @@ class ServerSyncController extends Controller
         return response()->json($handover->status());
     }
 
+    /**
+     * A run and its items after a cursor: the client polls with the id of its last item and
+     * appends what comes back.
+     */
     public function show(Request $request, SyncRun $run): JsonResponse
     {
         $since = (int) $request->query('since', 0);
 
-        // A run whose worker died stops producing items but never changes
-        // status, so the screen polling it spins for as long as someone leaves
-        // it open. Retiring it here is what ends that.
+        // A run whose worker died never changes status; retire it so the polling screen stops.
         $run->failIfStale();
 
         $run->setRelation(
@@ -125,11 +104,8 @@ class ServerSyncController extends Controller
     }
 
     /**
-     * Things the user has said no to, and the ability to change their mind.
-     *
-     * Without a way back, an ignore made by mistake is permanent from the
-     * screen that made it — so the list is readable and an entry is
-     * removable, both under the same permission that created it.
+     * Things the user has said no to; entries are removable under the same permission that
+     * created them.
      */
     public function ignores(): JsonResponse
     {
@@ -148,8 +124,7 @@ class ServerSyncController extends Controller
     {
         $validated = $request->validated();
 
-        // updateOrCreate, not create: saying "ignore" twice is one decision,
-        // and the unique index would otherwise turn a double-click into a 500.
+        // updateOrCreate: the unique index would turn a double-click into a 500.
         $ignore = SyncIgnore::updateOrCreate(
             [
                 'resource_type' => $validated['resource_type'],
@@ -186,8 +161,7 @@ class ServerSyncController extends Controller
     {
         $run = SyncRun::query()->latest('id')->first();
 
-        // Reopening the screen is the usual way an abandoned run is found, so
-        // it reports what happened rather than a progress bar that never moves.
+        // Reopening the screen is how an abandoned run is usually found; retire it.
         $run?->failIfStale();
 
         return response()->json([

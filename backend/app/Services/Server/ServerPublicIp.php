@@ -10,40 +10,29 @@ use Throwable;
 /**
  * The address the internet reaches this server on.
  *
- * The dashboard used to show `hostname -I`'s first address and call it the
- * server's IP. On a machine with a directly attached public address — most
- * small VPS providers — that is right. On anything NAT'd (AWS, GCP, Azure, or
- * any provider with a floating IP) it is the **private** address, and the
- * dashboard was confidently showing `10.0.0.5` as the address to point DNS at.
+ * `hostname -I` is wrong on anything NAT'd (AWS, GCP, Azure, floating IPs): it gives the
+ * **private** address, which is not the one to point DNS at.
  *
- * Two sources, in order of how much they can be trusted:
+ * Two sources, in order of trust:
  *
- *  1. **The local route table.** What `DnsVerifier::serverIp()` already reads,
- *     and the only source that needs no network at all. It is authoritative
- *     when it answers a public address and useless when it answers a private
- *     one, which is exactly the NAT case.
- *  2. **The cloud metadata service.** Link-local (169.254.169.254), so the
- *     request never leaves the host's own network segment and no third party
- *     is contacted — unlike an external "what is my IP" service, which is the
- *     obvious alternative and the wrong one for a self-hosted panel.
+ *  1. **The local route table.** What `DnsVerifier::serverIp()` reads; needs no network. Right
+ *     when it answers a public address, useless when it answers a private one (the NAT case).
+ *  2. **The cloud metadata service.** Link-local (169.254.169.254), so no third party is
+ *     contacted. Never use an external "what is my IP" service for a self-hosted panel.
  *
- * Null when neither answers. That is a real state — a machine behind a
- * hardware NAT it cannot introspect genuinely cannot know its own public
- * address — and the caller has to render it as "could not determine" rather
- * than as a blank that reads like a bug.
+ * Null when neither answers (e.g. behind a hardware NAT it cannot introspect); the caller must
+ * render that as "could not determine", not a blank.
  *
- * Every probe is bounded and its failure is swallowed: this runs on a
- * dashboard request, and a metadata service that does not exist must cost a
- * timeout, not an error.
+ * Every probe is bounded and its failure swallowed: this runs on a dashboard request, and a
+ * missing metadata service must cost a timeout, not an error.
  */
 class ServerPublicIp
 {
     /**
      * Providers, each a request plus the way to read an address out of it.
      *
-     * Kept as data rather than a class per cloud: they differ only in a URL,
-     * a header and where the string sits, and five tiny drivers would be more
-     * code than the thing they abstract.
+     * Kept as data rather than a class per cloud: they differ only in a URL, a header and where
+     * the string sits.
      *
      * @return array<int, array{url: string, headers: array<string, string>, json: ?string}>
      */
@@ -52,9 +41,8 @@ class ServerPublicIp
         $base = rtrim((string) config('server.metadata_base', 'http://169.254.169.254'), '/');
 
         return [
-            // AWS IMDSv2 requires a token first; the unauthenticated read
-            // below still works on instances where IMDSv1 is permitted, which
-            // is why both are here rather than only the newer one.
+            // AWS: the unauthenticated read below only works where IMDSv1 is permitted (IMDSv2
+            // needs a token first).
             ['url' => "{$base}/latest/meta-data/public-ipv4", 'headers' => [], 'json' => null],
             ['url' => "{$base}/metadata/v1/interfaces/public/0/ipv4/address", 'headers' => [], 'json' => null],
             ['url' => "{$base}/hetzner/v1/metadata/public-ipv4", 'headers' => [], 'json' => null],
@@ -81,8 +69,7 @@ class ServerPublicIp
         return Cache::remember('server.public_ip.resolved', now()->addHour(), function () use ($fromRoute): ?string {
             $routed = $fromRoute();
 
-            // Already public: nothing on the network can improve on what the
-            // machine can see about itself.
+            // Already public: nothing on the network can improve on it.
             if ($routed !== null) {
                 return $routed;
             }
@@ -102,8 +89,7 @@ class ServerPublicIp
                     ->connectTimeout($timeout)
                     ->get($source['url']);
             } catch (Throwable) {
-                // No metadata service here, or nothing listening on the
-                // link-local address. Expected on bare metal; try the next.
+                // No metadata service here (expected on bare metal); try the next.
                 continue;
             }
 
@@ -113,9 +99,7 @@ class ServerPublicIp
 
             $candidate = trim($response->body());
 
-            // A metadata service that answers with an HTML error page, or with
-            // a private address, has not told us the public IP — and returning
-            // it would be the same wrong answer in a new place.
+            // An HTML error page or a private address is not the public IP.
             if (filter_var($candidate, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
                 continue;
             }

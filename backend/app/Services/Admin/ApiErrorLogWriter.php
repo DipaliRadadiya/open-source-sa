@@ -25,30 +25,19 @@ class ApiErrorLogWriter
 
         try {
             Log::channel('server-ops')->error('api.error', [
-                // The reference the user was shown, when the exception carries
-                // one (ERR-02): two entries for one 500 with two different
-                // references, the second saying only the class name, sent
-                // anyone looking it up to the wrong one.
+                // The reference the user was shown, when the exception carries one, so a lookup
+                // finds the right entry.
                 'reference' => $this->reference($exception),
                 'status' => $status,
                 'method' => $request->method(),
                 'route' => $request->route()?->uri() ?? $request->path(),
                 'exception' => $exception::class,
-                // The exception's own message, not a placeholder.
-                //
-                // This screen exists to identify an error, and it was
-                // recording the same seven words for every one of them: an
-                // error log that says "Unexpected API error." is a count of
-                // failures, not a diagnosis. Finding out what a 500 actually
-                // was meant reading storage/logs on the server, which is the
-                // thing the screen was built to avoid.
+                // The exception's own message, not a placeholder: the screen must identify the
+                // error without anyone reading storage/logs on the server.
                 'message' => $this->summarise($exception),
-                // Where it was thrown, relative to the install: enough to open
-                // the file, without publishing the deployment path.
+                // Where it was thrown, relative to the install (no deployment path).
                 'file' => $this->relative($exception->getFile()).':'.$exception->getLine(),
-                // The first few frames inside the application. Vendor frames
-                // are dropped because the top of a Laravel stack is always the
-                // same handler chain and says nothing about this failure.
+                // The first few application frames; vendor frames are the same handler chain.
                 'trace' => $this->appFrames($exception),
                 'user_id' => $request->user()?->id,
             ]);
@@ -58,13 +47,9 @@ class ApiErrorLogWriter
     }
 
     /**
-     * A queued job or a scheduled task that failed, on the same screen as the
-     * API errors (ERR-02).
+     * A queued job or a scheduled task that failed, on the same screen as the API errors.
      *
-     * They were written only to laravel.log, which the Error Log screen does
-     * not read: a provisioning job dying at the worker, a nightly command
-     * failing seventeen times — none of it visible to an admin relying on the
-     * screen. Same channel, same shape, its own `source`.
+     * Same channel and shape, its own `source`: laravel.log is not read by the Error Log screen.
      */
     public function recordBackground(string $source, string $name, ?Throwable $exception = null, ?int $exitCode = null): string
     {
@@ -73,8 +58,7 @@ class ApiErrorLogWriter
         try {
             Log::channel('server-ops')->error($source, array_filter([
                 'reference' => $reference,
-                // The fields the Error Log screen already shows: a headline,
-                // what ran, and why it stopped.
+                // The fields the Error Log screen shows: a headline, what ran, and why it stopped.
                 'message' => $source === 'job.failed' ? 'A background job failed.' : 'A scheduled task failed.',
                 'feature' => $source === 'job.failed' ? 'queue' : 'schedule',
                 'op' => $source,
@@ -102,17 +86,15 @@ class ApiErrorLogWriter
     /**
      * The message, redacted and bounded.
      *
-     * Redacted through the same rules the server-ops command lines are: an
-     * exception message can carry a connection string or a token, and this log
-     * is read more widely than the file it came from. Bounded because a
+     * Redacted like the server-ops command lines: a message can carry a connection string or a
+     * token, and this log is read more widely than the file it came from. Bounded because a
      * message can be a whole SQL statement.
      */
     private function summarise(Throwable $exception): string
     {
         $message = trim($exception->getMessage());
 
-        // An empty message is common for HTTP exceptions thrown by abort();
-        // the class is then the only thing worth saying.
+        // Common for HTTP exceptions thrown by abort(); the class is then all there is to say.
         return $message === ''
             ? $exception::class
             : Str::limit(CommandRedactor::line($message), 500);
@@ -152,12 +134,9 @@ class ApiErrorLogWriter
     /**
      * The status the user was actually sent.
      *
-     * An exception that renders its own response says so itself (RC-24): a
-     * Fail2ban "this would lock you out" is a 422 to the browser, and every
-     * one was recorded here as a 500 crash with a trace, because this matched
-     * a fixed list of classes and called everything else 500. Rendering is
-     * pure in every such exception (it builds the JSON and nothing else), so
-     * asking it costs nothing and cannot disagree with what the user saw.
+     * An exception that renders its own response is asked directly (a Fail2ban "this would lock
+     * you out" is a 422, not a 500 crash). Rendering only builds the JSON, so asking is free and
+     * cannot disagree with what the user saw.
      */
     private function status(Throwable $exception, Request $request): int
     {

@@ -7,22 +7,16 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 
 /**
- * Puts container login on a server, idempotently (RC-28).
+ * Puts container login on a server, idempotently.
  *
- * Run by `containers:sync-shell-access` on install and on every panel update,
- * so a server installed before this existed gets it without a reinstall, and
- * again before anyone's container login is switched on, so a server whose
- * update step failed still gets it.
+ * Run by `containers:sync-shell-access` on install and on every panel update, and again before
+ * anyone's container login is switched on. A file is rewritten only when it differs. The two that
+ * can lock people out are validated first, and a failure leaves the server as it was:
  *
- * Each file is compared with what is on disk and only rewritten when it
- * differs. The two that can lock people out are validated before they take
- * effect, and a failure leaves the server as it was:
- *
- *  - the sudoers drop-in is written beside its target, checked with
- *    `visudo -cqf`, and only then renamed into place (PanelSudoers' rule);
- *  - the sshd drop-in is checked with `sshd -t` before sshd is reloaded, and
- *    put back as it was when the check fails, so a bad block never reaches
- *    the running daemon and never touches root or anyone outside the group.
+ *  - the sudoers drop-in is written beside its target, checked with `visudo -cqf`, then renamed
+ *    into place (PanelSudoers' rule);
+ *  - the sshd drop-in is checked with `sshd -t` before sshd is reloaded, and restored when the
+ *    check fails, so a bad block never reaches the running daemon.
  */
 class AppShellInstaller
 {
@@ -63,14 +57,10 @@ class AppShellInstaller
     }
 
     /**
-     * Does sshd, as configured right now, force this user's logins through
-     * the wrapper?
+     * Does sshd, as configured right now, force this user's logins through the wrapper?
      *
-     * The drop-in only works where the main sshd_config includes
-     * sshd_config.d, which every supported Ubuntu does and a hand-edited
-     * server may not. Without that include, a user put in the group would get
-     * an ordinary host shell — so the switch asks sshd itself, for this user,
-     * before it reports container login as on.
+     * Asked of sshd itself: the drop-in only works if sshd_config includes sshd_config.d, and
+     * without it a user in the group would get an ordinary host shell.
      */
     public function enforcedFor(string $username): bool
     {
@@ -129,9 +119,8 @@ class AppShellInstaller
             return self::UNCHANGED;
         }
 
-        // Beside the target, so the last step is a rename on one filesystem.
-        // sudo ignores names containing a dot, so the `.new` file is never
-        // read as a rule while it is being checked.
+        // Beside the target, so the last step is a rename on one filesystem. sudo ignores names
+        // containing a dot, so the `.new` file is never read as a rule while checked.
         $temporary = $path.'.new';
         $context = $this->context('sudoers');
 
@@ -163,9 +152,8 @@ class AppShellInstaller
 
         $context = $this->context('sshd');
 
-        // Written in place: `sshd -t` checks the configuration sshd would load,
-        // and a file under another name is not part of it. The running daemon
-        // reads nothing until the reload below, which only follows a pass.
+        // Written in place: `sshd -t` only checks files sshd would load. The running daemon reads
+        // nothing until the reload below, which only follows a pass.
         if ($this->managed->put($path, $content, $context)->failed()) {
             return self::FAILED;
         }
@@ -186,13 +174,11 @@ class AppShellInstaller
     }
 
     /**
-     * The file's content as root sees it, or null when it is not there (or
-     * cannot be read — either way it has to be written).
+     * The file's content as root sees it, or null when missing or unreadable (it must be written).
      */
     private function read(string $path): ?string
     {
-        // Exit 1 is cat's "no such file" — the expected answer on a server
-        // that has never had container login, not an error for the log.
+        // Exit 1 is cat's "no such file": expected before container login was ever set up.
         $result = $this->serverOps->run(['cat', $path], $this->context('read'), expectedExitCodes: [1]);
 
         return $result->ok ? $result->output() : null;

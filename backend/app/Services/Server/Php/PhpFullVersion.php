@@ -9,25 +9,19 @@ use Illuminate\Support\Facades\Cache;
  * The exact version of an installed PHP — `8.4.14`, where the rest of the
  * panel only ever knows `8.4`.
  *
- * Asked of the interpreter itself rather than apt: the binary is what runs
- * the site, and its own answer cannot disagree with it the way a package
- * database can (a hand-built or hand-replaced binary, an apt hold).
+ * Asked of the interpreter itself, not apt: the binary is what runs the site, and a package
+ * database can disagree with it (hand-built binary, apt hold).
  *
- * `-n` so no php.ini is loaded. That is what makes the answer clean — a broken
- * ini or an extension that warns at startup prints on stdout ahead of the
- * version — and cheap, since no extension is loaded just to print a constant.
- * `PHP_VERSION` is core and needs neither.
+ * `-n` loads no php.ini, so a broken ini or a warning extension cannot print ahead of the
+ * version; `PHP_VERSION` is core and needs neither.
  *
- * Never throws and never fails the screen: a binary that is missing, hangs,
- * exits non-zero or prints something that is not a version is `null`, which
- * the PHP screen reads as "show the minor version we already had".
+ * Never throws: a binary that is missing, hangs, exits non-zero or prints a non-version gives
+ * `null`, and the PHP screen falls back to the minor version.
  */
 class PhpFullVersion
 {
     /**
-     * Seconds a single binary may take. Starting `php -n` is milliseconds; this
-     * is only the ceiling for a binary that has hung, which must not hold the
-     * whole PHP screen with it.
+     * Seconds a single binary may take; only a ceiling so a hung binary cannot hold the PHP screen.
      */
     private const TIMEOUT_SECONDS = 3;
 
@@ -35,9 +29,8 @@ class PhpFullVersion
     private const FOUND_TTL_SECONDS = 86400;
 
     /**
-     * A failed read is remembered briefly: the screen is polled while an
-     * install runs, and a hung binary would otherwise cost the timeout on every
-     * poll and write an error to the ops log each time.
+     * A failed read is remembered briefly: the screen is polled during installs, and a hung binary
+     * would otherwise cost the timeout and an ops-log error on every poll.
      */
     private const MISSED_TTL_SECONDS = 60;
 
@@ -49,16 +42,12 @@ class PhpFullVersion
      */
     public function read(string $binary, string $version): ?string
     {
-        // A bare name ("php", from a blank `php_binary_pattern`) is resolved
-        // through PATH: there is no file to look at, so nothing to key a cache
-        // on and nothing to pre-check.
+        // A bare name ("php") is resolved through PATH: no file to cache on or pre-check.
         if (! str_contains($binary, '/')) {
             return $this->ask($binary, $version);
         }
 
-        // A path that is not an executable is a version whose CLI is not
-        // installed — an FPM package can be present without php-cli — and is
-        // not worth a spawn or an error in the ops log.
+        // Not executable means the CLI is not installed (FPM can exist without php-cli); skip the spawn.
         if (! is_executable($binary)) {
             return null;
         }
@@ -93,10 +82,8 @@ class PhpFullVersion
 
         $exact = $this->parse(trim($result->output()));
 
-        // A binary answering for a different minor than its row is not this
-        // row's version: a pattern that resolves every version to one `php` on
-        // PATH, or a stale symlink. Showing "8.3.9" under 8.4 would be worse
-        // than showing nothing.
+        // A binary answering for a different minor than its row (one `php` on PATH, a stale
+        // symlink) is wrong; showing "8.3.9" under 8.4 is worse than nothing.
         if ($exact === null || ! str_starts_with($exact, $version.'.')) {
             return null;
         }
@@ -107,10 +94,8 @@ class PhpFullVersion
     /**
      * `8.4.14` from `8.4.14`, `8.1.2-1ubuntu2.14` and `8.5.0RC1`.
      *
-     * A distribution's packaging suffix (`-1ubuntu…`, `+deb…`) says nothing
-     * about PHP and is dropped. A real pre-release marker is the version's
-     * identity — `8.5.0RC1` is not `8.5.0` — and is kept. Anything else is not
-     * a version.
+     * A distribution's packaging suffix (`-1ubuntu…`, `+deb…`) is dropped; a pre-release marker
+     * is part of the version (`8.5.0RC1` is not `8.5.0`) and is kept.
      */
     private function parse(string $output): ?string
     {
@@ -122,9 +107,7 @@ class PhpFullVersion
     }
 
     /**
-     * The binary's path, size and modification time, so an upgrade — which
-     * replaces the file — is a different key and the old answer is never
-     * served for the new binary.
+     * The binary's path, size and modification time, so an upgrade gets a new key.
      */
     private function cacheKey(string $binary, string $version): string
     {

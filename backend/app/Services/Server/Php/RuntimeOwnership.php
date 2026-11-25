@@ -7,38 +7,13 @@ use App\Models\Application;
 /**
  * Does this site's code run as its own Linux user?
  *
- * One question, asked in three places that each used to answer it themselves
- * with the same expression:
+ * `isolated_at` only says "has a pool": it is written by the `create_php_pool` step, which runs
+ * only when {@see PoolManager::supported()} (PHP-FPM). On OpenLiteSpeed it is never set, yet each
+ * vhost carries its own `extUser`, so the site still runs as its own user. Callers that need
+ * "runs as its own user" (phpMyAdmin SSO, secret file ownership, session directory mode) use this.
  *
- *     $application->serving_profile !== 'php' || $application->isolated_at !== null
- *
- * That expression is right about two thirds of the world and wrong about the
- * third. `isolated_at` is written by the `create_php_pool` step, which runs
- * only when {@see PoolManager::supported()} — the PHP-FPM stack. **On
- * OpenLiteSpeed it is never set, on any site, ever**, because there are no
- * pools there: each vhost carries its own `extUser`, so an OLS site runs as
- * its own user from the moment it is written. The column says "has a pool";
- * all three callers were reading it as "runs as its own user".
- *
- * What that cost, before this existed:
- *
- *  - **phpMyAdmin could not be opened at all on an OpenLiteSpeed server.**
- *    {@see PhpMyAdminSso::canIssue()} refused every database with
- *    `phpmyadmin_not_isolated` — a whole feature dead on one stack, reported
- *    as "the button is disabled for this database" when it was disabled for
- *    all of them.
- *  - Secret files (`wp-config.php`, `.env`) were group-owned by `www-data` on
- *    OLS, an account that does not run PHP there — breaking the rule
- *    {@see AbstractSiteInstaller::runtimePhpOwner()}'s own docblock states:
- *    owner is the site user, group is whoever runs PHP.
- *  - The session directory was never tightened to 0700 by
- *    {@see PermissionFixer}, so an OLS site's session files kept whatever the
- *    bulk chmod left them at.
- *
- * Deliberately NOT used by the pool feature itself. `PoolManager`,
- * `PoolIsolator`, `MemoryBudget`, `WebRootManager::republishPool()` and the
- * isolate endpoint all genuinely mean "has a pool", and reading them as this
- * question would have them build pools on a stack that has none.
+ * Not for the pool feature itself (`PoolManager`, `PoolIsolator`, `MemoryBudget`,
+ * `WebRootManager::republishPool()`, the isolate endpoint): they mean "has a pool".
  */
 class RuntimeOwnership
 {
@@ -46,9 +21,7 @@ class RuntimeOwnership
 
     public function runsAsOwnUser(Application $application): bool
     {
-        // A node site's systemd unit already runs as the site's own user, and
-        // it has no pool to be isolated by — so the column is null for one
-        // forever, and asking about it is asking the wrong question twice.
+        // A node site's systemd unit already runs as the site's own user and has no pool.
         if ($application->serving_profile !== 'php') {
             return true;
         }
@@ -57,22 +30,16 @@ class RuntimeOwnership
             return true;
         }
 
-        // The stack answers for itself. On LSPHP isolation is a property of
-        // how the vhost is written rather than a feature to switch on, so
-        // there is nothing to record and nothing to wait for.
+        // On LSPHP isolation comes from how the vhost is written; there is nothing to record.
         return $this->stacks->stack()->isolatesByDefault();
     }
 
     /**
      * The mode for a file holding this site's secrets.
      *
-     * 0640 lets the group read, which is needed only when PHP runs as the web
-     * server's account and the group is that account. Where the site runs as
-     * its own user nothing but that user needs the file, and the group is
-     * not private: on OpenLiteSpeed the web server account (`nobody`) is a
-     * member of every site user's group, so it can write the site's logs —
-     * which made every 0640 `wp-config.php` and `.env` readable to it
-     * (measured on 2026-09-29).
+     * 0640 lets the group read, needed only when PHP runs as the web server's account. A site
+     * running as its own user gets 0600: on OpenLiteSpeed the web server account (`nobody`) is in
+     * every site user's group, so 0640 would make the file readable to it.
      */
     public function secretFileMode(Application $application): string
     {
@@ -80,10 +47,8 @@ class RuntimeOwnership
     }
 
     /**
-     * The group for a file holding this site's secrets: the account that runs
-     * its PHP. The site user's own group where it runs as itself, the web
-     * server's account where it does not — which is the only reason
-     * {@see secretFileMode()} ever leaves the group any access.
+     * The group for a file holding this site's secrets: the account that runs its PHP (the site
+     * user's own group, or the web server's account). See {@see secretFileMode()}.
      */
     public function secretFileGroup(Application $application): string
     {

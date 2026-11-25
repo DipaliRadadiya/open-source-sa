@@ -8,16 +8,11 @@ use App\Models\Application;
 /**
  * What one change to a `.env` actually did, variable by variable.
  *
- * The values come off the **backup files**, never out of the activity log.
- * That is not squeamishness: `activity_logs` is append-only, never pruned, and
- * ships inside every database backup, and its rows are rendered by an
- * admin-wide screen gated on `access-admin` rather than on this application's
- * `app_environment`. Writing values there would put every password this panel
- * has ever set into the database permanently, readable by a different audience
- * than the one granted access to the file. The backups already hold the exact
- * contents, 0600, owned by the site's own user, and they expire.
- *
- * Reading them costs nothing extra and leaks nothing new.
+ * The values come off the backup files, never out of the activity log. `activity_logs` is
+ * append-only, never pruned, ships inside every database backup, and is shown on an admin-wide
+ * screen gated on `access-admin`, not on this application's `app_environment`. Logging values
+ * there would keep every password permanently, readable by a wider audience. The backups are
+ * 0600, owned by the site's user, and expire.
  */
 class EnvironmentDiff
 {
@@ -26,11 +21,9 @@ class EnvironmentDiff
     /**
      * The before and after of one logged change.
      *
-     * A row's `backup` names the file holding the state **before** that change.
-     * The state **after** it is therefore the backup taken by the next change,
-     * or the live file when nothing has happened since. Pruning removes the
-     * oldest first, so a row whose own backup survives has a successor that
-     * survives too.
+     * A row's `backup` holds the state before that change; the state after it is the next
+     * change's backup, or the live file if nothing changed since. Pruning removes the oldest
+     * first, so a row whose backup survives has a surviving successor.
      *
      * @return array{
      *     available: bool,
@@ -42,9 +35,7 @@ class EnvironmentDiff
         $before = $this->stateBefore($application, $row);
         $after = $this->stateAfter($application, $row);
 
-        // Null means the file that held it is gone. Rendering that as an empty
-        // diff would say "this change touched nothing", which is a different
-        // and false statement.
+        // Null means the file is gone; an empty diff would falsely say "this change touched nothing".
         if ($before === null || $after === null) {
             return ['available' => false, 'changes' => []];
         }
@@ -56,8 +47,7 @@ class EnvironmentDiff
     {
         $backup = $row->properties['backup'] ?? null;
 
-        // No backup on a first save: there was no file, so the state before it
-        // was genuinely empty. Distinct from a pruned one, which is unknown.
+        // No backup on a first save means the state before was empty; a pruned one is unknown.
         if ($backup === null) {
             return $this->wasFirstSave($application, $row) ? '' : null;
         }
@@ -77,17 +67,14 @@ class EnvironmentDiff
             ->first();
 
         if ($next === null) {
-            // Nothing has changed the file since, so what is on disk now is
-            // exactly what this change left behind.
+            // Nothing changed the file since: the disk holds what this change left.
             return $this->files->exists($application) ? $this->files->read($application) : '';
         }
 
         $backup = $next->properties['backup'] ?? null;
 
-        // The next change took no backup, meaning it found no file to copy —
-        // the file was removed outside the panel between the two. Its state
-        // cannot be reconstructed, and guessing "empty" would report every
-        // variable as deleted by a change that deleted nothing.
+        // No backup means the file was removed outside the panel in between. The state is unknown;
+        // guessing "empty" would report every variable as deleted.
         return $backup === null ? null : $this->files->readBackup($application, $backup);
     }
 
@@ -128,9 +115,7 @@ class EnvironmentDiff
 
         usort($changes, fn (array $a, array $b): int => $a['key'] <=> $b['key']);
 
-        // Bug #67: which secret changed, never what it was or became. The
-        // values are the ones the structured view already withholds, and the
-        // before side is a rotated secret nothing else on screen shows.
+        // Secrets: show which one changed, never its old or new value.
         return array_map(function (array $change): array {
             $secret = EnvironmentInspector::isSecret($change['key']);
 
@@ -143,11 +128,8 @@ class EnvironmentDiff
     /**
      * Key => value, from the raw text.
      *
-     * Deliberately the same shape of parse as the one that decides which key
-     * names go into the activity log: if these two disagreed, a change could be
-     * listed in the log and absent from its own diff, or the reverse. Comments
-     * and blank lines are skipped — this answers "which variables changed", and
-     * the file itself is one click away for anyone who wants the rest.
+     * Parses like the code that picks key names for the activity log, so the log and the diff
+     * cannot disagree. Comments and blank lines are skipped.
      *
      * @return array<string, string>
      */

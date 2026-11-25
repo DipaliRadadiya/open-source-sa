@@ -12,22 +12,10 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
 
 /**
- * The setup page, and — the same thing — the panel's Services page.
+ * The setup page and the panel's Services page: one catalog, two entry points.
  *
- * One catalog with two entry points. First run wraps it in a wizard; afterwards
- * the identical list lives in the panel and anything can be installed at any time.
- * Building it twice would guarantee the two drift, and skipping something on day
- * one would then mean losing it.
- *
- * Two rules this class exists to hold:
- *
- *  1. **Percent is derived**, `done ÷ total`. The commercial panel hard-codes a
- *     number per branch (8, 3, 5, 30, 30, 30, 40, 50, 75, 95) — which can go
- *     backwards, leaves a dead gap between 50 and 75, and drifts the moment a step
- *     is added. Derived cannot do any of that.
- *  2. **Every label comes from a translation key.** The same panel builds its
- *     labels as English string literals inside the controller; with eight locales
- *     that is not an option here.
+ * Percent is derived (`done ÷ total`), never hard-coded per step.
+ * Every label comes from a translation key.
  */
 class SetupCatalog
 {
@@ -45,12 +33,8 @@ class SetupCatalog
      */
     public function toArray(): array
     {
-        // Rows that do not apply to this server are left out entirely, not
-        // merely marked unrecommended. Marking the database row
-        // `recommended => false` on a container-only server was the wrong fix
-        // and it showed: `recommended` decides whether setup counts as
-        // complete, so the row stayed on the page with its install button and
-        // the server was still being offered an engine it will never manage.
+        // Rows that do not apply to this server are left out, not just marked unrecommended:
+        // the row would stay on the page with its install button.
         $rows = array_values(array_map(
             fn (SetupComponent $component) => $this->describe($component),
             array_filter($this->components, fn (SetupComponent $component) => $component->applies()),
@@ -63,10 +47,7 @@ class SetupCatalog
         $current = collect($rows)->firstWhere('state', 'installing');
 
         return [
-            // `complete` is about the *recommended* set, not everything. Nothing
-            // here is required: the installer already put the web server, PHP and
-            // Node in place, so the panel works from first boot. A wizard that
-            // demanded the rest would be blocking people over preferences.
+            // `complete` covers the recommended set only; nothing here is required.
             'complete' => collect($rows)
                 ->where('recommended', true)
                 ->every(fn (array $row) => $row['state'] === 'installed'),
@@ -101,12 +82,11 @@ class SetupCatalog
             'action' => $component->action(),
             'options' => $component->options(),
             'reason' => $progress?->reason,
-            // The model's own method, not a second implementation: it builds the
-            // sentence in the *viewer's* locale and falls back when a reason has
-            // no translation, so a missing key never reaches the user as text.
+            // Builds the sentence in the viewer's locale and falls back when a reason has no
+            // translation.
             'message' => $progress?->message(),
             'retryable' => $progress?->status === InstallStatus::Failed,
-            // Installing, but still waiting behind other jobs (FS-B1).
+            // Installing, but still waiting behind other jobs.
             'queued' => $state === 'installing' && $progress?->isQueued() === true,
             'progress' => $key === 'database' && $state !== 'installed' && $progress !== null
                 ? DatabaseInstallProgress::describe($progress)
@@ -115,9 +95,8 @@ class SetupCatalog
     }
 
     /**
-     * `installed` wins over everything: it is detected from the box, and the box
-     * is the truth. A stale `installing` row for something that is now present
-     * would otherwise show a spinner forever.
+     * `installed` wins over everything: it is detected from the box, so a stale `installing` row
+     * cannot show a spinner forever.
      */
     private function state(SetupComponent $component, mixed $progress): string
     {
@@ -125,8 +104,7 @@ class SetupCatalog
             return 'installed';
         }
 
-        // Compared against the enum, not strings: `status` is cast, so
-        // `=== 'installing'` is quietly always false and every row reads pending.
+        // Compare against the enum: `status` is cast, so a string comparison is always false.
         return match ($progress?->status) {
             InstallStatus::Installing => 'installing',
             InstallStatus::Failed => 'failed',
@@ -146,16 +124,12 @@ class SetupCatalog
             'php' => 'php',
             'node' => 'node',
             'wp_cli' => InstallWpCli::RUNTIME,
-            // Both were missing, so a failed install read as "pending" with a
-            // plain Install button and no reason (FS-A7).
             'fail2ban' => InstallFail2ban::RUNTIME,
             'build_tools' => InstallBuildTools::RUNTIME,
             default => null,
         };
 
-        // `first()` with a closure, not `firstWhere()` — the latter takes a key
-        // name and a value, so handing it a closure matches nothing and every row
-        // silently reads as `pending`.
+        // `first()` with a closure: `firstWhere()` takes a key and a value and would match nothing.
         return $runtime === null
             ? null
             : $this->installs->versions($runtime)->first(fn ($row) => $row->status !== InstallStatus::Ready);

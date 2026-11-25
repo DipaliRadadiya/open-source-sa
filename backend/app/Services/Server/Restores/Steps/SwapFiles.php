@@ -13,17 +13,12 @@ use RuntimeException;
 /**
  * Moves the restored copy into place, and the live one out of the way.
  *
- * Two renames within the same parent directory, so the window in which the
- * site does not exist is measured in milliseconds regardless of how large it
- * is — a copy would take minutes and serve a half-written site throughout.
+ * Two renames within the same parent directory, so the site is missing only for milliseconds;
+ * a copy would take minutes and serve a half-written site.
  *
- * The previous directory is *moved*, never deleted. It stays as
- * `.rollback-<id>` so that "the restore worked but the site is wrong" is still
- * recoverable by hand, which is a situation no amount of testing prevents.
- *
- * An application with a process (Node, and anything else systemd supervises)
- * is stopped first: swapping the directory under a running process leaves it
- * holding deleted file handles and serving code that no longer exists on disk.
+ * The previous directory is moved to `.rollback-<id>`, never deleted, so a bad restore stays
+ * recoverable. A supervised process (Node, systemd) is stopped first: swapping the directory
+ * under it leaves it holding deleted file handles.
  */
 class SwapFiles implements RestoreStep
 {
@@ -41,18 +36,13 @@ class SwapFiles implements RestoreStep
 
     public function appliesTo(RestoreContext $context): bool
     {
-        // `wantsConfig()` too: a container site's compose files and `.env` sit in
-        // the same document root this step renames, so restoring its config is
-        // the same two renames. A volumes-only restore leaves the directory
-        // alone — `RestoreVolumes` is the step with work to do there.
+        // `wantsConfig()` too: a container site's compose files and `.env` live in the renamed root.
         return $context->wantsFiles() || $context->wantsConfig();
     }
 
     public function run(RestoreContext $context): void
     {
-        // Whatever `ExtractArchive` unpacked, swapped back over the directory
-        // that archive was made from — the same question, asked the same way,
-        // so the two cannot disagree about which directory this restore is of.
+        // Same lookup as `ExtractArchive`, so both agree on which directory is restored.
         $siteRoot = $this->roots->forBackup($context->backup, $context->application);
         $staged = $context->stagingDirectory.'/'.basename($siteRoot);
         $rollback = dirname($siteRoot).'/.rollback-'.$context->restore->id;
@@ -78,10 +68,8 @@ class SwapFiles implements RestoreStep
             $this->keepExcluded($context, $context->rollbackPath, $siteRoot);
         }
 
-        // The archive preserves the ownership it was created with, but a
-        // restore onto a rebuilt server can land files owned by a uid that no
-        // longer maps to this site's user — which shows up as a white screen
-        // nobody connects to the restore.
+        // The archive keeps its original ownership; on a rebuilt server that uid may no longer
+        // map to this site's user (white screen).
         $user = $context->application->systemUser?->username;
 
         if ($user !== null) {
@@ -99,8 +87,7 @@ class SwapFiles implements RestoreStep
             return;
         }
 
-        // Put the site back. Only when the swap actually happened — if the
-        // move out of the way is what failed, the live directory never moved.
+        // Put the site back, only if the swap happened (the live directory moved).
         $siteRoot = $this->roots->forBackup($context->backup, $context->application);
 
         if ($context->rollbackPath !== null && is_dir($context->rollbackPath) && ! is_dir($siteRoot)) {
@@ -109,9 +96,7 @@ class SwapFiles implements RestoreStep
             $context->restore->update(['rollback_path' => null]);
         }
 
-        // If the failure happened inside this step, RestartProcess never ran
-        // and its cleanup will never fire — so the process this step stopped
-        // would stay stopped. The flag keeps the two from starting it twice.
+        // RestartProcess never ran if this step failed, so restart here; the flag avoids a double start.
         if ($context->processStopped) {
             $this->processes->start($context->application);
             $context->processStopped = false;
@@ -121,19 +106,11 @@ class SwapFiles implements RestoreStep
     /**
      * Bring back what the backup deliberately left out.
      *
-     * The swap replaces the whole site with the archive, and the archive does
-     * not contain the paths its target excluded -- so a restore permanently
-     * deleted them: exclude `wp-content/uploads` from a "Files and database"
-     * backup, restore it, and every upload was gone, with Undo unable to help
-     * (bug #78). Each excluded path that exists in the site as it was, and is
-     * absent from what was restored, is carried over.
+     * The archive lacks the paths its target excluded, so the swap would delete them for good.
+     * Each excluded path present in the old site but absent from the restored copy is carried over.
      *
-     * Hard links (`cp -al`), not a move: no second copy of a large uploads
-     * folder, and the copy kept aside for Undo stays whole.
-     *
-     * Patterns are the ones the archive was made with (manifest), or -- for a
-     * backup taken before they were recorded -- the target's current ones.
-     * Either is safe: only paths missing from the restored copy are filled.
+     * Hard links (`cp -al`): no second copy of a large folder, and the Undo copy stays whole.
+     * Patterns come from the manifest, or the target's current ones for older backups.
      */
     private function keepExcluded(RestoreContext $context, string $previous, string $siteRoot): void
     {
@@ -158,8 +135,7 @@ class SwapFiles implements RestoreStep
             array_push($match, '-path', $previous.'/'.$pattern, '-o', '-path', $previous.'/*/'.$pattern);
         }
 
-        // -prune: an excluded directory is carried whole, its contents are
-        // not listed one by one.
+        // -prune: an excluded directory is carried whole.
         $found = $this->serverOps->run(
             ['find', $previous, '(', ...$match, ')', '-prune', '-print0'],
             $op,
@@ -182,8 +158,7 @@ class SwapFiles implements RestoreStep
             $copied = $this->serverOps->run(['cp', '-al', $path, $target], $op, timeout: 600);
 
             if ($copied->failed()) {
-                // Not fatal: the restore itself succeeded, and the original is
-                // still in the copy kept for Undo. Said in the run's log.
+                // Not fatal: the original is still in the Undo copy. Reported in the run's log.
                 $context->restore->update(['reason' => trim(($context->restore->reason ?? '')."\n".__('backup.errors.excluded_not_kept', ['path' => $relative]))]);
             }
         }
@@ -191,9 +166,7 @@ class SwapFiles implements RestoreStep
 
     private function move(RestoreContext $context, string $from, string $to, string $op): void
     {
-        // Both ends are entries of the site root — the live directory, the
-        // aside copy, the staged one — so each move changes the top level of a
-        // directory {@see SiteRootLock} keeps immutable.
+        // Each move changes the top level of a directory {@see SiteRootLock} keeps immutable.
         $result = $this->rootLock->unlocked($context->application, fn () => $this->serverOps->run(
             ['mv', $from, $to],
             ['feature' => 'backup', 'op' => $op, 'application' => $context->application->id],

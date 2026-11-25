@@ -51,10 +51,8 @@ class MauticSiteType extends AbstractSiteType
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
             $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
-            // Mail delivery. Optional: Mautic runs without it (sending off)
-            // until SMTP is set up — requiring it kept a user with no SMTP
-            // details from creating the site at all. A host given needs the
-            // rest of the connection with it; see rules().
+            // Mail delivery. Optional: Mautic runs without it (sending off) until SMTP is set up.
+            // A host given needs the rest of the connection with it; see rules().
             $this->field('mailer_name', 'text', required: false,
                 extra: ['autocomplete' => 'name', 'autocapitalize' => 'words',
                     'placeholder' => __('application.placeholders.mailer_name')]),
@@ -62,10 +60,6 @@ class MauticSiteType extends AbstractSiteType
                 extra: ['placeholder' => __('application.placeholders.mailer_email')]),
             $this->field('mailer_host', 'text', required: false,
                 extra: ['autocomplete' => 'off', 'autocapitalize' => 'none', 'spellcheck' => 'false',
-                    // Was the literal 'e.g. smtp.example.com'. The prefix sat
-                    // inside the value, so this one field said "e.g." while
-                    // its nine neighbours showed a bare example — and being a
-                    // literal it stayed English while the rest translated.
                     'placeholder' => __('application.placeholders.mailer_host')]),
             $this->field('mailer_port', 'number', required: false,
                 extra: ['min' => 1, 'max' => 65535,
@@ -97,18 +91,10 @@ class MauticSiteType extends AbstractSiteType
     }
 
     /**
-     * Mautic 7.2.0, measured 2026-09-18.
+     * Mautic 7.2.0.
      *
-     * Mautic is the one application here that publishes this machine-readably:
-     * `app/release_metadata.json` in the release itself carries
-     * `minimum_php_version: 8.2.0` and `maximum_php_version: 8.5.99`. Taken
-     * from there rather than from the requirements page, because that file is
-     * what ships with the build we install.
-     *
-     * The ceiling is real, not caution. Mautic refuses to run outright —
-     * "Mautic does not support PHP version X at this time. To use Mautic, you
-     * will need to downgrade." — so an out-of-range version is a dead install,
-     * not a degraded one.
+     * Taken from `app/release_metadata.json` in the release (`minimum_php_version: 8.2.0`,
+     * `maximum_php_version: 8.5.99`). The ceiling is real: Mautic refuses to run on a newer PHP.
      */
     public function supportedPhpRange(): ?array
     {
@@ -116,22 +102,13 @@ class MauticSiteType extends AbstractSiteType
     }
 
     /**
-     * Bug #14: Mautic protects itself with one Apache `.htaccess` — every
-     * `.php` denied except `/index.php` (and the legacy `/upgrade/upgrade.php`),
-     * plus `.env*` and `composer.json/lock` — which nginx never reads and
-     * OpenLiteSpeed only where the vhost allows it. So `vendor/` scripts ran
-     * straight from the web. Read from the `.htaccess` of a real install
-     * (nginx test server, 2026-10-04).
+     * Paths the web server must never serve.
      *
-     * Written without lookaheads (OpenLiteSpeed's contexts): any PHP below
-     * the top level, the four helper scripts beside index.php by name, and
-     * `var/` whole — logs, cache and the mail spool, none of it served.
-     *
-     * And `bin/` whole: `bin/console` and its neighbours have no `.php`
-     * ending, so the PHP rule never saw them and nginx served the source as a
-     * download (junior re-test, 2026-10-05). Mautic's own `.htaccess` does
-     * not cover them either — it is a folder of command-line tools, and
-     * nothing in it is ever requested by a browser.
+     * Mautic protects itself with an Apache `.htaccess` that nginx never reads and OpenLiteSpeed
+     * only where the vhost allows it, so the same rules are denied here. Written without lookaheads
+     * (OpenLiteSpeed contexts): PHP below the top level, the helper scripts beside index.php, and
+     * `var/` (logs, cache, mail spool). `bin/` is denied whole: `bin/console` has no `.php` ending,
+     * so nginx would serve its source as a download.
      *
      * @return array<int, string>
      */
@@ -148,9 +125,8 @@ class MauticSiteType extends AbstractSiteType
     }
 
     /**
-     * Mautic reads a `.env` beside its code, the same as Craft and Statamic
-     * (bug #69). The editor finds it there: ApplicationEnvironment reads the
-     * file the framework actually loads before the one it would create.
+     * Mautic reads a `.env` beside its code, like Craft and Statamic. ApplicationEnvironment reads
+     * the file the framework actually loads before the one it would create.
      *
      * @return array<int, string>
      */

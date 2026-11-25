@@ -52,16 +52,13 @@ class PreparedDownloads
     }
 
     /**
-     * Bytes free where the copies are written, or null when that cannot be
-     * read — unknown is not "full", and refusing on it would break Download
-     * on a box whose filesystem simply does not answer.
+     * Bytes free where the copies are written, or null when unreadable (unknown is not "full").
      */
     public function freeBytes(): ?int
     {
         $directory = $this->root();
 
-        // The directory may not exist yet; its nearest existing parent is on
-        // the same filesystem, which is the question.
+        // The directory may not exist yet; its nearest existing parent is on the same filesystem.
         while (! is_dir($directory) && $directory !== dirname($directory)) {
             $directory = dirname($directory);
         }
@@ -72,9 +69,8 @@ class PreparedDownloads
     }
 
     /**
-     * Whether a copy of this size fits, with the margin the rest of the
-     * server needs left over. Null size (not recorded) is not refused here;
-     * the job checks again once it knows the real size.
+     * Whether a copy of this size fits, leaving the margin the rest of the server needs. A null
+     * size is not refused here; the job checks again with the real size.
      *
      * @return array{needed: int, free: int}|null null when it fits
      */
@@ -94,10 +90,8 @@ class PreparedDownloads
     /**
      * One of the few slots for sending a copy, or null when all are taken.
      *
-     * Each send holds a PHP worker for the whole transfer, so the number in
-     * flight is capped rather than left to whoever clicks. A lock per slot
-     * rather than a counter: a lock frees itself when its holder dies, and a
-     * counter that missed a decrement would lock Download out for good.
+     * Each send holds a PHP worker for the whole transfer, so the number in flight is capped. A
+     * lock per slot, not a counter: a lock frees itself when its holder dies.
      */
     public function acquireSlot(): ?Lock
     {
@@ -154,10 +148,8 @@ class PreparedDownloads
         }
 
         foreach (File::directories($this->root()) as $directory) {
-            // Asked per directory, not from one list taken up front: a copy
-            // started after that list was read would be swept mid-download.
-            // A directory is only ever made after its row, so no row now
-            // means none is coming.
+            // Asked per directory, not from an upfront list, which would sweep a copy started after
+            // it. A directory is only made after its row, so no row means none is coming.
             if (! BackupDownloadPreparation::query()->where('reference', basename($directory))->exists()) {
                 File::deleteDirectory($directory);
                 $removed++;

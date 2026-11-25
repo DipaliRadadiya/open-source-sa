@@ -9,19 +9,15 @@ use Illuminate\Support\Facades\Http;
 /**
  * Find an image on Docker Hub by what it is called, not by its exact name.
  *
- * Somebody who wants Memos types `memos`, not `neosmemo/memos`. Hub's search
- * answers in its own relevance order, which on 2026-10-07 put a third-party
- * repackage with 0.1M pulls above the project's own image with 11M — so the
- * results are re-ranked: the exact name typed, official images, then by
- * pulls — with the project's own publisher's pulls counted several times over.
+ * Hub's own relevance order can put a third-party repackage above the project's image, so
+ * results are re-ranked: exact name typed, official images, then pulls (the project's own
+ * publisher's pulls weigh more).
  *
- * Hub's v2 search does not report the "Verified Publisher" badge (its only
- * flags are `is_official` and `is_automated`), so `verified_publisher` is
- * always false today. The field stays in the contract so the UI does not
- * change shape the day a source that knows it is added.
+ * Hub's v2 search has no "Verified Publisher" flag, so `verified_publisher` is always false; the
+ * field stays so the UI contract does not change later.
  *
- * A panel with no internet gets an empty list and `offline: true` — never an
- * error, because the picker still accepts a typed reference.
+ * Offline returns an empty list and `offline: true`, never an error: the picker still accepts a
+ * typed reference.
  */
 class ImageSearch
 {
@@ -29,9 +25,8 @@ class ImageSearch
     private const PUBLISHER_WEIGHT = 5;
 
     /**
-     * The ramp the weight climbs: none at or below the first, all of it from
-     * the second. A ramp, not a step (DS-12) — a floor at 10k let an
-     * unrelated 10,001-pull repackage beat the project's own 9,999.
+     * The weight ramps from none at BOOST_FROM to full at BOOST_FULL. A ramp, not a step: a
+     * hard floor let an unrelated 10,001-pull repackage beat the project's own 9,999.
      */
     private const BOOST_FROM = 1_000;
 
@@ -71,8 +66,7 @@ class ImageSearch
                 ->acceptJson()
                 ->get('https://hub.docker.com/v2/search/repositories/', [
                     'query' => $query,
-                    // More than asked for: re-ranking only helps if the right
-                    // answer is in the page at all.
+                    // More than asked for: re-ranking needs the right answer in the page.
                     'page_size' => 50,
                 ]);
         } catch (ConnectionException) {
@@ -116,17 +110,12 @@ class ImageSearch
     /**
      * Pulls, with a publisher that looks like the project weighted up.
      *
-     * A weight, never a rank of its own (DS-09). As a rank above pulls it let
-     * anybody who registered `kavitaatdesign/kavita` — a handful of pulls —
-     * take the preselected first place from `jvmilazz0/kavita` with 11.9M, and
-     * the form deploys the first place in one click. Weighted, the project's
-     * own image still wins where it is in the same league (Umami: 181k × 5
-     * beats a 605k repackage), and a repository with next to no pulls gets
-     * next to no boost, so registering a matching name buys nothing.
+     * A weight, never a rank of its own: as a rank above pulls, anyone registering a matching
+     * name with a handful of pulls took the preselected first place (which deploys in one click).
+     * Weighted, a repository with next to no pulls gets next to no boost.
      *
-     * The weight grows with the pulls between BOOST_FROM and BOOST_FULL, so
-     * the result still grows with every pull and there is no count at which
-     * one more pull jumps a repository past another.
+     * The weight grows with pulls between BOOST_FROM and BOOST_FULL, so no single pull jumps a
+     * repository past another.
      *
      * @param  array<string, mixed>  $row
      */
@@ -144,12 +133,11 @@ class ImageSearch
     }
 
     /**
-     * Whether the publisher looks like the project: the name searched for is
-     * in the namespace and IS the repository, as in `umamisoftware/umami`.
+     * Whether the publisher looks like the project: the name searched for is in the namespace and
+     * IS the repository, as in `umamisoftware/umami`.
      *
-     * The repository is matched whole (DS-12). Matched as a substring, every
-     * accessory the vendor publishes was weighted as the project:
-     * `grafana/grafana-image-renderer` reached third place on "grafana".
+     * The repository is matched whole: as a substring, vendor accessories such as
+     * `grafana/grafana-image-renderer` were weighted as the project.
      */
     private function publisherMatches(string $image, string $query): bool
     {

@@ -10,13 +10,9 @@ use App\Services\Server\WebServers\WebServerManager;
 /**
  * Give a site its own FPM pool, and put its vhost on the matching socket.
  *
- * Provisioning already does this for every new PHP site, so the only sites
- * that ever need it are the ones the panel did not create: adopted from
- * another panel, made before pool isolation shipped, or left behind by a
- * `create_php_pool` step that failed. There is no "shared pool" mode to
- * choose — running as the web server's own account means one compromised
- * site can read every other site's `.env`, which is the thing isolation
- * exists to prevent.
+ * Provisioning does this for new PHP sites; this covers adopted sites, sites made before pool
+ * isolation, and sites whose `create_php_pool` step failed. There is no shared-pool mode: it
+ * would let one compromised site read every other site's `.env`.
  */
 class PoolIsolator
 {
@@ -36,17 +32,8 @@ class PoolIsolator
      */
     public function isolate(Application $application): array
     {
-        // A pool serves PHP. A static site has no PHP to serve and a Node
-        // site's runtime is a process, not a pool — for either one this would
-        // write a pool file under the *server's* default version (the site's
-        // own `php_version` is null), claim the site as isolated, and reload
-        // PHP-FPM across every real PHP site on the server to change nothing
-        // about how this one is served.
-        //
-        // The guard belongs here rather than only in `isolateAll()`, which
-        // has always filtered `serving_profile` in its query: two callers
-        // enforcing the same invariant in two places is how the single-site
-        // path came to be missing it.
+        // Static and Node sites have no pool: isolating one would write a pool file under the
+        // server's default PHP version and reload PHP-FPM for nothing.
         if ($application->serving_profile !== 'php') {
             return ['ok' => false, 'reason' => 'not_php_site'];
         }
@@ -55,24 +42,20 @@ class PoolIsolator
             'application_id' => $application->id,
         ]);
 
-        // Before the first write, not after. This is the moment the panel
-        // takes ownership of a pool it did not create — on a migrated server
-        // that file can carry an open_basedir the owner set deliberately, and
-        // rendering ours over it would drop the restriction in silence.
+        // Before the first write: a pool file the panel did not create may carry a deliberate
+        // open_basedir that rendering ours would silently drop.
         $adoption = $this->pools->adoptOpenBasedir($application, $settings);
 
         $result = $this->pools->apply($application, $settings);
 
         if (! $result['ok']) {
-            // Nothing was reloaded, so the site is still being served exactly
-            // as it was a moment ago.
+            // Nothing was reloaded, so the site is still served as before.
             return $result;
         }
 
         $application->forceFill(['isolated_at' => now()])->save();
 
-        // Vhost last: it can only point at the socket once the pool that owns
-        // that socket is live, or the site 502s in the gap.
+        // Vhost last: it needs the pool's socket to be live, or the site 502s.
         $this->republish($application);
 
         return $result + ['adoption' => $adoption];
@@ -81,12 +64,7 @@ class PoolIsolator
     /**
      * Rewrite a site's vhost from the current state and reload, tested first.
      *
-     * The document root comes from the provisioner rather than being rebuilt
-     * here. The copy that used to live in the PHP controller was wrong in two
-     * ways — it used `domain` where the real path uses `slug`, and it omitted
-     * `public_html` entirely — so every republish pointed the site at a
-     * directory that does not exist. One source of truth, so a change to the
-     * layout cannot leave a second copy behind.
+     * The document root comes from the provisioner, the single source of truth for the layout.
      */
     public function republish(Application $application): void
     {
@@ -102,9 +80,7 @@ class PoolIsolator
     /**
      * Isolate every PHP site that does not have a pool yet.
      *
-     * Used by `php:isolate-all` after an upgrade, so a server carrying sites
-     * from before this feature converts in one pass instead of the admin
-     * opening each site's PHP screen.
+     * Used by `php:isolate-all` after an upgrade to convert existing sites in one pass.
      *
      * @return array{total: int, isolated: int, skipped: int, adopted: array<int, array{name: string, kept: array<int, string>, dropped: array<int, string>}>, failed: array<int, array{id: int, name: string, reason: string}>}
      */
@@ -126,10 +102,7 @@ class PoolIsolator
             if ($result['ok']) {
                 $isolated++;
 
-                // Reported, not just logged: taking over someone else's
-                // open_basedir changes what a site can reach, and a migration
-                // that does that quietly is the thing this whole path exists
-                // to avoid.
+                // Reported: taking over an existing open_basedir changes what a site can reach.
                 if (($result['adoption']['adopted'] ?? false) === true) {
                     $adopted[] = [
                         'name' => $application->name,
@@ -141,9 +114,7 @@ class PoolIsolator
                 continue;
             }
 
-            // Carry on rather than aborting: one site whose pool will not
-            // write should not stop the rest of the server converting, and
-            // that site is still being served meanwhile.
+            // Carry on: one failing site must not stop the rest from converting.
             $failed[] = [
                 'id' => $application->id,
                 'name' => $application->name,

@@ -11,14 +11,8 @@ use RuntimeException;
 /**
  * Puts each database back to what the archive holds.
  *
- * Drop, recreate, import — not import-over-the-top. A plain import replaces
- * every table the dump contains, but a table created *after* the backup
- * survives it, leaving a schema that is a mix of two points in time. That is a
- * miserable bug to find months later, and "restore" has to mean the state in
- * the backup, not a merge with it.
- *
- * Grants live on the user rather than the schema, so dropping the database
- * does not cost the application its credentials.
+ * Drop, recreate, import: importing over the top would keep tables created after the backup.
+ * Grants live on the user, so dropping the database does not cost the application its credentials.
  */
 class RestoreDatabase implements RestoreStep
 {
@@ -45,19 +39,11 @@ class RestoreDatabase implements RestoreStep
         $dumps = glob($staging.'/db-*.sql') ?: [];
 
         if ($dumps === []) {
-            // A database restore with no dump in the archive would otherwise
-            // report success having done nothing at all — the worst possible
-            // outcome for someone who just watched their site get replaced.
+            // Without this the restore would report success having done nothing.
             throw new RuntimeException('this backup contains no database dump');
         }
 
-        // Everything is checked before anything is dropped.
-        //
-        // These checks used to live inside the loop below, which meant the
-        // first database could already have been dropped and replaced before
-        // the second was found to be missing or empty — a restore that half
-        // happened, on data the user cannot get back without going to the
-        // safety backup by hand. Nothing here touches the server.
+        // Check everything before anything is dropped, so a restore never half happens.
         $plan = [];
 
         if ($context->isDatabaseRestore()) {
@@ -67,11 +53,8 @@ class RestoreDatabase implements RestoreStep
         foreach ($context->isDatabaseRestore() ? [] : $dumps as $dump) {
             $name = substr(basename($dump), strlen('db-'), -strlen('.sql'));
 
-            // An empty dump is the one that costs the most: dropping a live
-            // database to import nothing leaves the site with no data at all.
-            // `DumpDatabase` already refuses to *write* an empty dump for the
-            // same reason; this is that check on the way back in, for an
-            // archive that was truncated in transit.
+            // Dropping a live database to import an empty dump would leave the site with no data
+            // (`DumpDatabase` refuses to write one; this covers an archive truncated in transit).
             if (! is_file($dump) || filesize($dump) === 0) {
                 throw new RuntimeException("the dump for {$name} is empty");
             }
@@ -88,9 +71,7 @@ class RestoreDatabase implements RestoreStep
             }
 
             if ($database === null) {
-                // Recreating a database the panel no longer tracks would leave
-                // an orphan with no user and no owner. Naming it is more use
-                // than silently skipping it.
+                // Recreating an untracked database would leave an orphan with no user and no owner.
                 throw new RuntimeException("the database {$name} is no longer attached to this application");
             }
 
@@ -102,18 +83,15 @@ class RestoreDatabase implements RestoreStep
 
             $engine->dropDatabase($database->name);
             $engine->createDatabase($database->name, $database->charset, $database->collation);
-            // Before the load, which may run as them: on PostgreSQL the new
-            // database belonged to the panel and no site user could connect.
+            // Before the load, which may run as them: on PostgreSQL no site user could connect.
             $engine->reattachUsers($database->name, $database->users()->pluck('username')->all());
             $engine->restore($database->name, $dump);
         }
     }
 
     /**
-     * A database backup holds one dump, and it goes into the database chosen
-     * for this restore — its own, or (archived) the one the user picked, whose
-     * name may differ from the dump's. Checked before anything is dropped, the
-     * same as the site path.
+     * A database backup holds one dump; it goes into the database chosen for this restore, whose
+     * name may differ from the dump's. Checked before anything is dropped.
      *
      * @param  list<string>  $dumps
      */
@@ -143,18 +121,9 @@ class RestoreDatabase implements RestoreStep
     /**
      * Whether a dump this panel wrote reached its end.
      *
-     * `mysqldump` closes every dump with `-- Dump completed on …`, and we run it
-     * without `--compact` or `--skip-comments`, so ours always carry it. A dump
-     * that stops short does not — which is exactly what a download cut off part
-     * way, or an archive that unpacked incompletely, leaves behind. Size alone
-     * cannot tell those apart: a truncated dump is a perfectly plausible size.
-     *
-     * Only the last few hundred bytes are read; these files are gigabytes.
-     *
-     * This is not a validity check. A dump can be complete and still fail to
-     * import, and the safety backup remains the answer to that. It rules out
-     * the failure that actually happens — the file did not all arrive — before
-     * anything is dropped for it.
+     * `mysqldump` closes every dump with `-- Dump completed on …` (we run it without `--compact`
+     * or `--skip-comments`); a truncated dump lacks it, and size alone cannot tell. Only the last
+     * 512 bytes are read. Not a validity check: a complete dump can still fail to import.
      */
     private function looksComplete(string $dump): bool
     {
@@ -174,8 +143,6 @@ class RestoreDatabase implements RestoreStep
 
     public function cleanup(RestoreContext $context, bool $failed): void
     {
-        // Nothing local to undo. A failure part-way through leaves the
-        // databases restored so far in place; the safety backup is the way
-        // back, which is why it is taken before this step can run.
+        // Nothing local to undo; the safety backup is the way back.
     }
 }

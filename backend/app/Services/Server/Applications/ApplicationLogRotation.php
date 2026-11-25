@@ -8,30 +8,15 @@ use App\Services\Server\WebServers\WebServerManager;
 use Throwable;
 
 /**
- * The logrotate policy for everything in a site's `logs/` (LOG-01).
+ * The logrotate policy for everything in a site's `logs/`: one policy per site, run as root.
  *
- * Two things were wrong, and the first broke the second's neighbours:
+ * Never `su {user}`: the directory is `root:{user} 0750` and root writes the files, so a site-user
+ * policy fails, and one failing policy fails the whole nightly `logrotate.service`. Root is safe
+ * because the directory is not writable by the site's group, so nothing can be swapped for a link
+ * between rotations. `copytruncate` because systemd and the web servers keep the files open.
  *
- *  - Node sites had a policy (`sv-app-{id}`) that ran as the site user
- *    (`su {user}`). The directory is `root:{user} 0750` and the files are
- *    written by root (systemd opens `append:` targets in PID 1, the web
- *    server's master opens its logs), so the user could not touch them and
- *    logrotate failed — and a failure in one policy fails the whole nightly
- *    `logrotate.service`, every other policy on the server included.
- *  - Every other site had no policy at all: its access and error logs grew
- *    forever on the disk every site shares.
- *
- * So: one policy per site, for all its logs, run as root. Root is right here
- * because the user cannot use it to reach anything — the directory is not
- * writable by the site's group, so nothing in it can be swapped for a link
- * between rotations. `copytruncate` because systemd and the web servers hold
- * these files open for their whole life; a rename would leave them writing
- * to an inode nobody reads.
- *
- * Files are named rather than globbed. Supervisor rotates its own worker logs
- * (`stdout_logfile_maxbytes`), and OpenLiteSpeed rotates the access and error
- * logs it writes itself (`rollingSize`); rotating those twice would lose lines
- * and fight over the same names.
+ * Files are named, not globbed: Supervisor (`stdout_logfile_maxbytes`) and OpenLiteSpeed
+ * (`rollingSize`) rotate their own logs, and rotating those twice would lose lines.
  */
 class ApplicationLogRotation
 {
@@ -47,10 +32,8 @@ class ApplicationLogRotation
     ) {}
 
     /**
-     * v7's own name for this file (`{name}-webserver-logs`), so a server that
-     * comes from v7 has its policy replaced in place rather than joined by a
-     * second one over the same logs — two policies naming one file fail the
-     * whole nightly run (v7 file layout, step B2).
+     * v7's own name for this file (`{name}-webserver-logs`), so a server coming from v7 has its
+     * policy replaced in place: two policies naming one file fail the whole nightly run.
      */
     public function path(Application $application): string
     {
@@ -58,10 +41,8 @@ class ApplicationLogRotation
     }
 
     /**
-     * Names this policy had before, removed wherever the current one is
-     * written: `sv-app-{id}` (Node sites only, ran as the site user and failed
-     * the nightly run) and `sv-site-{id}` (LOG-01, 2026-10-06). Either one
-     * left beside the current file names the same logs a second time.
+     * Earlier names of this policy (`sv-app-{id}`, `sv-site-{id}`), removed wherever the current
+     * one is written: left beside it they would name the same logs twice.
      *
      * @return list<string>
      */
@@ -74,9 +55,8 @@ class ApplicationLogRotation
     }
 
     /**
-     * Best-effort, like the directory it belongs to: a site whose policy could
-     * not be written still serves, and the next provision or `sites:resync`
-     * writes it again.
+     * Best-effort: a site whose policy could not be written still serves, and the next provision
+     * or `sites:resync` writes it again.
      */
     public function write(Application $application): void
     {

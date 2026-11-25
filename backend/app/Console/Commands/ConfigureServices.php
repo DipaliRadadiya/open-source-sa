@@ -10,21 +10,12 @@ use Throwable;
 /**
  * Point the queue, sessions and cache at Redis when Redis is actually there.
  *
- * The panel's database is SQLite by default, and SQLite allows exactly one
- * writer. Running the queue and the session store on it means the worker is
- * polling the same file every request is trying to write to, which is how a
- * single-user panel produces "database is locked" on an idle box.
+ * SQLite allows one writer, so the queue and sessions on it end in "database is locked".
  *
- * Why a command rather than bash in the installer: the installer writes `.env`
- * once and an update never rewrites it, so encoding this in bash would fix new
- * installs and leave every existing one broken. And only the application can
- * test Redis with the credentials the application will actually use. Same
- * argument as `panel:backup-database`.
- *
- * Why not decided in `config/*.php` at runtime: `php artisan optimize` freezes
- * the config. A probe there would run once, at cache-build time, and a Redis
- * blip in that second would silently pin the panel to the wrong driver with
- * nothing to show why.
+ * A command rather than installer bash: an update never rewrites `.env`, so bash would fix only
+ * new installs, and only the application can test Redis with its own credentials. Not decided
+ * in `config/*.php` at runtime either: `php artisan optimize` freezes the config, so a Redis
+ * blip at cache-build time would pin the wrong driver.
  *
  * Three rules keep this safe on somebody else's server:
  *
@@ -32,11 +23,10 @@ use Throwable;
  *     credential before anything is pointed at it. A failed probe changes
  *     nothing at all.
  *  2. **Never overwrite a deliberate choice.** Only a value still at the
- *     shipped default is touched. If the operator set something else, they
- *     meant it — this is a self-hosted panel and their config is theirs.
+ *     shipped default is touched.
  *  3. **Never strand queued work.** `queue:work` reads the default connection,
  *     so moving it while the database queue still holds jobs orphans them
- *     silently: no error, they simply never run. It refuses and says so.
+ *     silently. It refuses and says so.
  */
 class ConfigureServices extends Command
 {
@@ -62,9 +52,7 @@ class ConfigureServices extends Command
         }
 
         if (! $this->redisAnswers()) {
-            // Not a failure: a panel running everything on the database is
-            // slower under load, not broken, and saying so loudly on every
-            // update would train people to ignore the output.
+            // Not a failure: the database drivers are slower, not broken.
             $this->line('Redis did not answer — leaving the current drivers alone.');
 
             return self::SUCCESS;
@@ -107,9 +95,7 @@ class ConfigureServices extends Command
 
         file_put_contents($path, $contents);
 
-        // The config cache is built from .env, so it is stale the moment this
-        // writes. The update script rebuilds it in the step after this one;
-        // anyone running this by hand needs to know.
+        // The config cache is built from .env, so it is stale the moment this writes.
         $this->info('Run `php artisan optimize` and restart php-fpm and the queue worker for this to take effect.');
 
         if (array_key_exists('SESSION_DRIVER', $changes)) {
@@ -120,8 +106,7 @@ class ConfigureServices extends Command
     }
 
     /**
-     * Whether Redis answers with the credential this application is configured
-     * to use — not whether a server is listening on the port.
+     * Whether Redis answers with the configured credential, not merely whether it listens.
      */
     private function redisAnswers(): bool
     {
@@ -135,9 +120,7 @@ class ConfigureServices extends Command
     }
 
     /**
-     * Jobs still sitting on the database queue. Counted defensively: on an
-     * install that never used it the table may be absent, and that is not a
-     * reason to refuse.
+     * Jobs still sitting on the database queue. A missing table counts as none.
      */
     private function pendingJobs(): int
     {
@@ -158,8 +141,7 @@ class ConfigureServices extends Command
     }
 
     /**
-     * Replaces the value in place, leaving the rest of the file — comments,
-     * ordering, the operator's own additions — exactly as it was.
+     * Replaces the value in place; the rest of the file stays exactly as it was.
      */
     private function write(string $contents, string $key, string $value): string
     {

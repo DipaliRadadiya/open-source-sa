@@ -10,22 +10,13 @@ use Throwable;
 /**
  * The timezones this server accepts, grouped for a picker.
  *
- * Read from `timedatectl list-timezones`, because that is the authority: the
- * value ends up as an argument to `timedatectl set-timezone`, so the OS is
- * what accepts or rejects it. An earlier version of this used
- * `DateTimeZone::listIdentifiers()` instead, on the reasoning that it matched
- * what the validator checked — but the validator was the thing that was
- * wrong. PHP's default list omits the backward-compatibility group, which is
- * 78 zones including `Etc/UTC`, and `Etc/UTC` is what a fresh Debian or
- * Ubuntu box is actually set to. The result was a settings form that showed
- * the server's real timezone, refused to accept it back, and could not be
- * saved at all without changing it.
+ * Read from `timedatectl list-timezones`, because the OS is what accepts or rejects the value in
+ * `timedatectl set-timezone`. Never use PHP's default `DateTimeZone::listIdentifiers()`: it omits
+ * the backward-compatibility group, including `Etc/UTC`, which a fresh Debian or Ubuntu box uses.
+ * Offsets and labels are still computed with PHP.
  *
- * Every zone the OS offers is one PHP can construct — verified, 497 of 497 —
- * so offsets and labels are still computed with PHP.
- *
- * Falls back to PHP's full list (including backward-compatible names) where
- * timedatectl is absent, such as a container without systemd.
+ * Falls back to PHP's full list (with backward-compatible names) where timedatectl is absent,
+ * such as a container without systemd.
  */
 class Timezones
 {
@@ -38,9 +29,8 @@ class Timezones
      */
     public function grouped(bool $phpOnly = false): array
     {
-        // PHP's date.timezone knows fewer names than the OS (FS-B8):
-        // `US/Eastern` is in `timedatectl list-timezones` and PHP refuses it.
-        // The PHP settings picker asks for the ones both know.
+        // PHP's date.timezone knows fewer names than the OS (`US/Eastern` is in timedatectl, PHP
+        // refuses it). The PHP settings picker asks for the ones both know.
         $identifiers = $phpOnly
             ? array_values(array_intersect($this->identifiers(), DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC)))
             : $this->identifiers();
@@ -63,8 +53,8 @@ class Timezones
     }
 
     /**
-     * The flat set of accepted values — what validation checks against, so
-     * that the picker and the validator cannot disagree.
+     * The flat set of accepted values, what validation checks against, so the picker and the
+     * validator cannot disagree.
      *
      * @return array<int, string>
      */
@@ -81,8 +71,7 @@ class Timezones
             ->values();
 
         if (! $result->ok || $zones->isEmpty()) {
-            // No systemd. ALL_WITH_BC rather than the default set, so the
-            // backward-compatible names the OS uses are still accepted.
+            // No systemd. ALL_WITH_BC keeps the backward-compatible names the OS uses.
             return DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC);
         }
 
@@ -102,30 +91,23 @@ class Timezones
         try {
             $zone = new DateTimeZone($identifier);
         } catch (Throwable) {
-            // A name the OS knows and PHP does not. None exist today; skipped
-            // rather than offered, because we could not show its offset and
-            // the picker would be lying about it.
+            // A name the OS knows and PHP does not: skipped, as its offset cannot be shown.
             return null;
         }
 
-        // The offset right now, so it is right across DST rather than frozen
-        // at whatever it was when someone last deployed. All of them cost
-        // under 10ms, which is cheaper than being wrong for the hour after a
-        // transition.
+        // The offset right now, so it stays right across DST.
         $minutes = intdiv($zone->getOffset(new DateTime('now', $zone)), 60);
 
         $parts = explode('/', $identifier);
 
         return [
-            // Single-segment identifiers (UTC) are their own region rather
-            // than being dropped or hidden under something invented.
+            // Single-segment identifiers (UTC) are their own region.
             'region' => $parts[0],
             'value' => $identifier,
             // The city, not the identifier: it is what people scan for.
             'label' => str_replace('_', ' ', end($parts)),
             'offset' => sprintf('%s%02d:%02d', $minutes < 0 ? '-' : '+', intdiv(abs($minutes), 60), abs($minutes) % 60),
-            // So the frontend can sort or filter by offset without parsing
-            // the string back out.
+            // So the frontend can sort or filter without parsing the string.
             'offset_minutes' => $minutes,
         ];
     }

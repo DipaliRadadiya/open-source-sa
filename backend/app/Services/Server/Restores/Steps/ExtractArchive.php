@@ -10,14 +10,8 @@ use App\Services\Server\ServerOps;
 use RuntimeException;
 
 /**
- * Unpacks the archive **beside** the live site, never over it.
- *
- * The obvious implementation — empty the site directory, untar into it — means
- * a failure halfway through leaves the customer with no site at all, and the
- * failure modes here (out of disk, corrupt member, killed worker) are exactly
- * the ones that strike halfway. Extracting to a sibling directory and swapping
- * later costs one rename and makes every failure before the swap invisible to
- * visitors.
+ * Unpacks the archive **beside** the live site, never over it, so a failure halfway (disk full,
+ * corrupt member, killed worker) never leaves the site empty; the swap happens later.
  */
 class ExtractArchive implements RestoreStep
 {
@@ -45,31 +39,20 @@ class ExtractArchive implements RestoreStep
             throw new RuntimeException('there is no archive to extract');
         }
 
-        // The directory *this archive* was made from, which is not always the
-        // one a backup taken today would use — see {@see BackupRoot}. It
-        // decides both the entry name expected inside the archive and where
-        // the staging directory sits, since staging is a sibling of the thing
-        // being replaced.
         if ($context->isDatabaseRestore()) {
             $this->extractDatabaseDump($context, $archive);
 
             return;
         }
 
+        // The directory *this archive* was made from, which may differ from today's (see
+        // {@see BackupRoot}). It sets the expected entry name and where staging sits.
         $siteRoot = $this->roots->forBackup($context->backup, $context->application);
         $staging = dirname($siteRoot).'/.restore-'.$context->restore->id;
 
-        // Both through ServerOps rather than File::, which is PHP's own
-        // mkdir()/rmdir() and therefore runs as the panel's queue worker. The
-        // staging directory sits *beside the live site*, inside a tree owned
-        // by that site's own Linux user, and the worker has no access there —
-        // it failed with a bare "mkdir(): Permission denied" that named
-        // neither the path nor the reason. Every other filesystem action in
-        // this class already goes through ServerOps; these two were the
-        // exception.
-        // The staging directory is created beside the live site, at the top of
-        // the site root — see SiteRootLock. Extracting into it afterwards
-        // changes only its own contents, so the flag goes back on first.
+        // Through ServerOps, not File::: the staging directory sits in a tree owned by the site's own
+        // Linux user, where the queue worker has no access. It is created at the top of the site
+        // root (see SiteRootLock); extracting into it later changes only its own contents.
         $created = $this->rootLock->unlocked($context->application, function () use ($staging, $context) {
             $this->serverOps->run(
                 ['rm', '-rf', $staging],
@@ -86,18 +69,14 @@ class ExtractArchive implements RestoreStep
             throw new RuntimeException('the staging directory could not be created');
         }
 
-        // Recorded only once it exists, so a failure above leaves the runner
-        // with nothing to clean up rather than a path that was never made.
+        // Recorded only once it exists, so a failure above leaves the runner nothing to clean up.
         $context->stagingDirectory = $staging;
 
         $command = ['tar', '-xzf', $archive, '-C', $staging];
 
-        // A restore needing the site's own directory — a hosted site's files, or
-        // a container site's compose and `.env`, which live in that same
-        // directory — takes the whole archive. Everything else unpacks only the
-        // members it will read: unpacking a multi-gigabyte site to get at a
-        // 40 MB SQL file beside it wastes the disk the restore itself needs, and
-        // the same goes for volume tars.
+        // A restore needing the site directory (hosted files, or a container site's compose and
+        // `.env`) takes the whole archive; anything else unpacks only the members it reads, to
+        // save the disk the restore itself needs.
         if (! $context->wantsFiles() && ! $context->wantsConfig()) {
             $command[] = '--wildcards';
             $command[] = 'db-*.sql';
@@ -111,8 +90,7 @@ class ExtractArchive implements RestoreStep
         $result = $this->serverOps->run(
             $command,
             ['feature' => 'backup', 'op' => 'restore_extract', 'application' => $context->application->id],
-            // Same reason as ArchiveFiles: extraction scales with the archive,
-            // so a fixed hour fails exactly the large restores that need it.
+            // Extraction scales with the archive (as in ArchiveFiles), so the timeout is generous.
             timeout: (int) config('server.backups.job_timeout', 21600),
         );
 
@@ -121,9 +99,8 @@ class ExtractArchive implements RestoreStep
         }
 
         if (($context->wantsFiles() || $context->wantsConfig()) && ! is_dir($staging.'/'.basename($siteRoot))) {
-            // The archive holds the site under its directory name. If that is
-            // missing, this artefact is not what we think it is — better to
-            // stop than to swap an empty directory over a working site.
+            // The archive holds the site under its directory name; without it, stop rather than
+            // swap an empty directory over a working site.
             throw new RuntimeException(
                 'the archive does not contain the site directory '.basename($siteRoot),
             );
@@ -131,9 +108,7 @@ class ExtractArchive implements RestoreStep
     }
 
     /**
-     * A database on its own: only its dump, unpacked inside the panel's own
-     * working directory. There is no site directory to sit beside, and none of
-     * a site's files are in the archive to begin with.
+     * A database on its own: only its dump, unpacked in the panel's working directory.
      */
     private function extractDatabaseDump(RestoreContext $context, string $archive): void
     {
@@ -160,8 +135,6 @@ class ExtractArchive implements RestoreStep
 
     public function cleanup(RestoreContext $context, bool $failed): void
     {
-        // The runner removes the staging directory either way: on success its
-        // contents have been renamed into place, on failure it is a partial
-        // copy nobody wants sitting next to a live site.
+        // The runner removes the staging directory either way.
     }
 }
