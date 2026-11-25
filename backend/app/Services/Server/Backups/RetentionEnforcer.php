@@ -12,17 +12,11 @@ use Throwable;
 /**
  * Bring a target down to its retention count now, rather than at the next run.
  *
- * {@see Steps\PruneOldBackups} enforces retention as the last step of a backup,
- * which is the right moment for the common case — but it means lowering
- * retention from ten to three deletes nothing until another backup happens. The
- * user changed a setting, was told it saved, and ten copies stayed where they
- * were. That is the panel reporting a state the server is not in, which is the
- * one thing this codebase tries hardest not to do.
+ * {@see Steps\PruneOldBackups} only enforces retention after a backup, so lowering the
+ * count would otherwise delete nothing until the next one.
  *
- * The rules are the prune step's, deliberately: only *verified* backups count
- * towards retention, because a failed run is not one of your three copies; and
- * safety backups are never counted or deleted, because a safety backup is the
- * only way back from a restore that turned out to be wrong.
+ * Same rules as the prune step: only *verified* backups count toward retention, and
+ * safety backups are never counted or deleted (they are the way back from a bad restore).
  */
 class RetentionEnforcer
 {
@@ -36,8 +30,7 @@ class RetentionEnforcer
         $keep = (int) $target->retention_count;
 
         if ($keep <= 0) {
-            // Zero means keep everything. Treating it as "delete everything"
-            // would be an unrecoverable reading of an ambiguous number.
+            // Zero means keep everything; reading it as "delete everything" is unrecoverable.
             return 0;
         }
 
@@ -57,11 +50,8 @@ class RetentionEnforcer
                 $this->deleteBackup->execute($backup);
                 $deleted++;
             } catch (Throwable $e) {
-                // Unlike a user pressing delete, nobody is waiting on this one:
-                // it is a side effect of saving a setting. An archive that will
-                // not delete must not turn a successful settings save into an
-                // error, so it is logged and the row stays — visible, and
-                // retried next time retention runs.
+                // A side effect of saving a setting: a failed delete must not fail the save.
+                // Logged; the row stays and is retried next time retention runs.
                 Log::channel('server-ops')->warning('retention could not delete a backup', [
                     'feature' => 'backup',
                     'backup' => $backup->id,

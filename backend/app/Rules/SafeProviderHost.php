@@ -9,23 +9,17 @@ use Illuminate\Contracts\Validation\ValidationRule;
 /**
  * A self-hosted GitLab base URL the panel is allowed to call.
  *
- * This is the git feature's only SSRF surface (the other providers are pinned
- * to fixed hosts), so the URL must be https and must not point at the loopback
- * interface or the cloud metadata range — the two targets that turn an
- * outbound fetch into a local-privilege problem.
+ * This is the git feature's only SSRF surface (the other providers use fixed hosts), so the
+ * URL must be https and must not point at loopback or the cloud metadata range.
  *
- * Private LAN ranges are deliberately allowed: a self-hosted GitLab on the
- * same network is a normal deployment for this panel, and blocking it would
- * break a legitimate setup to defend against an actor who already holds the
- * `git` manage permission.
+ * Private LAN ranges are deliberately allowed: a GitLab on the same network is a normal
+ * deployment, and the caller already holds the `git` manage permission.
  */
 class SafeProviderHost implements ValidationRule
 {
     /**
-     * The rule is shared between features, so the message keys are
-     * injectable. A storage endpoint that fails this rule must not tell the
-     * user to "enter a valid URL for the self-hosted instance" — that is
-     * git's wording, and it is meaningless on a bucket form.
+     * The rule is shared between features, so the message keys are injectable (git's
+     * wording makes no sense on a storage bucket form).
      */
     public function __construct(
         private string $invalidKey = 'errors/git.invalid_host',
@@ -54,20 +48,15 @@ class SafeProviderHost implements ValidationRule
 
         $host = RemoteHost::canonical($parts['host']);
 
-        // A host that cannot be interpreted the same way the HTTP client will
-        // is one no decision can be made about, so it is refused as malformed
-        // rather than range-checked. This used to range-check *only* hosts
-        // that `filter_var` accepted as a dotted quad, which let every other
-        // spelling of an address through untouched — `https://0177.0.0.1` and
-        // `https://0251.0376.0251.0376` (octal for the cloud metadata
-        // address) among them. See `RemoteHost`.
+        // A host the HTTP client may read differently (octal `https://0177.0.0.1`, ...) cannot
+        // be range-checked, so refuse it as malformed. See `RemoteHost`.
         if (RemoteHost::isUninterpretable($host)) {
             $fail($this->invalidKey)->translate();
 
             return;
         }
 
-        // What it resolves to as well as what was typed (bug #34).
+        // Check what it resolves to as well as what was typed.
         if (RemoteHost::resolvesToBlocked($host)) {
             $fail($this->blockedKey)->translate();
         }

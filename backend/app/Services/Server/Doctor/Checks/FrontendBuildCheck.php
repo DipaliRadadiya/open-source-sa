@@ -9,16 +9,10 @@ use Illuminate\Support\Facades\File;
 /**
  * Did the interface actually build, and is what it serves current?
  *
- * The services check proves the frontend unit is *running*. A Next server runs
- * perfectly happily on a build from last week — so a build that failed leaves
- * the panel up, serving stale code, with every check green. That is exactly
- * how a diagnostic file with a Node import in an Edge-runtime hook shipped to
- * users: the build broke, nothing said so, and the panel looked fine.
- *
- * Two questions, because they have different answers:
+ * The services check only proves the frontend unit is *running*; Next keeps serving an
+ * old build after a failed one, with every other check green. Two cases:
  *  - no build at all → the panel cannot serve its interface
- *  - a build older than the code → it is serving something other than what
- *    is on disk, which is the confusing one to debug
+ *  - a build older than the code → it serves something other than what is on disk
  */
 class FrontendBuildCheck implements DoctorCheck
 {
@@ -37,9 +31,7 @@ class FrontendBuildCheck implements DoctorCheck
         $frontend = $this->installed->repositoryPath().'/frontend';
 
         if (! is_dir($frontend)) {
-            // A backend-only deployment is a legitimate arrangement; saying
-            // the panel is broken because a directory it does not use is
-            // absent would be wrong.
+            // A backend-only deployment is legitimate, not a failure.
             return ['status' => 'pass', 'detail' => __('doctor.details.frontend_none'), 'fix' => null];
         }
 
@@ -77,9 +69,8 @@ class FrontendBuildCheck implements DoctorCheck
     /**
      * Newest mtime across the source that the build is made from.
      *
-     * node_modules is excluded deliberately — npm rewrites it on every
-     * install, so including it would report a stale build for a panel that
-     * had just been rebuilt.
+     * node_modules is excluded: npm rewrites it on every install, which would flag a
+     * freshly rebuilt panel as stale.
      */
     private function newestSourceTime(string $frontend): int
     {

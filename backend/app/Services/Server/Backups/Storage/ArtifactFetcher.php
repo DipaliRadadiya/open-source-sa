@@ -11,12 +11,10 @@ use RuntimeException;
  * Copies one archive off a storage destination onto a local path.
  *
  * Shared by a restore ({@see DownloadArtifact}) and a prepared download
- * ({@see FetchBackupForDownload}), which need exactly the same thing and
- * learnt the same lesson getting it.
+ * ({@see FetchBackupForDownload}).
  *
- * Streamed to disk rather than read into memory: a site archive is routinely
- * larger than the whole PHP memory limit, and `$disk->get()` would kill the
- * worker on exactly the large sites that matter.
+ * Streamed to disk, never read into memory: an archive is often larger than the PHP memory
+ * limit, and `$disk->get()` would kill the worker.
  */
 class ArtifactFetcher
 {
@@ -32,19 +30,11 @@ class ArtifactFetcher
      */
     public function fetch(StorageDestination $destination, string $key, string $path): void
     {
-        // Ask the driver for a direct download first.
-        //
-        // `readStream()` is not always a stream: the FTP adapter implements it
-        // as `fopen('php://temp')` + `ftp_fget`, so the whole archive is
-        // buffered before a byte reaches us — and that buffer spills into the
-        // system temp directory, usually a tmpfs of a couple of gigabytes. A
-        // 24 GB restore therefore failed with "Unable to read file" while the
-        // transfer itself was healthy.
-        //
-        // The local path is deliberately not on /tmp for exactly this reason
-        // (`server.backups.working_dir`), so a driver able to write there
-        // directly should. Drivers whose `readStream()` genuinely streams
-        // return false and fall through to the copy below.
+        // Ask the driver for a direct download first: `readStream()` is not always a stream
+        // (the FTP adapter buffers the whole archive in `php://temp`, which spills into a small
+        // tmpfs and fails large restores). The local path is not on /tmp for that reason
+        // (`server.backups.working_dir`). Drivers that really stream return false and fall
+        // through to the copy below.
         if ($this->drivers->for($destination)->downloadTo($destination, $key, $path)) {
             return;
         }

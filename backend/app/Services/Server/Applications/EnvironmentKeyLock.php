@@ -7,16 +7,14 @@ use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 
 /**
- * Keeps the Environment editor from changing an application's encryption key
- * (bug #17), or a key the panel itself relies on (bug #7).
+ * Keeps the Environment editor from changing an application's encryption key, or a key the
+ * panel itself relies on.
  *
- * Saving n8n's `.env` with a different `N8N_ENCRYPTION_KEY` was accepted, and
- * every credential stored in n8n became permanently unreadable — with no error
- * until a workflow next ran. Which keys are locked is the site type's to say
+ * A different `N8N_ENCRYPTION_KEY` makes every stored n8n credential permanently unreadable,
+ * with no error until a workflow next runs. The site type decides which keys are locked
  * ({@see SiteType::lockedEnvironmentKeys()}).
  *
- * A key is locked only once it holds a value: a file that has none yet has
- * nothing to lose, and adding one is how it gets one.
+ * A key is locked only once it holds a value, so a file without one can still add it.
  */
 class EnvironmentKeyLock
 {
@@ -46,8 +44,7 @@ class EnvironmentKeyLock
     }
 
     /**
-     * Why `$key` cannot change, for the editor (`$backup` false) or for
-     * restoring one of its backups.
+     * Why `$key` cannot change, for the editor (`$backup` false) or a backup restore.
      */
     public function message(Application $application, string $key, bool $backup = false): string
     {
@@ -79,8 +76,8 @@ class EnvironmentKeyLock
     }
 
     /**
-     * The distinct non-empty values a key is given, so a duplicated line is
-     * not a change but a second, different value is.
+     * The distinct non-empty values a key is given: a duplicated line is not a change, a second
+     * different value is.
      *
      * @return array<int, string>
      */

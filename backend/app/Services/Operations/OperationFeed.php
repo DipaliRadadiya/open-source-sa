@@ -22,18 +22,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * Every long job the panel runs, in one list (RC-20, 2026-10-20).
+ * Every long job the panel runs, in one list.
  *
- * Backups, restores, clones, staging runs, deployments, installs, imports,
- * exports, syncs, security updates and panel updates each live in their own
- * table and showed progress only on the screen that started them. They already
- * share a shape — status, reference, start, end — so this is a read over them,
- * not a new tracking system.
+ * Backups, restores, clones, staging runs, deployments, installs, imports, exports, syncs,
+ * security updates and panel updates live in their own tables and share a shape (status,
+ * reference, start, end), so this is a read over them, not a new tracking system.
  *
- * "Done" is spelled six ways across their enums, so each row carries a
- * normalised `state` (`waiting` | `running` | `done` | `failed`) beside the
- * kind's own `status` word. Only the kinds the user's role can already see are
- * included: the list must not name sites or databases a role cannot open.
+ * "Done" is spelled six ways across their enums, so each row carries a normalised `state`
+ * (`waiting` | `running` | `done` | `failed`) beside the kind's own `status`. Only the kinds
+ * the user's role can already see are included: the list must not name sites or databases a
+ * role cannot open.
  */
 class OperationFeed
 {
@@ -70,7 +68,7 @@ class OperationFeed
                 $rows = $query
                     ->where(fn (Builder $query) => $activeOnly
                         ? $query->whereIn('status', $active)
-                            // RC-36: and what ended since the caller last looked.
+                            // And what ended since the caller last looked.
                             ->when($finishedAfter !== null, fn (Builder $query) => $query->orWhere('finished_at', '>', $finishedAfter))
                         : $query->whereIn('status', $active)->orWhere('created_at', '>=', $since))
                     ->latest('id')
@@ -91,9 +89,8 @@ class OperationFeed
         $status = $row->status instanceof BackedEnum ? $row->status->value : (string) $row->status;
         $state = self::STATE[$status] ?? 'running';
 
-        // A staging run whose worker died reports itself failed (RC-16).
-        // So does a container redeploy's (D5); an install's is closed with
-        // its site by StrandedProvisioning.
+        // A staging run or container redeploy whose worker died reports itself failed; an
+        // install's is closed with its site by StrandedProvisioning.
         if (($row instanceof StagingRun || $row instanceof ApplicationRun) && $row->isStranded()) {
             $state = 'failed';
         }
@@ -141,9 +138,8 @@ class OperationFeed
                 'subject' => fn (SiteClone $c) => self::application($c->sourceApplication)],
             ['kind' => 'staging', 'model' => StagingRun::class, 'permission' => 'app_staging', 'step' => 'kind', 'with' => ['application:id,name'],
                 'subject' => fn (StagingRun $s) => self::application($s->application)],
-            // D3 (2026-11-04): an install of any site type — create and Retry
-            // setup both run ProvisionApplication — and a container Pull and
-            // redeploy. One table, read twice, like `runtime_install`.
+            // An install of any site type (create and Retry setup both run ProvisionApplication)
+            // and a container Pull and redeploy. One table, read twice, like `runtime_install`.
             ['kind' => 'application_install', 'model' => ApplicationRun::class, 'permission' => 'application', 'step' => 'failed_step', 'with' => ['application:id,name'],
                 'scope' => fn (Builder $q) => $q->where('kind', ApplicationRun::INSTALL),
                 'subject' => fn (ApplicationRun $r) => self::application($r->application)],

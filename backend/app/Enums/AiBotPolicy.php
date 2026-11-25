@@ -3,15 +3,11 @@
 namespace App\Enums;
 
 /**
- * Four choices, not a switch — a blunt on/off would block AI search crawlers
- * (ChatGPT search, Perplexity, …) exactly as hard as the training scrapers
- * that never send a visitor back, silently costing the site owner traffic
- * they wanted to keep.
+ * Four choices, not a switch: a plain on/off would block AI search crawlers (ChatGPT search,
+ * Perplexity, …) as hard as training scrapers, costing the site owner traffic.
  *
- * The middle two are the interesting ones, and they exist because "AI bot" is
- * three things: a training scraper, a search crawler that earns citations,
- * and a live assistant fetching one page for one person. See
- * `config/ai_bots.php` for which bot goes in which bucket.
+ * "AI bot" is three things: a training scraper, a search crawler that earns citations, and a
+ * live assistant fetching one page for one person. See `config/ai_bots.php` for the buckets.
  */
 enum AiBotPolicy: string
 {
@@ -22,8 +18,7 @@ enum AiBotPolicy: string
     case BlockTraining = 'block_training';
 
     /**
-     * Training scrapers and live AI assistants, but not the search crawlers
-     * — the site stops serving one-off assistant fetches while staying
+     * Training scrapers and live AI assistants, but not the search crawlers, so the site stays
      * citable in AI search results.
      */
     case BlockAgents = 'block_agents';
@@ -45,10 +40,8 @@ enum AiBotPolicy: string
     }
 
     /**
-     * The bot names this policy actually blocks, resolved from
-     * `config/ai_bots.php` — one source of truth, so the vhost template, the
-     * API response and the frontend's transparency panel can never drift
-     * apart from each other.
+     * The bot names this policy actually blocks, resolved from `config/ai_bots.php`: one source
+     * for the vhost template, the API response and the frontend's transparency panel.
      *
      * @return array<int, string>
      */

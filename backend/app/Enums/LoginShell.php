@@ -5,12 +5,8 @@ namespace App\Enums;
 /**
  * The login shells a system user may be given.
  *
- * These are paths to binaries, and the panel used to show them as exactly
- * that — a dropdown reading `/usr/sbin/nologin` tells someone who has never
- * administered a Linux box nothing about what they are choosing, and the two
- * entries that *deny* login look no different from the three that grant it.
- * The value stays the path (it is what `usermod -s` takes); the label is what
- * the panel shows.
+ * The value is the binary path (what `usermod -s` takes); the label is what the panel shows, so
+ * the two entries that *deny* login are not indistinguishable from the three that grant it.
  */
 enum LoginShell: string
 {
@@ -23,8 +19,7 @@ enum LoginShell: string
     /**
      * Whether this shell lets the account actually start a session.
      *
-     * The pair that does not is the whole reason the label matters: a site's
-     * files still need an owner, but that owner has no business logging in.
+     * The pair that does not: a site's files need an owner who has no business logging in.
      */
     public function allowsLogin(): bool
     {
@@ -57,8 +52,7 @@ enum LoginShell: string
     }
 
     /**
-     * The picker's contents, login-capable first, so the safe-but-limited
-     * options are not what someone lands on by accident.
+     * The picker's contents, login-capable first, so the limited options are not a default.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -79,9 +73,8 @@ enum LoginShell: string
     }
 
     /**
-     * Label for a stored value, tolerating one that is no longer offered — a
-     * user adopted from an existing server can carry any shell at all, and a
-     * blank label would read as "no shell" when it means "not one of ours".
+     * Label for a stored value, tolerating one no longer offered: an adopted user can carry any
+     * shell, and a blank label would read as "no shell".
      */
     public static function titleFor(?string $path): ?string
     {

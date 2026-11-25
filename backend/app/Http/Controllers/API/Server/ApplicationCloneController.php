@@ -18,9 +18,7 @@ class ApplicationCloneController extends Controller
     /**
      * Every clone across every application, newest first.
      *
-     * For resuming a clone from a different browser session than the one that
-     * started it — the poll endpoint only works for the session that knows the
-     * clone id.
+     * Lets another browser session resume a clone; polling needs the clone id.
      */
     public function index(): JsonResponse
     {
@@ -42,18 +40,13 @@ class ApplicationCloneController extends Controller
     /**
      * Start a clone.
      *
-     * 202 with the Clone record immediately — the actual cloning runs on the
-     * queue so the HTTP request cannot time out while files are still being
-     * rsynced across. Polling GET /api/clones/{id} shows progress via named
-     * steps.
+     * Returns 202 at once; the cloning runs on the queue so the request cannot time out
+     * during the rsync. Poll GET /api/clones/{id} for progress.
      */
     public function store(CreateCloneRequest $request, Application $application): JsonResponse
     {
-        // One clone of a site at a time. RunClone is unique per source, so a
-        // second one was accepted with 202 and its job silently dropped: the
-        // row sat at `pending` forever (CL-B1). A pending row whose job never
-        // started is released first, so an old stuck one cannot block a site
-        // for good.
+        // One clone per site at a time: RunClone is unique per source, so a second job
+        // would be dropped silently. Stale pending rows are released first.
         SiteClone::query()
             ->where('source_application_id', $application->id)
             ->where('status', CloneStatus::Pending)
@@ -69,7 +62,7 @@ class ApplicationCloneController extends Controller
             __('clone.errors.already_running'),
         );
 
-        // Room for a copy of the site and its databases first (2026-10-29).
+        // Room for a copy of the site and its databases first.
         $sizes = app(SizeEstimate::class);
         app(DiskSpaceCheck::class)->require(
             (int) $sizes->sum($sizes->files($application), $sizes->databases($application)),
@@ -95,10 +88,7 @@ class ApplicationCloneController extends Controller
     /** Poll a clone while it runs. */
     public function show(SiteClone $clone): JsonResponse
     {
-        // Loaded so the resource can report the copy's own deploy-on-push URL
-        // once there is a copy. This is the endpoint the result screen polls,
-        // and `whenLoaded` emits nothing without it — the field would be
-        // permanently absent rather than occasionally null.
+        // Loaded so the resource can report the copy's deploy-on-push URL (`whenLoaded`).
         return response()->json([
             'clone' => CloneResource::make($clone->load('targetApplication'))->resolve(),
         ]);

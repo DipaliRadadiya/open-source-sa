@@ -60,13 +60,11 @@ class CommandRedactor
     }
 
     /**
-     * Passwords inside database statements, which an engine repeats in its
-     * own error message (bug #22): a failed `CREATE USER` put `IDENTIFIED BY
-     * '<password>'` into the server log and onto Admin → Error logs.
+     * Passwords inside database statements, which an engine repeats in its own error message
+     * (a failed `CREATE USER` would otherwise log `IDENTIFIED BY '<password>'`).
      *
-     * The quote counts are loose on purpose: MySQL quotes the statement it
-     * complains about (`near 'IDENTIFIED BY 'x''`), PostgreSQL doubles quotes
-     * inside a literal, and MongoDB is JavaScript.
+     * The quote counts are loose on purpose: MySQL quotes the statement it complains about
+     * (`near 'IDENTIFIED BY 'x''`), PostgreSQL doubles quotes inside a literal, MongoDB is JS.
      */
     public static function statements(string $value): string
     {
@@ -79,11 +77,9 @@ class CommandRedactor
             "/(\bPASSWORD\s*(?:=\s*|\(\s*)?E?)'(?:[^'\\\\]|\\\\.|'')*'/i" => "$1'[REDACTED]'",
             // SET PASSWORD [FOR account] = 'x' | PASSWORD('x').
             "/(\bSET\s+PASSWORD\b[^=;]*=\s*(?:PASSWORD\s*\(\s*)?)'(?:[^'\\\\]|\\\\.|'')*'/i" => "$1'[REDACTED]'",
-            // MySQL/MariaDB quote the statement from the token they choked on:
-            // `near 'BY 'secret'' at line 1`, or `near 'secret'' …` when that
-            // token is the password itself, so no keyword is left to anchor
-            // on. The whole snippet goes (found live on MariaDB 11.8); the
-            // error code and message before it stay.
+            // MySQL/MariaDB quote the statement from the token they choked on (`near 'BY
+            // 'secret'' at line 1`), possibly the password itself with no keyword to anchor
+            // on. The whole snippet goes; the error code and message before it stay.
             "/(\bnear\s+)'.*?'(?=\s+at\s+line\s+\d+)/s" => "$1'[REDACTED]'",
             // MongoDB: pwd: "x", 'pwd': 'x', "pwd":"x".
             '/((?:\bpwd|["\']pwd["\'])\s*:\s*)(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')/i' => '$1"[REDACTED]"',

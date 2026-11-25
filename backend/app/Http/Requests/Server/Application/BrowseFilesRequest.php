@@ -6,9 +6,8 @@ use App\Rules\SafeRelativePath;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Shared by list, view and download — all three only ever read, and all
- * three take the same one input: a path relative to the site's document
- * root.
+ * Shared by list, view and download: all only read, and all take one path relative to the
+ * site's document root.
  */
 class BrowseFilesRequest extends FormRequest
 {
@@ -23,16 +22,11 @@ class BrowseFilesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Nullable: `?path=` arrives as null (ConvertEmptyStringsToNull),
-            // and the documented meaning of an empty path is the site root.
-            // It was a 422 "must be a string" instead.
+            // Nullable: `?path=` arrives as null (ConvertEmptyStringsToNull) and means the site root.
             'path' => ['sometimes', 'nullable', 'string', 'max:1024', new SafeRelativePath],
-            // Only the listing reads this; view and download share this request
-            // and ignore it, which is cheaper than a fourth request class for
-            // one optional flag.
+            // Only the listing reads this; view and download share the request and ignore it.
             'hidden' => ['sometimes', 'in:0,1'],
-            // Folder sizes only: measure now instead of answering from the
-            // five-minute memory.
+            // Folder sizes only: measure now instead of using the five-minute cache.
             'refresh' => ['sometimes', 'in:0,1'],
         ];
     }
@@ -40,10 +34,8 @@ class BrowseFilesRequest extends FormRequest
     /**
      * Whether dotfiles belong in the listing.
      *
-     * Defaults to true, which is what this screen has always done: the browser
-     * has never filtered them. A new option must not change what an existing
-     * user sees until they ask it to, and defaulting the other way would make
-     * `.env` disappear for everyone who has used the file manager before.
+     * Defaults to true: the file manager has always shown dotfiles, and hiding `.env` by
+     * default would change what existing users see.
      */
     public function includeHidden(): bool
     {
@@ -51,8 +43,7 @@ class BrowseFilesRequest extends FormRequest
     }
 
     /**
-     * Not named `path()` — that method already exists on the base Request
-     * and returns the request's URI path, not this input.
+     * Not named `path()`: the base Request already has one, returning the URI path.
      */
     public function refresh(): bool
     {

@@ -12,10 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * One install, or one container Pull and redeploy, of an application (D3/D5).
+ * One install, or one container Pull and redeploy, of an application.
  *
- * The record Background jobs reads and the app screen polls; written by
- * {@see ApplicationRuns}.
+ * Read by Background jobs and polled by the app screen; written by {@see ApplicationRuns}.
  *
  * @property Carbon|null $started_at
  * @property Carbon|null $finished_at
@@ -57,10 +56,9 @@ class ApplicationRun extends Model
     /**
      * Queued or running, and young enough that its job can still be alive.
      *
-     * Only container redeploys can strand here: an install is closed by
-     * `StrandedProvisioning` with its site. A redeploy whose worker was killed
-     * outright never reaches `failed()`, and a row left `running` would refuse
-     * every later redeploy, restart and settings save of the site for good.
+     * Only container redeploys can strand here (an install is closed by `StrandedProvisioning`).
+     * A redeploy whose worker was killed never reaches `failed()`, and a row left `running`
+     * would refuse every later redeploy, restart and settings save of the site.
      *
      * @param  Builder<ApplicationRun>  $query
      */
@@ -85,10 +83,8 @@ class ApplicationRun extends Model
     /**
      * In flight on paper, but past the point any job can still be working on it.
      *
-     * A running redeploy: past its own budget plus the unique-lock grace, by
-     * when the worker has killed it. A queued one waits behind whatever the
-     * single worker is doing — at worst the longest install there is — so it
-     * gets that on top before it counts as lost.
+     * Running: past its own budget plus the unique-lock grace. Queued: it waits behind the single
+     * worker, at worst the longest install, so it gets that on top before it counts as lost.
      */
     public function isStranded(): bool
     {

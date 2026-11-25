@@ -11,13 +11,8 @@ use Illuminate\Validation\Rule;
 /**
  * Search, filter, sort and paging for the backup coverage list.
  *
- * This list is one row per application, so it grows with the number of sites on
- * the server rather than with anything the user does here.
- *
- * `filter[protected]` is the reason this screen exists — it answers "which of
- * my sites are not being backed up", which was previously only reachable by
- * reading every row. By name ascending, because the row is identified by the
- * site's name and somebody is looking for one they can already name.
+ * One row per application, so it grows with the number of sites on the server.
+ * `filter[protected]` answers "which of my sites are not being backed up".
  */
 class IndexBackupTargetsRequest extends FormRequest
 {
@@ -31,7 +26,7 @@ class IndexBackupTargetsRequest extends FormRequest
      */
     public const SORTS = ['state', 'name', 'domain', 'created_at'];
 
-    /** `kind=database` (RC-23): databases have no domain, and do have an engine. */
+    /** `kind=database`: databases have no domain, and do have an engine. */
     public const DATABASE_SORTS = ['state', 'name', 'engine', 'created_at'];
 
     public function authorize(): bool
@@ -85,9 +80,8 @@ class IndexBackupTargetsRequest extends FormRequest
             'filter.type' => ['sometimes', 'array', 'min:1'],
             'filter.type.*' => ['string', Rule::enum(BackupType::class)],
 
-            // RC-23: `database` lists the databases that are not part of a
-            // site — only those can have a schedule of their own — instead of
-            // the applications. Absent means `application`, as before.
+            // `database` lists the databases that are not part of a site (only those can have a
+            // schedule of their own) instead of the applications. Absent means `application`.
             'kind' => ['sometimes', Rule::in(['application', 'database'])],
 
             'sort' => ListSort::rule($this->input('kind') === 'database' ? self::DATABASE_SORTS : self::SORTS),

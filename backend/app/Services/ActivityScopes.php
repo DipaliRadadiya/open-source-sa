@@ -5,9 +5,8 @@ namespace App\Services;
 /**
  * Maps an activity `type` to the half of the panel it describes.
  *
- * The map is config, not a match expression, so a new feature type declares
- * its scope in one obvious place. The alternative fails silently: a type that
- * belongs to no scope is filtered out of both screens and nothing complains.
+ * The map is config so a new feature type declares its scope in one place; a type that belongs to
+ * no scope is filtered out of both screens silently.
  */
 class ActivityScopes
 {
@@ -30,8 +29,7 @@ class ActivityScopes
     }
 
     /**
-     * The scope a type belongs to, or null for a type nobody has classified —
-     * which the resource reports honestly rather than guessing at.
+     * The scope a type belongs to, or null for a type nobody has classified.
      */
     public function for(string $type): ?string
     {
@@ -45,9 +43,8 @@ class ActivityScopes
     }
 
     /**
-     * Scopes with their translated labels, in the viewer's locale — the same
-     * reason sidebar headers come from the API: the frontend should not be
-     * carrying a second copy of these names in eight languages.
+     * Scopes with their translated labels, in the viewer's locale (so the frontend carries no
+     * second copy of the names).
      *
      * @param  array<int, string>|null  $only  Limit to these scopes.
      * @return array<int, array{value: string, label: string}>

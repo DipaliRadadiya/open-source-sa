@@ -5,26 +5,16 @@ namespace App\Services\Panel;
 /**
  * The shell that stops an "update" from moving the panel backwards.
  *
- * 🔴 It used to ask the opposite question — "is the release already contained
- * in what is running?" (`merge-base --is-ancestor <tag> <current>`) — and go
- * ahead on anything but yes. On a shallow clone git cannot see far enough
- * back to answer yes, and install.sh clones with `--depth 1`, so every server
- * it installed answered no: on the Apache test box (2026-09-28), running main
- * 238 commits past v1.0.17, the update checked out v1.0.17 over it and
- * reported success. A guard that fails open is only a guard on the machine
- * it was written on.
- *
- * Now it fails closed:
- * - a shallow repository fetches its full history first (~20 MB for this
- *   project), so ancestry is a question git can answer;
+ * It fails closed: on a shallow clone (install.sh uses `--depth 1`) git cannot answer
+ * ancestry questions, so a guard that proceeds unless told "already contained" lets an update
+ * install an older release over a newer checkout.
+ * - a shallow repository fetches its full history first (~20 MB);
  * - the tag is fetched without `--depth`, which would make it shallow again;
- * - the update goes ahead only when the running commit is an ancestor of the
- *   release and is not the release itself — a real move forward. Behind,
- *   equal, or on a history that has diverged: refused.
+ * - the update goes ahead only when the running commit is an ancestor of the release and is
+ *   not the release itself. Behind, equal, or diverged: refused.
  *
- * The fetches run for real even in a dry run. They add objects and refs and
- * never touch the checked-out files, and without them a dry run could not
- * tell whether the release is newer at all.
+ * The fetches run for real even in a dry run: they add objects and refs, never touch the
+ * checked-out files, and a dry run cannot tell whether the release is newer without them.
  */
 final class ForwardOnlyGuard
 {

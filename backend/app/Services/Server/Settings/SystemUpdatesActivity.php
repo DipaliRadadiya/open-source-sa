@@ -7,23 +7,17 @@ use Illuminate\Support\Facades\Process;
 /**
  * Is Ubuntu installing its own updates right now?
  *
- * On a server that booted minutes ago the answer is usually yes: the installer
- * says "done" as soon as the panel works, while unattended-upgrades may still
- * be busy for a few minutes. Anything the panel installs with apt meanwhile
- * waits for it (ServerOps::apt), so the setup page says so rather than look
- * stuck.
+ * Right after boot it usually is, and apt installs by the panel wait for it (ServerOps::apt),
+ * so the setup page says so rather than look stuck.
  *
- * Read-only and without sudo, two ways, either of which counts:
+ * Read-only and without sudo; either check counts:
  *
- *  - `systemctl show` on the two units Ubuntu runs its updates in. A oneshot
- *    unit is `activating` for as long as it runs. Any account may ask.
- *  - a process running `unattended-upgrade` itself, for a run started some
- *    other way. /proc/<pid>/cmdline is world-readable. Only that exact name:
- *    `unattended-upgrade-shutdown` stays alive on an idle server, which is the
- *    false "busy" install.sh's apt_lock_is_held warns about.
+ *  - `systemctl show` on the two units Ubuntu runs its updates in (a oneshot unit is
+ *    `activating` while it runs).
+ *  - a process running `unattended-upgrade` itself. Only that exact name:
+ *    `unattended-upgrade-shutdown` stays alive on an idle server (false "busy").
  *
- * Never the dpkg lock: its files are root's, and probing them would need a new
- * sudo grant for a hint on a screen.
+ * Never probe the dpkg lock: its files are root's and it would need a new sudo grant.
  */
 class SystemUpdatesActivity
 {

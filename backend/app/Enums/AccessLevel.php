@@ -5,11 +5,9 @@ namespace App\Enums;
 /**
  * How much of one permission a role is granted.
  *
- * The `permission_role` pivot stores two booleans, but only three of their
- * four combinations are reachable: `PermissionResolver` sets `view` whenever
- * `manage` is set, so "write without read" cannot be saved. This enum is that
- * truth written down, so the role form can offer one three-way choice instead
- * of two checkboxes whose fourth combination silently rewrites itself.
+ * The `permission_role` pivot stores two booleans, but only three of their four combinations
+ * are reachable: `PermissionResolver` sets `view` whenever `manage` is set. This enum gives the
+ * role form one three-way choice instead of two checkboxes.
  */
 enum AccessLevel: string
 {
@@ -20,10 +18,8 @@ enum AccessLevel: string
     /**
      * Collapse a stored pair back into the level it represents.
      *
-     * `manage` is checked first on purpose: a legacy row written before the
-     * resolver enforced the rule could hold manage=true with view=false, and
-     * that row grants management — reporting it as "no access" would show the
-     * admin something weaker than what the user can actually do.
+     * `manage` is checked first on purpose: a legacy row can hold manage=true with view=false,
+     * and it grants management, so it must not be shown as "no access".
      */
     public static function fromGrant(bool $view, bool $manage): self
     {
@@ -58,8 +54,8 @@ enum AccessLevel: string
     }
 
     /**
-     * The three options a role form renders, weakest first — so the frontend
-     * never hardcodes the labels or the order.
+     * The three options a role form renders, weakest first, so the frontend hardcodes neither
+     * labels nor order.
      *
      * @return array<int, array<string, string>>
      */

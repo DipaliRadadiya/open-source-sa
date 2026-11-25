@@ -12,23 +12,14 @@ use RuntimeException;
 /**
  * Starts the application again.
  *
- * PHP sites need nothing — the web server picks up the new files on the next
- * request. Anything systemd supervises was stopped before the swap and is owed
- * a start, and failing to give it one leaves a site that is "restored" and
- * completely down.
+ * PHP sites need nothing: the web server picks up the new files on the next request. Anything
+ * systemd supervises was stopped before the swap and must be started, or the site stays down.
  *
- * **Container sites are the same owing, through a different supervisor.**
- * `ProcessSupervisor` knows about systemd units, and a container site has none,
- * so gating only on `runs()` skipped this step entirely for them: the restore
- * stopped the containers, replaced the volume contents, swapped the compose
- * file in, and left the site returning 502. Measured on the Docker test box —
- * `docker ps` empty, the site 502, the restore recorded as succeeded. Exactly
- * the sentence above, for the one site type it did not cover.
+ * Container sites need the same start through a different supervisor: `ProcessSupervisor` only
+ * knows systemd units, so gating on `runs()` alone would skip them.
  *
- * Starting happens here rather than in `RestoreVolumes` on purpose: this step
- * runs after `SwapFiles`, so the containers come up on the *restored* compose
- * file. Starting them earlier would bring them up on the old definition and
- * then swap it underneath them.
+ * Starting happens here, not in `RestoreVolumes`: this step runs after `SwapFiles`, so the
+ * containers come up on the *restored* compose file.
  */
 class RestartProcess implements RestoreStep
 {
@@ -73,14 +64,9 @@ class RestartProcess implements RestoreStep
 
     public function cleanup(RestoreContext $context, bool $failed): void
     {
-        // A restore that failed after the process was stopped must still leave
-        // the application running — the site was up when the user pressed the
-        // button, and a failed restore that also takes it offline turns a
-        // recoverable mistake into an outage.
-        //
-        // SwapFiles::cleanup carries the same guard, because a failure *in*
-        // the swap means this step never ran and its cleanup never fires. The
-        // flag makes running both harmless.
+        // A failed restore must still leave the application running, not turn into an outage.
+        // SwapFiles::cleanup has the same guard (a failure in the swap means this cleanup never
+        // fires); the flag makes running both harmless.
         if (! $failed || ! $context->processStopped || $context->application === null) {
             return;
         }

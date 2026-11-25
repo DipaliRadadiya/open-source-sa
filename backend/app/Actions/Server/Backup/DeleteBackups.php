@@ -9,17 +9,12 @@ use Throwable;
 /**
  * Delete several backups, reporting each one's outcome separately.
  *
- * Every deletion goes through {@see DeleteBackup} rather than reimplementing
- * the order it establishes — archive first, row second — because the two
- * disagreeing is how an object gets orphaned in a customer's bucket, and a
- * second copy of that logic is the obvious way for them to drift.
+ * Every deletion goes through {@see DeleteBackup} to keep its order (archive first, row second);
+ * a second copy of that logic could orphan an object in the customer's bucket.
  *
- * A batch half-working is a first-class outcome, not an edge case. Twenty
- * backups where one is mid-run must delete the nineteen and say which one it
- * did not: failing the whole request hides nineteen deletions that the user
- * would then try again, and succeeding quietly hides the one still sitting in
- * the bucket being paid for. This mirrors the file manager's bulk contract
- * (`succeeded` / `failed` with a reason) so a client reads one shape for both.
+ * A half-working batch is a normal outcome: the backups that can be deleted are deleted and the
+ * ones that cannot are reported, never failing the whole request or hiding the failure. Mirrors
+ * the file manager's bulk contract (`succeeded` / `failed` with a reason).
  */
 class DeleteBackups
 {
@@ -39,10 +34,8 @@ class DeleteBackups
                 $this->deleteBackup->execute($backup);
                 $succeeded[] = $backup->id;
             } catch (ValidationException $e) {
-                // The refusals DeleteBackup raises deliberately: a run in
-                // flight, or an archive that could not be removed. Both are
-                // answers about that one backup, so they belong beside it
-                // rather than failing the batch.
+                // Deliberate refusals from DeleteBackup (a run in flight, an archive that could not
+                // be removed) are answers about that one backup, not a reason to fail the batch.
                 $failed[] = ['id' => $backup->id, 'reason' => $this->reason($e)];
             } catch (Throwable $e) {
                 report($e);
@@ -56,9 +49,8 @@ class DeleteBackups
     /**
      * Which refusal this was, as a stable key rather than the sentence.
      *
-     * The message is already translated into the *actor's* locale by the time
-     * it reaches here, so passing it through would put a rendered sentence in
-     * an API field and make the client's own wording impossible.
+     * The message is already in the *actor's* locale, so passing it through would put a rendered
+     * sentence in an API field.
      */
     private function reason(ValidationException $e): string
     {

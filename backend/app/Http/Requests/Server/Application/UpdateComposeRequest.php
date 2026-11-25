@@ -10,11 +10,8 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * A hand-edited compose file for a site that already exists.
  *
- * The create form validates the same way and for the same reason, stated in its
- * own comment: a refused file accepted by the form becomes a 502 and an
- * application the user has to delete. Here the stakes are higher — the site is
- * already serving — so the refusal has to arrive on the field before anything is
- * written, and the action rolls back if applying it fails anyway.
+ * The create form validates the same way. Here the site is already serving, so a refusal must
+ * arrive on the field before anything is written; the action rolls back if applying fails anyway.
  */
 class UpdateComposeRequest extends FormRequest
 {
@@ -29,10 +26,8 @@ class UpdateComposeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Required and non-empty, unlike on the create form where an empty
-            // value means "generate one from the fields". Clearing the file here
-            // would be asking to stop the site, which is what the disable control
-            // is for.
+            // Required and non-empty, unlike the create form where empty means "generate one".
+            // Clearing the file would mean stopping the site, which the disable control is for.
             'compose' => ['required', 'string', 'max:131072'],
         ];
     }
@@ -50,12 +45,9 @@ class UpdateComposeRequest extends FormRequest
 
                 $application = $this->route('application');
 
-                // Validated against the site's REAL document root, not a temp
-                // directory as the create form must use. The bind-mount rule asks
-                // whether a source escapes the application's own tree, and on an
-                // existing site that tree is the thing to check against — a file
-                // that passes against /tmp and mounts the neighbours' data is the
-                // failure this rule exists to stop.
+                // Validated against the site's REAL document root, not a temp directory as on the
+                // create form: the bind-mount rule checks a source does not escape the
+                // application's own tree, or it could mount the neighbours' data.
                 $composeValidator = app(ComposeValidator::class);
                 $verdict = $composeValidator->validate(
                     (string) $this->input('compose'),
@@ -66,9 +58,8 @@ class UpdateComposeRequest extends FormRequest
                     $validator->errors()->add('compose', $error);
                 }
 
-                // A port another site holds (RC-43), leaving this one out: its own
-                // port is not a clash with itself. Unasked, the save got as far as
-                // recording the port and answered 500 on the unique index.
+                // A port another site holds; this site's own port is not a clash (otherwise the
+                // save would hit the unique index and answer 500).
                 $taken = $verdict['resolved'] === null ? null : $composeValidator->portTaken(
                     $verdict['resolved'],
                     $application->container_port ? (int) $application->container_port : null,
@@ -79,8 +70,8 @@ class UpdateComposeRequest extends FormRequest
                     $validator->errors()->add('compose', $taken);
                 }
 
-                // Docker's own networks and other sites' private ones (RC-28),
-                // which the Container card's network field refuses too.
+                // Docker's own networks and other sites' private ones, as the Container card's
+                // network field also refuses.
                 $network = $verdict['resolved'] === null ? null : $composeValidator->unjoinableNetwork(
                     $verdict['resolved'],
                     (int) $application->getKey(),

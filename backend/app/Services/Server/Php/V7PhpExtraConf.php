@@ -7,18 +7,15 @@ use App\Models\Application;
 /**
  * Turn a v7 site's "extra pool lines" (`extra_conf`) into v8 PHP settings.
  *
- * v7 pasted the text as-is at the end of the site's pool, after its own
- * fields — so a line there won over the field. Here every line lands where it
- * has the same effect in v8, or is refused with a reason:
+ * v7 pasted the text at the end of the site's pool, so a line there won over the field. Here
+ * every line lands where it has the same effect in v8, or is refused with a reason:
  *
- * - a setting v8 has a field for (memory_limit, date.timezone, pm.*, ...) →
- *   that field, with v7's value (the extra line won in v7 too);
+ * - a setting v8 has a field for (memory_limit, date.timezone, pm.*, ...) → that field;
  * - a PHP setting or an allowed pool setting → additional_directives;
  * - anything else → refused, with the same reason the PHP screen gives.
  *
- * Nothing is saved here. The result is exactly the body of
- * `PUT /applications/{id}/php`, which tests the pool before reloading and
- * rolls back on failure (Dipali, 2026-10-13: one save path, not two).
+ * Nothing is saved here. The result is the body of `PUT /applications/{id}/php`, which tests
+ * the pool before reloading and rolls back on failure.
  */
 class V7PhpExtraConf
 {

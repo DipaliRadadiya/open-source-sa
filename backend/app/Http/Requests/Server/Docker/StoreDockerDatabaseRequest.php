@@ -24,38 +24,28 @@ class StoreDockerDatabaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // The name is also the network alias other containers resolve, so it
-            // has to be a name Docker accepts — `NewDockerName` is the same rule
-            // the network and volume forms use, and it refuses one that already
-            // exists as a Docker object.
+            // The name is also the network alias other containers resolve, so it must be a name
+            // Docker accepts and one that does not already exist as a Docker object.
             'name' => [
                 'required', 'string', 'max:63',
                 Rule::unique('docker_databases', 'name'),
                 new NewDockerName('database'),
             ],
 
-            // Checked against the CATALOG, not a hardcoded list: engines live in
-            // config so an operator can remove one, and a rule that disagreed
-            // with the catalog would accept an engine nothing can render.
+            // Checked against the catalog in config, not a hardcoded list, so it cannot accept an
+            // engine nothing can render.
             'engine' => ['required', 'string', Rule::in(array_keys((array) config('server.docker_databases.engines')))],
 
             'version' => ['required', 'string', 'max:32'],
 
-            // Null is a real answer: a database only ever reached over its
-            // loopback port needs no network at all. Not Docker's own and not a
-            // site's private network (RC-28): a database belongs to no site, so
-            // every `sv-app-<id>_*` network is somebody else's. A database a
-            // site should reach goes on a network made for both.
+            // Null is valid: a database reached only over its loopback port needs no network.
+            // Never a site's private network: a database belongs to no site, so every
+            // `sv-app-<id>_*` network is somebody else's.
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
-            // The instance's size, and the reason these are here rather than read
-            // from config: before this, every engine on the box got the same
-            // server-wide 512m — a Redis cache and the primary Postgres sized
-            // identically. An engine's own buffers are sized from what it can see,
-            // so this is the field that decides how the database performs.
-            //
-            // Both nullable, both falling back to the configured default at render
-            // time. CPU null means no quota at all, as it does for a site.
+            // The instance's size, per database rather than one server-wide default. Both are
+            // nullable and fall back to the configured default at render time; CPU null means
+            // no quota, as for a site.
             'cpu_limit' => ['nullable', 'string', 'max:16', new WithinHostCpus, new SingleLine],
             'memory_limit' => ['nullable', 'string', 'max:20', new ContainerMemoryLimit, new SingleLine],
         ];
@@ -72,10 +62,8 @@ class StoreDockerDatabaseRequest extends FormRequest
                     return;
                 }
 
-                // The version has to belong to the engine that was chosen. Checked
-                // here rather than with a rule, because the valid set depends on
-                // another field — and accepting `postgres` with MySQL's `8.4` would
-                // resolve to no image and fail minutes later at `docker pull`.
+                // The version must belong to the chosen engine (the valid set depends on another
+                // field); otherwise it fails minutes later at `docker pull`.
                 $versions = (array) config('server.docker_databases.engines.'.$this->input('engine').'.versions');
 
                 if (! array_key_exists((string) $this->input('version'), $versions)) {

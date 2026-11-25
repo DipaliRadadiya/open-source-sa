@@ -26,9 +26,8 @@ class QueuePanelUpdate
 
     public function execute(User $actor, bool $dryRun = false): PanelUpdate
     {
-        // One at a time, and the lock is taken before the row is read. Two
-        // admins pressing the button together would otherwise both pass the
-        // in-flight check and both start a checkout of the same tree.
+        // The lock is taken before the row is read: two admins pressing together would otherwise
+        // both pass the in-flight check and both start a checkout of the same tree.
         $lock = Cache::lock('panel-update', 10);
 
         if (! $lock->get()) {
@@ -38,24 +37,11 @@ class QueuePanelUpdate
         }
 
         try {
-            // Ask the state file before believing the row.
-            //
-            // A row is only advanced by PanelUpdateRunner::reconcile(), and the
-            // only thing that calls it is somebody looking at the update page.
-            // The run itself is a detached script that cannot write to the
-            // database — it restarts php-fpm partway through, which is the
-            // whole reason progress lives in a file.
-            //
-            // So an update that finished while nobody was watching — the tab
-            // closed, the browser reloaded into a restarting panel, the run
-            // outlived the session — leaves a row saying "running" forever,
-            // and this check then refuses every future update. Permanently.
-            // On the test server: row #7 said `pending` while its state file
-            // had said `succeeded` for several minutes, and the panel answered
-            // "An update is already running" to every press.
-            //
-            // Reconciling first costs one file read and makes the check ask
-            // what actually happened rather than what was last written down.
+            // Ask the state file before believing the row. Only PanelUpdateRunner::reconcile()
+            // advances a row, and only a visit to the update page calls it; the run itself is a
+            // detached script that cannot write to the database (it restarts php-fpm midway).
+            // An update that finished unwatched would leave the row "running" and refuse every
+            // later update. Reconciling first costs one file read.
             foreach (PanelUpdate::whereIn('status', [
                 PanelUpdateStatus::Pending->value,
                 PanelUpdateStatus::Running->value,
@@ -76,17 +62,15 @@ class QueuePanelUpdate
                 ]);
             }
 
-            // Belt and braces: the version came from the release host, not the
-            // request, but it is interpolated into a shell script and that is
-            // not a place to extend trust on the basis of provenance.
+            // The version came from the release host, not the request, but it is interpolated
+            // into a shell script: do not trust it on provenance alone.
             if (! UpdateScript::isValidVersion((string) $latest['version'])) {
                 throw ValidationException::withMessages([
                     'version' => [__('panel_update.errors.bad_version')],
                 ]);
             }
 
-            // Preflight is a gate, not a warning. Everything it checks is
-            // cheap to verify now and an outage to discover halfway through.
+            // Preflight is a gate, not a warning: cheap to verify now, an outage to find midway.
             if (! $this->preflight->run()['ready']) {
                 throw ValidationException::withMessages([
                     'version' => [__('panel_update.errors.preflight_failed')],
@@ -96,8 +80,7 @@ class QueuePanelUpdate
             $update = PanelUpdate::create([
                 'user_id' => $actor->id,
                 'status' => PanelUpdateStatus::Pending,
-                // FS-C2: a dry run changes nothing, so it names no version it
-                // moved to — a finished one read as "Updated to …".
+                // A dry run changes nothing, so it names no version it moved to.
                 'dry_run' => $dryRun,
                 'from_version' => $current['version'],
                 'from_commit' => $current['commit_hash'],

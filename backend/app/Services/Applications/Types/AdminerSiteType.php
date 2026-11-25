@@ -5,14 +5,12 @@ namespace App\Services\Applications\Types;
 use App\Services\Server\Applications\AdminerSso;
 
 /**
- * Adminer — a database client in one PHP file, for the engines phpMyAdmin
- * cannot open.
+ * Adminer: a database client in one PHP file, for the engines phpMyAdmin cannot open
+ * (PostgreSQL).
  *
- * phpMyAdmin speaks MySQL and MariaDB only, so until this a PostgreSQL user had
- * no browser client at all. Adminer speaks both. Like phpMyAdmin it is a tool,
- * not a site: no admin account, no database of its own, nothing to name.
- * Whoever opens it signs in with a database user's credentials — normally via
- * the panel's one-click link ({@see AdminerSso}).
+ * Like phpMyAdmin it is a tool, not a site: no admin account and no database of its own. Users
+ * sign in with a database user's credentials, normally via the one-click link
+ * ({@see AdminerSso}).
  */
 class AdminerSiteType extends AbstractSiteType
 {
@@ -42,9 +40,8 @@ class AdminerSiteType extends AbstractSiteType
     }
 
     /**
-     * It reads the databases already on the server. One of its own would sit
-     * empty, and the standing account that came with it would be a credential
-     * nobody asked for.
+     * It reads the databases already on the server; one of its own would sit empty and add a
+     * standing credential nobody asked for.
      */
     public function needsDatabase(): bool
     {
@@ -62,12 +59,10 @@ class AdminerSiteType extends AbstractSiteType
     }
 
     /**
-     * A tool, not a site — the same reasoning as phpMyAdmin: it holds no
-     * content of its own, so backing it up or cloning it are screens about
-     * nothing, and reinstalling is the honest recovery path.
+     * A tool, not a site (as phpMyAdmin): it holds no content, so backup and clone are
+     * meaningless and reinstalling is the recovery path.
      *
-     * Password protection stays: an exposed Adminer is a login page for every
-     * database on the box.
+     * Password protection stays: an exposed Adminer is a login page for every database.
      */
     public function features(): array
     {
@@ -78,10 +73,8 @@ class AdminerSiteType extends AbstractSiteType
     }
 
     /**
-     * Adminer 6.1.2, measured 2026-10-14, and 6.2.0 again on 2026-10-29:
-     * `composer.json` declares `"php": ">=7.4"`. No ceiling — none is published, and a ceiling with no
-     * source behind it refuses working versions for nothing (the phpMyAdmin
-     * reasoning, 2026-09-18).
+     * Adminer's `composer.json` declares `"php": ">=7.4"`. No ceiling: none is published, and an
+     * unsourced one refuses working versions.
      */
     public function supportedPhpRange(): ?array
     {

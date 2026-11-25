@@ -32,28 +32,16 @@ class UpdateScheduleRequest extends FormRequest
             'enabled' => ['required', 'boolean'],
             'frequency' => ['required', Rule::in(DiskCleanerSchedule::FREQUENCIES)],
             /*
-             * `min:1` is deliberate, and it has been reported as a bug twice.
-             *
-             * The report is that the Save button stays disabled when every "What
-             * to Clean" box is unchecked. That button is the frontend correctly
-             * mirroring this rule — remove only the button's guard and the save
-             * becomes a 422 instead, which is worse.
-             *
-             * A schedule with no categories is a cron entry that runs on time and
-             * cleans nothing: it reads as protection on the screen and does
-             * nothing on the disk. `enabled` is already the off switch, and
-             * `DELETE /disk-cleaner/schedule` removes it entirely, so there are
-             * two honest ways to say "do not do this" and the empty list is not
-             * a third. Operator decision, 2026-09-14.
+             * `min:1` is deliberate: the frontend's disabled Save button mirrors it.
+             * A schedule with no categories reads as protection but cleans nothing;
+             * `enabled` is the off switch and `DELETE /disk-cleaner/schedule` removes it.
              */
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => [Rule::in($safe)],
-            // 99, not 100: a disk is never more than full, so a threshold of 100
-            // never fires and the schedule never runs (bug #25).
+            // 99, not 100: a threshold of 100 never fires.
             'threshold_percent' => ['nullable', 'integer', 'min:1', 'max:99'],
-            // Delete all (0) is allowed unattended — servers whose disks fill
-            // up asked for it (Dipali, 2026-10-26); pairing it with a threshold
-            // is the screen's advice, not a rule. Null = the pre-choice behaviour.
+            // Delete all (0) is allowed unattended; pairing it with a threshold is the
+            // screen's advice, not a rule. Null = the pre-choice behaviour.
             'keep_days' => ['nullable', 'integer', Rule::in(KeepDays::CHOICES)],
         ];
     }

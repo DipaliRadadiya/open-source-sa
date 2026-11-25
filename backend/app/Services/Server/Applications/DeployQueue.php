@@ -14,17 +14,13 @@ use Illuminate\Contracts\Cache\Repository as Cache;
 /**
  * Queue a deploy, or join the one already waiting.
  *
- * `DeployApplication` is unique until processing: while one deploy for a site
- * waits in the queue, Laravel silently drops every further dispatch — which
- * is the point, ten pushes should make one deploy. But every caller opened a
- * `queued` Deployment row *before* dispatching, so each dropped dispatch left
- * a row that no job would ever pick up, showing `queued` forever. Found on the
- * Apache test box: a push that arrived while a manual deploy was still waiting.
+ * `DeployApplication` is unique until processing: while one deploy for a site waits, Laravel
+ * silently drops further dispatches. A caller that opened a `queued` Deployment row before
+ * dispatching would leave a row no job ever picks up.
  *
- * So the lock is taken here first, with the same key and lifetime Laravel's
- * own check uses, and only a caller that gets it opens a row and queues the
- * job. One that does not is handed the deploy that is already waiting — which
- * fetches the branch tip when it runs, so the newer commit is deployed by it.
+ * So the lock is taken here first, with the same key and lifetime as Laravel's own check, and
+ * only the caller that gets it opens a row and queues the job. Any other caller is handed the
+ * deploy already waiting, which fetches the branch tip when it runs.
  */
 class DeployQueue
 {
@@ -49,18 +45,16 @@ class DeployQueue
                 return $waiting;
             }
 
-            // A lock with no waiting row: held by a deploy queued before rows
-            // existed, or by one whose worker died. Queue anyway rather than
-            // hand back nothing; the lock expires on its own (see
-            // ExpiresUniqueLock), and running a deploy twice is harmless.
+            // Lock with no waiting row (worker died, or queued before rows existed): queue
+            // anyway. The lock expires on its own (see ExpiresUniqueLock); a double deploy is
+            // harmless.
         }
 
         $this->closeOrphans($application);
 
         $deployment = $this->recorder->open($application, $trigger, $userId);
 
-        // Straight to the queue: the lock is already ours, and going through
-        // `dispatch()` would ask for it again and drop the job.
+        // Straight to the queue: `dispatch()` would ask for the lock again and drop the job.
         $this->bus->dispatchToQueue(new DeployApplication($application->id, $userId, $deployment->id));
 
         return $deployment;
@@ -69,10 +63,8 @@ class DeployQueue
     /**
      * Close `queued` rows no job will ever run.
      *
-     * Rows left behind before this class existed, or by a job lost with its
-     * worker. Only those older than the lock's own lifetime: a job that has
-     * just been picked up releases its lock a moment before it marks its row
-     * running, and a younger row may be exactly that one.
+     * Only rows older than the lock's lifetime: a job just picked up releases its lock a moment
+     * before it marks its row running, so a younger row may be that one.
      */
     private function closeOrphans(Application $application): void
     {

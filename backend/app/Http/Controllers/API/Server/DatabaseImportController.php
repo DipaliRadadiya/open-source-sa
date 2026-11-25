@@ -50,8 +50,7 @@ class DatabaseImportController extends Controller
     {
         $this->reap($database);
 
-        // Refused before the upload: the run would refuse anyway, after the
-        // user had sent two gigabytes for nothing.
+        // Refused before the upload: the run would refuse anyway, after a large file was sent.
         if (ImportDatabase::account($database) === null) {
             throw ValidationException::withMessages([
                 'database' => [__('errors/database.import_no_account')],
@@ -84,8 +83,7 @@ class DatabaseImportController extends Controller
 
         return response()->json([
             'import' => DatabaseImportResource::make($import->refresh())->resolve(),
-            // What one chunk may be — the same ceiling the file manager's
-            // resumable upload reports, since both go through the same PHP.
+            // The same chunk ceiling the file manager's resumable upload reports.
             'max_chunk' => ChunkedUpload::maxChunkBytes(),
         ], 201);
     }
@@ -114,8 +112,7 @@ class DatabaseImportController extends Controller
             fclose($stream);
         }
 
-        // Touches updated_at as well, which is what keeps a slow upload from
-        // being reaped as abandoned.
+        // Also touches updated_at, which keeps a slow upload from being reaped as abandoned.
         $import->update(['received_bytes' => $received]);
 
         return response()->json(['received' => $received]);
@@ -138,15 +135,14 @@ class DatabaseImportController extends Controller
             ]);
         }
 
-        // An export reading the database while it is dropped would hand the
-        // user a half-empty dump that looks like a good one.
+        // An export reading the database while it is dropped would give a half-empty dump.
         if (DatabaseExport::query()->where('database_id', $database->id)->inFlight()->get()->contains(fn ($e) => ! $e->isStale())) {
             throw ValidationException::withMessages([
                 'database' => [__('errors/database.import_export_running')],
             ]);
         }
 
-        // A backup restore replacing the same database (2026-10-16).
+        // A backup restore replacing the same database.
         if (Restore::inProgressForDatabase($database->id)) {
             throw ValidationException::withMessages([
                 'database' => [__('backup.errors.restore_database_busy')],

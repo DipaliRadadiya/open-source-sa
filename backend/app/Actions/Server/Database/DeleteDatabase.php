@@ -23,9 +23,8 @@ class DeleteDatabase
 
     public function execute(Database $database): void
     {
-        // A backup or restore of this database running right now would finish
-        // against a database that no longer exists — and a restore would
-        // recreate it behind the panel's back.
+        // A backup or restore running now would finish against a database that no longer exists
+        // (a restore would recreate it behind the panel's back).
         $busy = Backup::query()->where('database_id', $database->id)
             ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
             ->exists()
@@ -39,24 +38,17 @@ class DeleteDatabase
 
         $engine = $this->manager->engine($database->engine);
 
-        // Teardown order — and which statements it takes — belongs to the
-        // engine. This action had both inlined, in the order MySQL needs;
-        // PostgreSQL needs the same order and different statements, and
-        // discovering that here would mean an `if` on the engine name.
-        //
-        // A failed cleanup deliberately leaves the panel record intact, so the
-        // same delete can be retried until it finishes.
+        // The engine owns teardown order and statements, so there is no `if` on the engine name.
+        // A failed cleanup deliberately leaves the panel record intact, so the delete can be retried.
         $engine->teardownDatabase($database->name, $this->ownUsers($database, $engine));
 
         $this->activityLogger->log('database.deleted', null, ['name' => $database->name, 'engine' => $database->engine]);
 
         $users = $database->users->map(fn ($user) => [$user->connection_preference, $user->host])->all();
 
-        // Its backups are archived, not deleted (decision 2026-10-16): they
-        // keep their name and engine, stay listed and downloadable, and can be
-        // restored into another database. Detached from the target first —
-        // the target goes with the database, and `backups.backup_target_id`
-        // cascades, so leaving it set would delete the very rows this keeps.
+        // Its backups are archived, not deleted: they stay listed and downloadable and can be
+        // restored into another database. Detached from the target first, because
+        // `backups.backup_target_id` cascades and would delete the very rows this keeps.
         Backup::query()->where('database_id', $database->id)->update([
             'backup_target_id' => null,
             'database_id' => null,
@@ -72,13 +64,10 @@ class DeleteDatabase
     /**
      * The users to drop with the database: only those that serve nothing else.
      *
-     * One account often serves two databases on a server brought over from
-     * v7 or another panel, and Server Sync and Adopt record it under each.
-     * Dropping it with the first database broke the site using the second (on
-     * PostgreSQL the drop failed outright). So a user is dropped only when no
-     * other database has it in the panel and the engine reports no rights on
-     * another one. An adopted user the engine cannot account for is kept:
-     * unsure means leave it (bug #34).
+     * One account can serve two databases on a server brought over from v7 or another panel
+     * (Server Sync and Adopt record it under each), and dropping it breaks the other site. So a
+     * user is dropped only when no other database has it in the panel and the engine reports no
+     * rights on another one. Unsure means leave it.
      *
      * @return array<int, array{username: string, host: string}>
      */

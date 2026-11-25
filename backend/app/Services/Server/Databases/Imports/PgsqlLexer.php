@@ -3,19 +3,15 @@
 namespace App\Services\Server\Databases\Imports;
 
 /**
- * Just enough of `psql`'s own reading of a script to find its client
- * commands: a backslash outside a string, a quoted identifier, a comment or a
- * `COPY … FROM stdin` data block. `psql` runs those itself — `\! command` is a
- * shell command — and accepts them anywhere on a line, not only at its start.
+ * Just enough of `psql`'s own reading of a script to find its client commands: a
+ * backslash outside a string, a quoted identifier, a comment or a `COPY … FROM stdin`
+ * data block. `psql` runs those itself (`\! command` is a shell command), anywhere on a line.
  *
- * Fed one line at a time, carrying its state across lines, so a gigabyte dump
- * never has to be in memory.
+ * Fed one line at a time, carrying state across lines, so a huge dump never sits in memory.
  *
- * Strings are read the standard-conforming way (backslash is an ordinary
- * character in '…', an escape only in E'…'). A dump that turns that setting
- * off can only make psql read a string as running *longer* than this does,
- * never shorter — so anything psql would see outside a string, this sees
- * outside one too. It errs towards refusing.
+ * Strings are read the standard-conforming way (backslash is an escape only in E'…'). A
+ * dump that turns that off can only make psql read a string *longer* than this does, never
+ * shorter, so this errs towards refusing.
  */
 class PgsqlLexer
 {

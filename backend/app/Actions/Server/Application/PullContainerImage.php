@@ -11,11 +11,8 @@ use App\Services\Server\Applications\ContainerSupervisor;
 /**
  * Pull this site's image again and recreate the container on it.
  *
- * Refused for a site that is not running, rather than quietly provisioning one
- * as a side effect: a pending site has no compose file to pull from, and a
- * disabled site is deliberately offline — bringing its container up because
- * somebody pressed Update would put a site back online that was taken down on
- * purpose.
+ * Refused for a site that is not running: a pending site has no compose file to pull from, and a
+ * disabled site is deliberately offline and must not be brought back up by an update.
  */
 class PullContainerImage
 {
@@ -25,9 +22,8 @@ class PullContainerImage
     ) {}
 
     /**
-     * The refusals, on their own so the request can give them before anything
-     * is queued (D5). Asked again by `execute()` when the job runs: the site can
-     * be paused or start provisioning in the meantime.
+     * The refusals, on their own so the request can give them before anything is queued. Asked
+     * again by `execute()` when the job runs: the site can change state in the meantime.
      */
     public function assertPullable(Application $application): void
     {
@@ -39,17 +35,14 @@ class PullContainerImage
     }
 
     /**
-     * Run by the queued job (`RedeployContainerApplication`). The activity
-     * entry is written by `StartContainerRedeploy` when the redeploy is asked
-     * for — still before the pull, and with the person who asked as its actor,
-     * which a queue worker does not have.
+     * Run by the queued job (`RedeployContainerApplication`). The activity entry is written by
+     * `StartContainerRedeploy` when the redeploy is asked for, because a queue worker has no actor.
      */
     public function execute(Application $application): Application
     {
         $this->assertPullable($application);
 
-        // Cleared first, so a row that failed last time does not keep showing
-        // yesterday's reason beside today's success.
+        // Cleared first, so an earlier failure's reason does not show beside a success.
         $application->forceFill(['failed_step' => null, 'failed_reason' => null])->save();
 
         try {
@@ -58,14 +51,8 @@ class PullContainerImage
                 $this->provisioner->documentRoot($application),
             );
         } catch (ProvisioningFailedException $e) {
-            // Recorded on the row, not only thrown — and on the application, not
-            // only on the run: the failure card beside the button reads these, so
-            // without them it shows a healthy site while the pull that just failed
-            // is reported nowhere the person who pressed it is looking.
-            //
-            // Found on a real box: a rejected credential returned a bare 500
-            // "Server Error" and left `failed_reason` null, which is exactly the
-            // uninformative failure this whole feature exists to replace.
+            // Recorded on the application, not only thrown: the failure card beside the button
+            // reads these, so without them a failed pull shows a healthy site.
             $application->forceFill([
                 'failed_step' => $e->step,
                 'failed_reason' => $e->reason,

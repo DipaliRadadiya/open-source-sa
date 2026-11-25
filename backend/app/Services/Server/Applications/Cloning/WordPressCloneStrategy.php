@@ -17,14 +17,10 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
 /**
- * The database half of a WordPress clone: give it its own database (a copy
- * of the source's data), point wp-config.php at it, and rewrite the URLs a
- * serialized-data-safe way — the exact same problem `WordPressStagingStrategy`
- * solves, minus every staging-only safeguard (no `DISABLE_WP_CRON`, no mail
- * trap, no `WP_ENVIRONMENT_TYPE`). A clone is meant to become its own real,
- * independent site, not a safe sandbox — treating it like one would leave a
- * "clone of my shop" quietly unable to send order emails until someone
- * noticed and asked why.
+ * The database half of a WordPress clone: give it its own database (a copy of the source's
+ * data), point wp-config.php at it, and rewrite the URLs serialized-data-safe, as
+ * `WordPressStagingStrategy` does, minus the staging-only safeguards (`DISABLE_WP_CRON`, mail
+ * trap, `WP_ENVIRONMENT_TYPE`). A clone becomes a real independent site, not a sandbox.
  */
 class WordPressCloneStrategy implements CloneStrategy
 {
@@ -51,9 +47,8 @@ class WordPressCloneStrategy implements CloneStrategy
 
         $this->writeWpConfig($clone, $this->tablePrefix->of($source), $documentRoot, $cloneDatabase, "{$connection->host}:{$connection->port}");
 
-        // Every spelling of the source's address, not just its current URL
-        // (bug #92): a link saved as http://, in the block editor's escaped
-        // form or as a bare domain otherwise still pointed at the original.
+        // Every spelling of the source's address, not just its current URL: http://, the block
+        // editor's escaped form and a bare domain would otherwise still point at the original.
         foreach (WordPressUrlVariants::between($source, $clone) as $variant) {
             [$search, $replace] = $variant;
 
@@ -114,14 +109,10 @@ class WordPressCloneStrategy implements CloneStrategy
 
     private function writeSecretFile(Application $application, string $path, string $contents): void
     {
-        // As the site's own user. The directory is a copy of another site —
-        // anything its owner planted there came across with it, including a
-        // `wp-config.php` or `mu-plugins` that is a link — and this ran as
-        // root: `tee` wrote through the link and the `chown` after it handed
-        // the target to the user (the same class of bug found in `.panel`,
-        // 2026-09-29). The copy is already theirs by now (rsync() chowns it),
-        // so as the user the file is theirs by construction and a link
-        // reaches only what they could already write.
+        // As the site's own user, never root: the copied directory may hold a `wp-config.php` or
+        // `mu-plugins` that is a symlink, and root writing through it would hand the target to
+        // the user. The copy is already theirs (rsync() chowns it), so a link reaches only what
+        // they could already write.
         $user = $application->systemUser->username;
 
         $written = $this->serverOps->run(['runuser', '-u', $user, '--', 'tee', $path], $this->context($application, 'clone_write_file'), input: $contents);

@@ -9,18 +9,13 @@ use App\Services\Server\ServerOpsResult;
 /**
  * Runs SQL as MySQL/MariaDB root.
  *
- * Over the unix socket first, with no password: on MariaDB 10.4+ and MySQL 8
- * on Ubuntu, root@localhost authenticates by *being OS root*, which ServerOps
- * already is. That is the only way in on a fresh install, and the one the
- * engine installer has always used.
+ * First over the unix socket with no password: on MariaDB 10.4+ and MySQL 8 on Ubuntu,
+ * root@localhost authenticates by being OS root, which ServerOps already is.
  *
- * Then with the root password the user saved or set (2026-10-17). MySQL cannot
- * keep socket login once root has a password, and a server moved from v7 never
- * had it — so without this second try the panel could not reach root there at
- * all, and could not install or repair the engine (known since 2026-10-07).
+ * Then with the saved or supplied root password: MySQL drops socket login once root has
+ * a password, and a server moved from v7 never had it.
  *
- * The password goes in a 0600 client option file, never on argv, and SQL goes
- * over stdin.
+ * The password goes in a 0600 client option file, never on argv; SQL goes over stdin.
  */
 class SqlRootAccess
 {
@@ -45,10 +40,8 @@ class SqlRootAccess
             $context,
             timeout: 60,
             input: $sql,
-            // With a password to fall back to, a refused socket login is the
-            // normal answer on MySQL once root has one — not an error to log on
-            // every call. A real SQL error fails the retry too, and is logged
-            // there.
+            // With a password to fall back to, a refused socket login is normal on MySQL,
+            // not an error to log. A real SQL error fails the retry too and is logged there.
             expectedExitCodes: $candidates === [] ? [] : [1],
         );
 

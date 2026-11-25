@@ -13,13 +13,10 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * Keys already in a user's `authorized_keys` that the panel has no record of.
  *
- * Worth syncing for a reason the other resources do not have: a key on the box
- * the panel cannot list is unaudited access. Someone reading the SSH Keys
- * screen of a migrated server would conclude nobody can log in, while three
- * old laptops still can.
+ * A key on the box that the panel cannot list is unaudited access, so these are synced.
  *
- * Runs after system users, because a key belongs to one — including users
- * adopted moments earlier in the same run.
+ * Runs after system users, because a key belongs to one (including users adopted
+ * earlier in the same run).
  */
 class SshKeyDiscoverer implements Discoverable
 {
@@ -45,9 +42,8 @@ class SshKeyDiscoverer implements Discoverable
         $systemUsers = SystemUser::query()->with('sshKeys')->get();
 
         // A preview's own accounts, which applying it would adopt first (see
-        // SyncRun::previewedSystemUsers()). Unsaved stand-ins with no keys on
-        // record: every key in their file is new to the panel, and a preview
-        // never reaches adopt(), so the missing id is never used.
+        // SyncRun::previewedSystemUsers()). Unsaved stand-ins with no keys on record;
+        // a preview never reaches adopt(), so the missing id is never used.
         foreach ($run->previewedSystemUsers() as $username => $home) {
             if ($home !== null && ! $systemUsers->contains('username', $username)) {
                 $systemUsers->push(
@@ -63,11 +59,10 @@ class SshKeyDiscoverer implements Discoverable
                 ['cat', $path],
                 ['feature' => 'sync', 'op' => 'discover_ssh_keys', 'system_user' => $systemUser->username],
                 timeout: 30,
-                expectedExitCodes: [1], // no authorized_keys yet (bug #48)
+                expectedExitCodes: [1], // no authorized_keys yet
             );
 
-            // No file is the normal case for a user who has never had a key.
-            // Not an error, and not worth an item.
+            // No file is normal for a user who never had a key: not an error, no item.
             if ($result->failed()) {
                 continue;
             }
@@ -82,10 +77,8 @@ class SshKeyDiscoverer implements Discoverable
                 }
 
                 if (! $this->keys->isValidPublicKey($line)) {
-                    // A line that is not a key at all — an option-prefixed
-                    // entry, or a comment style we do not parse. Reported
-                    // rather than dropped, because a key the panel cannot read
-                    // is still a key that grants access.
+                    // Not parseable (e.g. an option-prefixed entry). Reported, not dropped:
+                    // a key the panel cannot read still grants access.
                     $found[] = [
                         'key' => $systemUser->username.':unparsed:'.substr(md5($line), 0, 8),
                         'label' => $systemUser->username,
@@ -116,8 +109,6 @@ class SshKeyDiscoverer implements Discoverable
                     ],
                     'attributes' => [
                         'system_user_id' => $systemUser->id,
-                        // The comment is what a person recognises a key by;
-                        // the fingerprint is what makes it unique.
                         'name' => $comment !== '' ? $comment : 'Imported key',
                         'public_key' => $line,
                         'fingerprint' => $fingerprint,
@@ -133,8 +124,7 @@ class SshKeyDiscoverer implements Discoverable
     {
         $attributes = $item['attributes'] ?? [];
 
-        // firstOrCreate on the pair the table already treats as unique, so a
-        // second run over the same box adopts nothing and fails nothing.
+        // firstOrCreate on the table's unique pair, so a second run adopts nothing.
         return SshKey::firstOrCreate(
             [
                 'system_user_id' => $attributes['system_user_id'],

@@ -12,18 +12,14 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * Ask for a Pull and redeploy of a container site (D5, 2026-11-04).
+ * Ask for a Pull and redeploy of a container site.
  *
- * It ran inside the HTTP request until now: 19 s for a small image, minutes
- * for a large recipe, and nothing was recorded while it ran — a page reloaded
- * mid-pull showed a site with nothing happening to it, and Background jobs
- * stayed empty. So the request now checks, records a `queued` run, and hands
- * the pull to the queue; the run row is what the app screen and Background
- * jobs read. The pull itself is `PullContainerImage`, unchanged.
+ * The request only checks and records a `queued` run, then hands the pull
+ * (`PullContainerImage`) to the queue; the run row is what the app screen and
+ * Background jobs read.
  *
- * One at a time per site. A second redeploy, a restart, or a settings or
- * compose save while one runs would start its own `compose up` against the
- * one in the job.
+ * One at a time per site: a second redeploy, a restart, or a settings or compose
+ * save mid-run would start its own `compose up` against the one in the job.
  */
 class StartContainerRedeploy
 {
@@ -35,12 +31,10 @@ class StartContainerRedeploy
 
     public function execute(Application $application): ApplicationRun
     {
-        // Not running, or paused: refused now, with the reason, rather than
-        // queued to fail a moment later where nobody is looking.
+        // Not running, or paused: refuse now with the reason, not fail later in the queue.
         $this->pull->assertPullable($application);
 
-        // Held only for the check-and-write, so two clicks cannot both find no
-        // redeploy running and both queue one.
+        // Held only for the check-and-write, so two clicks cannot both queue one.
         $lock = Cache::lock('container-redeploy:'.$application->id, 10);
 
         abort_unless($lock->get(), 409, __('errors/application.container_redeploy_running', ['name' => $application->name]));
@@ -56,10 +50,8 @@ class StartContainerRedeploy
 
             $run = $this->runs->open($application, ApplicationRun::CONTAINER_REDEPLOY, Auth::id());
 
-            // Recorded BEFORE the pull, not after. A pull that fails, times out,
-            // or takes the site down is the one somebody will be looking for in
-            // the log, and an entry written only on success is an entry missing
-            // exactly then.
+            // Logged BEFORE the pull: a pull that fails or takes the site down is the one
+            // that must be in the log.
             $this->activityLogger->log('application.container_pulled', $application, [
                 'name' => $application->name,
                 'image' => $application->image,
@@ -69,13 +61,11 @@ class StartContainerRedeploy
             $lock->release();
         }
 
-        // After the lock is released: on the `sync` driver the job runs right
-        // here, and it must not run holding a lock it never asked for.
+        // After the lock is released: the `sync` driver runs the job right here.
         try {
             RedeployContainerApplication::dispatch($run->id, Auth::id())->onQueue('default');
         } catch (Throwable $e) {
-            // The queue would not take it: close the row, or it reads
-            // "Redeploying" and refuses the next try for an hour.
+            // Queue refused it: close the row, or it reads "Redeploying" and blocks retries.
             $this->runs->fail($run, 'queue');
 
             throw $e;

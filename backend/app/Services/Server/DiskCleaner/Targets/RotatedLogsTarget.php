@@ -63,38 +63,28 @@ class RotatedLogsTarget extends AbstractCleanupTarget
     }
 
     /**
-     * The selection, without an action: the clean appends its age test and
-     * `-delete`, the estimate its `-printf`.
+     * The selection, without an action: clean appends its age test and `-delete`,
+     * the estimate its `-printf`.
      *
      * @return array<int, string>
      */
     private function findArgs(): array
     {
-        // `-delete` implies `-depth`, and `-prune` is silently ignored under
-        // `-depth` — hence the `! -path` exclusion below rather than a prune.
+        // `-delete` implies `-depth`, under which `-prune` is ignored: hence `! -path` below.
         return [
             'find', '/var/log',
-            // Never leave the filesystem /var/log is on. A separate volume or a
-            // bind mount underneath it is somebody else's data, and this
-            // command deletes what it finds.
+            // Never leave the filesystem /var/log is on: a separate volume or bind mount
+            // underneath it is somebody else's data, and this deletes what it finds.
             '-xdev',
             '-regextype', 'posix-extended',
             '-type', 'f',
-            // MySQL and MariaDB write binary logs here when binary logging is
-            // on — Debian's shipped config points `log_bin` at this directory.
-            // They are named `mysql-bin.000001`, so a match on "ends in digits"
-            // deletes them: replication and point-in-time recovery break,
-            // `mysql-bin.index` still lists the files, and because mysqld holds
-            // them open the space is not even freed. Binary logs are removed
-            // with `PURGE BINARY LOGS`, never from underneath the server.
+            // MySQL/MariaDB binary logs (`mysql-bin.000001`) live here. Deleting them breaks
+            // replication and point-in-time recovery; use `PURGE BINARY LOGS` instead.
             '!', '-path', '/var/log/mysql/*',
             '(',
             '-name', '*.gz',
-            // One or two digits: logrotate counts 1..99, binary logs are
-            // six-digit and zero-padded. Deliberately narrower than `[0-9]+`,
-            // which is what swept the binary logs in — the path exclusion above
-            // and this bound are two independent guards, because either one
-            // alone is a single point of failure for deleting a database's log.
+            // One or two digits: logrotate counts 1..99, binary logs are six-digit. Not
+            // `[0-9]+`: that, plus the path exclusion above, are two independent guards.
             '-o', '-regex', '.*\.[0-9]{1,2}',
             '-o', '-name', '*.old',
             ')',

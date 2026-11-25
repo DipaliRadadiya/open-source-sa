@@ -15,17 +15,13 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Start copying an SFTP/FTP backup to the panel, or hand back the copy that
- * is already on its way.
+ * Start copying an SFTP/FTP backup to the panel, or hand back the copy already on its way.
  *
- * Idempotent on purpose: the user who sees "Preparing…" and clicks again must
- * not start a second multi-gigabyte download of the same archive. A copy that
- * failed, expired or was stranded by a dead worker is replaced instead.
+ * Idempotent: a second click on "Preparing…" must not start a second multi-gigabyte download.
+ * A copy that failed, expired or was stranded by a dead worker is replaced instead.
  *
- * Everything that can be refused without the storage server is refused here,
- * before anything is queued — including a disk too full to hold the copy.
- * Whatever needs the server (is the archive still there, how big is it) is
- * the job's to find out.
+ * Everything that can be refused without the storage server (including a disk too full for the
+ * copy) is refused here, before queueing. What needs the server is the job's to find out.
  */
 class PrepareBackupDownload
 {
@@ -65,10 +61,8 @@ class PrepareBackupDownload
             ]);
         }
 
-        // Serialised per backup so two clicks in the same instant cannot both
-        // see "nothing yet" and both start a copy. The unique index on
-        // `backup_id` would stop the second row anyway; this stops the second
-        // request from failing on it.
+        // Serialised per backup so two simultaneous clicks cannot both start a copy; the unique
+        // index on `backup_id` would only make the second request fail.
         return Cache::lock('backup-download-prepare:'.$backup->getKey(), 10)->block(5, function () use ($backup, $user): array {
             $existing = BackupDownloadPreparation::query()->where('backup_id', $backup->getKey())->first();
 
@@ -97,9 +91,8 @@ class PrepareBackupDownload
     }
 
     /**
-     * Refused now rather than failed later: a copy that fills the disk takes
-     * the sites on it down with it, and "not enough space" is worth knowing
-     * before waiting for a transfer.
+     * Refused now rather than failed later: a copy that fills the disk takes the sites on it
+     * down with it.
      */
     private function refuseWithoutSpace(Backup $backup): void
     {

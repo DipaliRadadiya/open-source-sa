@@ -19,16 +19,11 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Runs one staging push or update-from-live (RC-16, 2026-10-20).
+ * Runs one staging push or update-from-live, off the request (nginx stops waiting
+ * after 300 s, and a large site would answer 504 while the copy carried on).
  *
- * Both used to run inside the request, and nginx stops waiting after 300 s:
- * a large site — or a push that backs up first — answered 504 while the copy
- * carried on, with nothing able to say afterwards how it ended.
- *
- * A failure is recorded as the body and status the old endpoint answered
- * with: every exception here already renders its own response (staging
- * failed / rollback failed / backup failed, a busy lock as a 422), so the run
- * keeps exactly what the user would have read.
+ * A failure is recorded as the body and status the old endpoint answered with: every
+ * exception here already renders its own response (a busy lock is a 422).
  */
 class RunStagingSync implements ShouldBeUnique, ShouldQueue
 {

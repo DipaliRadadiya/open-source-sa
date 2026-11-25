@@ -14,9 +14,8 @@ use Illuminate\Validation\Validator;
 /**
  * Create or update the backup settings for one application.
  *
- * One request for both: a target is one row per application (the table has a
- * unique on `application_id`), so "create" and "update" are the same act from
- * the user's side — they are configuring backups for this site.
+ * One request for both: a target is one row per application (unique on `application_id`), so
+ * create and update are the same act for the user.
  */
 class SaveBackupTargetRequest extends FormRequest
 {
@@ -35,26 +34,23 @@ class SaveBackupTargetRequest extends FormRequest
         return [
             'storage_destination_id' => ['required', 'integer', Rule::exists('storage_destinations', 'id')],
 
-            // `BackupTypeForSite` as well as the enum: the enum says the value
-            // exists, the rule says it means something for *this* site. Without
-            // it, every case the enum gains is silently accepted everywhere.
+            // `BackupTypeForSite` as well as the enum: the enum says the value exists, the rule
+            // says it means something for *this* site.
             'type' => array_filter([
                 'required',
                 Rule::enum(BackupType::class),
                 $application instanceof Application ? new BackupTypeForSite($application) : null,
             ]),
 
-            // At least one. Zero would mean every run prunes the backup it
-            // just took, which reads as "backups silently do nothing".
+            // At least one: zero would prune the backup each run just took.
             'retention_count' => ['required', 'integer', 'min:'.BackupTarget::RETENTION_MIN, 'max:'.BackupTarget::RETENTION_MAX],
 
             'frequency' => ['required', Rule::in(BackupTarget::FREQUENCIES)],
             'schedule_time' => ['sometimes', 'date_format:H:i'],
             'enabled' => ['required', 'boolean'],
 
-            // Exclusions are tar patterns and database names — never paths the
-            // panel resolves, so there is nothing here to escape with. They go
-            // into argv as their own elements, not into a shell string.
+            // Exclusions are tar patterns and database names, never paths the panel resolves. They
+            // go into argv as their own elements, not into a shell string.
             'file_excludes' => ['sometimes', 'array', 'max:100'],
             'file_excludes.*' => ['string', 'max:255'],
             'database_excludes' => ['sometimes', 'array', 'max:100'],
@@ -63,9 +59,7 @@ class SaveBackupTargetRequest extends FormRequest
     }
 
     /**
-     * Bug #33: a Database backup was accepted for a site with no database
-     * (n8n keeps its data in files), and every run then archived nothing.
-     * Full and Files backups are unaffected.
+     * Refuses a Database backup for a site with no database (every run would archive nothing).
      *
      * @return array<int, \Closure>
      */
@@ -80,11 +74,9 @@ class SaveBackupTargetRequest extends FormRequest
                 $validator->errors()->add('type', __('backup.errors.target_no_database', ['files' => __('backup.type.filesystem')]));
             }
 
-            // S-02, the container twin of bug #33: `volumes` was accepted for a
-            // site with no volumes (IT-Tools declares none), and every run then
-            // failed at `archive_files`. Only once the type is otherwise valid
-            // — `BackupTypeForSite` already refused it on a hosted site, and
-            // asking Docker there would add a second message to the first.
+            // Same for `volumes` on a site with no volumes. Only once the type is otherwise
+            // valid: `BackupTypeForSite` already refused it on a hosted site, and asking Docker
+            // there would add a second message.
             if ($this->input('type') === BackupType::Volumes->value
                 && $application instanceof Application
                 && ! $validator->errors()->has('type')
